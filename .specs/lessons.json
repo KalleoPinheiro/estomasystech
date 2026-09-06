@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 38,
+  "next_id": 39,
   "lessons": [
     {
       "id": "L-001",
@@ -672,6 +672,24 @@
       ],
       "created": "2026-09-02T16:07:00Z",
       "last_seen": "2026-09-02T16:07:00Z"
+    },
+    {
+      "id": "L-038",
+      "key": "spec_precision_gap::when an ac requires a post save side effect such as a refresh or refetch callback assert the resulting refetch call or its observable effect explicitly not just that the callback prop is wired in source",
+      "text": "When an AC requires a post-save side effect such as a refresh or refetch callback, assert the resulting refetch call or its observable effect explicitly, not just that the callback prop is wired in source",
+      "signal": "spec_precision_gap",
+      "scope": "configuracoes,hooks,testing",
+      "status": "candidate",
+      "features": [
+        "configuracoes-savable-form-seam"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "CFG-SEAM-06 in .specs/features/configuracoes-savable-form-seam/validation.md (configuracoes,hooks,testing)"
+      ],
+      "created": "2026-09-06T23:29:19Z",
+      "last_seen": "2026-09-06T23:29:19Z"
     }
   ]
 }

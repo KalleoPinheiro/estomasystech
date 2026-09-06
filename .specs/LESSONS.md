@@ -234,6 +234,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: spec.md Edge Cases — dupla revogação idempotente / tests/api/portal-routes.test.ts (consent)
 - last seen: 2026-09-02T16:07:00Z
 
+### L-038 — When an AC requires a post-save side effect such as a refresh or refetch callback, assert the resulting refetch call or its observable effect explicitly, not just that the callback prop is wired in source
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `configuracoes,hooks,testing` · harmful: 0
+- features: configuracoes-savable-form-seam
+- evidence: CFG-SEAM-06 in .specs/features/configuracoes-savable-form-seam/validation.md (configuracoes,hooks,testing)
+- last seen: 2026-09-06T23:29:19Z
+
 ## Quarantined (failed when applied — ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

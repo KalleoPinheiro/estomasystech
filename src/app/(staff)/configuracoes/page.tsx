@@ -34,6 +34,7 @@ import type {
 } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { useSavableForm } from '@/lib/use-savable-form';
 
 // Papéis que uma conta Admin de Empresa pode cadastrar (PROVISIONING_MATRIX.company_admin,
 // src/domain/auth/role-hierarchy.ts) — super_admin fica fora desta tela por design.
@@ -110,33 +111,23 @@ const CLINIC_INFO_FIELDS: {
  * emissão é bloqueada (fail-closed) nas páginas de documento.
  */
 function ClinicInfoSection() {
-  const { toast } = useToast();
   const { data, error } = useApiQuery<{ info: ClinicInfoDto }>(
     '/api/settings/clinic-info',
   );
-  const [edits, setEdits] = useState<ClinicInfoDraft | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   if (error) return <ErrorAlert message={error} />;
   if (!data) return <LoadingIndicator />;
 
-  const draft = edits ?? data.info;
+  return <ClinicInfoForm info={data.info} />;
+}
 
-  const save = async () => {
-    setSaveError(null);
-    try {
-      await apiFetch('/api/settings/clinic-info', {
-        method: 'PUT',
-        body: JSON.stringify(draft),
-      });
-      toast({ description: 'Dados da clínica salvos', variant: 'success' });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Erro ao salvar dados da clínica';
-      setSaveError(message);
-      toast({ description: message, variant: 'danger' });
-    }
-  };
+function ClinicInfoForm({ info }: { info: ClinicInfoDto }) {
+  const { draft, setDraft, saveError, save } = useSavableForm({
+    endpoint: '/api/settings/clinic-info',
+    initialValue: info,
+    successMessage: 'Dados da clínica salvos',
+    errorFallback: 'Erro ao salvar dados da clínica',
+  });
 
   return (
     <Card as="section" className="p-5">
@@ -155,7 +146,7 @@ function ClinicInfoSection() {
               value={draft[field.key] ?? ''}
               placeholder={field.placeholder}
               onChange={(e) =>
-                setEdits({ ...draft, [field.key]: e.target.value })
+                setDraft({ ...draft, [field.key]: e.target.value })
               }
               className="mt-1"
             />
@@ -186,69 +177,55 @@ function validateScheduleDraft(draft: ScheduleConfigDto): string | null {
 }
 
 function ScheduleSection() {
-  const { toast } = useToast();
   const { data, error, refresh } = useApiQuery<{
     config: ScheduleConfigDto;
     isDefault: boolean;
   }>('/api/settings/schedule');
-  const [edits, setEdits] = useState<ScheduleConfigDto | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   if (error) return <ErrorAlert message={error} />;
   if (!data) return <LoadingIndicator />;
 
-  // Sem edição local, exibe o que veio do servidor — nada de setState em effect.
-  const draft = edits ?? data.config;
-  const setDraft = (
-    update:
-      | ScheduleConfigDto
-      | ((prev: ScheduleConfigDto | null) => ScheduleConfigDto | null),
-  ) => setEdits(typeof update === 'function' ? update(draft) : update);
+  return (
+    <ScheduleForm
+      config={data.config}
+      isDefault={data.isDefault}
+      onSaved={refresh}
+    />
+  );
+}
+
+function ScheduleForm({
+  config,
+  isDefault,
+  onSaved,
+}: {
+  config: ScheduleConfigDto;
+  isDefault: boolean;
+  onSaved: () => void;
+}) {
+  const { draft, setDraft, saveError, save } = useSavableForm({
+    endpoint: '/api/settings/schedule',
+    initialValue: config,
+    successMessage: 'Grade salva — vale imediatamente para novos agendamentos.',
+    errorFallback: 'Erro ao salvar grade',
+    onSaved,
+    validate: validateScheduleDraft,
+  });
 
   const toggleDay = (day: number) =>
-    setDraft((prev) =>
-      prev
-        ? {
-            ...prev,
-            weekdays: prev.weekdays.includes(day)
-              ? prev.weekdays.filter((d) => d !== day)
-              : [...prev.weekdays, day].sort((a, b) => a - b),
-          }
-        : prev,
-    );
-
-  const save = async () => {
-    const validationMessage = validateScheduleDraft(draft);
-    if (validationMessage) {
-      setSaveError(validationMessage);
-      return;
-    }
-    setSaveError(null);
-    try {
-      await apiFetch('/api/settings/schedule', {
-        method: 'PUT',
-        body: JSON.stringify(draft),
-      });
-      refresh();
-      toast({
-        description:
-          'Grade salva — vale imediatamente para novos agendamentos.',
-        variant: 'success',
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Erro ao salvar grade';
-      setSaveError(message);
-      toast({ description: message, variant: 'danger' });
-    }
-  };
+    setDraft((prev) => ({
+      ...prev,
+      weekdays: prev.weekdays.includes(day)
+        ? prev.weekdays.filter((d) => d !== day)
+        : [...prev.weekdays, day].sort((a, b) => a - b),
+    }));
 
   return (
     <Card as="section" className="p-5">
       <h2 className="mb-1 font-semibold text-lg">Grade de horários</h2>
       <p className="mb-4 text-ink-3 text-sm">
         Define dias e janela de atendimento usados na validação da agenda.
-        {data.isDefault && ' (usando padrão — nada salvo ainda)'}
+        {isDefault && ' (usando padrão — nada salvo ainda)'}
       </p>
       {saveError && <ErrorAlert message={saveError} />}
 
