@@ -12,6 +12,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
+import { SummaryCard } from '@/components/summary-card';
 import { TriagePhotoList } from '@/components/triage-photo-list';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
@@ -218,15 +219,15 @@ function FollowUpsCard({
   };
 
   return (
-    <Card className="p-5">
-      <h2 className="mb-4 font-semibold text-lg">Retornos pendentes</h2>
-      {error ? (
-        <ErrorAlert message={error} onRetry={onRetry} />
-      ) : isLoading ? (
-        <LoadingIndicator />
-      ) : !followUps || followUps.length === 0 ? (
-        <EmptyState message="Nenhum retorno pendente." icon="check-circle" />
-      ) : (
+    <SummaryCard
+      title="Retornos pendentes"
+      error={error}
+      isLoading={isLoading}
+      onRetry={onRetry}
+      isEmpty={!followUps || followUps.length === 0}
+      emptyMessage="Nenhum retorno pendente."
+    >
+      {followUps && (
         <ul className="divide-y divide-border">
           {followUps.slice(0, 8).map((followUp) => (
             <li
@@ -292,7 +293,7 @@ function FollowUpsCard({
           ))}
         </ul>
       )}
-    </Card>
+    </SummaryCard>
   );
 }
 
@@ -310,38 +311,26 @@ function LowStockCard({
   onRetry,
 }: LowStockCardProps) {
   return (
-    <Card className="p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-semibold text-lg">Estoque baixo</h2>
-        <Link
-          href="/materiais"
-          className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-accent-ink text-sm hover:underline"
-        >
-          Ver materiais <Icon name="chevron-right" />
-        </Link>
-      </div>
-      {error ? (
-        <ErrorAlert message={error} onRetry={onRetry} />
-      ) : isLoading ? (
-        <LoadingIndicator />
-      ) : lowStock.length === 0 ? (
-        <EmptyState
-          message="Nenhum insumo abaixo do mínimo."
-          icon="check-circle"
-        />
-      ) : (
-        <ul className="divide-y divide-border text-sm">
-          {lowStock.slice(0, 6).map((supply) => (
-            <li key={supply.id} className="flex justify-between py-2">
-              <span className="truncate">{supply.name}</span>
-              <span className="shrink-0 font-medium text-warning">
-                {supply.stockQty}/{supply.minQty} {supply.unit}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
+    <SummaryCard
+      title="Estoque baixo"
+      href={{ label: 'Ver materiais', url: '/materiais' }}
+      error={error}
+      isLoading={isLoading}
+      onRetry={onRetry}
+      isEmpty={lowStock.length === 0}
+      emptyMessage="Nenhum insumo abaixo do mínimo."
+    >
+      <ul className="divide-y divide-border text-sm">
+        {lowStock.slice(0, 6).map((supply) => (
+          <li key={supply.id} className="flex justify-between py-2">
+            <span className="truncate">{supply.name}</span>
+            <span className="shrink-0 font-medium text-warning">
+              {supply.stockQty}/{supply.minQty} {supply.unit}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </SummaryCard>
   );
 }
 
@@ -361,35 +350,36 @@ function TriageQueue() {
     triage,
   } = useTriageQueue();
 
-  if (isLoading) {
-    return <LoadingIndicator />;
-  }
-  if (queryError) {
-    return <ErrorAlert message={queryError} onRetry={refresh} />;
-  }
-  if (!queue || queue.length === 0) {
-    return null;
-  }
   return (
-    <Card className="mb-6 border-warning bg-warning-soft p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-bold text-sm text-warning">
+    <SummaryCard
+      title={
+        <>
           <Icon name="camera" /> Fotos de pacientes aguardando triagem (
-          {queue.length})
-        </h3>
-        <Link
-          href="/triagem"
-          className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-sm text-warning hover:underline"
-        >
-          Ver todas as fotos <Icon name="chevron-right" />
-        </Link>
-      </div>
+          {queue?.length ?? 0})
+        </>
+      }
+      titleClassName="font-bold text-sm text-warning"
+      titleTag="h3"
+      headerClassName="mb-2 flex items-center justify-between"
+      href={{
+        label: 'Ver todas as fotos',
+        url: '/triagem',
+        className:
+          'inline-flex items-center gap-1 whitespace-nowrap font-medium text-sm text-warning hover:underline',
+      }}
+      cardClassName="mb-6 border-warning bg-warning-soft p-4"
+      error={queryError}
+      isLoading={isLoading}
+      onRetry={refresh}
+      isEmpty={!queue || queue.length === 0}
+      hideWhenEmpty
+    >
       <TriagePhotoList
-        queue={queue.slice(0, TRIAGE_QUEUE_CAP)}
+        queue={(queue ?? []).slice(0, TRIAGE_QUEUE_CAP)}
         actionError={actionError}
         submittingId={submittingId}
         onTriage={triage}
       />
-    </Card>
+    </SummaryCard>
   );
 }
