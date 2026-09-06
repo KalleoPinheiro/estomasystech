@@ -830,3 +830,9 @@ export const toClinicInfoDto = (clinic: Clinic): ClinicInfoDto => ({
   professionalName: clinic.professionalName,
   professionalRegistry: clinic.professionalRegistry,
 });
+
+/** Identidade da sessão ativa exibida na sidebar (issue #126) — `account` é `null` só em modo aberto (sem sessão real). */
+export interface SidebarIdentityDto {
+  clinicLabel: string;
+  account: { email: string; roleLabel: string } | null;
+}
