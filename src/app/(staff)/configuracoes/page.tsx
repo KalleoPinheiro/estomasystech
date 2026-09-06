@@ -34,6 +34,7 @@ import type {
 } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { useSavableForm } from '@/lib/use-savable-form';
 
 // Papéis que uma conta Admin de Empresa pode cadastrar (PROVISIONING_MATRIX.company_admin,
 // src/domain/auth/role-hierarchy.ts) — super_admin fica fora desta tela por design.
@@ -110,33 +111,23 @@ const CLINIC_INFO_FIELDS: {
  * emissão é bloqueada (fail-closed) nas páginas de documento.
  */
 function ClinicInfoSection() {
-  const { toast } = useToast();
   const { data, error } = useApiQuery<{ info: ClinicInfoDto }>(
     '/api/settings/clinic-info',
   );
-  const [edits, setEdits] = useState<ClinicInfoDraft | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   if (error) return <ErrorAlert message={error} />;
   if (!data) return <LoadingIndicator />;
 
-  const draft = edits ?? data.info;
+  return <ClinicInfoForm info={data.info} />;
+}
 
-  const save = async () => {
-    setSaveError(null);
-    try {
-      await apiFetch('/api/settings/clinic-info', {
-        method: 'PUT',
-        body: JSON.stringify(draft),
-      });
-      toast({ description: 'Dados da clínica salvos', variant: 'success' });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Erro ao salvar dados da clínica';
-      setSaveError(message);
-      toast({ description: message, variant: 'danger' });
-    }
-  };
+function ClinicInfoForm({ info }: { info: ClinicInfoDto }) {
+  const { draft, setDraft, saveError, save } = useSavableForm({
+    endpoint: '/api/settings/clinic-info',
+    initialValue: info,
+    successMessage: 'Dados da clínica salvos',
+    errorFallback: 'Erro ao salvar dados da clínica',
+  });
 
   return (
     <Card as="section" className="p-5">
@@ -155,7 +146,7 @@ function ClinicInfoSection() {
               value={draft[field.key] ?? ''}
               placeholder={field.placeholder}
               onChange={(e) =>
-                setEdits({ ...draft, [field.key]: e.target.value })
+                setDraft({ ...draft, [field.key]: e.target.value })
               }
               className="mt-1"
             />
