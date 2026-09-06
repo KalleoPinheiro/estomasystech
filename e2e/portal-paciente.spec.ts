@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createAppointment, createCondition, createPatient, unique } from "./support/api";
+import { expectToast } from "./support/assertions";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
 import { sessionCookie } from "./support/session-token";
@@ -40,9 +41,7 @@ test.describe("portal do paciente", () => {
     // Consentimento digital (LGPD).
     await expect(page.getByRole("heading", { name: "Termo de consentimento pendente" })).toBeVisible();
     await page.getByRole("button", { name: "Li e aceito o termo" }).click();
-    // Toast e a região de notificações (aria-live) duplicam o mesmo texto para
-    // leitores de tela — .first() pega o toast visível, não o anúncio sr-only.
-    await expect(page.getByText("Termo de consentimento aceito").first()).toBeVisible();
+    await expectToast(page, "Termo de consentimento aceito");
 
     // Confirmação de presença.
     const appointmentItem = page.locator("li", { hasText: procedure });
@@ -63,11 +62,10 @@ test.describe("portal do paciente", () => {
     // PORT-06 (#93): escolher o arquivo só monta a prévia — exige "Enviar" explícito.
     await expect(page.getByAltText("Prévia da foto selecionada")).toBeVisible();
     await page.getByRole("button", { name: "Enviar", exact: true }).click();
-    await expect(
-      page
-        .getByText("Foto enviada — a equipe vai avaliar e retorna se for preciso antecipar sua consulta.")
-        .first(),
-    ).toBeVisible();
+    await expectToast(
+      page,
+      "Foto enviada — a equipe vai avaliar e retorna se for preciso antecipar sua consulta.",
+    );
   });
 
   test("paciente não consegue confirmar consulta de outro paciente", async ({
