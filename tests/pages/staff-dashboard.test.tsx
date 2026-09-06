@@ -806,4 +806,115 @@ describe('Feature: Dashboard do painel interno', () => {
       expect(pendingCount).toHaveClass('text-warning');
     });
   });
+
+  describe('Cenário: banner de triagem usa token de urgência clínica', () => {
+    it('Dado fotos aguardando triagem, Quando renderizar, Então o heading usa text-warning (não accent de marca)', async () => {
+      mockFetch({ triage: [triageFixture] });
+      renderWithToast(<DashboardPage />);
+
+      const heading = await screen.findByText(/aguardando triagem \(1\)/);
+      expect(heading).toHaveClass('text-warning');
+    });
+  });
+
+  describe('Cenário: cap da fila de triagem (issue #135 cobre a paginação/link completo)', () => {
+    it('Dado mais de 8 fotos aguardando triagem, Quando renderizar, Então mostra a contagem total mas renderiza no máximo 8 itens', async () => {
+      const photos = Array.from({ length: 9 }, (_, i) => ({
+        ...triageFixture,
+        id: `photo-${i}`,
+        patientName: `Paciente ${i}`,
+      }));
+      mockFetch({ triage: photos });
+      renderWithToast(<DashboardPage />);
+
+      await screen.findByText(/aguardando triagem \(9\)/);
+      expect(
+        screen.getAllByText(/^Paciente \d — Ferida perna E$/),
+      ).toHaveLength(8);
+    });
+  });
+
+  describe('Cenário: feedback de processamento evita duplo-clique', () => {
+    it("Dado clique em 'Ok, manter plano', Quando o PATCH ainda está em voo, Então desabilita os dois botões de ação e mostra 'Enviando…'", async () => {
+      let resolvePatch: (() => void) | undefined;
+      const patchPending = new Promise<void>((resolve) => {
+        resolvePatch = resolve;
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = typeof input === 'string' ? input : input.toString();
+          const method = init?.method ?? 'GET';
+          if (url.startsWith('/api/summary'))
+            return jsonResponse(true, summaryFixture);
+          if (url.startsWith('/api/follow-ups')) return jsonResponse(true, []);
+          if (url.startsWith('/api/supplies')) return jsonResponse(true, []);
+          if (url.startsWith('/api/photos/triage'))
+            return jsonResponse(true, [triageFixture]);
+          if (url.startsWith('/api/photos/') && method === 'PATCH') {
+            await patchPending;
+            return jsonResponse(true, { ok: true });
+          }
+          throw new Error(`URL não mapeada: ${method} ${url}`);
+        }),
+      );
+      renderWithToast(<DashboardPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Ok, manter plano')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Ok, manter plano'));
+      fireEvent.click(await screen.findByText('Confirmar'));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('Enviando…')).toHaveLength(2);
+      });
+      for (const button of screen.getAllByRole('button', {
+        name: 'Enviando…',
+      })) {
+        expect(button).toBeDisabled();
+      }
+
+      resolvePatch?.();
+      await screen.findByText('Foto revisada');
+    });
+
+    it("Dado clique em 'Concluir' em retorno pendente, Quando o PATCH ainda está em voo, Então desabilita o botão e mostra 'Enviando…'", async () => {
+      let resolvePatch: (() => void) | undefined;
+      const patchPending = new Promise<void>((resolve) => {
+        resolvePatch = resolve;
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = typeof input === 'string' ? input : input.toString();
+          const method = init?.method ?? 'GET';
+          if (url.startsWith('/api/summary'))
+            return jsonResponse(true, summaryFixture);
+          if (url.startsWith('/api/follow-ups') && method === 'GET')
+            return jsonResponse(true, [followUpFixture]);
+          if (url.startsWith('/api/follow-ups/') && method === 'PATCH') {
+            await patchPending;
+            return jsonResponse(true, { ...followUpFixture, status: 'done' });
+          }
+          if (url.startsWith('/api/supplies')) return jsonResponse(true, []);
+          if (url.startsWith('/api/photos/triage'))
+            return jsonResponse(true, []);
+          throw new Error(`URL não mapeada: ${method} ${url}`);
+        }),
+      );
+      renderWithToast(<DashboardPage />);
+
+      const concludeButton = await screen.findByText('Concluir');
+      fireEvent.click(concludeButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enviando…')).toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: 'Enviando…' })).toBeDisabled();
+
+      resolvePatch?.();
+      await screen.findByText('Retorno concluído');
+    });
+  });
 });

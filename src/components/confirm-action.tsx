@@ -20,7 +20,7 @@ interface ConfirmActionProps {
   confirmLabel: string;
   cancelLabel?: string;
   onConfirm: () => void | Promise<void>;
-  variant?: 'default' | 'danger';
+  variant?: 'default' | 'danger' | 'success';
 }
 
 /**
@@ -56,7 +56,9 @@ export function ConfirmAction({
             className={
               variant === 'danger'
                 ? 'bg-danger text-white hover:bg-danger/90'
-                : undefined
+                : variant === 'success'
+                  ? 'bg-success text-white hover:bg-success/90'
+                  : undefined
             }
           >
             {confirmLabel}

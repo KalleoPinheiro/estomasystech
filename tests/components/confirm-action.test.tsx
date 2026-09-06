@@ -106,4 +106,27 @@ describe('Feature: ConfirmAction', () => {
       expect(onConfirm).not.toHaveBeenCalled();
     });
   });
+
+  describe('Cenário: variante success', () => {
+    it('Dado variant="success", Quando o dialog abre, Então o botão de confirmação usa a cor de sucesso', () => {
+      render(
+        <ConfirmAction
+          trigger={<button type="button">Antecipar retorno</button>}
+          title="Antecipar o retorno do paciente?"
+          description="O retorno do paciente é antecipado com base nesta foto."
+          confirmLabel="Confirmar antecipação"
+          variant="success"
+          onConfirm={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Antecipar retorno' }),
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'Confirmar antecipação' }),
+      ).toHaveClass('bg-success');
+    });
+  });
 });
