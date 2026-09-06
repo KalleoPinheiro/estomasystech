@@ -28,12 +28,6 @@ vi.mock('@/lib/auth/google-oauth-client', async (importOriginal) => {
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
-interface Envelope<T> {
-  success: boolean;
-  data: T;
-  error: string | null;
-}
-
 const staffHeaders = (): Record<string, string> =>
   cookieHeaderFor('company_admin', 'agenda@clinica.com', CLINIC_A_ID);
 
@@ -219,7 +213,7 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
       );
     });
 
-    it('Dado state divergente do cookie, Quando GET no callback, Então responde 400 e não persiste credencial', async () => {
+    it('Dado state divergente do cookie, Quando GET no callback, Então redireciona pra configurações com reason=fluxo_invalido e não persiste credencial (#124)', async () => {
       await ensureTestClinics();
       await clearCredential();
       stubTokenExchange({ refresh_token: 'nao-deve-salvar' });
@@ -231,14 +225,16 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
           withState('estado-real'),
         ),
       );
-      const json = (await response.json()) as Envelope<null>;
+      const location = new URL(response.headers.get('location') ?? '');
 
-      expect(response.status).toBe(400);
-      expect(json.error).toContain('Fluxo de conexão inválido');
+      expect(response.status).toBe(307);
+      expect(location.pathname).toBe('/configuracoes');
+      expect(location.searchParams.get('calendar')).toBe('erro');
+      expect(location.searchParams.get('reason')).toBe('fluxo_invalido');
       expect(await storedCredential()).toBeNull();
     });
 
-    it('Dado state ausente na query, Quando GET no callback, Então responde 400 e não persiste credencial', async () => {
+    it('Dado state ausente na query, Quando GET no callback, Então redireciona com reason=fluxo_invalido e não persiste credencial (#124)', async () => {
       await ensureTestClinics();
       await clearCredential();
       stubTokenExchange({ refresh_token: 'nao-deve-salvar' });
@@ -250,12 +246,14 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
           withState('estado-3'),
         ),
       );
+      const location = new URL(response.headers.get('location') ?? '');
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(307);
+      expect(location.searchParams.get('reason')).toBe('fluxo_invalido');
       expect(await storedCredential()).toBeNull();
     });
 
-    it('Dado o Google não devolver refresh token, Quando GET no callback, Então responde 400 e não persiste credencial', async () => {
+    it('Dado o Google não devolver refresh token, Quando GET no callback, Então redireciona com reason=sem_credencial e não persiste credencial (#124)', async () => {
       await ensureTestClinics();
       await clearCredential();
       stubTokenExchange({ refresh_token: null });
@@ -267,14 +265,15 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
           withState('estado-4'),
         ),
       );
-      const json = (await response.json()) as Envelope<null>;
+      const location = new URL(response.headers.get('location') ?? '');
 
-      expect(response.status).toBe(400);
-      expect(json.error).toContain('credencial de longa duração');
+      expect(response.status).toBe(307);
+      expect(location.searchParams.get('calendar')).toBe('erro');
+      expect(location.searchParams.get('reason')).toBe('sem_credencial');
       expect(await storedCredential()).toBeNull();
     });
 
-    it('Dado falha na troca do code, Quando GET no callback, Então responde 502', async () => {
+    it('Dado falha na troca do code, Quando GET no callback, Então redireciona com reason=falha_conexao (#124)', async () => {
       await ensureTestClinics();
       oauthClientMock.mockReturnValue({
         getToken: async () => {
@@ -290,8 +289,27 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
           withState('estado-5'),
         ),
       );
+      const location = new URL(response.headers.get('location') ?? '');
 
-      expect(response.status).toBe(502);
+      expect(response.status).toBe(307);
+      expect(location.searchParams.get('reason')).toBe('falha_conexao');
+    });
+
+    it('Dado config do Google ausente, Quando GET no callback, Então redireciona com reason=nao_configurado (#124)', async () => {
+      await ensureTestClinics();
+      delete process.env.GOOGLE_CLIENT_ID;
+      const route = await callbackRoute();
+
+      const response = await route.GET(
+        getRequest(
+          '/api/integrations/google-calendar/callback?code=abc&state=estado-6b',
+          withState('estado-6b'),
+        ),
+      );
+      const location = new URL(response.headers.get('location') ?? '');
+
+      expect(response.status).toBe(307);
+      expect(location.searchParams.get('reason')).toBe('nao_configurado');
     });
 
     it('Dado o fluxo iniciado pela sessão A e o callback chegando na sessão B, Quando GET no callback, Então recusa e não grava a credencial sob B', async () => {
@@ -314,7 +332,12 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
         ),
       );
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(307);
+      expect(
+        new URL(response.headers.get('location') ?? '').searchParams.get(
+          'reason',
+        ),
+      ).toBe('fluxo_invalido');
       const { getRepositories } = await import('@/infrastructure/container');
       const { googleAccounts } = await getRepositories({
         clinicId: CLINIC_A_ID,

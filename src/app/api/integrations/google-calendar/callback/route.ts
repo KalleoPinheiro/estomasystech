@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getRepositories } from '@/infrastructure/container';
-import { fail } from '@/lib/api-response';
 import { encryptSecret } from '@/lib/auth/crypto';
 import {
   CALENDAR_OAUTH_STATE_COOKIE,
@@ -15,6 +14,24 @@ import { getAuthConfig, type Session } from '@/lib/auth/session';
 /** Base pública p/ redirects: a URL interna do container não é acessível ao navegador. */
 const publicBaseUrl = (request: NextRequest): string =>
   process.env.APP_URL ?? request.url;
+
+/** Códigos de falha do fluxo OAuth (issue #124) — a página lê `reason` de uma allowlist própria, nunca texto bruto. */
+type CalendarConnectReason =
+  | 'nao_configurado'
+  | 'fluxo_invalido'
+  | 'sem_credencial'
+  | 'falha_conexao';
+
+/** Falha do fluxo OAuth sempre volta pro app com mensagem visível — nunca JSON cru fora dele (issue #124). */
+function redirectWithReason(
+  request: NextRequest,
+  reason: CalendarConnectReason,
+): NextResponse {
+  const url = new URL('/configuracoes', publicBaseUrl(request));
+  url.searchParams.set('calendar', 'erro');
+  url.searchParams.set('reason', reason);
+  return NextResponse.redirect(url);
+}
 
 function clearState(response: NextResponse): NextResponse {
   response.cookies.set(CALENDAR_OAUTH_STATE_COOKIE, '', {
@@ -77,13 +94,10 @@ async function persistCalendarCredential(
   code: string,
   owner: CredentialOwner,
   secret: string,
-): Promise<NextResponse | null> {
+): Promise<'ok' | 'sem_credencial'> {
   const { tokens } = await createOAuthClient(config).getToken(code);
   if (!tokens.refresh_token) {
-    return fail(
-      'O Google não devolveu credencial de longa duração — revogue o acesso do VittaFlow na sua conta Google e conecte de novo',
-      400,
-    );
+    return 'sem_credencial';
   }
 
   // Titular da credencial é a sessão nativa, não uma identidade do Google.
@@ -95,7 +109,7 @@ async function persistCalendarCredential(
     encryptedRefreshToken: encryptSecret(tokens.refresh_token, secret),
     connectedAt: new Date(),
   });
-  return null;
+  return 'ok';
 }
 
 /**
@@ -111,30 +125,34 @@ export async function GET(request: NextRequest) {
   const config = googleCalendarOAuthConfigFromEnv();
   const auth = getAuthConfig();
   if (!config || !auth) {
-    return fail('Integração com Google Agenda não configurada', 503);
+    return redirectWithReason(request, 'nao_configurado');
   }
 
   const owner = credentialOwner(guard.session);
   const code = extractValidatedCode(request, owner.subject);
   if (!code) {
-    return clearState(fail('Fluxo de conexão inválido, tente novamente', 400));
+    return clearState(redirectWithReason(request, 'fluxo_invalido'));
   }
 
   try {
-    const failure = await persistCalendarCredential(
+    const result = await persistCalendarCredential(
       config,
       code,
       owner,
       auth.secret,
     );
     return clearState(
-      failure ??
-        NextResponse.redirect(
-          new URL('/configuracoes?calendar=conectado', publicBaseUrl(request)),
-        ),
+      result === 'ok'
+        ? NextResponse.redirect(
+            new URL(
+              '/configuracoes?calendar=conectado',
+              publicBaseUrl(request),
+            ),
+          )
+        : redirectWithReason(request, result),
     );
   } catch (error) {
     console.error('Google Agenda: falha ao concluir a conexão', error);
-    return clearState(fail('Falha ao conectar o Google Agenda', 502));
+    return clearState(redirectWithReason(request, 'falha_conexao'));
   }
 }

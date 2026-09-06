@@ -14,6 +14,12 @@ import SettingsPage from '@/app/(staff)/configuracoes/page';
 import PartnersPage from '@/app/(staff)/parceiros/page';
 import ProfessionalsPage from '@/app/(staff)/profissionais/page';
 
+// CalendarIntegrationSection (issue #124) usa useSearchParams — fora de um
+// router real do Next, o hook retorna null no ambiente de teste.
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 interface FetchCall {
   url: string;
   init?: RequestInit;
@@ -298,6 +304,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -328,6 +340,12 @@ describe('Feature: SettingsPage', () => {
         }
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -375,6 +393,12 @@ describe('Feature: SettingsPage', () => {
         }
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -409,6 +433,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -439,6 +469,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -469,6 +505,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -512,6 +554,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -549,6 +597,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -568,6 +622,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -593,6 +653,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -626,6 +692,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -670,6 +742,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -710,6 +788,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -747,6 +831,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -792,6 +882,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -836,6 +932,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -888,6 +990,12 @@ describe('Feature: SettingsPage', () => {
         }
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -941,6 +1049,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -985,6 +1099,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1026,6 +1146,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1078,6 +1204,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1108,6 +1240,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1154,6 +1292,12 @@ describe('Feature: SettingsPage', () => {
         }
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1207,6 +1351,12 @@ describe('Feature: SettingsPage', () => {
         }
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1262,6 +1412,12 @@ describe('Feature: SettingsPage', () => {
         }
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1320,6 +1476,12 @@ describe('Feature: SettingsPage', () => {
         }
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1364,6 +1526,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1404,6 +1572,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1443,6 +1617,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1489,6 +1669,12 @@ describe('Feature: SettingsPage', () => {
           return jsonResponse(null, false);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1538,6 +1724,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1589,6 +1781,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 
@@ -1640,6 +1838,12 @@ describe('Feature: SettingsPage', () => {
         if (url.startsWith('/api/professionals')) return jsonResponse([]);
         if (url.startsWith('/api/settings/clinic-info'))
           return jsonResponse({ info: EMPTY_CLINIC_INFO });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
         return jsonResponse(null, false);
       });
 

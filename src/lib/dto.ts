@@ -836,3 +836,10 @@ export interface SidebarIdentityDto {
   clinicLabel: string;
   account: { email: string; roleLabel: string } | null;
 }
+
+/** Status da conexão do Google Agenda da clínica (issue #124) — `email`/`connectedAt` são `null` quando `connected` é `false`. */
+export interface CalendarIntegrationStatusDto {
+  connected: boolean;
+  email: string | null;
+  connectedAt: string | null;
+}
