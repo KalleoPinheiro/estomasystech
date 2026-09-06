@@ -8,11 +8,30 @@ import {
 } from '@still-void/ui/react/client';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
+import type { SidebarIdentityDto } from '@/lib/dto';
+import { useApiQuery } from '@/lib/use-api-query';
 import { SidebarAutoClose } from './sidebar-auto-close';
 import { StaffNav } from './staff-nav';
 
 interface StaffLayoutClientProps {
   children: React.ReactNode;
+}
+
+/** Clínica ativa + conta logada (issue #126) — nunca texto fixo, sempre a sessão real. Exportado pra teste isolado, sem precisar montar o SidebarProvider inteiro. */
+export function SidebarIdentity() {
+  const { data } = useApiQuery<SidebarIdentityDto>('/api/auth/identity');
+
+  return (
+    <div>
+      <BrandLogo />
+      <p className="mt-1 text-ink-3 text-xs">{data?.clinicLabel ?? ''}</p>
+      {data?.account && (
+        <p className="mt-0.5 text-ink-3 text-xs">
+          {data.account.email} · {data.account.roleLabel}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
@@ -35,12 +54,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
             a 1120px e as telas do staff são tabelas largas. */}
         <SidebarPanel className="w-56 shrink-0 justify-between border-border border-r p-5">
           <div className="flex flex-col gap-8">
-            <div>
-              <BrandLogo />
-              <p className="mt-1 text-ink-3 text-xs">
-                Clínica de Estomaterapia
-              </p>
-            </div>
+            <SidebarIdentity />
             <SidebarSection title="Navegação">
               <StaffNav />
             </SidebarSection>
