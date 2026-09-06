@@ -50,11 +50,20 @@ function authNotConfiguredResponse(): NextResponse {
 }
 
 /**
- * CSP estrita com nonce por request (issue #76). Nenhum script/style inline é
- * usado hoje no app (grep confirmado); `strict-dynamic` + nonce bloqueiam
- * injeção de script mesmo assim. O nonce só existe porque a página é
- * dinamicamente renderizada por request — Next injeta o valor automaticamente
- * nos scripts do próprio framework (ver `layout.tsx`: `dynamic = "force-dynamic"`).
+ * CSP estrita com nonce por request (issue #76). `strict-dynamic` + nonce
+ * bloqueiam injeção de `<script>`/`<style>` mesmo sem `unsafe-inline`. O nonce
+ * só existe porque a página é dinamicamente renderizada por request — Next
+ * injeta o valor automaticamente nos scripts do próprio framework (ver
+ * `layout.tsx`: `dynamic = "force-dynamic"`).
+ *
+ * `style-src-attr 'unsafe-inline'` (achado do critique de 2026-09-06, issue
+ * CSP-01): Radix (via `@still-void/ui`) seta `style={{ pointerEvents: ... }}`
+ * no `ToastViewport` — vira atributo `style=""` no DOM, sem passar pelo nonce
+ * (React não suporta nonce em `style` inline). Sem essa exceção, o navegador
+ * bloqueia e o toast fica sem `pointer-events` correto. `style-src-attr` (CSP
+ * nível 3) restringe a permissividade só ao atributo — `style-src-elem`
+ * continua exigindo nonce pra qualquer `<style>` injetado, que é o vetor real
+ * de CSS injection.
  */
 function nextWithCsp(request: NextRequest): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
@@ -64,6 +73,8 @@ function nextWithCsp(request: NextRequest): NextResponse {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
     // unsafe-inline só em dev: HMR/overlay do Next injeta estilo inline sem nonce.
     `style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
+    `style-src-elem 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
+    "style-src-attr 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
     "connect-src 'self'",
