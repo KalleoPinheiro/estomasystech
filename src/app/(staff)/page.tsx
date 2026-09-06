@@ -1,13 +1,7 @@
 'use client';
 
 import { Button, Card, Icon } from '@still-void/ui/react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  useToast,
-} from '@still-void/ui/react/client';
-import Image from 'next/image';
+import { useToast } from '@still-void/ui/react/client';
 import Link from 'next/link';
 import { useState } from 'react';
 import type { BillingSummary } from '@/application/billing/get-billing-summary';
@@ -17,8 +11,8 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
-import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
+import { TriagePhotoList } from '@/components/triage-photo-list';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
 import {
@@ -28,6 +22,7 @@ import {
   formatTime,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { useTriageQueue } from '@/lib/use-triage-queue';
 
 interface SummaryData {
   billing: BillingSummary;
@@ -350,58 +345,21 @@ function LowStockCard({
   );
 }
 
-interface TriagePhotoDto {
-  id: string;
-  conditionTitle: string;
-  patientId: string | null;
-  patientName: string;
-  patientNote: string | null;
-  createdAt: string;
-  waitingHours: number;
-  latestScore: { kind: 'push' | 'det'; value: number } | null;
-}
-
-const TRIAGE_ATTENTION_HOURS = 24;
-// Mesmo cap das outras cards do dashboard (FollowUpsCard/LowStockCard). Sem
-// link "ver tudo" ainda: não existe página dedicada de triagem — issue #135.
+// Mesmo cap das outras cards do dashboard (FollowUpsCard/LowStockCard) —
+// resto da fila fica em /triagem (issue #135).
 const TRIAGE_QUEUE_CAP = 8;
 
-/** Fila de triagem (O4.2): fotos enviadas por pacientes entre consultas. */
+/** Resumo da fila de triagem (O4.2) no dashboard; lista completa em `/triagem`. */
 function TriageQueue() {
   const {
-    data: queue,
-    error: queryError,
+    queue,
+    queryError,
     isLoading,
+    actionError,
+    submittingId,
     refresh,
-  } = useApiQuery<TriagePhotoDto[]>('/api/photos/triage');
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [previewPhoto, setPreviewPhoto] = useState<TriagePhotoDto | null>(null);
-  const [submittingId, setSubmittingId] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  const triage = async (
-    photo: TriagePhotoDto,
-    decision: 'reviewed' | 'escalated',
-  ) => {
-    setSubmittingId(photo.id);
-    try {
-      await apiFetch(`/api/photos/${photo.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ triage: decision }),
-      });
-      toast({
-        description:
-          decision === 'reviewed' ? 'Foto revisada' : 'Foto escalada',
-        variant: 'success',
-      });
-      setActionError(null);
-      refresh();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Erro na triagem');
-    } finally {
-      setSubmittingId(null);
-    }
-  };
+    triage,
+  } = useTriageQueue();
 
   if (isLoading) {
     return <LoadingIndicator />;
@@ -414,122 +372,24 @@ function TriageQueue() {
   }
   return (
     <Card className="mb-6 border-warning bg-warning-soft p-4">
-      <h3 className="mb-2 font-bold text-sm text-warning">
-        <Icon name="camera" /> Fotos de pacientes aguardando triagem (
-        {queue.length})
-      </h3>
-      {actionError && <ErrorAlert message={actionError} />}
-      <ul className="flex flex-col gap-2">
-        {queue.slice(0, TRIAGE_QUEUE_CAP).map((photo) => (
-          <li
-            key={photo.id}
-            className="flex flex-wrap items-center gap-2 text-sm"
-          >
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => setPreviewPhoto(photo)}
-              aria-label={`Ampliar foto de ${photo.patientName}`}
-              className="relative h-12 w-12 shrink-0 overflow-hidden rounded border border-border p-0"
-            >
-              <Image
-                src={`/api/photos/${photo.id}`}
-                alt={`Foto de ${photo.patientName}`}
-                fill
-                className="object-cover"
-              />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">
-                {photo.patientName} — {photo.conditionTitle}
-                {photo.latestScore && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="ml-2 h-auto rounded bg-sv-surface px-1.5 py-0.5 font-semibold text-accent-ink text-xs no-underline hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-ink focus-visible:outline-offset-2"
-                      >
-                        {photo.latestScore.kind === 'push' ? 'PUSH' : 'DET'}{' '}
-                        {photo.latestScore.value}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {photo.latestScore.kind === 'push'
-                        ? 'PUSH — Pressure Ulcer Scale for Healing: escala de cicatrização de lesão por pressão'
-                        : 'DET — índice Débito/Exsudato/Tecido da avaliação de estomia'}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </p>
-              <p className="truncate text-ink-3 text-xs">
-                {photo.patientNote ?? 'sem observação'} ·{' '}
-                {formatDate(photo.createdAt)} ·{' '}
-                <span
-                  className={
-                    photo.waitingHours >= TRIAGE_ATTENTION_HOURS
-                      ? 'font-semibold text-danger'
-                      : undefined
-                  }
-                >
-                  aguardando há {photo.waitingHours}h
-                </span>
-              </p>
-            </div>
-            <ConfirmAction
-              trigger={
-                <Button
-                  type="button"
-                  variant="link"
-                  disabled={submittingId === photo.id}
-                  className="h-auto min-h-11 min-w-11 p-0 text-danger"
-                >
-                  {submittingId === photo.id ? 'Enviando…' : 'Ok, manter plano'}
-                </Button>
-              }
-              title="Manter o plano de cuidados?"
-              description="A foto é marcada como revisada sem intervenção. Não há ação de reabrir depois."
-              confirmLabel="Confirmar"
-              variant="danger"
-              onConfirm={() => triage(photo, 'reviewed')}
-            />
-            <ConfirmAction
-              trigger={
-                <Button
-                  type="button"
-                  variant="link"
-                  disabled={submittingId === photo.id}
-                  className="h-auto min-h-11 min-w-11 p-0 text-success"
-                >
-                  {submittingId === photo.id
-                    ? 'Enviando…'
-                    : 'Antecipar retorno'}
-                </Button>
-              }
-              title="Antecipar o retorno do paciente?"
-              description="O retorno do paciente é antecipado com base nesta foto."
-              confirmLabel="Confirmar antecipação"
-              variant="success"
-              onConfirm={() => triage(photo, 'escalated')}
-            />
-          </li>
-        ))}
-      </ul>
-      {previewPhoto && (
-        <Modal
-          title={`Foto de ${previewPhoto.patientName}`}
-          onClose={() => setPreviewPhoto(null)}
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="font-bold text-sm text-warning">
+          <Icon name="camera" /> Fotos de pacientes aguardando triagem (
+          {queue.length})
+        </h3>
+        <Link
+          href="/triagem"
+          className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-sm text-warning hover:underline"
         >
-          <div className="relative mt-4 aspect-square w-full">
-            <Image
-              src={`/api/photos/${previewPhoto.id}`}
-              alt={`Foto de ${previewPhoto.patientName}`}
-              fill
-              className="rounded object-contain"
-            />
-          </div>
-        </Modal>
-      )}
+          Ver todas as fotos <Icon name="chevron-right" />
+        </Link>
+      </div>
+      <TriagePhotoList
+        queue={queue.slice(0, TRIAGE_QUEUE_CAP)}
+        actionError={actionError}
+        submittingId={submittingId}
+        onTriage={triage}
+      />
     </Card>
   );
 }

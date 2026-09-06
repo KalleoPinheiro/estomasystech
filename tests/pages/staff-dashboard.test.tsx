@@ -817,7 +817,7 @@ describe('Feature: Dashboard do painel interno', () => {
     });
   });
 
-  describe('Cenário: cap da fila de triagem (issue #135 cobre a paginação/link completo)', () => {
+  describe('Cenário: cap da fila de triagem, com link pra página completa (issue #135)', () => {
     it('Dado mais de 8 fotos aguardando triagem, Quando renderizar, Então mostra a contagem total mas renderiza no máximo 8 itens', async () => {
       const photos = Array.from({ length: 9 }, (_, i) => ({
         ...triageFixture,
@@ -831,6 +831,16 @@ describe('Feature: Dashboard do painel interno', () => {
       expect(
         screen.getAllByText(/^Paciente \d — Ferida perna E$/),
       ).toHaveLength(8);
+    });
+
+    it('Dado fotos aguardando triagem, Quando renderizar, Então mostra link "Ver todas as fotos" apontando pra /triagem', async () => {
+      mockFetch({ triage: [triageFixture] });
+      renderWithToast(<DashboardPage />);
+
+      const link = await screen.findByRole('link', {
+        name: /Ver todas as fotos/,
+      });
+      expect(link).toHaveAttribute('href', '/triagem');
     });
   });
 

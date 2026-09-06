@@ -742,6 +742,18 @@ export const toConditionPhotoDto = (
   createdAt: photo.createdAt.toISOString(),
 });
 
+/** Item da fila de triagem (`GET /api/photos/triage`) — foto de paciente aguardando revisão do staff. */
+export interface TriagePhotoDto {
+  id: string;
+  conditionTitle: string;
+  patientId: string | null;
+  patientName: string;
+  patientNote: string | null;
+  createdAt: string;
+  waitingHours: number;
+  latestScore: { kind: 'push' | 'det'; value: number } | null;
+}
+
 export interface ProfessionalDto {
   id: string;
   fullName: string;
