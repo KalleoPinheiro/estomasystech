@@ -85,6 +85,7 @@ interface FetchOptions {
   supplies?: SupplyDto[];
   suppliesError?: string;
   triage?: TriagePhotoFixture[];
+  triageError?: string;
 }
 
 function jsonResponse(
@@ -107,6 +108,7 @@ function mockFetch(options: FetchOptions = {}) {
     supplies = [],
     suppliesError,
     triage = [],
+    triageError,
   } = options;
 
   vi.stubGlobal(
@@ -134,7 +136,9 @@ function mockFetch(options: FetchOptions = {}) {
           : jsonResponse(true, supplies);
       }
       if (url.startsWith('/api/photos/triage')) {
-        return jsonResponse(true, triage);
+        return triageError
+          ? jsonResponse(false, null, triageError)
+          : jsonResponse(true, triage);
       }
       if (url.startsWith('/api/photos/') && method === 'PATCH') {
         return jsonResponse(true, { ok: true });
@@ -723,6 +727,83 @@ describe('Feature: Dashboard do painel interno', () => {
       await waitFor(() => {
         expect(screen.getByText('Erro na triagem')).toBeInTheDocument();
       });
+    });
+
+    it('Dado falha na API de triagem, Quando renderizar, Então mostra ErrorAlert com opção de retry em vez de esconder a seção', async () => {
+      mockFetch({ triageError: 'Erro ao buscar fila de triagem' });
+      renderWithToast(<DashboardPage />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Erro ao buscar fila de triagem'),
+        ).toBeInTheDocument();
+      });
+      const callsBefore = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+      fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+      await waitFor(() => {
+        expect(
+          (fetch as ReturnType<typeof vi.fn>).mock.calls.length,
+        ).toBeGreaterThan(callsBefore);
+      });
+    });
+
+    it('Dado fila de triagem carregando, Quando renderizar, Então mostra indicador de carregamento na seção', () => {
+      mockFetch({ triage: [triageFixture] });
+      renderWithToast(<DashboardPage />);
+
+      expect(screen.getAllByText('Carregando…').length).toBeGreaterThan(0);
+    });
+
+    it('Dado clique na miniatura da foto, Quando acionado, Então abre a foto ampliada em um modal', async () => {
+      mockFetch({ triage: [triageFixture] });
+      renderWithToast(<DashboardPage />);
+
+      const thumbnail = await screen.findByRole('button', {
+        name: 'Ampliar foto de Maria Souza',
+      });
+      fireEvent.click(thumbnail);
+
+      const dialog = await screen.findByRole('dialog');
+      expect(
+        within(dialog).getByRole('heading', { name: 'Foto de Maria Souza' }),
+      ).toBeInTheDocument();
+    });
+
+    it("Dado botão 'Ok, manter plano', Quando renderizar, Então usa cor de risco (é ação irreversível)", async () => {
+      mockFetch({ triage: [triageFixture] });
+      renderWithToast(<DashboardPage />);
+
+      const keepPlanButton = await screen.findByText('Ok, manter plano');
+      expect(keepPlanButton).toHaveClass('text-danger');
+    });
+
+    it("Dado botão 'Antecipar retorno', Quando renderizar, Então usa cor neutra/positiva (é a ação protetora)", async () => {
+      mockFetch({ triage: [triageFixture] });
+      renderWithToast(<DashboardPage />);
+
+      const escalateButton = await screen.findByText('Antecipar retorno');
+      expect(escalateButton).toHaveClass('text-success');
+    });
+  });
+
+  describe('Cenário: cor semântica dos cards de KPI (DASH-06)', () => {
+    it('Dado resumo financeiro, Quando renderizar, Então "Recebido no mês" usa tom de sucesso', async () => {
+      mockFetch();
+      renderWithToast(<DashboardPage />);
+
+      const value = await screen.findByText('R$ 1.500,00');
+      expect(value).toHaveClass('text-success');
+    });
+
+    it('Dado resumo financeiro, Quando renderizar, Então "A receber" e "Faturas pendentes" usam tom de alerta', async () => {
+      mockFetch();
+      renderWithToast(<DashboardPage />);
+
+      const pending = await screen.findByText('R$ 500,00');
+      expect(pending).toHaveClass('text-warning');
+      const pendingCount = await screen.findByText('3');
+      expect(pendingCount).toHaveClass('text-warning');
     });
   });
 });
