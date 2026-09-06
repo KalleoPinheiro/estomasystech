@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createAppointment, createPatient } from "./support/api";
+import { expectToast } from "./support/assertions";
 import { DEFAULT_SCHEDULE_CONFIG } from "./support/constants";
 import { businessDay, slotForAttempt, outsideBusinessHoursSlot, type YMD } from "./support/dates";
 
@@ -175,10 +176,7 @@ test.describe("agenda", () => {
     await page.getByLabel("Abre (h)").fill("10");
     await page.getByLabel("Fecha (h)").fill("12");
     await page.getByRole("button", { name: "Salvar grade" }).click();
-    // Toast e a região de notificações (aria-live) duplicam o mesmo texto para
-    // leitores de tela — .first() pega o toast visível, não o anúncio sr-only
-    // (mesmo padrão de e2e/portal-paciente.spec.ts).
-    await expect(page.getByText(/Grade salva/).first()).toBeVisible();
+    await expectToast(page, /Grade salva/);
 
     try {
       const patient = await createPatient(request, { fullName: `Paciente Grade ${Date.now()}` });
