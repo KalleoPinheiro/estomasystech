@@ -540,3 +540,30 @@ serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
 - **Next step**: seguir pra issue #142 ("locator de toast duplicado entre `agenda.spec.ts` e `portal-paciente.spec.ts`") — 5ª e última da ordem de prioridade (#126 → #124 → #141 → #140 → **#142**). Diferente das anteriores: mexe só em `tests/e2e/`, não em `src/` — pode dispensar o pipeline completo de Verifier se o escopo se confirmar trivial (helper compartilhado, sem lógica de produto).
 - **Blockers**: nenhum.
 - **Branch**: `fix/140-dashboard-cards-raso` (a deletar após squash-merge). PR #147, squash-merged em `main`. Issue #140 fechada via `Closes #140`.
+
+- **`toast-locator-e2e-duplicado` — CONCLUÍDA e VERIFICADA** (issue #142, "locator de toast duplicado entre agenda.spec.ts e portal-paciente.spec.ts" — 5ª e última issue da fila do `/improve-codebase-architecture` de 2026-09-06). Escopo Small (tooling de teste puro, sem `src/`/`tests/` tocado) — execução direta, sem spec.md formal.
+- **O que mudou**: novo helper `e2e/support/assertions.ts` (`expectToast(page, text)`) — desambiguação de locator de toast (`.first()` sobre toast visível + espelho `aria-live`) que já tinha sido corrigida uma vez em `portal-paciente.spec.ts` e reapareceu em `agenda.spec.ts`. 3 call sites migrados (1 em `agenda.spec.ts`, 2 em `portal-paciente.spec.ts`).
+- **Verifier (fresh sub-agent, author ≠ verifier) — 1 iteração, PASS direto**: escopo proporcionalmente leve (sem sensor de mutação — mudança puramente mecânica de extração). Confirmou os 3 call sites migrados com texto/regex idêntico e mesma semântica de `.first()`, nenhum outro `.first()` não relacionado tocado, `npm run typecheck` limpo, e2e das 2 specs afetadas 8/8 verde. Relatório: `.specs/features/toast-locator-e2e-duplicado/validation.md`.
+- **CodeRabbit no PR #148 — sem achado acionável** (cota disponível desta vez, review completo).
+- **CI verde de primeira, sem flake** — único PR desta sequência sem a falha recorrente de `clinico.spec.ts:110`.
+- **Gate final verde**: `npm run typecheck`, `npm run test:e2e` local (84/85, mesmo flake conhecido — issue #146), suíte completa (`test:coverage`/`biome`/`check:sv`) confirmada inalterada por disciplina (nenhum arquivo `src/`/`tests/` no diff). CI: `Typecheck, lint, sv-gate, test:coverage` verde (5m3s) + `E2E (Playwright)` verde (10m46s), PR #148.
+
+## Sequência `/improve-codebase-architecture` (2026-09-06) — CONCLUÍDA
+
+Todos os 5 achados do relatório de arquitetura rodado em 2026-09-06 foram implementados, verificados por Verifier independente e mergeados nesta sessão, em ordem de prioridade:
+
+| # | Achado | Issue | PR | Status |
+| --- | --- | --- | --- | --- |
+| 1 | Identidade de sessão ausente na sidebar | #126 | #143 | ✅ mergeada |
+| 2 | Feedback visual da conexão Google Agenda | #124 | #144 | ✅ mergeada |
+| 3 | Fetch de fotos duplicado (Condition Photo) | #141 | #145 | ✅ mergeada |
+| 4 | Dashboard: cartões de resumo raso | #140 | #147 | ✅ mergeada |
+| 5 | Locator de toast duplicado (e2e) | #142 | #148 | ✅ mergeada |
+
+**Achado colateral registrado como issue própria**: #146 (não implementado nesta sessão) — `e2e/clinico.spec.ts:110` flakou recorrentemente (3x) em PRs sem nenhuma relação com o domínio de Condition, sempre a mesma asserção de bloqueio de avaliação em condição resolvida. Candidato a investigação de causa raiz (suspeita de race condition), rotulado `needs-triage`.
+
+**Follow-up de cobertura sugerido (não bloqueante)**: 3 gaps expostos pelo sensor de mutação da issue #140 em `tests/pages/staff-dashboard.test.tsx` (ordem de checagem erro/loading da Triagem, tag/espaçamento do heading, ausência do `<Card>` em loading/erro) — pré-existentes ao refactor, cosméticos, sem risco funcional.
+
+- **Next step**: nenhum pendente desta sequência. Próximo trabalho depende de nova demanda do usuário ou de decidir se vale investigar #146.
+- **Blockers**: nenhum.
+- **Branch**: `fix/142-toast-locator-e2e-duplicado` (a deletar após squash-merge). PR #148, squash-merged em `main`. Issue #142 fechada via `Closes #142`.
