@@ -79,9 +79,14 @@ navegar pra JSON cru).
 ## Edge Cases
 
 - WHEN a sessão é `super_admin`/modo aberto (`clinicId === null`) THEN o
-  status de conexão SHALL ser escopado como "sistema" (mesma convenção de
-  `rowId` em `DrizzleGoogleAccountRepository`, já implementada pela #74) —
-  sem vazar credencial de clínica nenhuma.
+  status de conexão SHALL resolver via `googleAccounts.findMostRecent()` sem
+  filtro de clínica (AD-017: papel de sistema não filtra por `clinic_id`,
+  mesmo comportamento de qualquer outra rota do app) — não é um bug de
+  vazamento, é o acesso cross-clínica documentado do Super Admin
+  (CONTEXT.md § Role). **Correção de spec** (achado do Verifier): a versão
+  original deste edge case presumia erroneamente que `clinicId: null`
+  isolava um bucket "sistema" só dele; `withTenant` (linha 12-13 de
+  `tenant-scope.ts`) mostra que `null` retorna sem filtro nenhum.
 - WHEN o parâmetro `calendar` não está presente na URL (navegação normal pra
   Configurações) THEN nenhum toast SHALL disparar.
 

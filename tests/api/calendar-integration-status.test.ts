@@ -110,6 +110,44 @@ describe('Feature: Status da conexão do Google Agenda (issue #124)', () => {
     expect(response.status).toBe(200);
   });
 
+  it('Dado super_admin (clinicId null), Quando GET, Então resolve a conexão de escopo de sistema salva sob clinicId null (AD-017: papel de sistema não filtra por clínica)', async () => {
+    await ensureTestClinics();
+    // `findMostRecent()` com clinicId null não filtra por clínica (AD-017) —
+    // zera a tabela pra garantir que só a conta de sistema salva abaixo
+    // possa vencer o `ORDER BY connectedAt DESC`, independente de outros
+    // testes já terem salvo contas com `connectedAt = new Date()` (agora).
+    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+    const schema = await import('@/infrastructure/persistence/drizzle/schema');
+    await (await getDb()).delete(schema.googleAccounts);
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { googleAccounts: systemAccounts } = await getRepositories({
+      clinicId: null,
+    });
+    const connectedAt = new Date('2026-08-05T09:00:00.000Z');
+    await systemAccounts.save({
+      email: 'root@vitta.com',
+      encryptedRefreshToken: 'cipher-text-sistema',
+      connectedAt,
+    });
+    const route = await import('@/app/api/settings/calendar-integration/route');
+
+    const response = await route.GET(
+      jsonRequest(
+        '/api/settings/calendar-integration',
+        'GET',
+        undefined,
+        cookieHeaderFor('super_admin', 'root@vitta.com', null),
+      ),
+    );
+    const body =
+      (await response.json()) as Envelope<CalendarIntegrationStatusDto>;
+
+    expect(response.status).toBe(200);
+    expect(body.data?.connected).toBe(true);
+    expect(body.data?.email).toBe('root@vitta.com');
+    expect(body.data?.connectedAt).toBe(connectedAt.toISOString());
+  });
+
   it('Dado sem sessão, Quando GET, Então retorna 401', async () => {
     const route = await import('@/app/api/settings/calendar-integration/route');
     const { NextRequest } = await import('next/server');
