@@ -252,7 +252,7 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
   });
 
   describe('Cenário: CSP estrita com nonce (issue #76)', () => {
-    it('Dada requisição autenticada, Quando passa pelo proxy, Então gera CSP com nonce único e sem unsafe-inline', async () => {
+    it('Dada requisição autenticada, Quando passa pelo proxy, Então gera CSP com nonce único e sem unsafe-inline em script/style de elemento', async () => {
       const proxy = await loadProxy();
       const cookie = sessionCookie('company_admin');
 
@@ -265,8 +265,21 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       expect(cspFirst).toMatch(
         /script-src 'self' 'nonce-[^']+' 'strict-dynamic'/,
       );
-      expect(cspFirst).not.toContain('unsafe-inline');
+      expect(cspFirst).toMatch(/style-src-elem 'self' 'nonce-[^']+'/);
+      expect(cspFirst).not.toMatch(/script-src[^;]*unsafe-inline/);
+      expect(cspFirst).not.toMatch(/style-src-elem[^;]*unsafe-inline/);
       expect(cspFirst).not.toEqual(cspSecond);
+    });
+
+    it('Dada requisição, Quando passa pelo proxy, Então permite unsafe-inline só no atributo style (CSP-01: Radix seta style inline sem nonce)', async () => {
+      const proxy = await loadProxy();
+      const response = await proxy(
+        request('/agenda', sessionCookie('company_admin')),
+      );
+
+      expect(response.headers.get('Content-Security-Policy')).toMatch(
+        /style-src-attr 'unsafe-inline'/,
+      );
     });
 
     it('Dado caminho público, Quando passa pelo proxy, Então também recebe CSP com nonce', async () => {

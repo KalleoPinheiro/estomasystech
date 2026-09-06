@@ -201,7 +201,7 @@ interface FollowUpsCardProps {
   error: string | null;
   isLoading: boolean;
   onRetry: () => void;
-  onResolve: (id: string, status: 'done' | 'cancelled') => void;
+  onResolve: (id: string, status: 'done' | 'cancelled') => Promise<void>;
 }
 
 function FollowUpsCard({
@@ -211,6 +211,17 @@ function FollowUpsCard({
   onRetry,
   onResolve,
 }: FollowUpsCardProps) {
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+
+  const resolve = async (id: string, status: 'done' | 'cancelled') => {
+    setSubmittingId(id);
+    try {
+      await onResolve(id, status);
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
   return (
     <Card className="p-5">
       <h2 className="mb-4 font-semibold text-lg">Retornos pendentes</h2>
@@ -258,17 +269,19 @@ function FollowUpsCard({
               </Link>
               <Button
                 type="button"
-                onClick={() => void onResolve(followUp.id, 'done')}
+                onClick={() => void resolve(followUp.id, 'done')}
                 variant="link"
+                disabled={submittingId === followUp.id}
                 className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-success"
               >
-                Concluir
+                {submittingId === followUp.id ? 'Enviando…' : 'Concluir'}
               </Button>
               <ConfirmAction
                 trigger={
                   <Button
                     type="button"
                     variant="link"
+                    disabled={submittingId === followUp.id}
                     className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-ink-3"
                   >
                     Cancelar
@@ -278,7 +291,7 @@ function FollowUpsCard({
                 description="O retorno agendado será cancelado e o paciente não será mais lembrado."
                 confirmLabel="Cancelar retorno"
                 variant="danger"
-                onConfirm={() => onResolve(followUp.id, 'cancelled')}
+                onConfirm={() => resolve(followUp.id, 'cancelled')}
               />
             </li>
           ))}
@@ -349,6 +362,9 @@ interface TriagePhotoDto {
 }
 
 const TRIAGE_ATTENTION_HOURS = 24;
+// Mesmo cap das outras cards do dashboard (FollowUpsCard/LowStockCard). Sem
+// link "ver tudo" ainda: não existe página dedicada de triagem — issue #135.
+const TRIAGE_QUEUE_CAP = 8;
 
 /** Fila de triagem (O4.2): fotos enviadas por pacientes entre consultas. */
 function TriageQueue() {
@@ -360,12 +376,14 @@ function TriageQueue() {
   } = useApiQuery<TriagePhotoDto[]>('/api/photos/triage');
   const [actionError, setActionError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<TriagePhotoDto | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const triage = async (
     photo: TriagePhotoDto,
     decision: 'reviewed' | 'escalated',
   ) => {
+    setSubmittingId(photo.id);
     try {
       await apiFetch(`/api/photos/${photo.id}`, {
         method: 'PATCH',
@@ -380,6 +398,8 @@ function TriageQueue() {
       refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Erro na triagem');
+    } finally {
+      setSubmittingId(null);
     }
   };
 
@@ -393,14 +413,14 @@ function TriageQueue() {
     return null;
   }
   return (
-    <Card className="mb-6 border-accent bg-accent-soft p-4">
-      <h3 className="mb-2 font-bold text-accent-ink text-sm">
+    <Card className="mb-6 border-warning bg-warning-soft p-4">
+      <h3 className="mb-2 font-bold text-sm text-warning">
         <Icon name="camera" /> Fotos de pacientes aguardando triagem (
         {queue.length})
       </h3>
       {actionError && <ErrorAlert message={actionError} />}
       <ul className="flex flex-col gap-2">
-        {queue.map((photo) => (
+        {queue.slice(0, TRIAGE_QUEUE_CAP).map((photo) => (
           <li
             key={photo.id}
             className="flex flex-wrap items-center gap-2 text-sm"
@@ -461,9 +481,10 @@ function TriageQueue() {
                 <Button
                   type="button"
                   variant="link"
+                  disabled={submittingId === photo.id}
                   className="h-auto min-h-11 min-w-11 p-0 text-danger"
                 >
-                  Ok, manter plano
+                  {submittingId === photo.id ? 'Enviando…' : 'Ok, manter plano'}
                 </Button>
               }
               title="Manter o plano de cuidados?"
@@ -477,14 +498,18 @@ function TriageQueue() {
                 <Button
                   type="button"
                   variant="link"
+                  disabled={submittingId === photo.id}
                   className="h-auto min-h-11 min-w-11 p-0 text-success"
                 >
-                  Antecipar retorno
+                  {submittingId === photo.id
+                    ? 'Enviando…'
+                    : 'Antecipar retorno'}
                 </Button>
               }
               title="Antecipar o retorno do paciente?"
               description="O retorno do paciente é antecipado com base nesta foto."
               confirmLabel="Confirmar antecipação"
+              variant="success"
               onConfirm={() => triage(photo, 'escalated')}
             />
           </li>
