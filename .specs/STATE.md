@@ -567,3 +567,19 @@ Todos os 5 achados do relatório de arquitetura rodado em 2026-09-06 foram imple
 - **Next step**: nenhum pendente desta sequência. Próximo trabalho depende de nova demanda do usuário ou de decidir se vale investigar #146.
 - **Blockers**: nenhum.
 - **Branch**: `fix/142-toast-locator-e2e-duplicado` (a deletar após squash-merge). PR #148, squash-merged em `main`. Issue #142 fechada via `Closes #142`.
+
+## Sequência `/improve-codebase-architecture` (2026-09-06, 2ª rodada) — EM ANDAMENTO
+
+Novo relatório de arquitetura rodado em 2026-09-06 (hot spots: `container.ts`, `dto.ts`, `configuracoes/page.tsx`), 3 achados viraram issues via `triage-issue`, resolução via `tlc-spec-driven` um por vez.
+
+| # | Achado | Issue | Triagem | PR | Status |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Seam de save de rascunho duplicado em Configurações (2 adapters, não 3 como a issue original citava — `AccountsSection` tem shape diferente) | #150 | ready-for-agent | #152 | ✅ mergeada (squash) |
+| 2 | Grab-bag de DTOs (`src/lib/dto.ts`, ~32 mappers rasos) | #149 | ready-for-agent | — | pendente |
+| 3 | Bag flat de repositórios (`src/infrastructure/container.ts`, 30 props) | #151 | ready-for-human (especulativo, decisão de valer a pena fica com humano) | — | não iniciado |
+
+**#150 — detalhes**: hook `useSavableForm` extraído em `src/lib/use-savable-form.ts`; `ClinicInfoSection` e `ScheduleSection` consumindo. Verifier independente: PASS, 6/6 ACs, sensor 3/3 mutantes mortos. 1 gap não-bloqueante (CFG-SEAM-06, refresh pós-save não asserta refetch diretamente, pré-existente) registrado como lição candidata L-038. E2E flakou em `clinico.spec.ts:110` (issue #146, conhecido) no primeiro run — re-rodado, passou.
+
+- **Next step**: especificar e implementar #149 (`tlc-spec-driven`), mesma pipeline.
+- **Blockers**: nenhum.
+- **Branch**: `refactor/configuracoes-savable-form-seam` (deletada local e remota após squash-merge). PR #152, squash-merged em `main`. Issue #150 fechada via `Closes #150`.
