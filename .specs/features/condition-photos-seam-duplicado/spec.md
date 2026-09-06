@@ -64,19 +64,35 @@ Condition Photo se corrija num lugar só.
 4. WHEN upload excede 5 MB THEN SHALL bloquear antes de qualquer chamada de
    rede, mesmo comportamento atual.
 5. WHEN exclusão usa `DELETE /api/photos/[id]` THEN SHALL usar `apiFetch`
-   (não `fetch` cru), mesmo padrão de `useTriageQueue.triage`.
+   (mesmo padrão de `useTriageQueue.triage`). **Correção de spec** (achado
+   do Verifier): o código pré-refatoração já usava `apiFetch` pra exclusão —
+   este AC não é uma mudança de comportamento introduzida por esta feature,
+   é uma invariante preservada.
 
 **Independent Test**: rodar a suíte existente
-`tests/pages/staff-paciente-detail.test.tsx` § "Cenário: condition-photos"
-sem modificação de asserções (só ajustes mecânicos se algum seletor mudar
-por causa da refatoração) — todos os casos continuam verdes.
+`tests/pages/staff-paciente-detail.test.tsx` § "Cenário: condition-photos".
+A suíte foi estendida (não reescrita) pra fechar um gap real que o sensor de
+mutação do Verifier encontrou: os testes de upload/exclusão bem-sucedidos
+verificavam a chamada de rede e o toast, mas não afirmavam que a lista
+renderizada de fato refletia o novo estado após o `refresh()` — um
+`refresh()` removido silenciosamente não quebrava nenhum teste. Adicionadas
+2 asserções (uma por cenário) confirmando o conteúdo pós-refresh; nenhuma
+asserção existente foi alterada.
 
 ---
 
 ## Edge Cases
 
-- WHEN `photos` ainda não resolveu (nem sucesso nem erro) THEN SHALL mostrar
-  "Carregando fotos…" (equivalente ao `isLoading` de `useApiQuery`).
+- WHEN `photos` ainda não resolveu pela primeira vez (`photos === null`)
+  THEN SHALL mostrar "Carregando fotos…". **Correção de spec** (achado do
+  Verifier): usar `isLoading` do `useApiQuery` em vez de `photos === null`
+  reintroduziria um "flash" — a cada `refresh()` pós-upload/exclusão,
+  `isLoading` volta a `true` mesmo com a lista anterior ainda válida,
+  substituindo a grade de fotos por "Carregando fotos…" por um instante. O
+  código original nunca fazia isso (mantinha a lista visível durante
+  refetch). O gate correto é `photos === null` (só no carregamento inicial,
+  antes de qualquer resposta chegar), preservando o comportamento
+  stale-while-revalidate original.
 - WHEN há erro de carregamento THEN SHALL suprimir tanto "Carregando
   fotos…" quanto "Nenhuma foto registrada." (só o `ErrorAlert` aparece) —
   comportamento já coberto por teste existente.

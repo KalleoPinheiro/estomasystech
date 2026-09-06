@@ -1714,7 +1714,8 @@ describe('Feature: PatientRecordPage', () => {
       );
     });
 
-    it('Dado upload de foto válida, Quando enviado, Então chama POST multipart e recarrega a lista', async () => {
+    it('Dado upload de foto válida, Quando enviado, Então chama POST multipart e a lista passa a mostrar a foto nova', async () => {
+      let uploaded = false;
       const fetchMock = mockFetch(
         buildRouter({
           conditions: [woundConditionFixture],
@@ -1723,7 +1724,14 @@ describe('Feature: PatientRecordPage', () => {
               url === '/api/conditions/cond-wound/photos' &&
               init?.method === 'POST'
             ) {
+              uploaded = true;
               return rawResponse(true, { ok: true });
+            }
+            if (
+              url === '/api/conditions/cond-wound/photos' &&
+              (init?.method ?? 'GET') === 'GET'
+            ) {
+              return jsonResponse(uploaded ? [photoFixture] : []);
             }
             return undefined;
           },
@@ -1759,6 +1767,14 @@ describe('Feature: PatientRecordPage', () => {
       });
       await waitFor(() => expect(input).not.toBeDisabled());
       expect(await screen.findByText('Foto enviada')).toBeInTheDocument();
+      expect(
+        await screen.findByAltText(
+          `Foto de ${formatDate(photoFixture.createdAt)}`,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText('Nenhuma foto registrada.'),
+      ).not.toBeInTheDocument();
     });
 
     it('Dado arquivo maior que 5MB, Quando selecionado, Então exibe erro de validação local sem chamar a API', async () => {
@@ -1821,14 +1837,21 @@ describe('Feature: PatientRecordPage', () => {
       ).toBeInTheDocument();
     });
 
-    it('Dado clique em excluir foto, Quando a chamada é bem-sucedida, Então envia DELETE e recarrega', async () => {
+    it('Dado clique em excluir foto, Quando a chamada é bem-sucedida, Então envia DELETE e a foto some da lista', async () => {
+      let deleted = false;
       const fetchMock = mockFetch(
         buildRouter({
           conditions: [woundConditionFixture],
-          photosByCondition: { 'cond-wound': [photoFixture] },
           extra: ({ url, init }) => {
             if (url === '/api/photos/photo-1' && init?.method === 'DELETE') {
+              deleted = true;
               return jsonResponse({ deleted: true });
+            }
+            if (
+              url === '/api/conditions/cond-wound/photos' &&
+              (init?.method ?? 'GET') === 'GET'
+            ) {
+              return jsonResponse(deleted ? [] : [photoFixture]);
             }
             return undefined;
           },
@@ -1848,6 +1871,9 @@ describe('Feature: PatientRecordPage', () => {
         );
       });
       expect(await screen.findByText('Foto excluída')).toBeInTheDocument();
+      expect(
+        await screen.findByText('Nenhuma foto registrada.'),
+      ).toBeInTheDocument();
     });
 
     it('Dado clique em excluir foto seguido de cancelamento no dialog, Quando acionado, Então não chama a API', async () => {

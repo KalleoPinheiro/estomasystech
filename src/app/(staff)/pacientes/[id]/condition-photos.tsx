@@ -17,16 +17,8 @@ export function ConditionPhotos({
   conditionId,
   canUpload,
 }: ConditionPhotosProps) {
-  const {
-    photos,
-    listError,
-    isLoading,
-    actionError,
-    uploading,
-    refresh,
-    upload,
-    remove,
-  } = useConditionPhotos(conditionId);
+  const { photos, listError, actionError, uploading, refresh, upload, remove } =
+    useConditionPhotos(conditionId);
 
   const list = photos ?? [];
   const chronological = [...list].sort(
@@ -58,7 +50,7 @@ export function ConditionPhotos({
       {listError && <ErrorAlert message={listError} onRetry={refresh} />}
       {actionError && <ErrorAlert message={actionError} />}
 
-      {listError ? null : isLoading ? (
+      {listError ? null : photos === null ? (
         <p className="text-ink-3 text-xs">Carregando fotos…</p>
       ) : list.length === 0 ? (
         <p className="text-ink-3 text-xs">Nenhuma foto registrada.</p>
