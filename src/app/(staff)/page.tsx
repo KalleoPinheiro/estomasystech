@@ -17,6 +17,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
@@ -81,21 +82,25 @@ export default function DashboardPage() {
       label: 'Recebido no mês',
       value: formatCurrency(summary.billing.paidCents),
       href: '/faturamento',
+      tone: 'text-success',
     },
     {
       label: 'A receber',
       value: formatCurrency(summary.billing.pendingCents),
       href: '/faturamento',
+      tone: 'text-warning',
     },
     {
       label: 'Consultas no mês',
       value: String(summary.appointmentsInMonth),
       href: '/agenda',
+      tone: 'text-accent-ink',
     },
     {
       label: 'Faturas pendentes',
       value: String(summary.billing.pendingCount),
       href: '/faturamento',
+      tone: 'text-warning',
     },
   ];
 
@@ -112,7 +117,7 @@ export default function DashboardPage() {
           >
             <Card className="p-5 transition-colors hover:border-accent">
               <p className="text-ink-3 text-sm">{card.label}</p>
-              <p className="mt-1 font-bold text-2xl text-accent-ink">
+              <p className={`mt-1 font-bold text-2xl ${card.tone}`}>
                 {card.value}
               </p>
             </Card>
@@ -247,7 +252,7 @@ function FollowUpsCard({
               </span>
               <Link
                 href={`/agenda?followUpId=${followUp.id}&patientId=${followUp.patientId}&procedure=${encodeURIComponent(followUp.reason.replace(/^Retorno: /, ''))}`}
-                className="shrink-0 font-medium text-accent-ink hover:underline"
+                className="flex min-h-11 shrink-0 items-center font-medium text-accent-ink hover:underline"
               >
                 Agendar
               </Link>
@@ -255,7 +260,7 @@ function FollowUpsCard({
                 type="button"
                 onClick={() => void onResolve(followUp.id, 'done')}
                 variant="link"
-                className="h-auto shrink-0 p-0 text-success"
+                className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-success"
               >
                 Concluir
               </Button>
@@ -264,7 +269,7 @@ function FollowUpsCard({
                   <Button
                     type="button"
                     variant="link"
-                    className="h-auto shrink-0 p-0 text-ink-3"
+                    className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-ink-3"
                   >
                     Cancelar
                   </Button>
@@ -347,9 +352,14 @@ const TRIAGE_ATTENTION_HOURS = 24;
 
 /** Fila de triagem (O4.2): fotos enviadas por pacientes entre consultas. */
 function TriageQueue() {
-  const { data: queue, refresh } =
-    useApiQuery<TriagePhotoDto[]>('/api/photos/triage');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: queue,
+    error: queryError,
+    isLoading,
+    refresh,
+  } = useApiQuery<TriagePhotoDto[]>('/api/photos/triage');
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<TriagePhotoDto | null>(null);
   const { toast } = useToast();
 
   const triage = async (
@@ -366,13 +376,19 @@ function TriageQueue() {
           decision === 'reviewed' ? 'Foto revisada' : 'Foto escalada',
         variant: 'success',
       });
-      setError(null);
+      setActionError(null);
       refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro na triagem');
+      setActionError(err instanceof Error ? err.message : 'Erro na triagem');
     }
   };
 
+  if (isLoading) {
+    return <LoadingIndicator />;
+  }
+  if (queryError) {
+    return <ErrorAlert message={queryError} onRetry={refresh} />;
+  }
   if (!queue || queue.length === 0) {
     return null;
   }
@@ -382,21 +398,27 @@ function TriageQueue() {
         <Icon name="camera" /> Fotos de pacientes aguardando triagem (
         {queue.length})
       </h3>
-      {error && <ErrorAlert message={error} />}
+      {actionError && <ErrorAlert message={actionError} />}
       <ul className="flex flex-col gap-2">
         {queue.map((photo) => (
           <li
             key={photo.id}
             className="flex flex-wrap items-center gap-2 text-sm"
           >
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded border border-border">
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => setPreviewPhoto(photo)}
+              aria-label={`Ampliar foto de ${photo.patientName}`}
+              className="relative h-12 w-12 shrink-0 overflow-hidden rounded border border-border p-0"
+            >
               <Image
                 src={`/api/photos/${photo.id}`}
                 alt={`Foto de ${photo.patientName}`}
                 fill
                 className="object-cover"
               />
-            </div>
+            </Button>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">
                 {photo.patientName} — {photo.conditionTitle}
@@ -439,7 +461,7 @@ function TriageQueue() {
                 <Button
                   type="button"
                   variant="link"
-                  className="h-auto p-0 text-success"
+                  className="h-auto min-h-11 min-w-11 p-0 text-danger"
                 >
                   Ok, manter plano
                 </Button>
@@ -447,6 +469,7 @@ function TriageQueue() {
               title="Manter o plano de cuidados?"
               description="A foto é marcada como revisada sem intervenção. Não há ação de reabrir depois."
               confirmLabel="Confirmar"
+              variant="danger"
               onConfirm={() => triage(photo, 'reviewed')}
             />
             <ConfirmAction
@@ -454,7 +477,7 @@ function TriageQueue() {
                 <Button
                   type="button"
                   variant="link"
-                  className="h-auto p-0 text-danger"
+                  className="h-auto min-h-11 min-w-11 p-0 text-success"
                 >
                   Antecipar retorno
                 </Button>
@@ -462,12 +485,26 @@ function TriageQueue() {
               title="Antecipar o retorno do paciente?"
               description="O retorno do paciente é antecipado com base nesta foto."
               confirmLabel="Confirmar antecipação"
-              variant="danger"
               onConfirm={() => triage(photo, 'escalated')}
             />
           </li>
         ))}
       </ul>
+      {previewPhoto && (
+        <Modal
+          title={`Foto de ${previewPhoto.patientName}`}
+          onClose={() => setPreviewPhoto(null)}
+        >
+          <div className="relative mt-4 aspect-square w-full">
+            <Image
+              src={`/api/photos/${previewPhoto.id}`}
+              alt={`Foto de ${previewPhoto.patientName}`}
+              fill
+              className="rounded object-contain"
+            />
+          </div>
+        </Modal>
+      )}
     </Card>
   );
 }
