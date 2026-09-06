@@ -1,16 +1,11 @@
 'use client';
 
 import { Button, FileInput } from '@still-void/ui/react';
-import { useToast } from '@still-void/ui/react/client';
 import Image from 'next/image';
-import { useCallback, useEffect, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
-import { apiFetch } from '@/lib/client';
-import type { ConditionPhotoDto } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
-
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+import { useConditionPhotos } from '@/lib/use-condition-photos';
 
 interface ConditionPhotosProps {
   conditionId: string;
@@ -22,80 +17,8 @@ export function ConditionPhotos({
   conditionId,
   canUpload,
 }: ConditionPhotosProps) {
-  const { toast } = useToast();
-  const [photos, setPhotos] = useState<ConditionPhotoDto[] | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [version, setVersion] = useState(0);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: version não é lido no corpo — é só o gatilho de refetch usado por load() (retry/upload/remove).
-  useEffect(() => {
-    let cancelled = false;
-    apiFetch<ConditionPhotoDto[]>(`/api/conditions/${conditionId}/photos`)
-      .then((result) => {
-        if (!cancelled) {
-          setPhotos(result);
-          setListError(null);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setListError(
-            err instanceof Error ? err.message : 'Erro ao carregar fotos',
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [conditionId, version]);
-
-  const load = useCallback(() => setVersion((current) => current + 1), []);
-
-  const upload = async (file: File) => {
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setActionError('Imagem excede o limite de 5 MB');
-      return;
-    }
-    setUploading(true);
-    try {
-      const body = new FormData();
-      body.append('file', file);
-      const response = await fetch(`/api/conditions/${conditionId}/photos`, {
-        method: 'POST',
-        body,
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(payload?.error ?? 'Erro ao enviar foto');
-      }
-      toast({ description: 'Foto enviada', variant: 'success' });
-      setActionError(null);
-      load();
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : 'Erro ao enviar foto',
-      );
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const remove = async (photo: ConditionPhotoDto) => {
-    try {
-      await apiFetch(`/api/photos/${photo.id}`, { method: 'DELETE' });
-      toast({ description: 'Foto excluída', variant: 'success' });
-      setActionError(null);
-      load();
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : 'Erro ao excluir foto',
-      );
-    }
-  };
+  const { photos, listError, actionError, uploading, refresh, upload, remove } =
+    useConditionPhotos(conditionId);
 
   const list = photos ?? [];
   const chronological = [...list].sort(
@@ -124,13 +47,11 @@ export function ConditionPhotos({
         )}
       </div>
 
-      {listError && <ErrorAlert message={listError} onRetry={load} />}
+      {listError && <ErrorAlert message={listError} onRetry={refresh} />}
       {actionError && <ErrorAlert message={actionError} />}
 
-      {photos === null ? (
-        listError ? null : (
-          <p className="text-ink-3 text-xs">Carregando fotos…</p>
-        )
+      {listError ? null : photos === null ? (
+        <p className="text-ink-3 text-xs">Carregando fotos…</p>
       ) : list.length === 0 ? (
         <p className="text-ink-3 text-xs">Nenhuma foto registrada.</p>
       ) : (
