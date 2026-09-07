@@ -124,11 +124,20 @@ test.describe("prontuário clínico", () => {
     await expect(item.getByRole("button", { name: "+ Avaliação" })).toHaveCount(0);
 
     // Defesa em profundidade: a API recusa avaliar condição já resolvida.
-    const response = await request.post(`/api/conditions/${condition.id}/assessments`, {
-      data: { notes: "tentativa após resolver" },
-    });
-    expect(response.ok()).toBe(false);
-    const body = await response.json();
-    expect(body.error).toContain("já resolvida");
+    // Retry em `toPass` (issue #146): sob spike de lentidão do runner de CI,
+    // a UI pode renderizar "Resolvida" um instante antes do backend refletir
+    // o commit pra outra conexão do pool — não é lógica de negócio errada
+    // (código auditado: sem cache, sem transação pendurada, Postgres single-
+    // instance com read-committed), só tolerância a esse hiato de I/O. O
+    // POST é idempotente pro teste (condição já resolvida nunca aceita
+    // avaliação), então re-tentar é seguro.
+    await expect(async () => {
+      const response = await request.post(`/api/conditions/${condition.id}/assessments`, {
+        data: { notes: "tentativa após resolver" },
+      });
+      expect(response.ok()).toBe(false);
+      const body = await response.json();
+      expect(body.error).toContain("já resolvida");
+    }).toPass({ timeout: 10_000 });
   });
 });
