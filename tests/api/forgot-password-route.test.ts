@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
+import { buildUserAccount } from '../support/builders';
+import {
+  CLINIC_A_ID,
+  CLINIC_B_ID,
+  ensureTestClinics,
+} from '../support/clinics';
 import {
   spyOnSentEmails,
   tokenFromLastEmail,
@@ -158,6 +163,50 @@ describe('Feature: POST /api/auth/forgot-password', () => {
     );
 
     expect(response.status).toBe(200);
+  });
+
+  it('Dado o mesmo e-mail em duas clínicas diferentes, Quando pedir reset, Então envia um link de reset por conta ativa (issue #155)', async () => {
+    await ensureTestClinics();
+    const { getRepositories } = await import('@/infrastructure/container');
+    const email = 'duplicado-reset@x.com';
+    const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+    await clinicARepos.userAccounts.save(
+      buildUserAccount({ email, clinicId: CLINIC_A_ID }),
+    );
+    const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+    await clinicBRepos.userAccounts.save(
+      buildUserAccount({ email, clinicId: CLINIC_B_ID }),
+    );
+    const emails = spyOnSentEmails();
+
+    const response = await forgot(email);
+
+    expect(response.status).toBe(200);
+    await waitForEmails(emails, 2);
+    expect(emails.bodies).toHaveLength(2);
+    emails.restore();
+  });
+
+  it('Dado o mesmo e-mail em duas clínicas mas uma conta inativa, Quando pedir reset, Então envia link só pra ativa', async () => {
+    await ensureTestClinics();
+    const { getRepositories } = await import('@/infrastructure/container');
+    const email = 'duplicado-reset-inativa@x.com';
+    const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+    await clinicARepos.userAccounts.save(
+      buildUserAccount({ email, clinicId: CLINIC_A_ID }).deactivate(),
+    );
+    const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+    await clinicBRepos.userAccounts.save(
+      buildUserAccount({ email, clinicId: CLINIC_B_ID }),
+    );
+    const emails = spyOnSentEmails();
+
+    const response = await forgot(email);
+
+    expect(response.status).toBe(200);
+    await waitForEmails(emails, 1);
+    expect(emails.bodies).toHaveLength(1);
+    emails.restore();
   });
 
   it('Dado seis pedidos do mesmo IP em um minuto, Quando o sexto chegar, Então responde 429', async () => {

@@ -52,15 +52,22 @@ async function issueResetLink(email: string): Promise<void> {
   try {
     // clinicId nulo: quem pede o reset não tem sessão, logo não há empresa de contexto.
     const services = await getRepositories({ clinicId: null });
-    const account = await services.userAccounts.findByEmail(email);
-    if (!account?.isActive) {
-      return;
-    }
-    await new IssueAuthToken(services.authTokens, services.email).execute({
-      account,
-      purpose: 'reset',
-      appUrl: appUrlFromEnv(),
-    });
+    // MT-06/ADR-003 permite o mesmo e-mail em clínicas diferentes. Sem senha
+    // pra desambiguar (diferente do login, issue #125), emite um link por
+    // conta ativa correspondente: cada e-mail resolve a sua própria conta.
+    const accounts = (await services.userAccounts.findAllByEmail(email)).filter(
+      (account) => account.isActive,
+    );
+    const issueToken = new IssueAuthToken(services.authTokens, services.email);
+    await Promise.all(
+      accounts.map((account) =>
+        issueToken.execute({
+          account,
+          purpose: 'reset',
+          appUrl: appUrlFromEnv(),
+        }),
+      ),
+    );
   } catch (error) {
     console.error('Reset de senha: falha ao emitir o link', error);
   }
