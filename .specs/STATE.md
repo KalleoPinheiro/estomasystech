@@ -600,3 +600,15 @@ Novo relatório de arquitetura rodado em 2026-09-06 (hot spots: `container.ts`, 
 - **Next step**: nenhum agendável sem o usuário — #151 é `ready-for-human` (decisão de valer a pena fica com humano). Próximo trabalho depende de nova demanda ou de decidir #151/#146.
 - **Blockers**: nenhum.
 - **Branches**: `refactor/configuracoes-savable-form-seam` e `refactor/lib-dto-split` (ambas deletadas local e remota após squash-merge). PRs #152 e #153, squash-merged em `main`. Issues #150 e #149 fechadas via `Closes #`.
+
+## Issue #155 — forgot-password reproduz o bug findByEmail+LIMIT 1 (mesma causa da #125) — CONCLUÍDA
+
+Achado pelo security-reviewer durante o review do fix da #125 (fora de escopo daquele diff, instância irmã). `issueResetLink` em `src/app/api/auth/forgot-password/route.ts` chamava `findByEmail` (`.limit(1)` sem `ORDER BY`); com MT-06/ADR-003 permitindo o mesmo e-mail em contas de clínicas diferentes, pegava uma linha arbitrária e gerava o link de reset pra conta errada de forma imprevisível.
+
+**Fix**: troca pra `findAllByEmail`, filtra `isActive`, emite um token de reset (`IssueAuthToken.execute`) por conta ativa correspondente, em paralelo — sem senha pra desambiguar nesse fluxo (diferente do login), cada conta com aquele e-mail recebe seu próprio link. Resposta HTTP continua neutra e sem await do envio (`after()`), sem novo oráculo de enumeração/timing (confirmado por security-reviewer).
+
+Escopo pequeno (auto-sized pelo tlc-spec-driven): sem discuss/design/tasks formais, spec+fix+testes inline. 2 testes novos em `tests/api/forgot-password-route.test.ts` (duas clínicas com e-mail igual → 2 e-mails; uma inativa → 1 e-mail). security-reviewer: sem achados CRITICAL/HIGH.
+
+- **Next step**: nenhum pendente. Nota lateral do mesmo review original (#155): `src/app/api/patients/[id]/evolutions/route.ts:44` tem `findByEmail(subject)` parecido, mas `clinicId` vem de sessão autenticada (não input do atacante) — risco baixo, não virou issue.
+- **Blockers**: nenhum.
+- **Branch**: `fix/forgot-password-email-collision-155` (deletada após squash-merge). PR #157, squash-merged em `main`. Issue #155 fechada via `Fixes #155`.
