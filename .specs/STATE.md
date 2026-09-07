@@ -612,3 +612,17 @@ Escopo pequeno (auto-sized pelo tlc-spec-driven): sem discuss/design/tasks forma
 - **Next step**: nenhum pendente. Nota lateral do mesmo review original (#155): `src/app/api/patients/[id]/evolutions/route.ts:44` tem `findByEmail(subject)` parecido, mas `clinicId` vem de sessão autenticada (não input do atacante) — risco baixo, não virou issue.
 - **Blockers**: nenhum.
 - **Branch**: `fix/forgot-password-email-collision-155` (deletada após squash-merge). PR #157, squash-merged em `main`. Issue #155 fechada via `Fixes #155`.
+
+## Issue #136 — badge de score clínico (PUSH/DET) sem cor por severidade na fila de triagem — CONCLUÍDA
+
+Achado de critique re-run `/impeccable` (P2): `TriagePhotoList` (`src/components/triage-photo-list.tsx`) renderizava o badge de score PUSH/DET com o mesmo estilo visual independente do valor — o dado clínico mais relevante da fila de triagem não influenciava nada além do texto do badge. A própria issue sinalizava que o corte de severidade é decisão clínica, não de design, e pedia validação antes de aplicar threshold.
+
+**Decisão registrada**: sem acesso a um responsável clínico no momento, perguntei ao usuário o corte a usar; escolheu "terços da escala" — PUSH (0–17): 0–5 normal / 6–11 warning / 12–17 danger; DET (0–15, soma calculada em `condition-assessment.ts`): 0–5 normal / 6–10 warning / 11–15 danger. Aproximação **não validada clinicamente**, documentada em comentário no código (`triage-photo-list.tsx:20-22`) — revisitar se/quando houver validação clínica real dos cortes.
+
+**Fix**: função `scoreBadgeClassName` aplica classe de cor (`text-accent-ink`/`text-warning`/`text-danger` + fundo `-soft` correspondente) conforme faixa. Escopo Small (1 arquivo de produção) — sem discuss/design/tasks formais, TDD inline. Teste novo dedicado `tests/components/triage-photo-list.test.tsx` (7 casos: normal/warning/danger nos limites de cada faixa pra PUSH e DET, e ausência de badge sem score).
+
+E2E do PR flakou na 1ª run (timeouts em cascata em `agenda.spec.ts`/`equipe.spec.ts`/`faturamento.spec.ts`, specs sem relação com o diff — suspeita de sobrecarga do runner) — re-run confirmou flake, passou limpo na 2ª.
+
+- **Next step**: nenhum pendente.
+- **Blockers**: nenhum.
+- **Branch**: `fix/136-badge-severidade-push-det` (a deletar após squash-merge, se ainda não deletada). PR #158, squash-merged em `main`. Issue #136 fechada via `Closes #136`.
