@@ -17,6 +17,27 @@ import type { TriageDecision } from '@/lib/use-triage-queue';
 
 const TRIAGE_ATTENTION_HOURS = 24;
 
+// why: cortes por terço da escala (PUSH 0–17, DET 0–15 somado em
+// condition-assessment.ts) — aproximação não validada clinicamente,
+// ver decisão registrada na issue #136.
+const PUSH_WARNING_MIN = 6;
+const PUSH_DANGER_MIN = 12;
+const DET_WARNING_MIN = 6;
+const DET_DANGER_MIN = 11;
+
+function scoreBadgeClassName(
+  score: NonNullable<TriagePhotoDto['latestScore']>,
+) {
+  const [warningMin, dangerMin] =
+    score.kind === 'push'
+      ? [PUSH_WARNING_MIN, PUSH_DANGER_MIN]
+      : [DET_WARNING_MIN, DET_DANGER_MIN];
+
+  if (score.value >= dangerMin) return 'bg-danger-soft text-danger';
+  if (score.value >= warningMin) return 'bg-warning-soft text-warning';
+  return 'bg-sv-surface text-accent-ink';
+}
+
 interface TriagePhotoListProps {
   queue: TriagePhotoDto[];
   actionError: string | null;
@@ -70,7 +91,7 @@ export function TriagePhotoList({
                       <Button
                         type="button"
                         variant="link"
-                        className="ml-2 h-auto rounded bg-sv-surface px-1.5 py-0.5 font-semibold text-accent-ink text-xs no-underline hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-ink focus-visible:outline-offset-2"
+                        className={`ml-2 h-auto rounded px-1.5 py-0.5 font-semibold text-xs no-underline hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-ink focus-visible:outline-offset-2 ${scoreBadgeClassName(photo.latestScore)}`}
                       >
                         {photo.latestScore.kind === 'push' ? 'PUSH' : 'DET'}{' '}
                         {photo.latestScore.value}
