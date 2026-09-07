@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { UserAccount } from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
 import { getRepositories } from '@/infrastructure/container';
 import { fail } from '@/lib/api-response';
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       action: 'read',
       resourceType: 'session',
       resourceId: parsed.data.email,
-      detail: 'invalid_credentials',
+      detail: identity.auditDetail ?? 'invalid_credentials',
       actorOverride: {
         role: 'anonymous',
         id: parsed.data.email,
@@ -103,20 +104,32 @@ type AuthResult =
       clinicId: string | null;
       professionalId: string | null;
     }
-  | { error: string; status: number };
+  | { error: string; status: number; auditDetail?: string };
 
 async function authenticateAccount(
   email: string,
   password: string,
 ): Promise<AuthResult> {
   const { userAccounts } = await getRepositories({ clinicId: null });
-  const account = await userAccounts.findByEmail(email);
-  const isValid =
-    account?.isActive === true &&
-    (await verifyPassword(password, account.passwordHash));
-  if (!isValid || !account) {
+  // MT-06/ADR-003 permite o mesmo e-mail em clínicas diferentes, então mais de
+  // uma conta ativa pode bater aqui — a senha é o critério que desambigua
+  // entre elas (issue #125; findByEmail + LIMIT 1 pegava uma linha arbitrária).
+  const candidates = (await userAccounts.findAllByEmail(email)).filter(
+    (account) => account.isActive,
+  );
+  const matches = await filterByValidPassword(candidates, password);
+
+  if (matches.length === 0) {
     return { error: 'Email ou senha incorretos', status: 401 };
   }
+  if (matches.length > 1) {
+    return {
+      error: 'Email ou senha incorretos',
+      status: 401,
+      auditDetail: 'ambiguous_credentials',
+    };
+  }
+  const account = matches[0];
   // O papel e a empresa vêm sempre da própria conta — nunca um valor fixo por
   // padrão (fix do bug "senha sempre vira admin", RBAC-02/RBAC-04).
   return {
@@ -125,4 +138,19 @@ async function authenticateAccount(
     clinicId: account.clinicId,
     professionalId: account.professionalId,
   };
+}
+
+// hazard: 1 scrypt call por candidata, em paralelo. Response time cresce com
+// candidates.length além do threadpool do libuv (default 4) — vaza pra quem
+// mede timing quantas clínicas compartilham um e-mail. Aceito: caso raro
+// (colisão de e-mail entre clínicas já é exceção), mitigado pelo rate limit
+// de 5/min por IP. Não bloqueia auth, só metadado de contagem de tenants.
+async function filterByValidPassword(
+  candidates: UserAccount[],
+  password: string,
+): Promise<UserAccount[]> {
+  const checks = await Promise.all(
+    candidates.map((account) => verifyPassword(password, account.passwordHash)),
+  );
+  return candidates.filter((_, index) => checks[index]);
 }

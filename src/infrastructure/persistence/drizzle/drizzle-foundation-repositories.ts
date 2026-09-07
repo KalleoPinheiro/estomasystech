@@ -139,6 +139,22 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       : null;
   }
 
+  async findAllByEmail(email: string): Promise<UserAccount[]> {
+    const rows = await this.db
+      .select()
+      .from(userAccounts)
+      .where(
+        withTenant(
+          userAccounts,
+          this.clinicId,
+          eq(userAccounts.email, email.trim().toLowerCase()),
+        ),
+      );
+    return rows.map((row) =>
+      UserAccount.restore({ ...row, role: toUserRole(row.role) }),
+    );
+  }
+
   async findById(id: string): Promise<UserAccount | null> {
     const rows = await this.db
       .select()

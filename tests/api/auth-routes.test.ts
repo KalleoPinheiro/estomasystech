@@ -1,6 +1,11 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildUserAccount } from '../support/builders';
+import {
+  CLINIC_A_ID,
+  CLINIC_B_ID,
+  ensureTestClinics,
+} from '../support/clinics';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
@@ -380,6 +385,134 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
         event.actorId.startsWith('rate-limit-audit-'),
       );
       expect(rateLimitEvents).toHaveLength(5);
+    });
+
+    it('Dado o mesmo e-mail em duas clínicas com senhas diferentes, Quando POST login com a senha da segunda conta, Então autentica a segunda conta, nunca a primeira (issue #125)', async () => {
+      resetAuthEnv();
+      process.env.AUTH_SECRET = 'test-secret-email-duplicado';
+
+      const { getRepositories } = await import('@/infrastructure/container');
+      const { hashPassword } = await import('@/lib/auth/password');
+      const { verifySessionToken } = await import('@/lib/auth/session');
+      const email = 'duplicado@clinica.com';
+      await ensureTestClinics();
+
+      const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+      await clinicARepos.userAccounts.save(
+        buildUserAccount({
+          email,
+          clinicId: CLINIC_A_ID,
+          passwordHash: await hashPassword('senha-da-clinica-a'),
+        }),
+      );
+      const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+      await clinicBRepos.userAccounts.save(
+        buildUserAccount({
+          email,
+          clinicId: CLINIC_B_ID,
+          passwordHash: await hashPassword('senha-da-clinica-b'),
+        }),
+      );
+
+      const response = await loginRoute.POST(
+        jsonRequest(
+          '/api/auth/login',
+          'POST',
+          { email, password: 'senha-da-clinica-b' },
+          { 'x-forwarded-for': '10.0.0.110' },
+        ),
+      );
+      const cookie = response.headers.get('set-cookie') ?? '';
+      const token = cookie.match(/vitta_session=([^;]+)/)?.[1] ?? '';
+      const session = verifySessionToken('test-secret-email-duplicado', token);
+
+      expect(response.status).toBe(200);
+      expect(session?.clinicId).toBe(CLINIC_B_ID);
+    });
+
+    it('Dado o mesmo e-mail e a mesma senha em duas clínicas diferentes, Quando POST login, Então nega login (ambíguo) e registra auditoria com detail ambiguous_credentials (issue #125)', async () => {
+      resetAuthEnv();
+      process.env.AUTH_SECRET = 'test-secret-email-ambiguo';
+
+      const { getRepositories } = await import('@/infrastructure/container');
+      const { hashPassword } = await import('@/lib/auth/password');
+      const email = 'ambiguo@clinica.com';
+      const sharedHash = await hashPassword('senha-compartilhada');
+      await ensureTestClinics();
+
+      const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+      await clinicARepos.userAccounts.save(
+        buildUserAccount({
+          email,
+          clinicId: CLINIC_A_ID,
+          passwordHash: sharedHash,
+        }),
+      );
+      const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+      await clinicBRepos.userAccounts.save(
+        buildUserAccount({
+          email,
+          clinicId: CLINIC_B_ID,
+          passwordHash: sharedHash,
+        }),
+      );
+      const { auditEvents } = await getRepositories({ clinicId: null });
+
+      const response = await loginRoute.POST(
+        jsonRequest(
+          '/api/auth/login',
+          'POST',
+          { email, password: 'senha-compartilhada' },
+          { 'x-forwarded-for': '10.0.0.111' },
+        ),
+      );
+      const body = (await response.json()) as Envelope<null>;
+
+      expect(response.status).toBe(401);
+      expect(body.error).toContain('Email ou senha incorretos');
+      const events = await auditEvents.findAll();
+      const ambiguousEvent = events.find(
+        (event) => event.resourceType === 'session' && event.actorId === email,
+      );
+      expect(ambiguousEvent?.detail).toBe('ambiguous_credentials');
+    });
+
+    it('Dado o mesmo e-mail em duas clínicas mas uma conta inativa, Quando POST login com a senha da conta inativa, Então nega login (só a ativa entra na comparação)', async () => {
+      resetAuthEnv();
+      process.env.AUTH_SECRET = 'test-secret-email-inativa';
+
+      const { getRepositories } = await import('@/infrastructure/container');
+      const { hashPassword } = await import('@/lib/auth/password');
+      const email = 'inativa@clinica.com';
+      await ensureTestClinics();
+
+      const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+      await clinicARepos.userAccounts.save(
+        buildUserAccount({
+          email,
+          clinicId: CLINIC_A_ID,
+          passwordHash: await hashPassword('senha-inativa'),
+        }).deactivate(),
+      );
+      const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+      await clinicBRepos.userAccounts.save(
+        buildUserAccount({
+          email,
+          clinicId: CLINIC_B_ID,
+          passwordHash: await hashPassword('senha-ativa'),
+        }),
+      );
+
+      const response = await loginRoute.POST(
+        jsonRequest(
+          '/api/auth/login',
+          'POST',
+          { email, password: 'senha-inativa' },
+          { 'x-forwarded-for': '10.0.0.112' },
+        ),
+      );
+
+      expect(response.status).toBe(401);
     });
   });
 
