@@ -575,11 +575,15 @@ Novo relatório de arquitetura rodado em 2026-09-06 (hot spots: `container.ts`, 
 | # | Achado | Issue | Triagem | PR | Status |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Seam de save de rascunho duplicado em Configurações (2 adapters, não 3 como a issue original citava — `AccountsSection` tem shape diferente) | #150 | ready-for-agent | #152 | ✅ mergeada (squash) |
-| 2 | Grab-bag de DTOs (`src/lib/dto.ts`, ~32 mappers rasos) | #149 | ready-for-agent | — | pendente |
+| 2 | Grab-bag de DTOs (`src/lib/dto.ts`, ~32 mappers rasos) | #149 | ready-for-agent | #153 | ✅ mergeada (squash) |
 | 3 | Bag flat de repositórios (`src/infrastructure/container.ts`, 30 props) | #151 | ready-for-human (especulativo, decisão de valer a pena fica com humano) | — | não iniciado |
 
 **#150 — detalhes**: hook `useSavableForm` extraído em `src/lib/use-savable-form.ts`; `ClinicInfoSection` e `ScheduleSection` consumindo. Verifier independente: PASS, 6/6 ACs, sensor 3/3 mutantes mortos. 1 gap não-bloqueante (CFG-SEAM-06, refresh pós-save não asserta refetch diretamente, pré-existente) registrado como lição candidata L-038. E2E flakou em `clinico.spec.ts:110` (issue #146, conhecido) no primeiro run — re-rodado, passou.
 
-- **Next step**: especificar e implementar #149 (`tlc-spec-driven`), mesma pipeline.
+**#149 — detalhes**: decisão pré-spec com o usuário — DTOs continuam em `src/lib/dto/` (não `domain/*`, que violaria a camada documentada em `CONTEXT.md`). `src/lib/dto.ts` (845 linhas) virou 17 módulos por aggregate + `src/lib/dto/index.ts` como barrel de compatibilidade; zero dos 102 consumidores de `@/lib/dto` mudou (troca de arquivo por diretório é transparente pro resolver). Verifier independente: PASS limpo, 5/5 ACs, 2808/2808 testes idênticos ao baseline, 3 mappers com lógica computada confirmados byte-idênticos ao original, zero ciclo de import. E2E flakou de novo em `clinico.spec.ts:110` (2ª ocorrência na mesma sessão) — re-rodado, passou.
+
+**Observação sobre #146**: o flake recorreu 2x na mesma sessão (PRs #152 e #153), sempre a mesma asserção (`clinico.spec.ts:130`, bloqueio de avaliação em condição resolvida), sempre passa no re-run. Reforça a suspeita de race condition já registrada na issue; candidato a subir de prioridade se recorrer numa 3ª vez.
+
+- **Next step**: nenhum agendável sem o usuário — #151 é `ready-for-human` (decisão de valer a pena fica com humano). Próximo trabalho depende de nova demanda ou de decidir #151/#146.
 - **Blockers**: nenhum.
-- **Branch**: `refactor/configuracoes-savable-form-seam` (deletada local e remota após squash-merge). PR #152, squash-merged em `main`. Issue #150 fechada via `Closes #150`.
+- **Branches**: `refactor/configuracoes-savable-form-seam` e `refactor/lib-dto-split` (ambas deletadas local e remota após squash-merge). PRs #152 e #153, squash-merged em `main`. Issues #150 e #149 fechadas via `Closes #`.
