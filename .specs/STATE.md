@@ -165,6 +165,10 @@
 
 ## Handoff
 
+- **`fix-146-flaky-condition-resolve-e2e` — CONCLUÍDA** (issue #146). Flake recorrente em `e2e/clinico.spec.ts:110` ("condição resolvida bloqueia novas avaliações"), reportado 2x em PRs #144/#145 sem relação com o domínio de Condition. Auditoria completa da cadeia resolve→assess (`src/app/api/conditions/[id]/route.ts`, `ResolveCondition`, `AddConditionAssessment`, `DrizzleClinicalConditionRepository`, pool `pg`) não achou race real: sem camada de cache, sem transação pendurada, Postgres single-instance em read-committed garante que o PATCH de resolve só responde após commit — as duas ocorrências coincidiram com spikes de lentidão do runner (uma com 5 outras specs falhando junto), confirmando timing de CI e não lógica de negócio errada. Fix: POST de avaliação pós-resolução envolto em `expect(...).toPass()` (retry até 10s) — idempotente, sem enfraquecer a asserção. Branch `fix/146-flaky-condition-resolve-e2e`, PR #154, merged em `main` (`8bf847f`). Issue #146 fechada manualmente (PR body não tinha `Closes #146`).
+- **Next step**: nenhum pendente para esta feature.
+- **Blockers**: nenhum.
+
 - **`eslint-to-biome-migration` — CONCLUÍDA** (issue #107). `npm run lint` migrado de ESLint pro Biome único (lint+format), `biome.json` novo, lint-staged e hook `.claude/hooks/lint-edited-file.sh` atualizados, `eslint`+`eslint-config-next` removidos (286 pacotes). Branch `fix/eslint-to-biome-migration`, PR #109, merged em `main` (`5a133cd`). Issue #107 fechada linkando o PR.
 - **Achado de sessão**: `npx biome check .` (sem pin de versão) baixa/roda binário divergente e reporta falso positivo (2 erros); usar sempre `./node_modules/.bin/biome check .` ou `npm run lint`. Gate real: `./node_modules/.bin/biome check .` → 0 erros, `npm run test` → 167/167 arquivos, 2750/2750 testes, `npm run typecheck` → 0 erros, `npm run check:sv` → OK.
 - **Next step**: nenhum pendente para esta feature.
