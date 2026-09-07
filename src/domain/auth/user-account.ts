@@ -101,6 +101,13 @@ export class UserAccount {
 export interface UserAccountRepository {
   save(account: UserAccount): Promise<void>;
   findByEmail(email: string): Promise<UserAccount | null>;
+  /**
+   * Todas as contas com este e-mail, em qualquer clínica (issue #125). MT-06
+   * permite o mesmo e-mail em empresas diferentes — só o login (que roda sem
+   * clínica de contexto) precisa enxergar todas as candidatas de uma vez para
+   * desambiguar por senha, em vez de pegar uma linha arbitrária.
+   */
+  findAllByEmail(email: string): Promise<UserAccount[]>;
   findById(id: string): Promise<UserAccount | null>;
   findAll(): Promise<UserAccount[]>;
   /**

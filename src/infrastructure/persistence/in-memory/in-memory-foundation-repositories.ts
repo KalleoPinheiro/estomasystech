@@ -53,6 +53,11 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
     return [...this.items.values()].find((a) => a.email === normalized) ?? null;
   }
 
+  async findAllByEmail(email: string): Promise<UserAccount[]> {
+    const normalized = email.trim().toLowerCase();
+    return [...this.items.values()].filter((a) => a.email === normalized);
+  }
+
   async findById(id: string): Promise<UserAccount | null> {
     return this.items.get(id) ?? null;
   }
