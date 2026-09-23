@@ -18,8 +18,13 @@ export async function GET(request: NextRequest) {
   const { session } = guard;
 
   return handleRequest(async () => {
+    // Escopo da sessão do portal: e-mail pode repetir entre empresas (MT-06),
+    // então a busca por e-mail e todo o resto ficam na clínica da conta.
+    const services = await getRepositories({
+      clinicId: session.clinicId ?? null,
+    });
     const { partners, patients, appointments, conditions, assessments } =
-      await getRepositories({ clinicId: null });
+      services;
     const data = await new GetPartnerPortalData(
       partners,
       patients,
@@ -28,16 +33,12 @@ export async function GET(request: NextRequest) {
       assessments,
     ).execute({ email: session.subject });
 
-    recordAudit(
-      (await getRepositories({ clinicId: null })).auditEvents,
-      session,
-      {
-        action: 'read',
-        resourceType: 'portal-partner',
-        resourceId: data.partner.id,
-        detail: `pacientes indicados: ${data.referredPatients.length}`,
-      },
-    );
+    recordAudit(services.auditEvents, session, {
+      action: 'read',
+      resourceType: 'portal-partner',
+      resourceId: data.partner.id,
+      detail: `pacientes indicados: ${data.referredPatients.length}`,
+    });
     return {
       partner: toPartnerDto(data.partner),
       referredPatients: data.referredPatients.map((entry) => ({

@@ -10,6 +10,8 @@ import { auditEvents } from './schema';
 
 function buildConditions(filter: AuditEventFilter): SQL[] {
   const conditions: SQL[] = [];
+  if (filter.clinicId)
+    conditions.push(eq(auditEvents.clinicId, filter.clinicId));
   if (filter.patientId)
     conditions.push(eq(auditEvents.patientId, filter.patientId));
   if (filter.from) conditions.push(gte(auditEvents.occurredAt, filter.from));

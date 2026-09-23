@@ -7,6 +7,7 @@ import type {
 
 function violatesFilter(event: AuditEvent, filter: AuditEventFilter): boolean {
   const checks: boolean[] = [
+    Boolean(filter.clinicId) && event.clinicId !== filter.clinicId,
     Boolean(filter.patientId) && event.patientId !== filter.patientId,
     Boolean(filter.from) &&
       event.occurredAt.getTime() < (filter.from as Date).getTime(),

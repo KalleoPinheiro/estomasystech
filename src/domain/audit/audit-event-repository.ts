@@ -1,6 +1,8 @@
 import type { AuditEvent } from './audit-event';
 
 export interface AuditEventFilter {
+  /** Escopo por empresa — ausente só na visão cross-empresa do papel de sistema. */
+  clinicId?: string;
   patientId?: string;
   from?: Date;
   to?: Date;

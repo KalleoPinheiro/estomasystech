@@ -36,8 +36,10 @@ export async function GET(request: NextRequest) {
       now.getDate() + 1,
     );
 
+    // Escopo da sessão: o painel de uma empresa nunca soma faturamento nem
+    // lista consultas (com nome de paciente) de outra.
     const { appointments, patients, invoices } = await getRepositories({
-      clinicId: null,
+      clinicId: guard.session?.clinicId ?? null,
     });
     const [billing, monthStats, todayAppointments] = await Promise.all([
       new GetBillingSummary(invoices).execute({ from, to }),

@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
+import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
 
@@ -24,7 +25,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { procedureKits } = await getRepositories({ clinicId: null });
+    // `procedure_supplies` não tem clinic_id: o escopo vem do procedimento —
+    // kit só é visível se o procedimento pertence à empresa da sessão.
+    const { procedureKits, procedures } = await getRepositories({
+      clinicId: guard.session?.clinicId ?? null,
+    });
+    if (!(await procedures.findById(id))) {
+      throw new NotFoundError('Procedimento', id);
+    }
     return { items: await procedureKits.getKit(id) };
   });
 }
@@ -36,13 +44,22 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = kitSchema.parse(await request.json());
-    const { procedureKits, procedures } = await getRepositories({
-      clinicId: null,
+    const { procedureKits, procedures, supplies } = await getRepositories({
+      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
     });
 
     const procedure = await procedures.findById(id);
     if (!procedure) {
       throw new NotFoundError('Procedimento', id);
+    }
+    // Insumo de outra empresa não entra no kit (a baixa automática debitaria
+    // o estoque dela ao concluir a consulta).
+    const found = await Promise.all(
+      body.items.map((item) => supplies.findById(item.supplyId)),
+    );
+    const missing = body.items.find((_, index) => !found[index]);
+    if (missing) {
+      throw new NotFoundError('Insumo', missing.supplyId);
     }
 
     await procedureKits.setKit(id, body.items);
