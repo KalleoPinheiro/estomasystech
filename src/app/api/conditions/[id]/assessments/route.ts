@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { AddConditionAssessment } from '@/application/clinical/add-condition-assessment';
 import { EXUDATE_LEVELS } from '@/domain/clinical/condition-assessment';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toAssessmentDto } from '@/lib/dto';
 
 const detArea = z.number().int().min(0).max(3).nullish();
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { assessments, conditions, auditEvents } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { assessments, conditions, auditEvents } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const [result, condition] = await Promise.all([
       assessments.findByConditionId(id),
       conditions.findById(id),
@@ -63,9 +63,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = assessmentSchema.parse(await request.json());
-    const { assessments, conditions, auditEvents } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { assessments, conditions, auditEvents } = await getRepositories(
+      writeScope(guard.session),
+    );
     const assessment = await new AddConditionAssessment(
       assessments,
       conditions,

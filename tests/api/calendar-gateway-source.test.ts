@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { encryptSecret } from '@/lib/auth/crypto';
+import { systemScope } from '@/lib/auth/tenant-scope';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
@@ -25,7 +26,7 @@ describe('Feature: Origem da credencial do Google Agenda', () => {
 
   it('Dado uma credencial conectada e nenhuma allowlist, Quando montar os serviços, Então o gateway de agenda está habilitado', async () => {
     const { getRepositories } = await import('@/infrastructure/container');
-    const { googleAccounts } = await getRepositories({ clinicId: null });
+    const { googleAccounts } = await getRepositories(systemScope());
     await googleAccounts.save({
       email: 'equipe-agenda@clinica.com',
       encryptedRefreshToken: encryptSecret(
@@ -37,7 +38,7 @@ describe('Feature: Origem da credencial do Google Agenda', () => {
 
     // Chave de cache do gateway inclui o instante da conexão, então a nova
     // credencial força a reconstrução na próxima montagem.
-    const { calendar } = await getRepositories({ clinicId: null });
+    const { calendar } = await getRepositories(systemScope());
 
     expect(calendar.constructor.name).toBe('GoogleCalendarGateway');
   });
@@ -52,7 +53,7 @@ describe('Feature: Origem da credencial do Google Agenda', () => {
     delete process.env.GOOGLE_CALENDAR_ID;
 
     const { getRepositories } = await import('@/infrastructure/container');
-    const { calendar } = await getRepositories({ clinicId: null });
+    const { calendar } = await getRepositories(systemScope());
 
     expect(calendar.constructor.name).toBe('NullCalendarGateway');
   });

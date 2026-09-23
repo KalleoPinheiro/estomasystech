@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { buildUserAccount } from '../support/builders';
 import {
   CLINIC_A_ID,
@@ -114,7 +115,7 @@ describe('Feature: POST /api/auth/forgot-password', () => {
   it('Dado uma conta desativada, Quando pedir reset, Então responde 200 sem enviar e-mail', async () => {
     await createAccount('inativa-reset@x.com');
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { userAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
     const account = await userAccounts.findByEmail('inativa-reset@x.com');
     if (!account) throw new Error('Conta não encontrada');
     await userAccounts.save(account.deactivate());
@@ -169,11 +170,11 @@ describe('Feature: POST /api/auth/forgot-password', () => {
     await ensureTestClinics();
     const { getRepositories } = await import('@/infrastructure/container');
     const email = 'duplicado-reset@x.com';
-    const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+    const clinicARepos = await getRepositories(clinicScope(CLINIC_A_ID));
     await clinicARepos.userAccounts.save(
       buildUserAccount({ email, clinicId: CLINIC_A_ID }),
     );
-    const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+    const clinicBRepos = await getRepositories(clinicScope(CLINIC_B_ID));
     await clinicBRepos.userAccounts.save(
       buildUserAccount({ email, clinicId: CLINIC_B_ID }),
     );
@@ -191,11 +192,11 @@ describe('Feature: POST /api/auth/forgot-password', () => {
     await ensureTestClinics();
     const { getRepositories } = await import('@/infrastructure/container');
     const email = 'duplicado-reset-inativa@x.com';
-    const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+    const clinicARepos = await getRepositories(clinicScope(CLINIC_A_ID));
     await clinicARepos.userAccounts.save(
       buildUserAccount({ email, clinicId: CLINIC_A_ID }).deactivate(),
     );
-    const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+    const clinicBRepos = await getRepositories(clinicScope(CLINIC_B_ID));
     await clinicBRepos.userAccounts.save(
       buildUserAccount({ email, clinicId: CLINIC_B_ID }),
     );

@@ -10,6 +10,7 @@ import {
 import { createOAuthClient } from '@/lib/auth/google-oauth-client';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { getAuthConfig, type Session } from '@/lib/auth/session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 
 /** Base pública p/ redirects: a URL interna do container não é acessível ao navegador. */
 const publicBaseUrl = (request: NextRequest): string =>
@@ -101,9 +102,7 @@ async function persistCalendarCredential(
   }
 
   // Titular da credencial é a sessão nativa, não uma identidade do Google.
-  const { googleAccounts } = await getRepositories({
-    clinicId: owner.clinicId,
-  });
+  const { googleAccounts } = await getRepositories(sessionScope(owner));
   await googleAccounts.save({
     email: owner.subject,
     encryptedRefreshToken: encryptSecret(tokens.refresh_token, secret),

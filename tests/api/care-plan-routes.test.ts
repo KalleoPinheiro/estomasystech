@@ -4,6 +4,7 @@ import { NursingIntervention } from '@/domain/taxonomy/nursing-intervention';
 import { NursingOutcome } from '@/domain/taxonomy/nursing-outcome';
 import { TaxonomyLinkage } from '@/domain/taxonomy/taxonomy-linkage';
 import { getRepositories } from '@/infrastructure/container';
+import { systemScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest } from '../support/request';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -74,7 +75,7 @@ describe('Feature: Rotas do plano de cuidados (SAE) e catálogo de taxonomias', 
       nursingOutcomes,
       nursingInterventions,
       taxonomyLinkages,
-    } = await getRepositories({ clinicId: null });
+    } = await getRepositories(systemScope());
     await nursingDiagnoses.save(
       NursingDiagnosis.create({
         code: '00046',

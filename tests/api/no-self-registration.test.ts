@@ -2,6 +2,7 @@ import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
+import { systemScope } from '@/lib/auth/tenant-scope';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
@@ -56,7 +57,7 @@ describe('Feature: Ausência de rota de auto-cadastro (RBAC-14)', () => {
     expect(response.status).toBe(401);
 
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: null });
+    const { userAccounts } = await getRepositories(systemScope());
     expect(await userAccounts.findByEmail(email)).toBeNull();
   });
 });

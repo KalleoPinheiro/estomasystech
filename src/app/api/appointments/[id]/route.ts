@@ -9,9 +9,9 @@ import { RescheduleAppointment } from '@/application/appointments/reschedule-app
 import { DispenseProcedureKit } from '@/application/inventory/dispense-procedure-kit';
 import { RegisterStockMovement } from '@/application/inventory/register-stock-movement';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 
@@ -36,9 +36,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { appointments, patients } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { appointments, patients } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const appointment = await appointments.findById(id);
     if (!appointment) {
       return null;
@@ -55,9 +55,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = actionSchema.parse(await request.json());
-    const services = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const services = await getRepositories(writeScope(guard.session));
     const { appointments } = services;
 
     if (body.action === 'complete') {

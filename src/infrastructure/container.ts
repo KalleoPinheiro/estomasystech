@@ -53,6 +53,7 @@ import type {
 import { decryptSecret } from '@/lib/auth/crypto';
 import { googleCalendarOAuthConfigFromEnv } from '@/lib/auth/google-calendar-oauth';
 import { getAuthConfig } from '@/lib/auth/session';
+import type { TenantScope } from '@/lib/auth/tenant-scope';
 import {
   GoogleCalendarGateway,
   googleCalendarConfigFromEnv,
@@ -234,13 +235,11 @@ function buildMessagingGateway(): MessagingGateway {
   return config ? new MetaWhatsAppGateway(config) : new NullMessagingGateway();
 }
 
-export interface TenantContext {
-  clinicId: string | null;
-}
-
-export async function getRepositories(
-  tenant: TenantContext,
-): Promise<Services> {
+/**
+ * O escopo vem só das fábricas de `@/lib/auth/tenant-scope` (sessionScope,
+ * writeScope, clinicScope, systemScope) — objeto literal não compila.
+ */
+export async function getRepositories(tenant: TenantScope): Promise<Services> {
   const db = await getDb();
   const calendar = await buildCalendarGateway(db, tenant.clinicId);
   const auth = getAuthConfig();

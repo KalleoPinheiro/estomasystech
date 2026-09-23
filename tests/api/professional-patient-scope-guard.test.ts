@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getRepositories } from '@/infrastructure/container';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
@@ -95,9 +96,9 @@ describe('Feature: Guarda de vínculo Profissional-Paciente nas rotas clínicas 
         `com-vinculo-${Math.random()}@x.com`,
       );
 
-      const { professionalPatientLinks } = await getRepositories({
-        clinicId: CLINIC_A_ID,
-      });
+      const { professionalPatientLinks } = await getRepositories(
+        clinicScope(CLINIC_A_ID),
+      );
       await professionalPatientLinks.ensureLink(professionalId, patientId);
 
       const route = await import(specifier);

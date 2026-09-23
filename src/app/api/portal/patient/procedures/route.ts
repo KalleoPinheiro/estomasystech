@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requirePortalSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import { toProcedureDto } from '@/lib/dto';
 
 /**
@@ -14,9 +15,7 @@ export async function GET(request: NextRequest) {
 
   return handleRequest(async () => {
     // Catálogo da clínica do paciente, não o de todas as empresas.
-    const { procedures } = await getRepositories({
-      clinicId: guard.session.clinicId ?? null,
-    });
+    const { procedures } = await getRepositories(sessionScope(guard.session));
     const catalog = await procedures.findAll();
     return catalog
       .filter((procedure) => procedure.isActive)

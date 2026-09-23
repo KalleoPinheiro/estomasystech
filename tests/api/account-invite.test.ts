@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
@@ -141,7 +142,7 @@ describe('Feature: Cadastro de conta dispara convite por e-mail', () => {
     expect(json.data.delivered).toBe(false);
     expect(errors).toHaveBeenCalled();
 
-    const services = await getRepositories({ clinicId: CLINIC_A_ID });
+    const services = await getRepositories(clinicScope(CLINIC_A_ID));
     const stored =
       await services.userAccounts.findByEmail('envio-falhou@x.com');
     expect(stored).not.toBeNull();

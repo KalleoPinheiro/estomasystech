@@ -5,10 +5,14 @@ import {
   validateScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import {
+  clinicScope,
+  writeClinicId,
+  writeScope,
+} from '@/lib/auth/tenant-scope';
 
 const configSchema = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
@@ -22,9 +26,7 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   return handleRequest(async () => {
-    const { scheduleConfig } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { scheduleConfig } = await getRepositories(writeScope(guard.session));
     const config = await scheduleConfig.get();
     return {
       config: config ?? DEFAULT_SCHEDULE_CONFIG,
@@ -39,8 +41,10 @@ export async function PUT(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = configSchema.parse(await request.json());
-    const clinicId = guard.session?.clinicId ?? LEGACY_CLINIC_ID;
-    const { scheduleConfig, auditEvents } = await getRepositories({ clinicId });
+    const clinicId = writeClinicId(guard.session);
+    const { scheduleConfig, auditEvents } = await getRepositories(
+      clinicScope(clinicId),
+    );
     const validated = validateScheduleConfig(body);
     await scheduleConfig.save(validated);
     recordAudit(auditEvents, guard.session, {

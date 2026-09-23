@@ -2,10 +2,10 @@ import type { NextRequest } from 'next/server';
 import { AddConditionPhoto } from '@/application/clinical/add-condition-photo';
 import { MAX_PHOTO_BYTES } from '@/domain/clinical/condition-photo';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toConditionPhotoDto } from '@/lib/dto';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -16,9 +16,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { conditionPhotos, conditions, auditEvents } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { conditionPhotos, conditions, auditEvents } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const [photos, condition] = await Promise.all([
       conditionPhotos.findByConditionId(id),
       conditions.findById(id),
@@ -51,9 +51,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { conditionPhotos, conditions, photoStorage, auditEvents } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
     const photo = await new AddConditionPhoto(
       conditionPhotos,
       conditions,

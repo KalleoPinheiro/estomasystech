@@ -4,12 +4,16 @@ import { AddEvolutionNote } from '@/application/clinical/add-evolution-note';
 import { ListEvolutionNotes } from '@/application/clinical/list-evolution-notes';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import type { Session } from '@/lib/auth/session';
+import {
+  clinicScope,
+  sessionScope,
+  writeClinicId,
+} from '@/lib/auth/tenant-scope';
 import { toEvolutionNoteDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
 
@@ -55,9 +59,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const { evolutions, auditEvents, professionalPatientLinks } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? null,
-      });
+      await getRepositories(sessionScope(guard.session));
     await assertPatientAccessibleToProfessional(
       guard.session,
       id,
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 export async function POST(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
-  const clinicId = guard.session?.clinicId ?? LEGACY_CLINIC_ID;
+  const clinicId = writeClinicId(guard.session);
 
   return handleRequest(async () => {
     const { id } = await context.params;
@@ -90,7 +92,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       auditEvents,
       userAccounts,
       professionalPatientLinks,
-    } = await getRepositories({ clinicId });
+    } = await getRepositories(clinicScope(clinicId));
     const { session } = guard;
     await assertPatientAccessibleToProfessional(
       session,

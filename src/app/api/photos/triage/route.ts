@@ -4,6 +4,7 @@ import type { ConditionAssessment } from '@/domain/clinical/condition-assessment
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 
 const MS_PER_HOUR = 3_600_000;
 
@@ -30,9 +31,7 @@ export async function GET(request: NextRequest) {
 
   return handleRequest(async () => {
     const { conditionPhotos, conditions, patients, assessments } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? null,
-      });
+      await getRepositories(sessionScope(guard.session));
     const pending = await conditionPhotos.findPendingTriage();
 
     const conditionIds = [

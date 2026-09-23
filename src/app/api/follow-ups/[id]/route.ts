@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { SetFollowUpStatus } from '@/application/followups/set-follow-up-status';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toFollowUpDto } from '@/lib/dto';
 
 const patchSchema = z.object({ status: z.enum(['done', 'cancelled']) });
@@ -18,9 +18,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = patchSchema.parse(await request.json());
-    const { followUps } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { followUps } = await getRepositories(writeScope(guard.session));
     return toFollowUpDto(
       await new SetFollowUpStatus(followUps).execute({
         id,

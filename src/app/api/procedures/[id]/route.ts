@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toProcedureDto } from '@/lib/dto';
 
 const updateSchema = z.object({
@@ -23,9 +23,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = updateSchema.parse(await request.json());
-    const { procedures } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { procedures } = await getRepositories(writeScope(guard.session));
 
     const existing = await procedures.findById(id);
     if (!existing) {

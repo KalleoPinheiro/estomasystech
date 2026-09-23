@@ -2,10 +2,10 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ScheduleOwnAppointment } from '@/application/portal/schedule-own-appointment';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requirePortalSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toPortalAppointmentDto } from '@/lib/dto';
 
@@ -23,9 +23,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = scheduleSchema.parse(await request.json());
-    const services = await getRepositories({
-      clinicId: session.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const services = await getRepositories(writeScope(session));
 
     const appointment = await new ScheduleOwnAppointment(
       services.patients,

@@ -5,11 +5,15 @@ import { sendInvite } from '@/application/auth/send-invite';
 import { USER_ROLES } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import {
+  clinicScope,
+  sessionScope,
+  writeClinicId,
+} from '@/lib/auth/tenant-scope';
 import { toUserAccountDto } from '@/lib/dto';
 
 const createSchema = z
@@ -34,9 +38,7 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   return handleRequest(async () => {
-    const { userAccounts } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { userAccounts } = await getRepositories(sessionScope(guard.session));
     const accounts = await userAccounts.findAll();
     return accounts.map(toUserAccountDto);
   });
@@ -56,10 +58,10 @@ export async function POST(request: NextRequest) {
 
     const targetClinicId =
       actor.role === 'super_admin'
-        ? (body.clinicId ?? LEGACY_CLINIC_ID)
-        : (actor.clinicId ?? LEGACY_CLINIC_ID);
+        ? writeClinicId({ clinicId: body.clinicId ?? null })
+        : writeClinicId(actor);
 
-    const services = await getRepositories({ clinicId: targetClinicId });
+    const services = await getRepositories(clinicScope(targetClinicId));
     const { userAccounts, professionals, auditEvents } = services;
 
     if (body.professionalId) {

@@ -5,9 +5,9 @@ import { SessionPackage } from '@/domain/billing/package';
 import { NotFoundError } from '@/domain/shared/errors';
 import { Money } from '@/domain/shared/money';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 
 const createSchema = z.object({
   patientId: z.string().min(1),
@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
     if (!patientId) {
       return [];
     }
-    const { sessionPackages, procedures } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { sessionPackages, procedures } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const packages = await sessionPackages.findByPatientId(patientId);
     const catalog = await procedures.findAll();
     const nameById = new Map(catalog.map((p) => [p.id, p.name]));
@@ -60,9 +60,7 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
     const { sessionPackages, patients, procedures, invoices } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
 
     const [patient, procedure] = await Promise.all([
       patients.findById(body.patientId),

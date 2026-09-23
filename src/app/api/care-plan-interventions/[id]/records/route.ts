@@ -2,10 +2,10 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { RecordIntervention } from '@/application/clinical/record-intervention';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toInterventionRecordDto } from '@/lib/dto';
 
 const recordSchema = z.object({
@@ -27,9 +27,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       carePlanInterventions,
       carePlans,
       auditEvents,
-    } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    } = await getRepositories(writeScope(guard.session));
     const record = await new RecordIntervention(
       interventionRecords,
       carePlanInterventions,

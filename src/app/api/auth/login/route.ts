@@ -15,6 +15,7 @@ import {
   SESSION_TTL_MS,
   sessionCookieOptions,
 } from '@/lib/auth/session';
+import { systemScope } from '@/lib/auth/tenant-scope';
 
 const LOGIN_RATE_LIMIT = new RateLimiter(5, 60_000);
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     return fail('Credenciais inválidas', 401);
   }
 
-  const { auditEvents } = await getRepositories({ clinicId: null });
+  const { auditEvents } = await getRepositories(systemScope());
   const identity = await authenticateAccount(
     parsed.data.email,
     parsed.data.password,
@@ -110,7 +111,7 @@ async function authenticateAccount(
   email: string,
   password: string,
 ): Promise<AuthResult> {
-  const { userAccounts } = await getRepositories({ clinicId: null });
+  const { userAccounts } = await getRepositories(systemScope());
   // MT-06/ADR-003 permite o mesmo e-mail em clínicas diferentes, então mais de
   // uma conta ativa pode bater aqui — a senha é o critério que desambigua
   // entre elas (issue #125; findByEmail + LIMIT 1 pegava uma linha arbitrária).

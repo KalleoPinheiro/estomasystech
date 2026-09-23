@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 
 const kitSchema = z.object({
   items: z
@@ -27,9 +27,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     // `procedure_supplies` não tem clinic_id: o escopo vem do procedimento —
     // kit só é visível se o procedimento pertence à empresa da sessão.
-    const { procedureKits, procedures } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { procedureKits, procedures } = await getRepositories(
+      sessionScope(guard.session),
+    );
     if (!(await procedures.findById(id))) {
       throw new NotFoundError('Procedimento', id);
     }
@@ -44,9 +44,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = kitSchema.parse(await request.json());
-    const { procedureKits, procedures, supplies } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { procedureKits, procedures, supplies } = await getRepositories(
+      writeScope(guard.session),
+    );
 
     const procedure = await procedures.findById(id);
     if (!procedure) {

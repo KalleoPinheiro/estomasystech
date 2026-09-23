@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
+import { systemScope } from '@/lib/auth/tenant-scope';
 import {
   CLINIC_A_ID,
   CLINIC_B_ID,
@@ -107,7 +108,7 @@ describe('Feature: Isolamento de Paciente por empresa (piloto multi-tenancy, MT-
 
     // `after()` roda fire-and-forget: espera o evento aparecer em vez de
     // apostar num sleep fixo (padrão já usado em tests/api/portal-routes.test.ts).
-    const { auditEvents } = await getRepositories({ clinicId: null });
+    const { auditEvents } = await getRepositories(systemScope());
     const findReadEvent = async () => {
       for (let attempt = 0; attempt < 20; attempt += 1) {
         const events = await auditEvents.findAll({ patientId: patientBId });

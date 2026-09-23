@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { INVALID_TOKEN_MESSAGE } from '@/application/auth/auth-token-flow';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import {
   spyOnSentEmails,
@@ -168,7 +169,7 @@ describe('Feature: POST /api/auth/set-password', () => {
   it('Dado uma conta desativada, Quando usar o convite dela, Então responde 400 com a mensagem de link inválido', async () => {
     const token = await inviteFor('conta-inativa@x.com');
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { userAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
     const account = await userAccounts.findByEmail('conta-inativa@x.com');
     if (!account) throw new Error('Conta não encontrada');
     await userAccounts.save(account.deactivate());
@@ -183,7 +184,7 @@ describe('Feature: POST /api/auth/set-password', () => {
   it("Dado consumo de token de convite, Quando definir a senha, Então registra evento de auditoria com detail 'invite' (#71)", async () => {
     const token = await inviteFor('audit-invite@x.com');
     const { getRepositories } = await import('@/infrastructure/container');
-    const { auditEvents } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
 
     const response = await setPassword(token, 'senha-forte-audit-1');
 
@@ -204,9 +205,9 @@ describe('Feature: POST /api/auth/set-password', () => {
     await setPassword(inviteToken, 'senha-forte-audit-2');
 
     const { getRepositories } = await import('@/infrastructure/container');
-    const { authTokens, userAccounts, auditEvents } = await getRepositories({
-      clinicId: CLINIC_A_ID,
-    });
+    const { authTokens, userAccounts, auditEvents } = await getRepositories(
+      clinicScope(CLINIC_A_ID),
+    );
     const { AuthToken } = await import('@/domain/auth/auth-token');
     const account = await userAccounts.findByEmail('audit-reset@x.com');
     if (!account) throw new Error('Conta não encontrada');
@@ -233,7 +234,7 @@ describe('Feature: POST /api/auth/set-password', () => {
 
   it('Dado token inválido/expirado, Quando definir a senha, Então não registra evento de auditoria (#71)', async () => {
     const { getRepositories } = await import('@/infrastructure/container');
-    const { auditEvents } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
     const before = (await auditEvents.findAll()).length;
 
     const response = await setPassword(

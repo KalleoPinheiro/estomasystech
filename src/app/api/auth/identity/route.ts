@@ -3,6 +3,7 @@ import { getRepositories } from '@/infrastructure/container';
 import { handleRequest, ok } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { staffRoleLabel } from '@/lib/auth/role-labels';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import type { SidebarIdentityDto } from '@/lib/dto';
 
 const SYSTEM_ACCOUNT_LABEL = 'Conta de sistema';
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   return handleRequest(async () => {
-    const { clinics } = await getRepositories({ clinicId: session.clinicId });
+    const { clinics } = await getRepositories(sessionScope(session));
     const clinic = await clinics.findById(session.clinicId as string);
     return {
       clinicLabel: clinic ? clinic.name : 'Clínica não encontrada',

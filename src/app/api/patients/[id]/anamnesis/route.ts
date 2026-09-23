@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { GetAnamnesis } from '@/application/clinical/get-anamnesis';
 import { UpsertAnamnesis } from '@/application/clinical/upsert-anamnesis';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toAnamnesisDto } from '@/lib/dto';
 
 const anamnesisSchema = z.object({
@@ -27,9 +27,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const { anamneses, auditEvents, professionalPatientLinks } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? null,
-      });
+      await getRepositories(sessionScope(guard.session));
     await assertPatientAccessibleToProfessional(
       guard.session,
       id,
@@ -56,9 +54,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = anamnesisSchema.parse(await request.json());
     const { anamneses, patients, auditEvents, professionalPatientLinks } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
     await assertPatientAccessibleToProfessional(
       guard.session,
       id,

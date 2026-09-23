@@ -9,6 +9,7 @@ import { fail, handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { RateLimiter } from '@/lib/auth/rate-limit';
+import { systemScope } from '@/lib/auth/tenant-scope';
 
 /** Mesmo limite do login: adivinhar um token é força bruta como qualquer outra. */
 const SET_PASSWORD_RATE_LIMIT = new RateLimiter(5, 60_000);
@@ -31,9 +32,9 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = schema.parse(await request.json());
     // clinicId nulo: o consumo acontece antes da sessão, sem empresa de contexto.
-    const { authTokens, userAccounts, auditEvents } = await getRepositories({
-      clinicId: null,
-    });
+    const { authTokens, userAccounts, auditEvents } = await getRepositories(
+      systemScope(),
+    );
     const result = await new ConsumeAuthToken(authTokens, userAccounts).execute(
       {
         secret: body.token,

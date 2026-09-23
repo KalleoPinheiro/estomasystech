@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import type { CalendarIntegrationStatusDto } from '@/lib/dto';
 import {
   CLINIC_A_ID,
@@ -43,7 +44,7 @@ describe('Feature: Status da conexão do Google Agenda (issue #124)', () => {
   it('Dada clínica com conta conectada, Quando GET, Então connected é true com e-mail e data', async () => {
     await ensureTestClinics();
     const { getRepositories } = await import('@/infrastructure/container');
-    const { googleAccounts } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { googleAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
     const connectedAt = new Date('2026-08-01T12:00:00.000Z');
     await googleAccounts.save({
       email: 'agenda@clinica.com',
@@ -72,7 +73,7 @@ describe('Feature: Status da conexão do Google Agenda (issue #124)', () => {
   it('Dados de uma clínica conectados, Quando outra clínica busca o status, Então não vaza entre empresas (MT-06)', async () => {
     await ensureTestClinics();
     const { getRepositories } = await import('@/infrastructure/container');
-    const { googleAccounts } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { googleAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
     await googleAccounts.save({
       email: 'so-clinica-a@clinica.com',
       encryptedRefreshToken: 'cipher-text',
@@ -120,9 +121,9 @@ describe('Feature: Status da conexão do Google Agenda (issue #124)', () => {
     const schema = await import('@/infrastructure/persistence/drizzle/schema');
     await (await getDb()).delete(schema.googleAccounts);
     const { getRepositories } = await import('@/infrastructure/container');
-    const { googleAccounts: systemAccounts } = await getRepositories({
-      clinicId: null,
-    });
+    const { googleAccounts: systemAccounts } = await getRepositories(
+      systemScope(),
+    );
     const connectedAt = new Date('2026-08-05T09:00:00.000Z');
     await systemAccounts.save({
       email: 'root@vitta.com',

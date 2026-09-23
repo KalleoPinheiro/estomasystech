@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import {
   CLINIC_A_ID,
   CLINIC_B_ID,
@@ -143,9 +144,7 @@ describe('Feature: Isolamento de Nota de Evolução por empresa (MT-19)', () => 
     delete process.env.AUTH_SECRET;
     try {
       const { getRepositories } = await import('@/infrastructure/container');
-      await expect(
-        getRepositories({ clinicId: CLINIC_A_ID }),
-      ).rejects.toThrow();
+      await expect(getRepositories(clinicScope(CLINIC_A_ID))).rejects.toThrow();
     } finally {
       process.env.AUTH_SECRET = original;
     }
@@ -153,7 +152,7 @@ describe('Feature: Isolamento de Nota de Evolução por empresa (MT-19)', () => 
 
   it('Dado AUTH_SECRET configurado, Quando getRepositories constrói os repositórios clínicos cifrados, Então funcionam normalmente (regressão zero)', async () => {
     const { getRepositories } = await import('@/infrastructure/container');
-    const repos = await getRepositories({ clinicId: CLINIC_A_ID });
+    const repos = await getRepositories(clinicScope(CLINIC_A_ID));
 
     expect(repos.evolutions).toBeDefined();
     expect(repos.conditions).toBeDefined();

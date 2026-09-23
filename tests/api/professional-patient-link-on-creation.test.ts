@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { getRepositories } from '@/infrastructure/container';
 import { DrizzleProfessionalPatientLinkRepository } from '@/infrastructure/persistence/drizzle/professional-patient-link-repository';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -24,7 +25,7 @@ describe('Feature: Profissional que cadastra paciente ganha vínculo imediato (R
       'prof-link-1',
     );
 
-    const { professionals } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { professionals } = await getRepositories(clinicScope(CLINIC_A_ID));
     await professionals.save(
       (await import('@/domain/professional/professional')).Professional.restore(
         {
@@ -53,9 +54,9 @@ describe('Feature: Profissional que cadastra paciente ganha vínculo imediato (R
     const body = (await response.json()) as Envelope<{ id: string }>;
     expect(response.status).toBe(200);
 
-    const { professionalPatientLinks } = await getRepositories({
-      clinicId: CLINIC_A_ID,
-    });
+    const { professionalPatientLinks } = await getRepositories(
+      clinicScope(CLINIC_A_ID),
+    );
     expect(
       await professionalPatientLinks.hasLink('prof-link-1', body.data.id),
     ).toBe(true);
@@ -97,7 +98,7 @@ describe('Feature: Profissional que cadastra paciente ganha vínculo imediato (R
       'prof-link-2',
     );
 
-    const { professionals } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { professionals } = await getRepositories(clinicScope(CLINIC_A_ID));
     await professionals.save(
       (await import('@/domain/professional/professional')).Professional.restore(
         {
@@ -134,7 +135,7 @@ describe('Feature: Profissional que cadastra paciente ganha vínculo imediato (R
       const body = (await response.json()) as Envelope<{ id: string }>;
 
       expect(response.status).toBe(200);
-      const { patients } = await getRepositories({ clinicId: CLINIC_A_ID });
+      const { patients } = await getRepositories(clinicScope(CLINIC_A_ID));
       expect(await patients.findById(body.data.id)).not.toBeNull();
     } finally {
       ensureLinkSpy.mockRestore();

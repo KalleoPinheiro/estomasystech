@@ -4,6 +4,7 @@ import { GetBillingSummary } from '@/application/billing/get-billing-summary';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import { toAppointmentDto } from '@/lib/dto';
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
@@ -38,9 +39,9 @@ export async function GET(request: NextRequest) {
 
     // Escopo da sessão: o painel de uma empresa nunca soma faturamento nem
     // lista consultas (com nome de paciente) de outra.
-    const { appointments, patients, invoices } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { appointments, patients, invoices } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const [billing, monthStats, todayAppointments] = await Promise.all([
       new GetBillingSummary(invoices).execute({ from, to }),
       appointments.getStatsInRange(from, to),

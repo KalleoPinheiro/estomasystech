@@ -140,6 +140,7 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
   2. **Handler layer** (`src/lib/auth/require-session.ts`): per-route authorization, fail-closed.
 - Policy source: `src/lib/auth/access-policy.ts`.
 - Scoped by Clinic (`clinic_id`) for every role except Super Admin, and additionally by professional assignment for Profissional.
+- **Tenant scope** (`src/lib/auth/tenant-scope.ts`): `getRepositories` only accepts a branded `TenantScope` built by `sessionScope` (reads — exact session clinic, `null` for Super Admin), `writeScope`/`writeClinicId` (writes — falls back to the legacy clinic when the session has none), `clinicScope` (explicit clinic) or `systemScope` (cross-clinic, allowlisted in `tests/lib/tenant-scope.test.ts`). A raw `{ clinicId: … }` literal does not compile.
 - Audit: all changes record the authenticated actor (no anonymous actions); Super Admin access to another Clinic's data is always audited.
 
 ### Business Rules

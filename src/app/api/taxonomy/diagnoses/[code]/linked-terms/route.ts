@@ -3,6 +3,7 @@ import { SuggestLinkedTerms } from '@/application/taxonomy/suggest-linked-terms'
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { systemScope } from '@/lib/auth/tenant-scope';
 import { toNursingInterventionDto, toNursingOutcomeDto } from '@/lib/dto';
 
 type RouteContext = { params: Promise<{ code: string }> };
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { code } = await context.params;
     const { taxonomyLinkages, nursingOutcomes, nursingInterventions } =
-      await getRepositories({ clinicId: null });
+      await getRepositories(systemScope());
     const linked = await new SuggestLinkedTerms(
       taxonomyLinkages,
       nursingOutcomes,
