@@ -46,11 +46,4 @@ export interface AppointmentRepository {
   ): Promise<Appointment[]>;
   /** Agregação no banco — contagens e receita corretas independentemente do volume. */
   getStatsInRange(start: Date, end: Date): Promise<AppointmentRangeStats>;
-  /** Produção (concluídas) por profissional no período — null = sem atribuição. */
-  getProductionInRange(
-    start: Date,
-    end: Date,
-  ): Promise<
-    Array<{ professionalId: string | null; count: number; totalCents: number }>
-  >;
 }

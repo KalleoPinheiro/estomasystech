@@ -20,6 +20,7 @@ import {
 } from '@/infrastructure/persistence/drizzle/drizzle-foundation-repositories';
 import { DrizzleInvoiceRepository } from '@/infrastructure/persistence/drizzle/drizzle-invoice-repository';
 import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
+import { DrizzleProducedSessionRepository } from '@/infrastructure/persistence/drizzle/drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from '@/infrastructure/persistence/drizzle/drizzle-professional-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
 import { encodeCursor } from '@/lib/pagination';
@@ -631,12 +632,22 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
         totalCents: 25000,
       });
 
-      const production = await appointmentRepo.getProductionInRange(
+      const sessions = await new DrizzleProducedSessionRepository(
+        appDb,
+        'legacy-clinic',
+      ).findCompletedInRange(
         new Date('2026-07-20T00:00:00Z'),
         new Date('2026-07-21T00:00:00Z'),
       );
-      expect(production).toEqual([
-        { professionalId: professional.id, count: 1, totalCents: 25000 },
+      expect(sessions).toEqual([
+        {
+          appointmentId: completed.id,
+          professionalId: professional.id,
+          procedure: 'Troca de bolsa',
+          listPriceCents: 25000,
+          invoice: null,
+          package: null,
+        },
       ]);
     });
   });

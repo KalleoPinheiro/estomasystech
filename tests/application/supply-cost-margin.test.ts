@@ -37,7 +37,9 @@ import {
   InMemorySupplyRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
+import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
 
 // 2026-07-20 é segunda-feira; horários em UTC (testes rodam com TZ=UTC).
@@ -109,6 +111,11 @@ describe('Feature: Custo de insumos por atendimento e margem por procedimento', 
     const report = await new GetMonthlyReport(
       appointmentRepo,
       invoiceRepo,
+      new InMemoryProducedSessionRepository(
+        appointmentRepo,
+        invoiceRepo,
+        new InMemorySessionPackageRepository(),
+      ),
       movementRepo,
     ).execute({
       from: new Date('2026-07-01T00:00:00Z'),
@@ -136,6 +143,11 @@ describe('Feature: Custo de insumos por atendimento e margem por procedimento', 
     const report = await new GetMonthlyReport(
       appointmentRepo,
       invoiceRepo,
+      new InMemoryProducedSessionRepository(
+        appointmentRepo,
+        invoiceRepo,
+        new InMemorySessionPackageRepository(),
+      ),
       movementRepo,
     ).execute({
       from: new Date('2026-07-01T00:00:00Z'),
@@ -232,6 +244,11 @@ describe('Feature: Custo de insumos por atendimento e margem por procedimento', 
     const report = await new GetMonthlyReport(
       appointmentRepo,
       invoiceRepo,
+      new InMemoryProducedSessionRepository(
+        appointmentRepo,
+        invoiceRepo,
+        new InMemorySessionPackageRepository(),
+      ),
       movementRepo,
       professionalRepo,
     ).execute({

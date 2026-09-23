@@ -14,6 +14,11 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     this.invoices.set(invoice.id, invoice);
   }
 
+  /** Todas as faturas (sem paginação) — usado pela leitura de produção em memória. */
+  all(): Invoice[] {
+    return [...this.invoices.values()];
+  }
+
   async findById(id: string): Promise<Invoice | null> {
     return this.invoices.get(id) ?? null;
   }

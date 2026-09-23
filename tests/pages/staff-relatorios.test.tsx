@@ -62,6 +62,8 @@ const baseReport: MonthlyReport = {
       count: 8,
       totalCents: 80000,
       commissionCents: 8000,
+      releasedCommissionCents: 6000,
+      pendingCommissionCents: 2000,
     },
     {
       professionalId: null,
@@ -69,6 +71,8 @@ const baseReport: MonthlyReport = {
       count: 2,
       totalCents: 20000,
       commissionCents: null,
+      releasedCommissionCents: null,
+      pendingCommissionCents: null,
     },
   ],
   billing: {
@@ -210,6 +214,20 @@ describe('Feature: Relatório gerencial', () => {
       expect(await screen.findByText('Dra. Ana')).toBeInTheDocument();
       expect(screen.getByText('Sem atribuição')).toBeInTheDocument();
       expect(screen.getAllByText('R$ 80,00').length).toBeGreaterThan(0);
+    });
+
+    it('Dado repasse parcialmente liberado, Quando renderizar, Então separa apurado, liberado e a liberar', async () => {
+      mockFetch(() => jsonResponse(baseReport));
+
+      render(<ReportsPage />);
+
+      await screen.findByText('Dra. Ana');
+      expect(screen.getByText('Repasse apurado')).toBeInTheDocument();
+      expect(screen.getByText('Liberado')).toBeInTheDocument();
+      expect(screen.getByText('A liberar')).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 60,00').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('R$ 20,00').length).toBeGreaterThan(0);
+      expect(screen.getByText(/atraso acima de 60 dias/)).toBeInTheDocument();
     });
 
     it('Dado produção sem nenhum registro, Quando renderizar, Então exibe a seção com estado vazio (REL-05)', async () => {

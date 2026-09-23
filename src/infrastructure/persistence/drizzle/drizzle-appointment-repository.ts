@@ -253,38 +253,6 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
     };
   }
 
-  async getProductionInRange(
-    start: Date,
-    end: Date,
-  ): Promise<
-    Array<{ professionalId: string | null; count: number; totalCents: number }>
-  > {
-    const rows = await this.db
-      .select({
-        professionalId: appointments.professionalId,
-        count: sql<number>`count(*)::int`,
-        totalCents: sql<number>`coalesce(sum(${appointments.priceCents}), 0)`,
-      })
-      .from(appointments)
-      .where(
-        withTenant(
-          appointments,
-          this.clinicId,
-          and(
-            lt(appointments.startsAt, end),
-            gt(appointments.endsAt, start),
-            eq(appointments.status, 'completed'),
-          ),
-        ),
-      )
-      .groupBy(appointments.professionalId);
-    return rows.map((row) => ({
-      professionalId: row.professionalId,
-      count: Number(row.count),
-      totalCents: Number(row.totalCents),
-    }));
-  }
-
   async findConflicting(
     slot: TimeSlot,
     excludeId?: string,

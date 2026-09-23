@@ -3,6 +3,7 @@ import { CompleteAppointment } from '@/application/appointments/complete-appoint
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { ScheduleRecurringAppointments } from '@/application/appointments/schedule-recurring-appointments';
 import { CreatePatient } from '@/application/patients/create-patient';
+import { aggregateProduction } from '@/application/reports/production';
 import { SessionPackage } from '@/domain/billing/package';
 import type { Patient } from '@/domain/patient/patient';
 import { Professional } from '@/domain/professional/professional';
@@ -14,6 +15,7 @@ import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-m
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 
 // 2026-07-20 é segunda-feira; horários em UTC (testes rodam com TZ=UTC).
 describe('Onda 3 — operação multi-profissional', () => {
@@ -300,14 +302,19 @@ describe('Onda 3 — operação multi-profissional', () => {
       await complete.execute({ id: a1.id });
       await complete.execute({ id: a2.id });
 
-      const production = await appointmentRepo.getProductionInRange(
+      const sessions = await new InMemoryProducedSessionRepository(
+        appointmentRepo,
+        invoiceRepo,
+        new InMemorySessionPackageRepository(),
+      ).findCompletedInRange(
         new Date('2026-07-01T00:00:00Z'),
         new Date('2026-08-01T00:00:00Z'),
       );
+      const { byProfessional } = aggregateProduction(sessions, new Date());
 
-      const ana = production.find((p) => p.professionalId === 'prof-ana');
+      const ana = byProfessional.find((p) => p.professionalId === 'prof-ana');
       expect(ana?.count).toBe(2);
-      expect(ana?.totalCents).toBe(30000);
+      expect(ana?.revenueCents).toBe(30000);
     });
 
     it('Dado percentual fora de 0–100, Quando criar profissional, Então ValidationError', () => {

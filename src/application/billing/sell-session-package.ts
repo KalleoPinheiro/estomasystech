@@ -58,6 +58,7 @@ export class SellSessionPackage {
         ? Invoice.create({
             patientId: pkg.patientId,
             appointmentId: null,
+            sessionPackageId: pkg.id,
             description: `Pacote: ${procedure.name} (${pkg.totalSessions} sessões)`,
             amount: Money.fromCents(pkg.priceCents),
           })

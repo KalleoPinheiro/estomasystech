@@ -54,6 +54,7 @@ import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memor
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
 import { InMemoryReminderLogRepository } from '@/infrastructure/persistence/in-memory/in-memory-reminder-log-repository';
 import { encodeCursor } from '@/lib/pagination';
@@ -1357,7 +1358,7 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       expect(filtered.map((a) => a.id)).toEqual([withProf.id]);
     });
 
-    it('Dado produção de profissionais distintos, Quando getProductionInRange, Então agrega só concluídas', async () => {
+    it('Dada consulta concluída e outra agendada, Quando ler sessões produzidas, Então só a concluída entra', async () => {
       const repo = new InMemoryAppointmentRepository();
       const completed = buildAppointment({
         patientId: 'p1',
@@ -1372,14 +1373,22 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       await repo.save(completed);
       await repo.save(scheduled);
 
-      const production = await repo.getProductionInRange(
+      const sessions = await new InMemoryProducedSessionRepository(
+        repo,
+        new InMemoryInvoiceRepository(),
+        new InMemorySessionPackageRepository(),
+      ).findCompletedInRange(
         new Date('2026-07-20T00:00:00Z'),
         new Date('2026-07-21T00:00:00Z'),
       );
 
-      expect(production).toEqual([
-        { professionalId: 'prof-1', count: 1, totalCents: 25000 },
-      ]);
+      expect(
+        sessions.map((s) => [
+          s.appointmentId,
+          s.professionalId,
+          s.listPriceCents,
+        ]),
+      ).toEqual([[completed.id, 'prof-1', 25000]]);
     });
 
     it('Dado consulta ativa, Quando findConflicting, Então respeita exclusão de id, status inativo e profissionais distintos', async () => {

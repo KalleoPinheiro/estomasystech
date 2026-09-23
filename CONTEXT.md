@@ -163,6 +163,15 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 - Stock movement price frozen at time of ledger entry.
 - Supplies have cost; procedures have revenue.
 
+**Commission** (repasse ao profissional — rule in `src/domain/billing/commission.ts`)
+
+- **Accrued on production, released on payment:** commission is computed on sessions (completed appointments) of the month, but only enters the payout once the invoice covering it is paid.
+- **Cancelled invoice** → no revenue and no commission for that session.
+- **Default is the clinic's risk:** an invoice still pending 60 days after its due date (or issue date, when there is none) releases the commission anyway.
+- **Package session** is worth package price ÷ sessions (never the full procedure price — that double-counted revenue); release follows the package-sale invoice (`invoices.session_package_id`). Package invoices sold before that link existed release immediately.
+- **Courtesy package** (price zero): zero revenue, but commission on the session's normal price, already released — courtesy is the clinic's marketing cost.
+- Monthly report shows per professional: accrued (`commissionCents`), released and pending. A payout ledger (marking a payout as done) does not exist yet.
+
 **Taxonomy** (`import-taxonomy` script)
 
 - Canonical lists of condition kinds, stoma types, tissue types, complications.

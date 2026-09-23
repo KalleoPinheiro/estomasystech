@@ -716,6 +716,12 @@ export const invoices = pgTable(
       .notNull()
       .references(() => patients.id),
     appointmentId: text('appointment_id'),
+    // Fatura da venda de um pacote de sessões — base da liberação da comissão
+    // das sessões consumidas. Null em faturas avulsas/de consulta e nas de
+    // pacote vendidas antes do vínculo existir.
+    sessionPackageId: text('session_package_id').references(
+      () => sessionPackages.id,
+    ),
     description: text('description').notNull(),
     amountCents: integer('amount_cents').notNull(),
     status: text('status').notNull(),
@@ -733,6 +739,7 @@ export const invoices = pgTable(
     // Portal do paciente e filtros por paciente.
     index('idx_invoices_patient').on(table.patientId),
     index('idx_invoices_clinic').on(table.clinicId),
+    index('idx_invoices_session_package').on(table.sessionPackageId),
   ],
 );
 

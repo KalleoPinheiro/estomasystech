@@ -43,7 +43,9 @@ import {
   InMemorySupplyRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
+import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 
 describe('Feature: Estoque de insumos', () => {
   let supplyRepo: InMemorySupplyRepository;
@@ -317,6 +319,11 @@ describe('Feature: Relatório gerencial mensal', () => {
     const report = await new GetMonthlyReport(
       appointmentRepo,
       invoiceRepo,
+      new InMemoryProducedSessionRepository(
+        appointmentRepo,
+        invoiceRepo,
+        new InMemorySessionPackageRepository(),
+      ),
     ).execute({
       from: new Date('2026-07-01T00:00:00Z'),
       to: new Date('2026-08-01T00:00:00Z'),

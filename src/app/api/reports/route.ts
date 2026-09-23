@@ -1,5 +1,8 @@
 import type { NextRequest } from 'next/server';
-import { GetMonthlyReport } from '@/application/reports/get-monthly-report';
+import {
+  GetMonthlyReport,
+  isReportSettled,
+} from '@/application/reports/get-monthly-report';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -39,15 +42,23 @@ export async function GET(request: NextRequest) {
       return cached;
     }
 
-    const { appointments, invoices, stockMovements, professionals } =
-      await getRepositories(tenant);
+    const {
+      appointments,
+      invoices,
+      producedSessions,
+      stockMovements,
+      professionals,
+    } = await getRepositories(tenant);
     const report = await new GetMonthlyReport(
       appointments,
       invoices,
+      producedSessions,
       stockMovements,
       professionals,
     ).execute({ from, to });
-    if (isClosedMonth) {
+    // Mês encerrado ainda muda enquanto houver fatura pendente ou comissão a
+    // liberar — só o relatório assentado vai para o cache.
+    if (isClosedMonth && isReportSettled(report)) {
       cacheReport(clinicId, cacheKey, report);
     }
     return report;

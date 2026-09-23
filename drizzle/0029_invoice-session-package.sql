@@ -1,0 +1,3 @@
+ALTER TABLE "invoices" ADD COLUMN "session_package_id" text;--> statement-breakpoint
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_session_package_id_session_packages_id_fk" FOREIGN KEY ("session_package_id") REFERENCES "public"."session_packages"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "idx_invoices_session_package" ON "invoices" USING btree ("session_package_id");

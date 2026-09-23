@@ -53,4 +53,10 @@ export class InMemorySessionPackageRepository
   async wasConsumedBy(appointmentId: string): Promise<boolean> {
     return this.consumptions.has(appointmentId);
   }
+
+  /** Pacote que cobriu a consulta — usado pela leitura de produção em memória. */
+  consumedBy(appointmentId: string): SessionPackage | null {
+    const packageId = this.consumptions.get(appointmentId);
+    return packageId ? (this.items.get(packageId) ?? null) : null;
+  }
 }
