@@ -759,7 +759,7 @@ Terceiro tópico do item 8, PR própria (empilhada na de agenda por profissional
 
 ## Pagamento parcial, desconto e recibo (N6, item 8d) — CONCLUÍDA
 
-Quarto e último tópico do item 8, PR própria (empilhada na de lista de espera por causa da numeração das migrações).
+Quarto e último tópico do item 8, PR própria, sobre a `main` já com a lista de espera (#171) — a migração 0036 vem depois da 0035.
 
 - **Recebimentos** (`invoice_payments`, migração 0036): fatura aceita vários pagamentos; só vira `paid` quando alcança o líquido. Backfill `legacy-<id>` para as já pagas. Resumo: recebido = soma dos pagamentos; a receber = saldo das pendentes.
 - **Desconto** (`invoices.discount_cents/discount_reason`): com motivo, só pendente, nunca abaixo do já recebido nem total (total = cancelar). Fatura com pagamento não pode ser cancelada (409).
