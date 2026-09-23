@@ -4,7 +4,7 @@ Sources:
 
 - conversa (2026-09-23) - pedido de TPM/arquiteto: estrutura de docs por domínio, template de especificação funcional, guia de onboarding/integrações/troubleshooting, arquivo global de contexto, roadmap indexável e guia de governança para consumo por IA
 - `AGENTS.md`, `CONTEXT.md`, `README.md`, `docs/**`, `.specs/STATE.md` - estado atual lido nesta sessão; é daqui que saem os números do Problem
-- rascunhos desta proposta: [`drafts/`](./drafts/) - os templates prontos para uso, **ainda fora de `docs/`** até este plano ser aprovado
+- conversa (2026-09-23, resposta do usuário) - aprova `AGENTS.md` como SSOT e a migração em um único PR
 
 ## Problem
 
@@ -49,7 +49,7 @@ integração ou o ADR — cada fato em um lugar só, com o CI provando que os li
 
 | Assumption | Chosen default | Rationale | Confirmed? |
 | --- | --- | --- | --- |
-| Criar `PROJECT_CONTEXT.md` separado como SSOT | **não criar**: `AGENTS.md` vira o SSOT/roteador; `CLAUDE.md` continua `@AGENTS.md` | `AGENTS.md` é lido nativamente por Cursor, Copilot, Codex, Gemini e Claude (via import); um segundo arquivo "global" divide a verdade e nenhuma ferramenta o carrega sozinha | n |
+| Criar `PROJECT_CONTEXT.md` separado como SSOT | **não criar**: `AGENTS.md` vira o SSOT/roteador; `CLAUDE.md` continua `@AGENTS.md` | `AGENTS.md` é lido nativamente por Cursor, Copilot, Codex, Gemini e Claude (via import); um segundo arquivo "global" divide a verdade e nenhuma ferramenta o carrega sozinha | y |
 | Ferramenta de gestão do roadmap | GitHub Projects espelha; o arquivo no repo é a fonte | issues já vivem no GitHub (`docs/agents/issue-tracker.md`); Projects lê issues sem integração extra; o arquivo é versionado e legível offline por LLM | n |
 | Idioma dos templates | cabeçalhos-schema estáveis + prosa PT-BR; Gherkin em PT (`Dado/Quando/Então`, `# language: pt`) | é o idioma do produto e dos PRDs; palavras-chave Gherkin em PT são oficiais | n |
 | Caminhos com muitas referências | manter `docs/plano-evolucao-faseado.md` e `docs/still-void-gaps.md` onde estão | `scripts/check-sv-adoption.sh` l. 55 fixa `docs/still-void-gaps.md`; o plano faseado é citado em 11 `.md`, inclusive `.specs/` congelados | n |
@@ -57,13 +57,10 @@ integração ou o ADR — cada fato em um lugar só, com o CI provando que os li
 | Domínios da camada de docs | 9: `acesso`, `pacientes-prontuario`, `agenda`, `financeiro`, `estoque`, `portal`, `equipe-parceiros`, `comunicacao`, `relatorios` | agrupam as 16 pastas de `src/domain` + 14 de `src/application` em unidades que um PO reconhece | n |
 | Prazo de revisão de doc vivo | 90 dias em `last_reviewed`, só aviso | bloquear por data gera commits cosméticos de "bump"; aviso mantém o sinal sem ruído | n |
 | Handoffs concluídos de `STATE.md` | movem para `.specs/archive/handoff-<ano>.md`; `## Decisions` e handoffs abertos ficam | reduz a leitura obrigatória sem perder histórico | n |
+| Migração em fases ou em um PR | um único PR com todas as fatias | decisão do usuário | y |
+| Links dentro de `docs/templates/` | fora da checagem de links (frontmatter continua obrigatório) | um template aponta para o destino onde será copiado, com placeholders como `<slug>`; checar daqui produziria falso vermelho | n |
 
-**Open questions:**
-
-| # | Kind | Question | Until answered |
-| --- | --- | --- | --- |
-| 1 | blocks | Aprova `AGENTS.md` como SSOT (sem `PROJECT_CONTEXT.md`)? | critérios 1-4 não têm forma fechada |
-| 2 | open | Migração física em um PR ou em fases (1: roteador + templates + gate; 2: domínios; 3: onboarding/integrações)? | recomendo fases; o `checks.md` sai com o `## Handoff` correspondente |
+**Open questions:** none - all resolved or logged above.
 
 ## Criteria
 
@@ -125,7 +122,7 @@ integração ou o ADR — cada fato em um lugar só, com o CI provando que os li
 
 **Acceptance Criteria**
 
-20. WHEN `npm run check:docs` finds a relative Markdown link in `AGENTS.md`, `CONTEXT.md`, `README.md` or `docs/**` whose target does not exist THEN it SHALL exit `1` and print `file:line -> target`
+20. WHEN `npm run check:docs` finds a relative Markdown link in `AGENTS.md`, `CONTEXT.md`, `README.md` or `docs/**` (except `docs/templates/**`) whose target does not exist THEN it SHALL exit `1` and print `file:line -> target`
 21. IF a file under `docs/` violates criterion 7 or 8 THEN `npm run check:docs` SHALL exit `1` naming the file and the missing key
 22. WHEN a `living` file has `last_reviewed` older than 90 days THEN `npm run check:docs` SHALL print a warning and exit `0`
 23. The CI job that runs `npm run lint` SHALL also run `npm run check:docs`
