@@ -42,13 +42,11 @@ sempre linka a pasta de `.specs/features/` onde está a validação do Verifier.
 
 | id | Item | Objetivo de negócio | status | issue | spec |
 | --- | --- | --- | --- | --- | --- |
-| RM-13 | Documentação em progressive disclosure | onboarding de dev e de agente sem ler o repositório inteiro | em-andamento | [#173](https://github.com/KalleoPinheiro/vitta-flow/pull/173) | [`docs-progressive-disclosure/`](../.specs/features/docs-progressive-disclosure/) |
+| RM-14 | Lembretes por WhatsApp: templates, cadência de recall, escopo por empresa | lembrete que chega fora da janela de 24 h da Meta e não repete para sempre | especificado | — | [`lembretes-whatsapp-templates-cadencia/`](../.specs/features/lembretes-whatsapp-templates-cadencia/) |
 
 ### Next
 
-| id | Item | Objetivo de negócio | status | issue | spec |
-| --- | --- | --- | --- | --- | --- |
-| RM-14 | Lembretes por WhatsApp: templates, cadência de recall, escopo por empresa | lembrete que chega fora da janela de 24 h da Meta e não repete para sempre | especificado | — | [`lembretes-whatsapp-templates-cadencia/`](../.specs/features/lembretes-whatsapp-templates-cadencia/) |
+Nenhum item. A próxima prioridade depende das decisões pendentes listadas em **Later**.
 
 ### Later
 
@@ -75,6 +73,7 @@ sempre linka a pasta de `.specs/features/` onde está a validação do Verifier.
 | RM-10 | Auditoria UX — Fase A, padrões estruturais | estados de carregamento, confirmação e feedback consistentes | entregue | [#57](https://github.com/KalleoPinheiro/vitta-flow/issues/57) | [`fase-a-padroes-estruturais/`](../.specs/features/fase-a-padroes-estruturais/) |
 | RM-11 | Auditoria UX — Fase B, clínico-legal crítico | documentos clínicos válidos e autoria confiável | entregue | [#61](https://github.com/KalleoPinheiro/vitta-flow/issues/61) | [`fase-b-clinico-legal-critico/`](../.specs/features/fase-b-clinico-legal-critico/) |
 | RM-12 | Auditoria UX — Fase C, LGPD e segurança do dado | conformidade LGPD | entregue | [#69](https://github.com/KalleoPinheiro/vitta-flow/issues/69) | [`fase-c-lgpd-seguranca-dado/`](../.specs/features/fase-c-lgpd-seguranca-dado/) |
+| RM-13 | Documentação em progressive disclosure | onboarding de dev e de agente sem ler o repositório inteiro | entregue | [#173](https://github.com/KalleoPinheiro/vitta-flow/pull/173) | [`docs-progressive-disclosure/`](../.specs/features/docs-progressive-disclosure/) |
 
 As seções por fase abaixo são o detalhe (L2) — escopo, decisões pendentes e critérios de cada uma.
 

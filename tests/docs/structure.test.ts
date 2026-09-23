@@ -327,10 +327,12 @@ describe('S5 — roadmap', () => {
 
   it.each(['Now', 'Next', 'Later'])('roadmap now next later (%s)', (name) => {
     const [header, ...rows] = horizon(name);
+    // Next e Later podem ficar vazios (sem tabela); Now sempre tem o que está em curso.
+    if (name !== 'Now' && header === undefined) return;
     expect(header).toEqual(
       expect.arrayContaining(['id', 'status', 'issue', 'spec']),
     );
-    expect(rows.length).toBeGreaterThan(0);
+    if (name === 'Now') expect(rows.length).toBeGreaterThan(0);
     for (const row of rows)
       expect(row[header.indexOf('id')]).toMatch(/^RM-\d{2}$/);
   });
