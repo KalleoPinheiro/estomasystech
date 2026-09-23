@@ -2,10 +2,10 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { PrescribeOutcome } from '@/application/clinical/prescribe-outcome';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toCarePlanOutcomeDto } from '@/lib/dto';
 
 const outcomeSchema = z
@@ -30,9 +30,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = outcomeSchema.parse(await request.json());
     const { carePlanOutcomes, carePlans, nursingOutcomes, auditEvents } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
     const outcome = await new PrescribeOutcome(
       carePlanOutcomes,
       carePlans,

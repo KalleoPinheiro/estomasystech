@@ -2,11 +2,11 @@ import type { NextRequest } from 'next/server';
 import { ConsentRecord } from '@/domain/consent/consent-record';
 import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { requirePortalSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { CONSENT_TEXT, CONSENT_TEXT_VERSION } from '@/lib/consent-text';
 
 /**
@@ -36,9 +36,9 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   return handleRequest(async () => {
-    const { patients, consentRecords } = await getRepositories({
-      clinicId: auth.session.clinicId ?? null,
-    });
+    const { patients, consentRecords } = await getRepositories(
+      sessionScope(auth.session),
+    );
     const patient = await patients.findByEmail(auth.session.subject);
     if (!patient) {
       throw new NotFoundError('Paciente', auth.session.subject);
@@ -55,9 +55,9 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   return handleRequest(async () => {
-    const { patients, consentRecords, auditEvents } = await getRepositories({
-      clinicId: auth.session.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { patients, consentRecords, auditEvents } = await getRepositories(
+      writeScope(auth.session),
+    );
     const patient = await patients.findByEmail(auth.session.subject);
     if (!patient?.isActive) {
       throw new NotFoundError('Paciente', auth.session.subject);

@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { ListAppointments } from '@/application/appointments/list-appointments';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { getRepositories, type Services } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
@@ -47,9 +47,9 @@ export async function GET(request: NextRequest) {
     ) {
       return [];
     }
-    const { appointments, patients } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { appointments, patients } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const result = await new ListAppointments(appointments, patients).execute({
       from: new Date(from),
       to: new Date(to),
@@ -93,9 +93,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = scheduleSchema.parse(await request.json());
-    const services = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const services = await getRepositories(writeScope(guard.session));
     const appointment = await new ScheduleAppointment(
       services.appointments,
       services.patients,

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest } from '../support/request';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -134,9 +135,9 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       const { getRepositories } = await import('@/infrastructure/container');
       const { hashPassword } = await import('@/lib/auth/password');
       const { UserAccount } = await import('@/domain/auth/user-account');
-      const { userAccounts } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { userAccounts } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
       const account = UserAccount.create({
         email: 'inativo.gaps@clinica.com',
         passwordHash: await hashPassword('senha-individual'),
@@ -330,7 +331,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       // Aceite de uma versão anterior do termo: hash não cobre o CONSENT_TEXT vigente.
       const { getRepositories } = await import('@/infrastructure/container');
       const { ConsentRecord } = await import('@/domain/consent/consent-record');
-      const repos = await getRepositories({ clinicId: 'legacy-clinic' });
+      const repos = await getRepositories(clinicScope('legacy-clinic'));
       await repos.consentRecords.save(
         ConsentRecord.create({
           patientId: consentPatientId,

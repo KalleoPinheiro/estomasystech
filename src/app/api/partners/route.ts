@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { CreatePartner } from '@/application/partners/create-partner';
 import { ListPartners } from '@/application/partners/list-partners';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toPartnerDto } from '@/lib/dto';
 
 const partnerSchema = z.object({
@@ -21,9 +21,7 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   return handleRequest(async () => {
-    const { partners } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { partners } = await getRepositories(sessionScope(guard.session));
     const result = await new ListPartners(partners).execute();
     return result.map(toPartnerDto);
   });
@@ -35,9 +33,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = partnerSchema.parse(await request.json());
-    const { partners } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { partners } = await getRepositories(writeScope(guard.session));
     const partner = await new CreatePartner(partners).execute({
       fullName: body.fullName,
       email: body.email,

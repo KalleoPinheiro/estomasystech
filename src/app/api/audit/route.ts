@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import { toAuditEventDto } from '@/lib/dto';
 
 const querySchema = z.object({
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       offset: params.get('offset') ?? undefined,
     });
 
-    const { auditEvents } = await getRepositories({ clinicId: null });
+    const { auditEvents } = await getRepositories(sessionScope(guard.session));
     const events = await auditEvents.findAll(
       {
         // Trilha da empresa da sessão; papel de sistema (sem clínica) vê todas.

@@ -5,6 +5,7 @@ import {
   encodeCalendarOAuthState,
 } from '@/lib/auth/google-calendar-oauth';
 import { SESSION_COOKIE } from '@/lib/auth/session';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import { cookieHeaderFor } from '../support/session';
 
@@ -53,7 +54,7 @@ const withState = (
 /** Credencial gravada para o dono da sessão de teste (null quando não houve gravação). */
 const storedCredential = async () => {
   const { getRepositories } = await import('@/infrastructure/container');
-  const { googleAccounts } = await getRepositories({ clinicId: CLINIC_A_ID });
+  const { googleAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
   return googleAccounts.findByEmail('agenda@clinica.com');
 };
 
@@ -188,9 +189,9 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
 
       expect(response.status).toBe(307);
       const { getRepositories } = await import('@/infrastructure/container');
-      const { googleAccounts } = await getRepositories({
-        clinicId: CLINIC_A_ID,
-      });
+      const { googleAccounts } = await getRepositories(
+        clinicScope(CLINIC_A_ID),
+      );
       const stored = await googleAccounts.findByEmail('agenda@clinica.com');
       expect(stored).not.toBeNull();
       expect(stored?.encryptedRefreshToken).not.toContain('refresh-token-real');
@@ -339,9 +340,9 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
         ),
       ).toBe('fluxo_invalido');
       const { getRepositories } = await import('@/infrastructure/container');
-      const { googleAccounts } = await getRepositories({
-        clinicId: CLINIC_A_ID,
-      });
+      const { googleAccounts } = await getRepositories(
+        clinicScope(CLINIC_A_ID),
+      );
       expect(
         await googleAccounts.findByEmail('outra-conta@clinica.com'),
       ).toBeNull();

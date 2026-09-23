@@ -3,6 +3,7 @@ import { getRepositories } from '@/infrastructure/container';
 import { recordAuditNow } from '@/lib/audit';
 import { getRequestSession } from '@/lib/auth/request-session';
 import { SESSION_COOKIE } from '@/lib/auth/session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 
 export async function POST(request: NextRequest) {
   // Lê a sessão ANTES de limpar o cookie — sem sessão só não audita, não vira
@@ -10,9 +11,7 @@ export async function POST(request: NextRequest) {
   const session = getRequestSession(request);
   if (session) {
     try {
-      const { auditEvents } = await getRepositories({
-        clinicId: session.clinicId,
-      });
+      const { auditEvents } = await getRepositories(sessionScope(session));
       // AC-03 não define a `action` — "delete" reflete o encerramento da sessão
       // (spec-precision gap: valor exato não especificado no spec.md).
       await recordAuditNow(auditEvents, session, {

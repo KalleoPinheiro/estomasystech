@@ -3,6 +3,7 @@ import { SendReminders } from '@/application/reminders/send-reminders';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { passwordMatches } from '@/lib/auth/session';
+import { systemScope } from '@/lib/auth/tenant-scope';
 
 /**
  * Disparo do job de lembretes (cron externo):
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const { appointments, followUps, patients, reminderLog, messaging } =
-      await getRepositories({ clinicId: null });
+      await getRepositories(systemScope());
     return new SendReminders(
       appointments,
       followUps,

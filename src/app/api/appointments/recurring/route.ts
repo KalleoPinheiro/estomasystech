@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { ScheduleRecurringAppointments } from '@/application/appointments/schedule-recurring-appointments';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 
@@ -28,9 +28,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = recurringSchema.parse(await request.json());
-    const services = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const services = await getRepositories(writeScope(guard.session));
 
     const result = await new ScheduleRecurringAppointments(
       new ScheduleAppointment(

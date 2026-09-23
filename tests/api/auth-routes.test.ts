@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { buildUserAccount } from '../support/builders';
 import {
   CLINIC_A_ID,
@@ -144,9 +145,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
 
       const { getRepositories } = await import('@/infrastructure/container');
       const { hashPassword } = await import('@/lib/auth/password');
-      const { userAccounts } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { userAccounts } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
       await userAccounts.save(
         buildUserAccount({
           email: 'equipe@clinica.com',
@@ -175,9 +176,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const { getRepositories } = await import('@/infrastructure/container');
       const { hashPassword } = await import('@/lib/auth/password');
       const { verifySessionToken } = await import('@/lib/auth/session');
-      const { userAccounts } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { userAccounts } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
       await userAccounts.save(
         buildUserAccount({
           email: 'profissional@clinica.com',
@@ -248,9 +249,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
 
       const { getRepositories } = await import('@/infrastructure/container');
       const { hashPassword } = await import('@/lib/auth/password');
-      const { userAccounts, auditEvents } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { userAccounts, auditEvents } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
       await userAccounts.save(
         buildUserAccount({
           email: 'auditoria-ok@clinica.com',
@@ -286,9 +287,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
 
       const { getRepositories } = await import('@/infrastructure/container');
       const { hashPassword } = await import('@/lib/auth/password');
-      const { userAccounts, auditEvents } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { userAccounts, auditEvents } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
       await userAccounts.save(
         buildUserAccount({
           email: 'auditoria-falha-senha@clinica.com',
@@ -325,9 +326,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       process.env.AUTH_SECRET = 'test-secret-audit-inexistente';
 
       const { getRepositories } = await import('@/infrastructure/container');
-      const { auditEvents } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { auditEvents } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
 
       const response = await loginRoute.POST(
         jsonRequest(
@@ -358,9 +359,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       process.env.AUTH_SECRET = 'test-secret-audit-rate-limit';
       const ip = '10.0.0.101';
       const { getRepositories } = await import('@/infrastructure/container');
-      const { auditEvents } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { auditEvents } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
 
       const responses: number[] = [];
       for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -397,7 +398,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const email = 'duplicado@clinica.com';
       await ensureTestClinics();
 
-      const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+      const clinicARepos = await getRepositories(clinicScope(CLINIC_A_ID));
       await clinicARepos.userAccounts.save(
         buildUserAccount({
           email,
@@ -405,7 +406,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           passwordHash: await hashPassword('senha-da-clinica-a'),
         }),
       );
-      const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+      const clinicBRepos = await getRepositories(clinicScope(CLINIC_B_ID));
       await clinicBRepos.userAccounts.save(
         buildUserAccount({
           email,
@@ -440,7 +441,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const sharedHash = await hashPassword('senha-compartilhada');
       await ensureTestClinics();
 
-      const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+      const clinicARepos = await getRepositories(clinicScope(CLINIC_A_ID));
       await clinicARepos.userAccounts.save(
         buildUserAccount({
           email,
@@ -448,7 +449,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           passwordHash: sharedHash,
         }),
       );
-      const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+      const clinicBRepos = await getRepositories(clinicScope(CLINIC_B_ID));
       await clinicBRepos.userAccounts.save(
         buildUserAccount({
           email,
@@ -456,7 +457,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           passwordHash: sharedHash,
         }),
       );
-      const { auditEvents } = await getRepositories({ clinicId: null });
+      const { auditEvents } = await getRepositories(systemScope());
 
       const response = await loginRoute.POST(
         jsonRequest(
@@ -486,7 +487,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const email = 'inativa@clinica.com';
       await ensureTestClinics();
 
-      const clinicARepos = await getRepositories({ clinicId: CLINIC_A_ID });
+      const clinicARepos = await getRepositories(clinicScope(CLINIC_A_ID));
       await clinicARepos.userAccounts.save(
         buildUserAccount({
           email,
@@ -494,7 +495,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           passwordHash: await hashPassword('senha-inativa'),
         }).deactivate(),
       );
-      const clinicBRepos = await getRepositories({ clinicId: CLINIC_B_ID });
+      const clinicBRepos = await getRepositories(clinicScope(CLINIC_B_ID));
       await clinicBRepos.userAccounts.save(
         buildUserAccount({
           email,
@@ -538,9 +539,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
 
       const { getRepositories } = await import('@/infrastructure/container');
       const { hashPassword } = await import('@/lib/auth/password');
-      const { userAccounts, auditEvents } = await getRepositories({
-        clinicId: 'legacy-clinic',
-      });
+      const { userAccounts, auditEvents } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
       await userAccounts.save(
         buildUserAccount({
           email: 'logout-audit@clinica.com',

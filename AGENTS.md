@@ -33,6 +33,10 @@ Next.js 16 (App Router), React 19, TypeScript 5, Drizzle ORM + Postgres 16, Tail
 
 Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<table>`, and raw Tailwind color utilities are banned — use `@still-void/ui` components instead. `npm run check:sv` enforces this. A deliberate exception needs a `// sv-gap: <slug>` comment matched by an entry in `docs/still-void-gaps.md`. Migration status/history: `.specs/features/still-void-*-migration/`, `docs/backlog-design-system.md`.
 
+## Tenant scope
+
+Never build `{ clinicId }` by hand for `getRepositories` — it won't compile. Use `sessionScope(guard.session)` for reads, `writeScope(guard.session)` (or `writeClinicId` when you need the id) for writes, `clinicScope(id)` for an explicit clinic. `systemScope()` (cross-clinic) is allowlisted per file in `tests/lib/tenant-scope.test.ts`; adding a use means justifying it there.
+
 ## Auth (fails closed)
 
 Every account authenticates with email + its own password (ADR-004) — there is no master password, no email allowlist and no Google login. Without `AUTH_SECRET` the app returns 503 everywhere; `VITTA_ALLOW_OPEN_MODE=true` bypasses this in dev only (ignored in production).

@@ -4,9 +4,9 @@ import { CreateFollowUp } from '@/application/followups/create-follow-up';
 import { ListFollowUps } from '@/application/followups/list-follow-ups';
 import { FOLLOW_UP_STATUSES } from '@/domain/followup/follow-up';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toFollowUpDto } from '@/lib/dto';
 
 const createSchema = z.object({
@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
     );
     const patientId =
       request.nextUrl.searchParams.get('patientId') ?? undefined;
-    const { followUps, patients } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { followUps, patients } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const result = await new ListFollowUps(followUps, patients).execute({
       status,
       patientId,
@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
-    const { followUps, patients } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { followUps, patients } = await getRepositories(
+      writeScope(guard.session),
+    );
     const followUp = await new CreateFollowUp(followUps, patients).execute({
       patientId: body.patientId,
       appointmentId: body.appointmentId ?? null,

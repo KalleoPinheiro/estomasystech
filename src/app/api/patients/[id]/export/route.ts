@@ -4,6 +4,7 @@ import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import {
   toAnamnesisDto,
   toAppointmentDto,
@@ -27,9 +28,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const response = await handleRequest(async () => {
     const { id } = await context.params;
-    const repos = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const repos = await getRepositories(sessionScope(guard.session));
 
     const patient = await repos.patients.findById(id);
     if (!patient) {

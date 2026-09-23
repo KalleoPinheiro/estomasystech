@@ -8,10 +8,10 @@ import {
   ValidationError,
 } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requirePortalSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { CONSENT_TEXT } from '@/lib/consent-text';
 
 /**
@@ -47,9 +47,7 @@ export async function POST(request: NextRequest) {
       consentRecords,
       photoStorage,
       auditEvents,
-    } = await getRepositories({
-      clinicId: session.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    } = await getRepositories(writeScope(session));
 
     const patient = await patients.findByEmail(session.subject);
     const condition = await conditions.findById(conditionId);

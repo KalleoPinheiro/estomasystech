@@ -10,6 +10,7 @@ import {
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { systemScope } from '@/lib/auth/tenant-scope';
 
 /**
  * Bootstrap do catálogo de taxonomias com o subset curado de estomaterapia —
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       nursingInterventions,
       taxonomyLinkages,
       auditEvents,
-    } = await getRepositories({ clinicId: null });
+    } = await getRepositories(systemScope());
     const result = await importTaxonomyCatalog(
       {
         diagnoses: nursingDiagnoses,

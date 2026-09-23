@@ -4,9 +4,9 @@ import { CreateInvoice } from '@/application/billing/create-invoice';
 import { ListInvoices } from '@/application/billing/list-invoices';
 import { INVOICE_STATUSES } from '@/domain/billing/invoice';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import type { InvoiceDto } from '@/lib/dto';
 import { toInvoiceDto } from '@/lib/dto';
 import { encodeCursor } from '@/lib/pagination';
@@ -55,9 +55,9 @@ export async function GET(request: NextRequest) {
       });
       limit = parsedPage.limit;
 
-      const { invoices, patients } = await getRepositories({
-        clinicId: guard.session?.clinicId ?? null,
-      });
+      const { invoices, patients } = await getRepositories(
+        sessionScope(guard.session),
+      );
       const result = await new ListInvoices(invoices, patients).execute(
         {
           status,
@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = createInvoiceSchema.parse(await request.json());
-    const { invoices, patients } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { invoices, patients } = await getRepositories(
+      writeScope(guard.session),
+    );
     const invoice = await new CreateInvoice(invoices, patients).execute({
       patientId: body.patientId,
       description: body.description,

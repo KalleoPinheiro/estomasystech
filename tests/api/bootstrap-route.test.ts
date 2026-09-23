@@ -4,6 +4,7 @@ import {
   BOOTSTRAP_TOKEN_HEADER,
   BOOTSTRAP_UNAVAILABLE_MESSAGE,
 } from '@/app/api/auth/bootstrap/route';
+import { systemScope } from '@/lib/auth/tenant-scope';
 import { spyOnSentEmails, tokenFromLastEmail } from '../support/email';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -204,7 +205,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     expect(response.status).toBe(403);
     expect(json.error).toBe(BOOTSTRAP_UNAVAILABLE_MESSAGE);
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: null });
+    const { userAccounts } = await getRepositories(systemScope());
     expect(await userAccounts.findByEmail('segundo@clinica.com')).toBeNull();
   });
 
@@ -226,7 +227,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     expect(statuses).toEqual([200, 403]);
 
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: null });
+    const { userAccounts } = await getRepositories(systemScope());
     const [accountA, accountB] = await Promise.all([
       userAccounts.findByEmail('concorrente-a@clinica.com'),
       userAccounts.findByEmail('concorrente-b@clinica.com'),
@@ -247,7 +248,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     expect(response.status).toBe(403);
     expect(json.error).toBe(BOOTSTRAP_UNAVAILABLE_MESSAGE);
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: null });
+    const { userAccounts } = await getRepositories(systemScope());
     expect(await userAccounts.hasAnyAccount()).toBe(false);
   });
 
@@ -263,7 +264,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
 
     expect(response.status).toBe(403);
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: null });
+    const { userAccounts } = await getRepositories(systemScope());
     expect(await userAccounts.hasAnyAccount()).toBe(false);
   });
 
@@ -277,7 +278,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
 
     expect(response.status).toBe(403);
     const { getRepositories } = await import('@/infrastructure/container');
-    const { userAccounts } = await getRepositories({ clinicId: null });
+    const { userAccounts } = await getRepositories(systemScope());
     expect(await userAccounts.hasAnyAccount()).toBe(false);
   });
 

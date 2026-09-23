@@ -1,10 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { toClinicInfoDto } from '@/lib/dto';
 
 const infoSchema = z.object({
@@ -23,10 +23,10 @@ const canEditClinicInfo = (role: string | undefined): boolean =>
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
-  const clinicId = guard.session?.clinicId ?? LEGACY_CLINIC_ID;
+  const clinicId = writeClinicId(guard.session);
 
   return handleRequest(async () => {
-    const { clinics } = await getRepositories({ clinicId });
+    const { clinics } = await getRepositories(clinicScope(clinicId));
     const clinic = await clinics.findById(clinicId);
     if (!clinic) {
       throw new Error('Clínica não encontrada');
@@ -41,11 +41,13 @@ export async function PUT(request: NextRequest) {
   if (!canEditClinicInfo(guard.session?.role)) {
     return fail('Apenas Admin de Empresa pode editar os dados da clínica', 403);
   }
-  const clinicId = guard.session?.clinicId ?? LEGACY_CLINIC_ID;
+  const clinicId = writeClinicId(guard.session);
 
   return handleRequest(async () => {
     const body = infoSchema.parse(await request.json());
-    const { clinics, auditEvents } = await getRepositories({ clinicId });
+    const { clinics, auditEvents } = await getRepositories(
+      clinicScope(clinicId),
+    );
     const clinic = await clinics.findById(clinicId);
     if (!clinic) {
       throw new Error('Clínica não encontrada');

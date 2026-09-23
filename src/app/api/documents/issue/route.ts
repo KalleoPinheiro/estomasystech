@@ -2,9 +2,9 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { AuditEvent } from '@/domain/audit/audit-event';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 
 const DOCUMENT_TYPES = [
   'atestado',
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = issueSchema.parse(await request.json());
-    const clinicId = guard.session?.clinicId ?? LEGACY_CLINIC_ID;
-    const { auditEvents } = await getRepositories({ clinicId });
+    const clinicId = writeClinicId(guard.session);
+    const { auditEvents } = await getRepositories(clinicScope(clinicId));
 
     const existing = await auditEvents.findAll({
       resourceType: body.documentType,

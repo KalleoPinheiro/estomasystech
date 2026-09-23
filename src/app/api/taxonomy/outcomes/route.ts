@@ -3,6 +3,7 @@ import { SearchOutcomes } from '@/application/taxonomy/search-outcomes';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { systemScope } from '@/lib/auth/tenant-scope';
 import { toNursingOutcomeDto } from '@/lib/dto';
 
 export async function GET(request: NextRequest) {
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   return handleRequest(async () => {
     const term = request.nextUrl.searchParams.get('q') ?? '';
-    const { nursingOutcomes } = await getRepositories({ clinicId: null });
+    const { nursingOutcomes } = await getRepositories(systemScope());
     const result = await new SearchOutcomes(nursingOutcomes).execute({ term });
     return result.map(toNursingOutcomeDto);
   });

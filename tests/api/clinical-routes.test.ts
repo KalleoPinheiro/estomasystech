@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { getRepositories } from '@/infrastructure/container';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest, multipartRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -672,9 +673,9 @@ describe('Feature: Rotas clínicas (condições, avaliações, fotos, anamnese, 
         (await forgedPatientResponse.json()) as Envelope<{ id: string }>
       ).data.id;
 
-      const { professionalPatientLinks } = await getRepositories({
-        clinicId: LEGACY_CLINIC_ID,
-      });
+      const { professionalPatientLinks } = await getRepositories(
+        clinicScope(LEGACY_CLINIC_ID),
+      );
       await professionalPatientLinks.ensureLink(
         professionalId,
         forgedPatientId,

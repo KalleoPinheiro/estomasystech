@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { Procedure } from '@/domain/catalog/procedure';
 import { ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toProcedureDto } from '@/lib/dto';
 
 const procedureSchema = z.object({
@@ -19,9 +19,9 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   return handleRequest(async () => {
-    const { procedures, procedureKits } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? null,
-    });
+    const { procedures, procedureKits } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const [result, kitCounts] = await Promise.all([
       procedures.findAll(),
       procedureKits.countByProcedure(),
@@ -38,9 +38,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = procedureSchema.parse(await request.json());
-    const { procedures } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { procedures } = await getRepositories(writeScope(guard.session));
 
     const existing = await procedures.findByName(body.name);
     if (existing) {

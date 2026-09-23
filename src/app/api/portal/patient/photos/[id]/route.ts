@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { fail } from '@/lib/api-response';
 import { requirePortalSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -17,9 +17,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
   const { conditionPhotos, conditions, patients, photoStorage } =
-    await getRepositories({
-      clinicId: session.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    await getRepositories(writeScope(session));
 
   const photo = await conditionPhotos.findById(id);
   const condition = photo ? await conditions.findById(photo.conditionId) : null;

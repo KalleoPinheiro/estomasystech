@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import type { ClinicInfoDto } from '@/lib/dto';
 import {
   CLINIC_A_ID,
@@ -99,7 +100,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     await ensureTestClinics();
     const route = await import('@/app/api/settings/clinic-info/route');
     const { getRepositories } = await import('@/infrastructure/container');
-    const { auditEvents } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
 
     await route.PUT(
       jsonRequest(

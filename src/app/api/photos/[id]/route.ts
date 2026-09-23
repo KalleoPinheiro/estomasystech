@@ -4,10 +4,10 @@ import { DeleteConditionPhoto } from '@/application/clinical/delete-condition-ph
 import { FollowUp } from '@/domain/followup/follow-up';
 import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit, recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -17,9 +17,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
 
   const { id } = await context.params;
-  const { conditionPhotos, photoStorage } = await getRepositories({
-    clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-  });
+  const { conditionPhotos, photoStorage } = await getRepositories(
+    writeScope(guard.session),
+  );
 
   const photo = await conditionPhotos.findById(id);
   const data = photo ? await photoStorage.read(photo.id) : null;
@@ -44,9 +44,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const { conditionPhotos, photoStorage, conditions, auditEvents } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
 
     const photo = await conditionPhotos.findById(id);
     const condition = photo
@@ -84,9 +82,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = triageSchema.parse(await request.json());
     const { conditionPhotos, conditions, followUps, auditEvents } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
 
     const photo = await conditionPhotos.findById(id);
     if (!photo) {

@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { AddCarePlanDiagnosis } from '@/application/clinical/add-care-plan-diagnosis';
 import { CARE_PLAN_DIAGNOSIS_TYPES } from '@/domain/clinical/care-plan-diagnosis';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toCarePlanDiagnosisDto } from '@/lib/dto';
 
 const diagnosisBodySchema = z.object({
@@ -102,9 +102,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = diagnosisSchema.parse(await request.json());
     const { carePlanDiagnoses, carePlans, nursingDiagnoses, auditEvents } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
     const diagnosis = await new AddCarePlanDiagnosis(
       carePlanDiagnoses,
       carePlans,

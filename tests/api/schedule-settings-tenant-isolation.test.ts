@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import {
   CLINIC_A_ID,
   CLINIC_B_ID,
@@ -84,7 +85,7 @@ describe('Feature: Configuração de horário por empresa (MT-17/MT-18)', () => 
 
     const { getRepositories } = await import('@/infrastructure/container');
     const { Clinic } = await import('@/domain/clinic/clinic');
-    const { clinics } = await getRepositories({ clinicId: null });
+    const { clinics } = await getRepositories(systemScope());
     if (!(await clinics.findById(freshClinicId))) {
       await clinics.create(
         Clinic.restore({
@@ -113,7 +114,7 @@ describe('Feature: Configuração de horário por empresa (MT-17/MT-18)', () => 
     await ensureTestClinics();
     const scheduleRoute = await import('@/app/api/settings/schedule/route');
     const { getRepositories } = await import('@/infrastructure/container');
-    const { auditEvents } = await getRepositories({ clinicId: CLINIC_A_ID });
+    const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
 
     await scheduleRoute.PUT(
       jsonRequest(

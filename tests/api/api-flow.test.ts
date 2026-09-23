@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest } from '../support/request';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -55,9 +56,7 @@ describe('Feature: Fluxo completo da API (paciente → consulta → fatura → r
 
   it('Dado paciente criado, Quando POST /api/patients, Então registra evento de auditoria (#71)', async () => {
     const { getRepositories } = await import('@/infrastructure/container');
-    const { auditEvents } = await getRepositories({
-      clinicId: 'legacy-clinic',
-    });
+    const { auditEvents } = await getRepositories(clinicScope('legacy-clinic'));
 
     const events = await auditEvents.findAll();
     const event = events.find(

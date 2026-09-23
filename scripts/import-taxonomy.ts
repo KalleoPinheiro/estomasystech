@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getRepositories } from "@/infrastructure/container";
+import { systemScope } from "@/lib/auth/tenant-scope";
 import {
   importTaxonomyCatalog,
   type TaxonomyCatalog,
@@ -35,7 +36,7 @@ async function loadCatalog(filePath: string | undefined): Promise<TaxonomyCatalo
 async function main(): Promise<void> {
   const filePath = process.argv[2];
   const catalog = await loadCatalog(filePath);
-  const repos = await getRepositories({ clinicId: null });
+  const repos = await getRepositories(systemScope());
   const result = await importTaxonomyCatalog(
     {
       diagnoses: repos.nursingDiagnoses,

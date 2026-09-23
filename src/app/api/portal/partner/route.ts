@@ -4,6 +4,7 @@ import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requirePortalSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import {
   toPartnerDto,
   toPortalAppointmentDto,
@@ -20,9 +21,7 @@ export async function GET(request: NextRequest) {
   return handleRequest(async () => {
     // Escopo da sessão do portal: e-mail pode repetir entre empresas (MT-06),
     // então a busca por e-mail e todo o resto ficam na clínica da conta.
-    const services = await getRepositories({
-      clinicId: session.clinicId ?? null,
-    });
+    const services = await getRepositories(sessionScope(session));
     const { partners, patients, appointments, conditions, assessments } =
       services;
     const data = await new GetPartnerPortalData(

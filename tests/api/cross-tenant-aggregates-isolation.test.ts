@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AuditEvent } from '@/domain/audit/audit-event';
 import { getRepositories } from '@/infrastructure/container';
+import { systemScope } from '@/lib/auth/tenant-scope';
 import {
   CLINIC_A_ID,
   CLINIC_B_ID,
@@ -186,7 +187,7 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
     it('Dado evento de auditoria da clínica B, Quando a clínica A consulta a trilha, Então não vê o evento', async () => {
       await ensureTestClinics();
       const patientId = 'audit-isolation-patient';
-      const { auditEvents } = await getRepositories({ clinicId: null });
+      const { auditEvents } = await getRepositories(systemScope());
       await auditEvents.save(
         AuditEvent.create({
           clinicId: CLINIC_B_ID,

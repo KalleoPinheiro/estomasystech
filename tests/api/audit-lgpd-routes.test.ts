@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader } from '../support/session';
 
@@ -471,7 +472,7 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
       const { ConditionPhoto } = await import(
         '@/domain/clinical/condition-photo'
       );
-      const repos = await getRepositories({ clinicId: 'legacy-clinic' });
+      const repos = await getRepositories(clinicScope('legacy-clinic'));
       const stored = await repos.conditionPhotos.findById(photoId);
       if (!stored) throw new Error('Foto de condição não encontrada');
       const thirtyHoursAgo = new Date(Date.now() - 30 * 3_600_000);

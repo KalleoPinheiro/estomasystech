@@ -10,6 +10,7 @@ import { clientIp } from '@/lib/auth/client-ip';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { RateLimiter } from '@/lib/auth/rate-limit';
 import { passwordMatches } from '@/lib/auth/session';
+import { systemScope } from '@/lib/auth/tenant-scope';
 import { isUniqueViolation } from '@/lib/db-errors';
 
 const BOOTSTRAP_RATE_LIMIT = new RateLimiter(5, 60_000);
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   // clinicId nulo: o Super Admin é papel de sistema, sem empresa própria.
-  const services = await getRepositories({ clinicId: null });
+  const services = await getRepositories(systemScope());
   if (await services.userAccounts.hasAnyAccount()) {
     return fail(BOOTSTRAP_UNAVAILABLE_MESSAGE, 403);
   }

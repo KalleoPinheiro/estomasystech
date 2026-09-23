@@ -3,6 +3,7 @@ import { ListAvailableSlots } from '@/application/portal/list-available-slots';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requirePortalSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 
 /** Horários livres para o paciente agendar seu retorno (PORT4-01..03). */
 export async function GET(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     // Grade, conflitos e catálogo são os da clínica do paciente — nunca de
     // outra empresa.
     const { patients, appointments, procedures, scheduleConfig } =
-      await getRepositories({ clinicId: session.clinicId ?? null });
+      await getRepositories(sessionScope(session));
     const slots = await new ListAvailableSlots(
       patients,
       appointments,

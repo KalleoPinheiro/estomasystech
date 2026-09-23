@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { getRepositories } from '@/infrastructure/container';
 import { DrizzleProfessionalPatientLinkRepository } from '@/infrastructure/persistence/drizzle/professional-patient-link-repository';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
@@ -65,9 +66,9 @@ describe('Feature: Agendamento e evolução com profissional criam vínculo (RBA
     );
     expect(response.status).toBe(200);
 
-    const { professionalPatientLinks } = await getRepositories({
-      clinicId: CLINIC_A_ID,
-    });
+    const { professionalPatientLinks } = await getRepositories(
+      clinicScope(CLINIC_A_ID),
+    );
     expect(
       await professionalPatientLinks.hasLink(professionalId, patientId),
     ).toBe(true);
@@ -115,9 +116,9 @@ describe('Feature: Agendamento e evolução com profissional criam vínculo (RBA
     expect(response.status).toBe(200);
     expect(body.data.professionalId).toBe(professionalId);
 
-    const { professionalPatientLinks } = await getRepositories({
-      clinicId: CLINIC_A_ID,
-    });
+    const { professionalPatientLinks } = await getRepositories(
+      clinicScope(CLINIC_A_ID),
+    );
     expect(
       await professionalPatientLinks.hasLink(professionalId, patientId),
     ).toBe(true);
@@ -155,7 +156,7 @@ describe('Feature: Agendamento e evolução com profissional criam vínculo (RBA
       const body = (await response.json()) as Envelope<{ id: string }>;
 
       expect(response.status).toBe(200);
-      const { appointments } = await getRepositories({ clinicId: CLINIC_A_ID });
+      const { appointments } = await getRepositories(clinicScope(CLINIC_A_ID));
       expect(await appointments.findById(body.data.id)).not.toBeNull();
     } finally {
       ensureLinkSpy.mockRestore();
@@ -189,7 +190,7 @@ describe('Feature: Agendamento e evolução com profissional criam vínculo (RBA
       const body = (await response.json()) as Envelope<{ id: string }>;
 
       expect(response.status).toBe(200);
-      const { evolutions } = await getRepositories({ clinicId: CLINIC_A_ID });
+      const { evolutions } = await getRepositories(clinicScope(CLINIC_A_ID));
       const notes = await evolutions.findByPatientId(patientId);
       expect(notes.some((note) => note.id === body.data.id)).toBe(true);
     } finally {
@@ -238,9 +239,9 @@ describe('Feature: Agendamento e evolução com profissional criam vínculo (RBA
         ),
       );
 
-      const { professionalPatientLinks } = await getRepositories({
-        clinicId: CLINIC_A_ID,
-      });
+      const { professionalPatientLinks } = await getRepositories(
+        clinicScope(CLINIC_A_ID),
+      );
       expect(await professionalPatientLinks.hasLink(drA, patientId)).toBe(true);
       expect(await professionalPatientLinks.hasLink(drB, patientId)).toBe(true);
     });

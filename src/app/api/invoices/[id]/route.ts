@@ -4,9 +4,9 @@ import { CancelInvoice } from '@/application/billing/cancel-invoice';
 import { PayInvoice } from '@/application/billing/pay-invoice';
 import { PAYMENT_METHODS } from '@/domain/billing/invoice';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toInvoiceDto } from '@/lib/dto';
 
 const actionSchema = z.discriminatedUnion('action', [
@@ -23,9 +23,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = actionSchema.parse(await request.json());
-    const { invoices } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    const { invoices } = await getRepositories(writeScope(guard.session));
 
     if (body.action === 'pay') {
       return toInvoiceDto(

@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { CreatePatient } from '@/application/patients/create-patient';
 import { ListPatients } from '@/application/patients/list-patients';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import type { PatientDto } from '@/lib/dto';
 import { toPatientDto } from '@/lib/dto';
 import { encodeCursor } from '@/lib/pagination';
@@ -52,9 +52,9 @@ export async function GET(request: NextRequest) {
       });
       limit = parsedPage.limit;
 
-      const { patients, professionalPatientLinks } = await getRepositories({
-        clinicId: guard.session?.clinicId ?? null,
-      });
+      const { patients, professionalPatientLinks } = await getRepositories(
+        sessionScope(guard.session),
+      );
       // Escopo dinâmico do Profissional (R4/RBAC-17): a listagem só mostra
       // pacientes com quem o profissional tem vínculo registrado.
       let allowedPatientIds: string[] | undefined;
@@ -84,9 +84,7 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = createPatientSchema.parse(await request.json());
     const { patients, partners, professionalPatientLinks, auditEvents } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
     const patient = await new CreatePatient(patients, partners).execute({
       fullName: body.fullName,
       email: body.email,

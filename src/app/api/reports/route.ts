@@ -3,6 +3,7 @@ import { GetMonthlyReport } from '@/application/reports/get-monthly-report';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import { cacheReport, getCachedReport } from '@/lib/report-cache';
 
 const MONTH_REGEX = /^\d{4}-\d{2}$/;
@@ -29,7 +30,8 @@ export async function GET(request: NextRequest) {
     const cacheKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
     // Escopo da sessão: empresa vê só os próprios números; papel de sistema
     // (sem clínica) mantém a visão cross-empresa.
-    const clinicId = guard.session?.clinicId ?? null;
+    const tenant = sessionScope(guard.session);
+    const { clinicId } = tenant;
     const cached = isClosedMonth
       ? getCachedReport(clinicId, cacheKey)
       : undefined;
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { appointments, invoices, stockMovements, professionals } =
-      await getRepositories({ clinicId });
+      await getRepositories(tenant);
     const report = await new GetMonthlyReport(
       appointments,
       invoices,

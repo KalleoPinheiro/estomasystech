@@ -7,11 +7,11 @@ import {
   STOMA_TYPES,
 } from '@/domain/clinical/clinical-condition';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toConditionDto } from '@/lib/dto';
 
 const conditionSchema = z.object({
@@ -31,9 +31,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const { conditions, auditEvents, professionalPatientLinks } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? null,
-      });
+      await getRepositories(sessionScope(guard.session));
     await assertPatientAccessibleToProfessional(
       guard.session,
       id,
@@ -60,9 +58,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = conditionSchema.parse(await request.json());
     const { conditions, patients, auditEvents, professionalPatientLinks } =
-      await getRepositories({
-        clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-      });
+      await getRepositories(writeScope(guard.session));
     await assertPatientAccessibleToProfessional(
       guard.session,
       id,

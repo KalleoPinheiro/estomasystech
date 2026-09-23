@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { PrescribeIntervention } from '@/application/clinical/prescribe-intervention';
 import { INTERVENTION_PRIORITIES } from '@/domain/clinical/care-plan-intervention';
 import { getRepositories } from '@/infrastructure/container';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toCarePlanInterventionDto } from '@/lib/dto';
 
 const interventionSchema = z.object({
@@ -29,9 +29,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       carePlans,
       nursingInterventions,
       auditEvents,
-    } = await getRepositories({
-      clinicId: guard.session?.clinicId ?? LEGACY_CLINIC_ID,
-    });
+    } = await getRepositories(writeScope(guard.session));
     const intervention = await new PrescribeIntervention(
       carePlanInterventions,
       carePlans,

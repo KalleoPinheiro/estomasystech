@@ -643,3 +643,13 @@ Achado de análise de arquitetura/negócio (2026-09-22): rotas de leitura passav
 - **Decisão**: `procedure_supplies` continua sem `clinic_id` — o escopo é herdado do procedimento (validado na rota). Sem migração.
 - **Testes**: `tests/api/cross-tenant-aggregates-isolation.test.ts` (10 casos) — sensor: os 10 falham com o código antigo (`git stash` de `src/`), passam com o fix.
 - **Fora de escopo (próximo passo sugerido)**: wrapper de rota que resolva o escopo por empresa centralmente (hoje ~80 call sites decidem `?? null` / `?? LEGACY_CLINIC_ID` à mão — causa-raiz deste achado).
+
+## Escopo de empresa centralizado (`tenant-scope`) — CONCLUÍDA
+
+Follow-up direto do PR #159: a causa-raiz daquele vazamento era o escopo de empresa decidido à mão em ~100 call sites de `getRepositories` (`?? null` / `?? LEGACY_CLINIC_ID` / `null`).
+
+- **Decisão**: `TenantScope` "branded" em `src/lib/auth/tenant-scope.ts` — `getRepositories` só aceita valores das fábricas `sessionScope` (leitura), `writeScope`/`writeClinicId` (escrita, fallback legado), `clinicScope` (empresa explícita), `systemScope` (cross-empresa). Objeto literal não compila (coberto por `@ts-expect-error` no teste).
+- **Alternativa descartada**: wrapper de rota (`withStaffRoute`) — os guards variam (equipe, portal paciente/parceiro, escopo de Profissional) e o wrapper exigiria reescrever o corpo de ~70 rotas; o tipo resolve o mesmo problema (não dá para esquecer o escopo) com diff mecânico.
+- **Enforcement**: `tests/lib/tenant-scope.test.ts` varre `src/` — (1) quem usa `systemScope()` precisa estar na allowlist com motivo (login, bootstrap, forgot/set-password, cron de lembretes, taxonomia global); (2) nenhum arquivo de `src/app` referencia `LEGACY_CLINIC_ID` (fallback vive só em `writeClinicId`).
+- **Mudança de comportamento**: nenhuma. `/api/audit` trocou `systemScope` por `sessionScope` — equivalente, o repositório de auditoria não é escopado e o filtro por empresa já vem de `AuditEventFilter.clinicId` (#159).
+- Migração mecânica por codemod (mapeamento 1:1 dos padrões), testes (63 call sites) migrados junto.
