@@ -40,6 +40,9 @@ jobs:
       - name: still-void adoption gate
         run: npm run check:sv
 
+      - name: Docs gate
+        run: npm run check:docs
+
       - name: Test (coverage)
         run: npm run test:coverage
 
