@@ -13,6 +13,7 @@ import type { AuditEventRepository } from '@/domain/audit/audit-event-repository
 import type { AuthTokenRepository } from '@/domain/auth/auth-token';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
 import type { ProducedSessionRepository } from '@/domain/billing/commission';
+import type { CommissionPayoutRepository } from '@/domain/billing/commission-payout';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
 import type { ProcedureKitRepository } from '@/domain/catalog/procedure-kit';
@@ -86,6 +87,7 @@ import {
   DrizzleConsentRecordRepository,
   DrizzleEvolutionNoteRepository,
 } from './persistence/drizzle/drizzle-clinical-repositories';
+import { DrizzleCommissionPayoutRepository } from './persistence/drizzle/drizzle-commission-payout-repository';
 import {
   DrizzleProcedureKitRepository,
   DrizzleProcedureRepository,
@@ -132,6 +134,7 @@ export interface Services {
   appointments: AppointmentRepository;
   invoices: InvoiceRepository;
   producedSessions: ProducedSessionRepository;
+  commissionPayouts: CommissionPayoutRepository;
   anamneses: AnamnesisRepository;
   evolutions: EvolutionNoteRepository;
   conditions: ClinicalConditionRepository;
@@ -266,6 +269,10 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     appointments: new DrizzleAppointmentRepository(db, tenant.clinicId),
     invoices: new DrizzleInvoiceRepository(db, tenant.clinicId),
     producedSessions: new DrizzleProducedSessionRepository(db, tenant.clinicId),
+    commissionPayouts: new DrizzleCommissionPayoutRepository(
+      db,
+      tenant.clinicId,
+    ),
     anamneses: new DrizzleAnamnesisRepository(db, tenant.clinicId),
     evolutions: new DrizzleEvolutionNoteRepository(
       db,

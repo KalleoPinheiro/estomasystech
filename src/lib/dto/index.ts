@@ -11,6 +11,7 @@ export * from './followup';
 export * from './inventory';
 export * from './partner';
 export * from './patient';
+export * from './payout';
 export * from './procedure';
 export * from './professional';
 export * from './staff';

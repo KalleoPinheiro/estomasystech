@@ -52,6 +52,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     expect(body.data?.clinicLabel).toBe('Clínica B (teste)');
     expect(body.data?.account).toEqual({
       email: 'ana@clinica.com',
+      role: 'company_admin',
       roleLabel: 'Admin de Empresa',
     });
   });
@@ -72,6 +73,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     expect(body.data?.clinicLabel).toBe('Conta de sistema');
     expect(body.data?.account).toEqual({
       email: 'root@vitta.com',
+      role: 'super_admin',
       roleLabel: 'Super Admin',
     });
   });

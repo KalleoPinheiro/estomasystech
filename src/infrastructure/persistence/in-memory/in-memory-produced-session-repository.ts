@@ -32,10 +32,11 @@ export class InMemoryProducedSessionRepository
   async findCompletedInRange(
     start: Date,
     end: Date,
+    options: { professionalId?: string } = {},
   ): Promise<ProducedSession[]> {
-    const completed = (await this.appointments.findInRange(start, end)).filter(
-      (a) => a.status === 'completed',
-    );
+    const completed = (
+      await this.appointments.findInRange(start, end, options)
+    ).filter((a) => a.status === 'completed');
     const invoices = this.invoices.all();
     return completed.map((appointment) => {
       const pkg = this.packages.consumedBy(appointment.id);
@@ -43,6 +44,7 @@ export class InMemoryProducedSessionRepository
         appointmentId: appointment.id,
         professionalId: appointment.professionalId,
         procedure: appointment.procedure,
+        sessionDate: appointment.slot.start,
         listPriceCents: appointment.price.cents,
         invoice: toBillingRef(
           invoices.find((i) => i.appointmentId === appointment.id),

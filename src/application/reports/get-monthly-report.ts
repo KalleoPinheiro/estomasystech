@@ -2,12 +2,10 @@ import {
   type BillingSummary,
   GetBillingSummary,
 } from '@/application/billing/get-billing-summary';
-import {
-  commissionCents,
-  type ProducedSessionRepository,
-} from '@/domain/billing/commission';
+import type { ProducedSessionRepository } from '@/domain/billing/commission';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { StockMovementRepository } from '@/domain/inventory/inventory-repositories';
+import type { Professional } from '@/domain/professional/professional';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentStatus } from '@/domain/scheduling/appointment';
 import type {
@@ -95,9 +93,16 @@ export class GetMonthlyReport {
     ]);
 
     const { byStatus } = stats;
+    const professionalIds = sessions
+      .map((s) => s.professionalId)
+      .filter((id): id is string => id != null);
+    const professionals =
+      (await this.professionals?.findByIds(professionalIds)) ?? [];
+    const byId = new Map(professionals.map((p) => [p.id, p]));
     const { revenueByProcedure, byProfessional } = aggregateProduction(
       sessions,
       input.now ?? new Date(),
+      (id) => (id ? (byId.get(id)?.commissionRule ?? null) : null),
     );
     const totalAppointments = Object.values(byStatus).reduce(
       (sum, count) => sum + count,
@@ -153,41 +158,33 @@ export class GetMonthlyReport {
       }),
       unattributedSupplyCostCents,
       totalSupplyCostCents,
-      productionByProfessional: await this.buildProduction(byProfessional),
+      productionByProfessional: buildProduction(byProfessional, byId),
       billing,
     };
   }
+}
 
-  private async buildProduction(
-    totals: ProfessionalTotals[],
-  ): Promise<ProfessionalProduction[]> {
-    const ids = totals
-      .map((p) => p.professionalId)
-      .filter((id): id is string => id != null);
-    const professionals = (await this.professionals?.findByIds(ids)) ?? [];
-    const byId = new Map(professionals.map((p) => [p.id, p]));
-
-    return totals
-      .map((entry) => {
-        const professional = entry.professionalId
-          ? byId.get(entry.professionalId)
-          : undefined;
-        const pct = professional?.commissionPct ?? null;
-        const released =
-          pct != null ? commissionCents(entry.releasedBaseCents, pct) : null;
-        const pending =
-          pct != null ? commissionCents(entry.pendingBaseCents, pct) : null;
-        return {
-          professionalId: entry.professionalId,
-          professionalName: professional?.fullName ?? 'Sem atribuição',
-          count: entry.count,
-          totalCents: entry.revenueCents,
-          commissionCents:
-            released != null && pending != null ? released + pending : null,
-          releasedCommissionCents: released,
-          pendingCommissionCents: pending,
-        };
-      })
-      .sort((a, b) => b.totalCents - a.totalCents);
-  }
+function buildProduction(
+  totals: ProfessionalTotals[],
+  byId: Map<string, Professional>,
+): ProfessionalProduction[] {
+  return totals
+    .map((entry) => {
+      const professional = entry.professionalId
+        ? byId.get(entry.professionalId)
+        : undefined;
+      const released = entry.releasedCommissionCents;
+      const pending = entry.pendingCommissionCents;
+      return {
+        professionalId: entry.professionalId,
+        professionalName: professional?.fullName ?? 'Sem atribuição',
+        count: entry.count,
+        totalCents: entry.revenueCents,
+        commissionCents:
+          released != null && pending != null ? released + pending : null,
+        releasedCommissionCents: released,
+        pendingCommissionCents: pending,
+      };
+    })
+    .sort((a, b) => b.totalCents - a.totalCents);
 }

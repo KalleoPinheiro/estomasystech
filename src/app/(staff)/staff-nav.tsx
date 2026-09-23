@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/procedimentos', label: 'Procedimentos' },
   { href: '/materiais', label: 'Materiais' },
   { href: '/relatorios', label: 'Relatórios' },
+  { href: '/repasses', label: 'Repasses' },
   { href: '/auditoria', label: 'Auditoria' },
   { href: '/configuracoes', label: 'Configurações' },
 ];

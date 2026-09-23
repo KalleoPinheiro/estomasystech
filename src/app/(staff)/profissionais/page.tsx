@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Input,
+  NativeSelect,
   Table,
   TableBody,
   TableCell,
@@ -21,9 +22,26 @@ import {
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
+import type { CommissionType } from '@/domain/professional/professional';
 import { apiFetch } from '@/lib/client';
 import type { ProfessionalDto } from '@/lib/dto';
+import { formatCommissionRule } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+
+/** Regra vigente a partir do DTO — mesma leitura de `Professional.commissionRule`. */
+function ruleOf(professional: ProfessionalDto) {
+  if (professional.commissionType === 'fixed') {
+    return professional.commissionFixedCents != null
+      ? {
+          kind: 'fixed' as const,
+          centsPerSession: professional.commissionFixedCents,
+        }
+      : null;
+  }
+  return professional.commissionPct != null
+    ? { kind: 'percentage' as const, pct: professional.commissionPct }
+    : null;
+}
 
 export default function ProfessionalsPage() {
   const { toast } = useToast();
@@ -103,9 +121,7 @@ export default function ProfessionalsPage() {
                       {professional.registry ?? '—'}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-ink-2">
-                      {professional.commissionPct != null
-                        ? `${professional.commissionPct}%`
-                        : '—'}
+                      {formatCommissionRule(ruleOf(professional))}
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <StatusBadge
@@ -184,8 +200,16 @@ function ProfessionalForm({
   const { toast } = useToast();
   const [fullName, setFullName] = useState(initial?.fullName ?? '');
   const [registry, setRegistry] = useState(initial?.registry ?? '');
+  const [commissionType, setCommissionType] = useState<CommissionType>(
+    initial?.commissionType ?? 'percentage',
+  );
   const [commissionPct, setCommissionPct] = useState(
     initial?.commissionPct != null ? String(initial.commissionPct) : '',
+  );
+  const [commissionFixed, setCommissionFixed] = useState(
+    initial?.commissionFixedCents != null
+      ? String(initial.commissionFixedCents / 100)
+      : '',
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -198,7 +222,11 @@ function ProfessionalForm({
       const payload = {
         fullName,
         registry: registry || null,
+        commissionType,
         commissionPct: commissionPct ? Number(commissionPct) : null,
+        commissionFixedCents: commissionFixed
+          ? Math.round(Number(commissionFixed) * 100)
+          : null,
       };
       if (initial) {
         await apiFetch(`/api/professionals/${initial.id}`, {
@@ -250,21 +278,52 @@ function ProfessionalForm({
         </span>
       </label>
       <label className="font-medium text-sm">
-        Repasse (%)
-        <Input
-          type="number"
-          min="0"
-          max="100"
-          value={commissionPct}
-          onChange={(e) => setCommissionPct(e.target.value)}
-          placeholder="Ex.: 15"
+        Tipo de repasse
+        <NativeSelect
+          value={commissionType}
+          onChange={(e) => setCommissionType(e.target.value as CommissionType)}
           className="mt-1"
-        />
-        <span className="mt-1 block font-normal text-ink-3 text-xs">
-          Percentual repassado ao profissional sobre a receita das consultas
-          concluídas.
-        </span>
+        >
+          <option value="percentage">Percentual da sessão</option>
+          <option value="fixed">Valor fixo por sessão</option>
+        </NativeSelect>
       </label>
+      {commissionType === 'percentage' ? (
+        <label className="font-medium text-sm">
+          Repasse (%)
+          <Input
+            type="number"
+            min="0"
+            max="100"
+            value={commissionPct}
+            onChange={(e) => setCommissionPct(e.target.value)}
+            placeholder="Ex.: 15"
+            className="mt-1"
+          />
+          <span className="mt-1 block font-normal text-ink-3 text-xs">
+            Percentual sobre o valor de cada sessão realizada (sessão de pacote
+            vale o preço do pacote dividido pelas sessões).
+          </span>
+        </label>
+      ) : (
+        <label className="font-medium text-sm">
+          Valor por sessão (R$)
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            value={commissionFixed}
+            onChange={(e) => setCommissionFixed(e.target.value)}
+            placeholder="Ex.: 50,00"
+            className="mt-1"
+          />
+          <span className="mt-1 block font-normal text-ink-3 text-xs">
+            Valor fixo repassado por sessão realizada, qualquer que seja o
+            preço.
+          </span>
+        </label>
+      )}
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Salvando…' : 'Salvar'}
       </Button>

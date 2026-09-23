@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
 
   const account = {
     email: session.subject,
+    role: session.role,
     roleLabel: staffRoleLabel(session.role),
   };
 

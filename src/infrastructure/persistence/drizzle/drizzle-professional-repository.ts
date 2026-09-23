@@ -1,9 +1,18 @@
 import { asc, eq, inArray } from 'drizzle-orm';
-import { Professional } from '@/domain/professional/professional';
+import {
+  type CommissionType,
+  Professional,
+} from '@/domain/professional/professional';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import { type AppDb, MAX_ROWS } from './db';
 import { professionals } from './schema';
 import { withTenant } from './tenant-scope';
+
+const toProfessional = (row: typeof professionals.$inferSelect) =>
+  Professional.restore({
+    ...row,
+    commissionType: row.commissionType as CommissionType,
+  });
 
 export class DrizzleProfessionalRepository implements ProfessionalRepository {
   constructor(
@@ -22,7 +31,9 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       clinicId: this.clinicId,
       fullName: professional.fullName,
       registry: professional.registry,
+      commissionType: professional.commissionType,
       commissionPct: professional.commissionPct,
+      commissionFixedCents: professional.commissionFixedCents,
       active: professional.isActive,
       createdAt: professional.createdAt,
     };
@@ -38,7 +49,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .from(professionals)
       .where(withTenant(professionals, this.clinicId, eq(professionals.id, id)))
       .limit(1);
-    return rows[0] ? Professional.restore(rows[0]) : null;
+    return rows[0] ? toProfessional(rows[0]) : null;
   }
 
   async findByIds(ids: string[]): Promise<Professional[]> {
@@ -56,7 +67,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           inArray(professionals.id, unique),
         ),
       );
-    return rows.map((row) => Professional.restore(row));
+    return rows.map((row) => toProfessional(row));
   }
 
   async findAll(): Promise<Professional[]> {
@@ -66,6 +77,6 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .where(withTenant(professionals, this.clinicId))
       .orderBy(asc(professionals.fullName))
       .limit(MAX_ROWS);
-    return rows.map((row) => Professional.restore(row));
+    return rows.map((row) => toProfessional(row));
   }
 }

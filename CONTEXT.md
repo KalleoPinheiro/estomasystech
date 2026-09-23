@@ -170,7 +170,15 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 - **Default is the clinic's risk:** an invoice still pending 60 days after its due date (or issue date, when there is none) releases the commission anyway.
 - **Package session** is worth package price ÷ sessions (never the full procedure price — that double-counted revenue); release follows the package-sale invoice (`invoices.session_package_id`). Package invoices sold before that link existed release immediately.
 - **Courtesy package** (price zero): zero revenue, but commission on the session's normal price, already released — courtesy is the clinic's marketing cost.
-- Monthly report shows per professional: accrued (`commissionCents`), released and pending. A payout ledger (marking a payout as done) does not exist yet.
+- **Commission rule per professional** (set only by Admin de Empresa): `percentage` of the session value, or `fixed` amount per session performed.
+- Monthly report shows per professional: accrued (`commissionCents`), released and pending — computed session by session with the same rule the payout ledger uses.
+
+**Commission payout** (repasse — `src/domain/billing/commission-payout.ts`, screen `/repasses`)
+
+- **Monthly closing per professional**, one per month, recorded only by Admin de Empresa (Super Admin too). Closing month M pays everything released up to the end of M and not yet paid — including late releases from earlier months. Only months already ended can be closed.
+- Each session is paid **at most once** (unique `(appointment_id, kind)` in `commission_payout_items`); the amount is **frozen** in the item, so a later rule change never recalculates what was paid.
+- A paid session whose invoice is cancelled afterwards becomes a **reversal** (negative item) deducted in the next closing; a closing whose balance is zero or negative is refused and the reversal waits.
+- Access is declared by route family (`src/lib/auth/route-family.ts`): `/api/commission-payouts` (clinic view + closing) is `administrative` (Admin only); `/api/my-payouts` is the new `professional_self` family (Admin and Profissional, never Atendente) and always scopes to the session's `professionalId`. **Profissional** sees only their own statement (to receive, awaiting patient payment, history).
 
 **Taxonomy** (`import-taxonomy` script)
 
