@@ -17,3 +17,4 @@ export * from './professional';
 export * from './schedule';
 export * from './staff';
 export * from './taxonomy';
+export * from './waitlist';

@@ -28,6 +28,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { appointment: cancelled, changed } = await new CancelOwnAppointment(
       services.patients,
       services.appointments,
+      services.scheduleConfig,
     ).execute({
       email: session.subject,
       appointmentId: id,

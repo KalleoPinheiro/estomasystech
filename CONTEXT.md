@@ -154,7 +154,7 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 
 **Patient self-service** (paciente cancela/remarca pelo portal — `src/domain/scheduling/patient-self-service.ts`)
 
-- The patient can cancel or reschedule their own active appointment through the portal only up to **24 h before it starts**; inside that window the portal points them to the clinic (the server enforces the same rule).
+- The patient can cancel or reschedule their own active appointment through the portal only up to the clinic's **cancellation notice** (default 24 h, see Cancellation policy); inside that window the portal points them to the clinic (the server enforces the same rule).
 - Reschedule keeps procedure, price, professional and duration — only the time changes, validated by the same availability rule as staff scheduling; the appointment goes back to `scheduled` (awaiting confirmation). Slots for rescheduling (`/api/portal/patient/slots?appointmentId=…`) use the appointment's own duration and professional and ignore the appointment itself as a conflict.
 - Both actions are audited with the patient as actor and sync Google Calendar after the response. Cancelling again is idempotent. The portal alerts only cancellations made by the clinic; the patient's own go to the history. Staff see the origin, date and reason in the appointment detail.
 
@@ -163,6 +163,18 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 - Weekday/hour ranges when clinic accepts appointments — one row per clinic.
 - Optional **lunch break** (`lunchBreak`, minutes of day): no appointment may overlap it, for any professional. Must sit strictly inside opening hours.
 - Business hours respected for appointment creation and reminders.
+
+**Cancellation policy** (política de cancelamento — `cancellationPolicy` in the clinic's schedule settings)
+
+- `noticeHours` (0–168, default 24): minimum notice for the patient to cancel/reschedule alone in the portal.
+- `lateFeeCents` (default 0 = no fee): optional fee for **late cancellation** and **no-show**.
+- Staff cancelling records who asked (`clinic` or `patient`, e.g. by phone). A patient request inside the notice window is marked **late** (`appointments.cancelled_late`); a clinic cancellation is never late. With a fee configured, staff choose whether to charge it: the fee becomes an ordinary **pending invoice** linked to the appointment ("Taxa de cancelamento tardio" / "Taxa de não comparecimento"). The appointment never becomes a completed session, so the fee never enters commission. Charging a fee on a non-late cancellation is refused.
+- Saving the schedule grid without the policy or lunch fields keeps the stored values (older screens can't wipe them).
+
+**Waitlist** (lista de espera — `src/domain/scheduling/waitlist.ts`, `waitlist_entries`)
+
+- A patient waiting for a slot: optional procedure and professional (empty = any), a date window (≤ 180 days) and notes; first come, first served. Added by staff (agenda → Lista de espera) or by the patient in the portal when a day has no free slot (30-day window starting that day, never in the past). Repeating the same request does not duplicate it.
+- When staff cancel an appointment, the response says how many waiting entries accept that day (and professional); the agenda shows it as a toast. The system never books automatically — staff offer the slot and use "Agendar" (form prefilled), which removes the entry as `scheduled`. Entries leave as `scheduled` or `removed` (staff, or the patient in the portal — own entries only).
 
 **Schedule availability** (`src/domain/scheduling/schedule-availability.ts`)
 

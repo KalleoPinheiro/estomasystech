@@ -100,6 +100,7 @@ const appointmentFixture: AppointmentDto = {
   cancelledBy: null,
   cancelledAt: null,
   cancelReason: null,
+  cancelledLate: false,
 };
 
 const movementFixture: StockMovementDto = {
@@ -789,6 +790,7 @@ describe('Feature: Materiais e estoque', () => {
         cancelledBy: null,
         cancelledAt: null,
         cancelReason: null,
+        cancelledLate: false,
       };
       mockFetch(
         buildRouter({

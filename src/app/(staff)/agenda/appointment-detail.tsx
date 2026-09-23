@@ -4,6 +4,10 @@ import { Button, Input, NativeSelect } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
+import {
+  type CancellationPolicy,
+  DEFAULT_CANCELLATION_POLICY,
+} from '@/domain/scheduling/schedule-config';
 import type { AppointmentDto } from '@/lib/dto';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -11,14 +15,24 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/format';
+import { CancelPanel, type CancelRequest, NoShowPanel } from './cancel-panel';
 
 type AppointmentAction = 'confirm' | 'cancel' | 'no_show' | 'complete';
 
+export interface ActionExtras {
+  requestedBy?: CancelRequest['requestedBy'];
+  reason?: string | null;
+  chargeLateFee?: boolean;
+}
+
 interface AppointmentDetailProps {
   appointment: AppointmentDto;
+  /** Política da clínica — antecedência e taxa do cancelamento tardio. */
+  cancellationPolicy?: CancellationPolicy;
   onAction: (
     action: AppointmentAction,
     followUpInDays?: number | null,
+    extras?: ActionExtras,
   ) => Promise<void>;
   onReschedule: (startsAt: Date, endsAt: Date) => Promise<void>;
 }
@@ -66,12 +80,18 @@ const VISIBLE_ACTIONS: Record<string, AppointmentAction[]> = {
 
 export function AppointmentDetail({
   appointment,
+  cancellationPolicy = DEFAULT_CANCELLATION_POLICY,
   onAction,
   onReschedule,
 }: AppointmentDetailProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
+  // Cancelar sempre abre o painel; falta só quando há taxa a decidir.
+  const [absencePanel, setAbsencePanel] = useState<'cancel' | 'no_show' | null>(
+    null,
+  );
+  const hasFee = cancellationPolicy.lateFeeCents > 0;
   const [followUpInDays, setFollowUpInDays] = useState(30);
   const [newDate, setNewDate] = useState(appointment.startsAt.slice(0, 10));
   const [newTime, setNewTime] = useState(formatTime(appointment.startsAt));
@@ -136,7 +156,9 @@ export function AppointmentDetail({
 
       {appointment.status === 'cancelled' && appointment.cancelledAt && (
         <p>
-          <span className="text-ink-3">Cancelada </span>
+          <span className="text-ink-3">
+            {appointment.cancelledLate ? 'Cancelamento tardio ' : 'Cancelada '}
+          </span>
           {appointment.cancelledBy === 'patient'
             ? 'pelo paciente no portal'
             : 'pela clínica'}{' '}
@@ -178,7 +200,12 @@ export function AppointmentDetail({
               key={button.action}
               type="button"
               disabled={busy}
-              onClick={() =>
+              onClick={() => {
+                const action = button.action;
+                if (action === 'cancel' || (action === 'no_show' && hasFee)) {
+                  setAbsencePanel((prev) => (prev === action ? null : action));
+                  return;
+                }
                 void run(() =>
                   onAction(
                     button.action,
@@ -186,8 +213,8 @@ export function AppointmentDetail({
                       ? followUpInDays
                       : null,
                   ),
-                )
-              }
+                );
+              }}
               variant="ghost"
               className={button.className}
             >
@@ -204,6 +231,26 @@ export function AppointmentDetail({
             Remarcar
           </Button>
         </div>
+      )}
+
+      {absencePanel === 'cancel' && (
+        <CancelPanel
+          startsAt={appointment.startsAt}
+          policy={cancellationPolicy}
+          busy={busy}
+          onConfirm={(request) =>
+            void run(() => onAction('cancel', null, request))
+          }
+        />
+      )}
+      {absencePanel === 'no_show' && (
+        <NoShowPanel
+          policy={cancellationPolicy}
+          busy={busy}
+          onConfirm={(chargeLateFee) =>
+            void run(() => onAction('no_show', null, { chargeLateFee }))
+          }
+        />
       )}
 
       {rescheduling && (

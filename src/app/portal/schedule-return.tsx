@@ -15,6 +15,7 @@ import { apiFetch } from '@/lib/client';
 import type { ProcedureDto } from '@/lib/dto';
 import { formatDateTime, formatTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { JoinWaitlist } from './waitlist';
 
 export interface AvailableSlotDto {
   startsAt: string;
@@ -32,6 +33,7 @@ export const OFFER_WINDOW_DAYS = 14;
 interface ScheduleReturnProps {
   followUpId: string;
   onScheduled: () => void;
+  onWaitlistJoined?: () => void;
 }
 
 /**
@@ -42,6 +44,7 @@ interface ScheduleReturnProps {
 export function ScheduleReturn({
   followUpId,
   onScheduled,
+  onWaitlistJoined,
 }: ScheduleReturnProps) {
   const [open, setOpen] = useState(false);
 
@@ -62,6 +65,7 @@ export function ScheduleReturn({
   return (
     <SchedulePanel
       followUpId={followUpId}
+      onWaitlistJoined={onWaitlistJoined}
       onScheduled={() => {
         setOpen(false);
         onScheduled();
@@ -75,6 +79,7 @@ function SchedulePanel({
   followUpId,
   onScheduled,
   onCancel,
+  onWaitlistJoined,
 }: ScheduleReturnProps & { onCancel: () => void }) {
   const { toast } = useToast();
   const { data: procedures } = useApiQuery<ProcedureDto[]>(
@@ -157,6 +162,14 @@ function SchedulePanel({
           <SlotPicker
             query={`procedureId=${encodeURIComponent(procedureId)}`}
             date={date}
+            emptyAction={
+              <JoinWaitlist
+                key={`${procedureId}|${date}`}
+                procedureId={procedureId}
+                fromDate={date}
+                onJoined={onWaitlistJoined}
+              />
+            }
             disabled={saving}
             onPick={(slot) => void schedule(slot)}
           />
@@ -186,12 +199,15 @@ export function SlotPicker({
   disabled,
   onPick,
   mode = 'schedule',
+  emptyAction,
 }: {
   query: string;
   date: string;
   disabled: boolean;
   onPick: (slot: AvailableSlotDto) => void;
   mode?: 'schedule' | 'reschedule';
+  /** O que oferecer quando o dia não tem horário (ex.: lista de espera). */
+  emptyAction?: React.ReactNode;
 }) {
   const { data: slots, error } = useApiQuery<AvailableSlotDto[]>(
     `/api/portal/patient/slots?${query}&date=${encodeURIComponent(date)}`,
@@ -207,9 +223,12 @@ export function SlotPicker({
   }
   if (slots.length === 0) {
     return (
-      <p className="mt-3 text-ink-3 text-xs">
-        Nenhum horário livre neste dia — tente outra data.
-      </p>
+      <div className="mt-3">
+        <p className="text-ink-3 text-xs">
+          Nenhum horário livre neste dia — tente outra data.
+        </p>
+        {emptyAction}
+      </div>
     );
   }
 

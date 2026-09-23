@@ -2,6 +2,10 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import { assertPatientCanChange } from '@/domain/scheduling/patient-self-service';
+import {
+  cancellationPolicyOf,
+  type ScheduleConfigRepository,
+} from '@/domain/scheduling/schedule-config';
 import { findOwnAppointment } from './own-appointment';
 
 export interface CancelOwnAppointmentResult {
@@ -27,6 +31,7 @@ export class CancelOwnAppointment {
   constructor(
     private readonly patients: PatientRepository,
     private readonly appointments: AppointmentRepository,
+    private readonly scheduleConfig?: ScheduleConfigRepository,
   ) {}
 
   async execute(
@@ -44,7 +49,8 @@ export class CancelOwnAppointment {
     }
 
     const now = input.now ?? new Date();
-    assertPatientCanChange(appointment, now);
+    const policy = cancellationPolicyOf(await this.scheduleConfig?.get());
+    assertPatientCanChange(appointment, now, policy.noticeHours);
 
     const cancelled = appointment.cancel({
       by: 'patient',

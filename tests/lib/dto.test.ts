@@ -169,6 +169,7 @@ describe('Feature: DTO de consulta', () => {
       cancelledBy: null,
       cancelledAt: null,
       cancelReason: null,
+      cancelledLate: false,
     });
   });
 

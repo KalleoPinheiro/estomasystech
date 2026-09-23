@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { GetPatientPortalData } from '@/application/portal/get-patient-portal-data';
+import { cancellationPolicyOf } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -61,6 +62,10 @@ export async function GET(request: NextRequest) {
       ),
       invoices: data.invoices.map((i) => toInvoiceDto(i)),
       followUps: data.followUps.map((f) => toFollowUpDto(f)),
+      // Antecedência mínima para cancelar/remarcar pelo portal (política da clínica).
+      changeNoticeHours: cancellationPolicyOf(
+        await services.scheduleConfig.get(),
+      ).noticeHours,
     };
   });
 }

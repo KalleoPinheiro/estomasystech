@@ -21,14 +21,16 @@ import type {
   PatientDto,
   ProfessionalDto,
   ScheduleClosureDto,
+  WaitlistEntryDto,
 } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
-import { AppointmentDetail } from './appointment-detail';
+import { type ActionExtras, AppointmentDetail } from './appointment-detail';
 import {
   AppointmentForm,
   type AppointmentFormValues,
 } from './appointment-form';
 import { CalendarGrid, dayKey } from './calendar-grid';
+import { WaitlistPanel } from './waitlist-panel';
 
 function ProfessionalFilter({
   professionals,
@@ -102,6 +104,15 @@ const monthLabel = (date: Date): string => {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 };
 
+/** Primeiro dia aceito pela entrada, nunca antes de hoje. */
+function waitlistStartDay(fromDate: string): Date {
+  const [year, month, day] = fromDate.split('-').map(Number);
+  const from = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return from < today ? today : from;
+}
+
 function resolveScheduleConfig(
   data: { config: ScheduleConfig } | null,
 ): ScheduleConfig {
@@ -135,6 +146,11 @@ export default function AgendaPage() {
     readRecallParams() ? new Date() : null,
   );
   const [selected, setSelected] = useState<AppointmentDto | null>(null);
+  // Entrada da lista de espera sendo agendada pelo formulário de consulta.
+  const [fromWaitlist, setFromWaitlist] = useState<WaitlistEntryDto | null>(
+    null,
+  );
+  const [waitlistVersion, setWaitlistVersion] = useState(0);
   const [professionalFilter, setProfessionalFilter] = useState('');
 
   const appointmentsUrl = useMemo(() => {
@@ -228,27 +244,74 @@ export default function AgendaPage() {
         description: 'Consulta criada',
         variant: 'success',
       });
+      if (fromWaitlist) {
+        await resolveWaitlistEntry(fromWaitlist);
+      }
       setSeriesNotice(null);
       setCreatingFor(null);
       refresh();
     }
   };
 
+  // Consulta marcada a partir da fila: a entrada sai da lista de espera.
+  const resolveWaitlistEntry = async (entry: WaitlistEntryDto) => {
+    try {
+      await apiFetch(`/api/waitlist/${entry.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ resolution: 'scheduled' }),
+      });
+    } catch {
+      toast({
+        description:
+          'Consulta criada, mas não foi possível tirar o paciente da lista de espera.',
+        variant: 'danger',
+      });
+    }
+    setFromWaitlist(null);
+    setWaitlistVersion((v) => v + 1);
+  };
+
   const handleAction = async (
     action: 'confirm' | 'cancel' | 'no_show' | 'complete',
     followUpInDays?: number | null,
+    extras?: ActionExtras,
   ) => {
     if (!selected) return;
-    await apiFetch<AppointmentDto>(`/api/appointments/${selected.id}`, {
+    const result = await apiFetch<
+      AppointmentDto & {
+        feeInvoiceId?: string | null;
+        waitlistMatches?: number;
+      }
+    >(`/api/appointments/${selected.id}`, {
       method: 'PATCH',
       body: JSON.stringify(
         action === 'complete'
           ? { action, followUpInDays: followUpInDays ?? null }
-          : { action },
+          : { action, ...extras },
       ),
     });
     setSelected(null);
     refresh();
+    announceAbsence(result);
+  };
+
+  // Depois de cancelar/registrar falta: taxa lançada e quem espera por vaga.
+  const announceAbsence = (result: {
+    feeInvoiceId?: string | null;
+    waitlistMatches?: number;
+  }) => {
+    if (result.feeInvoiceId) {
+      toast({
+        description: 'Taxa lançada como fatura pendente em Faturamento.',
+        variant: 'success',
+      });
+    }
+    if (result.waitlistMatches) {
+      toast({
+        description: `Horário liberado: ${result.waitlistMatches} na lista de espera aceita${result.waitlistMatches === 1 ? '' : 'm'} esse dia.`,
+        variant: 'info',
+      });
+    }
   };
 
   const handleReschedule = async (startsAt: Date, endsAt: Date) => {
@@ -329,14 +392,32 @@ export default function AgendaPage() {
         />
       )}
 
+      <WaitlistPanel
+        patients={patients ?? []}
+        professionals={professionals ?? []}
+        version={waitlistVersion}
+        onSchedule={(entry) => {
+          setFromWaitlist(entry);
+          setCreatingFor(waitlistStartDay(entry.fromDate));
+        }}
+      />
+
       {creatingFor && (
-        <Modal title="Nova consulta" onClose={() => setCreatingFor(null)}>
+        <Modal
+          title="Nova consulta"
+          onClose={() => {
+            setCreatingFor(null);
+            setFromWaitlist(null);
+          }}
+        >
           <AppointmentForm
             patients={patients ?? []}
             professionals={(professionals ?? []).filter((p) => p.active)}
             defaultDate={creatingFor}
-            defaultPatientId={recall?.patientId}
-            defaultProcedure={recall?.procedure}
+            defaultPatientId={fromWaitlist?.patientId ?? recall?.patientId}
+            defaultProcedure={
+              fromWaitlist?.procedureName ?? recall?.procedure ?? undefined
+            }
             onSubmit={handleCreate}
           />
         </Modal>
@@ -346,6 +427,7 @@ export default function AgendaPage() {
         <Modal title="Detalhes da consulta" onClose={() => setSelected(null)}>
           <AppointmentDetail
             appointment={selected}
+            cancellationPolicy={scheduleConfig.cancellationPolicy}
             onAction={handleAction}
             onReschedule={handleReschedule}
           />

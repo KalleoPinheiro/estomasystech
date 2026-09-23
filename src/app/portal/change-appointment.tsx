@@ -29,6 +29,8 @@ interface ChangeAppointmentProps {
   appointment: PortalAppointmentDto;
   /** Relógio de referência da tela (carregamento da página). */
   nowMs: number;
+  /** Antecedência mínima da política da clínica. */
+  noticeHours?: number;
   onChanged: () => void;
 }
 
@@ -40,16 +42,20 @@ interface ChangeAppointmentProps {
 export function ChangeAppointment({
   appointment,
   nowMs,
+  noticeHours = PATIENT_CHANGE_MIN_NOTICE_HOURS,
   onChanged,
 }: ChangeAppointmentProps) {
   const [panel, setPanel] = useState<Panel>('none');
-  const deadline = patientChangeDeadline(new Date(appointment.startsAt));
+  const deadline = patientChangeDeadline(
+    new Date(appointment.startsAt),
+    noticeHours,
+  );
 
   if (nowMs > deadline.getTime()) {
     return (
       <p className="text-ink-3 text-xs">
-        Para cancelar ou remarcar com menos de {PATIENT_CHANGE_MIN_NOTICE_HOURS}
-        h de antecedência, fale com a clínica.
+        Para cancelar ou remarcar com menos de {noticeHours}h de antecedência,
+        fale com a clínica.
       </p>
     );
   }

@@ -114,6 +114,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta (portal)', () 
         by: 'patient',
         at: beforeDeadline,
         reason: 'Viagem',
+        late: false,
       });
       expect((await appointmentRepo.findById(appointment.id))?.status).toBe(
         'cancelled',

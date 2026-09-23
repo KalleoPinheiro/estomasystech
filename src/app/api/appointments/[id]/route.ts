@@ -1,6 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import {
+  CancelAppointmentByStaff,
+  MarkNoShow,
+} from '@/application/appointments/cancel-appointment-by-staff';
+import {
   ACTIONS_REMOVING_EVENT,
   ChangeAppointmentStatus,
 } from '@/application/appointments/change-appointment-status';
@@ -8,6 +12,9 @@ import { CompleteAppointment } from '@/application/appointments/complete-appoint
 import { RescheduleAppointment } from '@/application/appointments/reschedule-appointment';
 import { DispenseProcedureKit } from '@/application/inventory/dispense-procedure-kit';
 import { RegisterStockMovement } from '@/application/inventory/register-stock-movement';
+import { findWaitlistMatches } from '@/application/scheduling/waitlist';
+import { localDateKey } from '@/domain/scheduling/schedule-availability';
+import { cancellationPolicyOf } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -16,7 +23,17 @@ import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 
 const actionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.enum(['confirm', 'cancel', 'no_show']) }),
+  z.object({ action: z.literal('confirm') }),
+  z.object({
+    action: z.literal('cancel'),
+    requestedBy: z.enum(['clinic', 'patient']).optional(),
+    reason: z.string().max(1000).nullish(),
+    chargeLateFee: z.boolean().optional(),
+  }),
+  z.object({
+    action: z.literal('no_show'),
+    chargeLateFee: z.boolean().optional(),
+  }),
   z.object({
     action: z.literal('complete'),
     followUpInDays: z.number().int().positive().max(365).nullish(),
@@ -110,14 +127,52 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
       return toAppointmentDto(rescheduled);
     }
-    const changed = await new ChangeAppointmentStatus(appointments).execute({
-      id,
-      action: body.action,
-    });
+    if (body.action === 'confirm') {
+      const confirmed = await new ChangeAppointmentStatus(appointments).execute(
+        { id, action: 'confirm' },
+      );
+      return toAppointmentDto(confirmed);
+    }
+
+    // Cancelamento e falta: consulta e taxa (quando cobrada) juntas ou nada.
+    const policy = cancellationPolicyOf(await services.scheduleConfig.get());
+    const { appointment: changed, feeInvoice } =
+      await services.transactions.run((tx) =>
+        body.action === 'cancel'
+          ? new CancelAppointmentByStaff(
+              tx.appointments,
+              tx.invoices,
+              policy,
+            ).execute({
+              id,
+              requestedBy: body.requestedBy,
+              reason: body.reason,
+              chargeLateFee: body.chargeLateFee,
+            })
+          : new MarkNoShow(tx.appointments, tx.invoices, policy).execute({
+              id,
+              chargeLateFee: body.chargeLateFee,
+            }),
+      );
     const eventId = changed.googleEventId;
     if (eventId && ACTIONS_REMOVING_EVENT.includes(body.action)) {
       scheduleCalendarSync(services, (sync) => sync.removed(eventId));
     }
-    return toAppointmentDto(changed);
+    // Horário vago: quem da lista de espera aceita esse dia (a recepção oferece).
+    const waitlistMatches =
+      body.action === 'cancel'
+        ? (
+            await findWaitlistMatches(
+              services.waitlist,
+              localDateKey(changed.slot.start),
+              changed.professionalId,
+            )
+          ).length
+        : 0;
+    return {
+      ...toAppointmentDto(changed),
+      feeInvoiceId: feeInvoice?.id ?? null,
+      waitlistMatches,
+    };
   });
 }

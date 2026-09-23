@@ -79,6 +79,7 @@ const appointmentFixture: AppointmentDto = {
   cancelledBy: null,
   cancelledAt: null,
   cancelReason: null,
+  cancelledLate: false,
 };
 
 // Fixture com data fixa para os cenários do CalendarGrid, que renderizam o mês
@@ -95,6 +96,7 @@ const julyAppointmentFixture: AppointmentDto = {
   cancelledBy: null,
   cancelledAt: null,
   cancelReason: null,
+  cancelledLate: false,
 };
 
 interface AgendaFetchOptions {
@@ -168,6 +170,9 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
         return jsonResponse(true, professionals);
       }
       if (url.startsWith('/api/procedures')) {
+        return jsonResponse(true, []);
+      }
+      if (url.startsWith('/api/waitlist')) {
         return jsonResponse(true, []);
       }
       if (url.startsWith('/api/settings/schedule/closures')) {
@@ -316,6 +321,7 @@ describe('Feature: Página de agenda', () => {
           if (url.startsWith('/api/professionals'))
             return jsonResponse(true, []);
           if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
       );
@@ -380,6 +386,7 @@ describe('Feature: Página de agenda', () => {
           if (url.startsWith('/api/professionals'))
             return jsonResponse(true, [professionalFixture]);
           if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
       );
@@ -507,6 +514,7 @@ describe('Feature: Página de agenda', () => {
           if (url.startsWith('/api/professionals'))
             return jsonResponse(true, []);
           if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
       );
@@ -567,6 +575,7 @@ describe('Feature: Página de agenda', () => {
           if (url.startsWith('/api/professionals'))
             return jsonResponse(true, []);
           if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
       );
@@ -656,6 +665,7 @@ describe('Feature: Página de agenda', () => {
           if (url.startsWith('/api/professionals'))
             return jsonResponse(true, []);
           if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
       );
@@ -706,6 +716,7 @@ describe('Feature: Página de agenda', () => {
           if (url.startsWith('/api/professionals'))
             return jsonResponse(true, []);
           if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
       );
@@ -748,6 +759,7 @@ describe('Feature: Página de agenda', () => {
           if (url.startsWith('/api/professionals'))
             return jsonResponse(true, []);
           if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
       );
@@ -1434,6 +1446,7 @@ describe('Feature: Detalhe de consulta', () => {
       );
 
       fireEvent.click(screen.getByText('Cancelar'));
+      fireEvent.click(screen.getByText('Confirmar cancelamento'));
 
       await waitFor(() => {
         expect(
@@ -1534,6 +1547,7 @@ describe('Feature: Detalhe de consulta', () => {
       );
 
       fireEvent.click(screen.getByText('Cancelar'));
+      fireEvent.click(screen.getByText('Confirmar cancelamento'));
 
       await waitFor(() => {
         expect(

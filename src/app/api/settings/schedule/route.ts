@@ -25,6 +25,12 @@ const configSchema = z.object({
       endMinute: z.number().int().min(0).max(1440),
     })
     .nullish(),
+  cancellationPolicy: z
+    .object({
+      noticeHours: z.number().int().min(0).max(168),
+      lateFeeCents: z.number().int().min(0).max(1_000_000),
+    })
+    .optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -51,7 +57,18 @@ export async function PUT(request: NextRequest) {
     const { scheduleConfig, auditEvents } = await getRepositories(
       clinicScope(clinicId),
     );
-    const validated = validateScheduleConfig(body);
+    // Campo ausente no corpo mantém o valor salvo (telas antigas não mandam
+    // almoço nem política e não podem apagá-los sem querer).
+    const current = await scheduleConfig.get();
+    const validated = validateScheduleConfig({
+      ...body,
+      lunchBreak:
+        body.lunchBreak === undefined
+          ? (current?.lunchBreak ?? null)
+          : body.lunchBreak,
+      cancellationPolicy:
+        body.cancellationPolicy ?? current?.cancellationPolicy,
+    });
     await scheduleConfig.save(validated);
     recordAudit(auditEvents, guard.session, {
       action: 'update',

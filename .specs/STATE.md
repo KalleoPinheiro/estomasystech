@@ -748,3 +748,12 @@ Segundo tópico do item 8 (lacunas de produto do N6), PR própria.
 - **Regra única**: `assertSlotAvailable` ganhou o repositório de disponibilidade; todos os caminhos de agendamento (equipe, recorrência, portal, remarcação e listagem de horários) passam por ele. A listagem do portal lê bloqueios/horário uma vez por chamada (memo), não por candidato.
 - **Testes**: domínio, aplicação, API (PGlite: isolamento entre clínicas, Atendente 403 no horário do profissional, pausa em todos os caminhos) e telas; E2E de ausência em Configurações. Sensor: 9 mutantes, 1 sobreviveu (consulta de bloqueios por intervalo) → teste de férias de vários dias adicionado, morto. E2E completo: 85 passaram, 2 intermitentes já conhecidos (`responsive-tables › relatórios`, `export-lgpd › auditoria`) passaram na nova tentativa.
 
+## Lista de espera e política de cancelamento tardio (N6, item 8c) — CONCLUÍDA
+
+Terceiro tópico do item 8, PR própria (empilhada na de agenda por profissional por causa da numeração das migrações).
+
+- **Política por clínica** (`schedule_settings.cancel_notice_hours/late_cancel_fee_cents`, migração 0035): antecedência mínima do portal (substitui as 24 h fixas do item 8a) e taxa opcional. Cancelamento pela equipe registra quem pediu; pedido do paciente dentro da antecedência fica `cancelled_late`. Taxa (tardio ou falta) é decisão da equipe, vira fatura pendente ligada à consulta — nunca entra em comissão (consulta não concluída).
+- **Lista de espera** (`waitlist_entries`): recepção e paciente (portal, quando o dia não tem horário) entram na fila; ao cancelar, a agenda avisa quantos aceitam o dia. Sem agendamento automático nem aviso ativo ao paciente — depende do item 3 (WhatsApp), ainda aguardando D1–D4.
+- **Decisões**: taxa não bloqueia nada (é fatura comum, pode ser cancelada no Faturamento); PUT da grade preserva campos omitidos; re-resolver uma entrada da fila é 409.
+- **Testes**: domínio, aplicação, API (PGlite: taxa como fatura, tardio persistido, política no portal, fila com isolamento entre clínicas e posse no portal) e telas (painéis de cancelamento/falta, fila na agenda e no portal, fluxo de agendar a partir da fila). Sensor: 10 mutantes, 3 sobreviveram (rota do portal sem política, painel mandando taxa indevida, tardio não persistido) → testes adicionados, todos mortos. E2E: lista de espera na agenda; completo com 86 passando e os 2 intermitentes conhecidos passando na nova tentativa.
+

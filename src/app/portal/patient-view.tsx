@@ -41,6 +41,7 @@ import {
   PatientPhotoUpload,
 } from './consent-card';
 import { ScheduleReturn } from './schedule-return';
+import { MyWaitlist } from './waitlist';
 
 interface PatientPortalDto {
   patient: PortalPatientProfileDto;
@@ -48,6 +49,8 @@ interface PatientPortalDto {
   conditions: ConditionWithAssessmentsDto[];
   invoices: InvoiceDto[];
   followUps: FollowUpDto[];
+  /** Antecedência mínima para cancelar/remarcar (política da clínica). */
+  changeNoticeHours?: number;
 }
 
 // Momento de carregamento da página — suficiente para separar futuras × passadas.
@@ -64,6 +67,7 @@ export function PatientPortalView() {
   const { data: consent, refresh: refreshConsent } =
     useApiQuery<ConsentStatusDto>('/api/portal/patient/consent');
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [waitlistVersion, setWaitlistVersion] = useState(0);
 
   if (error) return <ErrorAlert message={error} />;
   if (!data) return <LoadingIndicator />;
@@ -136,6 +140,7 @@ export function PatientPortalView() {
               <ChangeAppointment
                 appointment={appointment}
                 nowMs={PAGE_LOAD_MS}
+                noticeHours={data.changeNoticeHours}
                 onChanged={refresh}
               />
             )}
@@ -156,12 +161,15 @@ export function PatientPortalView() {
                 <ScheduleReturn
                   followUpId={followUp.id}
                   onScheduled={refresh}
+                  onWaitlistJoined={() => setWaitlistVersion((v) => v + 1)}
                 />
               </li>
             ))}
           </ul>
         </Section>
       )}
+
+      <MyWaitlist version={waitlistVersion} />
 
       <Section title="Minha evolução clínica">
         {data.conditions.length === 0 ? (

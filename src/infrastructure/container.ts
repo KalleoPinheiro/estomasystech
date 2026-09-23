@@ -48,6 +48,7 @@ import type { ProfessionalRepository } from '@/domain/professional/professional-
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
+import type { WaitlistRepository } from '@/domain/scheduling/waitlist';
 import type {
   NursingDiagnosisRepository,
   NursingInterventionRepository,
@@ -118,6 +119,7 @@ import {
   DrizzleTaxonomyLinkageRepository,
 } from './persistence/drizzle/drizzle-taxonomy-repositories';
 import { DrizzleTransactionManager } from './persistence/drizzle/drizzle-transaction-manager';
+import { DrizzleWaitlistRepository } from './persistence/drizzle/drizzle-waitlist-repository';
 import { LEGACY_CLINIC_ID } from './persistence/drizzle/legacy-clinic';
 import { DrizzleProfessionalPatientLinkRepository } from './persistence/drizzle/professional-patient-link-repository';
 import { LocalPhotoStorage } from './storage/local-photo-storage';
@@ -140,6 +142,7 @@ export interface Services {
   authTokens: AuthTokenRepository;
   scheduleConfig: ScheduleConfigRepository;
   scheduleAvailability: ScheduleAvailabilityRepository;
+  waitlist: WaitlistRepository;
   googleAccounts: DrizzleGoogleAccountRepository;
   appointments: AppointmentRepository;
   invoices: InvoiceRepository;
@@ -308,6 +311,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       db,
       tenant.clinicId,
     ),
+    waitlist: new DrizzleWaitlistRepository(db, tenant.clinicId),
     googleAccounts: new DrizzleGoogleAccountRepository(db, tenant.clinicId),
     appointments: new DrizzleAppointmentRepository(db, tenant.clinicId),
     invoices: new DrizzleInvoiceRepository(db, tenant.clinicId),

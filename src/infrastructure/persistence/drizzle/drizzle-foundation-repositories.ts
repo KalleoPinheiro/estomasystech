@@ -12,6 +12,7 @@ import {
 } from '@/domain/catalog/procedure-kit';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import {
+  DEFAULT_CANCELLATION_POLICY,
   type ScheduleConfig,
   type ScheduleConfigRepository,
   validateScheduleConfig,
@@ -233,6 +234,14 @@ export class DrizzleScheduleConfigRepository
                 endMinute: rows[0].lunchEndMinute,
               }
             : null,
+        cancellationPolicy: {
+          noticeHours:
+            rows[0].cancelNoticeHours ??
+            DEFAULT_CANCELLATION_POLICY.noticeHours,
+          lateFeeCents:
+            rows[0].lateCancelFeeCents ??
+            DEFAULT_CANCELLATION_POLICY.lateFeeCents,
+        },
       });
     } catch {
       // Configuração corrompida nunca derruba o agendamento — cai no default.
@@ -256,6 +265,8 @@ export class DrizzleScheduleConfigRepository
       minGapMinutes: validated.minGapMinutes,
       lunchStartMinute: validated.lunchBreak?.startMinute ?? null,
       lunchEndMinute: validated.lunchBreak?.endMinute ?? null,
+      cancelNoticeHours: validated.cancellationPolicy?.noticeHours ?? null,
+      lateCancelFeeCents: validated.cancellationPolicy?.lateFeeCents ?? null,
       updatedAt: new Date(),
     };
     await this.db
@@ -270,6 +281,8 @@ export class DrizzleScheduleConfigRepository
           minGapMinutes: values.minGapMinutes,
           lunchStartMinute: values.lunchStartMinute,
           lunchEndMinute: values.lunchEndMinute,
+          cancelNoticeHours: values.cancelNoticeHours,
+          lateCancelFeeCents: values.lateCancelFeeCents,
           updatedAt: values.updatedAt,
         },
       });

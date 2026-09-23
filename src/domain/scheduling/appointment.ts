@@ -23,12 +23,15 @@ export interface AppointmentCancellation {
   by: CancellationOrigin;
   at: Date;
   reason: string | null;
+  /** Pedido do paciente dentro da antecedência mínima da política da clínica. */
+  late: boolean;
 }
 
 export interface CancelInput {
   by?: CancellationOrigin;
   at?: Date;
   reason?: string | null;
+  late?: boolean;
 }
 
 const MAX_CANCEL_REASON_LENGTH = 1000;
@@ -122,6 +125,7 @@ export class Appointment {
         by: input.by ?? 'clinic',
         at: input.at ?? new Date(),
         reason,
+        late: input.late ?? false,
       },
     });
   }

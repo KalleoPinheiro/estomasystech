@@ -25,6 +25,7 @@ import {
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
+import type { CancellationPolicy } from '@/domain/scheduling/schedule-config';
 import { apiFetch } from '@/lib/client';
 import type {
   CalendarIntegrationStatusDto,
@@ -35,6 +36,7 @@ import type {
 import { formatDateTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useSavableForm } from '@/lib/use-savable-form';
+import { CancellationPolicyFields } from './cancellation-policy-fields';
 import { ClosuresSection } from './closures-section';
 import { LunchBreakFields } from './lunch-break-fields';
 
@@ -71,6 +73,7 @@ interface ScheduleConfigDto {
   endHour: number;
   minGapMinutes: number;
   lunchBreak?: { startMinute: number; endMinute: number } | null;
+  cancellationPolicy?: CancellationPolicy;
 }
 
 export default function SettingsPage() {
@@ -303,6 +306,12 @@ function ScheduleForm({
       <LunchBreakFields
         value={draft.lunchBreak ?? null}
         onChange={(lunchBreak) => setDraft({ ...draft, lunchBreak })}
+      />
+      <CancellationPolicyFields
+        value={draft.cancellationPolicy}
+        onChange={(cancellationPolicy) =>
+          setDraft({ ...draft, cancellationPolicy })
+        }
       />
 
       <Button
