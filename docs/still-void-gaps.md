@@ -8,7 +8,7 @@ last_reviewed: 2026-09-23
 
 # Lacunas do `@still-void/ui` — backlog para a lib
 
-- **Status:** Fechado — nenhuma seção aberta
+- **Status:** Aberto — 2 seções abertas (`layout-grid-min-content`, `touch-target-size`)
 - **Data:** 2026-08-26
 - **Versão verificada:** `@still-void/ui@3.2.0`
 - **Origem:** migração 2.0 → 3.1 do VittaFlow (`.specs/features/still-void-v3-migration/`); as
@@ -33,6 +33,42 @@ relato sobre a lib, não dívida no VittaFlow.
 publicado, não a documentação.
 
 **Contagem de call sites** é de ocorrências no código, não de arquivos.
+
+---
+
+## Lacunas abertas
+
+Levantadas pela issue [#127](https://github.com/KalleoPinheiro/vitta-flow/issues/127) (portal em
+viewport mobile), conferidas contra `dist/style.css` da `@still-void/ui@3.3.1`. Os dois
+workarounds moram em [src/app/globals.css](../src/app/globals.css), escopados a `.portal-shell`
+([src/app/portal/layout.tsx](../src/app/portal/layout.tsx)), e são provados por
+[e2e/portal-responsivo.spec.ts](../e2e/portal-responsivo.spec.ts).
+
+### `layout-grid-min-content`
+
+**Defeito.** `.sv-layout` declara `grid-template-columns: 1fr`, que o CSS lê como
+`minmax(auto, 1fr)`: a coluna nunca fica menor que o min-content do conteúdo. No portal, a linha de
+consulta (data + "Confirmar presença" + selo) e o título do termo levaram a coluna a ~511px numa
+tela de 390px — scroll horizontal na página inteira. A própria lib já usa `minmax(0, 1fr)` em
+`.sv-layout--with-sidebar`.
+
+**Workaround local.** `.portal-shell .sv-layout { grid-template-columns: minmax(0, 1fr); }`.
+
+**Correção sugerida na lib (patch).** Trocar `1fr` por `minmax(0, 1fr)` em `.sv-layout`.
+
+### `touch-target-size`
+
+**Lacuna.** Não há tamanho de alvo de toque em `Button` nem nos campos: `size="sm"` mede 36px,
+o default e `.sv-field` 40px, e o link da marca no `Header` 24px — abaixo dos 44x44px do WCAG
+2.5.5. Só o `.sv-btn--lg` (44px) e o menu aberto do `Header` chegam lá.
+
+**Workaround local.** Em `(width < 40rem), (pointer: coarse)`, `.sv-btn`, `.sv-field` e `a[href]`
+dentro de `.portal-shell` ganham `min-height`/`min-width` de
+`calc(var(--sv-space-10) + var(--sv-space-1))` (44px); links viram `inline-flex`. Desktop com
+mouse fica como a lib desenha.
+
+**Correção sugerida na lib (minor).** Um tamanho de toque — prop ou regra
+`@media (pointer: coarse)` — em `.sv-btn` e `.sv-field`, para o app não sobrescrever classe `sv-*`.
 
 ---
 
