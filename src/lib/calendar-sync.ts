@@ -1,6 +1,9 @@
 import { after } from 'next/server';
 import { SyncAppointmentCalendar } from '@/application/appointments/sync-appointment-calendar';
-import { NullCalendarGateway } from '@/application/ports/calendar-gateway';
+import {
+  NullCalendarGateway,
+  resolveCalendarGateway,
+} from '@/application/ports/calendar-gateway';
 import type { Services } from '@/infrastructure/container';
 
 type CalendarServices = Pick<
@@ -21,11 +24,17 @@ export function scheduleCalendarSync(
   }
   after(async () => {
     try {
+      // Gateway preguiçoso: a credencial é lida aqui, já fora do tempo de
+      // resposta; se não houver conta conectada, resolve para o nulo.
+      const calendar = await resolveCalendarGateway(services.calendar);
+      if (calendar instanceof NullCalendarGateway) {
+        return;
+      }
       await action(
         new SyncAppointmentCalendar(
           services.appointments,
           services.patients,
-          services.calendar,
+          calendar,
         ),
       );
     } catch (error) {

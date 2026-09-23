@@ -21,3 +21,43 @@ export class NullCalendarGateway implements CalendarGateway {
 
   async deleteEvent(): Promise<void> {}
 }
+
+/**
+ * Gateway montado só no primeiro uso: resolver o real exige ler a credencial
+ * OAuth no banco, e a maioria dos requests nunca toca a agenda. A resolução é
+ * memorizada; se falhar, a próxima chamada tenta de novo.
+ */
+export class LazyCalendarGateway implements CalendarGateway {
+  private pending: Promise<CalendarGateway> | null = null;
+
+  constructor(private readonly load: () => Promise<CalendarGateway>) {}
+
+  resolve(): Promise<CalendarGateway> {
+    this.pending ??= this.load().catch((error: unknown) => {
+      this.pending = null;
+      throw error;
+    });
+    return this.pending;
+  }
+
+  async createEvent(input: CalendarEventInput): Promise<string | null> {
+    return (await this.resolve()).createEvent(input);
+  }
+
+  async updateEvent(eventId: string, input: CalendarEventInput): Promise<void> {
+    return (await this.resolve()).updateEvent(eventId, input);
+  }
+
+  async deleteEvent(eventId: string): Promise<void> {
+    return (await this.resolve()).deleteEvent(eventId);
+  }
+}
+
+/** O gateway concreto por trás de um preguiçoso (ou o próprio, se não for). */
+export function resolveCalendarGateway(
+  gateway: CalendarGateway,
+): Promise<CalendarGateway> {
+  return gateway instanceof LazyCalendarGateway
+    ? gateway.resolve()
+    : Promise.resolve(gateway);
+}

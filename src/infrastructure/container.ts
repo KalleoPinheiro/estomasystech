@@ -1,5 +1,6 @@
 import {
   type CalendarGateway,
+  LazyCalendarGateway,
   NullCalendarGateway,
 } from '@/application/ports/calendar-gateway';
 import type { EmailGateway } from '@/application/ports/email-gateway';
@@ -236,6 +237,22 @@ async function buildCalendarGateway(
   return next.gateway;
 }
 
+/**
+ * Sem integração configurada no ambiente, o gateway é o nulo — sem tocar o
+ * banco. Com integração, a credencial OAuth só é lida no primeiro uso: antes,
+ * todo request (inclusive os que nunca usam a agenda) consultava
+ * `google_accounts` ao montar os serviços.
+ */
+function calendarGatewayFor(
+  db: AppDb,
+  clinicId: string | null,
+): CalendarGateway {
+  if (!googleCalendarOAuthConfigFromEnv() && !googleCalendarConfigFromEnv()) {
+    return new NullCalendarGateway();
+  }
+  return new LazyCalendarGateway(() => buildCalendarGateway(db, clinicId));
+}
+
 function buildMessagingGateway(): MessagingGateway {
   const config = metaWhatsAppConfigFromEnv();
   return config ? new MetaWhatsAppGateway(config) : new NullMessagingGateway();
@@ -247,7 +264,6 @@ function buildMessagingGateway(): MessagingGateway {
  */
 export async function getRepositories(tenant: TenantScope): Promise<Services> {
   const db = await getDb();
-  const calendar = await buildCalendarGateway(db, tenant.clinicId);
   const auth = getAuthConfig();
   if (!auth) {
     throw new Error(
@@ -327,7 +343,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     ),
     auditEvents: new DrizzleAuditEventRepository(db),
     reminderLog: new DrizzleReminderLogRepository(db, tenant.clinicId),
-    calendar,
+    calendar: calendarGatewayFor(db, tenant.clinicId),
     messaging: buildMessagingGateway(),
     email: buildEmailGateway(),
     transactions: new DrizzleTransactionManager(db, tenant.clinicId),
