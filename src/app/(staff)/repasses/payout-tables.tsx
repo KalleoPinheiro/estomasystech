@@ -101,17 +101,50 @@ export function ItemsButton({
   );
 }
 
-/** Repasses já registrados, mais recentes primeiro. */
+/**
+ * Só o repasse ativo mais recente de cada profissional pode ser cancelado —
+ * a API impõe a mesma regra; aqui só se evita oferecer o botão à toa.
+ */
+export function latestActiveIds(history: CommissionPayoutDto[]): Set<string> {
+  const seen = new Set<string>();
+  const ids = new Set<string>();
+  for (const payout of history) {
+    if (payout.status !== 'active' || seen.has(payout.professionalId)) continue;
+    seen.add(payout.professionalId);
+    ids.add(payout.id);
+  }
+  return ids;
+}
+
+function PayoutStatusCell({ payout }: { payout: CommissionPayoutDto }) {
+  if (payout.status === 'active') {
+    return <span>Pago</span>;
+  }
+  return (
+    <span className="text-danger">
+      Cancelado
+      {payout.cancelReason && (
+        <span className="block text-ink-3 text-xs">{payout.cancelReason}</span>
+      )}
+    </span>
+  );
+}
+
+/** Repasses já registrados (inclusive cancelados), mais recentes primeiro. */
 export function PayoutHistoryTable({
   history,
   showProfessional,
+  onCancel,
 }: {
   history: CommissionPayoutDto[];
   showProfessional: boolean;
+  /** Presente só para o Admin — habilita "Cancelar" no repasse mais recente. */
+  onCancel?: (payout: CommissionPayoutDto) => void;
 }) {
   if (history.length === 0) {
     return <EmptyState message="Nenhum repasse registrado ainda." />;
   }
+  const cancellable = latestActiveIds(history);
   return (
     <div className="overflow-x-auto">
       <Table className="w-full text-left text-sm">
@@ -124,7 +157,8 @@ export function PayoutHistoryTable({
             <TableHead className="py-2 text-right">Valor</TableHead>
             <TableHead className="py-2">Pago em</TableHead>
             <TableHead className="py-2">Forma</TableHead>
-            <TableHead className="py-2 text-right">Sessões</TableHead>
+            <TableHead className="py-2">Situação</TableHead>
+            <TableHead className="py-2 text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -148,12 +182,31 @@ export function PayoutHistoryTable({
                 {PAYMENT_METHOD_LABELS[payout.paymentMethod] ??
                   payout.paymentMethod}
               </TableCell>
+              <TableCell className="py-2">
+                <PayoutStatusCell payout={payout} />
+              </TableCell>
               <TableCell className="py-2 text-right">
                 <ItemsButton
                   title={`Repasse de ${monthLabelPtBr(payout.period)} — ${payout.professionalName}`}
                   items={payout.items}
                   label={`${payout.items.length} sessões`}
                 />
+                <a
+                  href={`/documentos/repasse/${payout.id}`}
+                  className="mx-2 font-medium text-accent-ink text-xs hover:underline"
+                >
+                  Comprovante
+                </a>
+                {onCancel && cancellable.has(payout.id) && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onCancel(payout)}
+                  >
+                    Cancelar
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}

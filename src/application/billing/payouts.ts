@@ -90,7 +90,7 @@ export class GetPayoutStatement {
         paid,
         input.now ?? new Date(),
       ),
-      closedPayout: closed[0] ?? null,
+      closedPayout: closed.find((p) => p.isActive) ?? null,
     };
   }
 }
@@ -122,7 +122,9 @@ export class GetPayoutOverview {
           now,
         ),
         closedPayout:
-          closed.find((p) => p.professionalId === professional.id) ?? null,
+          closed.find(
+            (p) => p.isActive && p.professionalId === professional.id,
+          ) ?? null,
       }))
       .filter(
         (row) =>
@@ -181,9 +183,51 @@ export class ClosePayout {
       paymentMethod: input.paymentMethod,
       notes: input.notes,
       createdBy: input.createdBy,
+      rule,
       items: statement.payable,
     });
     await this.deps.payouts.save(payout);
     return payout;
+  }
+}
+
+export interface CancelPayoutInput {
+  payoutId: string;
+  reason: string;
+  /** Quem cancelou (e-mail da sessão do Admin). */
+  cancelledBy: string;
+  now?: Date;
+}
+
+/**
+ * Cancela um repasse registrado por engano — só o mais recente (ativo) de cada
+ * profissional: um fechamento posterior pode ter descontado estornos deste, e
+ * cancelar fora de ordem deixaria esse desconto sem origem.
+ */
+export class CancelPayout {
+  constructor(private readonly payouts: CommissionPayoutRepository) {}
+
+  async execute(input: CancelPayoutInput): Promise<CommissionPayout> {
+    const payout = await this.payouts.findById(input.payoutId);
+    if (!payout) {
+      throw new NotFoundError('Repasse', input.payoutId);
+    }
+    if (payout.isActive) {
+      const latest = (
+        await this.payouts.findAll({ professionalId: payout.professionalId })
+      ).find((p) => p.isActive);
+      if (latest && latest.id !== payout.id) {
+        throw new ConflictError(
+          `Só o repasse mais recente pode ser cancelado — cancele antes o de ${latest.period}`,
+        );
+      }
+    }
+    const cancelled = payout.cancel({
+      by: input.cancelledBy,
+      reason: input.reason,
+      at: input.now,
+    });
+    await this.payouts.saveCancellation(cancelled);
+    return cancelled;
   }
 }

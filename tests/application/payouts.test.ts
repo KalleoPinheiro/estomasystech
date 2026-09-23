@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  CancelPayout,
   ClosePayout,
   GetPayoutOverview,
   GetPayoutStatement,
@@ -257,5 +258,96 @@ describe('Feature: Fechamento mensal de repasses (casos de uso)', () => {
     expect(rows.map((r) => r.professional.fullName)).toEqual(['Dra. Ana']);
     expect(rows[0].statement.payableCents).toBe(6000);
     expect(rows[0].closedPayout).toBeNull();
+  });
+
+  describe('Cancelar repasse registrado por engano', () => {
+    const cancel = (payoutId: string, reason = 'valor errado') =>
+      new CancelPayout(payouts).execute({
+        payoutId,
+        reason,
+        cancelledBy: 'admin@clinica.com',
+        now: NOW,
+      });
+
+    it('Dado repasse fechado, Quando cancelar, Então as sessões voltam ao saldo e o mês pode ser fechado de novo', async () => {
+      await session('2026-09-10', 'paid');
+      const first = await close();
+
+      const cancelled = await cancel(first.id);
+
+      expect(cancelled.status).toBe('cancelled');
+      expect(cancelled.cancelledAt).toEqual(NOW);
+      const statement = await new GetPayoutStatement(deps).execute({
+        professionalId: ana.id,
+        period: '2026-09',
+        now: NOW,
+      });
+      expect(statement.closedPayout).toBeNull();
+      expect(statement.statement.payableCents).toBe(6000);
+
+      const again = await close();
+      expect(again.totalCents).toBe(6000);
+      expect(again.id).not.toBe(first.id);
+      // O cancelado continua no histórico.
+      const history = await payouts.findAll({ professionalId: ana.id });
+      expect(history.map((p) => p.status).sort()).toEqual([
+        'active',
+        'cancelled',
+      ]);
+    });
+
+    it('Dado repasse cancelado, Quando pedir a visão geral, Então o mês aparece em aberto', async () => {
+      await session('2026-09-10', 'paid');
+      await cancel((await close()).id);
+
+      const [row] = await new GetPayoutOverview(deps).execute({
+        period: '2026-09',
+        now: NOW,
+      });
+      expect(row.closedPayout).toBeNull();
+      expect(row.statement.payableCents).toBe(6000);
+    });
+
+    it('Dados dois repasses do profissional, Quando cancelar o mais antigo, Então ConflictError apontando o mais recente', async () => {
+      await session('2026-09-10', 'paid');
+      const september = await close('2026-09');
+      await session('2026-10-05', 'paid');
+      const october = await closeOctober();
+
+      await expect(cancel(september.id)).rejects.toThrow(
+        /cancele antes o de 2026-10/,
+      );
+
+      await cancel(october.id);
+      const reopened = await cancel(september.id);
+      expect(reopened.status).toBe('cancelled');
+    });
+
+    it('Dado repasse de outro profissional mais recente, Quando cancelar, Então não bloqueia', async () => {
+      const caio = Professional.create({ fullName: 'Caio', commissionPct: 10 });
+      await professionals.save(caio);
+      await session('2026-09-10', 'paid');
+      const anaPayout = await close('2026-09');
+      await session('2026-10-05', 'paid', caio.id);
+      await new ClosePayout(deps).execute({
+        professionalId: caio.id,
+        period: '2026-10',
+        paidAt: NOW,
+        paymentMethod: 'pix',
+        createdBy: 'admin@clinica.com',
+        now: new Date('2026-11-05T12:00:00'),
+      });
+
+      expect((await cancel(anaPayout.id)).status).toBe('cancelled');
+    });
+
+    it('Dado repasse inexistente ou já cancelado, Quando cancelar, Então recusa', async () => {
+      await expect(cancel('ghost')).rejects.toThrow(NotFoundError);
+      await session('2026-09-10', 'paid');
+      const payout = await close();
+      await cancel(payout.id);
+
+      await expect(cancel(payout.id)).rejects.toThrow(/já foi cancelado/);
+    });
   });
 });

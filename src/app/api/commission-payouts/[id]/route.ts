@@ -1,0 +1,32 @@
+import type { NextRequest } from 'next/server';
+import { NotFoundError } from '@/domain/shared/errors';
+import { getRepositories } from '@/infrastructure/container';
+import { handleRequest } from '@/lib/api-response';
+import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
+import { type PayoutReceiptDto, toCommissionPayoutDto } from '@/lib/dto';
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+/** Repasse de qualquer profissional da clínica (Admin) — base do comprovante. */
+export async function GET(request: NextRequest, context: RouteContext) {
+  const guard = requireStaffSession(request);
+  if (!guard.ok) return guard.response;
+
+  return handleRequest(async (): Promise<PayoutReceiptDto> => {
+    const { id } = await context.params;
+    const { commissionPayouts, professionals } = await getRepositories(
+      sessionScope(guard.session),
+    );
+    const payout = await commissionPayouts.findById(id);
+    if (!payout) {
+      throw new NotFoundError('Repasse', id);
+    }
+    const professional = await professionals.findById(payout.professionalId);
+    const fullName = professional?.fullName ?? '—';
+    return {
+      payout: toCommissionPayoutDto(payout, fullName),
+      professional: { fullName, registry: professional?.registry ?? null },
+    };
+  });
+}

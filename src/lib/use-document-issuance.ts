@@ -7,7 +7,8 @@ export type DocumentType =
   | 'atestado'
   | 'consentimento'
   | 'plano-cuidados'
-  | 'relatorio';
+  | 'relatorio'
+  | 'repasse';
 
 export interface DocumentIssuance {
   documentNumber: string;

@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import type { CommissionRule } from '@/domain/billing/commission';
 import {
   CommissionPayout,
   type CommissionPayoutRepository,
@@ -7,6 +8,7 @@ import {
   type PayoutItem,
   type PayoutItemKind,
   type PayoutMethod,
+  type PayoutStatus,
 } from '@/domain/billing/commission-payout';
 import { ConflictError } from '@/domain/shared/errors';
 import { newId } from '@/domain/shared/id';
@@ -27,6 +29,25 @@ const toItem = (row: ItemRow): PayoutItem => ({
   commissionCents: row.commissionCents,
 });
 
+const toRule = (row: PayoutRow): CommissionRule | null => {
+  if (row.ruleKind === 'fixed' && row.ruleValue != null) {
+    return { kind: 'fixed', centsPerSession: row.ruleValue };
+  }
+  if (row.ruleKind === 'percentage' && row.ruleValue != null) {
+    return { kind: 'percentage', pct: row.ruleValue };
+  }
+  return null;
+};
+
+const ruleColumns = (rule: CommissionRule | null) => ({
+  ruleKind: rule?.kind ?? null,
+  ruleValue: rule
+    ? rule.kind === 'fixed'
+      ? rule.centsPerSession
+      : rule.pct
+    : null,
+});
+
 const toPayout = (row: PayoutRow, items: ItemRow[]): CommissionPayout =>
   CommissionPayout.restore({
     id: row.id,
@@ -38,6 +59,11 @@ const toPayout = (row: PayoutRow, items: ItemRow[]): CommissionPayout =>
     notes: row.notes,
     createdBy: row.createdBy,
     createdAt: row.createdAt,
+    rule: toRule(row),
+    status: row.status as PayoutStatus,
+    cancelledAt: row.cancelledAt,
+    cancelledBy: row.cancelledBy,
+    cancelReason: row.cancelReason,
     items: items.map(toItem),
   });
 
@@ -67,6 +93,8 @@ export class DrizzleCommissionPayoutRepository
           paidAt: payout.paidAt,
           paymentMethod: payout.paymentMethod,
           notes: payout.notes,
+          ...ruleColumns(payout.rule),
+          status: payout.status,
           createdBy: payout.createdBy,
           createdAt: payout.createdAt,
         });
@@ -90,6 +118,38 @@ export class DrizzleCommissionPayoutRepository
       }
       throw error;
     }
+  }
+
+  async saveCancellation(payout: CommissionPayout): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(commissionPayouts)
+        .set({
+          status: payout.status,
+          cancelledAt: payout.cancelledAt,
+          cancelledBy: payout.cancelledBy,
+          cancelReason: payout.cancelReason,
+        })
+        .where(
+          withTenant(
+            commissionPayouts,
+            this.clinicId,
+            eq(commissionPayouts.id, payout.id),
+          ),
+        );
+      // Itens inativos saem das unicidades parciais: a sessão volta a poder
+      // ser paga num novo fechamento.
+      await tx
+        .update(commissionPayoutItems)
+        .set({ active: false })
+        .where(
+          withTenant(
+            commissionPayoutItems,
+            this.clinicId,
+            eq(commissionPayoutItems.payoutId, payout.id),
+          ),
+        );
+    });
   }
 
   async findById(id: string): Promise<CommissionPayout | null> {
@@ -170,9 +230,12 @@ export class DrizzleCommissionPayoutRepository
         withTenant(
           commissionPayoutItems,
           this.clinicId,
-          professionalId
-            ? eq(commissionPayoutItems.professionalId, professionalId)
-            : undefined,
+          and(
+            eq(commissionPayoutItems.active, true),
+            professionalId
+              ? eq(commissionPayoutItems.professionalId, professionalId)
+              : undefined,
+          ),
         ),
       );
     return rows.map((row) => ({ ...row, kind: row.kind as PayoutItemKind }));

@@ -1,4 +1,7 @@
-import { ValidationError } from '../shared/errors';
+import {
+  InvalidStatusTransitionError,
+  ValidationError,
+} from '../shared/errors';
 import { newId } from '../shared/id';
 import {
   type CommissionRule,
@@ -144,6 +147,11 @@ export function buildStatement(
   };
 }
 
+export type PayoutStatus = 'active' | 'cancelled';
+
+/** Mínimo para o motivo do cancelamento dizer algo ("erro" não explica nada). */
+const MIN_CANCEL_REASON = 5;
+
 export interface CommissionPayoutProps {
   professionalId: string;
   period: string;
@@ -151,6 +159,8 @@ export interface CommissionPayoutProps {
   paymentMethod: PayoutMethod;
   notes?: string | null;
   createdBy: string;
+  /** Regra vigente no fechamento — retrato para o comprovante. */
+  rule: CommissionRule | null;
   items: PayoutItem[];
 }
 
@@ -159,6 +169,10 @@ export interface CommissionPayoutState extends CommissionPayoutProps {
   totalCents: number;
   notes: string | null;
   createdAt: Date;
+  status: PayoutStatus;
+  cancelledAt: Date | null;
+  cancelledBy: string | null;
+  cancelReason: string | null;
 }
 
 export class CommissionPayout {
@@ -184,6 +198,34 @@ export class CommissionPayout {
       id: newId(),
       totalCents,
       createdAt: new Date(),
+      status: 'active',
+      cancelledAt: null,
+      cancelledBy: null,
+      cancelReason: null,
+    });
+  }
+
+  /**
+   * Repasse registrado por engano: cancela (nunca apaga) — as sessões voltam ao
+   * saldo a pagar e o mês pode ser fechado de novo. O dinheiro já transferido é
+   * acertado fora do sistema.
+   */
+  cancel(input: { by: string; reason: string; at?: Date }): CommissionPayout {
+    if (this.state.status === 'cancelled') {
+      throw new InvalidStatusTransitionError('Este repasse já foi cancelado');
+    }
+    const reason = input.reason.trim();
+    if (reason.length < MIN_CANCEL_REASON) {
+      throw new ValidationError(
+        'Informe o motivo do cancelamento (ex.: valor errado, profissional errado)',
+      );
+    }
+    return new CommissionPayout({
+      ...this.state,
+      status: 'cancelled',
+      cancelledAt: input.at ?? new Date(),
+      cancelledBy: input.by,
+      cancelReason: reason,
     });
   }
 
@@ -230,6 +272,30 @@ export class CommissionPayout {
   get items(): PayoutItem[] {
     return [...this.state.items];
   }
+
+  get rule(): CommissionRule | null {
+    return this.state.rule;
+  }
+
+  get status(): PayoutStatus {
+    return this.state.status;
+  }
+
+  get isActive(): boolean {
+    return this.state.status === 'active';
+  }
+
+  get cancelledAt(): Date | null {
+    return this.state.cancelledAt;
+  }
+
+  get cancelledBy(): string | null {
+    return this.state.cancelledBy;
+  }
+
+  get cancelReason(): string | null {
+    return this.state.cancelReason;
+  }
 }
 
 export interface PayoutFilter {
@@ -240,8 +306,11 @@ export interface PayoutFilter {
 export interface CommissionPayoutRepository {
   /** Grava repasse + itens juntos; sessão já paga → `ConflictError`. */
   save(payout: CommissionPayout): Promise<void>;
+  /** Persiste o cancelamento e devolve as sessões ao saldo (itens inativos). */
+  saveCancellation(payout: CommissionPayout): Promise<void>;
   findById(id: string): Promise<CommissionPayout | null>;
-  /** Mais recentes primeiro. */
+  /** Mais recentes primeiro; inclui os cancelados (histórico). */
   findAll(filter?: PayoutFilter): Promise<CommissionPayout[]>;
+  /** Só itens de repasses ativos — cancelado não conta como pago. */
   findPaidItems(professionalId?: string): Promise<PaidItemRef[]>;
 }
