@@ -10,6 +10,11 @@ import {
 } from '@/domain/catalog/procedure-kit';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type {
+  ScheduleAvailabilityRepository,
+  ScheduleClosure,
+  WeeklyWindow,
+} from '@/domain/scheduling/schedule-availability';
+import type {
   ScheduleConfig,
   ScheduleConfigRepository,
 } from '@/domain/scheduling/schedule-config';
@@ -111,5 +116,44 @@ export class InMemoryProcedureKitRepository implements ProcedureKitRepository {
         .filter(([, items]) => items.length > 0)
         .map(([procedureId, items]) => [procedureId, items.length]),
     );
+  }
+}
+
+export class InMemoryScheduleAvailabilityRepository
+  implements ScheduleAvailabilityRepository
+{
+  private readonly closures = new Map<string, ScheduleClosure>();
+  private readonly hours = new Map<string, WeeklyWindow[]>();
+
+  async listClosures(range: {
+    from: string;
+    to: string;
+  }): Promise<ScheduleClosure[]> {
+    return [...this.closures.values()]
+      .filter((c) => c.startsOn <= range.to && c.endsOn >= range.from)
+      .sort((a, b) => a.startsOn.localeCompare(b.startsOn));
+  }
+
+  async findClosureById(id: string): Promise<ScheduleClosure | null> {
+    return this.closures.get(id) ?? null;
+  }
+
+  async saveClosure(closure: ScheduleClosure): Promise<void> {
+    this.closures.set(closure.id, closure);
+  }
+
+  async deleteClosure(id: string): Promise<void> {
+    this.closures.delete(id);
+  }
+
+  async getProfessionalHours(professionalId: string): Promise<WeeklyWindow[]> {
+    return [...(this.hours.get(professionalId) ?? [])];
+  }
+
+  async replaceProfessionalHours(
+    professionalId: string,
+    windows: readonly WeeklyWindow[],
+  ): Promise<void> {
+    this.hours.set(professionalId, [...windows]);
   }
 }

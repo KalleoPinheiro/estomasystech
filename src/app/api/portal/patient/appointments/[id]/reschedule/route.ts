@@ -30,6 +30,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       services.patients,
       services.appointments,
       services.scheduleConfig,
+      services.scheduleAvailability,
     ).execute({
       email: session.subject,
       appointmentId: id,

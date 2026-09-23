@@ -4,6 +4,7 @@ import type { FollowUpRepository } from '@/domain/followup/follow-up-repository'
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 
@@ -33,6 +34,7 @@ export class ScheduleOwnAppointment {
     private readonly procedures: ProcedureRepository,
     private readonly followUps: FollowUpRepository,
     private readonly scheduleConfig?: ScheduleConfigRepository,
+    private readonly availability?: ScheduleAvailabilityRepository,
   ) {}
 
   async execute(input: ScheduleOwnAppointmentInput): Promise<Appointment> {
@@ -61,6 +63,7 @@ export class ScheduleOwnAppointment {
       this.appointments,
       this.patients,
       this.scheduleConfig,
+      this.availability,
     ).execute({
       patientId: patient.id,
       startsAt: input.startsAt,

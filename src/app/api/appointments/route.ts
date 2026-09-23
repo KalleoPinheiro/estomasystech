@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
       services.appointments,
       services.patients,
       services.scheduleConfig,
+      services.scheduleAvailability,
     ).execute({
       patientId: body.patientId,
       startsAt: new Date(body.startsAt),

@@ -226,6 +226,13 @@ export class DrizzleScheduleConfigRepository
         startHour: rows[0].startHour,
         endHour: rows[0].endHour,
         minGapMinutes: rows[0].minGapMinutes,
+        lunchBreak:
+          rows[0].lunchStartMinute !== null && rows[0].lunchEndMinute !== null
+            ? {
+                startMinute: rows[0].lunchStartMinute,
+                endMinute: rows[0].lunchEndMinute,
+              }
+            : null,
       });
     } catch {
       // Configuração corrompida nunca derruba o agendamento — cai no default.
@@ -247,6 +254,8 @@ export class DrizzleScheduleConfigRepository
       startHour: validated.startHour,
       endHour: validated.endHour,
       minGapMinutes: validated.minGapMinutes,
+      lunchStartMinute: validated.lunchBreak?.startMinute ?? null,
+      lunchEndMinute: validated.lunchBreak?.endMinute ?? null,
       updatedAt: new Date(),
     };
     await this.db
@@ -259,6 +268,8 @@ export class DrizzleScheduleConfigRepository
           startHour: values.startHour,
           endHour: values.endHour,
           minGapMinutes: values.minGapMinutes,
+          lunchStartMinute: values.lunchStartMinute,
+          lunchEndMinute: values.lunchEndMinute,
           updatedAt: values.updatedAt,
         },
       });

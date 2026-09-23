@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   pgTable,
@@ -167,12 +168,65 @@ export const scheduleSettings = pgTable(
     startHour: integer('start_hour').notNull(),
     endHour: integer('end_hour').notNull(),
     minGapMinutes: integer('min_gap_minutes').notNull(),
+    // Almoço da clínica em minutos desde 00:00 — ambos nulos = sem pausa.
+    lunchStartMinute: integer('lunch_start_minute'),
+    lunchEndMinute: integer('lunch_end_minute'),
     updatedAt: timestamp('updated_at', {
       withTimezone: true,
       mode: 'date',
     }).notNull(),
   },
   (table) => [uniqueIndex('uq_schedule_settings_clinic').on(table.clinicId)],
+);
+
+// Feriados/recessos da clínica (professional_id nulo) e ausências de um
+// profissional. Datas locais inclusivas.
+export const scheduleClosures = pgTable(
+  'schedule_closures',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    professionalId: text('professional_id').references(() => professionals.id),
+    startsOn: date('starts_on', { mode: 'string' }).notNull(),
+    endsOn: date('ends_on', { mode: 'string' }).notNull(),
+    reason: text('reason').notNull(),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [
+    index('idx_schedule_closures_clinic_dates').on(
+      table.clinicId,
+      table.startsOn,
+      table.endsOn,
+    ),
+  ],
+);
+
+// Janelas semanais de atendimento de um profissional. Sem linhas = segue a
+// grade da clínica.
+export const professionalAvailability = pgTable(
+  'professional_availability',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    professionalId: text('professional_id')
+      .notNull()
+      .references(() => professionals.id),
+    weekday: integer('weekday').notNull(),
+    startMinute: integer('start_minute').notNull(),
+    endMinute: integer('end_minute').notNull(),
+  },
+  (table) => [
+    index('idx_professional_availability_professional').on(
+      table.professionalId,
+    ),
+  ],
 );
 
 export const patients = pgTable(

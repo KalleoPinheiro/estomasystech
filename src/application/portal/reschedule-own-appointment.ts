@@ -3,6 +3,7 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import { assertPatientCanChange } from '@/domain/scheduling/patient-self-service';
+import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import { ValidationError } from '@/domain/shared/errors';
 import { findOwnAppointment } from './own-appointment';
@@ -25,6 +26,7 @@ export class RescheduleOwnAppointment {
     private readonly patients: PatientRepository,
     private readonly appointments: AppointmentRepository,
     private readonly scheduleConfig?: ScheduleConfigRepository,
+    private readonly availability?: ScheduleAvailabilityRepository,
   ) {}
 
   async execute(input: RescheduleOwnAppointmentInput): Promise<Appointment> {
@@ -46,6 +48,7 @@ export class RescheduleOwnAppointment {
     return new RescheduleAppointment(
       this.appointments,
       this.scheduleConfig,
+      this.availability,
     ).execute({
       id: appointment.id,
       startsAt: input.startsAt,

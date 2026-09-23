@@ -14,5 +14,6 @@ export * from './patient';
 export * from './payout';
 export * from './procedure';
 export * from './professional';
+export * from './schedule';
 export * from './staff';
 export * from './taxonomy';

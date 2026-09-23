@@ -27,6 +27,7 @@ import { apiFetch } from '@/lib/client';
 import type { ProfessionalDto } from '@/lib/dto';
 import { formatCommissionRule } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { AvailabilityForm } from './availability-form';
 
 /** Regra vigente a partir do DTO — mesma leitura de `Professional.commissionRule`. */
 function ruleOf(professional: ProfessionalDto) {
@@ -51,6 +52,9 @@ export default function ProfessionalsPage() {
     refresh,
   } = useApiQuery<ProfessionalDto[]>('/api/professionals');
   const [editing, setEditing] = useState<ProfessionalDto | 'new' | null>(null);
+  const [editingHours, setEditingHours] = useState<ProfessionalDto | null>(
+    null,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
 
   const toggleActive = async (professional: ProfessionalDto) => {
@@ -138,6 +142,14 @@ export default function ProfessionalsPage() {
                       >
                         Editar
                       </Button>
+                      <Button
+                        type="button"
+                        onClick={() => setEditingHours(professional)}
+                        variant="ghost"
+                        size="sm"
+                      >
+                        Horários
+                      </Button>
                       {professional.active ? (
                         <ConfirmAction
                           trigger={
@@ -169,6 +181,18 @@ export default function ProfessionalsPage() {
           </div>
         )}
       </Card>
+
+      {editingHours && (
+        <Modal
+          title={`Horários — ${editingHours.fullName}`}
+          onClose={() => setEditingHours(null)}
+        >
+          <AvailabilityForm
+            professional={editingHours}
+            onDone={() => setEditingHours(null)}
+          />
+        </Modal>
+      )}
 
       {editing && (
         <Modal

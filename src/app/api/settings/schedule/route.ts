@@ -19,6 +19,12 @@ const configSchema = z.object({
   startHour: z.number().int().min(0).max(23),
   endHour: z.number().int().min(1).max(24),
   minGapMinutes: z.number().int().min(15).max(120),
+  lunchBreak: z
+    .object({
+      startMinute: z.number().int().min(0).max(1440),
+      endMinute: z.number().int().min(0).max(1440),
+    })
+    .nullish(),
 });
 
 export async function GET(request: NextRequest) {

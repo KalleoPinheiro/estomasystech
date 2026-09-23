@@ -1,5 +1,6 @@
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfigRepository,
@@ -18,6 +19,7 @@ export class RescheduleAppointment {
   constructor(
     private readonly appointments: AppointmentRepository,
     private readonly scheduleConfig?: ScheduleConfigRepository,
+    private readonly availability?: ScheduleAvailabilityRepository,
   ) {}
 
   async execute(input: RescheduleAppointmentInput): Promise<Appointment> {
@@ -35,6 +37,7 @@ export class RescheduleAppointment {
       appointment.id,
       config,
       appointment.professionalId,
+      this.availability,
     );
 
     const rescheduled = appointment.reschedule(slot);

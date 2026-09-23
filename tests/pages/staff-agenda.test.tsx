@@ -14,7 +14,12 @@ import { AppointmentForm } from '@/app/(staff)/agenda/appointment-form';
 import { CalendarGrid, dayKey } from '@/app/(staff)/agenda/calendar-grid';
 import AgendaPage from '@/app/(staff)/agenda/page';
 import { ApiError } from '@/lib/client';
-import type { AppointmentDto, PatientDto, ProfessionalDto } from '@/lib/dto';
+import type {
+  AppointmentDto,
+  PatientDto,
+  ProfessionalDto,
+  ScheduleClosureDto,
+} from '@/lib/dto';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -102,6 +107,7 @@ interface AgendaFetchOptions {
     endHour: number;
     minGapMinutes: number;
   };
+  closures?: ScheduleClosureDto[];
   appointmentsPostStatus?: number;
   appointmentsPostError?: string;
 }
@@ -119,6 +125,7 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
     patients = [patientFixture],
     professionals = [],
     scheduleConfig = DEFAULT_TEST_SCHEDULE_CONFIG,
+    closures = [],
     appointmentsPostStatus,
     appointmentsPostError,
   } = options;
@@ -162,6 +169,9 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
       }
       if (url.startsWith('/api/procedures')) {
         return jsonResponse(true, []);
+      }
+      if (url.startsWith('/api/settings/schedule/closures')) {
+        return jsonResponse(true, closures);
       }
       if (url.startsWith('/api/settings/schedule')) {
         return jsonResponse(true, { config: scheduleConfig, isDefault: false });

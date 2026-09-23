@@ -738,3 +738,13 @@ Pedido do usuário (2026-09-23): implementar o item 8 (lacunas de produto do N6)
 - **Remarcação**: mesma duração, procedimento, preço e profissional; mesma regra de disponibilidade da equipe (`RescheduleAppointment`). A listagem de horários aceita `appointmentId` (duração/profissional da consulta, ela mesma não conta como conflito).
 - **Decisões**: motivo opcional para o paciente; sem notificação ativa à equipe (a agenda mostra a origem no detalhe); remarcação só dentro da janela de oferta de 14 dias (UI), sem limite no servidor além de "futuro".
 
+## Agenda por profissional, almoço e feriados (N6, item 8b) — CONCLUÍDA
+
+Segundo tópico do item 8 (lacunas de produto do N6), PR própria.
+
+- **Almoço** na grade da clínica (`schedule_settings.lunch_start_minute/lunch_end_minute`, migração 0034): vale para todos; nenhuma consulta pode invadir.
+- **Feriados/recessos e ausências** (`schedule_closures`): da clínica (dia fechado para todos) ou de um profissional (só as consultas dele). Cadastrar não cancela consultas: a resposta devolve as ativas no período e a tela avisa. Sem importação de feriados nacionais — entrada manual (decisão: evitar dependência externa e feriados municipais variam).
+- **Horário semanal do profissional** (`professional_availability`): janelas por dia da semana; sem janelas = segue a clínica. Editado só pelo Admin (família `/api/professionals`); feriados/ausências também pela Atendente (família da grade).
+- **Regra única**: `assertSlotAvailable` ganhou o repositório de disponibilidade; todos os caminhos de agendamento (equipe, recorrência, portal, remarcação e listagem de horários) passam por ele. A listagem do portal lê bloqueios/horário uma vez por chamada (memo), não por candidato.
+- **Testes**: domínio, aplicação, API (PGlite: isolamento entre clínicas, Atendente 403 no horário do profissional, pausa em todos os caminhos) e telas; E2E de ausência em Configurações. Sensor: 9 mutantes, 1 sobreviveu (consulta de bloqueios por intervalo) → teste de férias de vários dias adicionado, morto. E2E completo: 85 passaram, 2 intermitentes já conhecidos (`responsive-tables › relatórios`, `export-lgpd › auditoria`) passaram na nova tentativa.
+

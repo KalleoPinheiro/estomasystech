@@ -26,13 +26,19 @@ export async function GET(request: NextRequest) {
   return handleRequest(async () => {
     // Grade, conflitos e catálogo são os da clínica do paciente — nunca de
     // outra empresa.
-    const { patients, appointments, procedures, scheduleConfig } =
-      await getRepositories(sessionScope(session));
+    const {
+      patients,
+      appointments,
+      procedures,
+      scheduleConfig,
+      scheduleAvailability,
+    } = await getRepositories(sessionScope(session));
     const slots = await new ListAvailableSlots(
       patients,
       appointments,
       procedures,
       scheduleConfig,
+      scheduleAvailability,
     ).execute(
       appointmentId
         ? { email: session.subject, appointmentId, date }

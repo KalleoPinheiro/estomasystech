@@ -1,4 +1,11 @@
 import { ValidationError } from '../shared/errors';
+import { toTimeInput } from './time-of-day';
+
+/** Intervalo sem atendimento dentro do dia (almoço), em minutos desde 00:00. */
+export interface LunchBreak {
+  startMinute: number;
+  endMinute: number;
+}
 
 /** Dias da semana como em Date.getDay(): 0=domingo … 6=sábado. */
 export interface ScheduleConfig {
@@ -6,6 +13,8 @@ export interface ScheduleConfig {
   startHour: number;
   endHour: number;
   minGapMinutes: number;
+  /** Almoço da clínica — vale para todos os profissionais. Ausente = sem pausa. */
+  lunchBreak?: LunchBreak | null;
 }
 
 /** Comportamento histórico do sistema — usado quando nada foi configurado. */
@@ -14,6 +23,7 @@ export const DEFAULT_SCHEDULE_CONFIG: ScheduleConfig = {
   startHour: 8,
   endHour: 18,
   minGapMinutes: 15,
+  lunchBreak: null,
 };
 
 const WEEKDAY_LABELS = [
@@ -52,12 +62,44 @@ export function validateScheduleConfig(config: ScheduleConfig): ScheduleConfig {
       `Intervalo entre consultas deve ser de ${MIN_GAP_FLOOR} a ${MAX_GAP} minutos`,
     );
   }
-  return { ...config, weekdays };
+  return {
+    ...config,
+    weekdays,
+    lunchBreak: validateLunchBreak(config.lunchBreak ?? null, config),
+  };
 }
+
+function validateLunchBreak(
+  lunch: LunchBreak | null,
+  config: ScheduleConfig,
+): LunchBreak | null {
+  if (lunch === null) {
+    return null;
+  }
+  const valid =
+    Number.isInteger(lunch.startMinute) &&
+    Number.isInteger(lunch.endMinute) &&
+    lunch.startMinute < lunch.endMinute &&
+    lunch.startMinute > config.startHour * 60 &&
+    lunch.endMinute < config.endHour * 60;
+  if (!valid) {
+    throw new ValidationError(
+      'Intervalo de almoço deve começar antes de terminar e ficar dentro do horário de funcionamento',
+    );
+  }
+  return { startMinute: lunch.startMinute, endMinute: lunch.endMinute };
+}
+
+/** 750 → "12:30". */
+export const formatMinuteOfDay = toTimeInput;
 
 export function describeSchedule(config: ScheduleConfig): string {
   const days = config.weekdays.map((d) => WEEKDAY_LABELS[d]).join(', ');
-  return `${days}, das ${String(config.startHour).padStart(2, '0')}:00 às ${config.endHour}:00`;
+  const hours = `${days}, das ${String(config.startHour).padStart(2, '0')}:00 às ${config.endHour}:00`;
+  const lunch = config.lunchBreak;
+  return lunch
+    ? `${hours} (pausa das ${formatMinuteOfDay(lunch.startMinute)} às ${formatMinuteOfDay(lunch.endMinute)})`
+    : hours;
 }
 
 export interface ScheduleConfigRepository {
