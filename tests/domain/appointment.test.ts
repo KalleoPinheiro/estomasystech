@@ -70,6 +70,36 @@ describe('Feature: Agendamento de consulta', () => {
       expect(Appointment.create(validProps).cancel().status).toBe('cancelled');
     });
 
+    it('Dado cancelamento sem origem, Quando cancelar, Então registra como da clínica, com data e sem motivo', () => {
+      const at = new Date('2026-07-18T10:00:00Z');
+      const cancelled = Appointment.create(validProps).cancel({ at });
+
+      expect(cancelled.cancellation).toEqual({
+        by: 'clinic',
+        at,
+        reason: null,
+      });
+    });
+
+    it('Dado consulta não cancelada, Então não tem registro de cancelamento', () => {
+      expect(Appointment.create(validProps).cancellation).toBeNull();
+    });
+
+    it('Dado motivo só com espaços, Quando cancelar, Então motivo fica nulo', () => {
+      const cancelled = Appointment.create(validProps).cancel({
+        by: 'patient',
+        reason: '   ',
+      });
+      expect(cancelled.cancellation?.reason).toBeNull();
+      expect(cancelled.cancellation?.by).toBe('patient');
+    });
+
+    it('Dado motivo com mais de 1000 caracteres, Quando cancelar, Então lança ValidationError', () => {
+      expect(() =>
+        Appointment.create(validProps).cancel({ reason: 'x'.repeat(1001) }),
+      ).toThrow(ValidationError);
+    });
+
     it('Dado consulta concluída, Quando cancelar, Então lança InvalidStatusTransitionError', () => {
       const completed = Appointment.create(validProps).complete();
 

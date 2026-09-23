@@ -41,6 +41,9 @@ const appointmentFixture: AppointmentDto = {
   notes: null,
   status: 'scheduled',
   professionalId: null,
+  cancelledBy: null,
+  cancelledAt: null,
+  cancelReason: null,
 };
 
 const followUpFixture: FollowUpDto = {

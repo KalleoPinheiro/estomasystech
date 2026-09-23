@@ -1,4 +1,7 @@
-import type { Appointment } from '@/domain/scheduling/appointment';
+import type {
+  Appointment,
+  CancellationOrigin,
+} from '@/domain/scheduling/appointment';
 
 export interface AppointmentDto {
   id: string;
@@ -11,6 +14,9 @@ export interface AppointmentDto {
   notes: string | null;
   status: string;
   professionalId: string | null;
+  cancelledBy: CancellationOrigin | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
 }
 
 export const toAppointmentDto = (
@@ -27,6 +33,9 @@ export const toAppointmentDto = (
   notes: appointment.notes,
   status: appointment.status,
   professionalId: appointment.professionalId,
+  cancelledBy: appointment.cancellation?.by ?? null,
+  cancelledAt: appointment.cancellation?.at.toISOString() ?? null,
+  cancelReason: appointment.cancellation?.reason ?? null,
 });
 
 /** Consulta vista pelos portais: sem preço e sem anotações internas da equipe. */
@@ -36,6 +45,8 @@ export interface PortalAppointmentDto {
   endsAt: string;
   procedure: string;
   status: string;
+  /** Quem cancelou — o portal só alerta cancelamentos feitos pela clínica. */
+  cancelledBy: CancellationOrigin | null;
 }
 
 export const toPortalAppointmentDto = (
@@ -46,4 +57,5 @@ export const toPortalAppointmentDto = (
   endsAt: appointment.slot.end.toISOString(),
   procedure: appointment.procedure,
   status: appointment.status,
+  cancelledBy: appointment.cancellation?.by ?? null,
 });

@@ -134,6 +134,18 @@ export function AppointmentDetail({
         </p>
       )}
 
+      {appointment.status === 'cancelled' && appointment.cancelledAt && (
+        <p>
+          <span className="text-ink-3">Cancelada </span>
+          {appointment.cancelledBy === 'patient'
+            ? 'pelo paciente no portal'
+            : 'pela clínica'}{' '}
+          em {formatDate(appointment.cancelledAt)},{' '}
+          {formatTime(appointment.cancelledAt)}
+          {appointment.cancelReason && ` — ${appointment.cancelReason}`}
+        </p>
+      )}
+
       <a
         href={`/documentos/atestado/${appointment.id}`}
         className="font-medium text-accent-ink text-xs hover:underline"

@@ -30,6 +30,7 @@ import {
   INVOICE_STATUS_LABELS,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { ChangeAppointment } from './change-appointment';
 import {
   ConditionProgress,
   type ConditionWithAssessmentsDto,
@@ -95,10 +96,13 @@ export function PatientPortalView() {
   // separada — antes só aparecia enterrada em "Histórico", abaixo da
   // evolução clínica, e o paciente podia aparecer presencialmente no dia
   // errado.
+  // Cancelamento feito pelo próprio paciente no portal não é alerta: ele já
+  // sabe, e a consulta vai para o histórico como cancelada.
   const cancelledUpcoming = data.appointments.filter(
     (a) =>
       new Date(a.startsAt).getTime() >= PAGE_LOAD_MS &&
-      a.status === 'cancelled',
+      a.status === 'cancelled' &&
+      a.cancelledBy !== 'patient',
   );
   const past = data.appointments.filter(
     (a) => !upcoming.includes(a) && !cancelledUpcoming.includes(a),
@@ -128,6 +132,13 @@ export function PatientPortalView() {
           <AppointmentList
             appointments={upcoming}
             onConfirm={(appointment) => void confirmAppointment(appointment)}
+            renderActions={(appointment) => (
+              <ChangeAppointment
+                appointment={appointment}
+                nowMs={PAGE_LOAD_MS}
+                onChanged={refresh}
+              />
+            )}
           />
         )}
       </Section>
@@ -277,40 +288,46 @@ function InvoicesList({ invoices }: { invoices: InvoiceDto[] }) {
 interface AppointmentListProps {
   appointments: PortalAppointmentDto[];
   onConfirm?: (appointment: PortalAppointmentDto) => void;
+  /** Ações extras abaixo de cada consulta (cancelar/remarcar nas futuras). */
+  renderActions?: (appointment: PortalAppointmentDto) => React.ReactNode;
 }
 
-function AppointmentList({ appointments, onConfirm }: AppointmentListProps) {
+function AppointmentList({
+  appointments,
+  onConfirm,
+  renderActions,
+}: AppointmentListProps) {
   return (
     <Card>
       <ul className="divide-y divide-border text-sm">
         {appointments.map((appointment) => (
-          <li
-            key={appointment.id}
-            className="flex items-center gap-3 px-4 py-3"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">
-                {formatDateTime(appointment.startsAt)}
-              </p>
-              <p className="truncate text-ink-3">{appointment.procedure}</p>
+          <li key={appointment.id} className="flex flex-col gap-2 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">
+                  {formatDateTime(appointment.startsAt)}
+                </p>
+                <p className="truncate text-ink-3">{appointment.procedure}</p>
+              </div>
+              {onConfirm && appointment.status === 'scheduled' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => onConfirm(appointment)}
+                  variant="accent"
+                >
+                  Confirmar presença
+                </Button>
+              )}
+              <StatusBadge
+                status={appointment.status}
+                label={
+                  APPOINTMENT_STATUS_LABELS[appointment.status] ??
+                  appointment.status
+                }
+              />
             </div>
-            {onConfirm && appointment.status === 'scheduled' && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => onConfirm(appointment)}
-                variant="accent"
-              >
-                Confirmar presença
-              </Button>
-            )}
-            <StatusBadge
-              status={appointment.status}
-              label={
-                APPOINTMENT_STATUS_LABELS[appointment.status] ??
-                appointment.status
-              }
-            />
+            {renderActions?.(appointment)}
           </li>
         ))}
       </ul>

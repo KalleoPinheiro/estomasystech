@@ -12,14 +12,25 @@ import {
   ValidationError,
 } from '@/domain/shared/errors';
 import { TimeSlot } from '@/domain/shared/time-slot';
+import { findOwnAppointment } from './own-appointment';
 
-export interface ListAvailableSlotsInput {
+export type ListAvailableSlotsInput = {
   /** Email da sessão do paciente — escopo obrigatório. */
   email: string;
-  procedureId: string;
   /** Dia local no formato AAAA-MM-DD. */
   date: string;
   now?: Date;
+} & (
+  | { procedureId: string; appointmentId?: undefined }
+  /** Remarcação: duração e profissional vêm da própria consulta. */
+  | { appointmentId: string; procedureId?: undefined }
+);
+
+/** O que define os candidatos: duração, profissional e consulta a ignorar. */
+interface SlotRequest {
+  durationMinutes: number;
+  professionalId: string | null;
+  excludeId?: string;
 }
 
 export interface AvailableSlot {
@@ -44,8 +55,7 @@ export class ListAvailableSlots {
   ) {}
 
   async execute(input: ListAvailableSlotsInput): Promise<AvailableSlot[]> {
-    await this.assertActivePatient(input.email);
-    const procedure = await this.assertOfferableProcedure(input.procedureId);
+    const request = await this.resolveRequest(input);
 
     const config =
       (await this.scheduleConfig?.get()) ?? DEFAULT_SCHEDULE_CONFIG;
@@ -58,7 +68,7 @@ export class ListAvailableSlots {
     const candidates = candidateSlots(
       day,
       config,
-      procedure.durationMinutes,
+      request.durationMinutes,
     ).filter(
       // Horário já passado não é ofertado.
       (slot) => slot.startsAt.getTime() > now.getTime(),
@@ -66,11 +76,38 @@ export class ListAvailableSlots {
 
     const slots: AvailableSlot[] = [];
     for (const candidate of candidates) {
-      if (await this.isFree(candidate.startsAt, candidate.endsAt, config)) {
+      if (await this.isFree(candidate, request, config)) {
         slots.push(candidate);
       }
     }
     return slots;
+  }
+
+  private async resolveRequest(
+    input: ListAvailableSlotsInput,
+  ): Promise<SlotRequest> {
+    if (input.appointmentId !== undefined) {
+      // Remarcação: a consulta precisa ser do próprio paciente; ela mesma não
+      // conta como conflito do novo horário.
+      const appointment = await findOwnAppointment(
+        this.patients,
+        this.appointments,
+        input.email,
+        input.appointmentId,
+      );
+      return {
+        durationMinutes: Math.round(
+          (appointment.slot.end.getTime() - appointment.slot.start.getTime()) /
+            MINUTE_MS,
+        ),
+        professionalId: appointment.professionalId,
+        excludeId: appointment.id,
+      };
+    }
+    await this.assertActivePatient(input.email);
+    const procedure = await this.assertOfferableProcedure(input.procedureId);
+    // Sem profissional: regra global de conflito (default seguro).
+    return { durationMinutes: procedure.durationMinutes, professionalId: null };
   }
 
   /** Escopo da sessão: só paciente cadastrado e ativo consulta horários. */
@@ -91,18 +128,17 @@ export class ListAvailableSlots {
   }
 
   private async isFree(
-    start: Date,
-    end: Date,
+    candidate: AvailableSlot,
+    request: SlotRequest,
     config: typeof DEFAULT_SCHEDULE_CONFIG,
   ): Promise<boolean> {
     try {
       await assertSlotAvailable(
         this.appointments,
-        TimeSlot.create(start, end),
-        undefined,
+        TimeSlot.create(candidate.startsAt, candidate.endsAt),
+        request.excludeId,
         config,
-        // Sem profissional: regra global de conflito (default seguro).
-        null,
+        request.professionalId,
       );
       return true;
     } catch (error) {

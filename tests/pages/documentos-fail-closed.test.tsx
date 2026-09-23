@@ -80,6 +80,9 @@ const appointment = (status: string): AppointmentDto => ({
   notes: null,
   status,
   professionalId: null,
+  cancelledBy: null,
+  cancelledAt: null,
+  cancelReason: null,
 });
 
 const condition: ConditionDto = {

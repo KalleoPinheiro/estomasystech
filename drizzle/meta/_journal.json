@@ -232,6 +232,13 @@
       "when": 1790162830228,
       "tag": "0032_rate-limit-windows",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1790166661402,
+      "tag": "0033_appointment-cancellation",
+      "breakpoints": true
     }
   ]
 }

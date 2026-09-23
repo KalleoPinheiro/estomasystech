@@ -251,6 +251,14 @@ export const appointments = pgTable(
     professionalId: text('professional_id').references(() => professionals.id),
     // Procedimento do catálogo (O1.1) — nullable, histórico intacto.
     procedureId: text('procedure_id').references(() => procedures.id),
+    // Registro do cancelamento (quem, quando, por quê) — null no histórico
+    // anterior e em consultas não canceladas.
+    cancelledAt: timestamp('cancelled_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    cancelledBy: text('cancelled_by'),
+    cancelReason: text('cancel_reason'),
     createdAt: timestamp('created_at', {
       withTimezone: true,
       mode: 'date',

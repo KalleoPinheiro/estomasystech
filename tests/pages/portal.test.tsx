@@ -99,6 +99,7 @@ function buildAppointment(
     endsAt: '2099-01-01T11:00:00.000Z',
     procedure: 'Troca de bolsa',
     status: 'scheduled',
+    cancelledBy: null,
     ...overrides,
   };
 }
@@ -548,6 +549,7 @@ describe('Feature: Visão do paciente no portal', () => {
         endsAt: '2099-03-02T13:00:00.000Z',
         procedure: 'Curativo',
         status: 'scheduled',
+        cancelledBy: null,
       };
       let scheduledYet = false;
       let postBody: string | null = null;

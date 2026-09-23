@@ -16,6 +16,7 @@ import {
 import {
   APPOINTMENT_STATUSES,
   Appointment,
+  type AppointmentCancellation,
   type AppointmentStatus,
 } from '@/domain/scheduling/appointment';
 import type {
@@ -59,8 +60,21 @@ const toAppointment = (row: AppointmentRow): Appointment =>
     googleEventId: row.googleEventId,
     professionalId: row.professionalId,
     procedureId: row.procedureId,
+    cancellation: toCancellation(row),
     createdAt: row.createdAt,
   });
+
+function toCancellation(row: AppointmentRow): AppointmentCancellation | null {
+  if (row.status !== 'cancelled' || !row.cancelledAt) {
+    return null;
+  }
+  return {
+    // Só o portal grava 'patient'; qualquer outro valor é da equipe.
+    by: row.cancelledBy === 'patient' ? 'patient' : 'clinic',
+    at: row.cancelledAt,
+    reason: row.cancelReason,
+  };
+}
 
 export class DrizzleAppointmentRepository implements AppointmentRepository {
   constructor(
@@ -87,6 +101,9 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
       googleEventId: appointment.googleEventId,
       professionalId: appointment.professionalId,
       procedureId: appointment.procedureId,
+      cancelledAt: appointment.cancellation?.at ?? null,
+      cancelledBy: appointment.cancellation?.by ?? null,
+      cancelReason: appointment.cancellation?.reason ?? null,
       createdAt: appointment.createdAt,
     };
     try {

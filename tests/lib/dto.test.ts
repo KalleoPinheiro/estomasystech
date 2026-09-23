@@ -166,7 +166,29 @@ describe('Feature: DTO de consulta', () => {
       notes: 'Trazer exames',
       status: 'scheduled',
       professionalId: 'prof-1',
+      cancelledBy: null,
+      cancelledAt: null,
+      cancelReason: null,
     });
+  });
+
+  it('Dado consulta cancelada pelo paciente, Quando mapear, Então a equipe vê origem, data e motivo e o portal só a origem', () => {
+    const at = new Date('2026-07-18T10:00:00.000Z');
+    const appointment = Appointment.create({
+      patientId: 'patient-1',
+      slot,
+      procedure: 'Curativo',
+      price: Money.fromCents(15000),
+    }).cancel({ by: 'patient', at, reason: 'Viagem' });
+
+    expect(toAppointmentDto(appointment)).toMatchObject({
+      cancelledBy: 'patient',
+      cancelledAt: '2026-07-18T10:00:00.000Z',
+      cancelReason: 'Viagem',
+    });
+    const portal = toPortalAppointmentDto(appointment);
+    expect(portal.cancelledBy).toBe('patient');
+    expect(portal).not.toHaveProperty('cancelReason');
   });
 
   it('Dado agendamento sem patientName, Quando toAppointmentDto, Então patientName fica undefined', () => {
@@ -197,6 +219,7 @@ describe('Feature: DTO de consulta', () => {
       endsAt: slot.end.toISOString(),
       procedure: 'Curativo',
       status: 'scheduled',
+      cancelledBy: null,
     });
     expect(dto).not.toHaveProperty('priceCents');
     expect(dto).not.toHaveProperty('notes');
