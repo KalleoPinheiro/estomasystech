@@ -112,6 +112,8 @@
 
 **AUTH-20 — estreitamento aceito, NÃO bloqueante.** A cláusula "preservando a sincronização bidirecional" continua reduzida a uma asserção de `constructor.name`. Reavaliado nesta iteração e mantido como aceito, com fundamento novo: `vitest.config.ts:51` exclui `src/infrastructure/calendar/**` da cobertura por decisão **pré-existente e documentada** ("Cliente Google Calendar real — chamada externa, sem valor em unit test"). Além disso, `git diff --name-only 9ec7e00 9b0371d` **não contém nenhum arquivo sob `src/infrastructure/calendar/`** — a feature não tocou o código de sincronização; ela só trocou a origem da credencial que o alimenta. A asserção disponível mais forte, sob a política de teste do próprio projeto, é exatamente a que existe: com credencial → gateway real do Google; sem credencial → gateway nulo. Verificar o comportamento bidirecional exigiria E2E contra o Google real, fora do escopo desta feature.
 
+> **Nota de 2026-09-23 ([#45](https://github.com/KalleoPinheiro/vitta-flow/issues/45)):** a cláusula "bidirecional" estava errada: a sincronização é só de saída (`CalendarGateway` expõe apenas `createEvent`/`updateEvent`/`deleteEvent`). O requisito AUTH-20 em `spec.md` foi corrigido. A #45, que pedia o E2E contra o Google, foi fechada como *not planned*, porque as chamadas ao gateway já são testadas com fakes em `tests/application/`.
+
 ### P4: Remoção + bootstrap (AUTH-21..30)
 
 | Criterion | Spec-defined outcome | `file:line` + assertion | Result |
@@ -250,7 +252,7 @@ Baseline no worktree limpo: `npx vitest run tests/application/auth-token-flow.te
 
 **Ranked gaps** (nenhum bloqueia o merge)
 
-1. **AUTH-20 — estreitamento aceito** (Low): "sincronização bidirecional preservada" segue asserida só por `expect(calendar.constructor.name).toBe("GoogleCalendarGateway")` (`tests/api/calendar-gateway-source.test.ts:39`). Limite estrutural: `vitest.config.ts:51` exclui `src/infrastructure/calendar/**` da cobertura por decisão anterior, e a feature não tocou esse diretório. Fecharia com E2E, fora do escopo.
+1. **AUTH-20 — estreitamento aceito** (Low): "sincronização bidirecional preservada" segue asserida só por `expect(calendar.constructor.name).toBe("GoogleCalendarGateway")` (`tests/api/calendar-gateway-source.test.ts:39`). Limite estrutural: `vitest.config.ts:51` exclui `src/infrastructure/calendar/**` da cobertura por decisão anterior, e a feature não tocou esse diretório. Fecharia com E2E, fora do escopo. _(2026-09-23: premissa corrigida para "sincronização de saída"; E2E descartado na #45.)_
 2. **Dívida de spec no `purpose`** (Low): `ConsumeAuthToken` continua sem ler `token.purpose` para decidir aceitação. Inofensivo com dois propósitos equivalentes; precisa virar validação real se nascer um terceiro propósito com poder distinto (ex.: troca de e-mail). Sugestão: registrar no backlog.
 3. **JSDoc deslocado** (Low, cosmético): `src/app/api/integrations/google-calendar/callback/route.ts:34-45` — o bloco que documentava `GET` e o de `persistCalendarCredential` ficaram ambos sobre `interface CredentialOwner`.
 4. **Dívida de lint do repositório** (Low, fora do escopo desta feature): `npx eslint .` sai 1 por 2 erros `complexity` e 6 warnings `no-unused-vars` herdados de `9ec7e00`. Não atribuível a `feature/issue-21`, mas mantém o comando repo-wide vermelho — vale uma issue própria.
