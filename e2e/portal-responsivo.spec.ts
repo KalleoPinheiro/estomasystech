@@ -21,9 +21,26 @@ import { sessionCookie } from "./support/session-token";
  * ganha scroll horizontal (mesmo critério de `responsive-tables.spec.ts`) e (2) todo
  * controle visível tem alvo de toque de pelo menos 44x44 px (WCAG 2.5.5).
  */
+/**
+ * Seeds de horário escolhidas à mão: o conflito de agenda é global e
+ * `businessDay` joga sábado/domingo para a segunda seguinte, então offsets
+ * vizinhos (ex.: 59 e 60) caem no mesmo dia. `…-paciente-375x667` colidia com
+ * `responsive-tables-relatorios` (409). Estas ficam a mais de 3 dias ou 90 min
+ * de qualquer outra seed da suíte.
+ */
 const VIEWPORTS = [
-  { width: 390, height: 844 },
-  { width: 375, height: 667 },
+  {
+    width: 390,
+    height: 844,
+    patientSeed: "portal-responsivo-paciente-390x844-1",
+    partnerSeed: "portal-responsivo-parceiro-390x844",
+  },
+  {
+    width: 375,
+    height: 667,
+    patientSeed: "portal-responsivo-paciente-375x667-1",
+    partnerSeed: "portal-responsivo-parceiro-375x667",
+  },
 ] as const;
 const MIN_TOUCH_TARGET_PX = 44;
 
@@ -146,7 +163,7 @@ for (const viewport of VIEWPORTS) {
 
   test.describe(`portal em viewport mobile (${size})`, () => {
     test.beforeEach(async ({ page }) => {
-      await page.setViewportSize(viewport);
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
     });
 
     test(`paciente: todas as telas sem scroll horizontal e com alvos de toque >= 44px (${size})`, async ({
@@ -154,7 +171,7 @@ for (const viewport of VIEWPORTS) {
       context,
       request,
     }) => {
-      const seeded = await seedPatientPortal(request, context, `portal-responsivo-paciente-${size}`);
+      const seeded = await seedPatientPortal(request, context, viewport.patientSeed);
 
       await page.goto("/portal");
       await expect(page.getByRole("heading", { name: `Olá, ${seeded.firstName}!` })).toBeVisible();
@@ -208,7 +225,7 @@ for (const viewport of VIEWPORTS) {
         fullName: `Paciente Indicado Mobile ${unique()}`,
         referredByPartnerId: partner.id,
       });
-      const slot = slotForAttempt(`portal-responsivo-parceiro-${size}`, SLOT_MINUTES);
+      const slot = slotForAttempt(viewport.partnerSeed, SLOT_MINUTES);
       const procedure = `Avaliação mobile E2E ${unique()}`;
       await createAppointment(request, {
         patientId: referred.id,
