@@ -62,6 +62,7 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
   });
 
   beforeEach(async () => {
+    await db.delete(schema.invoicePayments);
     await db.delete(schema.invoices);
     await db.delete(schema.procedureSupplies);
     await db.delete(schema.userAccounts);

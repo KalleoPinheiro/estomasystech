@@ -836,6 +836,9 @@ export const invoices = pgTable(
     dueDate: timestamp('due_date', { withTimezone: true, mode: 'date' }),
     paidAt: timestamp('paid_at', { withTimezone: true, mode: 'date' }),
     paymentMethod: text('payment_method'),
+    // Desconto sobre o valor da fatura (0 = sem desconto) e o motivo.
+    discountCents: integer('discount_cents').notNull().default(0),
+    discountReason: text('discount_reason'),
   },
   (table) => [
     index('idx_invoices_status').on(table.status),
@@ -845,6 +848,29 @@ export const invoices = pgTable(
     index('idx_invoices_clinic').on(table.clinicId),
     index('idx_invoices_session_package').on(table.sessionPackageId),
   ],
+);
+
+// Recebimentos de uma fatura (parciais ou total) — imutáveis. A fatura vira
+// `paid` quando a soma alcança o valor líquido. Faturas pagas antes desta
+// tabela existir ganham um recebimento `legacy-<id>` na migração.
+export const invoicePayments = pgTable(
+  'invoice_payments',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    invoiceId: text('invoice_id')
+      .notNull()
+      .references(() => invoices.id),
+    amountCents: integer('amount_cents').notNull(),
+    method: text('method').notNull(),
+    paidAt: timestamp('paid_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [index('idx_invoice_payments_invoice').on(table.invoiceId)],
 );
 
 // Catálogo de taxonomias de enfermagem (NANDA-I/NOC/NIC) — populado por importação

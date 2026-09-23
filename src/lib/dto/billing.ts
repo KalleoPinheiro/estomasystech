@@ -12,6 +12,22 @@ export interface InvoiceDto {
   dueDate: string | null;
   paidAt: string | null;
   paymentMethod: string | null;
+  discountCents: number;
+  discountReason: string | null;
+  /** Valor menos desconto. */
+  netAmountCents: number;
+  /** Total recebido (parciais incluídos). */
+  paidCents: number;
+  /** Saldo a receber (zero se paga ou cancelada). */
+  balanceCents: number;
+  payments: InvoicePaymentDto[];
+}
+
+export interface InvoicePaymentDto {
+  id: string;
+  amountCents: number;
+  method: string;
+  paidAt: string;
 }
 
 export const toInvoiceDto = (
@@ -29,4 +45,15 @@ export const toInvoiceDto = (
   dueDate: invoice.dueDate?.toISOString() ?? null,
   paidAt: invoice.paidAt?.toISOString() ?? null,
   paymentMethod: invoice.paymentMethod,
+  discountCents: invoice.discount?.amount.cents ?? 0,
+  discountReason: invoice.discount?.reason ?? null,
+  netAmountCents: invoice.netAmount.cents,
+  paidCents: invoice.paid.cents,
+  balanceCents: invoice.balance.cents,
+  payments: invoice.payments.map((payment) => ({
+    id: payment.id,
+    amountCents: payment.amount.cents,
+    method: payment.method,
+    paidAt: payment.paidAt.toISOString(),
+  })),
 });

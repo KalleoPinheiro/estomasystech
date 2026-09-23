@@ -53,6 +53,39 @@ test.describe("faturamento", () => {
     );
   });
 
+  test("recebe parte da fatura, dá desconto e quita o saldo", async ({ page, request }) => {
+    const patient = await createPatient(request);
+    await createInvoice(request, {
+      patientId: patient.id,
+      description: `Sessão parcelada ${unique()}`,
+      amountCents: 20000,
+    });
+
+    await page.goto("/faturamento");
+    const row = page.getByRole("row", { name: literal(patient.fullName) });
+
+    // Recebe R$ 50 de R$ 200: continua pendente, com saldo.
+    await row.getByRole("button", { name: "Receber" }).click();
+    await page.getByLabel("Valor recebido (R$)").fill("50");
+    await page.getByRole("button", { name: "Pix", exact: true }).click();
+    await expect(row).toContainText("falta R$ 150,00");
+    await expect(row.getByRole("link", { name: "Recibo" })).toBeVisible();
+
+    // Desconto de R$ 20 com motivo: saldo cai para R$ 130.
+    await row.getByRole("button", { name: "Desconto" }).click();
+    await page.getByLabel("Desconto (R$)").fill("20");
+    await page.getByLabel("Motivo *").fill("Fidelidade");
+    await page.getByRole("button", { name: "Aplicar desconto" }).click();
+    await expect(row).toContainText("falta R$ 130,00");
+
+    // Quita o saldo em dinheiro.
+    await row.getByRole("button", { name: "Receber" }).click();
+    await page.getByRole("button", { name: "Dinheiro", exact: true }).click();
+    await page.getByRole("button", { name: "Pagas" }).click();
+    const paidRow = page.getByRole("row", { name: literal(patient.fullName) });
+    await expect(paidRow.getByRole("link", { name: "Recibo" })).toHaveCount(2);
+  });
+
   test("bloqueia cancelamento de fatura já paga", async ({ page, request }) => {
     const patient = await createPatient(request);
     const invoice = await createInvoice(request, {

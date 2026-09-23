@@ -58,6 +58,12 @@ const invoicePending: InvoiceDto = {
   dueDate: null,
   paidAt: null,
   paymentMethod: null,
+  discountCents: 0,
+  discountReason: null,
+  netAmountCents: 15000,
+  paidCents: 0,
+  balanceCents: 15000,
+  payments: [],
 };
 
 const invoicePaid: InvoiceDto = {
@@ -72,6 +78,19 @@ const invoicePaid: InvoiceDto = {
   dueDate: null,
   paidAt: '2026-06-16T12:00:00.000Z',
   paymentMethod: 'pix',
+  discountCents: 0,
+  discountReason: null,
+  netAmountCents: 20000,
+  paidCents: 20000,
+  balanceCents: 0,
+  payments: [
+    {
+      id: 'pay-1',
+      amountCents: 20000,
+      method: 'pix',
+      paidAt: '2026-06-16T12:00:00.000Z',
+    },
+  ],
 };
 
 const patientFixture: PatientDto = {
@@ -168,7 +187,7 @@ describe('Feature: Faturamento', () => {
       expect(screen.getByText('João Lima')).toBeInTheDocument();
       expect(screen.getAllByText('R$ 150,00').length).toBeGreaterThan(0);
       expect(screen.getAllByText('R$ 200,00').length).toBeGreaterThan(0);
-      expect(screen.getByText('Pix em 16/06/2026')).toBeInTheDocument();
+      expect(screen.getByText(/via Pix em 16\/06\/2026/)).toBeInTheDocument();
     });
 
     it('Dado erro ao carregar faturas, Quando a página carrega, Então exibe alerta de erro', async () => {
@@ -204,6 +223,7 @@ describe('Feature: Faturamento', () => {
         patientName: 'Carla Nunes',
         paymentMethod: 'boleto',
         paidAt: null,
+        payments: [],
       };
       mockFetch(defaultRouter({ invoices: [invoiceUnknownPayment] }));
 

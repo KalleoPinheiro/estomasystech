@@ -12,6 +12,7 @@ const DOCUMENT_TYPES = [
   'plano-cuidados',
   'relatorio',
   'repasse',
+  'recibo',
 ] as const;
 
 const NUMBER_PREFIX: Record<(typeof DOCUMENT_TYPES)[number], string> = {
@@ -20,6 +21,7 @@ const NUMBER_PREFIX: Record<(typeof DOCUMENT_TYPES)[number], string> = {
   'plano-cuidados': 'PLAN',
   relatorio: 'REL',
   repasse: 'REP',
+  recibo: 'REC',
 };
 
 const issueSchema = z.object({

@@ -273,8 +273,14 @@ function InvoicesList({ invoices }: { invoices: InvoiceDto[] }) {
                   {formatDate(invoice.issuedAt)}
                 </p>
               </div>
-              <span className="font-medium">
-                {formatCurrency(invoice.amountCents)}
+              <span className="text-right font-medium">
+                {formatCurrency(invoice.netAmountCents ?? invoice.amountCents)}
+                {invoice.status === 'pending' && invoice.paidCents > 0 && (
+                  <span className="block font-normal text-ink-3 text-xs">
+                    pago {formatCurrency(invoice.paidCents)} · falta{' '}
+                    {formatCurrency(invoice.balanceCents)}
+                  </span>
+                )}
               </span>
               <StatusBadge
                 status={invoice.status}
