@@ -78,10 +78,10 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
       (summary, invoice) => ({
         paidCents:
           summary.paidCents +
-          (invoice.status === 'paid' ? invoice.amount.cents : 0),
+          (invoice.status === 'cancelled' ? 0 : invoice.paid.cents),
         pendingCents:
           summary.pendingCents +
-          (invoice.status === 'pending' ? invoice.amount.cents : 0),
+          (invoice.status === 'pending' ? invoice.balance.cents : 0),
         totalInvoices: summary.totalInvoices + 1,
         paidCount: summary.paidCount + (invoice.status === 'paid' ? 1 : 0),
         pendingCount:

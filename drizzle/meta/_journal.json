@@ -253,6 +253,13 @@
       "when": 1790175201634,
       "tag": "0035_waitlist-late-cancellation",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1790177228083,
+      "tag": "0036_invoice-payments-discount",
+      "breakpoints": true
     }
   ]
 }

@@ -188,6 +188,15 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 - Stock movement price frozen at time of ledger entry.
 - Supplies have cost; procedures have revenue.
 
+**Invoice payments and discount** (`src/domain/billing/invoice.ts`, `invoice_payments`)
+
+- An invoice can be paid in **several payments** (partial payments), each immutable with amount, method and date. It stays `pending` until the payments reach the **net amount**; then it becomes `paid`, with the date and method of the settling payment. "Receber" with the full balance keeps the historic one-click flow.
+- **Discount** with a mandatory reason, only while pending, replacing any previous discount; it cannot bring the net amount below what was already received, nor to zero (that is cancelling). A discount that makes the net equal to the received amount settles the invoice.
+- An invoice with any payment cannot be cancelled (give a discount on the balance instead).
+- Billing totals: **received** = sum of payments (partials included); **to receive** = balance of pending invoices (net − received). Invoices paid before payments were recorded got one `legacy-<id>` payment in migration 0036.
+- **Commission is unchanged**: it is released only when the invoice is fully `paid` and is still computed on the session value — an invoice discount does not reduce the professional's commission (clinic's cost).
+- **Receipt** (`/documentos/recibo/:invoiceId/:paymentId`, number `REC-…`): one per payment — who paid, amount, method, date, invoice value, discount, received so far and remaining balance; Admin only (billing family). The patient portal shows paid and remaining amounts on partially paid invoices.
+
 **Commission** (repasse ao profissional — rule in `src/domain/billing/commission.ts`)
 
 - **Accrued on production, released on payment:** commission is computed on sessions (completed appointments) of the month, but only enters the payout once the invoice covering it is paid.

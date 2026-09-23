@@ -946,6 +946,12 @@ describe('Feature: Visão do paciente no portal', () => {
         dueDate: null,
         paidAt: null,
         paymentMethod: null,
+        discountCents: 0,
+        discountReason: null,
+        netAmountCents: 15000,
+        paidCents: 0,
+        balanceCents: 15000,
+        payments: [],
       };
       mockFetch([
         {

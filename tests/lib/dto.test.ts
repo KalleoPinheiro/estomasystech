@@ -251,7 +251,47 @@ describe('Feature: DTO de fatura', () => {
       dueDate: invoice.dueDate?.toISOString(),
       paidAt: null,
       paymentMethod: null,
+      discountCents: 0,
+      discountReason: null,
+      netAmountCents: 20000,
+      paidCents: 0,
+      balanceCents: 20000,
+      payments: [],
     });
+  });
+
+  it('Dado fatura com desconto e pagamento parcial, Quando toInvoiceDto, Então expõe líquido, recebido, saldo e recebimentos', () => {
+    const paidAt = new Date('2026-05-02T10:00:00.000Z');
+    const invoice = Invoice.create({
+      patientId: 'patient-1',
+      description: 'Consulta',
+      amount: Money.fromCents(20000),
+    })
+      .applyDiscount(Money.fromCents(5000), 'Fidelidade')
+      .registerPayment({
+        amount: Money.fromCents(6000),
+        method: 'pix',
+        paidAt,
+      });
+
+    const dto = toInvoiceDto(invoice);
+
+    expect(dto).toMatchObject({
+      status: 'pending',
+      discountCents: 5000,
+      discountReason: 'Fidelidade',
+      netAmountCents: 15000,
+      paidCents: 6000,
+      balanceCents: 9000,
+    });
+    expect(dto.payments).toEqual([
+      {
+        id: invoice.payments[0].id,
+        amountCents: 6000,
+        method: 'pix',
+        paidAt: paidAt.toISOString(),
+      },
+    ]);
   });
 
   it('Dado fatura paga, Quando toInvoiceDto, Então reflete status e método de pagamento', () => {

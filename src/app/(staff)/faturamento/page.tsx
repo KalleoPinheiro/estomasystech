@@ -32,6 +32,7 @@ import {
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
+import { DiscountForm, PaymentForm } from './invoice-adjust-forms';
 import { InvoiceForm, type InvoiceFormValues } from './invoice-form';
 
 const STATUS_FILTERS = [
@@ -46,10 +47,67 @@ const PAGE_SIZE = 100;
 interface InvoicesTableProps {
   invoices: InvoiceDto[];
   onPay: (invoice: InvoiceDto) => void;
+  onDiscount: (invoice: InvoiceDto) => void;
   onCancel: (invoice: InvoiceDto) => void;
 }
 
-function InvoicesTable({ invoices, onPay, onCancel }: InvoicesTableProps) {
+/** Valor líquido; com desconto, o valor original riscado; parcial, o saldo. */
+function AmountCell({ invoice }: { invoice: InvoiceDto }) {
+  return (
+    <>
+      {invoice.discountCents > 0 && (
+        <span className="mr-1 text-ink-3 text-xs line-through">
+          {formatCurrency(invoice.amountCents)}
+        </span>
+      )}
+      {formatCurrency(invoice.netAmountCents)}
+      {invoice.status === 'pending' && invoice.paidCents > 0 && (
+        <span className="block font-normal text-warning text-xs">
+          falta {formatCurrency(invoice.balanceCents)}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** Recebimentos com link para o recibo de cada um. */
+function PaymentsCell({ invoice }: { invoice: InvoiceDto }) {
+  if (invoice.payments.length === 0) {
+    // Registro sem recebimentos detalhados: mostra o que a fatura guarda.
+    return invoice.paymentMethod ? (
+      <>
+        {PAYMENT_METHOD_LABELS[invoice.paymentMethod] ?? invoice.paymentMethod}
+        {invoice.paidAt ? ` em ${formatDate(invoice.paidAt)}` : ''}
+      </>
+    ) : (
+      <>—</>
+    );
+  }
+  return (
+    <ul className="flex flex-col gap-0.5">
+      {invoice.payments.map((payment) => (
+        <li key={payment.id}>
+          {formatCurrency(payment.amountCents)} via{' '}
+          {PAYMENT_METHOD_LABELS[payment.method] ?? payment.method} em{' '}
+          {formatDate(payment.paidAt)} ·{' '}
+          <a
+            href={`/documentos/recibo/${invoice.id}/${payment.id}`}
+            className="font-medium text-accent-ink hover:underline"
+          >
+            Recibo
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function InvoicesTable({
+  invoices,
+  onPay,
+  onDiscount,
+  onCancel,
+}: InvoicesTableProps) {
   return (
     <div className="overflow-x-auto">
       <Table className="w-full text-left text-sm">
@@ -77,7 +135,7 @@ function InvoicesTable({ invoices, onPay, onCancel }: InvoicesTableProps) {
                 {invoice.description}
               </TableCell>
               <TableCell className="px-4 py-3 text-right font-medium tabular-nums">
-                {formatCurrency(invoice.amountCents)}
+                <AmountCell invoice={invoice} />
               </TableCell>
               <TableCell className="px-4 py-3">
                 <StatusBadge
@@ -87,12 +145,8 @@ function InvoicesTable({ invoices, onPay, onCancel }: InvoicesTableProps) {
                   }
                 />
               </TableCell>
-              <TableCell className="px-4 py-3 text-ink-2">
-                {invoice.paymentMethod
-                  ? `${PAYMENT_METHOD_LABELS[invoice.paymentMethod] ?? invoice.paymentMethod}${
-                      invoice.paidAt ? ` em ${formatDate(invoice.paidAt)}` : ''
-                    }`
-                  : '—'}
+              <TableCell className="px-4 py-3 text-ink-2 text-xs">
+                <PaymentsCell invoice={invoice} />
               </TableCell>
               <TableCell className="px-4 py-3 text-right">
                 {invoice.status === 'pending' ? (
@@ -105,22 +159,32 @@ function InvoicesTable({ invoices, onPay, onCancel }: InvoicesTableProps) {
                     >
                       Receber
                     </Button>
-                    <ConfirmAction
-                      trigger={
-                        <Button
-                          type="button"
-                          variant="link"
-                          className="h-auto p-0 text-danger"
-                        >
-                          Cancelar
-                        </Button>
-                      }
-                      title="Cancelar fatura?"
-                      description="A fatura é cancelada permanentemente."
-                      confirmLabel="Cancelar fatura"
-                      variant="danger"
-                      onConfirm={() => onCancel(invoice)}
-                    />
+                    <Button
+                      type="button"
+                      onClick={() => onDiscount(invoice)}
+                      variant="link"
+                      className="mr-2 h-auto p-0 text-accent-ink"
+                    >
+                      Desconto
+                    </Button>
+                    {invoice.paidCents === 0 && (
+                      <ConfirmAction
+                        trigger={
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto p-0 text-danger"
+                          >
+                            Cancelar
+                          </Button>
+                        }
+                        title="Cancelar fatura?"
+                        description="A fatura é cancelada permanentemente."
+                        confirmLabel="Cancelar fatura"
+                        variant="danger"
+                        onConfirm={() => onCancel(invoice)}
+                      />
+                    )}
                   </>
                 ) : (
                   <span className="text-ink-3">—</span>
@@ -161,6 +225,7 @@ export default function BillingPage() {
   const [creating, setCreating] = useState(false);
   const [sellingPackage, setSellingPackage] = useState(false);
   const [paying, setPaying] = useState<InvoiceDto | null>(null);
+  const [discounting, setDiscounting] = useState<InvoiceDto | null>(null);
 
   const {
     items: invoices,
@@ -200,14 +265,26 @@ export default function BillingPage() {
     refreshSummary();
   };
 
-  const handlePay = async (invoice: InvoiceDto, method: string) => {
+  const handlePay = async (
+    invoice: InvoiceDto,
+    amountCents: number,
+    method: string,
+  ) => {
+    // Saldo inteiro = quitar (fluxo histórico); menos que isso = parcial.
+    const partial = amountCents < invoice.balanceCents;
     try {
       await apiFetch<InvoiceDto>(`/api/invoices/${invoice.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ action: 'pay', method }),
+        body: JSON.stringify(
+          partial
+            ? { action: 'pay_partial', amountCents, method }
+            : { action: 'pay', method },
+        ),
       });
       toast({
-        description: 'Pagamento registrado',
+        description: partial
+          ? 'Pagamento parcial registrado'
+          : 'Pagamento registrado',
         variant: 'success',
       });
       setPaying(null);
@@ -219,6 +296,22 @@ export default function BillingPage() {
         err instanceof Error ? err.message : 'Erro ao registrar pagamento',
       );
     }
+  };
+
+  // Erro fica no formulário do desconto (o modal continua aberto).
+  const handleDiscount = async (
+    invoice: InvoiceDto,
+    amountCents: number,
+    reason: string,
+  ) => {
+    await apiFetch<InvoiceDto>(`/api/invoices/${invoice.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'discount', amountCents, reason }),
+    });
+    toast({ description: 'Desconto aplicado', variant: 'success' });
+    setDiscounting(null);
+    refresh();
+    refreshSummary();
   };
 
   const handleCancel = async (invoice: InvoiceDto) => {
@@ -299,6 +392,7 @@ export default function BillingPage() {
             <InvoicesTable
               invoices={list}
               onPay={setPaying}
+              onDiscount={setDiscounting}
               onCancel={(invoice) => void handleCancel(invoice)}
             />
           )}
@@ -332,22 +426,23 @@ export default function BillingPage() {
 
       {paying && (
         <Modal title="Registrar pagamento" onClose={() => setPaying(null)}>
-          <p className="mb-4 text-ink-2 text-sm">
-            {paying.patientName} — {formatCurrency(paying.amountCents)}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(PAYMENT_METHOD_LABELS).map(([method, label]) => (
-              <Button
-                key={method}
-                type="button"
-                onClick={() => void handlePay(paying, method)}
-                variant="outline"
-                className="hover:bg-accent-soft"
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
+          <PaymentForm
+            invoice={paying}
+            onPay={(amountCents, method) =>
+              handlePay(paying, amountCents, method)
+            }
+          />
+        </Modal>
+      )}
+
+      {discounting && (
+        <Modal title="Desconto na fatura" onClose={() => setDiscounting(null)}>
+          <DiscountForm
+            invoice={discounting}
+            onSave={(amountCents, reason) =>
+              handleDiscount(discounting, amountCents, reason)
+            }
+          />
         </Modal>
       )}
     </div>

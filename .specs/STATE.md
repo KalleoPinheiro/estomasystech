@@ -757,3 +757,13 @@ Terceiro tópico do item 8, PR própria (empilhada na de agenda por profissional
 - **Decisões**: taxa não bloqueia nada (é fatura comum, pode ser cancelada no Faturamento); PUT da grade preserva campos omitidos; re-resolver uma entrada da fila é 409.
 - **Testes**: domínio, aplicação, API (PGlite: taxa como fatura, tardio persistido, política no portal, fila com isolamento entre clínicas e posse no portal) e telas (painéis de cancelamento/falta, fila na agenda e no portal, fluxo de agendar a partir da fila). Sensor: 10 mutantes, 3 sobreviveram (rota do portal sem política, painel mandando taxa indevida, tardio não persistido) → testes adicionados, todos mortos. E2E: lista de espera na agenda; completo com 86 passando e os 2 intermitentes conhecidos passando na nova tentativa.
 
+## Pagamento parcial, desconto e recibo (N6, item 8d) — CONCLUÍDA
+
+Quarto e último tópico do item 8, PR própria, sobre a `main` já com a lista de espera (#171) — a migração 0036 vem depois da 0035.
+
+- **Recebimentos** (`invoice_payments`, migração 0036): fatura aceita vários pagamentos; só vira `paid` quando alcança o líquido. Backfill `legacy-<id>` para as já pagas. Resumo: recebido = soma dos pagamentos; a receber = saldo das pendentes.
+- **Desconto** (`invoices.discount_cents/discount_reason`): com motivo, só pendente, nunca abaixo do já recebido nem total (total = cancelar). Fatura com pagamento não pode ser cancelada (409).
+- **Recibo** por pagamento (`REC-`), com desconto, recebido até o momento e saldo.
+- **Decisões**: comissão não muda — libera só com a fatura quitada e continua sobre o valor da sessão (desconto é custo da clínica); convênio/TISS segue fora (backlog); recibo só para o Admin (o portal mostra pago/saldo, sem recibo).
+- **Testes**: domínio, aplicação, API (PGlite: parcial→quitação, resumo, desconto, 409 no cancelamento, auditoria, isolamento, número do recibo, backfill da migração) e telas (formulários, Faturamento, recibo, portal). Sensor: 9 mutantes, 1 sobreviveu (recebido acumulado no recibo) → teste com dois pagamentos, morto. E2E completo: 88 passaram, 1 intermitente conhecido.
+

@@ -1,6 +1,18 @@
-import { and, desc, eq, gte, lt, or, type SQL, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lt,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm';
 import {
   Invoice,
+  type InvoicePayment,
   type InvoiceStatus,
   type PaymentMethod,
 } from '@/domain/billing/invoice';
@@ -13,12 +25,20 @@ import type {
 import { Money } from '@/domain/shared/money';
 import { decodeCursor } from '@/lib/pagination';
 import { type AppDb, MAX_ROWS } from './db';
-import { invoices } from './schema';
+import { invoicePayments, invoices } from './schema';
 import { withTenant } from './tenant-scope';
 
 type InvoiceRow = typeof invoices.$inferSelect;
+type PaymentRow = typeof invoicePayments.$inferSelect;
 
-const toInvoice = (row: InvoiceRow): Invoice =>
+const toPayment = (row: PaymentRow): InvoicePayment => ({
+  id: row.id,
+  amount: Money.fromCents(row.amountCents),
+  method: row.method as PaymentMethod,
+  paidAt: row.paidAt,
+});
+
+const toInvoice = (row: InvoiceRow, payments: PaymentRow[] = []): Invoice =>
   Invoice.restore({
     id: row.id,
     patientId: row.patientId,
@@ -31,6 +51,14 @@ const toInvoice = (row: InvoiceRow): Invoice =>
     dueDate: row.dueDate,
     paidAt: row.paidAt,
     paymentMethod: row.paymentMethod as PaymentMethod | null,
+    discount:
+      row.discountCents > 0
+        ? {
+            amount: Money.fromCents(row.discountCents),
+            reason: row.discountReason ?? '',
+          }
+        : null,
+    payments: payments.map(toPayment),
   });
 
 export class DrizzleInvoiceRepository implements InvoiceRepository {
@@ -58,11 +86,55 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
       dueDate: invoice.dueDate,
       paidAt: invoice.paidAt,
       paymentMethod: invoice.paymentMethod,
+      discountCents: invoice.discount?.amount.cents ?? 0,
+      discountReason: invoice.discount?.reason ?? null,
     };
     await this.db
       .insert(invoices)
       .values(values)
       .onConflictDoUpdate({ target: invoices.id, set: values });
+    // Recebimentos são imutáveis: só os novos entram.
+    const payments = invoice.payments;
+    if (payments.length > 0) {
+      await this.db
+        .insert(invoicePayments)
+        .values(
+          payments.map((payment) => ({
+            id: payment.id,
+            clinicId: this.clinicId as string,
+            invoiceId: invoice.id,
+            amountCents: payment.amount.cents,
+            method: payment.method,
+            paidAt: payment.paidAt,
+          })),
+        )
+        .onConflictDoNothing({ target: invoicePayments.id });
+    }
+  }
+
+  /** Recebimentos das faturas, em lote (sem N+1), por ordem de data. */
+  private async withPayments(rows: InvoiceRow[]): Promise<Invoice[]> {
+    if (rows.length === 0) {
+      return [];
+    }
+    const paymentRows = await this.db
+      .select()
+      .from(invoicePayments)
+      .where(
+        inArray(
+          invoicePayments.invoiceId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(invoicePayments.paidAt), asc(invoicePayments.id));
+    const byInvoice = new Map<string, PaymentRow[]>();
+    for (const payment of paymentRows) {
+      byInvoice.set(payment.invoiceId, [
+        ...(byInvoice.get(payment.invoiceId) ?? []),
+        payment,
+      ]);
+    }
+    return rows.map((row) => toInvoice(row, byInvoice.get(row.id)));
   }
 
   async findById(id: string): Promise<Invoice | null> {
@@ -71,7 +143,7 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
       .from(invoices)
       .where(withTenant(invoices, this.clinicId, eq(invoices.id, id)))
       .limit(1);
-    return rows[0] ? toInvoice(rows[0]) : null;
+    return (await this.withPayments(rows))[0] ?? null;
   }
 
   async findByAppointmentId(appointmentId: string): Promise<Invoice | null> {
@@ -86,7 +158,7 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
         ),
       )
       .limit(1);
-    return rows[0] ? toInvoice(rows[0]) : null;
+    return (await this.withPayments(rows))[0] ?? null;
   }
 
   private buildConditions(filter: InvoiceFilter): SQL | undefined {
@@ -119,17 +191,23 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
       )
       .orderBy(desc(invoices.issuedAt), desc(invoices.id))
       .limit(limit);
-    return rows.map(toInvoice);
+    return this.withPayments(rows);
   }
 
+  /**
+   * Recebido = soma dos recebimentos (inclui parciais de faturas ainda
+   * pendentes); a receber = saldo das pendentes (líquido do desconto menos o já
+   * recebido).
+   */
   async summarize(filter: InvoiceFilter = {}): Promise<InvoiceSummary> {
     const paid = sql`${invoices.status} = 'paid'`;
     const pending = sql`${invoices.status} = 'pending'`;
     const cancelled = sql`${invoices.status} = 'cancelled'`;
+    const received = sql`coalesce((select sum(${invoicePayments.amountCents}) from ${invoicePayments} where ${invoicePayments.invoiceId} = ${invoices.id}), 0)`;
     const [row] = await this.db
       .select({
-        paidCents: sql<number>`coalesce(sum(${invoices.amountCents}) filter (where ${paid}), 0)`,
-        pendingCents: sql<number>`coalesce(sum(${invoices.amountCents}) filter (where ${pending}), 0)`,
+        paidCents: sql<number>`coalesce(sum(${received}) filter (where not ${cancelled}), 0)`,
+        pendingCents: sql<number>`coalesce(sum(${invoices.amountCents} - ${invoices.discountCents} - ${received}) filter (where ${pending}), 0)`,
         totalInvoices: sql<number>`count(*)::int`,
         paidCount: sql<number>`(count(*) filter (where ${paid}))::int`,
         pendingCount: sql<number>`(count(*) filter (where ${pending}))::int`,
