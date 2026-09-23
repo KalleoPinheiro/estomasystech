@@ -43,6 +43,12 @@ describe('Feature: Rate limit compartilhado entre réplicas (issue #77)', () => 
       ]);
     });
 
+    it('Dado um lote de acessos, Então soma o lote de uma vez; na janela nova, recomeça do lote', async () => {
+      expect(await store.hit('api:ip', WINDOW, T0, 3)).toBe(3);
+      expect(await store.hit('api:ip', WINDOW, T0 + 1, 2)).toBe(5);
+      expect(await store.hit('api:ip', WINDOW, T0 + WINDOW, 4)).toBe(4);
+    });
+
     it('Quando podar, Então apaga só as janelas vencidas', async () => {
       await store.hit('velha', WINDOW, T0);
       await store.hit('nova', WINDOW, T0 + WINDOW);
@@ -124,6 +130,76 @@ describe('Feature: Rate limit compartilhado entre réplicas (issue #77)', () => 
       await limiter.allow('c', T0 + WINDOW);
 
       expect(prune).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('SharedRateLimiter em lote (limite geral da API)', () => {
+    const SYNC = 1_000;
+    const batched = (max: number) =>
+      new SharedRateLimiter('api', max, WINDOW, async () => store, SYNC);
+
+    it('Dados vários acessos no mesmo segundo, Então vai ao banco uma vez só e conta o resto localmente', async () => {
+      const hit = vi.spyOn(store, 'hit');
+      const limiter = batched(3);
+
+      const results: boolean[] = [];
+      for (let i = 0; i < 5; i++) {
+        results.push(await limiter.allow('ip', T0 + i));
+      }
+
+      expect(results).toEqual([true, true, true, false, false]);
+      expect(hit).toHaveBeenCalledTimes(1);
+    });
+
+    it('Passado o intervalo, Quando acessar, Então envia ao banco o acumulado mais o acesso atual', async () => {
+      const hit = vi.spyOn(store, 'hit');
+      const limiter = batched(100);
+      await limiter.allow('ip', T0);
+      await limiter.allow('ip', T0 + 10);
+      await limiter.allow('ip', T0 + 20);
+
+      await limiter.allow('ip', T0 + SYNC);
+
+      expect(hit).toHaveBeenLastCalledWith('api:ip', WINDOW, T0 + SYNC, 3);
+      const [row] = await (await getDb()).select().from(rateLimitWindows);
+      expect(row.count).toBe(4);
+    });
+
+    it('Dadas duas réplicas, Então o teto vale somado (com deriva de no máximo um intervalo)', async () => {
+      const replicaA = batched(4);
+      const replicaB = batched(4);
+
+      expect(await replicaA.allow('ip', T0)).toBe(true); // banco: 1
+      expect(await replicaA.allow('ip', T0 + 10)).toBe(true); // A local: 2
+      expect(await replicaB.allow('ip', T0 + 20)).toBe(true); // banco: 2
+      expect(await replicaB.allow('ip', T0 + 30)).toBe(true); // B local: 3
+      expect(await replicaA.allow('ip', T0 + 1_100)).toBe(true); // banco: 4
+      expect(await replicaB.allow('ip', T0 + 1_200)).toBe(false); // banco: 6
+      expect(await replicaA.allow('ip', T0 + 1_300)).toBe(false); // A vê 4 + 1
+    });
+
+    it('Dada falha no banco, Então usa o limite da réplica e tenta sincronizar de novo no próximo acesso', async () => {
+      const hit = vi
+        .spyOn(store, 'hit')
+        .mockRejectedValueOnce(new Error('banco fora'));
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const limiter = batched(5);
+
+      expect(await limiter.allow('ip', T0)).toBe(true);
+      expect(await limiter.allow('ip', T0 + 1)).toBe(true);
+
+      expect(hit).toHaveBeenCalledTimes(2);
+      expect(log).toHaveBeenCalledTimes(1);
+      log.mockRestore();
+    });
+
+    it('Dada chave parada por mais de uma janela, Quando podar, Então sai da memória da réplica', async () => {
+      const limiter = batched(5);
+      await limiter.allow('parado', T0);
+      await limiter.allow('ativo', T0 + SYNC + WINDOW);
+
+      const local = Reflect.get(limiter, 'local') as Map<string, unknown>;
+      expect([...local.keys()]).toEqual(['api:ativo']);
     });
   });
 });

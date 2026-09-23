@@ -9,7 +9,7 @@ import {
   UNAUTHENTICATED_MESSAGE,
 } from '@/lib/auth/access-policy';
 import { clientIp } from '@/lib/auth/client-ip';
-import { RateLimiter } from '@/lib/auth/rate-limit';
+import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { getRequestSession } from '@/lib/auth/request-session';
 import { isStaffSessionRevoked } from '@/lib/auth/staff-revocation';
 
@@ -27,7 +27,16 @@ import { isStaffSessionRevoked } from '@/lib/auth/staff-revocation';
 // Configurável via env para permitir relaxar em ambientes de teste E2E (muitas
 // chamadas de setup em sequência) sem afetar o padrão de produção.
 const API_RATE_LIMIT_MAX = Number(process.env.API_RATE_LIMIT_MAX) || 120;
-const API_RATE_LIMIT = new RateLimiter(API_RATE_LIMIT_MAX, 60_000);
+// Teto por IP somado entre réplicas (issue #77). Cada réplica sincroniza com o
+// banco no máximo 1×/s por IP — não uma escrita por request.
+const API_RATE_LIMIT_SYNC_MS = 1_000;
+const API_RATE_LIMIT = new SharedRateLimiter(
+  'api',
+  API_RATE_LIMIT_MAX,
+  60_000,
+  undefined,
+  API_RATE_LIMIT_SYNC_MS,
+);
 
 const isApiPath = (pathname: string): boolean => pathname.startsWith('/api/');
 
@@ -95,7 +104,7 @@ function nextWithCsp(request: NextRequest): NextResponse {
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
-  if (isApiPath(pathname) && !API_RATE_LIMIT.allow(clientIp(request))) {
+  if (isApiPath(pathname) && !(await API_RATE_LIMIT.allow(clientIp(request)))) {
     return fail(
       'Limite de requisições excedido, tente novamente em instantes',
       429,

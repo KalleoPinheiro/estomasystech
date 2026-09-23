@@ -212,8 +212,9 @@ One account belongs to exactly one Clinic (email is unique per Clinic, not globa
 
 **Multiple replicas** (analysis item A4)
 
-- Auth endpoints (login, forgot/set password, bootstrap) rate-limit through Postgres (`rate_limit_windows`, one atomic upsert per attempt) — exact across replicas; if the database fails, the replica's in-memory limit applies instead of allowing everything.
-- The global `/api/*` limit (`API_RATE_LIMIT_MAX`, `proxy.ts`) stays in memory, per replica — it is burst protection, and a database write per request would double write load. With N replicas the effective ceiling is N × the setting.
+- All rate limits are counted in Postgres (`rate_limit_windows`, atomic fixed-window upsert) and hold **summed across replicas** (issue #77). If the database fails, the replica's in-memory limit applies instead of allowing everything.
+- Auth endpoints (login, forgot/set password, bootstrap) write every attempt — exact.
+- The global `/api/*` limit (`API_RATE_LIMIT_MAX`, `proxy.ts`) is batched: each replica counts locally and sends the accumulated delta at most once per second per IP, reading back the global total. Drift is bounded by one second of traffic per replica; database writes are at most one per IP per second per replica, not one per request.
 - Other per-process state is safe to keep per replica: the staff revocation cache (60 s TTL over the database), the closed-month report cache (only settled reports, which no longer change) and the Calendar gateway cache (token reuse only).
 
 **No global state per clinic** (in preparation for Phase 2)
