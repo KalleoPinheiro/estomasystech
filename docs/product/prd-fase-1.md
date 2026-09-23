@@ -1,3 +1,11 @@
+---
+title: "PRD — VittaFlow: Módulo Clínico para Estomaterapia"
+status: frozen
+audience: [po, stakeholder, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # PRD — VittaFlow: Módulo Clínico para Estomaterapia
 
 - **Versão:** 1.0

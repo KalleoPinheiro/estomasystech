@@ -1,3 +1,11 @@
+---
+title: "Plano de Evolução Faseado e Roadmap"
+status: living
+audience: [po, stakeholder, dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Plano de Evolução Faseado — VittaFlow
 
 - **Versão:** 1.0
@@ -21,16 +29,54 @@
    usuário (matriz RBAC fina, taxa de cancelamento, PSP, multi-tenancy) ficam especificados como
    backlog para não inventar requisitos.
 
-## Visão geral das fases
+## Roadmap
 
-| Fase | Nome | Status | Spec |
-|------|------|--------|------|
-| 1 | Hardening de segurança | ✅ **Entregue** (Verifier PASS) | `.specs/features/fase-1-hardening-seguranca/` |
-| 2 | Consistência transacional e performance | ✅ **Entregue** (PASS na iteração 1) | `.specs/features/fase-2-consistencia-performance/` |
-| 3 | Compliance e UX clínico | ✅ **Entregue** (PASS na iteração 1) | `.specs/features/fase-3-compliance-ux-clinico/` |
-| 4 | Portal: auto-agendamento e recall | ✅ **Entregue** (Verifier PASS) | `.specs/features/fase-4-portal-auto-agendamento/` |
-| 5 | Monetização e canal | Backlog (depende de decisão de negócio) | seção 5 abaixo |
-| 6 | Plataforma (RBAC fino, multi-tenancy, TISS) | RBAC, multi-tenancy Fases 1–2 e sunset da senha master: ✅ **Entregues** (Verifier PASS) — ver `.specs/features/{rbac-catalogo-papeis,fundacao-multi-tenancy,autenticacao-nativa}/`. TISS e paginação por cursor seguem backlog | `product/prd-fase-6.md`, seção 6 abaixo |
+> **Fonte da verdade:** esta seção. O GitHub Project é a *view*: cada linha `RM-NN` tem uma
+> issue épica `[RM-NN] <Item>` com label `roadmap`. Divergiu? Esta seção vence e o Project é
+> corrigido. Contrato completo em [Contrato repo ↔ ferramenta de gestão](#contrato-repo--ferramenta-de-gestão).
+
+`status` ∈ `backlog` · `especificado` · `em-andamento` · `entregue` · `descartado`. Linha `entregue`
+sempre linka a pasta de `.specs/features/` onde está a validação do Verifier.
+
+### Now — T4 2026
+
+| id | Item | Objetivo de negócio | status | issue | spec |
+| --- | --- | --- | --- | --- | --- |
+| RM-13 | Documentação em progressive disclosure | onboarding de dev e de agente sem ler o repositório inteiro | em-andamento | [#173](https://github.com/KalleoPinheiro/vitta-flow/pull/173) | [`docs-progressive-disclosure/`](../.specs/features/docs-progressive-disclosure/) |
+
+### Next
+
+| id | Item | Objetivo de negócio | status | issue | spec |
+| --- | --- | --- | --- | --- | --- |
+| RM-14 | Lembretes por WhatsApp: templates, cadência de recall, escopo por empresa | lembrete que chega fora da janela de 24 h da Meta e não repete para sempre | especificado | — | [`lembretes-whatsapp-templates-cadencia/`](../.specs/features/lembretes-whatsapp-templates-cadencia/) |
+
+### Later
+
+| id | Item | Objetivo de negócio | status | issue | spec |
+| --- | --- | --- | --- | --- | --- |
+| RM-05 | Pagamento online (Pix/cartão) | receber sem ação manual da recepção | backlog | — | — (decisão pendente: PSP) |
+| RM-15 | Relatório automático para o parceiro | fidelizar quem indica pacientes | backlog | — | — (decisão pendente: cadência e canal) |
+| RM-16 | Oferta de vaga da lista de espera por WhatsApp | ocupar horário cancelado | backlog | — | — (decisão pendente: expiração da oferta) |
+| RM-17 | TISS / convênios | faturar operadoras | backlog | — | — |
+| RM-18 | Row-Level Security no Postgres ([ADR-001](./adr/001-multi-tenancy.md)) | isolamento de empresa também no banco | backlog | — | — |
+
+### Entregue
+
+| id | Item | Objetivo de negócio | status | issue | spec |
+| --- | --- | --- | --- | --- | --- |
+| RM-01 | Fase 1 — Hardening de segurança | proteger dado de saúde antes de crescer | entregue | — | [`fase-1-hardening-seguranca/`](../.specs/features/fase-1-hardening-seguranca/) |
+| RM-02 | Fase 2 — Consistência transacional e performance | fundação antes de feature | entregue | — | [`fase-2-consistencia-performance/`](../.specs/features/fase-2-consistencia-performance/) |
+| RM-03 | Fase 3 — Compliance e UX clínico | prontuário aderente a COFEN/LGPD | entregue | — | [`fase-3-compliance-ux-clinico/`](../.specs/features/fase-3-compliance-ux-clinico/) |
+| RM-04 | Fase 4 — Portal: auto-agendamento e recall | fechar o loop de retorno com o que já existe | entregue | — | [`fase-4-portal-auto-agendamento/`](../.specs/features/fase-4-portal-auto-agendamento/) |
+| RM-06 | RBAC: catálogo fechado de seis papéis | cada papel vê só o que precisa | entregue | [#20](https://github.com/KalleoPinheiro/vitta-flow/issues/20) | [`rbac-catalogo-papeis/`](../.specs/features/rbac-catalogo-papeis/) |
+| RM-07 | Multiempresa fases 1–2 (ADR-001) | vender para N clínicas | entregue | [#19](https://github.com/KalleoPinheiro/vitta-flow/issues/19) | [`fundacao-multi-tenancy/`](../.specs/features/fundacao-multi-tenancy/) |
+| RM-08 | Autenticação nativa, fim da senha mestre | nenhuma credencial compartilhada | entregue | [#21](https://github.com/KalleoPinheiro/vitta-flow/issues/21) | [`autenticacao-nativa/`](../.specs/features/autenticacao-nativa/) |
+| RM-09 | Paginação por cursor e CSP com nonce | listagens em volume alto; CSP estrita | entregue | [#75](https://github.com/KalleoPinheiro/vitta-flow/issues/75) | [`paginacao-cursor-csp-nonce/`](../.specs/features/paginacao-cursor-csp-nonce/) |
+| RM-10 | Auditoria UX — Fase A, padrões estruturais | estados de carregamento, confirmação e feedback consistentes | entregue | [#57](https://github.com/KalleoPinheiro/vitta-flow/issues/57) | [`fase-a-padroes-estruturais/`](../.specs/features/fase-a-padroes-estruturais/) |
+| RM-11 | Auditoria UX — Fase B, clínico-legal crítico | documentos clínicos válidos e autoria confiável | entregue | [#61](https://github.com/KalleoPinheiro/vitta-flow/issues/61) | [`fase-b-clinico-legal-critico/`](../.specs/features/fase-b-clinico-legal-critico/) |
+| RM-12 | Auditoria UX — Fase C, LGPD e segurança do dado | conformidade LGPD | entregue | [#69](https://github.com/KalleoPinheiro/vitta-flow/issues/69) | [`fase-c-lgpd-seguranca-dado/`](../.specs/features/fase-c-lgpd-seguranca-dado/) |
+
+As seções por fase abaixo são o detalhe (L2) — escopo, decisões pendentes e critérios de cada uma.
 
 ### Registro de entrega
 
@@ -165,3 +211,15 @@ pendente nomeada.
 Uma fase só é considerada entregue quando: (1) todos os tasks da `tasks.md` têm commit atômico;
 (2) gates verdes (`npm test`, `npm run lint`, `npm run build`); (3) o Verifier independente
 reporta PASS em `.specs/features/<fase>/validation.md`.
+
+## Contrato repo ↔ ferramenta de gestão
+
+| Regra | Como |
+| --- | --- |
+| 1 linha `RM-NN` = 1 issue épica | título `[RM-NN] <Item>`, label `roadmap`, corpo linka esta seção |
+| Sub-tarefas | sub-issues da épica no GitHub — nunca linhas novas aqui |
+| Campos do GitHub Project | `Horizon` (Now/Next/Later/Entregue), `Status` (os 5 valores acima), `Quarter`, `Domain` (os 9 de [`domains/`](./domains/)) |
+| Mudança de status | no PR que muda o estado: edita a linha aqui **e** o campo no Project |
+| Jira / Linear | mesmo contrato: `RM-NN` no título do epic; o link do epic vai na coluna `issue` |
+| Notion | só leitura (embed do Project); nunca fonte |
+| Novo id | próximo número livre; ids não são reaproveitados, item abandonado vira `descartado` |

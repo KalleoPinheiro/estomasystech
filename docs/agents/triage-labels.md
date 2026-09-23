@@ -1,3 +1,11 @@
+---
+title: "Triage Labels"
+status: living
+audience: [agent, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Triage Labels
 
 The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.

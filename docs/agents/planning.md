@@ -1,13 +1,22 @@
+---
+title: "Planning docs"
+status: living
+audience: [agent, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Planning docs
 
 How phase and initiative planning is organized in `docs/`, and how it relates to `.specs/features/` and the two decision logs. Read this before writing a new PRD, audit, or roadmap entry.
 
 ## What lives where
 
-- **`docs/plano-evolucao-faseado.md`** — the master roadmap. One row per phase, links out to each phase's PRD and `.specs/` execution folder. This is the entry point: start here to see what's delivered, specified, or still backlog.
+- **`docs/plano-evolucao-faseado.md`** — the master roadmap: a `## Roadmap` section (Now/Next/Later/Entregue, one `RM-NN` row per item, mirrored in the GitHub Project) followed by the per-phase detail. One row per item, links out to each phase's PRD and `.specs/` execution folder. This is the entry point: start here to see what's delivered, specified, or still backlog.
 - **`docs/product/`** — one PRD per phase (`prd-fase-N.md`), written **only when a phase requires an explicit product/business decision** (scope, priority, a trade-off the user made, not the engineering team). See "When a phase does NOT get a PRD" below.
 - **`docs/audits/`** — raw audit/analysis findings (security, UX, design-system gaps). These are **input** to planning, not a work request by themselves: an audit's findings get triaged into a phase (with a PRD) or a standalone `.specs/features/` entry, never executed directly off the audit doc.
 - **`docs/adr/`** — durable architecture/domain decisions. Owned by the `domain-modeling` skill. See "Two decision logs" below.
+- **`docs/domains/<slug>/`** — the *living* description of how each business domain behaves today: a README per domain plus `features/<feature>.md` specs from `docs/templates/feature-spec.md`. Updated in the same PR that changes behaviour. Not to be confused with `.specs/`, which is frozen execution history.
 - **`.specs/features/<slug>/`** — execution-level spec/design/tasks/validation for one feature or initiative. Owned by the `tlc-spec-driven` skill; naming and structure there are fixed by that skill's tooling — don't reorganize it from here.
 
 ## When a phase does NOT get a PRD

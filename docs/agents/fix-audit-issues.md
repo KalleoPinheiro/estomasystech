@@ -1,3 +1,11 @@
+---
+title: "Corrigir um subconjunto de issues de auditoria (fim a fim)"
+status: living
+audience: [agent, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Corrigir um subconjunto de issues de auditoria (fim a fim)
 
 Fluxo padrão quando o pedido é "especifique e corrija só as issues N e M [de
@@ -42,8 +50,11 @@ especificar → implementar → documentar → PR → merge → fechar issue.
 6. **Atualizar a documentação viva** antes de abrir o PR:
    - `docs/plano-evolucao-faseado.md` — risque o item de backlog citado e
      marque `**entregue**`, linkando a issue e o spec novo.
-   - `README.md`/`AGENTS.md` — só se a mudança afeta setup, env vars, ou
-     contrato de API visível a quem desenvolve no repo.
+   - `docs/domains/<slug>/` — se a mudança altera regra ou funcionalidade
+     do domínio (tabela `Regras de negócio`/`Funcionalidades`).
+   - `docs/engineering/onboarding.md` (setup, env vars) ou
+     `docs/engineering/api.md` (contrato de API) — só se a mudança os afeta;
+     `AGENTS.md` só para regra que vale para toda tarefa.
    - **Não** edite `docs/audits/*.md` (frozen) nem a tabela geral de fases em
      `docs/plano-correcao-achados-auditoria-2026-09.md` — precedente das
      Fases A–C é deixar essa tabela como está; o rastro de "feito" vive nas

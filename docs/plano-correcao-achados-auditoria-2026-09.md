@@ -1,3 +1,11 @@
+---
+title: "Plano de Correção — Achados de Auditoria (Setembro 2026)"
+status: frozen
+audience: [dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Plano de Correção — Achados de Auditoria (Setembro 2026)
 
 - **Versão:** 1.0

@@ -1,3 +1,11 @@
+---
+title: "Backlog — Adoção do `@still-void/ui`"
+status: living
+audience: [dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Backlog — Adoção do `@still-void/ui`
 
 - **Status:** Parcialmente fechado — itens 1, 2 e 3 resolvidos em 2026-08-22 pela

@@ -12,7 +12,7 @@ Do not deviate from that document's 10 steps or its "O que NÃO fazer" section. 
 - Branch from an up-to-date `main` (`git checkout main && git pull --ff-only && git status` clean, then `git checkout -b fix/<slug>`).
 - Implement with `tlc-spec-driven` (`/implement`); gate green (`typecheck`, `lint`, `check:sv`, `test:coverage` >= 90%, `test:e2e`) before every commit — the `audit-fix-gate` subagent runs this.
 - One semantic commit per issue (or one atomic commit per task if `tasks.md` was generated), each closing its issue via `Closes #N`.
-- Update `docs/plano-evolucao-faseado.md` and, only if setup/env/API contract changed, `README.md`/`AGENTS.md` — never `docs/audits/*.md`.
+- Update `docs/plano-evolucao-faseado.md` and, the affected `docs/domains/<slug>/README.md`, and, only if setup/env/API contract changed, `docs/engineering/onboarding.md`/`api.md` — never `docs/audits/*.md`.
 - PR from the up-to-date branch, track CodeRabbit, squash merge with `Closes #N` per issue in the squash body.
 - Record the outcome in `.specs/STATE.md` → Handoff, same format as prior phases.
 

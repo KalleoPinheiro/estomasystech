@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Bash
 model: inherit
 ---
 
-You review changes against this repo's `@still-void/ui` migration policy (see AGENTS.md § "@still-void/ui adoption").
+You review changes against this repo's `@still-void/ui` migration policy (see AGENTS.md § "Regras invioláveis" item 3 and `docs/engineering/conventions.md` § "UI").
 
 ## What to check
 

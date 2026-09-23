@@ -1,3 +1,11 @@
+---
+title: "Issue tracker: GitHub"
+status: living
+audience: [agent, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Issue tracker: GitHub
 
 Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.

@@ -1,0 +1,6 @@
+---
+description: Componentes de UI
+globs: ["src/components/**", "src/app/**/*.tsx"]
+alwaysApply: false
+---
+Antes de editar JSX, leia `AGENTS.md` § Regras invioláveis (item 3) e `docs/still-void-gaps.md`.

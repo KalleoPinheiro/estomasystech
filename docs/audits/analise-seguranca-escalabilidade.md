@@ -1,3 +1,11 @@
+---
+title: "Análise de Segurança, Escalabilidade e Performance — VittaFlow"
+status: frozen
+audience: [dev, po]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Análise de Segurança, Escalabilidade e Performance — VittaFlow
 
 - **Data:** 2026-07-16

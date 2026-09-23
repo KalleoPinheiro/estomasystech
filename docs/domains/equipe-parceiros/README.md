@@ -1,0 +1,50 @@
+---
+title: "Domínio: Equipe e parceiros"
+status: living
+audience: [dev, po, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+domain: equipe-parceiros
+---
+
+# Equipe e parceiros
+
+## Resumo
+
+Cadastro clínico dos profissionais (registro, comissão, horário semanal, ausências) e dos
+parceiros que indicam pacientes. O cadastro clínico é separado da conta de login: um
+profissional ou parceiro pode ter, opcionalmente, uma conta com o papel correspondente.
+
+**Termos ([`CONTEXT.md`](../../../CONTEXT.md)):** `Professional`, `Partner`.
+
+## Regras de negócio
+
+| ID | Regra | Onde é garantida |
+| --- | --- | --- |
+| EQP-RN-01 | Profissional tem registro (conselho) e regra de comissão; só o Admin edita a regra | `src/domain/professional/professional.ts` |
+| EQP-RN-02 | Horário semanal do profissional: janelas por dia sem sobreposição; com janelas, a consulta dele precisa caber numa delas | `professional_availability` |
+| EQP-RN-03 | Ausência do profissional bloqueia só as consultas dele | `schedule_closures` |
+| EQP-RN-04 | Parceiro: nome, e-mail, CRM, especialidade; o paciente guarda "Indicado por" | `src/domain/partner/partner.ts`, `src/application/patients/assert-valid-referrer.ts` |
+
+## Funcionalidades
+
+| Funcionalidade | Estado | Onde |
+| --- | --- | --- |
+| Cadastro de profissionais, horário e ausências | entregue | `/profissionais` |
+| Cadastro de parceiros e indicação | entregue | `/parceiros` |
+
+Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
+
+## Código
+
+| Camada | Caminho |
+| --- | --- |
+| domínio | `src/domain/{professional,partner}/` |
+| casos de uso | `src/application/partners/` |
+| API | `src/app/api/{professionals,partners}/` |
+| UI | `src/app/(staff)/{profissionais,parceiros}/` |
+| testes | `tests/domain/`, `e2e/equipe.spec.ts` |
+
+## Decisões
+
+- [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — vínculo dinâmico do Profissional com pacientes
