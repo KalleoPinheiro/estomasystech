@@ -1,3 +1,11 @@
+---
+title: "ADR 001 — Estratégia de Multi-Tenancy"
+status: frozen
+audience: [dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # ADR 001 — Estratégia de Multi-Tenancy
 
 - **Status:** Aceito; Fase 1 e parte da Fase 2 em andamento

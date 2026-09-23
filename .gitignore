@@ -71,7 +71,9 @@ uploads/
 
 # IA
 .agents
-.cursor
+# .cursor/ fica local, exceto as regras versionadas (pontes para AGENTS.md — docs/governance.md)
+.cursor/*
+!.cursor/rules/
 .windsurf
 .tlc/harness/state/
 .cursor/hooks.json

@@ -1,3 +1,11 @@
+---
+title: "ADR 002 — Autorização em duas camadas (proxy + guarda por rota)"
+status: frozen
+audience: [dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # ADR 002 — Autorização em duas camadas (proxy + guarda por rota)
 
 - **Status:** Aceito (implementado)

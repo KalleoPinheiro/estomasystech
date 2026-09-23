@@ -1,0 +1,7 @@
+---
+description: Fonte única de instruções do Vitta Flow
+alwaysApply: true
+---
+Siga `AGENTS.md` na raiz do repositório: produto, comandos, regras invioláveis e o mapa de
+contexto ("vai mexer em X → leia Y"). Leia só o arquivo que o mapa indicar para a tarefa.
+Não crie regras novas aqui — elas vão no `AGENTS.md` (ver `docs/governance.md`).

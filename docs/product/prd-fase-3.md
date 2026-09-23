@@ -1,3 +1,11 @@
+---
+title: "PRD — VittaFlow Fase 3: De Sistema de Clínica a Plataforma de Estomaterapia"
+status: frozen
+audience: [po, stakeholder, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # PRD — VittaFlow Fase 3: De Sistema de Clínica a Plataforma de Estomaterapia
 
 - **Versão:** 1.0

@@ -1,3 +1,11 @@
+---
+title: "Auditoria de design system — gaps do `@still-void/ui` (2026-08)"
+status: frozen
+audience: [dev, po]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Auditoria de design system — gaps do `@still-void/ui` (2026-08)
 
 - **Origem:** `/impeccable critique` — auditoria completa das 18 superfícies do VittaFlow (14 páginas + 4 documentos clínicos), rodada em 2026-08-29 com app local (Docker Postgres + `next dev`, dados de seed mínimos).

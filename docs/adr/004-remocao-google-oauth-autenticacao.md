@@ -1,3 +1,11 @@
+---
+title: "ADR 004 — Remoção do Google OAuth como mecanismo de autenticação"
+status: frozen
+audience: [dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # ADR 004 — Remoção do Google OAuth como mecanismo de autenticação
 
 - **Status:** Aceito (implementação incremental futura)

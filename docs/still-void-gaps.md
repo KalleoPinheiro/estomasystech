@@ -1,3 +1,11 @@
+---
+title: "Lacunas do `@still-void/ui` — backlog para a lib"
+status: living
+audience: [dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Lacunas do `@still-void/ui` — backlog para a lib
 
 - **Status:** Fechado — nenhuma seção aberta

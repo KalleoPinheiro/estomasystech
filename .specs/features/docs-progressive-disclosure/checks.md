@@ -157,3 +157,7 @@ Proof: `npx vitest run tests/docs/structure.test.ts -t "handoffs arquivados"`
 ## Handoff
 
 - S1-S6 ≈ 70k somados, abaixo do orçamento de 150k - um builder, um PR (decisão do usuário)
+
+- **Boundary:** C1-C30 fechados; provas verdes (`tests/docs/structure.test.ts` + `tests/scripts/check-docs.test.ts`: 84/84) e gate completo verde (`typecheck`, `lint`, `check:sv`, `check:docs`, `test:coverage` 209 arquivos / 3374 testes / 96,56% linhas). E2E não rodado: nenhum arquivo de `src/` ou `e2e/` no diff
+- **Settled mid-build:** `docs/templates/**` fora da checagem de links (linha nova em Assumptions do plano, antes dos checks); `.cursor/` passa a versionar só `rules/` (Impact)
+- **Abandoned:** `PROJECT_CONTEXT.md` separado (recusado pelo usuário em favor de `AGENTS.md`); migração em fases (usuário escolheu um PR)

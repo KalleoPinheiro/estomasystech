@@ -1,3 +1,11 @@
+---
+title: "ADR 003 — Modelo de papéis (RBAC) multi-empresa"
+status: frozen
+audience: [dev, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # ADR 003 — Modelo de papéis (RBAC) multi-empresa
 
 - **Status:** Aceito (implementação incremental futura)

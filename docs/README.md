@@ -1,12 +1,109 @@
+---
+title: "Índice de docs/"
+status: living
+audience: [dev, po, stakeholder, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # docs/
 
-- [`plano-evolucao-faseado.md`](./plano-evolucao-faseado.md) — master roadmap, one row per phase. Start here.
-- [`plano-correcao-achados-auditoria-2026-09.md`](./plano-correcao-achados-auditoria-2026-09.md) — phased plan for audit findings triaged into issues #57–#77 (no product decision involved, see `agents/planning.md`).
-- [`product/`](./product/) — one PRD per phase, written only when a phase involves an explicit product/business decision.
-- [`audits/`](./audits/) — dated audit/analysis findings (security, UX, design system). Input to planning, not a work request by itself.
-- [`adr/`](./adr/) — durable architecture/domain decisions. Read alongside [`../CONTEXT.md`](../CONTEXT.md).
-- [`agents/`](./agents/) — how agent skills should consume this repo's docs (issue tracking, triage labels, domain glossary, planning).
-- [`backlog-design-system.md`](./backlog-design-system.md), [`still-void-gaps.md`](./still-void-gaps.md) — `@still-void/ui` adoption tracking.
-- [`setup-local.md`](./setup-local.md) — local dev setup.
+> **Como ler:** [`../AGENTS.md`](../AGENTS.md) (L0) aponta para um domínio ou guia; cada um abre
+> com um resumo e desce por links. Este índice lista **todo** arquivo de `docs/` — `npm run
+> check:docs` garante que os links resolvem. Regras do sistema: [`governance.md`](governance.md).
 
-Feature-level execution specs (spec/design/tasks/validation) live in `.specs/features/`, not here — see [`agents/planning.md`](./agents/planning.md) for how the two relate.
+## Produto e planejamento
+
+| Arquivo | Status | Para quê |
+| --- | --- | --- |
+| [`product/visao-produto.md`](product/visao-produto.md) | living | visão, personas, objetivos de negócio |
+| [`plano-evolucao-faseado.md`](plano-evolucao-faseado.md) | living | **roadmap** (Now/Next/Later, `RM-NN`) e detalhe por fase |
+| [`product/prd-fase-1.md`](product/prd-fase-1.md) | frozen | PRD do módulo clínico |
+| [`product/prd-fase-2.md`](product/prd-fase-2.md) | frozen | PRD da fase 2 |
+| [`product/prd-fase-3.md`](product/prd-fase-3.md) | frozen | PRD da fase 3 |
+| [`product/prd-fase-6.md`](product/prd-fase-6.md) | living | PRD da plataforma (RBAC, multiempresa, auth) |
+| [`plano-correcao-achados-auditoria-2026-09.md`](plano-correcao-achados-auditoria-2026-09.md) | frozen | plano dos achados de auditoria #57–#77 |
+
+## Domínios de negócio
+
+| Domínio | Cobre |
+| --- | --- |
+| [`domains/acesso/`](domains/acesso/README.md) | login, papéis, empresas, auditoria |
+| [`domains/pacientes-prontuario/`](domains/pacientes-prontuario/README.md) | paciente e prontuário |
+| [`domains/agenda/`](domains/agenda/README.md) | consultas, grade, lista de espera, recall |
+| [`domains/financeiro/`](domains/financeiro/README.md) | faturas, pacotes, comissão, repasses |
+| [`domains/estoque/`](domains/estoque/README.md) | insumos e movimentações |
+| [`domains/portal/`](domains/portal/README.md) | portal do paciente e do parceiro |
+| [`domains/equipe-parceiros/`](domains/equipe-parceiros/README.md) | profissionais e parceiros |
+| [`domains/comunicacao/`](domains/comunicacao/README.md) | lembretes e e-mails |
+| [`domains/relatorios/`](domains/relatorios/README.md) | dashboard e relatório gerencial |
+
+Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo README do domínio.
+
+## Engenharia
+
+| Arquivo | Para quê |
+| --- | --- |
+| [`engineering/onboarding.md`](engineering/onboarding.md) | requisitos, Docker, Node local, **variáveis de ambiente**, testes, gates |
+| [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
+| [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
+| [`engineering/api.md`](engineering/api.md) | rotas REST centrais |
+| [`engineering/troubleshooting.md`](engineering/troubleshooting.md) | sintoma → causa → ação |
+| [`engineering/security-scan.md`](engineering/security-scan.md) | npm audit, gitleaks, semgrep |
+| [`engineering/integrations/README.md`](engineering/integrations/README.md) | índice das integrações externas |
+| [`engineering/integrations/resend.md`](engineering/integrations/resend.md) | e-mail transacional |
+| [`engineering/integrations/google-calendar.md`](engineering/integrations/google-calendar.md) | sincronização de agenda |
+| [`engineering/integrations/whatsapp-meta.md`](engineering/integrations/whatsapp-meta.md) | lembretes por WhatsApp |
+| [`engineering/integrations/s3-storage.md`](engineering/integrations/s3-storage.md) | fotos em bucket S3-compatível |
+| [`engineering/integrations/cron.md`](engineering/integrations/cron.md) | disparo externo dos lembretes |
+
+## Decisões
+
+| Arquivo | Decisão |
+| --- | --- |
+| [`adr/001-multi-tenancy.md`](adr/001-multi-tenancy.md) | multiempresa por `clinic_id`, RLS adiada |
+| [`adr/002-autorizacao-em-duas-camadas.md`](adr/002-autorizacao-em-duas-camadas.md) | proxy + handler, fail-closed |
+| [`adr/003-modelo-de-papeis-multi-empresa.md`](adr/003-modelo-de-papeis-multi-empresa.md) | catálogo fechado de seis papéis |
+| [`adr/004-remocao-google-oauth-autenticacao.md`](adr/004-remocao-google-oauth-autenticacao.md) | login nativo; Google só como integração |
+
+Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
+
+## Auditorias (snapshots congelados)
+
+| Arquivo | Escopo |
+| --- | --- |
+| [`audits/analise-seguranca-escalabilidade.md`](audits/analise-seguranca-escalabilidade.md) | segurança e escalabilidade |
+| [`audits/auditoria-ux-2026-08.md`](audits/auditoria-ux-2026-08.md) | UX, agosto 2026 |
+| [`audits/auditoria-design-system-2026-08.md`](audits/auditoria-design-system-2026-08.md) | design system, agosto 2026 |
+
+Auditoria é **entrada** de planejamento, nunca pedido de trabalho por si só.
+
+## Design system
+
+| Arquivo | Para quê |
+| --- | --- |
+| [`still-void-gaps.md`](still-void-gaps.md) | exceções `sv-gap` aceitas pelo `check:sv` (caminho fixo no script) |
+| [`backlog-design-system.md`](backlog-design-system.md) | histórico e backlog da adoção de `@still-void/ui` |
+
+## Como agentes consomem este repositório
+
+| Arquivo | Para quê |
+| --- | --- |
+| [`governance.md`](governance.md) | progressive disclosure, docs-as-code, contexto para LLMs |
+| [`agents/domain.md`](agents/domain.md) | glossário e ADRs |
+| [`agents/planning.md`](agents/planning.md) | onde vive cada tipo de plano; os dois logs de decisão |
+| [`agents/issue-tracker.md`](agents/issue-tracker.md) | issues no GitHub |
+| [`agents/triage-labels.md`](agents/triage-labels.md) | labels de triagem |
+| [`agents/fix-audit-issues.md`](agents/fix-audit-issues.md) | pipeline de correção de achados |
+
+## Templates
+
+| Template | Destino |
+| --- | --- |
+| [`templates/feature-spec.md`](templates/feature-spec.md) | `domains/<slug>/features/<funcionalidade>.md` |
+| [`templates/domain.md`](templates/domain.md) | `domains/<slug>/README.md` |
+| [`templates/integration.md`](templates/integration.md) | `engineering/integrations/<serviço>.md` |
+| [`templates/prd.md`](templates/prd.md) | `product/prd-fase-N.md` |
+| [`templates/adr.md`](templates/adr.md) | `adr/NNN-slug.md` |
+
+Execução por feature (spec/design/tasks/validação, congelado) fica em `../.specs/features/`, não aqui.

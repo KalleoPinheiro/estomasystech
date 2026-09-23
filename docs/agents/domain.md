@@ -1,3 +1,11 @@
+---
+title: "Domain Docs"
+status: living
+audience: [agent, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # Domain Docs
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.

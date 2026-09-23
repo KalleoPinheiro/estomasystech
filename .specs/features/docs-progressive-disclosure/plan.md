@@ -206,4 +206,8 @@ None - nothing consumed outside; `npm run check:docs` é interno ao repo e não 
 | docs | `README.md` perde ~150 linhas (env vars, API, arquitetura) que descem para `docs/engineering/`; `docs/setup-local.md` deixa de existir e 11 links vivos são atualizados; referências em `.specs/` congelados ficam históricas |
 | agents | `.specs/STATE.md` encolhe de 769 para ≤ 250 linhas; handoffs concluídos vão para `.specs/archive/` |
 | CI | novo passo `check:docs` no job de lint - o primeiro PR após o merge falha se trouxer link quebrado |
+| agents | `AGENTS.md` deixa de importar `@CONTEXT.md`: o Claude Code não carrega mais as 291 linhas do glossário em toda sessão; o mapa de contexto aponta para ele quando a tarefa pede |
+| agents | `.claude/agents/{audit-fix-gate,sv-migration-reviewer}.md`, `.claude/commands/fix-audit-issues.md` e `docs/agents/{fix-audit-issues,planning}.md` passam a citar os caminhos novos; `audit-fix-gate` roda `check:docs` |
+| docs | `.github/pull_request_template.md` novo com o checklist de documentação de `docs/governance.md`; `.cursor/rules/10-ui.mdc` como ponte com `globs` para JSX; `.gitignore` passa de `.cursor` para `.cursor/*` + `!.cursor/rules/` para versionar só as regras |
+| docs | rascunhos em `drafts/` removidos após serem instalados nos destinos |
 | stored data | nothing to migrate |

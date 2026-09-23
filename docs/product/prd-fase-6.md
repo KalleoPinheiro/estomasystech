@@ -1,3 +1,11 @@
+---
+title: "PRD — VittaFlow Fase 6: Plataforma (RBAC multi-empresa e autenticação nativa)"
+status: living
+audience: [po, stakeholder, dev]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-09-23
+---
+
 # PRD — VittaFlow Fase 6: Plataforma (RBAC multi-empresa e autenticação nativa)
 
 - **Versão:** 1.0
