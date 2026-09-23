@@ -1,6 +1,6 @@
 # CONTEXT — VittaFlow Domain
 
-**VittaFlow** is a clinical management system for dental therapy (estomaterapia) clinics. It manages patient records, clinical conditions, appointments, inventory, and team operations.
+**VittaFlow** is a clinical management system for enterostomal therapy / wound, ostomy and continence nursing (estomaterapia) clinics. It manages patient records, clinical conditions, appointments, inventory, and team operations.
 
 ## Glossary
 
