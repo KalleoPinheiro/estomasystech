@@ -26,6 +26,7 @@ import {
   formatPercent,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { ProductionTable } from './production-table';
 
 const currentMonth = () => {
   const now = new Date();
@@ -277,78 +278,7 @@ export default function ReportsPage() {
             </Card>
           </div>
 
-          <Card as="section" className="p-5">
-            <h2 className="mb-3 font-semibold text-lg">
-              Produção por profissional
-            </h2>
-            {report.productionByProfessional.length === 0 ? (
-              <EmptyState message="Nenhuma produção por profissional no mês." />
-            ) : (
-              <div className="overflow-x-auto">
-                <Table className="w-full text-left text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="py-2">Profissional</TableHead>
-                      <TableHead className="py-2 text-right">
-                        Concluídas
-                      </TableHead>
-                      <TableHead className="py-2 text-right">Receita</TableHead>
-                      <TableHead className="py-2 text-right">Repasse</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {report.productionByProfessional.map((row) => (
-                      <TableRow key={row.professionalId ?? 'none'}>
-                        <TableCell className="py-2">
-                          {row.professionalName}
-                        </TableCell>
-                        <TableCell className="py-2 text-right">
-                          {row.count}
-                        </TableCell>
-                        <TableCell className="py-2 text-right font-medium">
-                          {formatCurrency(row.totalCents)}
-                        </TableCell>
-                        <TableCell className="py-2 text-right text-ink-2">
-                          {row.commissionCents != null
-                            ? formatCurrency(row.commissionCents)
-                            : '—'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow>
-                      <TableCell className="py-2 font-semibold">
-                        Total
-                      </TableCell>
-                      <TableCell className="py-2 text-right font-semibold">
-                        {report.productionByProfessional.reduce(
-                          (sum, row) => sum + row.count,
-                          0,
-                        )}
-                      </TableCell>
-                      <TableCell className="py-2 text-right font-semibold">
-                        {formatCurrency(
-                          report.productionByProfessional.reduce(
-                            (sum, row) => sum + row.totalCents,
-                            0,
-                          ),
-                        )}
-                      </TableCell>
-                      <TableCell className="py-2 text-right font-semibold">
-                        {formatCurrency(
-                          report.productionByProfessional.reduce(
-                            (sum, row) => sum + (row.commissionCents ?? 0),
-                            0,
-                          ),
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              </div>
-            )}
-          </Card>
+          <ProductionTable rows={report.productionByProfessional} />
         </div>
       )}
     </div>

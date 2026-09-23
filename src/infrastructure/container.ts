@@ -12,6 +12,7 @@ import type { TransactionManager } from '@/application/ports/transaction-manager
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { AuthTokenRepository } from '@/domain/auth/auth-token';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
+import type { ProducedSessionRepository } from '@/domain/billing/commission';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
 import type { ProcedureKitRepository } from '@/domain/catalog/procedure-kit';
@@ -102,6 +103,7 @@ import { DrizzleInvoiceRepository } from './persistence/drizzle/drizzle-invoice-
 import { DrizzleSessionPackageRepository } from './persistence/drizzle/drizzle-package-repository';
 import { DrizzlePartnerRepository } from './persistence/drizzle/drizzle-partner-repository';
 import { DrizzlePatientRepository } from './persistence/drizzle/drizzle-patient-repository';
+import { DrizzleProducedSessionRepository } from './persistence/drizzle/drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './persistence/drizzle/drizzle-professional-repository';
 import { DrizzleReminderLogRepository } from './persistence/drizzle/drizzle-reminder-log-repository';
 import {
@@ -129,6 +131,7 @@ export interface Services {
   googleAccounts: DrizzleGoogleAccountRepository;
   appointments: AppointmentRepository;
   invoices: InvoiceRepository;
+  producedSessions: ProducedSessionRepository;
   anamneses: AnamnesisRepository;
   evolutions: EvolutionNoteRepository;
   conditions: ClinicalConditionRepository;
@@ -262,6 +265,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     googleAccounts: new DrizzleGoogleAccountRepository(db, tenant.clinicId),
     appointments: new DrizzleAppointmentRepository(db, tenant.clinicId),
     invoices: new DrizzleInvoiceRepository(db, tenant.clinicId),
+    producedSessions: new DrizzleProducedSessionRepository(db, tenant.clinicId),
     anamneses: new DrizzleAnamnesisRepository(db, tenant.clinicId),
     evolutions: new DrizzleEvolutionNoteRepository(
       db,

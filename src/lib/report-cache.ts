@@ -1,7 +1,7 @@
 import type { MonthlyReport } from '@/application/reports/get-monthly-report';
 
 /**
- * Mês 100% no passado é imutável — recalcular o agregado inteiro a cada acesso
+ * Mês 100% no passado e assentado (`isReportSettled`) não muda mais — recalcular o agregado inteiro a cada acesso
  * é desperdício (CONS2-11). Cache em memória por processo, bounded pelo nº de
  * meses de história; mês corrente nunca entra (CONS2-12). Para múltiplas
  * réplicas (era SaaS), trocar por cache compartilhado — anotado na Fase 6.

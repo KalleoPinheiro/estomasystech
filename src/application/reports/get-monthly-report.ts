@@ -2,6 +2,10 @@ import {
   type BillingSummary,
   GetBillingSummary,
 } from '@/application/billing/get-billing-summary';
+import {
+  commissionCents,
+  type ProducedSessionRepository,
+} from '@/domain/billing/commission';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { StockMovementRepository } from '@/domain/inventory/inventory-repositories';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
@@ -10,6 +14,7 @@ import type {
   AppointmentRepository,
   ProcedureRevenue,
 } from '@/domain/scheduling/appointment-repository';
+import { aggregateProduction, type ProfessionalTotals } from './production';
 
 export type { ProcedureRevenue };
 
@@ -21,10 +26,19 @@ export interface ProcedureMargin extends ProcedureRevenue {
 export interface ProfessionalProduction {
   professionalId: string | null;
   professionalName: string;
+  /** Sessões realizadas no mês. */
   count: number;
+  /** Receita reconhecida (sessão de pacote = preço ÷ sessões; fatura cancelada = 0). */
   totalCents: number;
-  /** Repasse = receita × commissionPct; null quando o profissional não tem %. */
+  /**
+   * Comissão apurada na produção do mês (liberada + a liberar); null quando o
+   * profissional não tem %. Regra em `domain/billing/commission.ts`.
+   */
   commissionCents: number | null;
+  /** Já pode entrar no repasse: fatura paga, cortesia ou atraso ≥ 60 dias. */
+  releasedCommissionCents: number | null;
+  /** Aguardando o pagamento da fatura. */
+  pendingCommissionCents: number | null;
 }
 
 export interface MonthlyReport {
@@ -42,26 +56,49 @@ export interface MonthlyReport {
 export interface MonthlyReportInput {
   from: Date;
   to: Date;
+  /** Referência para liberação por atraso (testes). */
+  now?: Date;
+}
+
+/**
+ * Relatório que não muda mais: sem consulta aberta, fatura pendente ou
+ * comissão a liberar. Mês encerrado ainda muda quando uma fatura é paga
+ * depois — só relatório assentado pode ir para o cache.
+ */
+export function isReportSettled(report: MonthlyReport): boolean {
+  return (
+    report.byStatus.scheduled === 0 &&
+    report.byStatus.confirmed === 0 &&
+    report.billing.pendingCount === 0 &&
+    report.productionByProfessional.every(
+      (row) => (row.pendingCommissionCents ?? 0) === 0,
+    )
+  );
 }
 
 export class GetMonthlyReport {
   constructor(
     private readonly appointments: AppointmentRepository,
     private readonly invoices: InvoiceRepository,
+    private readonly producedSessions: ProducedSessionRepository,
     private readonly stockMovements?: StockMovementRepository,
     private readonly professionals?: ProfessionalRepository,
   ) {}
 
   async execute(input: MonthlyReportInput): Promise<MonthlyReport> {
-    const [stats, billing, outflowCosts, production] = await Promise.all([
+    const [stats, billing, outflowCosts, sessions] = await Promise.all([
       this.appointments.getStatsInRange(input.from, input.to),
       new GetBillingSummary(this.invoices).execute(input),
       this.stockMovements?.getOutflowCostInRange(input.from, input.to) ??
         Promise.resolve([]),
-      this.appointments.getProductionInRange(input.from, input.to),
+      this.producedSessions.findCompletedInRange(input.from, input.to),
     ]);
 
-    const { byStatus, revenueByProcedure } = stats;
+    const { byStatus } = stats;
+    const { revenueByProcedure, byProfessional } = aggregateProduction(
+      sessions,
+      input.now ?? new Date(),
+    );
     const totalAppointments = Object.values(byStatus).reduce(
       (sum, count) => sum + count,
       0,
@@ -116,37 +153,39 @@ export class GetMonthlyReport {
       }),
       unattributedSupplyCostCents,
       totalSupplyCostCents,
-      productionByProfessional: await this.buildProduction(production),
+      productionByProfessional: await this.buildProduction(byProfessional),
       billing,
     };
   }
 
   private async buildProduction(
-    production: Array<{
-      professionalId: string | null;
-      count: number;
-      totalCents: number;
-    }>,
+    totals: ProfessionalTotals[],
   ): Promise<ProfessionalProduction[]> {
-    const ids = production
+    const ids = totals
       .map((p) => p.professionalId)
       .filter((id): id is string => id != null);
     const professionals = (await this.professionals?.findByIds(ids)) ?? [];
     const byId = new Map(professionals.map((p) => [p.id, p]));
 
-    return production
+    return totals
       .map((entry) => {
         const professional = entry.professionalId
           ? byId.get(entry.professionalId)
           : undefined;
         const pct = professional?.commissionPct ?? null;
+        const released =
+          pct != null ? commissionCents(entry.releasedBaseCents, pct) : null;
+        const pending =
+          pct != null ? commissionCents(entry.pendingBaseCents, pct) : null;
         return {
           professionalId: entry.professionalId,
           professionalName: professional?.fullName ?? 'Sem atribuição',
           count: entry.count,
-          totalCents: entry.totalCents,
+          totalCents: entry.revenueCents,
           commissionCents:
-            pct != null ? Math.round((entry.totalCents * pct) / 100) : null,
+            released != null && pending != null ? released + pending : null,
+          releasedCommissionCents: released,
+          pendingCommissionCents: pending,
         };
       })
       .sort((a, b) => b.totalCents - a.totalCents);

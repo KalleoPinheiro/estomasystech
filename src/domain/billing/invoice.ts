@@ -23,6 +23,8 @@ export interface InvoiceProps {
   description: string;
   amount: Money;
   appointmentId?: string | null;
+  /** Pacote de sessões cuja venda esta fatura cobra. */
+  sessionPackageId?: string | null;
   dueDate?: Date | null;
 }
 
@@ -52,6 +54,7 @@ export class Invoice {
       ...props,
       description,
       appointmentId: props.appointmentId ?? null,
+      sessionPackageId: props.sessionPackageId ?? null,
       dueDate: props.dueDate ?? null,
       id: newId(),
       status: 'pending',
@@ -98,6 +101,10 @@ export class Invoice {
 
   get appointmentId(): string | null {
     return this.state.appointmentId ?? null;
+  }
+
+  get sessionPackageId(): string | null {
+    return this.state.sessionPackageId ?? null;
   }
 
   get description(): string {

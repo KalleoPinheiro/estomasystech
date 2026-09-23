@@ -666,3 +666,14 @@ Achado N5 da análise de 2026-09-22. `POST /api/packages` tinha a regra na rota 
 - **Decisão**: pacote de preço zero (cortesia) é gravado **sem fatura** — o domínio já permitia preço zero e não há o que cobrar; antes o fluxo simplesmente quebrava.
 - **Testes**: `tests/application/sell-session-package.test.ts` (5, in-memory) e `tests/api/package-sale-transaction.test.ts` (2, PGlite: rollback real quando a fatura falha; cortesia 200 sem fatura). Sensor: os 2 de integração falham com a rota antiga.
 - **Plano registrado, não implementado**: lembretes WhatsApp (N1–N3) — `.specs/features/lembretes-whatsapp-templates-cadencia/spec.md`, aguarda decisões D1–D4.
+
+## Regra de comissão e receita de pacote (N4) — CONCLUÍDA
+
+Achado N4 da análise de 2026-09-22. A produção por profissional somava o preço cheio de toda consulta concluída: sessão de pacote contava o preço do procedimento **além** do pacote já faturado na venda (receita e repasse em dobro), e a comissão incidia mesmo sobre fatura cancelada ou nunca paga.
+
+- **Decisão de negócio (usuário, 2026-09-23)**: comissão **apurada na produção, liberada no recebimento**; fatura cancelada não gera repasse; pendente há ≥ 60 dias do vencimento (ou emissão) é liberada — inadimplência é risco da clínica; sessão de pacote vale preço ÷ sessões, liberação pela fatura da venda do pacote; pacote cortesia gera repasse sobre o preço normal, já liberado (custo de marketing da clínica).
+- **Implementação**: regra pura em `src/domain/billing/commission.ts`; agregação em `src/application/reports/production.ts`; leitura `ProducedSessionRepository` (Drizzle: 1 query com joins, **sem `MAX_ROWS`**; in-memory espelho). `invoices.session_package_id` (migração 0029) liga a fatura da venda ao pacote — preenchido por `SellSessionPackage`. `getProductionInRange` removido (sem uso). Relatório ganha `releasedCommissionCents`/`pendingCommissionCents`; tabela extraída para `relatorios/production-table.tsx`.
+- **Bug pré-existente corrigido junto**: o cache de mês encerrado (CONS2-11) assumia mês passado imutável, mas fatura paga depois muda o relatório. Agora só relatório assentado (`isReportSettled`: sem consulta aberta, fatura pendente ou comissão a liberar) vai para o cache.
+- **Legado**: fatura de pacote vendida antes do vínculo não é identificável → sessões desses pacotes contam como liberadas (não bloqueia o repasse de trabalho feito).
+- **Fora de escopo (próximo passo natural)**: livro de repasses (marcar repasse como pago, "repasse do mês" por data de liberação). Hoje o relatório mostra, por mês de produção, o que já está liberado e o que falta.
+- **Testes**: `tests/domain/commission.test.ts` (15), `tests/api/commission-report.test.ts` (PGlite ponta a ponta: pacote → sessões → a liberar → paga → liberado), `tests/api/report-cache-settled.test.ts` (4), tela (1). Sensor: 3 mutantes (rateio→preço cheio, sem liberação por atraso, cortesia sem repasse) todos mortos.
