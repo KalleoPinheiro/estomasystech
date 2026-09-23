@@ -38,6 +38,7 @@ indicou. O papel da sessão escolhe a visão.
 | Auto-agendamento e lista de espera | entregue | `/portal` |
 | Envio de foto para monitoramento remoto e consentimento | entregue | `/portal` |
 | Pacientes indicados | entregue | `/portal` (parceiro) |
+| Uso no celular: sem scroll horizontal e alvo de toque ≥ 44x44px em 390 e 375px | entregue | `/portal` ([#127](https://github.com/KalleoPinheiro/vitta-flow/issues/127)) |
 
 Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-portal-p0-p3-pontuais}/`.
 
@@ -48,7 +49,8 @@ Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-port
 | casos de uso | `src/application/portal/` |
 | API | `src/app/api/portal/{me,patient,partner}/` |
 | UI | `src/app/portal/` |
-| testes | `tests/application/`, `e2e/{portal-paciente,portal-parceiro}.spec.ts` |
+| layout mobile | `.portal-shell` em `src/app/globals.css` (lacunas `layout-grid-min-content` e `touch-target-size` em [`still-void-gaps.md`](../../still-void-gaps.md)) |
+| testes | `tests/application/`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo}.spec.ts` |
 
 ## Decisões
 

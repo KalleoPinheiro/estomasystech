@@ -19,7 +19,9 @@ export default function PortalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    // `portal-shell` escopa as correções mobile de globals.css (#127) ao portal —
+    // telas de staff não usam `.sv-layout` nem mudam de alvo de toque.
+    <div className="portal-shell">
       <Header
         logo={
           <div>
@@ -48,6 +50,6 @@ export default function PortalLayout({
           {children}
         </main>
       </Layout>
-    </>
+    </div>
   );
 }
