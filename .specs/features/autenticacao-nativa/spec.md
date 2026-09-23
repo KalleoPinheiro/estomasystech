@@ -109,7 +109,7 @@ Toda ambiguidade está resolvida ou registrada aqui. As linhas abaixo foram leva
 3. WHEN `GET /api/integrations/google-calendar/callback` recebe um `code` com `state` que confere e um refresh token THEN o sistema SHALL persistir a credencial cifrada em `google_accounts` sob o `subject` da sessão que iniciou o fluxo. <!-- event-driven -->
 4. WHEN `GET /api/integrations/google-calendar/callback` conclui com sucesso THEN o sistema SHALL manter inalterado o cookie de sessão da requisição — nenhuma sessão é criada, renovada ou trocada. <!-- event-driven -->
 5. IF `GET /api/integrations/google-calendar/callback` recebe `state` ausente ou divergente do cookie THEN o sistema SHALL recusar sem persistir credencial. <!-- unwanted-behavior -->
-6. WHILE existe uma credencial de Calendar conectada por esse fluxo o sistema SHALL construir o gateway de agenda a partir dela, preservando a sincronização bidirecional de agendamentos já existente. <!-- state-driven -->
+6. WHILE existe uma credencial de Calendar conectada por esse fluxo o sistema SHALL construir o gateway de agenda a partir dela, preservando a sincronização de saída de agendamentos já existente (agendar cria, remarcar atualiza, cancelar remove o evento; não há leitura de eventos do Google). <!-- state-driven -->
 
 **Independent Test**: com um cookie de sessão de equipe, chamar a rota de início e conferir o redirect e o escopo; em seguida chamar o callback com o `state` correto e conferir que `google_accounts` ganhou a linha e que a resposta não traz `Set-Cookie` de sessão.
 
