@@ -24,6 +24,8 @@ import {
   APPOINTMENT_STATUS_LABELS,
   formatCurrency,
   formatPercent,
+  monthLabelPtBr,
+  shiftMonth,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { ProductionTable } from './production-table';
@@ -32,23 +34,6 @@ const currentMonth = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
-
-/** "2026-08" → "Agosto de 2026" (REL-02) — só a 1ª letra maiúscula, mesma
- * correção de capitalização já usada em `/agenda`. */
-function monthLabelPtBr(month: string): string {
-  const [year, monthNum] = month.split('-').map(Number);
-  const raw = new Date(year, monthNum - 1, 1).toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric',
-  });
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
-function shiftMonth(month: string, delta: number): string {
-  const [year, monthNum] = month.split('-').map(Number);
-  const shifted = new Date(year, monthNum - 1 + delta, 1);
-  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
-}
 
 /** Delta percentual vs. mês anterior (REL-04) — `undefined` quando não há
  * base de comparação (mês anterior não carregou ou é zero — evita divisão

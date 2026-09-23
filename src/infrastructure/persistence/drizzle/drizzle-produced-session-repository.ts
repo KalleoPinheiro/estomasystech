@@ -65,12 +65,14 @@ export class DrizzleProducedSessionRepository
   async findCompletedInRange(
     start: Date,
     end: Date,
+    options: { professionalId?: string } = {},
   ): Promise<ProducedSession[]> {
     const rows = await this.db
       .select({
         appointmentId: appointments.id,
         professionalId: appointments.professionalId,
         procedure: appointments.procedure,
+        sessionDate: appointments.startsAt,
         listPriceCents: appointments.priceCents,
         invoiceStatus: invoices.status,
         invoiceIssuedAt: invoices.issuedAt,
@@ -103,6 +105,9 @@ export class DrizzleProducedSessionRepository
             eq(appointments.status, 'completed'),
             lt(appointments.startsAt, end),
             gt(appointments.endsAt, start),
+            options.professionalId
+              ? eq(appointments.professionalId, options.professionalId)
+              : undefined,
           ),
         ),
       );
@@ -134,6 +139,7 @@ export class DrizzleProducedSessionRepository
         appointmentId: row.appointmentId,
         professionalId: row.professionalId,
         procedure: row.procedure,
+        sessionDate: row.sessionDate,
         listPriceCents: row.listPriceCents,
         invoice,
         package:

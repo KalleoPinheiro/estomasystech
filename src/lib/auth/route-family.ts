@@ -11,6 +11,7 @@ export type RouteFamily =
   | 'clinical'
   | 'operational'
   | 'administrative'
+  | 'professional_self'
   | 'shared';
 
 const SHARED_PREFIXES = ['/portal', '/api/portal', '/api/auth/logout'];
@@ -61,7 +62,16 @@ const ADMINISTRATIVE_PREFIXES = [
   // Conectar a agenda do Google é ato administrativo da empresa, não operação
   // de atendimento — mesma família de /api/settings/clinic-info.
   '/api/integrations',
+  // Livro de repasses da clínica: ver saldos de todos e registrar o
+  // fechamento mensal é ato do Admin (decisão de 2026-09-23).
+  '/api/commission-payouts',
 ];
+
+/**
+ * Dados do próprio Profissional (extrato de repasses): Admin e Profissional
+ * entram; Atendente não. O handler restringe ao `professionalId` da sessão.
+ */
+const PROFESSIONAL_SELF_PREFIXES = ['/api/my-payouts'];
 
 function startsWithAny(pathname: string, prefixes: readonly string[]): boolean {
   return prefixes.some(
@@ -89,6 +99,9 @@ export function classifyRoute(pathname: string): RouteFamily {
   if (startsWithAny(pathname, ADMINISTRATIVE_PREFIXES)) {
     return 'administrative';
   }
+  if (startsWithAny(pathname, PROFESSIONAL_SELF_PREFIXES)) {
+    return 'professional_self';
+  }
   return 'operational';
 }
 
@@ -97,6 +110,7 @@ const FAMILY_ALLOWED_ROLES: Record<RouteFamily, readonly UserRole[]> = {
   operational: STAFF_ROLES,
   clinical: ['super_admin', 'company_admin', 'profissional'],
   administrative: ['super_admin', 'company_admin'],
+  professional_self: ['super_admin', 'company_admin', 'profissional'],
 };
 
 export function isFamilyAllowedForRole(

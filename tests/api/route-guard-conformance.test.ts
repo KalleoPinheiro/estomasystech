@@ -255,11 +255,12 @@ describe('Feature: Conformidade das guardas de rota', () => {
 
     /**
      * Papéis restritos (Atendente, Profissional) recebem 403 nas famílias que
-     * a matriz de `route-family.ts` nega — Atendente: clinical/administrative;
-     * Profissional: administrative (o escopo fino do R4 é testado à parte).
+     * a matriz de `route-family.ts` nega — Atendente: clinical/administrative/
+     * professional_self; Profissional: administrative (o escopo fino do R4 é
+     * testado à parte).
      */
     const RESTRICTED_ROLE_DENIED_FAMILIES = {
-      atendente: new Set(['clinical', 'administrative']),
+      atendente: new Set(['clinical', 'administrative', 'professional_self']),
       profissional: new Set(['administrative']),
     } as const;
 

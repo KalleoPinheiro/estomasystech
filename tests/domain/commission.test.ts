@@ -24,6 +24,7 @@ const session = (
   appointmentId: 'a-1',
   professionalId: 'prof-1',
   procedure: 'Curativo',
+  sessionDate: daysAgo(10),
   listPriceCents: 15000,
   invoice: bill('pending'),
   package: null,
@@ -187,6 +188,7 @@ describe('Feature: Regra de repasse ao profissional', () => {
           }),
         ],
         NOW,
+        (id) => (id === 'prof-1' ? { kind: 'percentage', pct: 40 } : null),
       );
 
       expect(revenueByProcedure).toEqual([
@@ -199,10 +201,36 @@ describe('Feature: Regra de repasse ao profissional', () => {
           professionalId: 'prof-1',
           count: 4,
           revenueCents: 40000,
-          releasedBaseCents: 25000,
-          pendingBaseCents: 15000,
+          // 40% por sessão: paga (6000) + pacote (4000) liberados; pendente 6000.
+          releasedCommissionCents: 10000,
+          pendingCommissionCents: 6000,
         },
       );
+      // Sem regra configurada, o repasse fica null (não zero).
+      expect(
+        byProfessional.find((p) => p.professionalId === null)
+          ?.releasedCommissionCents,
+      ).toBeNull();
+    });
+
+    it('Dada regra de valor fixo, Então cada sessão liberada vale o fixo, independente do preço', () => {
+      const { byProfessional } = aggregateProduction(
+        [
+          session({ appointmentId: 'x', invoice: bill('paid') }),
+          session({
+            appointmentId: 'y',
+            invoice: bill('paid'),
+            listPriceCents: 90000,
+          }),
+          session({ appointmentId: 'z', invoice: bill('cancelled') }),
+        ],
+        NOW,
+        () => ({ kind: 'fixed', centsPerSession: 5000 }),
+      );
+      expect(byProfessional[0]).toMatchObject({
+        releasedCommissionCents: 10000,
+        pendingCommissionCents: 0,
+      });
     });
   });
 });

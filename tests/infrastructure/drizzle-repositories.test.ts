@@ -644,6 +644,7 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
           appointmentId: completed.id,
           professionalId: professional.id,
           procedure: 'Troca de bolsa',
+          sessionDate: new Date('2026-07-20T09:00:00Z'),
           listPriceCents: 25000,
           invoice: null,
           package: null,

@@ -42,6 +42,8 @@ export interface ProducedSession {
   appointmentId: string;
   professionalId: string | null;
   procedure: string;
+  /** Início da consulta — data da sessão no extrato de repasse. */
+  sessionDate: Date;
   /** Preço da consulta no agendamento — o "preço normal" da sessão. */
   listPriceCents: number;
   /** Fatura da própria consulta (consultas avulsas). */
@@ -113,7 +115,32 @@ export function commissionCents(baseCents: number, pct: number): number {
   return Math.round((baseCents * pct) / 100);
 }
 
+/**
+ * Regra de repasse do profissional, configurada pelo Admin da clínica:
+ * percentual sobre a base da sessão ou valor fixo por sessão realizada.
+ */
+export type CommissionRule =
+  | { kind: 'percentage'; pct: number }
+  | { kind: 'fixed'; centsPerSession: number };
+
+/** Repasse de uma sessão pela regra; sessão anulada (fatura cancelada) = 0. */
+export function sessionCommission(
+  rule: CommissionRule,
+  valuation: SessionValuation,
+): number {
+  if (valuation.release === 'void') {
+    return 0;
+  }
+  return rule.kind === 'fixed'
+    ? rule.centsPerSession
+    : commissionCents(valuation.commissionBaseCents, rule.pct);
+}
+
 /** Leitura das sessões concluídas no período, com faturas e pacote resolvidos. */
 export interface ProducedSessionRepository {
-  findCompletedInRange(start: Date, end: Date): Promise<ProducedSession[]>;
+  findCompletedInRange(
+    start: Date,
+    end: Date,
+    options?: { professionalId?: string },
+  ): Promise<ProducedSession[]>;
 }

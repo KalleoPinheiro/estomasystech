@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import {
+  ConflictError,
   ConsentRequiredError,
   DomainError,
   InvalidStatusTransitionError,
@@ -43,6 +44,7 @@ function statusForDomainError(error: DomainError): number {
   if (error instanceof ConsentRequiredError) return 403;
   if (error instanceof ProvisioningDeniedError) return 403;
   if (error instanceof SchedulingConflictError) return 409;
+  if (error instanceof ConflictError) return 409;
   if (error instanceof InvalidStatusTransitionError) return 409;
   return 400;
 }

@@ -122,3 +122,33 @@ export function outcomeStatusLabel(outcome: {
   }
   return (outcome.attainment ?? 0) < 0 ? 'Em regressão' : 'Em progresso';
 }
+
+/** Regra de repasse legível: "40% da sessão" ou "R$ 50,00 por sessão". */
+export const formatCommissionRule = (
+  rule:
+    | { kind: 'percentage'; pct: number }
+    | { kind: 'fixed'; centsPerSession: number }
+    | null,
+): string => {
+  if (!rule) return '—';
+  return rule.kind === 'fixed'
+    ? `${formatCurrency(rule.centsPerSession)} por sessão`
+    : `${rule.pct}% da sessão`;
+};
+
+/** "2026-08" → "Agosto de 2026" (REL-02) — só a 1ª letra maiúscula, mesma
+ * correção de capitalização já usada em `/agenda`. */
+export function monthLabelPtBr(month: string): string {
+  const [year, monthNum] = month.split('-').map(Number);
+  const raw = new Date(year, monthNum - 1, 1).toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+export function shiftMonth(month: string, delta: number): string {
+  const [year, monthNum] = month.split('-').map(Number);
+  const shifted = new Date(year, monthNum - 1 + delta, 1);
+  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
+}

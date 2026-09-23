@@ -36,6 +36,11 @@ export class SchedulingConflictError extends DomainError {
 }
 
 /** Ação exige consentimento vigente do titular (LGPD) — mapeado para 403. */
+/** Operação colide com estado já gravado (ex.: sessão já paga em outro repasse). */
+export class ConflictError extends DomainError {
+  readonly code = 'CONFLICT';
+}
+
 export class ConsentRequiredError extends DomainError {
   readonly code = 'CONSENT_REQUIRED';
 }

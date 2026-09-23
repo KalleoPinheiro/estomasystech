@@ -2914,7 +2914,18 @@ describe('Feature: ProfessionalsPage', () => {
               id: 'pr10',
               fullName: 'Dra. Sofia',
               registry: null,
+              commissionType: 'percentage',
               commissionPct: 20,
+              commissionFixedCents: null,
+              active: true,
+            },
+            {
+              id: 'pr11',
+              fullName: 'Dr. Caio',
+              registry: null,
+              commissionType: 'fixed',
+              commissionPct: null,
+              commissionFixedCents: 5000,
               active: true,
             },
           ]);
@@ -2925,7 +2936,44 @@ describe('Feature: ProfessionalsPage', () => {
       renderWithToast(<ProfessionalsPage />);
 
       expect(await screen.findByText('Dra. Sofia')).toBeInTheDocument();
-      expect(screen.getByText('20%')).toBeInTheDocument();
+      expect(screen.getByText('20% da sessão')).toBeInTheDocument();
+      expect(screen.getByText('R$ 50,00 por sessão')).toBeInTheDocument();
+    });
+
+    it('Dado tipo valor fixo, Quando submetido, Então envia commissionType fixed e o valor em centavos', async () => {
+      let sentBody: Record<string, unknown> | undefined;
+      mockFetch(({ url, init }) => {
+        if (url === '/api/professionals' && init?.method === 'POST') {
+          sentBody = JSON.parse(String(init.body));
+          return jsonResponse({ id: 'pr12' });
+        }
+        if (url.startsWith('/api/professionals')) return jsonResponse([]);
+        return jsonResponse(null, false);
+      });
+
+      renderWithToast(<ProfessionalsPage />);
+      await screen.findByText(
+        'Nenhum profissional cadastrado. Consultas e evoluções podem ser atribuídas após o cadastro.',
+      );
+
+      fireEvent.click(screen.getByText('+ Novo profissional'));
+      fireEvent.change(screen.getByLabelText(/Nome \*/), {
+        target: { value: 'Dr. Caio' },
+      });
+      fireEvent.change(screen.getByLabelText('Tipo de repasse'), {
+        target: { value: 'fixed' },
+      });
+      fireEvent.change(screen.getByLabelText(/Valor por sessão/), {
+        target: { value: '50.5' },
+      });
+      fireEvent.click(screen.getByText('Salvar'));
+
+      await waitFor(() => {
+        expect(sentBody).toMatchObject({
+          commissionType: 'fixed',
+          commissionFixedCents: 5050,
+        });
+      });
     });
 
     it('Dado o campo Registro, Quando renderizar, Então mostra hint persistente abaixo do input (PROF-02)', async () => {

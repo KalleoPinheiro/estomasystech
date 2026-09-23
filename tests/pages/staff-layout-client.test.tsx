@@ -39,7 +39,11 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
   it('Dado clinicId válido, Quando carrega, Então mostra o nome real da clínica, o e-mail e o papel', async () => {
     mockIdentityFetch({
       clinicLabel: 'Clínica VittaFlow Ltda',
-      account: { email: 'ana@clinica.com', roleLabel: 'Admin de Empresa' },
+      account: {
+        email: 'ana@clinica.com',
+        role: 'company_admin',
+        roleLabel: 'Admin de Empresa',
+      },
     });
 
     renderWithToast(<SidebarIdentity />);
@@ -55,7 +59,11 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
   it('Dado super_admin (clinicId null), Quando carrega, Então mostra "Conta de sistema" no lugar do nome da clínica', async () => {
     mockIdentityFetch({
       clinicLabel: 'Conta de sistema',
-      account: { email: 'root@vitta.com', roleLabel: 'Super Admin' },
+      account: {
+        email: 'root@vitta.com',
+        role: 'company_admin',
+        roleLabel: 'Super Admin',
+      },
     });
 
     renderWithToast(<SidebarIdentity />);
@@ -79,7 +87,11 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
   it('Não sobra nenhum texto fixo de "Clínica de Estomaterapia" no componente', async () => {
     mockIdentityFetch({
       clinicLabel: 'Clínica B (teste)',
-      account: { email: 'x@y.com', roleLabel: 'Atendente' },
+      account: {
+        email: 'x@y.com',
+        role: 'company_admin',
+        roleLabel: 'Atendente',
+      },
     });
 
     renderWithToast(<SidebarIdentity />);

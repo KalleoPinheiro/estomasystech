@@ -662,7 +662,9 @@ describe('Feature: DTO de profissional', () => {
       id: professional.id,
       fullName: 'Enf. Ana Costa',
       registry: 'COREN-SP 654321',
+      commissionType: 'percentage',
       commissionPct: 30,
+      commissionFixedCents: null,
       active: true,
     });
   });

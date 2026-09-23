@@ -58,8 +58,11 @@ export const professionals = pgTable(
       .references(() => clinics.id),
     fullName: text('full_name').notNull(),
     registry: text('registry'),
-    // Repasse (O3.4): % da receita das consultas concluídas do profissional.
+    // Repasse (O3.4): regra configurada pelo Admin da clínica — percentual
+    // sobre o valor da sessão ou valor fixo por sessão.
+    commissionType: text('commission_type').notNull().default('percentage'),
     commissionPct: integer('commission_pct'),
+    commissionFixedCents: integer('commission_fixed_cents'),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -1032,5 +1035,81 @@ export const professionalPatientLinks = pgTable(
       table.professionalId,
     ),
     index('idx_professional_patient_links_clinic').on(table.clinicId),
+  ],
+);
+
+/**
+ * Livro de repasses: fechamento mensal por profissional (um por mês). O valor
+ * de cada item é congelado no pagamento — mudar a regra depois não recalcula
+ * o que já foi pago.
+ */
+export const commissionPayouts = pgTable(
+  'commission_payouts',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    professionalId: text('professional_id')
+      .notNull()
+      .references(() => professionals.id),
+    // Mês fechado (YYYY-MM): paga o que foi liberado até o fim dele.
+    period: text('period').notNull(),
+    totalCents: integer('total_cents').notNull(),
+    paidAt: timestamp('paid_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+    paymentMethod: text('payment_method').notNull(),
+    notes: text('notes'),
+    createdBy: text('created_by').notNull(),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('uq_commission_payouts_period').on(
+      table.clinicId,
+      table.professionalId,
+      table.period,
+    ),
+    index('idx_commission_payouts_professional').on(table.professionalId),
+  ],
+);
+
+export const commissionPayoutItems = pgTable(
+  'commission_payout_items',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    payoutId: text('payout_id')
+      .notNull()
+      .references(() => commissionPayouts.id),
+    professionalId: text('professional_id')
+      .notNull()
+      .references(() => professionals.id),
+    appointmentId: text('appointment_id').notNull(),
+    // `session` = repasse da sessão; `reversal` = estorno de sessão já paga
+    // cuja fatura foi cancelada depois (valor negativo).
+    kind: text('kind').notNull(),
+    procedure: text('procedure').notNull(),
+    sessionDate: timestamp('session_date', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+    baseCents: integer('base_cents').notNull(),
+    commissionCents: integer('commission_cents').notNull(),
+  },
+  (table) => [
+    // Uma sessão é paga no máximo uma vez (e estornada no máximo uma vez).
+    uniqueIndex('uq_commission_payout_items_appointment').on(
+      table.appointmentId,
+      table.kind,
+    ),
+    index('idx_commission_payout_items_payout').on(table.payoutId),
+    index('idx_commission_payout_items_professional').on(table.professionalId),
   ],
 );

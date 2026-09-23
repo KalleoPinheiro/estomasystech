@@ -192,7 +192,9 @@ const professionalFixture: ProfessionalDto = {
   id: 'prof-1',
   fullName: 'Dra. Ana',
   registry: null,
+  commissionType: 'percentage',
   commissionPct: null,
+  commissionFixedCents: null,
   active: true,
 };
 
