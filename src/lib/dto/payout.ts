@@ -5,6 +5,7 @@ import type {
   PayoutItem,
   PayoutItemKind,
   PayoutMethod,
+  PayoutStatus,
 } from '@/domain/billing/commission-payout';
 
 /** Mês de fechamento (AAAA-MM). */
@@ -36,7 +37,19 @@ export interface CommissionPayoutDto {
   notes: string | null;
   createdBy: string;
   createdAt: string;
+  /** Regra vigente no fechamento (retrato). */
+  rule: CommissionRule | null;
+  status: PayoutStatus;
+  cancelledAt: string | null;
+  cancelledBy: string | null;
+  cancelReason: string | null;
   items: PayoutItemDto[];
+}
+
+/** Comprovante de repasse: o repasse + dados do profissional para o documento. */
+export interface PayoutReceiptDto {
+  payout: CommissionPayoutDto;
+  professional: { fullName: string; registry: string | null };
 }
 
 export interface PayoutStatementDto {
@@ -74,6 +87,11 @@ export const toCommissionPayoutDto = (
   notes: payout.notes,
   createdBy: payout.createdBy,
   createdAt: payout.createdAt.toISOString(),
+  rule: payout.rule,
+  status: payout.status,
+  cancelledAt: payout.cancelledAt?.toISOString() ?? null,
+  cancelledBy: payout.cancelledBy,
+  cancelReason: payout.cancelReason,
   items: payout.items.map(toPayoutItemDto),
 });
 

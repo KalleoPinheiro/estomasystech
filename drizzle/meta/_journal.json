@@ -218,6 +218,13 @@
       "when": 1790156145104,
       "tag": "0030_commission-payouts",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1790158825933,
+      "tag": "0031_commission-payout-cancel",
+      "breakpoints": true
     }
   ]
 }

@@ -241,6 +241,7 @@ describe('Feature: Livro de repasses (API, banco real)', () => {
       paidAt: new Date('2025-02-05T12:00:00'),
       paymentMethod: 'pix',
       createdBy: 'outro-admin@clinica.com',
+      rule: { kind: 'percentage', pct: 40 },
       items: [
         {
           appointmentId: paidItem.appointmentId,

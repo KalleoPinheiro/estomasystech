@@ -1062,6 +1062,19 @@ export const commissionPayouts = pgTable(
     }).notNull(),
     paymentMethod: text('payment_method').notNull(),
     notes: text('notes'),
+    // Regra vigente no fechamento (retrato para o comprovante) — mudar a regra
+    // do profissional depois não altera o que o documento mostra.
+    ruleKind: text('rule_kind'),
+    ruleValue: integer('rule_value'),
+    // `active` | `cancelled`: repasse registrado por engano é cancelado, nunca
+    // apagado — a trilha continua, as sessões voltam ao saldo.
+    status: text('status').notNull().default('active'),
+    cancelledAt: timestamp('cancelled_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    cancelledBy: text('cancelled_by'),
+    cancelReason: text('cancel_reason'),
     createdBy: text('created_by').notNull(),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -1069,11 +1082,10 @@ export const commissionPayouts = pgTable(
     }).notNull(),
   },
   (table) => [
-    uniqueIndex('uq_commission_payouts_period').on(
-      table.clinicId,
-      table.professionalId,
-      table.period,
-    ),
+    // Um fechamento ATIVO por profissional/mês — cancelado libera o refechamento.
+    uniqueIndex('uq_commission_payouts_active_period')
+      .on(table.clinicId, table.professionalId, table.period)
+      .where(sql`${table.status} = 'active'`),
     index('idx_commission_payouts_professional').on(table.professionalId),
   ],
 );
@@ -1102,13 +1114,15 @@ export const commissionPayoutItems = pgTable(
     }).notNull(),
     baseCents: integer('base_cents').notNull(),
     commissionCents: integer('commission_cents').notNull(),
+    // Falso quando o repasse foi cancelado: a sessão volta ao saldo a pagar.
+    active: boolean('active').notNull().default(true),
   },
   (table) => [
-    // Uma sessão é paga no máximo uma vez (e estornada no máximo uma vez).
-    uniqueIndex('uq_commission_payout_items_appointment').on(
-      table.appointmentId,
-      table.kind,
-    ),
+    // Uma sessão é paga no máximo uma vez entre os repasses ativos (e
+    // estornada no máximo uma vez).
+    uniqueIndex('uq_commission_payout_items_active_appointment')
+      .on(table.appointmentId, table.kind)
+      .where(sql`${table.active}`),
     index('idx_commission_payout_items_payout').on(table.payoutId),
     index('idx_commission_payout_items_professional').on(table.professionalId),
   ],

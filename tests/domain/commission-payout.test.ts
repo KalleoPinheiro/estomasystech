@@ -12,7 +12,10 @@ import {
   periodBounds,
 } from '@/domain/billing/commission-payout';
 import { Professional } from '@/domain/professional/professional';
-import { ValidationError } from '@/domain/shared/errors';
+import {
+  InvalidStatusTransitionError,
+  ValidationError,
+} from '@/domain/shared/errors';
 
 const NOW = new Date('2026-10-15T12:00:00');
 const paid: BillingRef = {
@@ -182,6 +185,7 @@ describe('Feature: Livro de repasses (domínio)', () => {
       paidAt: NOW,
       paymentMethod: 'pix' as const,
       createdBy: 'admin@clinica.com',
+      rule: PCT_40,
     };
     const item = (commissionCents: number) => ({
       appointmentId: `a-${commissionCents}`,
@@ -223,6 +227,47 @@ describe('Feature: Livro de repasses (domínio)', () => {
           items: [item(100)],
         }),
       ).toThrow(ValidationError);
+    });
+
+    it('Dado repasse novo, Então nasce ativo e guarda o retrato da regra', () => {
+      const payout = CommissionPayout.create({ ...base, items: [item(100)] });
+      expect(payout.status).toBe('active');
+      expect(payout.isActive).toBe(true);
+      expect(payout.rule).toEqual(PCT_40);
+      expect(payout.cancelledAt).toBeNull();
+      expect(payout.cancelledBy).toBeNull();
+      expect(payout.cancelReason).toBeNull();
+    });
+
+    it('Dado motivo, Quando cancelar, Então fica cancelado com quem, quando e motivo (aparado), sem mudar o original', () => {
+      const payout = CommissionPayout.create({ ...base, items: [item(100)] });
+      const at = new Date('2026-10-20T10:00:00');
+
+      const cancelled = payout.cancel({
+        by: 'admin@clinica.com',
+        reason: '  valor errado  ',
+        at,
+      });
+
+      expect(cancelled.status).toBe('cancelled');
+      expect(cancelled.isActive).toBe(false);
+      expect(cancelled.cancelledAt).toEqual(at);
+      expect(cancelled.cancelledBy).toBe('admin@clinica.com');
+      expect(cancelled.cancelReason).toBe('valor errado');
+      expect(cancelled.totalCents).toBe(100);
+      expect(payout.isActive).toBe(true);
+    });
+
+    it('Dado motivo curto ou repasse já cancelado, Quando cancelar, Então recusa', () => {
+      const payout = CommissionPayout.create({ ...base, items: [item(100)] });
+      expect(() => payout.cancel({ by: 'a', reason: ' ok  ' })).toThrow(
+        ValidationError,
+      );
+      const cancelled = payout.cancel({ by: 'a', reason: 'errado' });
+      expect(cancelled.cancelledAt).toBeInstanceOf(Date);
+      expect(() => cancelled.cancel({ by: 'a', reason: 'de novo' })).toThrow(
+        InvalidStatusTransitionError,
+      );
     });
   });
 

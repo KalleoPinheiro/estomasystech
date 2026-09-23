@@ -19,6 +19,7 @@ export class InMemoryCommissionPayoutRepository
     const duplicated =
       [...this.items.values()].some(
         (p) =>
+          p.isActive &&
           p.professionalId === payout.professionalId &&
           p.period === payout.period,
       ) ||
@@ -28,6 +29,10 @@ export class InMemoryCommissionPayoutRepository
         'Este mês já foi fechado ou alguma sessão já foi paga em outro repasse',
       );
     }
+    this.items.set(payout.id, payout);
+  }
+
+  async saveCancellation(payout: CommissionPayout): Promise<void> {
     this.items.set(payout.id, payout);
   }
 
@@ -52,7 +57,11 @@ export class InMemoryCommissionPayoutRepository
 
   async findPaidItems(professionalId?: string): Promise<PaidItemRef[]> {
     return [...this.items.values()]
-      .filter((p) => !professionalId || p.professionalId === professionalId)
+      .filter(
+        (p) =>
+          p.isActive &&
+          (!professionalId || p.professionalId === professionalId),
+      )
       .flatMap((p) =>
         p.items.map((item) => ({
           professionalId: p.professionalId,

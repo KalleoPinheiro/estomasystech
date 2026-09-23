@@ -73,6 +73,11 @@ const closed: CommissionPayoutDto = {
   createdBy: 'admin@clinica.com',
   createdAt: '2026-09-05T12:00:00.000Z',
   items: [item],
+  rule: { kind: 'percentage', pct: 40 },
+  status: 'active',
+  cancelledAt: null,
+  cancelledBy: null,
+  cancelReason: null,
 };
 
 const caioRow: PayoutStatementDto = {
@@ -218,5 +223,115 @@ describe('Feature: Tela de repasses', () => {
     expect(
       await screen.findByText('Sem permissão para ver repasses'),
     ).toBeInTheDocument();
+  });
+
+  describe('Cancelar repasse e comprovante', () => {
+    const older: CommissionPayoutDto = {
+      ...closed,
+      id: 'po-0',
+      period: '2026-07',
+    };
+    const voided: CommissionPayoutDto = {
+      ...closed,
+      id: 'po-x',
+      period: '2026-06',
+      status: 'cancelled',
+      cancelledAt: '2026-09-06T12:00:00.000Z',
+      cancelledBy: 'admin@clinica.com',
+      cancelReason: 'valor errado',
+    };
+    const withHistory: PayoutsResponseDto = {
+      ...clinicResponse,
+      history: [closed, older, voided],
+    };
+
+    it('Dado histórico, Então mostra situação, comprovante e Cancelar só no mais recente ativo', async () => {
+      mockFetch(() => jsonResponse(withHistory));
+
+      renderWithToast(<PayoutsPage />);
+
+      expect(await screen.findByText('Cancelado')).toBeInTheDocument();
+      expect(screen.getByText('valor errado')).toBeInTheDocument();
+      expect(screen.getAllByText('Pago')).toHaveLength(2);
+      expect(screen.getAllByText('Cancelar')).toHaveLength(1);
+      const links = screen
+        .getAllByText('Comprovante')
+        .map((a) => a.closest('a')?.getAttribute('href'));
+      expect(links).toEqual([
+        '/documentos/repasse/po-1',
+        '/documentos/repasse/po-0',
+        '/documentos/repasse/po-x',
+      ]);
+    });
+
+    it('Dado Admin, Quando cancela com motivo, Então envia o motivo e recarrega', async () => {
+      let posted: { url: string; body: unknown } | undefined;
+      mockFetch((url, init) => {
+        if (init?.method === 'POST') {
+          posted = { url, body: JSON.parse(String(init.body)) };
+          return jsonResponse({ ...closed, status: 'cancelled' });
+        }
+        return jsonResponse(withHistory);
+      });
+
+      renderWithToast(<PayoutsPage />);
+      fireEvent.click(await screen.findByText('Cancelar'));
+      fireEvent.change(screen.getByLabelText(/Motivo do cancelamento/), {
+        target: { value: 'registrado em dobro' },
+      });
+      fireEvent.click(screen.getByText('Confirmar cancelamento'));
+
+      await waitFor(() => {
+        expect(posted).toEqual({
+          url: '/api/commission-payouts/po-1/cancel',
+          body: { reason: 'registrado em dobro' },
+        });
+      });
+      expect(await screen.findByText('Repasse cancelado')).toBeInTheDocument();
+    });
+
+    it('Dada recusa da API ao cancelar, Então mostra o erro no formulário', async () => {
+      mockFetch((_url, init) =>
+        init?.method === 'POST'
+          ? {
+              ok: false,
+              json: async () => ({
+                success: false,
+                data: null,
+                error: 'Só o repasse mais recente pode ser cancelado',
+              }),
+            }
+          : jsonResponse(withHistory),
+      );
+
+      renderWithToast(<PayoutsPage />);
+      fireEvent.click(await screen.findByText('Cancelar'));
+      fireEvent.change(screen.getByLabelText(/Motivo do cancelamento/), {
+        target: { value: 'registrado em dobro' },
+      });
+      fireEvent.click(screen.getByText('Confirmar cancelamento'));
+
+      expect(
+        await screen.findByText('Só o repasse mais recente pode ser cancelado'),
+      ).toBeInTheDocument();
+    });
+
+    it('Dado Profissional, Então vê o comprovante mas não o Cancelar', async () => {
+      mockFetch(
+        () =>
+          jsonResponse({
+            scope: 'own',
+            period: '2020-01',
+            rows: [caioRow],
+            history: [closed],
+          } satisfies PayoutsResponseDto),
+        'profissional',
+      );
+
+      renderWithToast(<PayoutsPage />);
+
+      expect(await screen.findByText('Comprovante')).toBeInTheDocument();
+      expect(screen.queryByText('Cancelar')).not.toBeInTheDocument();
+    });
   });
 });

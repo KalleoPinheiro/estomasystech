@@ -6,6 +6,7 @@ import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { MetricCard } from '@/components/metric-card';
 import { Modal } from '@/components/modal';
 import type {
+  CommissionPayoutDto,
   PayoutStatementDto,
   PayoutsResponseDto,
   SidebarIdentityDto,
@@ -18,6 +19,7 @@ import {
   shiftMonth,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { CancelPayoutForm } from './cancel-payout-form';
 import { ClosePayoutForm } from './close-payout-form';
 import {
   ClinicStatementsTable,
@@ -87,6 +89,9 @@ function OwnStatement({
 export default function PayoutsPage() {
   const [month, setMonth] = useState(() => shiftMonth(currentMonth(), -1));
   const [closing, setClosing] = useState<PayoutStatementDto | null>(null);
+  const [cancelling, setCancelling] = useState<CommissionPayoutDto | null>(
+    null,
+  );
   // Profissional lê o próprio extrato; Admin vê a clínica. A API decide o
   // acesso (famílias de rota) — aqui só se escolhe qual visão pedir.
   const { data: identity } =
@@ -167,9 +172,22 @@ export default function PayoutsPage() {
             <PayoutHistoryTable
               history={data.history}
               showProfessional={data.scope === 'clinic'}
+              onCancel={data.scope === 'clinic' ? setCancelling : undefined}
             />
           </Card>
         </div>
+      )}
+
+      {cancelling && (
+        <Modal title="Cancelar repasse" onClose={() => setCancelling(null)}>
+          <CancelPayoutForm
+            payout={cancelling}
+            onDone={() => {
+              setCancelling(null);
+              refresh();
+            }}
+          />
+        </Modal>
       )}
 
       {closing && (
