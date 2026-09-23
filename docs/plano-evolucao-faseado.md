@@ -105,6 +105,11 @@ Fecha o loop follow-up → agendamento sem intervenção da recepção.
 
 Exige escolhas do negócio antes de executar:
 
+- **Lembretes por WhatsApp (templates, cadência de recall, escopo por empresa):** plano de ação
+  em [`.specs/features/lembretes-whatsapp-templates-cadencia/spec.md`](../.specs/features/lembretes-whatsapp-templates-cadencia/spec.md)
+  — corrige envio fora da janela de 24 h da Meta, recall diário sem fim e job cross-empresa.
+  **Decisão pendente:** cadência do recall, templates aprovados e número por empresa (D1–D4).
+
 - **Pagamento online (Pix/cartão):** novo port `PaymentGateway` (mesmo padrão de
   `MessagingGateway`), fatura pendente gera link/QR no portal e no lembrete. **Decisão pendente:**
   qual PSP (Mercado Pago, Stripe, Asaas) e credenciais.

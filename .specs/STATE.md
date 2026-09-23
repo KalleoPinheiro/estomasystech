@@ -653,3 +653,16 @@ Follow-up direto do PR #159: a causa-raiz daquele vazamento era o escopo de empr
 - **Enforcement**: `tests/lib/tenant-scope.test.ts` varre `src/` — (1) quem usa `systemScope()` precisa estar na allowlist com motivo (login, bootstrap, forgot/set-password, cron de lembretes, taxonomia global); (2) nenhum arquivo de `src/app` referencia `LEGACY_CLINIC_ID` (fallback vive só em `writeClinicId`).
 - **Mudança de comportamento**: nenhuma. `/api/audit` trocou `systemScope` por `sessionScope` — equivalente, o repositório de auditoria não é escopado e o filtro por empresa já vem de `AuditEventFilter.clinicId` (#159).
 - Migração mecânica por codemod (mapeamento 1:1 dos padrões), testes (63 call sites) migrados junto.
+
+## Venda de pacote atômica (`SellSessionPackage`) — CONCLUÍDA
+
+Achado N5 da análise de 2026-09-22. `POST /api/packages` tinha a regra na rota e gravava pacote e fatura em duas escritas soltas:
+
+- Falha ao gravar a fatura → pacote já gravado, sem cobrança (sessões de graça).
+- **Reproduzível hoje sem falha de infra**: schema e domínio aceitam `priceCents: 0`, mas `Invoice.create` rejeita valor zero — a rota salvava o pacote e depois respondia 400.
+
+**Fix**: caso de uso `src/application/billing/sell-session-package.ts` — valida paciente, procedimento, pacote e fatura **antes** de escrever, e grava pacote + fatura em `transactions.run` (mesma unidade de trabalho do `CompleteAppointment`, CONS2-01). A rota vira só parse + DTO.
+
+- **Decisão**: pacote de preço zero (cortesia) é gravado **sem fatura** — o domínio já permitia preço zero e não há o que cobrar; antes o fluxo simplesmente quebrava.
+- **Testes**: `tests/application/sell-session-package.test.ts` (5, in-memory) e `tests/api/package-sale-transaction.test.ts` (2, PGlite: rollback real quando a fatura falha; cortesia 200 sem fatura). Sensor: os 2 de integração falham com a rota antiga.
+- **Plano registrado, não implementado**: lembretes WhatsApp (N1–N3) — `.specs/features/lembretes-whatsapp-templates-cadencia/spec.md`, aguarda decisões D1–D4.
