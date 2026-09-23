@@ -219,6 +219,7 @@ One account belongs to exactly one Clinic (email is unique per Clinic, not globa
 
 - Google Calendar integration requires OAuth tokens (encrypted in `google_accounts`), connected separately after login — unrelated to authentication.
 - Bidirectional: appointments ↔ Google events.
+- Gateway resolved **lazily** (`LazyCalendarGateway`): building the services never reads `google_accounts`; the credential is read on first use — for appointment sync, inside `after()`, off the response path. With no Google integration configured in env, the gateway is `NullCalendarGateway` and no query happens at all.
 
 **Consent enforcement**
 

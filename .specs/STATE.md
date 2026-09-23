@@ -700,3 +700,13 @@ Fecha as duas pontas deixadas em aberto pelo livro de repasses. Decisões do usu
 - **Retrato da regra**: `rule_kind`/`rule_value` no cabeçalho — o comprovante mostra a regra aplicada naquele fechamento, não a atual. Repasses anteriores a 0031 ficam com regra "não registrada".
 - **Comprovante** (`/documentos/repasse/:id`, número `REP-…` pela mesma emissão idempotente dos demais documentos): cabeçalho da clínica (bloqueia com cadastro incompleto), profissional/registro, mês, data e forma de pagamento, regra, sessões e estornos, total, linha "recebi o valor acima" para o profissional, marca CANCELADO com motivo. Admin lê qualquer um da clínica (`GET /api/commission-payouts/:id`); Profissional só o próprio (`GET /api/my-payouts/:id`, 404 para o alheio — nem a existência vaza).
 - **Testes**: domínio (+3), casos de uso in-memory (+5: reabre e refecha, visão geral em aberto, só o mais recente, outro profissional não bloqueia, inexistente/já cancelado), API PGlite (7: permissões por papel e clínica, 409 fora de ordem, 400 motivo curto, auditoria, reabertura real pelos índices parciais, número `REP-` idempotente), tela (+4), documento (6). Sensor: 4 mutantes (sem regra do mais recente, itens não desativados no Drizzle, comprovante alheio liberado, visão geral contando cancelado) — todos mortos.
+
+## Gateway de agenda preguiçoso (A2) — CONCLUÍDA
+
+Achado A2 da análise de 2026-09-22: `getRepositories` consultava o banco em **todo** request (`buildCalendarGateway` → `google_accounts.findMostRecent`), mesmo em rotas que nunca usam a agenda.
+
+- **Fix**: `calendar` passa a ser `LazyCalendarGateway` (`src/application/ports/calendar-gateway.ts`) — resolve no primeiro uso, memoriza (chamadas simultâneas compartilham a resolução) e tenta de novo se a resolução falhar. Sem integração no ambiente (nem OAuth nem service account), o container devolve `NullCalendarGateway` direto, sem consulta. A prioridade OAuth → service account → nulo e o cache por clínica (issue #74) ficaram iguais.
+- **Sincronização**: `scheduleCalendarSync` só descarta de imediato o gateway nulo; o preguiçoso é resolvido dentro do `after()` — a leitura da credencial saiu do caminho da resposta — e, se resolver para o nulo (nenhuma conta conectada), não sincroniza.
+- **Relação com #151** (segmentar o container): resolve só a parte de desempenho; a segmentação organizacional continua `ready-for-human`.
+- **Testes**: gateway preguiçoso (5), `calendar-sync` (+3), origem da credencial com PGlite (5: não lê a credencial ao montar e lê uma vez ao usar, OAuth sem conta → nulo, service account, sem integração → nulo sem consulta). Sensor: 5 mutantes (resolução antecipada, sem atalho do nulo, sem checar nulo após resolver, sem nova tentativa, sem memorizar) — todos mortos.
+
