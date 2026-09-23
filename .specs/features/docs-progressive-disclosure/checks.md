@@ -103,7 +103,7 @@ Proof: `npx vitest run tests/scripts/check-docs.test.ts -t "arquivos da raiz"`
 Proof: `npx vitest run tests/scripts/check-docs.test.ts -t "ignora templates"`
 Proof: `npx vitest run tests/scripts/check-docs.test.ts -t "ignora externos, âncoras e código"`
 
-**C26** - Doc `living` com `last_reviewed` a mais de 90 dias imprime aviso e sai `0`; `frozen` antigo não avisa (DOCS-06, AC 22)
+**C26** - Doc `living` com `last_reviewed` a mais de 90 dias imprime aviso e sai `0`; `frozen`, `draft` e `superseded` antigos não avisam (DOCS-06, AC 22)
 Proof: `npx vitest run tests/scripts/check-docs.test.ts -t "doc vivo vencido"`
 
 **C27** - `last_reviewed` fora de `YYYY-MM-DD` faz `check:docs` sair `1` (DOCS-06, AC 21)
@@ -136,6 +136,7 @@ Proof: `npx vitest run tests/docs/structure.test.ts -t "handoffs arquivados"`
 | status do roadmap (5) | C22, table-driven sobre os 5 | - |
 | escopo da checagem de links (4) | `AGENTS.md` C24 · `CONTEXT.md` C24 · `README.md` C24 · `docs/**` C23 | - |
 | exclusões da checagem de links (4) | `docs/templates/**` C25 · URL externa C25 · âncora C25 · bloco de código C25 | - |
+| `status` que não avisam quando vencidos (3) | C26, table-driven sobre os 3 | - |
 | saídas do gate (3) | erro `1` C23 · aviso `0` C26 · limpo `0` C10, C12 | - |
 | portas sem volta (4) | door 1 C1-C4 · door 2 C6, C13, C17 · door 3 C8-C10, C27 · door 4 C12, C23, C28 | - |
 

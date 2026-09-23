@@ -122,20 +122,28 @@ describe('check:docs — frontmatter', () => {
     },
   );
 
-  it('doc vivo vencido avisa e sai 0; frozen antigo não avisa', () => {
+  it('doc vivo vencido avisa e sai 0', () => {
     write(
       'docs/velho.md',
       `${frontmatter({ last_reviewed: '2000-01-01' })}\n# X\n`,
     );
-    write(
-      'docs/congelado.md',
-      `${frontmatter({ status: 'frozen', last_reviewed: '2000-01-01' })}\n# X\n`,
-    );
     const result = runGate(root);
     expect(result.status).toBe(0);
     expect(result.output).toMatch(/aviso.*docs\/velho\.md/i);
-    expect(result.output).not.toContain('docs/congelado.md');
   });
+
+  it.each(['frozen', 'draft', 'superseded'])(
+    'doc vivo vencido: só living avisa — %s antigo não avisa',
+    (status) => {
+      write(
+        'docs/antigo.md',
+        `${frontmatter({ status, last_reviewed: '2000-01-01' })}\n# X\n`,
+      );
+      const result = runGate(root);
+      expect(result.status).toBe(0);
+      expect(result.output).not.toContain('docs/antigo.md');
+    },
+  );
 });
 
 describe('check:docs — links', () => {

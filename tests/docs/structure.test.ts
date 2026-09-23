@@ -155,6 +155,13 @@ describe('S1 — AGENTS.md como roteador L0', () => {
 });
 
 describe('S2 — domínios e metadados', () => {
+  it('existem os 9 domínios e nenhum outro', () => {
+    const dirs = readdirSync(join(ROOT, 'docs/domains')).filter((entry) =>
+      statSync(join(ROOT, 'docs/domains', entry)).isDirectory(),
+    );
+    expect([...dirs].sort()).toEqual([...DOMAINS].sort());
+  });
+
   it.each(DOMAINS)('existem os 9 domínios (%s)', (domain) => {
     expect(existsSync(join(ROOT, 'docs/domains', domain, 'README.md'))).toBe(
       true,
@@ -249,8 +256,8 @@ describe('S4 — onboarding, integrações e troubleshooting', () => {
     ];
     const withTable = candidates.filter((f) => header.test(read(f)));
     expect(withTable).toEqual(['docs/engineering/onboarding.md']);
-    expect(read('README.md')).toContain('docs/engineering/onboarding.md');
-    expect(read('AGENTS.md')).toContain('docs/engineering/onboarding.md');
+    expect(read('README.md')).toContain('](docs/engineering/onboarding.md)');
+    expect(read('AGENTS.md')).toContain('](docs/engineering/onboarding.md)');
   });
 
   it.each(INTEGRATIONS)('existem as 5 integrações (%s)', (file) => {
@@ -282,8 +289,16 @@ describe('S4 — onboarding, integrações e troubleshooting', () => {
     /consulta rejeitada com 409/,
     /E2E falha só ao reaproveitar npm run dev/,
   ])('troubleshooting preserva os 8 sintomas (%s)', (symptom) => {
-    const text = read('docs/engineering/troubleshooting.md').replace(/`/g, '');
-    expect(text).toMatch(new RegExp(symptom.source, 'i'));
+    const rows = tableRows(
+      read('docs/engineering/troubleshooting.md').replace(/`/g, ''),
+    );
+    const row = rows.find((cells) =>
+      new RegExp(symptom.source, 'i').test(cells[0]),
+    );
+    // sintoma → causa → ação: a linha inteira, não só o sintoma
+    expect(row).toBeDefined();
+    expect(row?.length).toBe(3);
+    expect(row?.every((cell) => cell.length > 0)).toBe(true);
   });
 });
 
