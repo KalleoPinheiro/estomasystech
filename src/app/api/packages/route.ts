@@ -1,9 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { Invoice } from '@/domain/billing/invoice';
-import { SessionPackage } from '@/domain/billing/package';
-import { NotFoundError } from '@/domain/shared/errors';
-import { Money } from '@/domain/shared/money';
+import { SellSessionPackage } from '@/application/billing/sell-session-package';
+import type { SessionPackage } from '@/domain/billing/package';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -59,35 +57,17 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
-    const { sessionPackages, patients, procedures, invoices } =
-      await getRepositories(writeScope(guard.session));
-
-    const [patient, procedure] = await Promise.all([
-      patients.findById(body.patientId),
-      procedures.findById(body.procedureId),
-    ]);
-    if (!patient) {
-      throw new NotFoundError('Paciente', body.patientId);
-    }
-    if (!procedure) {
-      throw new NotFoundError('Procedimento', body.procedureId);
-    }
-
-    const pkg = SessionPackage.create({
+    const { patients, procedures, transactions } = await getRepositories(
+      writeScope(guard.session),
+    );
+    const sold = await new SellSessionPackage(
+      patients,
+      procedures,
+      transactions,
+    ).execute({
       ...body,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
     });
-    await sessionPackages.save(pkg);
-
-    // Venda do pacote fatura uma única vez; as sessões consomem saldo (O3.3).
-    const invoice = Invoice.create({
-      patientId: pkg.patientId,
-      appointmentId: null,
-      description: `Pacote: ${procedure.name} (${pkg.totalSessions} sessões)`,
-      amount: Money.fromCents(pkg.priceCents),
-    });
-    await invoices.save(invoice);
-
-    return toPackageDto(pkg, procedure.name);
+    return toPackageDto(sold.package, sold.procedureName);
   });
 }
