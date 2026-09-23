@@ -49,7 +49,7 @@ Google Calendar sync is an integration, not a login: `/api/integrations/google-c
 
 ## Env vars
 
-`DATABASE_URL`, `APP_URL`, `AUTH_SECRET`, `RESEND_API_KEY`/`EMAIL_FROM`, `VITTA_BOOTSTRAP_TOKEN`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (Calendar OAuth only), `TZ` (business hours validated in local time), `CRON_SECRET`, `API_RATE_LIMIT_MAX`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`/`PRIVATE_KEY`/`CALENDAR_ID`.
+`DATABASE_URL`, `APP_URL`, `AUTH_SECRET`, `RESEND_API_KEY`/`EMAIL_FROM`, `VITTA_BOOTSTRAP_TOKEN`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (Calendar OAuth only), `TZ` (business hours validated in local time), `CRON_SECRET`, `API_RATE_LIMIT_MAX`, `PHOTO_STORAGE`/`S3_*` (photos in an S3-compatible bucket; default local disk), `GOOGLE_SERVICE_ACCOUNT_EMAIL`/`PRIVATE_KEY`/`CALENDAR_ID`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

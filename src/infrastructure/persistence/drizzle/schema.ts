@@ -1127,3 +1127,21 @@ export const commissionPayoutItems = pgTable(
     index('idx_commission_payout_items_professional').on(table.professionalId),
   ],
 );
+
+/**
+ * Janelas de rate limit compartilhadas entre réplicas (issue #77) — só para
+ * os endpoints de autenticação. Tabela de sistema, sem `clinic_id`: a chave é
+ * `<limite>:<ip>`, anterior a qualquer sessão.
+ */
+export const rateLimitWindows = pgTable(
+  'rate_limit_windows',
+  {
+    key: text('key').primaryKey(),
+    count: integer('count').notNull(),
+    resetAt: timestamp('reset_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [index('idx_rate_limit_windows_reset_at').on(table.resetAt)],
+);

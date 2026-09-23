@@ -119,6 +119,12 @@ import { DrizzleTransactionManager } from './persistence/drizzle/drizzle-transac
 import { LEGACY_CLINIC_ID } from './persistence/drizzle/legacy-clinic';
 import { DrizzleProfessionalPatientLinkRepository } from './persistence/drizzle/professional-patient-link-repository';
 import { LocalPhotoStorage } from './storage/local-photo-storage';
+import {
+  createS3Client,
+  S3PhotoStorage,
+  type S3Sender,
+  s3PhotoStorageConfigFromEnv,
+} from './storage/s3-photo-storage';
 
 export interface Services {
   clinics: ClinicRepository;
@@ -170,6 +176,7 @@ const globalForServices = globalThis as unknown as {
   // hazard: chave por clínica (não uma entrada única) — cache global sem essa
   // chave reaproveitava a credencial OAuth de uma empresa em outra (issue #74).
   vittaCalendar?: Map<string, { key: string; gateway: CalendarGateway }>;
+  vittaS3?: S3Sender;
 };
 
 async function oauthCalendarGateway(
@@ -253,6 +260,19 @@ function calendarGatewayFor(
   return new LazyCalendarGateway(() => buildCalendarGateway(db, clinicId));
 }
 
+/**
+ * `PHOTO_STORAGE=s3` → bucket S3-compatível, compartilhado entre réplicas;
+ * senão, disco local (volume Docker). Um `S3Client` por processo.
+ */
+function buildPhotoStorage(clinicId: string): PhotoStorage {
+  const config = s3PhotoStorageConfigFromEnv();
+  if (!config) {
+    return new LocalPhotoStorage(undefined, clinicId);
+  }
+  globalForServices.vittaS3 ??= createS3Client(config);
+  return new S3PhotoStorage(globalForServices.vittaS3, config.bucket, clinicId);
+}
+
 function buildMessagingGateway(): MessagingGateway {
   const config = metaWhatsAppConfigFromEnv();
   return config ? new MetaWhatsAppGateway(config) : new NullMessagingGateway();
@@ -329,10 +349,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       db,
       tenant.clinicId,
     ),
-    photoStorage: new LocalPhotoStorage(
-      undefined,
-      tenant.clinicId ?? LEGACY_CLINIC_ID,
-    ),
+    photoStorage: buildPhotoStorage(tenant.clinicId ?? LEGACY_CLINIC_ID),
     supplies: new DrizzleSupplyRepository(db, tenant.clinicId),
     stockMovements: new DrizzleStockMovementRepository(db, tenant.clinicId),
     supplyBatches: new DrizzleSupplyBatchRepository(db, tenant.clinicId),

@@ -7,7 +7,7 @@ import { fail } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { verifyPassword } from '@/lib/auth/password';
-import { RateLimiter } from '@/lib/auth/rate-limit';
+import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import {
   createSessionToken,
   getAuthConfig,
@@ -17,7 +17,7 @@ import {
 } from '@/lib/auth/session';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
-const LOGIN_RATE_LIMIT = new RateLimiter(5, 60_000);
+const LOGIN_RATE_LIMIT = new SharedRateLimiter('login', 5, 60_000);
 
 /**
  * Único caminho de login desde a ADR-004: e-mail + senha da própria conta.
@@ -30,7 +30,7 @@ const loginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   const ip = clientIp(request);
-  if (!LOGIN_RATE_LIMIT.allow(ip)) {
+  if (!(await LOGIN_RATE_LIMIT.allow(ip))) {
     return fail('Muitas tentativas de login, aguarde um minuto', 429);
   }
 

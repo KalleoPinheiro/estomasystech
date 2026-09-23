@@ -8,12 +8,12 @@ import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { clientIp } from '@/lib/auth/client-ip';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
-import { RateLimiter } from '@/lib/auth/rate-limit';
+import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { passwordMatches } from '@/lib/auth/session';
 import { systemScope } from '@/lib/auth/tenant-scope';
 import { isUniqueViolation } from '@/lib/db-errors';
 
-const BOOTSTRAP_RATE_LIMIT = new RateLimiter(5, 60_000);
+const BOOTSTRAP_RATE_LIMIT = new SharedRateLimiter('bootstrap', 5, 60_000);
 
 export const BOOTSTRAP_TOKEN_HEADER = 'x-bootstrap-token';
 /** Mensagem única para segredo errado e para instalação já inicializada. */
@@ -48,7 +48,7 @@ function hasValidBootstrapToken(request: NextRequest): boolean {
  * convite enviado por e-mail — igual a qualquer outra conta.
  */
 export async function POST(request: NextRequest) {
-  if (!BOOTSTRAP_RATE_LIMIT.allow(clientIp(request))) {
+  if (!(await BOOTSTRAP_RATE_LIMIT.allow(clientIp(request)))) {
     return fail('Muitas tentativas, aguarde um minuto', 429);
   }
   if (!hasValidBootstrapToken(request)) {
