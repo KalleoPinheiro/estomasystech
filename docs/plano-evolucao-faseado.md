@@ -92,9 +92,9 @@ re-verificadas. A Fase 4 passou de primeira (7/7 mutantes mortos), com três ach
 corrigidos em seguida — inclusive a causa-raiz de um erro de tipo que escapava do gate: `npm run
 build` não verifica `tests/**`, então o projeto ganhou `npm run typecheck` (`tsc --noEmit`).
 
-**Gate recomendado antes de merge:** `npm test && npm run typecheck && npm run lint && npm run check:sv && npm run build`.
+**Gate recomendado antes de merge:** `npm run typecheck && npm run lint && npm run check:sv && npm run test:coverage && npm run build` — lista canônica e atual em `AGENTS.md` § Commands.
 
-> `npm run lint` (`npx eslint .`) propaga o exit code real e hoje sai limpo (issues #48/#49). O ruído antes observado num ambiente de sessão de agente vinha de `.claude/worktrees/**` — checkouts aninhados de sessões paralelas escapando do `globalIgnores` do `eslint.config.mjs` por falta de `**/` nos padrões — corrigido (AD-021 em `.specs/STATE.md`), não de um wrapper mascarando o exit code.
+> `npm run lint` é `biome check` desde a migração de ESLint para Biome (issue #107) e propaga o exit code real. Nota histórica da era ESLint (issues #48/#49): o ruído antes observado num ambiente de sessão de agente vinha de `.claude/worktrees/**` — checkouts aninhados de sessões paralelas escapando do `globalIgnores` do antigo `eslint.config.mjs` — corrigido (AD-021 em `.specs/STATE.md`), não de um wrapper mascarando o exit code. O `biome.json` atual mantém `.claude/worktrees` fora de `files.includes`.
 
 ---
 
