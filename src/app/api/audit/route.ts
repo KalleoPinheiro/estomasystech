@@ -30,6 +30,8 @@ export async function GET(request: NextRequest) {
     const { auditEvents } = await getRepositories({ clinicId: null });
     const events = await auditEvents.findAll(
       {
+        // Trilha da empresa da sessão; papel de sistema (sem clínica) vê todas.
+        clinicId: guard.session?.clinicId ?? undefined,
         patientId: query.patientId,
         from: query.from ? new Date(query.from) : undefined,
         to: query.to ? new Date(query.to) : undefined,

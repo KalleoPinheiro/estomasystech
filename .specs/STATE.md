@@ -626,3 +626,20 @@ E2E do PR flakou na 1ª run (timeouts em cascata em `agenda.spec.ts`/`equipe.spe
 - **Next step**: nenhum pendente.
 - **Blockers**: nenhum.
 - **Branch**: `fix/136-badge-severidade-push-det` (a deletar após squash-merge, se ainda não deletada). PR #158, squash-merged em `main`. Issue #136 fechada via `Closes #136`.
+
+## Vazamento cross-empresa em agregados, auditoria, kit e portal — CONCLUÍDA
+
+Achado de análise de arquitetura/negócio (2026-09-22): rotas de leitura passavam `getRepositories({ clinicId: null })` (visão de sistema, sem filtro) mesmo com sessão de empresa, violando o item (4) do padrão consolidado acima.
+
+| Rota | Vazamento | Fix |
+| --- | --- | --- |
+| `GET /api/summary` | faturamento do mês + consultas do dia (com nome do paciente) de todas as empresas | escopo `session.clinicId ?? null` |
+| `GET /api/reports` | receita, margem, produção/comissão de todas as empresas | idem |
+| `src/lib/report-cache.ts` | chave só `YYYY-MM` — 1ª empresa a abrir mês encerrado definia o relatório das demais | chave `${clinicId ?? 'system'}:${month}` (assinatura passa a exigir `clinicId`) |
+| `GET /api/audit` | trilha global | `AuditEventFilter.clinicId` (Drizzle + in-memory); papel de sistema segue cross-empresa |
+| `/api/procedures/[id]/kit` | GET/PUT sem escopo; insumo de outra empresa aceito no kit | procedimento e cada insumo buscados no escopo da sessão → 404 |
+| `/api/portal/patient`, `/partner`, `/slots`, `/procedures` | busca por e-mail, grade, conflitos e catálogo cross-empresa | escopo pela `clinicId` da sessão do portal |
+
+- **Decisão**: `procedure_supplies` continua sem `clinic_id` — o escopo é herdado do procedimento (validado na rota). Sem migração.
+- **Testes**: `tests/api/cross-tenant-aggregates-isolation.test.ts` (10 casos) — sensor: os 10 falham com o código antigo (`git stash` de `src/`), passam com o fix.
+- **Fora de escopo (próximo passo sugerido)**: wrapper de rota que resolva o escopo por empresa centralmente (hoje ~80 call sites decidem `?? null` / `?? LEGACY_CLINIC_ID` à mão — causa-raiz deste achado).

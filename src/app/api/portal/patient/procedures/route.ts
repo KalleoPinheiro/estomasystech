@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   return handleRequest(async () => {
-    const { procedures } = await getRepositories({ clinicId: null });
+    // Catálogo da clínica do paciente, não o de todas as empresas.
+    const { procedures } = await getRepositories({
+      clinicId: guard.session.clinicId ?? null,
+    });
     const catalog = await procedures.findAll();
     return catalog
       .filter((procedure) => procedure.isActive)

@@ -27,13 +27,18 @@ export async function GET(request: NextRequest) {
     const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const isClosedMonth = to.getTime() <= startOfCurrentMonth.getTime();
     const cacheKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-    const cached = isClosedMonth ? getCachedReport(cacheKey) : undefined;
+    // Escopo da sessão: empresa vê só os próprios números; papel de sistema
+    // (sem clínica) mantém a visão cross-empresa.
+    const clinicId = guard.session?.clinicId ?? null;
+    const cached = isClosedMonth
+      ? getCachedReport(clinicId, cacheKey)
+      : undefined;
     if (cached) {
       return cached;
     }
 
     const { appointments, invoices, stockMovements, professionals } =
-      await getRepositories({ clinicId: null });
+      await getRepositories({ clinicId });
     const report = await new GetMonthlyReport(
       appointments,
       invoices,
@@ -41,7 +46,7 @@ export async function GET(request: NextRequest) {
       professionals,
     ).execute({ from, to });
     if (isClosedMonth) {
-      cacheReport(cacheKey, report);
+      cacheReport(clinicId, cacheKey, report);
     }
     return report;
   });
