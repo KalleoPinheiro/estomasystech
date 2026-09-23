@@ -225,6 +225,13 @@
       "when": 1790158825933,
       "tag": "0031_commission-payout-cancel",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1790162830228,
+      "tag": "0032_rate-limit-windows",
+      "breakpoints": true
     }
   ]
 }

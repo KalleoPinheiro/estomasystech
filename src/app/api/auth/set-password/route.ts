@@ -8,11 +8,15 @@ import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
-import { RateLimiter } from '@/lib/auth/rate-limit';
+import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
 /** Mesmo limite do login: adivinhar um token é força bruta como qualquer outra. */
-const SET_PASSWORD_RATE_LIMIT = new RateLimiter(5, 60_000);
+const SET_PASSWORD_RATE_LIMIT = new SharedRateLimiter(
+  'set-password',
+  5,
+  60_000,
+);
 
 const schema = z.object({
   token: z.string().min(1).max(400),
@@ -25,7 +29,7 @@ const schema = z.object({
  * único, não um cookie.
  */
 export async function POST(request: NextRequest) {
-  if (!SET_PASSWORD_RATE_LIMIT.allow(clientIp(request))) {
+  if (!(await SET_PASSWORD_RATE_LIMIT.allow(clientIp(request)))) {
     return fail('Muitas tentativas, aguarde um minuto', 429);
   }
 

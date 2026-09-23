@@ -710,3 +710,13 @@ Achado A2 da análise de 2026-09-22: `getRepositories` consultava o banco em **t
 - **Relação com #151** (segmentar o container): resolve só a parte de desempenho; a segmentação organizacional continua `ready-for-human`.
 - **Testes**: gateway preguiçoso (5), `calendar-sync` (+3), origem da credencial com PGlite (5: não lê a credencial ao montar e lê uma vez ao usar, OAuth sem conta → nulo, service account, sem integração → nulo sem consulta). Sensor: 5 mutantes (resolução antecipada, sem atalho do nulo, sem checar nulo após resolver, sem nova tentativa, sem memorizar) — todos mortos.
 
+## Pronto para várias réplicas (A4) — CONCLUÍDA
+
+Achado A4 da análise de 2026-09-22: rate limit, caches e fotos viviam na memória ou no disco do processo. Decisões do usuário (2026-09-23): **rate limit em Postgres** (sem serviço novo) e **fotos em bucket S3-compatível**.
+
+- **Rate limit** (issue #77): `SharedRateLimiter` em login, esqueci a senha, definir senha e bootstrap, contando em `rate_limit_windows` (migração 0032) com um upsert atômico de janela fixa — exato entre réplicas. Falha do banco → limite em memória da réplica (nunca libera tudo), com log. Poda das janelas vencidas no máximo uma vez por janela por processo.
+- **Limite global da API fica por réplica** (decisão): é proteção contra rajada, e gravar no banco a cada request dobraria as escritas. Com N réplicas o teto efetivo é N × `API_RATE_LIMIT_MAX`. Por isso a #77 não é fechada automaticamente; a decisão fica registrada aqui e no `CONTEXT.md`.
+- **Fotos**: `S3PhotoStorage` (`@aws-sdk/client-s3`), ligado por `PHOTO_STORAGE=s3`; disco local continua o padrão, então o deploy atual não muda. A chave espelha o caminho do disco (`<clinicId>/condition-photos/<id>`) — migrar é copiar `uploads/` para o bucket. Variável S3 faltando falha na montagem, nunca volta ao disco em silêncio. Um `S3Client` por processo.
+- **Estado por processo que fica como está** (seguro por réplica): cache de revogação de sessão (TTL 60 s sobre o banco), cache de relatório de mês fechado (só relatório assentado, imutável) e cache do gateway de agenda (só reaproveita token).
+- **Testes**: rate limit com PGlite (9: contagem, janela vencida, 8 acessos simultâneos sem perder incremento, poda, **duas réplicas somando o mesmo limite**, contadores separados por endpoint, queda do banco → limite local, poda uma vez por janela); S3 (11: gravar/ler/remover, isolamento por clínica, path traversal, 404, corpo vazio, configuração pelo ambiente, container). Rotas de autenticação existentes (137) seguem passando. Sensor: 6 mutantes (limite com off-by-one, janela sem reinício, falha liberando tudo, chave sem clínica, 404 não tratado, container ignorando S3) — todos mortos. `npm run build` ok com o SDK.
+

@@ -208,7 +208,13 @@ One account belongs to exactly one Clinic (email is unique per Clinic, not globa
 
 **Photo storage**
 
-- Currently at root; planned to migrate to `uploads/<clinic_id>/condition-photos/…` in Phase 1.
+- Namespaced per clinic: `<clinic_id>/condition-photos/<id>`. Default is local disk (`UPLOADS_DIR`, Docker volume); `PHOTO_STORAGE=s3` stores in a private S3-compatible bucket (AWS S3, R2, MinIO) under the same keys — required with more than one replica. Missing S3 variables fail at startup, never silently fall back to disk.
+
+**Multiple replicas** (analysis item A4)
+
+- Auth endpoints (login, forgot/set password, bootstrap) rate-limit through Postgres (`rate_limit_windows`, one atomic upsert per attempt) — exact across replicas; if the database fails, the replica's in-memory limit applies instead of allowing everything.
+- The global `/api/*` limit (`API_RATE_LIMIT_MAX`, `proxy.ts`) stays in memory, per replica — it is burst protection, and a database write per request would double write load. With N replicas the effective ceiling is N × the setting.
+- Other per-process state is safe to keep per replica: the staff revocation cache (60 s TTL over the database), the closed-month report cache (only settled reports, which no longer change) and the Calendar gateway cache (token reuse only).
 
 **No global state per clinic** (in preparation for Phase 2)
 

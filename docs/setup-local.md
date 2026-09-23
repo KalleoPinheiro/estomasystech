@@ -91,6 +91,7 @@ Copia `.env.example` → `.env` e ajusta. Referência completa:
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_CALENDAR_ID` | Não | Calendar via service account (alternativa ao OAuth) |
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | Não | Tuning do pool Postgres |
 | `UPLOADS_DIR` | Não | Diretório de fotos de evolução (fora de `public/`) |
+| `PHOTO_STORAGE` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` / `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE` | Não | `PHOTO_STORAGE=s3` guarda as fotos num bucket S3-compatível privado (necessário com várias réplicas); faltando variável, falha na inicialização |
 | `CLINIC_NAME` / `CLINIC_CNPJ` / `CLINIC_ADDRESS` / `CLINIC_CITY` / `CLINIC_PROFESSIONAL_NAME` / `CLINIC_PROFESSIONAL_REGISTRY` | Não | Cabeçalho/assinatura de documentos clínicos |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | Não | Lembretes via WhatsApp (Meta Cloud API); sem elas roda em dry-run |
 

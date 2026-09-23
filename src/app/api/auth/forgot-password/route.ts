@@ -5,11 +5,11 @@ import { appUrlFromEnv } from '@/application/auth/send-invite';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, ok } from '@/lib/api-response';
 import { clientIp } from '@/lib/auth/client-ip';
-import { RateLimiter } from '@/lib/auth/rate-limit';
+import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
 /** Mesmo limite do login: a rota é um oráculo em potencial se puder ser martelada. */
-const FORGOT_RATE_LIMIT = new RateLimiter(5, 60_000);
+const FORGOT_RATE_LIMIT = new SharedRateLimiter('forgot-password', 5, 60_000);
 
 const schema = z.object({
   email: z.string().min(3).max(200),
@@ -26,7 +26,7 @@ const NEUTRAL_RESPONSE = {
 };
 
 export async function POST(request: NextRequest) {
-  if (!FORGOT_RATE_LIMIT.allow(clientIp(request))) {
+  if (!(await FORGOT_RATE_LIMIT.allow(clientIp(request)))) {
     return fail('Muitas tentativas, aguarde um minuto', 429);
   }
 
