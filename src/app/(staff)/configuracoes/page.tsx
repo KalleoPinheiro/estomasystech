@@ -35,6 +35,8 @@ import type {
 import { formatDateTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useSavableForm } from '@/lib/use-savable-form';
+import { ClosuresSection } from './closures-section';
+import { LunchBreakFields } from './lunch-break-fields';
 
 // Papéis que uma conta Admin de Empresa pode cadastrar (PROVISIONING_MATRIX.company_admin,
 // src/domain/auth/role-hierarchy.ts) — super_admin fica fora desta tela por design.
@@ -68,6 +70,7 @@ interface ScheduleConfigDto {
   startHour: number;
   endHour: number;
   minGapMinutes: number;
+  lunchBreak?: { startMinute: number; endMinute: number } | null;
 }
 
 export default function SettingsPage() {
@@ -76,6 +79,7 @@ export default function SettingsPage() {
       <h1 className="sv-display font-bold text-2xl">Configurações</h1>
       <ClinicInfoSection />
       <ScheduleSection />
+      <ClosuresSection />
       <CalendarIntegrationSection />
       <AccountsSection />
     </div>
@@ -172,6 +176,15 @@ function validateScheduleDraft(draft: ScheduleConfigDto): string | null {
   }
   if (draft.minGapMinutes < 15 || draft.minGapMinutes > 120) {
     return 'Intervalo mínimo deve estar entre 15 e 120 minutos';
+  }
+  const lunch = draft.lunchBreak;
+  if (
+    lunch &&
+    (lunch.startMinute >= lunch.endMinute ||
+      lunch.startMinute <= draft.startHour * 60 ||
+      lunch.endMinute >= draft.endHour * 60)
+  ) {
+    return 'O almoço precisa começar antes de terminar e ficar dentro do horário de funcionamento';
   }
   return null;
 }
@@ -286,6 +299,11 @@ function ScheduleForm({
           />
         </label>
       </div>
+
+      <LunchBreakFields
+        value={draft.lunchBreak ?? null}
+        onChange={(lunchBreak) => setDraft({ ...draft, lunchBreak })}
+      />
 
       <Button
         type="button"

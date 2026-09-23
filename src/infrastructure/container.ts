@@ -46,6 +46,7 @@ import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import type {
   NursingDiagnosisRepository,
@@ -109,6 +110,7 @@ import { DrizzlePatientRepository } from './persistence/drizzle/drizzle-patient-
 import { DrizzleProducedSessionRepository } from './persistence/drizzle/drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './persistence/drizzle/drizzle-professional-repository';
 import { DrizzleReminderLogRepository } from './persistence/drizzle/drizzle-reminder-log-repository';
+import { DrizzleScheduleAvailabilityRepository } from './persistence/drizzle/drizzle-schedule-availability-repository';
 import {
   DrizzleNursingDiagnosisRepository,
   DrizzleNursingInterventionRepository,
@@ -137,6 +139,7 @@ export interface Services {
   userAccounts: UserAccountRepository;
   authTokens: AuthTokenRepository;
   scheduleConfig: ScheduleConfigRepository;
+  scheduleAvailability: ScheduleAvailabilityRepository;
   googleAccounts: DrizzleGoogleAccountRepository;
   appointments: AppointmentRepository;
   invoices: InvoiceRepository;
@@ -301,6 +304,10 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     userAccounts: new DrizzleUserAccountRepository(db, tenant.clinicId),
     authTokens: new DrizzleAuthTokenRepository(db),
     scheduleConfig: new DrizzleScheduleConfigRepository(db, tenant.clinicId),
+    scheduleAvailability: new DrizzleScheduleAvailabilityRepository(
+      db,
+      tenant.clinicId,
+    ),
     googleAccounts: new DrizzleGoogleAccountRepository(db, tenant.clinicId),
     appointments: new DrizzleAppointmentRepository(db, tenant.clinicId),
     invoices: new DrizzleInvoiceRepository(db, tenant.clinicId),

@@ -38,8 +38,13 @@ const errorResponse = (message: string) => ({
 const mockFetch = (
   router: (call: FetchCall) => { ok: boolean; json: () => Promise<unknown> },
 ): ReturnType<typeof vi.fn> => {
+  // A tela de configurações também lista feriados/ausências: sem bloqueios
+  // por padrão, para os cenários que não tratam deles.
   const fn = vi.fn(async (url: string, init?: RequestInit) =>
-    router({ url, init }),
+    url.startsWith('/api/settings/schedule/closures') &&
+    (init?.method ?? 'GET') === 'GET'
+      ? jsonResponse([])
+      : router({ url, init }),
   );
   vi.stubGlobal('fetch', fn);
   return fn;
@@ -1003,7 +1008,10 @@ describe('Feature: SettingsPage', () => {
 
       expect(await screen.findByText('ana@clinica.com')).toBeInTheDocument();
       expect(screen.getByText('bob@clinica.com')).toBeInTheDocument();
-      expect(screen.getByText('Dra. Ana')).toBeInTheDocument();
+      // O nome também aparece como opção no formulário de ausências.
+      expect(
+        screen.getByRole('cell', { name: 'Dra. Ana' }),
+      ).toBeInTheDocument();
       expect(screen.getByText('Ativa')).toBeInTheDocument();
       expect(screen.getByText('Desativada')).toBeInTheDocument();
 
@@ -2551,6 +2559,36 @@ describe('Feature: ProfessionalsPage', () => {
       expect(await screen.findByText('Dra. Ana')).toBeInTheDocument();
       expect(screen.getByText('COREN-SP 123')).toBeInTheDocument();
       expect(screen.getByText('Ativo')).toBeInTheDocument();
+    });
+
+    it('Dado profissional listado, Quando clicar em Horários, Então abre o editor de horário dele', async () => {
+      mockFetch(({ url }) => {
+        if (url.startsWith('/api/professionals/pr1/availability')) {
+          return jsonResponse({ windows: [] });
+        }
+        if (url.startsWith('/api/professionals')) {
+          return jsonResponse([
+            {
+              id: 'pr1',
+              fullName: 'Dra. Ana',
+              registry: null,
+              commissionPct: 10,
+              active: true,
+            },
+          ]);
+        }
+        return jsonResponse(null, false);
+      });
+
+      renderWithToast(<ProfessionalsPage />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Horários' }));
+      expect(
+        await screen.findByRole('dialog', { name: 'Horários — Dra. Ana' }),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByRole('button', { name: 'Salvar horários' }),
+      ).toBeInTheDocument();
     });
 
     it('Dado erro ao carregar, Quando a página carrega, Então exibe alerta de erro', async () => {

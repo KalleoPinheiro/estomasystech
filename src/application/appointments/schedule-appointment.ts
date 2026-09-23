@@ -1,6 +1,7 @@
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfigRepository,
@@ -26,6 +27,7 @@ export class ScheduleAppointment {
     private readonly appointments: AppointmentRepository,
     private readonly patients: PatientRepository,
     private readonly scheduleConfig?: ScheduleConfigRepository,
+    private readonly availability?: ScheduleAvailabilityRepository,
   ) {}
 
   async execute(input: ScheduleAppointmentInput): Promise<Appointment> {
@@ -48,6 +50,7 @@ export class ScheduleAppointment {
       undefined,
       config,
       input.professionalId ?? null,
+      this.availability,
     );
 
     const appointment = Appointment.create({

@@ -16,14 +16,19 @@ import {
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { apiFetch } from '@/lib/client';
-import type { AppointmentDto, PatientDto, ProfessionalDto } from '@/lib/dto';
+import type {
+  AppointmentDto,
+  PatientDto,
+  ProfessionalDto,
+  ScheduleClosureDto,
+} from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 import { AppointmentDetail } from './appointment-detail';
 import {
   AppointmentForm,
   type AppointmentFormValues,
 } from './appointment-form';
-import { CalendarGrid } from './calendar-grid';
+import { CalendarGrid, dayKey } from './calendar-grid';
 
 function ProfessionalFilter({
   professionals,
@@ -154,6 +159,13 @@ export default function AgendaPage() {
     isDefault: boolean;
   }>('/api/settings/schedule');
   const scheduleConfig = resolveScheduleConfig(scheduleData);
+  // Grade do mês mostra até 6 dias do mês vizinho de cada lado.
+  const closuresUrl = useMemo(() => {
+    const from = new Date(monthDate.getFullYear(), monthDate.getMonth(), -6);
+    const to = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 7);
+    return `/api/settings/schedule/closures?from=${dayKey(from)}&to=${dayKey(to)}`;
+  }, [monthDate]);
+  const { data: closures } = useApiQuery<ScheduleClosureDto[]>(closuresUrl);
 
   const changeMonth = (delta: number) =>
     setMonthDate(
@@ -308,6 +320,10 @@ export default function AgendaPage() {
           monthDate={monthDate}
           appointments={appointments}
           scheduleConfig={scheduleConfig}
+          closures={closures ?? []}
+          professionalName={(id) =>
+            professionals?.find((p) => p.id === id)?.fullName ?? 'Profissional'
+          }
           onDayClick={(day) => setCreatingFor(day)}
           onAppointmentClick={setSelected}
         />

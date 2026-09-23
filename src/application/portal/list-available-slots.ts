@@ -2,6 +2,7 @@ import { assertSlotAvailable } from '@/application/appointments/assert-slot-avai
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfigRepository,
@@ -52,7 +53,14 @@ export class ListAvailableSlots {
     private readonly appointments: AppointmentRepository,
     private readonly procedures: ProcedureRepository,
     private readonly scheduleConfig?: ScheduleConfigRepository,
-  ) {}
+    availability?: ScheduleAvailabilityRepository,
+  ) {
+    // Uma listagem testa dezenas de candidatos do mesmo dia: bloqueios e
+    // horário do profissional são lidos uma vez só.
+    this.availability = availability && memoizeAvailability(availability);
+  }
+
+  private readonly availability?: ScheduleAvailabilityRepository;
 
   async execute(input: ListAvailableSlotsInput): Promise<AvailableSlot[]> {
     const request = await this.resolveRequest(input);
@@ -139,6 +147,7 @@ export class ListAvailableSlots {
         request.excludeId,
         config,
         request.professionalId,
+        this.availability,
       );
       return true;
     } catch (error) {
@@ -200,4 +209,37 @@ function parseLocalDate(date: string): Date | null {
     parsed.getMonth() === month - 1 &&
     parsed.getDate() === day;
   return isRealDate ? parsed : null;
+}
+
+/** Leituras de disponibilidade em cache durante uma listagem. */
+function memoizeAvailability(
+  source: ScheduleAvailabilityRepository,
+): ScheduleAvailabilityRepository {
+  const closures = new Map<string, ReturnType<typeof source.listClosures>>();
+  const hours = new Map<
+    string,
+    ReturnType<typeof source.getProfessionalHours>
+  >();
+  // Métodos delegados explicitamente: spread de instância de classe perderia
+  // os métodos do protótipo.
+  return {
+    findClosureById: (id) => source.findClosureById(id),
+    saveClosure: (closure) => source.saveClosure(closure),
+    deleteClosure: (id) => source.deleteClosure(id),
+    replaceProfessionalHours: (id, windows) =>
+      source.replaceProfessionalHours(id, windows),
+    listClosures: (range) => {
+      const key = `${range.from}|${range.to}`;
+      const cached = closures.get(key) ?? source.listClosures(range);
+      closures.set(key, cached);
+      return cached;
+    },
+    getProfessionalHours: (professionalId) => {
+      const cached =
+        hours.get(professionalId) ??
+        source.getProfessionalHours(professionalId);
+      hours.set(professionalId, cached);
+      return cached;
+    },
+  };
 }

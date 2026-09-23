@@ -6,7 +6,7 @@ import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
-import type { AppointmentDto } from '@/lib/dto';
+import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
 
 const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -62,6 +62,9 @@ interface CalendarGridProps {
   monthDate: Date;
   appointments: AppointmentDto[];
   scheduleConfig?: ScheduleConfig;
+  /** Feriados/recessos (dia fechado) e ausências de profissional (aviso). */
+  closures?: ScheduleClosureDto[];
+  professionalName?: (professionalId: string) => string;
   onDayClick: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }
@@ -70,6 +73,8 @@ export function CalendarGrid({
   monthDate,
   appointments,
   scheduleConfig = DEFAULT_SCHEDULE_CONFIG,
+  closures = [],
+  professionalName = () => 'Profissional',
   onDayClick,
   onAppointmentClick,
 }: CalendarGridProps) {
@@ -104,7 +109,14 @@ export function CalendarGrid({
             {days.map((day) => {
               const key = dayKey(day);
               const isCurrentMonth = day.getMonth() === monthDate.getMonth();
-              const invalid = isInvalidDay(day, scheduleConfig);
+              const dayClosures = closures.filter(
+                (c) => c.startsOn <= key && key <= c.endsOn,
+              );
+              const clinicClosure = dayClosures.find(
+                (c) => c.professionalId === null,
+              );
+              const invalid =
+                isInvalidDay(day, scheduleConfig) || Boolean(clinicClosure);
               const dayAppointments = (byDay.get(key) ?? []).sort((a, b) =>
                 a.startsAt.localeCompare(b.startsAt),
               );
@@ -142,6 +154,17 @@ export function CalendarGrid({
                   >
                     {day.getDate()}
                   </span>
+                  {dayClosures.map((closure) => (
+                    <p
+                      key={closure.id}
+                      className="truncate px-1 text-ink-3 text-xs"
+                      title={closure.reason}
+                    >
+                      {closure.professionalId === null
+                        ? `Fechado: ${closure.reason}`
+                        : `${professionalName(closure.professionalId)} ausente`}
+                    </p>
+                  ))}
                   <div className="mt-1 flex max-h-32 flex-col gap-1 overflow-hidden">
                     {visibleAppointments.map((appointment) => (
                       <Button

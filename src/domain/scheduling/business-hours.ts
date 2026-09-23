@@ -38,7 +38,13 @@ export function assertWithinBusinessHours(
   }
   const opensAt = config.startHour * 60;
   const closesAt = config.endHour * 60;
-  if (minutesOfDay(slot.start) < opensAt || minutesOfDay(slot.end) > closesAt) {
+  const startMinute = minutesOfDay(slot.start);
+  const endMinute = minutesOfDay(slot.end);
+  if (startMinute < opensAt || endMinute > closesAt) {
+    throw new ValidationError(message);
+  }
+  const lunch = config.lunchBreak;
+  if (lunch && startMinute < lunch.endMinute && lunch.startMinute < endMinute) {
     throw new ValidationError(message);
   }
 }

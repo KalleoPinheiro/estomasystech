@@ -160,9 +160,15 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 
 **Schedule settings** (configuração de horário)
 
-- Weekday/hour ranges when clinic accepts appointments.
-- Single row (id = `"default"`).
+- Weekday/hour ranges when clinic accepts appointments — one row per clinic.
+- Optional **lunch break** (`lunchBreak`, minutes of day): no appointment may overlap it, for any professional. Must sit strictly inside opening hours.
 - Business hours respected for appointment creation and reminders.
+
+**Schedule availability** (`src/domain/scheduling/schedule-availability.ts`)
+
+- **Closures** (`schedule_closures`): a clinic-wide closure (holiday, recess — `professional_id` null) blocks the whole day for everyone; a professional closure (vacation, congress) blocks only that professional's appointments. Local inclusive dates, 1–366 days, mandatory reason. Registering a closure never cancels existing appointments: the response lists the active ones in the period so the front desk reschedules case by case. Managed in Configurações (Admin and Atendente, same family as the grid); holidays are entered by hand (no national-holiday import).
+- **Professional weekly hours** (`professional_availability`): windows per weekday (non-overlapping). A professional with no windows follows only the clinic grid; with windows, an appointment assigned to them must fit entirely inside one window **and** the clinic grid/lunch. Edited in Profissionais (Admin only — `/api/professionals` family).
+- One rule everywhere: `assertSlotAvailable` (staff create/reschedule/recurring, portal self-scheduling/reschedule and the portal slot list) checks grid → lunch → closures → professional hours → gap between appointments. Portal bookings have no professional, so only clinic closures apply to them. The agenda grid shows clinic closures as closed days and professional absences as a note.
 
 **Pricing**
 

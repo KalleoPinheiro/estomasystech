@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       services.procedures,
       services.followUps,
       services.scheduleConfig,
+      services.scheduleAvailability,
     ).execute({
       email: session.subject,
       procedureId: body.procedureId,

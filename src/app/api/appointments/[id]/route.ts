@@ -99,6 +99,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const rescheduled = await new RescheduleAppointment(
         appointments,
         services.scheduleConfig,
+        services.scheduleAvailability,
       ).execute({
         id,
         startsAt: new Date(body.startsAt),
