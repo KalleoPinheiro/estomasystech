@@ -68,6 +68,35 @@ test.describe("portal do paciente", () => {
     );
   });
 
+  test("paciente cancela a própria consulta com antecedência", async ({ page, context, request }) => {
+    const patient = await createPatient(request, { fullName: `Paciente Cancela ${unique()}` });
+    const procedure = `Curativo cancela E2E ${unique()}`;
+    const slot = slotForAttempt("portal-paciente-cancel");
+    await createAppointment(request, {
+      patientId: patient.id,
+      startsAt: toApiDatetime(slot.startsAt),
+      endsAt: toApiDatetime(slot.endsAt),
+      procedure,
+      priceCents: 12000,
+    });
+
+    await context.addCookies([sessionCookie(patient.email, "patient")]);
+    await page.goto("/portal");
+
+    const upcoming = page.locator("section", { hasText: "Próximas consultas" });
+    const appointmentItem = upcoming.locator("li", { hasText: procedure });
+    await appointmentItem.getByRole("button", { name: "Cancelar consulta" }).click();
+    await appointmentItem.getByLabel("Motivo (opcional)").fill("Imprevisto no trabalho");
+    await appointmentItem.getByRole("button", { name: "Confirmar cancelamento" }).click();
+    await expectToast(page, "Consulta cancelada");
+
+    // Sai das próximas, vai para o histórico e não vira alerta de "cancelada pela clínica".
+    await expect(upcoming.getByText(procedure)).toHaveCount(0);
+    const history = page.locator("section", { hasText: "Histórico de consultas" });
+    await expect(history.locator("li", { hasText: procedure }).getByText("Cancelada")).toBeVisible();
+    await expect(page.getByText(/cancelada pela clínica/)).toHaveCount(0);
+  });
+
   test("paciente não consegue confirmar consulta de outro paciente", async ({
     page,
     context,

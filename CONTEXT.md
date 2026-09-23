@@ -38,6 +38,7 @@
 - May have an associated evolution note and Google Calendar event.
 - Statuses: pending, confirmed, completed, cancelled, no-show.
 - Anti-double-booking enforced by `endsAtBuffered` trigger.
+- **Cancellation record**: a cancelled appointment keeps who cancelled (`clinic` or `patient`), when, and an optional reason (≤ 1000 chars). Cancellations before this record existed have none.
 
 **Procedure** (procedimento)
 
@@ -150,6 +151,12 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 - No two appointments may overlap for a patient.
 - Enforced by `endsAtBuffered` and trigger-level exclusion constraint.
 - Minimum gap between appointments: defined in `schedule_settings`.
+
+**Patient self-service** (paciente cancela/remarca pelo portal — `src/domain/scheduling/patient-self-service.ts`)
+
+- The patient can cancel or reschedule their own active appointment through the portal only up to **24 h before it starts**; inside that window the portal points them to the clinic (the server enforces the same rule).
+- Reschedule keeps procedure, price, professional and duration — only the time changes, validated by the same availability rule as staff scheduling; the appointment goes back to `scheduled` (awaiting confirmation). Slots for rescheduling (`/api/portal/patient/slots?appointmentId=…`) use the appointment's own duration and professional and ignore the appointment itself as a conflict.
+- Both actions are audited with the patient as actor and sync Google Calendar after the response. Cancelling again is idempotent. The portal alerts only cancellations made by the clinic; the patient's own go to the history. Staff see the origin, date and reason in the appointment detail.
 
 **Schedule settings** (configuração de horário)
 

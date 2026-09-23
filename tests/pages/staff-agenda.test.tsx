@@ -71,6 +71,9 @@ const appointmentFixture: AppointmentDto = {
   notes: 'Observação clínica',
   status: 'scheduled',
   professionalId: null,
+  cancelledBy: null,
+  cancelledAt: null,
+  cancelReason: null,
 };
 
 // Fixture com data fixa para os cenários do CalendarGrid, que renderizam o mês
@@ -84,6 +87,9 @@ const julyAppointmentFixture: AppointmentDto = {
   notes: 'Observação clínica',
   status: 'scheduled',
   professionalId: null,
+  cancelledBy: null,
+  cancelledAt: null,
+  cancelReason: null,
 };
 
 interface AgendaFetchOptions {
@@ -1328,6 +1334,45 @@ describe('Feature: Detalhe de consulta', () => {
 
       expect(screen.queryByText('Confirmar')).not.toBeInTheDocument();
       expect(screen.queryByText('Remarcar')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Cenário: registro de cancelamento', () => {
+    it('Dado consulta cancelada pelo paciente no portal, Quando renderizar, Então mostra quem cancelou, quando e o motivo', () => {
+      render(
+        <AppointmentDetail
+          appointment={{
+            ...appointmentFixture,
+            status: 'cancelled',
+            cancelledBy: 'patient',
+            cancelledAt: '2026-07-18T10:00:00.000Z',
+            cancelReason: 'Viagem',
+          }}
+          onAction={vi.fn().mockResolvedValue(undefined)}
+          onReschedule={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+
+      expect(screen.getByText(/pelo paciente no portal/)).toHaveTextContent(
+        /— Viagem/,
+      );
+    });
+
+    it('Dado consulta cancelada pela clínica sem motivo, Quando renderizar, Então mostra a origem sem motivo', () => {
+      render(
+        <AppointmentDetail
+          appointment={{
+            ...appointmentFixture,
+            status: 'cancelled',
+            cancelledBy: 'clinic',
+            cancelledAt: '2026-07-18T10:00:00.000Z',
+          }}
+          onAction={vi.fn().mockResolvedValue(undefined)}
+          onReschedule={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+
+      expect(screen.getByText(/pela clínica/)).not.toHaveTextContent('—');
     });
   });
 

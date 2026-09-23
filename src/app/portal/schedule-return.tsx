@@ -16,18 +16,18 @@ import type { ProcedureDto } from '@/lib/dto';
 import { formatDateTime, formatTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 
-interface AvailableSlotDto {
+export interface AvailableSlotDto {
   startsAt: string;
   endsAt: string;
 }
 
 /** Data local no formato aceito por <input type="date"> e pela API. */
-const dayKey = (date: Date): string =>
+export const dayKey = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
     date.getDate(),
   ).padStart(2, '0')}`;
 
-const OFFER_WINDOW_DAYS = 14;
+export const OFFER_WINDOW_DAYS = 14;
 
 interface ScheduleReturnProps {
   followUpId: string;
@@ -155,7 +155,7 @@ function SchedulePanel({
 
         {procedureId && date && (
           <SlotPicker
-            procedureId={procedureId}
+            query={`procedureId=${encodeURIComponent(procedureId)}`}
             date={date}
             disabled={saving}
             onPick={(slot) => void schedule(slot)}
@@ -175,20 +175,26 @@ function SchedulePanel({
   );
 }
 
-/** Horários livres do dia — montado só com procedimento e data escolhidos. */
-function SlotPicker({
-  procedureId,
+/**
+ * Horários livres do dia — montado só com o dia e o que define a duração
+ * escolhidos: `procedureId=…` (novo agendamento) ou `appointmentId=…`
+ * (remarcação, com a duração e o profissional da própria consulta).
+ */
+export function SlotPicker({
+  query,
   date,
   disabled,
   onPick,
+  mode = 'schedule',
 }: {
-  procedureId: string;
+  query: string;
   date: string;
   disabled: boolean;
   onPick: (slot: AvailableSlotDto) => void;
+  mode?: 'schedule' | 'reschedule';
 }) {
   const { data: slots, error } = useApiQuery<AvailableSlotDto[]>(
-    `/api/portal/patient/slots?procedureId=${encodeURIComponent(procedureId)}&date=${encodeURIComponent(date)}`,
+    `/api/portal/patient/slots?${query}&date=${encodeURIComponent(date)}`,
   );
 
   // Sem estes dois ramos a falha era silenciosa: o paciente via a área vazia e
@@ -227,8 +233,16 @@ function SlotPicker({
               {formatTime(slot.startsAt)}
             </Button>
           }
-          title="Confirmar agendamento"
-          description={`Agendar sua consulta para ${formatDateTime(slot.startsAt)}?`}
+          title={
+            mode === 'reschedule'
+              ? 'Confirmar remarcação'
+              : 'Confirmar agendamento'
+          }
+          description={
+            mode === 'reschedule'
+              ? `Remarcar sua consulta para ${formatDateTime(slot.startsAt)}?`
+              : `Agendar sua consulta para ${formatDateTime(slot.startsAt)}?`
+          }
           confirmLabel="Confirmar"
           onConfirm={() => onPick(slot)}
         />

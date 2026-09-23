@@ -16,6 +16,23 @@ export const APPOINTMENT_STATUSES = [
 
 export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 
+/** Quem cancelou: a equipe da clínica ou o próprio paciente pelo portal. */
+export type CancellationOrigin = 'clinic' | 'patient';
+
+export interface AppointmentCancellation {
+  by: CancellationOrigin;
+  at: Date;
+  reason: string | null;
+}
+
+export interface CancelInput {
+  by?: CancellationOrigin;
+  at?: Date;
+  reason?: string | null;
+}
+
+const MAX_CANCEL_REASON_LENGTH = 1000;
+
 export interface AppointmentProps {
   patientId: string;
   slot: TimeSlot;
@@ -33,6 +50,8 @@ export interface AppointmentState extends AppointmentProps {
   status: AppointmentStatus;
   createdAt: Date;
   googleEventId?: string | null;
+  /** Registro do cancelamento — null em consultas não canceladas e no histórico anterior. */
+  cancellation?: AppointmentCancellation | null;
 }
 
 const ACTIVE_STATUSES: readonly AppointmentStatus[] = [
@@ -61,6 +80,7 @@ export class Appointment {
       status: 'scheduled',
       createdAt: new Date(),
       googleEventId: null,
+      cancellation: null,
     });
   }
 
@@ -88,8 +108,22 @@ export class Appointment {
     return this.transitionTo('completed', ACTIVE_STATUSES);
   }
 
-  cancel(): Appointment {
-    return this.transitionTo('cancelled', ACTIVE_STATUSES);
+  cancel(input: CancelInput = {}): Appointment {
+    const reason = input.reason?.trim() || null;
+    if (reason && reason.length > MAX_CANCEL_REASON_LENGTH) {
+      throw new ValidationError(
+        `Motivo do cancelamento deve ter até ${MAX_CANCEL_REASON_LENGTH} caracteres`,
+      );
+    }
+    const cancelled = this.transitionTo('cancelled', ACTIVE_STATUSES);
+    return new Appointment({
+      ...cancelled.state,
+      cancellation: {
+        by: input.by ?? 'clinic',
+        at: input.at ?? new Date(),
+        reason,
+      },
+    });
   }
 
   markNoShow(): Appointment {
@@ -128,6 +162,10 @@ export class Appointment {
 
   withGoogleEventId(googleEventId: string | null): Appointment {
     return new Appointment({ ...this.state, googleEventId });
+  }
+
+  get cancellation(): AppointmentCancellation | null {
+    return this.state.cancellation ?? null;
   }
 
   get googleEventId(): string | null {

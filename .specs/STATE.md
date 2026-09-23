@@ -729,3 +729,12 @@ Pedido do usuário (2026-09-23): resolver a #77 por inteiro. Faltava o limite ge
 - **Redis dispensado**: o critério da issue citava Redis; a decisão do usuário foi Postgres, sem serviço novo. `API_RATE_LIMIT_MAX` continua configurável.
 - **Testes**: +6 no `shared-rate-limit` (lote no upsert, 1 ida ao banco por segundo, envio do acumulado, **duas réplicas em lote somando o teto**, falha → local e nova tentativa, poda da memória); `proxy.test.ts` passa a usar PGlite e zera o contador entre cenários. E2E completo local: 84 passaram, 1 intermitente já conhecido (`responsive-tables › relatórios`, colisão de horário nos dados de teste). Sensor: 6 mutantes (lote contado como +1, acumulado descartado, sem lote, contagem local sempre liberando, sem poda da memória, proxy sem limite) — todos mortos.
 
+## Paciente cancela e remarca pelo portal (N6, item 8a) — CONCLUÍDA
+
+Pedido do usuário (2026-09-23): implementar o item 8 (lacunas de produto do N6), uma PR por tópico. Este é o primeiro tópico; os outros (agenda por profissional, lista de espera + cancelamento tardio, pagamento parcial + desconto + recibo) seguem em PRs próprias.
+
+- **Regra**: antecedência mínima fixa de 24 h (`PATIENT_CHANGE_MIN_NOTICE_HOURS`); dentro dela o portal manda falar com a clínica. Configuração por clínica fica para o tópico de política de cancelamento tardio.
+- **Registro do cancelamento**: `appointments.cancelled_at/cancelled_by/cancel_reason` (migração 0033). Cancelamento da equipe grava `clinic`; o do portal, `patient`. O alerta "cancelada pela clínica" do portal (PORT-09) ignora os do próprio paciente.
+- **Remarcação**: mesma duração, procedimento, preço e profissional; mesma regra de disponibilidade da equipe (`RescheduleAppointment`). A listagem de horários aceita `appointmentId` (duração/profissional da consulta, ela mesma não conta como conflito).
+- **Decisões**: motivo opcional para o paciente; sem notificação ativa à equipe (a agenda mostra a origem no detalhe); remarcação só dentro da janela de oferta de 14 dias (UI), sem limite no servidor além de "futuro".
+

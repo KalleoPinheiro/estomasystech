@@ -1,7 +1,8 @@
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
-import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import { ValidationError } from '@/domain/shared/errors';
+import { findOwnAppointment } from './own-appointment';
 
 export interface ConfirmOwnAppointmentInput {
   email: string;
@@ -21,15 +22,12 @@ export class ConfirmOwnAppointment {
   ) {}
 
   async execute(input: ConfirmOwnAppointmentInput): Promise<Appointment> {
-    const patient = await this.patients.findByEmail(input.email);
-    if (!patient?.isActive) {
-      throw new NotFoundError('Paciente', input.email);
-    }
-
-    const appointment = await this.appointments.findById(input.appointmentId);
-    if (!appointment || appointment.patientId !== patient.id) {
-      throw new NotFoundError('Consulta', input.appointmentId);
-    }
+    const appointment = await findOwnAppointment(
+      this.patients,
+      this.appointments,
+      input.email,
+      input.appointmentId,
+    );
 
     if (appointment.status === 'confirmed') {
       return appointment;
