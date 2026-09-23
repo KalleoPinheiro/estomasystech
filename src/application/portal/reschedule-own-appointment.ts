@@ -4,7 +4,10 @@ import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import { assertPatientCanChange } from '@/domain/scheduling/patient-self-service';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
-import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
+import {
+  cancellationPolicyOf,
+  type ScheduleConfigRepository,
+} from '@/domain/scheduling/schedule-config';
 import { ValidationError } from '@/domain/shared/errors';
 import { findOwnAppointment } from './own-appointment';
 
@@ -37,7 +40,8 @@ export class RescheduleOwnAppointment {
       input.appointmentId,
     );
     const now = input.now ?? new Date();
-    assertPatientCanChange(appointment, now);
+    const policy = cancellationPolicyOf(await this.scheduleConfig?.get());
+    assertPatientCanChange(appointment, now, policy.noticeHours);
 
     if (input.startsAt.getTime() <= now.getTime()) {
       throw new ValidationError('Escolha um horário futuro para a consulta');

@@ -171,6 +171,9 @@ export const scheduleSettings = pgTable(
     // Almoço da clínica em minutos desde 00:00 — ambos nulos = sem pausa.
     lunchStartMinute: integer('lunch_start_minute'),
     lunchEndMinute: integer('lunch_end_minute'),
+    // Política de cancelamento — nulos = padrão (24 h, sem taxa).
+    cancelNoticeHours: integer('cancel_notice_hours'),
+    lateCancelFeeCents: integer('late_cancel_fee_cents'),
     updatedAt: timestamp('updated_at', {
       withTimezone: true,
       mode: 'date',
@@ -226,6 +229,40 @@ export const professionalAvailability = pgTable(
     index('idx_professional_availability_professional').on(
       table.professionalId,
     ),
+  ],
+);
+
+// Lista de espera: pacientes aguardando vaga, por ordem de chegada.
+export const waitlistEntries = pgTable(
+  'waitlist_entries',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    patientId: text('patient_id')
+      .notNull()
+      .references(() => patients.id),
+    procedureId: text('procedure_id').references(() => procedures.id),
+    professionalId: text('professional_id').references(() => professionals.id),
+    fromDate: date('from_date', { mode: 'string' }).notNull(),
+    toDate: date('to_date', { mode: 'string' }).notNull(),
+    notes: text('notes'),
+    source: text('source').notNull(),
+    status: text('status').notNull(),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'date' }),
+  },
+  (table) => [
+    index('idx_waitlist_entries_clinic_status').on(
+      table.clinicId,
+      table.status,
+      table.createdAt,
+    ),
+    index('idx_waitlist_entries_patient').on(table.patientId),
   ],
 );
 
@@ -313,6 +350,8 @@ export const appointments = pgTable(
     }),
     cancelledBy: text('cancelled_by'),
     cancelReason: text('cancel_reason'),
+    // Cancelamento pedido pelo paciente dentro da antecedência mínima.
+    cancelledLate: boolean('cancelled_late').notNull().default(false),
     createdAt: timestamp('created_at', {
       withTimezone: true,
       mode: 'date',

@@ -18,6 +18,10 @@ import type {
   ScheduleConfig,
   ScheduleConfigRepository,
 } from '@/domain/scheduling/schedule-config';
+import type {
+  WaitlistEntry,
+  WaitlistRepository,
+} from '@/domain/scheduling/waitlist';
 
 export class InMemoryProcedureRepository implements ProcedureRepository {
   private readonly items = new Map<string, Procedure>();
@@ -155,5 +159,29 @@ export class InMemoryScheduleAvailabilityRepository
     windows: readonly WeeklyWindow[],
   ): Promise<void> {
     this.hours.set(professionalId, [...windows]);
+  }
+}
+
+export class InMemoryWaitlistRepository implements WaitlistRepository {
+  private readonly entries = new Map<string, WaitlistEntry>();
+
+  async save(entry: WaitlistEntry): Promise<void> {
+    this.entries.set(entry.id, entry);
+  }
+
+  async findById(id: string): Promise<WaitlistEntry | null> {
+    return this.entries.get(id) ?? null;
+  }
+
+  async listWaiting(): Promise<WaitlistEntry[]> {
+    return [...this.entries.values()]
+      .filter((e) => e.status === 'waiting')
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  async findByPatient(patientId: string): Promise<WaitlistEntry[]> {
+    return [...this.entries.values()]
+      .filter((e) => e.patientId === patientId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }

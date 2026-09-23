@@ -83,6 +83,7 @@ const appointment = (status: string): AppointmentDto => ({
   cancelledBy: null,
   cancelledAt: null,
   cancelReason: null,
+  cancelledLate: false,
 });
 
 const condition: ConditionDto = {

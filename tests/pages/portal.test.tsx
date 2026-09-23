@@ -57,9 +57,17 @@ function mockFetch(routes: RouteHandler[]) {
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString();
       const method = init?.method ?? 'GET';
-      const route = routes.find(
-        (r) => url.startsWith(r.path) && (r.method ?? 'GET') === method,
-      );
+      // Lista de espera do paciente: vazia, salvo quando o cenário define
+      // uma rota própria para ela (o prefixo '/api/portal/patient' não vale).
+      const isWaitlist = url.startsWith('/api/portal/patient/waitlist');
+      const route =
+        routes.find(
+          (r) =>
+            url.startsWith(r.path) &&
+            (r.method ?? 'GET') === method &&
+            (!isWaitlist || r.path.includes('/waitlist')),
+        ) ??
+        (isWaitlist ? { respond: () => jsonResponse(true, []) } : undefined);
       if (!route) {
         throw new Error(`URL não mapeada no mock: ${method} ${url}`);
       }

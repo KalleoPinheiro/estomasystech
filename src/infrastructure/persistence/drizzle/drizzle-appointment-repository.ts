@@ -73,6 +73,7 @@ function toCancellation(row: AppointmentRow): AppointmentCancellation | null {
     by: row.cancelledBy === 'patient' ? 'patient' : 'clinic',
     at: row.cancelledAt,
     reason: row.cancelReason,
+    late: row.cancelledLate,
   };
 }
 
@@ -104,6 +105,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
       cancelledAt: appointment.cancellation?.at ?? null,
       cancelledBy: appointment.cancellation?.by ?? null,
       cancelReason: appointment.cancellation?.reason ?? null,
+      cancelledLate: appointment.cancellation?.late ?? false,
       createdAt: appointment.createdAt,
     };
     try {

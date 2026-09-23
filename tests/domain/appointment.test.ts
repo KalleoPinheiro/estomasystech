@@ -78,6 +78,7 @@ describe('Feature: Agendamento de consulta', () => {
         by: 'clinic',
         at,
         reason: null,
+        late: false,
       });
     });
 

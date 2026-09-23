@@ -17,6 +17,8 @@ export interface AppointmentDto {
   cancelledBy: CancellationOrigin | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /** Pedido do paciente dentro da antecedência mínima da clínica. */
+  cancelledLate: boolean;
 }
 
 export const toAppointmentDto = (
@@ -36,6 +38,7 @@ export const toAppointmentDto = (
   cancelledBy: appointment.cancellation?.by ?? null,
   cancelledAt: appointment.cancellation?.at.toISOString() ?? null,
   cancelReason: appointment.cancellation?.reason ?? null,
+  cancelledLate: appointment.cancellation?.late ?? false,
 });
 
 /** Consulta vista pelos portais: sem preço e sem anotações internas da equipe. */

@@ -246,6 +246,13 @@
       "when": 1790173461668,
       "tag": "0034_schedule-availability",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790175201634,
+      "tag": "0035_waitlist-late-cancellation",
+      "breakpoints": true
     }
   ]
 }

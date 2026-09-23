@@ -7,6 +7,25 @@ export interface LunchBreak {
   endMinute: number;
 }
 
+/**
+ * Política de cancelamento da clínica: antecedência mínima para o paciente
+ * mudar a consulta sozinho (portal) e, dentro dela, taxa opcional cobrada por
+ * cancelamento tardio pedido pelo paciente ou por falta.
+ */
+export interface CancellationPolicy {
+  noticeHours: number;
+  /** 0 = sem taxa. */
+  lateFeeCents: number;
+}
+
+export const DEFAULT_CANCELLATION_POLICY: CancellationPolicy = {
+  noticeHours: 24,
+  lateFeeCents: 0,
+};
+
+const MAX_NOTICE_HOURS = 168;
+const MAX_LATE_FEE_CENTS = 1_000_000;
+
 /** Dias da semana como em Date.getDay(): 0=domingo … 6=sábado. */
 export interface ScheduleConfig {
   weekdays: number[];
@@ -15,6 +34,8 @@ export interface ScheduleConfig {
   minGapMinutes: number;
   /** Almoço da clínica — vale para todos os profissionais. Ausente = sem pausa. */
   lunchBreak?: LunchBreak | null;
+  /** Ausente = `DEFAULT_CANCELLATION_POLICY` (24 h, sem taxa). */
+  cancellationPolicy?: CancellationPolicy;
 }
 
 /** Comportamento histórico do sistema — usado quando nada foi configurado. */
@@ -24,6 +45,7 @@ export const DEFAULT_SCHEDULE_CONFIG: ScheduleConfig = {
   endHour: 18,
   minGapMinutes: 15,
   lunchBreak: null,
+  cancellationPolicy: DEFAULT_CANCELLATION_POLICY,
 };
 
 const WEEKDAY_LABELS = [
@@ -66,7 +88,39 @@ export function validateScheduleConfig(config: ScheduleConfig): ScheduleConfig {
     ...config,
     weekdays,
     lunchBreak: validateLunchBreak(config.lunchBreak ?? null, config),
+    cancellationPolicy: validateCancellationPolicy(
+      config.cancellationPolicy ?? DEFAULT_CANCELLATION_POLICY,
+    ),
   };
+}
+
+export function validateCancellationPolicy(
+  policy: CancellationPolicy,
+): CancellationPolicy {
+  if (!isIntInRange(policy.noticeHours, 0, MAX_NOTICE_HOURS)) {
+    throw new ValidationError(
+      `Antecedência para cancelar deve ser de 0 a ${MAX_NOTICE_HOURS} horas`,
+    );
+  }
+  if (!isIntInRange(policy.lateFeeCents, 0, MAX_LATE_FEE_CENTS)) {
+    throw new ValidationError('Taxa de cancelamento tardio inválida');
+  }
+  return { noticeHours: policy.noticeHours, lateFeeCents: policy.lateFeeCents };
+}
+
+export function cancellationPolicyOf(
+  config: ScheduleConfig | null | undefined,
+): CancellationPolicy {
+  return config?.cancellationPolicy ?? DEFAULT_CANCELLATION_POLICY;
+}
+
+/** Mudança dentro da antecedência mínima (inclusive depois do início). */
+export function isLateChange(
+  startsAt: Date,
+  at: Date,
+  policy: CancellationPolicy,
+): boolean {
+  return at.getTime() > startsAt.getTime() - policy.noticeHours * 3_600_000;
 }
 
 function validateLunchBreak(

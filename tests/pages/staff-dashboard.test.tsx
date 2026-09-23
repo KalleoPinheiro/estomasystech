@@ -44,6 +44,7 @@ const appointmentFixture: AppointmentDto = {
   cancelledBy: null,
   cancelledAt: null,
   cancelReason: null,
+  cancelledLate: false,
 };
 
 const followUpFixture: FollowUpDto = {
