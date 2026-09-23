@@ -86,7 +86,7 @@ Copia `.env.example` → `.env` e ajusta. Referência completa:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | P/ Google Agenda | OAuth client (Web) — integração de agenda, nunca login |
 | `TZ` | Recomendada | Fuso da clínica (horário comercial validado em hora local) |
 | `CRON_SECRET` | P/ lembretes | Header `x-cron-secret` em `POST /api/reminders/run`; sem ele rota fica 503 |
-| `API_RATE_LIMIT_MAX` | Não | Req/min por IP em `/api/*` (padrão 120) |
+| `API_RATE_LIMIT_MAX` | Não | Req/min por IP em `/api/*` (padrão 120), somado entre réplicas (contador no Postgres) |
 | `VITTA_ALLOW_OPEN_MODE` | Não | `true` roda sem auth (só fora de produção) |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_CALENDAR_ID` | Não | Calendar via service account (alternativa ao OAuth) |
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | Não | Tuning do pool Postgres |

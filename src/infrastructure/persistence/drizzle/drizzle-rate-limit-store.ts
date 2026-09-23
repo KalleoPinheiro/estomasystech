@@ -5,23 +5,28 @@ import { rateLimitWindows } from './schema';
 
 /**
  * Janela fixa no Postgres, compartilhada entre réplicas (issue #77). Um único
- * upsert atômico conta o acesso: requisições simultâneas de réplicas
+ * upsert atômico soma os acessos: requisições simultâneas de réplicas
  * diferentes nunca perdem incremento.
  */
 export class DrizzleRateLimitStore implements RateLimitStore {
   constructor(private readonly db: AppDb) {}
 
-  async hit(key: string, windowMs: number, nowMs: number): Promise<number> {
+  async hit(
+    key: string,
+    windowMs: number,
+    nowMs: number,
+    amount = 1,
+  ): Promise<number> {
     const now = new Date(nowMs);
     const resetAt = new Date(nowMs + windowMs);
     const expired = sql`${rateLimitWindows.resetAt} <= ${now.toISOString()}::timestamptz`;
     const [row] = await this.db
       .insert(rateLimitWindows)
-      .values({ key, count: 1, resetAt })
+      .values({ key, count: amount, resetAt })
       .onConflictDoUpdate({
         target: rateLimitWindows.key,
         set: {
-          count: sql`CASE WHEN ${expired} THEN 1 ELSE ${rateLimitWindows.count} + 1 END`,
+          count: sql`CASE WHEN ${expired} THEN ${amount} ELSE ${rateLimitWindows.count} + ${amount} END`,
           resetAt: sql`CASE WHEN ${expired} THEN excluded.reset_at ELSE ${rateLimitWindows.resetAt} END`,
         },
       })

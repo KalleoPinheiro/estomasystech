@@ -10,6 +10,9 @@ vi.mock('@/lib/auth/staff-revocation', () => ({
   isStaffSessionRevoked: vi.fn().mockResolvedValue(false),
 }));
 
+// O limite de /api é contado no Postgres (issue #77) — PGlite na suíte.
+process.env.VITTA_DB_DRIVER = 'pglite';
+
 const SECRET = 'segredo-do-proxy-em-teste';
 
 const AUTH_ENV_KEYS = [
@@ -55,7 +58,14 @@ const body = async (response: NextResponse) =>
 describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => {
   const saved: Record<string, string | undefined> = {};
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Contador compartilhado vive no banco: zera entre cenários, como o
+    // loadProxy() zera o módulo.
+    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+    const { rateLimitWindows } = await import(
+      '@/infrastructure/persistence/drizzle/schema'
+    );
+    await (await getDb()).delete(rateLimitWindows);
     for (const key of AUTH_ENV_KEYS) {
       saved[key] = process.env[key];
       delete process.env[key];
