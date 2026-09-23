@@ -239,8 +239,8 @@ for (const viewport of VIEWPORTS) {
         title: `Ferida indicada mobile ${unique()}`,
       });
       // Duas avaliações com medida: o gráfico de evolução só aparece a partir da segunda.
-  await addAssessment(request, condition.id, { lengthMm: 20, widthMm: 10, depthMm: 2 });
-  await addAssessment(request, condition.id, { lengthMm: 16, widthMm: 8, depthMm: 1 });
+      await addAssessment(request, condition.id, { lengthMm: 20, widthMm: 10, depthMm: 2 });
+      await addAssessment(request, condition.id, { lengthMm: 16, widthMm: 8, depthMm: 1 });
 
       await context.addCookies([sessionCookie(partner.email, "partner")]);
       await page.goto("/portal");
