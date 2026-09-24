@@ -24,7 +24,7 @@ import {
   createSupply,
   unique,
 } from "./support/api";
-import { slotForAttempt } from "./support/dates";
+import { type SlotSeed, slotForAttempt } from "./support/dates";
 import { sessionCookie } from "./support/session-token";
 
 /**
@@ -365,7 +365,7 @@ test.describe("casca e padrões compartilhados", () => {
 });
 
 /** Consulta nova num dia futuro, com o paciente do mundo; devolve o dia e a hora. */
-async function seedAgendaAppointment(request: APIRequestContext, seed: string) {
+async function seedAgendaAppointment(request: APIRequestContext, seed: SlotSeed) {
   const w = await world(request);
   const slot = slotForAttempt(seed, 30);
   await createAppointment(request, {

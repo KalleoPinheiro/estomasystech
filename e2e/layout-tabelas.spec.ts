@@ -15,7 +15,7 @@ import {
   payInvoice,
   unique,
 } from "./support/api";
-import { businessDay, slotForAttempt, ymdToDateInput } from "./support/dates";
+import { businessDay, type SlotSeed, slotForAttempt, ymdToDateInput } from "./support/dates";
 
 /**
  * Layout mobile-first, S3 (checks C16–C18): as 13 tabelas do table set empilham
@@ -56,7 +56,7 @@ async function goToMonth(page: Page, isoDate: string): Promise<void> {
 }
 
 /** Consulta concluída com profissional comissionado: alimenta relatórios e repasses. */
-async function seedProduction(request: APIRequestContext, seed: string) {
+async function seedProduction(request: APIRequestContext, seed: SlotSeed) {
   const professional = await apiPost<{ id: string }>(request, "/api/professionals", {
     fullName: `Enf. Comissão ${unique()}`,
     registry: "COREN-SP 1",
