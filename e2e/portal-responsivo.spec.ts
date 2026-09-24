@@ -10,7 +10,7 @@ import {
   createProcedure,
   unique,
 } from "./support/api";
-import { businessDay, slotForAttempt, ymdToDateInput } from "./support/dates";
+import { businessDay, type SlotSeed, slotForAttempt, ymdToDateInput } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
 import { literal } from "./support/regexp";
 import { sessionCookie } from "./support/session-token";
@@ -22,11 +22,8 @@ import { sessionCookie } from "./support/session-token";
  * controle visível tem alvo de toque de pelo menos 44x44 px (WCAG 2.5.5).
  */
 /**
- * Seeds de horário escolhidas à mão: o conflito de agenda é global e
- * `businessDay` joga sábado/domingo para a segunda seguinte, então offsets
- * vizinhos (ex.: 59 e 60) caem no mesmo dia. `…-paciente-375x667` colidia com
- * `responsive-tables-relatorios` (409). Estas ficam a mais de 3 dias ou 90 min
- * de qualquer outra seed da suíte.
+ * Seeds de horário registradas em `SLOT_SEEDS` (`e2e/support/slots.ts`): cada uma
+ * tem dia útil exclusivo, então não colidem com as demais seeds da suíte.
  */
 const VIEWPORTS = [
   {
@@ -90,10 +87,7 @@ async function expectMobileFriendly(page: Page, width: number, state: string): P
   await expectTouchTargets(page, state);
 }
 
-/**
- * `slotFromSeed` sorteia início até 17:45 — com 60 min, parte das seeds termina
- * depois das 18:00 e a API recusa. 15 min cabe na grade para qualquer seed.
- */
+/** Consulta curta: o portal só precisa de uma consulta futura para exibir. */
 const SLOT_MINUTES = 15;
 
 /** Toast é transitório e mora fora do portal — mede a tela depois que ele sai. */
@@ -111,7 +105,7 @@ interface SeededPatient {
 async function seedPatientPortal(
   request: APIRequestContext,
   context: BrowserContext,
-  seed: string,
+  seed: SlotSeed,
 ): Promise<SeededPatient> {
   const patient = await createPatient(request, { fullName: `Paciente Mobile ${unique()}` });
   const procedure = await createProcedure(request, { name: `Curativo mobile ${unique()}` });
