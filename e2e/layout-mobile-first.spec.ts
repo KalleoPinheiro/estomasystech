@@ -185,12 +185,26 @@ async function settle(page: Page): Promise<void> {
   await expect(page.locator(".sv-skeleton:visible")).toHaveCount(0, { timeout: 20_000 });
 }
 
-/** Largura útil de `main` (sem o padding): a coluna onde o conteúdo deve caber. */
+/**
+ * Largura útil esperada da coluna de conteúdo, calculada sem depender dela:
+ * viewport − sidebar fixa (rail do desktop; no celular a sidebar é drawer e não
+ * ocupa a linha) − padding horizontal de `main`. Se o wrapper encolher até o
+ * conteúdo, `main` encolhe junto e esta referência não — a prova falha.
+ */
 async function contentWidth(page: Page): Promise<number> {
-  return page.locator("main").first().evaluate((el) => {
-    const style = getComputedStyle(el);
+  return page.evaluate(() => {
+    const main = document.querySelector("main") as HTMLElement;
+    const style = getComputedStyle(main);
+    const aside = document.querySelector("aside");
+    const rail =
+      aside && aside.checkVisibility() && getComputedStyle(aside).position !== "fixed"
+        ? aside.getBoundingClientRect().width
+        : 0;
     return (
-      el.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight)
+      document.documentElement.clientWidth -
+      rail -
+      Number.parseFloat(style.paddingLeft) -
+      Number.parseFloat(style.paddingRight)
     );
   });
 }
@@ -413,6 +427,52 @@ async function seedReceipt(request: APIRequestContext) {
     { action: "pay", method: "pix" },
   );
   return { receiptUrl: `/documentos/recibo/${paid.id}/${paid.payments[0].id}` };
+}
+
+/**
+ * Comprovante de repasse: fechar um repasse de verdade exige mês encerrado, e a
+ * API recusa consulta no passado. A página busca o comprovante pela API no
+ * navegador, então o teste responde essa chamada com um repasse fixo e mede o
+ * documento renderizado de verdade.
+ */
+async function mockPayoutReceipt(page: Page): Promise<string> {
+  const payout = {
+    id: "po-layout",
+    professionalId: "pr-layout",
+    professionalName: "Enf. Layout Repasse",
+    period: "2026-08",
+    totalCents: 4000,
+    paidAt: "2026-09-05T12:00:00.000Z",
+    paymentMethod: "pix",
+    notes: null,
+    createdBy: "admin@clinica.com",
+    createdAt: "2026-09-05T12:00:00.000Z",
+    rule: { kind: "percentage", pct: 40 },
+    status: "active",
+    cancelledAt: null,
+    cancelledBy: null,
+    cancelReason: null,
+    items: [
+      {
+        appointmentId: "a1",
+        kind: "session",
+        procedure: "Troca de curativo com cobertura de prata",
+        sessionDate: "2026-08-10T12:00:00.000Z",
+        baseCents: 25000,
+        commissionCents: 10000,
+      },
+    ],
+  };
+  await page.route("**/api/commission-payouts/po-layout", (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: { payout, professional: { fullName: "Enf. Layout Repasse", registry: "COREN-SP 3" } },
+        error: null,
+      },
+    }),
+  );
+  return "/documentos/repasse/po-layout";
 }
 
 test.describe("agenda", () => {
@@ -659,6 +719,7 @@ test.describe("telas com defeito específico", () => {
       `/documentos/relatorio/${w.conditionId}`,
       `/documentos/plano-cuidados/${w.carePlanId}`,
       receiptUrl,
+      await mockPayoutReceipt(page),
     ]) {
       await page.goto(url);
       await settle(page);
@@ -672,5 +733,29 @@ test.describe("telas com defeito específico", () => {
       );
       expect(unwrapped, url).toBe(0);
     }
+  });
+});
+
+test.describe("regra de toque da lib no desktop", () => {
+  test("desktop com mouse mantém a altura da lib", async ({ page, request }) => {
+    await world(request);
+    await page.setViewportSize(DESKTOP);
+    await page.goto("/pacientes");
+    await settle(page);
+    const sizes = await page
+      .locator("[data-page-header-actions] .sv-btn")
+      .first()
+      .evaluate((el) => {
+        const probe = document.createElement("div");
+        probe.style.height = "var(--sv-space-10)";
+        document.body.append(probe);
+        const base = probe.getBoundingClientRect().height;
+        probe.remove();
+        return { height: el.getBoundingClientRect().height, base };
+      });
+    // Em 1440x900 com ponteiro fino a regra de 44px não se aplica: o botão
+    // continua com a altura base da lib (--sv-space-10).
+    expect(sizes.base).toBeLessThan(44);
+    expect(sizes.height).toBe(sizes.base);
   });
 });

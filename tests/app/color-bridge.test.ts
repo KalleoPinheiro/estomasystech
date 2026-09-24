@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -56,5 +56,50 @@ function colorBridge(): Record<string, string> {
 describe('Feature: cores preservadas no layout mobile-first', () => {
   it('ponte de cor inalterada', () => {
     expect(colorBridge()).toEqual(BASELINE);
+  });
+});
+
+/** Todo `.tsx` de `src/`. */
+function tsxFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return tsxFiles(path);
+    return path.endsWith('.tsx') ? [path] : [];
+  });
+}
+
+const COLOR_PREFIXES =
+  '(?:text|bg|border|border-[trblxy]|ring|outline|divide|decoration|fill|stroke|placeholder|caret|accent)';
+/** Nomes da ponte `@theme` mais os neutros literais que AD-006 permite. */
+const ALLOWED = new Set([
+  ...Object.keys(BASELINE).map((name) => name.replace('--color-', '')),
+  'white',
+  'black',
+  'transparent',
+  'current',
+  'inherit',
+]);
+/** Sufixos que não são cor (tamanho, alinhamento, largura, estilo). */
+const NOT_COLOR =
+  /^(?:xs|sm|base|lg|xl|\d?xl|left|right|center|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|none|solid|dashed|dotted|double|collapse|separate|\d+|x|y|t|b|l|r|[trblxy]-\d+|offset-\d+|inset|opacity-\d+)$/;
+
+describe('Feature: utilitários de cor resolvem pela ponte', () => {
+  it('todo utilitário de cor do app usa um nome da ponte @theme', () => {
+    const re = new RegExp(
+      `(?:^|[\\s"'\`{:])${COLOR_PREFIXES}-([a-z][a-z0-9-]*)(?:/\\d+)?(?=[\\s"'\`}])`,
+      'g',
+    );
+    const unknown = new Set<string>();
+    for (const file of tsxFiles(resolve(process.cwd(), 'src'))) {
+      const source = readFileSync(file, 'utf-8');
+      for (const [, suffix] of source.matchAll(re)) {
+        const name = suffix as string;
+        // `sv-*`: token do próprio pacote (`@still-void/ui/tailwind.css`), também var(--sv-*).
+        if (NOT_COLOR.test(name) || ALLOWED.has(name) || name.startsWith('sv-'))
+          continue;
+        unknown.add(`${name} (${file.split('/src/')[1]})`);
+      }
+    }
+    expect([...unknown]).toEqual([]);
   });
 });
