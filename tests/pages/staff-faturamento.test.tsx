@@ -289,7 +289,9 @@ describe('Feature: Faturamento', () => {
       renderWithToast(<BillingPage />);
 
       const valueCell = await screen.findAllByText('R$ 150,00');
-      const cell = valueCell.find((el) => el.tagName === 'TD');
+      const cell = valueCell
+        .map((el) => el.closest('td'))
+        .find((td) => td?.getAttribute('data-label') === 'Valor');
       expect(cell).toHaveClass('text-right', 'tabular-nums');
     });
 

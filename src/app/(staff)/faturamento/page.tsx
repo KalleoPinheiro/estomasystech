@@ -54,8 +54,9 @@ interface InvoicesTableProps {
 
 /** Valor líquido; com desconto, o valor original riscado; parcial, o saldo. */
 function AmountCell({ invoice }: { invoice: InvoiceDto }) {
+  // Um único filho: na tabela empilhada o texto solto cairia sob o rótulo.
   return (
-    <>
+    <span>
       {invoice.discountCents > 0 && (
         <span className="mr-1 text-ink-3 text-xs line-through">
           {formatCurrency(invoice.amountCents)}
@@ -67,7 +68,7 @@ function AmountCell({ invoice }: { invoice: InvoiceDto }) {
           falta {formatCurrency(invoice.balanceCents)}
         </span>
       )}
-    </>
+    </span>
   );
 }
 
@@ -129,7 +130,10 @@ function InvoicesTable({
               <TableCell label="Emissão" className="px-4 py-3 text-ink-2">
                 {formatDate(invoice.issuedAt)}
               </TableCell>
-              <TableCell label="Paciente" className="px-4 py-3 font-medium">
+              <TableCell
+                label="Paciente"
+                className="px-4 py-3 font-medium sm:min-w-44"
+              >
                 {invoice.patientName}
               </TableCell>
               <TableCell
@@ -163,12 +167,12 @@ function InvoicesTable({
                 className="px-4 py-3 text-right sm:whitespace-nowrap"
               >
                 {invoice.status === 'pending' ? (
-                  <>
+                  <span className="inline-flex flex-wrap justify-end gap-x-2 sm:flex-nowrap">
                     <Button
                       type="button"
                       onClick={() => onPay(invoice)}
                       variant="link"
-                      className="mr-2 h-auto p-0 text-success"
+                      className="h-auto p-0 text-success"
                     >
                       Receber
                     </Button>
@@ -176,7 +180,7 @@ function InvoicesTable({
                       type="button"
                       onClick={() => onDiscount(invoice)}
                       variant="link"
-                      className="mr-2 h-auto p-0 text-accent-ink"
+                      className="h-auto p-0 text-accent-ink"
                     >
                       Desconto
                     </Button>
@@ -198,7 +202,7 @@ function InvoicesTable({
                         onConfirm={() => onCancel(invoice)}
                       />
                     )}
-                  </>
+                  </span>
                 ) : (
                   <span className="text-ink-3">—</span>
                 )}

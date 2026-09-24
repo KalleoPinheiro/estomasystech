@@ -1,6 +1,7 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import {
   addAssessment,
+  apiPatch,
   apiPost,
   completeAppointment,
   createAppointment,
@@ -115,12 +116,33 @@ const TABLE_SET: Member[] = [
   {
     name: "faturamento",
     seed: async (request) => {
-      const patient = await createPatient(request);
-      await createInvoice(request, {
+      // Nome longo e fatura com desconto e pagamento parcial: o valor riscado,
+      // o saldo e as três ações são os filhos mistos que a célula empilhada
+      // precisa manter na coluna do valor.
+      const patient = await createPatient(request, {
+        fullName: `Maria Aparecida Tabela Faturamento ${unique()}`,
+      });
+      const invoice = await createInvoice(request, {
         patientId: patient.id,
         description: `Fatura tabela ${unique()}`,
         amountCents: 9000,
       });
+      await apiPatch(request, `/api/invoices/${invoice.id}`, {
+        action: "discount",
+        amountCents: 1000,
+        reason: "Tabela",
+      });
+      await createInvoice(request, {
+        patientId: patient.id,
+        description: `Fatura parcial ${unique()}`,
+        amountCents: 9000,
+      }).then((partial) =>
+        apiPatch(request, `/api/invoices/${partial.id}`, {
+          action: "pay_partial",
+          amountCents: 3000,
+          method: "pix",
+        }),
+      );
       return { url: "/faturamento", header: "Pagamento" };
     },
   },
@@ -157,7 +179,7 @@ const TABLE_SET: Member[] = [
   {
     name: "repasses",
     seed: async (request) => {
-      const { slot, patient } = await seedProduction(request, "layout-tabelas-repasses");
+      const { slot, patient } = await seedProduction(request, "layout-tabelas-repasses-2");
       const invoice = await createInvoice(request, {
         patientId: patient.id,
         description: `Fatura repasse ${unique()}`,

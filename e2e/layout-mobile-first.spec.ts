@@ -497,7 +497,7 @@ test.describe("agenda", () => {
   });
 
   test("agenda: ponto no dia com consulta", async ({ page, request }) => {
-    const { dayKey } = await seedAgendaAppointment(request, "layout-agenda-ponto");
+    const { dayKey } = await seedAgendaAppointment(request, "layout-agenda-ponto-2");
     await page.setViewportSize(MOBILE);
     await page.goto("/agenda");
     await settle(page);
