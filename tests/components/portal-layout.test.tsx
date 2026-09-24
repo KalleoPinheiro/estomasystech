@@ -56,3 +56,19 @@ describe('Feature: Header do portal (SV3-03)', () => {
     expect(document.querySelector('details')).toBeNull();
   });
 });
+
+describe('Feature: aviso de emergência do portal (layout mobile-first, AC 28)', () => {
+  it('aviso de emergência com um ícone', () => {
+    const { container } = render(
+      <PortalLayout>
+        <p>Conteúdo da página</p>
+      </PortalLayout>,
+    );
+    const notice = screen
+      .getByText(/Em caso de sangramento, febre ou dor/)
+      .closest('.sv-alert');
+    expect(notice).not.toBeNull();
+    expect(notice?.querySelectorAll('svg')).toHaveLength(1);
+    expect(container).toBeTruthy();
+  });
+});

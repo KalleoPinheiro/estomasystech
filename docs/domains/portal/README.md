@@ -3,7 +3,7 @@ title: "Domínio: Portal do paciente e do parceiro"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-24
 domain: portal
 ---
 
@@ -49,8 +49,8 @@ Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-port
 | casos de uso | `src/application/portal/` |
 | API | `src/app/api/portal/{me,patient,partner}/` |
 | UI | `src/app/portal/` |
-| layout mobile | `.portal-shell` em `src/app/globals.css` (lacunas `layout-grid-min-content` e `touch-target-size` em [`still-void-gaps.md`](../../still-void-gaps.md)) |
-| testes | `tests/application/`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo}.spec.ts` |
+| layout mobile | regras de toque e de grid da `@still-void/ui@3.4.0`; só o alvo de toque de link segue local (`.portal-shell` em `src/app/globals.css`, lacuna `touch-target-size` em [`still-void-gaps.md`](../../still-void-gaps.md)) |
+| testes | `tests/application/`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo,layout-mobile-first}.spec.ts` |
 
 ## Decisões
 

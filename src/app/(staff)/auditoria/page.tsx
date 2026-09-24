@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { LoadMoreButton } from '@/components/load-more-button';
+import { PageHeader } from '@/components/page-header';
 import { PagedList } from '@/components/paged-list';
 import type { AuditEventDto, PatientDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -95,41 +96,41 @@ export default function AuditPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">
-          Auditoria de prontuário
-        </h1>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-ink-2 text-sm">
-            De
-            <Input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-ink-2 text-sm">
-            Até
-            <Input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </label>
-          <NativeSelect
-            aria-label="Filtrar por paciente"
-            value={patientId}
-            onChange={(e) => setPatientId(e.target.value)}
-          >
-            <option value="">Todos os pacientes</option>
-            {(patients ?? []).map((patient) => (
-              <option key={patient.id} value={patient.id}>
-                {patient.fullName}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-      </div>
+      <PageHeader
+        title="Auditoria de prontuário"
+        actions={
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-ink-2 text-sm">
+              De
+              <Input
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-ink-2 text-sm">
+              Até
+              <Input
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </label>
+            <NativeSelect
+              aria-label="Filtrar por paciente"
+              value={patientId}
+              onChange={(e) => setPatientId(e.target.value)}
+            >
+              <option value="">Todos os pacientes</option>
+              {(patients ?? []).map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.fullName}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        }
+      />
 
       <p className="mb-4 text-ink-3 text-sm">
         Trilha imutável de acessos e alterações em dados clínicos (LGPD art.
@@ -145,6 +146,7 @@ export default function AuditPage() {
           render={(list) => (
             <div className="overflow-x-auto">
               <Table
+                stack
                 className={`w-full text-left text-sm ${isLoading ? 'opacity-60' : ''}`}
                 aria-busy={isLoading}
               >
@@ -161,29 +163,38 @@ export default function AuditPage() {
                 <TableBody>
                   {list.map((event) => (
                     <TableRow key={event.id}>
-                      <TableCell className="whitespace-nowrap px-4 py-2 text-ink-2">
+                      <TableCell
+                        label="Quando"
+                        className="whitespace-nowrap px-4 py-2 text-ink-2"
+                      >
                         {formatDateTimeWithSeconds(event.occurredAt)}
                       </TableCell>
-                      <TableCell className="px-4 py-2">
+                      <TableCell label="Ator" className="px-4 py-2">
                         <span className="font-medium">{event.actorRole}</span>
                         <span className="block text-ink-3 text-xs">
                           {event.actorId}
                         </span>
                       </TableCell>
-                      <TableCell className="px-4 py-2">
+                      <TableCell label="Ação" className="px-4 py-2">
                         {ACTION_LABELS[event.action] ?? event.action}
                       </TableCell>
-                      <TableCell className="px-4 py-2">
+                      <TableCell label="Recurso" className="px-4 py-2">
                         {RESOURCE_LABELS[event.resourceType] ??
                           event.resourceType}
                       </TableCell>
-                      <TableCell className="px-4 py-2 text-ink-2">
+                      <TableCell
+                        label="Paciente"
+                        className="px-4 py-2 text-ink-2"
+                      >
                         {event.patientId
                           ? (patientNames.get(event.patientId) ??
                             event.patientId)
                           : '—'}
                       </TableCell>
-                      <TableCell className="px-4 py-2 text-ink-3">
+                      <TableCell
+                        label="Detalhe"
+                        className="px-4 py-2 text-ink-3"
+                      >
                         {event.detail ?? '—'}
                       </TableCell>
                     </TableRow>

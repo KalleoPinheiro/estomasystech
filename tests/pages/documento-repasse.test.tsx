@@ -203,3 +203,20 @@ describe('Feature: Comprovante de repasse', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('Feature: comprovante de repasse no celular (layout mobile-first, AC 30)', () => {
+  it('tabela do comprovante dentro de contêiner com rolagem', async () => {
+    mockFetch('company_admin', jsonResponse(receipt()));
+
+    await render();
+
+    await screen.findByText('Comprovante de Repasse');
+    const tables = document.querySelectorAll('table');
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of Array.from(tables)) {
+      // `.sv-table-container` da lib declara `overflow-x: auto`: uma tabela larga
+      // rola dentro de si e a página do documento não ganha rolagem lateral.
+      expect(table.closest('.sv-table-container')).not.toBeNull();
+    }
+  });
+});

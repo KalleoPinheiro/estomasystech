@@ -21,6 +21,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import type { CommissionType } from '@/domain/professional/professional';
 import { apiFetch } from '@/lib/client';
@@ -80,16 +81,18 @@ export default function ProfessionalsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Profissionais</h1>
-        <Button
-          type="button"
-          onClick={() => setEditing('new')}
-          variant="accent"
-        >
-          + Novo profissional
-        </Button>
-      </div>
+      <PageHeader
+        title="Profissionais"
+        actions={
+          <Button
+            type="button"
+            onClick={() => setEditing('new')}
+            variant="accent"
+          >
+            + Novo profissional
+          </Button>
+        }
+      />
 
       {(error || actionError) && (
         <ErrorAlert message={actionError ?? error ?? ''} />
@@ -102,7 +105,7 @@ export default function ProfessionalsPage() {
           <EmptyState message="Nenhum profissional cadastrado. Consultas e evoluções podem ser atribuídas após o cadastro." />
         ) : (
           <div className="overflow-x-auto">
-            <Table className="w-full text-left text-sm">
+            <Table stack className="w-full text-left text-sm">
               <TableHeader>
                 <TableRow>
                   <TableHead className="px-4 py-3">Nome</TableHead>
@@ -118,22 +121,25 @@ export default function ProfessionalsPage() {
                     key={professional.id}
                     className={professional.active ? '' : 'bg-surface-2/60'}
                   >
-                    <TableCell className="px-4 py-3 font-medium">
+                    <TableCell label="Nome" className="px-4 py-3 font-medium">
                       {professional.fullName}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-ink-2">
+                    <TableCell
+                      label="Registro"
+                      className="px-4 py-3 text-ink-2"
+                    >
                       {professional.registry ?? '—'}
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-ink-2">
+                    <TableCell label="Repasse" className="px-4 py-3 text-ink-2">
                       {formatCommissionRule(ruleOf(professional))}
                     </TableCell>
-                    <TableCell className="px-4 py-3">
+                    <TableCell label="Situação" className="px-4 py-3">
                       <StatusBadge
                         status={professional.active ? 'confirmed' : 'cancelled'}
                         label={professional.active ? 'Ativo' : 'Inativo'}
                       />
                     </TableCell>
-                    <TableCell className="px-4 py-3 text-right">
+                    <TableCell label="Ações" className="px-4 py-3 text-right">
                       <Button
                         type="button"
                         onClick={() => setEditing(professional)}

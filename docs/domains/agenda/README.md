@@ -3,7 +3,7 @@ title: "Domínio: Agenda"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-24
 domain: agenda
 ---
 
@@ -37,6 +37,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
 | Calendário mensal, nova consulta, ações por status, remarcação | entregue | `/agenda` |
+| Agenda no celular (abaixo de 768px): mês compacto de 7 colunas com ponto no dia que tem consulta e, abaixo, a lista das consultas do dia escolhido (hoje por padrão); "Agendar neste dia" só em dia válido | entregue | `/agenda` (`mobile-month.tsx`) |
 | Consultas recorrentes | entregue | `/agenda` |
 | Grade, almoço, política de cancelamento, feriados e ausências | entregue | Configurações, Profissionais |
 | Lista de espera | entregue | `/agenda` → Lista de espera |
@@ -53,7 +54,7 @@ Specs de execução: `.specs/features/{agenda-p1-p3-pontuais,catalogo-p0-p3-pont
 | casos de uso | `src/application/{appointments,scheduling,followups}/` |
 | API | `src/app/api/{appointments,follow-ups,procedures,waitlist,settings}/` |
 | UI | `src/app/(staff)/{agenda,procedimentos}/` |
-| testes | `tests/domain/`, `tests/application/`, `e2e/{agenda,followup,lista-espera,feriados-ausencias}.spec.ts` |
+| testes | `tests/domain/`, `tests/application/`, `e2e/{agenda,followup,lista-espera,feriados-ausencias,layout-mobile-first}.spec.ts` |
 
 ## Decisões
 

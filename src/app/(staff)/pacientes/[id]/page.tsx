@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { use, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import type {
   AnamnesisDto,
@@ -72,34 +73,48 @@ function tabLabel(
 
 function PatientHeader({ patient }: { patient: PatientDto }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-3">
-      <h1 className="sv-display font-bold text-2xl">{patient.fullName}</h1>
-      <StatusBadge
-        status={patient.active ? 'confirmed' : 'cancelled'}
-        label={patient.active ? 'Ativo' : 'Inativo'}
-      />
-      <span className="text-ink-3 text-sm">
-        {patient.phone} · {patient.email}
-        {patient.birthDate ? ` · nasc. ${formatDate(patient.birthDate)}` : ''}
-      </span>
-      <span className="ml-auto flex gap-3 font-medium text-sm">
-        <a
-          href={`/documentos/consentimento/${patient.id}`}
-          className="text-accent-ink hover:underline"
+    <PageHeader
+      leading={
+        <Link
+          href="/pacientes"
+          className="inline-flex items-center gap-1 text-accent-ink text-sm hover:underline"
         >
-          Termo de consentimento
-        </a>
-        <a
-          href={`/api/patients/${patient.id}/export`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-ink-3 hover:underline"
-          title="Exportação completa dos dados do titular (LGPD art. 18)"
-        >
-          Exportar dados (LGPD)
-        </a>
-      </span>
-    </div>
+          <Icon name="chevron-left" /> Pacientes
+        </Link>
+      }
+      title={patient.fullName}
+      badge={
+        <StatusBadge
+          status={patient.active ? 'confirmed' : 'cancelled'}
+          label={patient.active ? 'Ativo' : 'Inativo'}
+        />
+      }
+      description={
+        <span className="break-words">
+          {patient.phone} · {patient.email}
+          {patient.birthDate ? ` · nasc. ${formatDate(patient.birthDate)}` : ''}
+        </span>
+      }
+      actions={
+        <span className="flex flex-wrap gap-x-4 gap-y-1 font-medium text-sm">
+          <a
+            href={`/documentos/consentimento/${patient.id}`}
+            className="text-accent-ink hover:underline"
+          >
+            Termo de consentimento
+          </a>
+          <a
+            href={`/api/patients/${patient.id}/export`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-ink-3 hover:underline"
+            title="Exportação completa dos dados do titular (LGPD art. 18)"
+          >
+            Exportar dados (LGPD)
+          </a>
+        </span>
+      }
+    />
   );
 }
 
@@ -220,11 +235,6 @@ export default function PatientRecordPage({
 
   return (
     <div>
-      <div className="mb-1 text-sm">
-        <Link href="/pacientes" className="text-accent-ink hover:underline">
-          <Icon name="chevron-left" /> Pacientes
-        </Link>
-      </div>
       <PatientHeader patient={patient} />
       <AllergyBanner allergies={anamnesis?.allergies} />
 

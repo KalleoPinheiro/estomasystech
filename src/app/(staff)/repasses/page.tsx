@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { MetricCard } from '@/components/metric-card';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import type {
   CommissionPayoutDto,
   PayoutStatementDto,
@@ -106,32 +107,32 @@ export default function PayoutsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">
-          {data?.scope === 'own' ? 'Meus repasses' : 'Repasses'}
-        </h1>
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            onClick={() => setMonth((m) => shiftMonth(m, -1))}
-            aria-label="Mês anterior"
-            variant="outline"
-          >
-            <Icon name="chevron-left" />
-          </Button>
-          <span className="min-w-40 text-center font-semibold text-lg">
-            {monthLabelPtBr(month)}
-          </span>
-          <Button
-            type="button"
-            onClick={() => setMonth((m) => shiftMonth(m, 1))}
-            aria-label="Próximo mês"
-            variant="outline"
-          >
-            <Icon name="chevron-right" />
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={data?.scope === 'own' ? 'Meus repasses' : 'Repasses'}
+        actions={
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              onClick={() => setMonth((m) => shiftMonth(m, -1))}
+              aria-label="Mês anterior"
+              variant="outline"
+            >
+              <Icon name="chevron-left" />
+            </Button>
+            <span className="min-w-40 text-center font-semibold text-lg">
+              {monthLabelPtBr(month)}
+            </span>
+            <Button
+              type="button"
+              onClick={() => setMonth((m) => shiftMonth(m, 1))}
+              aria-label="Próximo mês"
+              variant="outline"
+            >
+              <Icon name="chevron-right" />
+            </Button>
+          </div>
+        }
+      />
 
       {error && <ErrorAlert message={error} />}
       {!error && !data && isLoading && <LoadingIndicator />}

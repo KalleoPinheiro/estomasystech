@@ -267,7 +267,7 @@ function ClosuresTable({
 
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="py-2 pr-3">Período</TableHead>
@@ -279,16 +279,18 @@ function ClosuresTable({
         <TableBody>
           {closures.map((closure) => (
             <TableRow key={closure.id}>
-              <TableCell className="py-2 pr-3">
+              <TableCell label="Período" className="py-2 pr-3">
                 {closure.startsOn === closure.endsOn
                   ? formatDateKey(closure.startsOn)
                   : `${formatDateKey(closure.startsOn)} a ${formatDateKey(closure.endsOn)}`}
               </TableCell>
-              <TableCell className="py-2 pr-3">
+              <TableCell label="Quem" className="py-2 pr-3">
                 {professionalName(closure.professionalId)}
               </TableCell>
-              <TableCell className="py-2 pr-3">{closure.reason}</TableCell>
-              <TableCell className="py-2 text-right">
+              <TableCell label="Motivo" className="py-2 pr-3">
+                {closure.reason}
+              </TableCell>
+              <TableCell label="Ações" className="py-2 text-right">
                 <ConfirmAction
                   trigger={
                     <Button type="button" size="sm" variant="ghost">

@@ -3,6 +3,7 @@
 import { Button, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { AuthCard } from '@/components/auth-card';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 
@@ -38,46 +39,42 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center">
-      {/* sv-gradient-border é a assinatura visual do Still Void — nunca trocada
-          por box-shadow, e cards do sistema não têm sombra. */}
-      <div className="sv-gradient-border w-full max-w-sm p-8">
-        <h1 className="sv-display font-bold text-xl">Esqueci minha senha</h1>
-        <p className="mt-1 mb-6 text-ink-3 text-sm">
-          Informe seu e-mail e enviaremos um link para definir uma nova senha.
-        </p>
-        {sent ? (
-          <p className="text-sm">{NEUTRAL_CONFIRMATION}</p>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            {error && <ErrorAlert message={error} />}
-            <label className="font-medium text-sm">
-              E-mail
-              <Input
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                className="mt-1"
-              />
-            </label>
-            <Button
-              type="submit"
-              disabled={submitting}
-              variant="accent"
-              className="mt-4 w-full"
-            >
-              {submitting ? 'Enviando…' : 'Enviar link'}
-            </Button>
-          </form>
-        )}
-        <p className="mt-4 text-center text-sm">
-          <Link href="/login" className="text-accent-ink hover:underline">
-            Voltar para o login
-          </Link>
-        </p>
-      </div>
-    </div>
+    <AuthCard>
+      <h1 className="sv-display font-bold text-xl">Esqueci minha senha</h1>
+      <p className="mt-1 mb-6 text-ink-3 text-sm">
+        Informe seu e-mail e enviaremos um link para definir uma nova senha.
+      </p>
+      {sent ? (
+        <p className="text-sm">{NEUTRAL_CONFIRMATION}</p>
+      ) : (
+        <form onSubmit={handleSubmit}>
+          {error && <ErrorAlert message={error} />}
+          <label className="font-medium text-sm">
+            E-mail
+            <Input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seu@email.com"
+              className="mt-1"
+            />
+          </label>
+          <Button
+            type="submit"
+            disabled={submitting}
+            variant="accent"
+            className="mt-4 w-full"
+          >
+            {submitting ? 'Enviando…' : 'Enviar link'}
+          </Button>
+        </form>
+      )}
+      <p className="mt-4 text-center text-sm">
+        <Link href="/login" className="text-accent-ink hover:underline">
+          Voltar para o login
+        </Link>
+      </p>
+    </AuthCard>
   );
 }

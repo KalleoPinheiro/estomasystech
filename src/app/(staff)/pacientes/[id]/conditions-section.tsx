@@ -204,7 +204,7 @@ export function ConditionsSection({
                         <div className="mb-3">
                           <HealingChart assessments={conditionAssessments} />
                         </div>
-                        <Table className="text-left text-xs">
+                        <Table stack className="text-left text-xs">
                           <TableHeader>
                             <TableRow>
                               <TableHead className="py-1 pr-3">Data</TableHead>
@@ -235,37 +235,57 @@ export function ConditionsSection({
                           <TableBody>
                             {conditionAssessments.map((a) => (
                               <TableRow key={a.id}>
-                                <TableCell className="py-1.5 pr-3">
+                                <TableCell label="Data" className="py-1.5 pr-3">
                                   {formatDateTime(a.createdAt)}
                                 </TableCell>
-                                <TableCell className="py-1.5 pr-3">
+                                <TableCell
+                                  label="C×L×P (mm)"
+                                  className="py-1.5 pr-3"
+                                >
                                   {a.lengthMm != null
                                     ? `${a.lengthMm}×${a.widthMm ?? '—'}×${a.depthMm ?? '—'}`
                                     : '—'}
                                 </TableCell>
-                                <TableCell className="py-1.5 pr-3">
+                                <TableCell
+                                  label="Área (mm²)"
+                                  className="py-1.5 pr-3"
+                                >
                                   {a.areaMm2 ?? '—'}
                                 </TableCell>
-                                <TableCell className="py-1.5 pr-3">
+                                <TableCell
+                                  label="Tecido"
+                                  className="py-1.5 pr-3"
+                                >
                                   {a.tissueType ?? '—'}
                                 </TableCell>
-                                <TableCell className="py-1.5 pr-3">
+                                <TableCell
+                                  label="Exsudato"
+                                  className="py-1.5 pr-3"
+                                >
                                   {a.exudate ? EXUDATE_LABELS[a.exudate] : '—'}
                                 </TableCell>
                                 <TableCell
+                                  label="Dor"
                                   className={painCellClass(a.painScale)}
                                 >
                                   {a.painScale != null
                                     ? `${a.painScale}/10`
                                     : '—'}
                                 </TableCell>
-                                <TableCell className="py-1.5 pr-3 font-medium">
+                                <TableCell
+                                  label="PUSH/DET"
+                                  className="py-1.5 pr-3 font-medium"
+                                >
                                   {scoreLabel(a)}
                                 </TableCell>
-                                <TableCell className="py-1.5 pr-3">
+                                <TableCell
+                                  label="Pele periestomal"
+                                  className="py-1.5 pr-3"
+                                >
                                   {a.skinCondition ?? '—'}
                                 </TableCell>
                                 <TableCell
+                                  label="Complicações"
                                   className={complicationsCellClass(a)}
                                 >
                                   {complicationsCellText(a)}

@@ -19,6 +19,7 @@ import { ErrorAlert } from '@/components/feedback';
 import { LoadMoreButton } from '@/components/load-more-button';
 import { MetricCard } from '@/components/metric-card';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { PagedList } from '@/components/paged-list';
 import { StatusBadge } from '@/components/status-badge';
 import type { InvoiceSummary } from '@/domain/billing/invoice-repository';
@@ -53,20 +54,21 @@ interface InvoicesTableProps {
 
 /** Valor líquido; com desconto, o valor original riscado; parcial, o saldo. */
 function AmountCell({ invoice }: { invoice: InvoiceDto }) {
+  // Um único filho: na tabela empilhada o texto solto cairia sob o rótulo.
   return (
-    <>
+    <span>
       {invoice.discountCents > 0 && (
-        <span className="mr-1 text-ink-3 text-xs line-through">
+        <span className="mr-1 text-ink-3 text-xs line-through sm:mr-0 sm:block">
           {formatCurrency(invoice.amountCents)}
         </span>
       )}
       {formatCurrency(invoice.netAmountCents)}
       {invoice.status === 'pending' && invoice.paidCents > 0 && (
-        <span className="block font-normal text-warning text-xs">
+        <span className="block whitespace-nowrap font-normal text-warning text-xs">
           falta {formatCurrency(invoice.balanceCents)}
         </span>
       )}
-    </>
+    </span>
   );
 }
 
@@ -110,34 +112,43 @@ function InvoicesTable({
 }: InvoicesTableProps) {
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
-            <TableHead className="px-4 py-3">Emissão</TableHead>
-            <TableHead className="px-4 py-3">Paciente</TableHead>
-            <TableHead className="px-4 py-3">Descrição</TableHead>
-            <TableHead className="px-4 py-3 text-right">Valor</TableHead>
-            <TableHead className="px-4 py-3">Status</TableHead>
-            <TableHead className="px-4 py-3">Pagamento</TableHead>
-            <TableHead className="px-4 py-3 text-right">Ações</TableHead>
+            <TableHead className="px-3 py-3">Emissão</TableHead>
+            <TableHead className="px-3 py-3">Paciente</TableHead>
+            <TableHead className="px-3 py-3">Descrição</TableHead>
+            <TableHead className="px-3 py-3 text-right">Valor</TableHead>
+            <TableHead className="px-3 py-3">Status</TableHead>
+            <TableHead className="px-3 py-3">Pagamento</TableHead>
+            <TableHead className="px-3 py-3 text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {invoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell className="px-4 py-3 text-ink-2">
+              <TableCell label="Emissão" className="px-3 py-3 text-ink-2">
                 {formatDate(invoice.issuedAt)}
               </TableCell>
-              <TableCell className="px-4 py-3 font-medium">
+              <TableCell
+                label="Paciente"
+                className="px-3 py-3 font-medium sm:min-w-44"
+              >
                 {invoice.patientName}
               </TableCell>
-              <TableCell className="max-w-56 truncate px-4 py-3 text-ink-2">
+              <TableCell
+                label="Descrição"
+                className="px-3 py-3 text-ink-2 sm:max-w-32 sm:truncate"
+              >
                 {invoice.description}
               </TableCell>
-              <TableCell className="px-4 py-3 text-right font-medium tabular-nums">
+              <TableCell
+                label="Valor"
+                className="px-3 py-3 text-right font-medium tabular-nums"
+              >
                 <AmountCell invoice={invoice} />
               </TableCell>
-              <TableCell className="px-4 py-3">
+              <TableCell label="Status" className="px-3 py-3">
                 <StatusBadge
                   status={invoice.status}
                   label={
@@ -145,17 +156,23 @@ function InvoicesTable({
                   }
                 />
               </TableCell>
-              <TableCell className="px-4 py-3 text-ink-2 text-xs">
+              <TableCell
+                label="Pagamento"
+                className="px-3 py-3 text-ink-2 text-xs"
+              >
                 <PaymentsCell invoice={invoice} />
               </TableCell>
-              <TableCell className="px-4 py-3 text-right">
+              <TableCell
+                label="Ações"
+                className="px-3 py-3 text-right sm:whitespace-nowrap"
+              >
                 {invoice.status === 'pending' ? (
-                  <>
+                  <span className="inline-flex flex-wrap justify-end gap-x-2 sm:flex-nowrap">
                     <Button
                       type="button"
                       onClick={() => onPay(invoice)}
                       variant="link"
-                      className="mr-2 h-auto p-0 text-success"
+                      className="h-auto p-0 text-success"
                     >
                       Receber
                     </Button>
@@ -163,7 +180,7 @@ function InvoicesTable({
                       type="button"
                       onClick={() => onDiscount(invoice)}
                       variant="link"
-                      className="mr-2 h-auto p-0 text-accent-ink"
+                      className="h-auto p-0 text-accent-ink"
                     >
                       Desconto
                     </Button>
@@ -185,7 +202,7 @@ function InvoicesTable({
                         onConfirm={() => onCancel(invoice)}
                       />
                     )}
-                  </>
+                  </span>
                 ) : (
                   <span className="text-ink-3">—</span>
                 )}
@@ -336,30 +353,35 @@ export default function BillingPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Faturamento</h1>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            onClick={() => setSellingPackage(true)}
-            variant="outline"
-            className="text-accent-ink hover:bg-accent-soft"
-          >
-            Vender pacote
-          </Button>
-          <Button
-            type="button"
-            onClick={() => setCreating(true)}
-            variant="accent"
-          >
-            + Nova fatura
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Faturamento"
+        actions={
+          <>
+            <Button
+              type="button"
+              onClick={() => setSellingPackage(true)}
+              variant="outline"
+              className="text-accent-ink hover:bg-accent-soft"
+            >
+              Vender pacote
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setCreating(true)}
+              variant="accent"
+            >
+              + Nova fatura
+            </Button>
+          </>
+        }
+      />
 
       {error && <ErrorAlert message={error} />}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:max-w-xl">
+      <div
+        data-kpi-grid
+        className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:max-w-xl"
+      >
         <BillingSummaryCards summary={summary} />
       </div>
 

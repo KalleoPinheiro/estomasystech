@@ -71,8 +71,14 @@ test.describe("exportação de dados do titular (LGPD art. 18)", () => {
     // exato da resposta; tenta de novo (recarregando) até aparecer.
     await expect(async () => {
       await page.goto("/auditoria");
+      // Espera a lista já filtrada: sem isso a asserção vê a trilha inteira,
+      // com leituras de outros specs.
+      const filtered = page.waitForResponse((r) => r.url().includes(`patientId=${patient.id}`));
       await page.getByRole("combobox").selectOption({ label: patient.fullName });
-      await expect(page.getByRole("row", { name: /Leitura/ })).toBeVisible({ timeout: 2_000 });
+      await filtered;
+      await expect(page.getByRole("row", { name: /Leitura/ }).first()).toBeVisible({
+        timeout: 2_000,
+      });
     }).toPass({ timeout: 15_000 });
   });
 });

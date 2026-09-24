@@ -15,9 +15,13 @@ export function MetricCard({
   delta,
 }: MetricCardProps) {
   return (
-    <Card className="p-5">
+    <Card className="h-full p-4 sm:p-5">
       <p className="text-ink-3 text-sm">{label}</p>
-      <p className={`mt-1 font-bold text-2xl ${accent}`}>{value}</p>
+      <p
+        className={`mt-1 font-bold text-xl tabular-nums sm:text-2xl ${accent}`}
+      >
+        {value}
+      </p>
       {delta && <p className="mt-1 text-ink-3 text-xs">{delta}</p>}
     </Card>
   );

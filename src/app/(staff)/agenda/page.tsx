@@ -7,10 +7,11 @@ import {
   Icon,
   NativeSelect,
 } from '@still-void/ui/react';
-import { useToast } from '@still-void/ui/react/client';
+import { useMediaQuery, useToast } from '@still-void/ui/react/client';
 import { useMemo, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
@@ -36,10 +37,13 @@ function ProfessionalFilter({
   professionals,
   value,
   onChange,
+  compact,
 }: {
   professionals: ProfessionalDto[];
   value: string;
   onChange: (value: string) => void;
+  /** Celular: largura total abaixo da navegação de mês; desktop: largura limitada (AGENDA-04). */
+  compact: boolean;
 }) {
   if (professionals.length === 0) {
     return null;
@@ -48,7 +52,9 @@ function ProfessionalFilter({
     <NativeSelect
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="max-w-56"
+      aria-label="Filtrar por profissional"
+      data-professional-filter
+      className={compact ? 'w-full' : 'max-w-56'}
     >
       <option value="">Todos os profissionais</option>
       {professionals.map((professional) => (
@@ -136,6 +142,8 @@ function readRecallParams() {
 }
 
 export default function AgendaPage() {
+  // Abaixo de `md` a grade de 7 colunas com chips não cabe: vira mês compacto.
+  const compact = useMediaQuery('(max-width: 767px)');
   const { toast } = useToast();
   const [monthDate, setMonthDate] = useState(() => {
     const now = new Date();
@@ -330,16 +338,18 @@ export default function AgendaPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Agenda</h1>
-        <Button
-          type="button"
-          onClick={() => setCreatingFor(new Date())}
-          variant="accent"
-        >
-          + Nova consulta
-        </Button>
-      </div>
+      <PageHeader
+        title="Agenda"
+        actions={
+          <Button
+            type="button"
+            onClick={() => setCreatingFor(new Date())}
+            variant="accent"
+          >
+            + Nova consulta
+          </Button>
+        }
+      />
 
       <AgendaNotices
         error={error}
@@ -347,32 +357,35 @@ export default function AgendaPage() {
         onDismissSeriesNotice={() => setSeriesNotice(null)}
       />
 
-      <div className="mb-4 flex items-center gap-3">
-        <Button
-          type="button"
-          onClick={() => changeMonth(-1)}
-          aria-label="Mês anterior"
-          variant="outline"
-          className="hover:bg-surface-2"
-        >
-          <Icon name="chevron-left" />
-        </Button>
-        <span className="min-w-48 text-center font-semibold text-lg">
-          {monthLabel(monthDate)}
-        </span>
-        <Button
-          type="button"
-          onClick={() => changeMonth(1)}
-          aria-label="Próximo mês"
-          variant="outline"
-          className="hover:bg-surface-2"
-        >
-          <Icon name="chevron-right" />
-        </Button>
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            onClick={() => changeMonth(-1)}
+            aria-label="Mês anterior"
+            variant="outline"
+            className="hover:bg-surface-2"
+          >
+            <Icon name="chevron-left" />
+          </Button>
+          <span className="min-w-48 flex-1 text-center font-semibold text-lg md:flex-none">
+            {monthLabel(monthDate)}
+          </span>
+          <Button
+            type="button"
+            onClick={() => changeMonth(1)}
+            aria-label="Próximo mês"
+            variant="outline"
+            className="hover:bg-surface-2"
+          >
+            <Icon name="chevron-right" />
+          </Button>
+        </div>
         <ProfessionalFilter
           professionals={professionals ?? []}
           value={professionalFilter}
           onChange={setProfessionalFilter}
+          compact={compact}
         />
       </div>
 
@@ -387,6 +400,7 @@ export default function AgendaPage() {
           professionalName={(id) =>
             professionals?.find((p) => p.id === id)?.fullName ?? 'Profissional'
           }
+          compact={compact}
           onDayClick={(day) => setCreatingFor(day)}
           onAppointmentClick={setSelected}
         />

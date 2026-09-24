@@ -21,6 +21,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { ProcedureDto, SupplyDto } from '@/lib/dto';
@@ -65,23 +66,19 @@ export default function ProceduresPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">
-          Catálogo de procedimentos
-        </h1>
-        <Button
-          type="button"
-          onClick={() => setEditing('new')}
-          variant="accent"
-        >
-          + Novo procedimento
-        </Button>
-      </div>
-
-      <p className="mb-4 text-ink-3 text-sm">
-        Fonte única de nome, preço e duração — o agendamento preenche a partir
-        daqui e a margem por procedimento fica consistente.
-      </p>
+      <PageHeader
+        title="Catálogo de procedimentos"
+        description="Fonte única de nome, preço e duração — o agendamento preenche a partir daqui e a margem por procedimento fica consistente."
+        actions={
+          <Button
+            type="button"
+            onClick={() => setEditing('new')}
+            variant="accent"
+          >
+            + Novo procedimento
+          </Button>
+        }
+      />
 
       <ErrorAlertOrNull message={resolveErrorMessage(actionError, error)} />
 
@@ -205,7 +202,7 @@ function ProceduresTable({
         <EmptyState message="Nenhum procedimento encontrado para a busca." />
       ) : (
         <div className="overflow-x-auto">
-          <Table className="w-full text-left text-sm">
+          <Table stack className="w-full text-left text-sm">
             <TableHeader>
               <TableRow>
                 <TableHead className="px-4 py-3">Procedimento</TableHead>
@@ -246,20 +243,22 @@ function ProcedureRow({
 }) {
   return (
     <TableRow className={procedure.active ? '' : 'opacity-50'}>
-      <TableCell className="px-4 py-3 font-medium">{procedure.name}</TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Procedimento" className="px-4 py-3 font-medium">
+        {procedure.name}
+      </TableCell>
+      <TableCell label="Preço padrão" className="px-4 py-3">
         {formatCurrency(procedure.priceCents)}
       </TableCell>
-      <TableCell className="px-4 py-3 text-ink-2">
+      <TableCell label="Duração" className="px-4 py-3 text-ink-2">
         {procedure.durationMinutes} min
       </TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Situação" className="px-4 py-3">
         <StatusBadge
           status={procedure.active ? 'confirmed' : 'cancelled'}
           label={procedure.active ? 'Ativo' : 'Inativo'}
         />
       </TableCell>
-      <TableCell className="px-4 py-3 text-right">
+      <TableCell label="Ações" className="px-4 py-3 text-right">
         <Button type="button" onClick={onKit} variant="ghost" size="sm">
           {procedure.kitItemCount > 0
             ? `Kit (${procedure.kitItemCount})`
