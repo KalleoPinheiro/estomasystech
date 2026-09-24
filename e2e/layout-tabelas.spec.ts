@@ -245,11 +245,19 @@ for (const member of TABLE_SET) {
       const offscreen = Array.from(el.querySelectorAll("tbody button, tbody a[href]"))
         .map((c) => c.getBoundingClientRect())
         .filter((r) => r.width > 0 && r.right > width + 1).length;
-      // O rótulo mora numa coluna à esquerda: o valor começa depois dela, nunca por baixo.
+      // O rótulo mora numa coluna à esquerda: todo o conteúdo da célula começa
+      // depois dela (nunca por baixo do rótulo) e fica dentro da célula.
       const overlapped = cells.filter((td) => {
+        if (!td.getAttribute("data-label")) return false;
         const box = td.getBoundingClientRect();
-        const start = Number.parseFloat(getComputedStyle(td).paddingInlineStart);
-        return start < box.width * 0.3;
+        const range = document.createRange();
+        range.selectNodeContents(td);
+        const rects = Array.from(range.getClientRects()).filter((r) => r.width > 0);
+        const left = Math.min(...rects.map((r) => r.left));
+        const bottom = Math.max(...rects.map((r) => r.bottom));
+        // O rótulo (::before) fica no fluxo: se quebrar linha, aumenta a célula.
+        const labelOutOfFlow = getComputedStyle(td, "::before").position === "absolute";
+        return left < box.left + box.width * 0.3 || bottom > box.bottom + 1 || labelOutOfFlow;
       }).length;
       return { theadHeight, badLabels, offscreen, overlapped, cells: cells.length };
     }, PHONE.width);

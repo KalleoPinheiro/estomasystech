@@ -2,198 +2,213 @@
 
 **Verdict**: FAIL
 **Profile**: ui
-**Diff range**: app `46026ba..14af395` (`claude/layout-mobile-first`) · lib `19ea056..e361dfb` (`claude/sharp-gauss-meunxe`). Fix diff for this round: app `521a386..14af395`, lib `3c15474..e361dfb`
-**Round**: 2 - scoped
+**Diff range**: app `46026ba..ba9089d` (`claude/layout-mobile-first`) · lib `19ea056..e361dfb` (`claude/sharp-gauss-meunxe`). Fix diff for this round: app `14af395..ba9089d`. The lib has not changed since round 2
+**Round**: 3 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-Summary: I re-ran every proof at the new heads and all of them are green: lib 6/6 named (9 with the
-supporting tab and color tests), app Vitest 17/17 (C9, C15, C30, the C32 repasse test, and the 13
-C33 tests), app Playwright 109/109. The code fix works. The staff content column now fills the
-available width (358 of 358 at 390, 1152 of 1152 at 1440, on all four screens measured). The active
-tab is visible on first load. C13, C24, C25 and C32 now fail under their faults.
+Summary: I re-ran every proof at the new heads. All of them pass: lib 9 of 9 named tests (the 6
+checks plus 3 supporting tests), app Vitest 20 of 20 named tests, and app Playwright 110 of 110.
+All 34 checks now have a proof that can fail. All five faults I injected this round were caught,
+including the round-2 surviving mutant F2: C26 and C23 now fail when the staff content column
+shrinks to its content. Every round-2 finding about the code or the tests is closed:
 
-The verdict is still FAIL, for three reasons:
+- C26 and C23 now pass and can fail.
+- C33 now proves the repasses table.
+- Both Test policy rows that were unmet are now met.
+- AC 30 repasse is now measured in the browser.
 
-1. **C26 still proves nothing about the round-1 defect.** Its new reference, the usable width of
-   `main`, shrinks along with the staff wrapper. F2 put the round-1 layout back exactly (triagem
-   271px at 390 and at 1440, prontuário 704 of 1152). C26 passed at both viewports anyway.
-2. **The C33 proof for "repasses" asserts a different table.** It checks the payout history table.
-   C16 and C17 measure the clinic statements table, and that table's empty state has no proof.
-3. **Two Test policy rows are still unmet.** The touch rule has no browser case at 1440. The
-   arrangement measurement for the content column cannot fail.
+The verdict is still FAIL for one reason, and the build cannot fix it. **Door 3 is not met.**
+`package.json:29` still reads `"@still-void/ui": "^3.3.1"`, but the plan's literal shape is
+`^3.4.0`. The `checks.md` Coverage row says C15 and C8 cover door 3. They do not: neither one reads
+the version range, and the installed package is a local tarball that still reports version `3.3.1`.
+This is open question 1 (`blocks go-live`). Only the user can close it, by approving publication of
+`@still-void/ui@3.4.0` and then the version bump. This is round 3, so it goes to the user.
 
 ## Binding sources
 
-*Verified at app `14af395` for the screens the fix touched: staff shell, prontuário tab strip,
-agenda desktop. Other screens carried from `521a386`.*
+*Checked at app `ba9089d` for the only interface-relevant change: none. The fix diff touches only
+tests, `checks.md` and this report, not `src/`. The screen enumeration is carried from `14af395`.
+The content-column row was measured again under F2.*
 
-The plan marks no design file as binding. As in round 1, the authority is the plan's `Problem`, its
-confirmed `Assumptions` and its `Criteria`. The evidence is live box measurements at HEAD from a
-scratch spec that ran in a discarded worktree against the real dev server.
+The plan marks no design file as binding. As in rounds 1 and 2, the authority is the plan's
+`Problem`, its confirmed `Assumptions` and its `Criteria`.
 
 | Source | Opened | Contradiction | Uncovered |
 | --- | --- | --- | --- |
-| plan `Problem` + outcome ("cards encolhem até o conteúdo") | yes - plan.md; re-measured at `14af395` | none | No proof can catch a regression of the staff content column. The fix holds: at `14af395`, wrapper = viewport and `main` usable width = 358 (390) / 1152 (1440) on `/triagem`, `/pacientes`, `/pacientes/[id]` and `/`. But C26 and C23 both measure against `main`, which shrinks with the wrapper. Under F2 (the wrapper back to content width) C26 stayed green while triagem was 271/358 and 271/1152 again (see Faults). |
-| plan AC 23 ("keep the active tab fully visible") | yes - plan.md; C25 at `14af395` | none | - (first load now asserted at `e2e/layout-mobile-first.spec.ts:534-535`; F3 killed) |
-| user answer: agenda no celular = mês compacto + lista do dia | carried from `521a386` | none | - (the compact breakpoint is 768px by design; `checks.md` Handoff explains it. It does not contradict AC 17-21, which fix only 390x844) |
-| user answer: melhorias como minor da lib, app sobe e remove `sv-gap` | yes - `package.json:29` re-read | none | door 3: `package.json:29` still reads `"@still-void/ui": "^3.3.1"` and the installed package is a local 3.3.1-versioned tarball of lib HEAD. Expected under open question 1 (`blocks go-live`), but still open |
-| before screenshots (23 screens × 2) | carried from `521a386` | none | see the per-screen table |
+| plan `Problem` + outcome ("cards encolhem até o conteúdo") | yes - plan.md; F2 re-measured at `ba9089d` | none | - (C26 and C23 now use viewport − rail − `main` padding as the reference. With F2 applied, C26 is off by 87.5px at 390 and 310.8px at 1440, and C23 by 7.08px) |
+| plan AC 23 (active tab visible) - carried from `14af395` | yes | none | - |
+| user answer: agenda on mobile = compact month + day list - carried from `521a386` | yes | none | - |
+| user answer: lib improvements ship as a lib minor, the app bumps to it and removes the `sv-gap` workarounds | yes - `package.json:29` and `src/app/globals.css:107-124` re-read | none | door 3: `package.json:29` still reads `^3.3.1` (plan Landing step 4 and door 3 require `^3.4.0`). This is open question 1, `blocks go-live`. The `sv-gap` workaround that remains is narrowed to text links and documented in `docs/still-void-gaps.md:46-56` |
+| before screenshots (23 screens × 2) - carried from `521a386` | yes | none | - |
 
 ### Per-screen arrangement enumeration (authority: plan criteria)
 
 | Screen | What the plan decides about arrangement | Check | Observed at HEAD |
 | --- | --- | --- | --- |
-| all 23 | no horizontal page scroll, 390 and 1440 | C7 | ok (carried; proof re-run green) |
-| 14 staff | one `h1` in `PageHeader`; actions below the title under 40rem | C10, C11 | ok |
-| staff content column | fills the available width | C26 (and C23) against `main` usable width | **code ok, proof non-discriminating**: 358/358 and 1152/1152 measured, but F2 survived |
-| Dashboard / Faturamento / Relatórios | KPI in 2 columns under 40rem | C13 | ok; F1 (4 columns) now killed on all 3 |
-| Agenda | compact grid, filter, day list; chips inside the day cell on desktop | C19-C24 | ok; C24 now places the chip inside `[data-calendar-day]` (F4 killed) |
-| Prontuário | tab strip scrolls inside itself; active tab visible on load and after selection | C25 | ok; F3 killed |
-| Triagem | empty state fills the column | C26 | fills (358 / 1152); same proof weakness as the content column |
-| Documentos | tables in a horizontal scroller; page without lateral scroll | C32 | 5 in the browser; repasse by jsdom structure only |
+| all 23 | no horizontal page scroll at 390 and 1440 | C7 | proof re-run green (23 tests × 2 viewports) |
+| 14 staff screens | one `h1` inside `PageHeader`; actions below the title under 40rem | C10, C11 | green |
+| staff content column | fills the available width | C26, C23 against viewport − rail − padding | green; F2 killed |
+| Dashboard / Faturamento / Relatórios | KPIs in 2 columns under 40rem | C13 | green (F1 killed in round 2; file unchanged) |
+| Agenda | compact grid, filter, day list; chips inside the day cell on desktop | C19-C24 | green |
+| Prontuário | tab strip scrolls inside itself; active tab visible | C25 | green |
+| Triagem | empty state fills the column | C26 | green; F2 killed |
+| Documentos (6) | tables in a horizontal scroller; page does not scroll sideways | C32 | all 6 in the browser; the repasse probe showed 1 table, inside `.sv-table-container`, with `scrollWidth` 390 |
 
 ## Checks
 
-*Verified at app `14af395` / lib `e361dfb`. Every proof was re-run in full. Citations were
-refreshed for `e2e/layout-mobile-first.spec.ts` and `still-void/tests/layout-css-contract.test.ts`.*
+*Verified at app `ba9089d` / lib `e361dfb`. Every proof was re-run in full at these heads.
+Citations were refreshed for the files the fix touched: `e2e/layout-mobile-first.spec.ts`,
+`tests/app/color-bridge.test.ts` and the new `tests/pages/payout-tables-empty.test.tsx`. Every other
+citation is carried from `14af395`, and its file is unchanged in `14af395..ba9089d`.*
 
 Proof runs:
 
-- lib: `npx vitest run tests/layout-css-contract.test.ts tests/ui-table.test.tsx tests/table-css-contract.test.ts tests/release-contract.test.ts -t "<6 check names>|tab triggers reach 44px|no literal color inside|pointer-fine desktop keeps"`. 9 passed (the 6 check tests plus 3 supporting tests), each listed by name. `git diff --exit-code origin/main -- src/tokens/colors.ts src/css/theme.css` exit 0 (origin/main = `19ea056`).
-- app Vitest: one call over 13 files with a 17-name `-t` alternation: 17 passed, each listed by name. That is C9, C15, C30, `tabela do comprovante dentro de contêiner com rolagem` (C32) and all 13 C33 names.
-- app Playwright: `npx playwright test -c playwright.shots.config.ts e2e/layout-mobile-first.spec.ts e2e/layout-tabelas.spec.ts --retries=0 --reporter=list`. **109 passed, 0 failed, 3.6 min**, exit 0, each test listed.
+- **lib**: `npx vitest run tests/layout-css-contract.test.ts tests/ui-table.test.tsx tests/table-css-contract.test.ts tests/release-contract.test.ts -t "<6 check names>|tab triggers reach 44px|no literal color inside|pointer-fine desktop keeps"`. 9 passed, each listed by name.
+  - `git diff --exit-code 19ea056 -- src/tokens/colors.ts src/css/theme.css` exit 0 (`origin/main` = `19ea056`).
+- **app Vitest**: one call over 14 files with a 20-name `-t` alternation. 20 passed, each listed by name. That covers C9, the two C15 tests, C30, the C32 jsdom test, and the 15 C33 tests (13 existing plus the 2 new payout-table tests).
+- **app Playwright**: `npx playwright test -c playwright.shots.config.ts e2e/layout-mobile-first.spec.ts e2e/layout-tabelas.spec.ts --retries=0 --reporter=list`. **110 passed, 0 failed, 3.5 min**, exit 0, each test listed.
+  - Hits per `-g` name: `sem scroll lateral` 23+1, `alvos de toque` 23, `um h1 por página` 14, `ações abaixo do título` 3, `KPIs em 2 colunas` 3, `empilhada no celular` 13, `tabela no desktop` 13, `painéis na largura` 2.
+  - Every other name had exactly 1 hit, including the new `desktop com mouse mantém a altura da lib`.
 
 | Check | Claim | Proof run | Evidence | Result |
 | --- | --- | --- | --- | --- |
-| C1 | `.sv-layout` `minmax(0, 1fr)` | lib vitest, pass | `still-void/tests/layout-css-contract.test.ts:85` - `expect(declIn(body, 'grid-template-columns')).toBe('minmax(0, 1fr)')` | PASS |
+| C1 | `.sv-layout` `minmax(0, 1fr)` | lib vitest, pass | `still-void/tests/layout-css-contract.test.ts:85` - `expect(declIn(body, 'grid-template-columns')).toBe('minmax(0, 1fr)')` (carried; lib unchanged) | PASS |
 | C2 | 44px `min-height` on `.sv-btn`/`.sv-field` under touch media | lib vitest, pass | `still-void/tests/layout-css-contract.test.ts:95-98` - `… toBe(TOUCH_TARGET)` for both selectors | PASS |
 | C3 | `stack` → `sv-table--stack`, absent without | lib vitest, pass | `still-void/tests/ui-table.test.tsx:283` `toHaveClass('sv-table','sv-table--stack')`; `:285` `not.toHaveClass('sv-table--stack')` | PASS |
 | C4 | `label` → `data-label`, absent without | lib vitest, pass | `still-void/tests/ui-table.test.tsx:303` `toHaveAttribute('data-label','Nome')`; `:314` `not.toHaveAttribute('data-label')` | PASS |
-| C5 | stack rules only under `(width < 40rem)` | lib vitest, pass | `still-void/tests/table-css-contract.test.ts:209` `expect(outside).not.toMatch(/\.sv-table--stack/)`; `:219-220`; `:224` `toMatch(/content:\s*attr\(data-label\)/)` | PASS |
-| C6 | minor changeset; no color value changed | lib vitest + git diff, pass | `still-void/tests/release-contract.test.ts:17` - `toMatch(/^---\s*\n"@still-void\/ui":\s*minor\s*\n---/)`; git diff exit 0. The new `layout-css-contract.test.ts:152-157` (`not.toMatch(/#[0-9a-fA-F]{3,8}\b\|oklch\(\|rgba?\(\|hsla?\(/)`) narrows the round-1 precision gap on the new media blocks. `git diff 19ea056..e361dfb -- src/css/style.css` has no `--sv-*` definition line | PASS |
-| C7 | no page scroll, 23 × 2 | e2e, 46 pass | `e2e/layout-mobile-first.spec.ts:237` - `toBeLessThanOrEqual(viewport.width + 2)` | PASS |
-| C8 | ≥44×44 controls in `main` | e2e, 23 pass | `e2e/layout-mobile-first.spec.ts:248` - `expect(await tooSmallControls(target), …).toEqual([])` | PASS |
-| C9 | one `h1` + actions group | vitest, pass | `tests/components/page-header.test.tsx:21` `toHaveLength(1)`; `:27-30` actions contain the button, not the `h1` | PASS |
-| C10 | one `h1` inside `[data-page-header]`, 14 pages | e2e, 14 pass | `e2e/layout-mobile-first.spec.ts:259-260` - `toHaveCount(1)` on `h1` and on `[data-page-header] h1` | PASS |
-| C11 | actions below the title, right ≤ 390 | e2e, 3 pass | `e2e/layout-mobile-first.spec.ts:281-282` - `actions!.y >= title!.y + title!.height`; `actions!.x + width <= MOBILE.width` | PASS |
-| C12 | sidebar e-mail on one line, ellipsis, `title` | e2e, pass | `e2e/layout-mobile-first.spec.ts:302-304` - `height <= lineHeight * 1.5`; `overflow === "ellipsis"`; `title === text` | PASS |
-| C13 | KPI 2 columns: each card = half the grid ±2, first two share the row | e2e, 3 pass | `e2e/layout-mobile-first.spec.ts:327` - `expect(Math.abs(width - layout.half)).toBeLessThanOrEqual(2)` for every card; `:329` - `expect(layout.tops[0]).toBe(layout.tops[1])`. F1 killed on all 3 (card 92.5px off half) | PASS |
-| C14 | back link icon/text centers ≤ 4px | e2e, pass | `e2e/layout-mobile-first.spec.ts:349` - `Math.abs(centers.icon - centers.text) <= 4` | PASS |
-| C15 | `@theme` bridge identical to `46026ba`; `check:sv` green | vitest pass; `check:sv` exit 0 | `tests/app/color-bridge.test.ts:58` - `expect(colorBridge()).toEqual(BASELINE)`. Precision gap carried: no proof of utility-level token identity (AC 13) | PASS |
+| C5 | stack rules only under `(width < 40rem)` | lib vitest, pass | `still-void/tests/table-css-contract.test.ts:209` `expect(outside).not.toMatch(/\.sv-table--stack/)`; `:224` `toMatch(/content:\s*attr\(data-label\)/)` | PASS |
+| C6 | minor changeset; no color value changed | lib vitest + git diff, pass | `still-void/tests/release-contract.test.ts:17` - `toMatch(/^---\s*\n"@still-void\/ui":\s*minor\s*\n---/)`; git diff exit 0; `layout-css-contract.test.ts:152-157` shows no literal color in the new media blocks | PASS |
+| C7 | no page scroll, 23 pages × 2 viewports | e2e, 23 tests pass | `e2e/layout-mobile-first.spec.ts:251` - `toBeLessThanOrEqual(viewport.width + 2)` in a `for (const viewport of [MOBILE, DESKTOP])` loop (`:244`) | PASS |
+| C8 | controls in `main` are at least 44×44 | e2e, 23 pass | `e2e/layout-mobile-first.spec.ts:262` - `expect(await tooSmallControls(target), …).toEqual([])` | PASS |
+| C9 | one `h1` + an actions group | vitest, pass | `tests/components/page-header.test.tsx:21` `toHaveLength(1)`; `:27-30` the actions contain the button and not the `h1` | PASS |
+| C10 | one `h1` inside `[data-page-header]`, 14 pages | e2e, 14 pass | `e2e/layout-mobile-first.spec.ts:273-274` - `toHaveCount(1)` on `h1` and on `[data-page-header] h1` | PASS |
+| C11 | actions below the title, right edge ≤ 390 | e2e, 3 pass | `e2e/layout-mobile-first.spec.ts:294` `actions!.y >= title!.y + title!.height`; `:295` `actions!.x + width <= MOBILE.width` | PASS |
+| C12 | sidebar e-mail on one line, ellipsis, `title` | e2e, pass | `e2e/layout-mobile-first.spec.ts:316-317` - `height <= lineHeight * 1.5`; `overflow === "ellipsis"` | PASS |
+| C13 | KPIs in 2 columns | e2e, 3 pass | `e2e/layout-mobile-first.spec.ts:341` - `Math.abs(width - layout.half) <= 2` for every card; `:343` `layout.tops[0]` equals `layout.tops[1]` | PASS |
+| C14 | back-link icon and text centers ≤ 4px apart | e2e, pass | `e2e/layout-mobile-first.spec.ts:363` - `Math.abs(centers.icon - centers.text) <= 4` | PASS |
+| C15 | `@theme` bridge identical to `46026ba`; every color utility uses a bridge name; `check:sv` green | vitest 2 pass; `check:sv` exit 0 | `tests/app/color-bridge.test.ts:58` - `expect(colorBridge()).toEqual(BASELINE)`; `:103` - `expect([...unknown]).toEqual([])` (new scan; F-d killed). Supplementary diff: `46026ba..HEAD` removes no color utility in `src/**/*.tsx`. Net additions are all bridge names (`text-ink-3`, `bg-accent-ink`, `bg-accent-soft`, `text-accent-ink`, `divide-border`, `text-white`, `bg-transparent`), in the new `agenda/mobile-month.tsx` and in reflowed markup | PASS |
 | C16 | 13 tables stacked at 375 | e2e, 13 pass | `e2e/layout-tabelas.spec.ts:233` `toHaveClass(/sv-table--stack/)`; `:257-259` `theadHeight <= 1`, `badLabels` `[]`, `offscreen` 0 | PASS |
 | C17 | 13 tables at 1440 | e2e, 13 pass | `e2e/layout-tabelas.spec.ts:274-275` - `theadHeight > 0`; `tallRows === 0` | PASS |
-| C18 | Pacientes empty at both viewports | e2e, pass | `e2e/layout-tabelas.spec.ts:285-286` - `getByText("Nenhum paciente encontrado")` visible; `main table` count 0 | PASS |
-| C19 | 7 day columns ≥44 inside 390 | e2e, pass | `e2e/layout-mobile-first.spec.ts:430-435` - `toHaveLength(7)`, 7 distinct lefts, `box.right <= MOBILE.width`, `w,h >= MIN_TOUCH_PX` | PASS |
-| C20 | dot marker, no chip in cell | e2e, pass | `e2e/layout-mobile-first.spec.ts:446` `data-has-appointments="true"`; `:448` `day.locator("button")` count 0 | PASS |
-| C21 | today selected on load; tapped day lists the appointment below the grid | e2e, pass | `e2e/layout-mobile-first.spec.ts:459-462` - `[data-mobile-month] [data-day="${today}"]` `toHaveAttribute("aria-pressed","true")`, now unconditional (round-1 precision gap closed); `:477` `listTop >= gridBottom` | PASS |
-| C22 | empty day message | e2e, pass | `e2e/layout-mobile-first.spec.ts:489` - `getByText("Nenhuma consulta neste dia.")` visible | PASS |
-| C23 | filter below month nav, content-column width ±2 | e2e, pass | `e2e/layout-mobile-first.spec.ts:500` - `abs(filter.width - contentWidth(page)) <= 2`. Precision note: the same shrinking reference as C26 (`main` usable width) | PASS |
-| C24 | desktop chip inside its day cell | e2e, pass | `e2e/layout-mobile-first.spec.ts:515` - `expect(page.locator('[data-calendar-day="${dayKey}"]').locator(chip)).toHaveCount(1)`. F4 killed | PASS |
-| C25 | tablist scrolls inside; active tab visible on load; Pacotes visible after selection | e2e, pass | `e2e/layout-mobile-first.spec.ts:530` `scroll > client`; `:534-535` Anamnese `x >= 0`, `right <= 390`; `:538-539` Pacotes. F3 killed (Anamnese x = -174.9) | PASS |
-| C26 | Anamnese panel and Triagem empty state = `main` usable width ±2, both viewports | e2e, 2 pass | `e2e/layout-mobile-first.spec.ts:553-554` - `abs(box.width - contentWidth(page)) <= 2`. **F2 survived**: with the staff wrapper shrunk to content (round-1 layout), `main` usable width shrank to 271 (triagem 390 and 1440) and 704 (prontuário 1440), and the panel shrank with it. The reference is still relative to the thing that shrinks, so the proof cannot fail on the defect the plan names | FAIL - surviving mutant; the proof does not discriminate AC 24's intent |
-| C27 | Retornos not clipped, actions below | e2e, pass | `e2e/layout-mobile-first.spec.ts:581-582` - `clipped === false`; `below === true` | PASS |
-| C28 | public cards ≥16px from edges | e2e, pass | `e2e/layout-mobile-first.spec.ts:594-595` | PASS |
-| C29 | Confirmar and date disjoint | e2e, pass | `e2e/layout-mobile-first.spec.ts:623` - `expect(disjoint).toBe(true)` | PASS |
+| C18 | Pacientes empty state at both viewports | e2e, pass | `e2e/layout-tabelas.spec.ts:285-286` - `getByText("Nenhum paciente encontrado")` visible; `main table` count 0 | PASS |
+| C19 | 7 day columns, each ≥ 44px, inside 390 | e2e, pass | `e2e/layout-mobile-first.spec.ts:490` `expect(boxes).toHaveLength(7)`; `:494-495` `box.w`/`box.h` `toBeGreaterThanOrEqual(MIN_TOUCH_PX)` | PASS |
+| C20 | dot marker, no chip in the cell | e2e, pass | `e2e/layout-mobile-first.spec.ts:506` `toHaveAttribute("data-has-appointments", "true")`; `:508` `day.locator("button")` `toHaveCount(0)` | PASS |
+| C21 | today selected on load; the tapped day lists below the grid | e2e, pass | `e2e/layout-mobile-first.spec.ts:521` `"aria-pressed"` on today, unconditional; `:537` `expect(listTop).toBeGreaterThanOrEqual(gridBottom)` | PASS |
+| C22 | empty-day message | e2e, pass | `e2e/layout-mobile-first.spec.ts:549` - `[data-day-list]` `getByText("Nenhuma consulta neste dia.")` `toBeVisible()` | PASS |
+| C23 | filter below the month nav, content-column width ±2 | e2e, pass | `e2e/layout-mobile-first.spec.ts:560` - `Math.abs(filter!.width - (await contentWidth(page))) <= 2`. The reference (`:194-210`) is `documentElement.clientWidth − rail − main padding`, which does not depend on the column. F2 killed it (7.08 > 2) | PASS |
+| C24 | desktop chip inside its day cell | e2e, pass | `e2e/layout-mobile-first.spec.ts:575` - `[data-calendar-day="${dayKey}"]` `.locator(chip)` `toHaveCount(1)` | PASS |
+| C25 | tablist scrolls inside itself; active tab visible on load and after selection | e2e, pass | `e2e/layout-mobile-first.spec.ts:589` `scroll > client`; `:594-595` Anamnese inside 0..390; `:598-599` Pacotes | PASS |
+| C26 | Anamnese panel and Triagem empty state = the independent content width ±2, both viewports | e2e, 2 pass | `e2e/layout-mobile-first.spec.ts:614` - `Math.abs(box!.width - width) <= 2`, where `width = contentWidth(page)` (`:613`) is independent of the column. **F2 killed** at 390 (`/triagem` off by 87.5) and at 1440 (`/pacientes/[id]` off by 310.8) | PASS |
+| C27 | Retornos not clipped, actions below | e2e, pass | `e2e/layout-mobile-first.spec.ts:641-642` - `clipped` `toBe(false)`; `below` `toBe(true)` | PASS |
+| C28 | public cards ≥ 16px from the edges | e2e, pass | `e2e/layout-mobile-first.spec.ts:654` `expect(card!.x, url).toBeGreaterThanOrEqual(16)`; `:655` the right margin is at least 16, for all 3 URLs | PASS |
+| C29 | Confirmar and the date are disjoint | e2e, pass | `e2e/layout-mobile-first.spec.ts:683` - `expect(disjoint).toBe(true)` | PASS |
 | C30 | one `svg` in the emergency notice | vitest, pass | `tests/components/portal-layout.test.tsx:71` - `querySelectorAll('svg')).toHaveLength(1)` | PASS |
-| C31 | greeting headline at 390, display at 1440 | e2e, pass | `e2e/layout-mobile-first.spec.ts:647` - `expect(sizes.actual).toBe(sizes.expected)` | PASS |
-| C32 | 5 documents in the browser: tables in a scroller, no page scroll; repasse table inside `.sv-table-container` | e2e pass + vitest pass | `e2e/layout-mobile-first.spec.ts:665` `scrollWidth <= 392`; `:673` `expect(unwrapped, url).toBe(0)` (now includes `receiptUrl`, F5 killed on the recibo); `tests/pages/documento-repasse.test.tsx:219` - `expect(table.closest('.sv-table-container')).not.toBeNull()`. Level note: repasse's "page without horizontal scroll" half of AC 30 is not measured in a browser (see Coverage) | PASS |
-| C33 | each of the 13 tables shows its existing empty message | vitest, 13 pass | pacientes `staff-pacientes-list.test.tsx:108` ("Nenhum paciente cadastrado."); parceiros `staff-operations.test.tsx:1883`; profissionais `:2535-2537`; auditoria `:101`; contas `:952`; procedimentos `staff-procedimentos.test.tsx:150-152`; materiais `staff-materiais.test.tsx:189`; faturamento `staff-faturamento.test.tsx:177`; relatórios receita `staff-relatorios.test.tsx:166`; relatórios produção `:244`; feriados `schedule-availability-ui.test.tsx:115`; prontuário `staff-paciente-detail.test.tsx:1254` ("Nenhuma avaliação registrada.", reached through the empty branch after a fetch error); **repasses `staff-repasses.test.tsx:181` asserts "Nenhum repasse registrado ainda.", the empty state of `PayoutHistoryTable`**. The repasses table that C16/C17 measure (header "Regra") is `ClinicStatementsTable`, and its empty state `"Nenhum profissional cadastrado."` (`src/app/(staff)/repasses/payout-tables.tsx:242`) has no assertion anywhere (`rg` finds only the longer profissionais-page string). All 15 messages are byte-identical at `46026ba` and HEAD (`git grep -c -F`) | FAIL - repasses member proven on a different table; the measured table's empty state is unasserted |
+| C31 | greeting at the headline step at 390, display at 1440 | e2e, pass | `e2e/layout-mobile-first.spec.ts:707` - `expect(sizes.actual).toBe(sizes.expected)` | PASS |
+| C32 | 6 documents in the browser (repasse via `page.route`): tables in a scroller, no page scroll; repasse jsdom structure | e2e pass + vitest pass | `e2e/layout-mobile-first.spec.ts:726` `scrollWidth <= MOBILE.width + 2`; `:734` `expect(unwrapped, url).toBe(0)`, now over `mockPayoutReceipt(page)` (`:722`, route at `:466`). A probe at HEAD confirmed that the mocked repasse page renders (1 table, inside `.sv-table-container`, `scrollWidth` 390). F-e killed on `/documentos/repasse/po-layout`. jsdom: `tests/pages/documento-repasse.test.tsx:215` `tables.length > 0`; `:219` `closest('.sv-table-container')` `not.toBeNull()` | PASS |
+| C33 | each of the 13 tables shows its existing empty message | vitest, 15 pass | **repasses, now on the measured tables:** `tests/pages/payout-tables-empty.test.tsx:20-23` `getByText('Nenhum profissional cadastrado.')` `toBeInTheDocument()` + `querySelector('table')` `toBeNull()` (`ClinicStatementsTable`, `payout-tables.tsx:242`); `:28-29` `'Nenhuma sessão.'` (`PayoutItemsTable`, `payout-tables.tsx:31`). F-c killed both. The other 12 are carried with their files unchanged: pacientes `staff-pacientes-list.test.tsx:108`; parceiros `staff-operations.test.tsx:1883`; profissionais `:2535-2537`; auditoria `:101`; contas `:952`; procedimentos `staff-procedimentos.test.tsx:150-152`; materiais `staff-materiais.test.tsx:189`; faturamento `staff-faturamento.test.tsx:177`; relatórios receita `staff-relatorios.test.tsx:166`; produção `:244`; feriados `schedule-availability-ui.test.tsx:115`; prontuário `staff-paciente-detail.test.tsx:1254`; history `staff-repasses.test.tsx:180` | PASS |
+| C34 | at 1440 with a fine pointer, a default `Button` keeps the `--sv-space-10` height (< 44) | e2e, pass | `e2e/layout-mobile-first.spec.ts:758` `expect(sizes.base).toBeLessThan(44)`; `:759` `expect(sizes.height).toBe(sizes.base)`. F-b killed it (expected 40, received 44) | PASS |
 
 ## Coverage
 
-*Recomputed at `14af395` for the rows the fix touched: KPI groups, table empty states, documents,
-AC 23/24 panels, staff content column. The rest are carried from `521a386` and marked as such.*
+*Recomputed at `ba9089d` for the rows the fix touched: table empty states, documents, AC 24 panels,
+staff content column, touch rule × context, AC 13 utilities, and Landing doors. The other rows are
+carried from `14af395` and marked as such; their proofs were re-run green.*
 
 | Set (size) | Recomputed from | Member -> proof | Unproven |
 | --- | --- | --- | --- |
-| page set × viewport (46) - carried from `521a386` | plan Observable | C7, 46 tests (re-run green) | - |
+| page set × viewport (46) - carried from `14af395` | plan Observable | C7, 23 tests × 2 viewports | - |
 | page set, touch (23) - carried | plan Observable | C8, 23 tests | - |
 | staff pages with `PageHeader` (14) - carried | plan Observable | C10, 14 tests | - |
-| KPI groups (3) × 2 columns - verified at `14af395` | AC 11 | Dashboard, Faturamento, Relatórios: C13 `:327` per card; F1 killed on all 3 | - |
+| KPI groups (3) - carried | AC 11 | C13 ×3 | - |
 | table set, stacked + desktop (13) - carried | plan Observable | C16 ×13, C17 ×13 | - |
-| table set, empty state (13) - verified at `14af395` | AC 16 + plan Observable ("repasses (tabelas de repasse)") | 12 members asserted by C33 (+ C18 in the browser for pacientes). Repasses: the history table only (`staff-repasses.test.tsx:181`) | repasses: `ClinicStatementsTable` empty ("Nenhum profissional cadastrado.", `payout-tables.tsx:242`), the table C16/C17 measure; also `PayoutItemsTable` ("Nenhuma sessão.", `payout-tables.tsx:31`) |
-| document pages (6) - verified at `14af395` | AC 30 + plan Observable | atestado, consentimento, relatório, plano de cuidados, recibo: C32 in the browser (container `overflowX === auto` + page scroll) · repasse: C32 jsdom structure | repasse: "page itself without horizontal scroll" at 390x844 has no browser proof (level gap; the checks give the seeding constraint as the reason) |
-| AC 23 active-tab visibility (2 states) - verified at `14af395` | AC 23 | first load C25 `:534-535` (F3 killed) · after selection C25 `:538-539` | - |
-| AC 24 panels (2 × 2 viewports) - verified at `14af395` | AC 24 + plan Problem | prontuário and triagem at 390 and 1440: C26 `:554` against `main` usable width. Measured values meet the intent: 358 = 358 and 1152 = 1152 | all 4: the reference shrinks with the column, so no member is discriminated from the round-1 defect (F2 survived with triagem 271/358 and 271/1152, prontuário 704/1152) |
-| staff content column = available width (4 screens × 2) - verified at `14af395` | plan Problem ("cards encolhem até o conteúdo") | no check measures `main` against viewport − sidebar − padding | all 8 (code measured correct; no proof holds it) |
-| agenda mobile states (4) - verified at `14af395` (C21 touched) | AC 18-20 | today selected C21 (now unconditional) · day with appointment C21 · empty day C22 · dot C20 | - |
-| agenda viewports (2) - verified at `14af395` (C24 touched) | AC 17, 22 | C19 · C24 (chip inside the cell) | - |
-| `Table stack`, `TableCell label`, touch rule selectors - carried | lib API | C3 C5 · C4 · C2 | - |
-| Landing doors (4) - verified at `14af395` | plan Landing | 1: C3 C4 C5 · 2: C2 · 4: C9 C10 | door 3: `package.json:29` `^3.3.1`, not `^3.4.0` (open question 1, `blocks go-live`) |
-| AC 13 color utilities - carried | AC 13 | bridge C15; utilities checked by manual scan only | utility → token identity (precision gap) |
+| table set, empty state (13 tables; repasses has 3 empty branches) - verified at `ba9089d` | AC 16 + `payout-tables.tsx` empty branches | 12 tables via C33 (+ C18 in the browser for pacientes). Repasses: statements `payout-tables-empty.test.tsx:20` · items `:28` · history `staff-repasses.test.tsx:180` | - |
+| document pages (6) - verified at `ba9089d` | AC 30 + plan Observable | atestado, consentimento, relatório, plano de cuidados, recibo, repasse: C32 in the browser (`:726`, `:734`); repasse also jsdom `:219` | - |
+| AC 24 panels (2 × 2 viewports) - verified at `ba9089d` | AC 24 + plan Problem | prontuário and triagem at 390 and 1440: C26 `:614` against the column-independent reference; F2 killed at both viewports | - |
+| staff content column = available width - verified at `ba9089d` | plan Problem | held through C26 (prontuário, triagem) and C23 (agenda), all against viewport − rail − padding; F2 killed all three tests | - |
+| touch rule, selector × context (3) - verified at `ba9089d` | AC 2 + checks row | `.sv-btn` narrow/touch C2 + C8 · `.sv-field` narrow/touch C2 + C8 · `.sv-btn` desktop fine pointer C34 (F-b killed) | - |
+| AC 13 color utilities - verified at `ba9089d` | AC 13 | name-level: C15 `:103` (F-d killed); bridge: C15 `:58`; supplementary diff shows no existing color utility changed | - |
+| agenda mobile states (4) and viewports (2) - carried | AC 17-22 | C20 C21 C22 · C19 C24 | - |
+| `Table stack`, `TableCell label` - carried | lib API | C3 C5 · C4 | - |
+| Landing doors (4) - verified at `ba9089d` | plan Landing + one-way doors table | 1: C3 C4 C5 · 2: C2 C34 · 4: C9 C10 | door 3 (`"@still-void/ui": "^3.4.0"`): `package.json:29` reads `^3.3.1`, and `node_modules/@still-void/ui/package.json:3` reads `3.3.1`. The `checks.md` Coverage row attributes door 3 to C15 (`check:sv`) and C8, but neither reads the dependency range. Blocked on open question 1 (`blocks go-live`) |
 
 ## Test policy rows
 
-*Re-judged at `14af395`: the two unmet rows, plus the arrangement row whose files the fix touched.
-The component-prop and `PageHeader` rows are carried from `521a386` because their files are unchanged.*
+*Re-judged at `ba9089d`: the two rows that were unmet in round 2, plus the arrangement row, whose
+spec the fix touched. The other two rows are carried from `14af395` because their files are
+unchanged.*
 
 | Row | Files it classifies | Required proof | Expectation met |
 | --- | --- | --- | --- |
-| Regra de CSS da lib (media query) | `still-void/src/css/style.css` | CSS text contract + browser measurement, one case per viewport | no - the fix added text assertions (`justify-content` `:114`, no literal color `:152-157`), but the touch rule still has a browser case only at 390 (C8). No browser case at 1440 or pointer-fine shows the rule stays off. The `.sv-tabs__list` start-alignment has its browser case at 390 (C25) |
+| Regra de CSS da lib (media query) | `still-void/src/css/style.css` | CSS text contract + browser measurement, one case per viewport | yes - text contract C1 C2 C5 (+ supporting tests for tabs, pointer-fine and literal colors); browser at 390 C8 and at 1440 fine pointer C34 (F-b killed); tabs start-alignment C25 |
 | Componente da lib com prop (carried) | `still-void/src/components/ui/table.tsx` | jsdom, prop present and absent | yes - C3, C4 |
-| Página/arranjo do app | `src/app/**` pages, `staff-layout-client.tsx` | Playwright box measurement per page and viewport | no - C26 and C23 measure against `main` usable width, which shrinks with the column the fix changed. F2 survived, so the arrangement "panel fills the content column" is still not held by a proof that can fail |
+| Página/arranjo do app | `src/app/**` pages, `staff-layout-client.tsx` | Playwright box measurement per page and viewport | yes - C26 and C23 now measure against a reference independent of the column; F2 killed at 390 and 1440 |
 | `PageHeader` (carried) | `src/components/page-header.tsx` | component test with and without actions | yes |
 
-Swept `existing` (authorization), carried from `521a386`: the fix touched neither `src/proxy.ts` nor `src/lib/auth/request-session.ts`.
+Swept `existing` (authorization): carried from `521a386`. The fix diff `14af395..ba9089d` touches
+no `src/` file.
 
 ## Faults injected
 
-*Verified at app `14af395`.* Isolation: `git worktree add <scratchpad>/wt-app HEAD`, with
-`node_modules` symlinked. The only edits were in the scratch copy: a `test.beforeEach` that runs
-`page.addInitScript(process.env.FAULT)` in the spec, and `webServer.cwd` in the config. The
-assertions were unmodified. The dev server ran from the real tree. Baseline porcelain: app
-` M AGENTS.md` (the `next dev` agent-rules block the brief says to expect), lib empty. After
-removing the worktree, both are byte-identical to the baseline. `git worktree list` shows only the
-main trees.
+*Verified at app `ba9089d`.*
+
+Isolation:
+
+- I ran `git worktree add <scratchpad>/wt HEAD` and symlinked `node_modules` into it.
+- The dev server ran from the scratch worktree. To make that work I added `turbopack: { root: "/" }` to the scratch copy of `next.config.ts`; Turbopack refuses a `node_modules` symlink that points outside its root. I did not touch the real `node_modules`.
+- The proof assertions were left unmodified. Each fault was reverted before the next one.
+
+Clean-up:
+
+- Baseline porcelain before: app ` M AGENTS.md` (the `next dev` block the brief says to expect), lib empty.
+- After `git worktree remove --force`, both are byte-identical to the baseline (`diff` empty). `git worktree list` shows only the main tree.
+- No dev server is left running.
 
 | Mutation | Location | Killed |
 | --- | --- | --- |
-| F1 KPI grid `repeat(4, minmax(0,1fr))` at 390 (the round-1 surviving mutant, run against the new C13) | `[data-kpi-grid]` (`src/app/(staff)/page.tsx` et al.) | yes - `KPIs em 2 colunas` failed on dashboard, faturamento and relatórios (`e2e/layout-mobile-first.spec.ts:327`, 92.5 > 2) |
-| F2 staff wrapper back to content width (`flex: 0 1 auto; width: auto`, which is the effect of removing `w-full flex-1`) | `.sv-app-shell > div`, `src/app/(staff)/staff-layout-client.tsx:62` | **no** - `painéis na largura do conteúdo (390)` and `(1440)` both passed. A separate measurement under the same fault confirmed it took effect: `/triagem` wrapper 303 / `main` usable 271 at 390, wrapper 559 / `main` 271 at 1440, `/pacientes/[id]` 704 of the 1152 available |
-| F3 tab strip `justify-content: center` (reverts lib `e361dfb`) | `.sv-tabs__list`, `still-void/src/css/style.css:1593` | yes - `prontuário: abas rolam dentro de si` failed at `:534` (Anamnese x = -174.9) |
-| F4 appointment chip moved out of its day cell (DOM script) | `[data-calendar-day] button`, `src/app/(staff)/agenda/calendar-grid.tsx:138` | yes - `agenda: chips no desktop` failed at `:515` (count 0, expected 1) after `:514` saw the chip visible |
-| F5 `overflow-x: visible` on `.overflow-x-auto, .sv-table-container`, only on `/documentos/recibo/*` | recibo document page | yes - `documentos sem scroll lateral` failed at `:673` for the recibo URL (`unwrapped` 1) |
+| F2 (round-2 survivor): remove `w-full` and `flex-1` from the staff wrapper, in the source | `src/app/(staff)/staff-layout-client.tsx:62` | yes - `painéis na largura do conteúdo (390)` failed at `:614` (`/triagem 390`, 87.5 > 2); `(1440)` failed (`/pacientes/[id] 1440`, 310.8 > 2); `agenda: filtro em largura total` failed at `:560` (7.08 > 2). As a control, C34 stayed green under the same fault |
+| F-b: `page.addStyleTag(".sv-btn { min-height: 44px !important }")` in C34, the touch rule leaking to desktop (scratch spec copy) | C34 surface, `/pacientes` at 1440 | yes - `desktop com mouse mantém a altura da lib` failed at `:759` (expected 40, received 44) |
+| F-c: empty messages changed ("Nenhum profissional encontrado." / "Sem sessões.") | `src/app/(staff)/repasses/payout-tables.tsx:242`, `:31` | yes - both `payout-tables-empty.test.tsx` tests failed |
+| F-d: raw palette class `text-red-500` added to the staff wrapper | `src/app/(staff)/staff-layout-client.tsx:62` | yes - `todo utilitário de cor do app usa um nome da ponte @theme` failed, listing `red-500 (app/(staff)/staff-layout-client.tsx)` |
+| F-e: `overflow-x: visible !important` on `.overflow-x-auto, .sv-table-container`, only on `/documentos/repasse/*` (new C32 member) | repasse document page | yes - `documentos sem scroll lateral` failed at `:734` for `/documentos/repasse/po-layout` (`unwrapped` 1) |
 
 ## Gate
 
-*Verified at app `14af395` / lib `e361dfb`.*
+*Verified at app `ba9089d` / lib `e361dfb`.*
 
 - app `npm run typecheck`: exit 0
-- app `npm run lint` (Biome): exit 0, 640 files, 1 info
+- app `npm run lint` (Biome): exit 0, 641 files, 1 info
 - app `npm run check:sv`: exit 0 ("adoção do @still-void/ui v2 completa")
 - app `npm run check:docs`: exit 0 (0 warnings)
-- app Playwright (the two feature specs): 109 passed, 0 failed
-- app Vitest (the check proofs): 17 passed, 0 failed
+- app Playwright (the two feature specs): 110 passed, 0 failed
+- app Vitest (the check proofs): 20 passed, 0 failed
 - lib `npx vitest run`: 77 files, 1516 passed, 0 failed
 - lib `npm run typecheck`: exit 0
-- app `npm run test:coverage`: not re-run this round
+- app `npm run test:coverage`: not re-run this round (outside the brief's gate list)
 
 ## Ranked gaps
 
-1. **C26 surviving mutant (F2).** The proof's reference (`main` usable width, from the
-   `contentWidth` helper at `e2e/layout-mobile-first.spec.ts:189-196`) shrinks together with the
-   staff wrapper. Reverting the column fix leaves C26 green while the plan's first-listed defect is
-   back (triagem 271 of 358 / 1152). The code is correct at HEAD (358/358, 1152/1152 on
-   `/triagem`, `/pacientes`, `/pacientes/[id]`, `/`), but no proof holds it. An independent
-   reference would close this, e.g. `main` width = viewport − sidebar width, or the wrapper width =
-   viewport. C23 (`:500`) shares the same reference. Location: `e2e/layout-mobile-first.spec.ts:553-554`;
-   subject `src/app/(staff)/staff-layout-client.tsx:62`.
-2. **C33 repasses member proven on the wrong table.** `tests/pages/staff-repasses.test.tsx:181`
-   asserts the history table's empty state. The table-set repasses table (`ClinicStatementsTable`,
-   header "Regra", measured by C16/C17) has an empty branch at
-   `src/app/(staff)/repasses/payout-tables.tsx:241-242` that no test asserts. `PayoutItemsTable`'s
-   empty branch (`:31`) has no assertion either.
-3. **Test policy, arrangement row unmet.** Same root cause as gap 1.
-4. **Test policy, lib CSS row unmet.** The touch rule has no browser case at 1440 or pointer-fine.
-   Only the text contract `still-void/tests/layout-css-contract.test.ts:128-132` covers it.
-5. **AC 30 repasse level gap.** The page-level "no horizontal scroll" is not measured in a
-   browser. Only the container structure is proven, in jsdom (`tests/pages/documento-repasse.test.tsx:219`).
-6. **Door 3.** `package.json:29` still reads `^3.3.1`. This is expected until `@still-void/ui@3.4.0`
-   is published (open question 1, `blocks go-live`).
-7. **Precision gaps, lower weight.** C15/AC 13 has no utility-level token-identity proof. C33
-   proves AC 16 "at both viewports" in jsdom, except pacientes, which C18 covers in the browser.
+1. **Door 3 unmet: open question 1, escalate to the user.** `package.json:29` reads
+   `"@still-void/ui": "^3.3.1"`. The plan's one-way door 3 and Landing step 4 require `^3.4.0`,
+   and the plan says the app PR closes only after publication. The `checks.md` Coverage row
+   "Landing doors" says C15 (`check:sv`) and C8 cover door 3. Neither reads the range, so that row
+   overstates its coverage. To close it: the user approves publishing `@still-void/ui@3.4.0`, the
+   app bumps to `^3.4.0` and reinstalls from the registry, and then a check or gate asserts the
+   range.
+2. **C32 does not require the document to render (low weight).** `e2e/layout-mobile-first.spec.ts:727-734`
+   counts unwrapped tables, but nothing asserts that each document rendered at least one table. A
+   page that errored (for example a changed repasse API shape that breaks the `page.route` mock)
+   would pass trivially. At HEAD the probe confirmed that the repasse page renders 1 table, and F-e
+   was killed, so the gap is only a future risk.
+3. **`checks.md` header count is stale (cosmetic).** The line says "32 checks em 4 fatias", but the
+   file now defines C1-C34.
+4. **Precision note, C33 "at both viewports".** 12 of 13 empty states are proven in jsdom only
+   (pacientes is proven in the browser by C18). The empty branches render an `EmptyState` in place
+   of the `<table>`, so the viewport-scoped `.sv-table--stack` rules cannot reach them. I accept
+   that reasoning, and it does not fail the check.
 
-Round-1 gaps now closed: the content column shrinking (code fixed; the proof gap stays, see 1),
-the active tab off-screen on load (C25, F3 killed), the C13 surviving mutant (F1 killed), AC 16 on
-1 of 13 (now 12 of 13 fully), AC 30 recibo (C32, F5 killed), the conditional C21 assertion, and
-C24's chip placement (F4 killed).
+Round-2 gaps now closed:
+
+- C26 surviving mutant (F2 killed, including C23).
+- C33 repasses proven on the wrong table (statements and items tables asserted; F-c killed).
+- Both unmet Test policy rows (C34 with F-b killed; arrangement with F2 killed).
+- AC 30 repasse level gap (browser, F-e killed).
+- The C15 utility-level precision gap (scan with F-d killed, plus a diff showing no existing color utility changed).

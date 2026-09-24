@@ -3,7 +3,7 @@
 Profile: ui
 Plan: `.specs/features/layout-mobile-first/plan.md`
 
-32 checks em 4 fatias · 4 portas sem volta · 1 pergunta aberta (`blocks go-live`: publicar a lib)
+35 checks em 4 fatias · 4 portas sem volta · 1 pergunta aberta (`blocks go-live`: publicar a lib)
 
 Dois repositórios. Checks da S1 rodam em `still-void/` (Vitest, texto do CSS + jsdom), os demais
 em `vitta-flow/` (Vitest para componente, Playwright para arranjo real em 390x844 e 1440x900).
@@ -36,6 +36,11 @@ Proof: `cd still-void && npx vitest run tests/table-css-contract.test.ts -t "sv-
 **C6** - Existe um changeset `minor` para `@still-void/ui` e nenhum valor de cor em `src/tokens/colors.ts`, `src/css/theme.css` ou nas custom properties `--sv-*` de cor de `src/css/style.css` difere de `origin/main` (LAYOUT-03, AC 5)
 Proof: `cd still-void && npx vitest run tests/release-contract.test.ts -t "changeset minor para layout mobile"`
 Proof: `cd still-void && git diff --exit-code origin/main -- src/tokens/colors.ts src/css/theme.css`
+
+### S0 - dependência publicada
+
+**C35** - `package.json` declara `"@still-void/ui": "^3.4.0"` e o pacote instalado em `node_modules` tem versão >= 3.4.0 (Landing door 3)
+Proof: `npx vitest run tests/app/still-void-version.test.ts -t "app depende da still-void 3.4.0 publicada"`
 
 ### S2 - casca e padrões do app · ~26 files · ~170 KB · ~43k
 
@@ -155,7 +160,7 @@ Proof: `npx vitest run tests/pages/documento-repasse.test.tsx -t "tabela do comp
 | `Table` `stack` (2 estados) | com `stack` C3 C5 · sem `stack` C3 | - |
 | `TableCell` `label` (2 estados) | com `label` C4 · sem `label` C4 | - |
 | regra de toque, seletor × contexto (3) | `.sv-btn` estreito/toque C2 · `.sv-field` estreito/toque C2 · `.sv-btn` desktop com mouse C34 | - |
-| Landing doors (4) | 1 `Table stack`/`label` C3 C4 C5 · 2 regra de toque C2 · 3 dependência `^3.4.0` C15 (via `check:sv` sobre o pacote instalado) e C8 · 4 `PageHeader` C9 C10 | - |
+| Landing doors (4) | 1 `Table stack`/`label` C3 C4 C5 · 2 regra de toque C2 C34 · 3 dependência `^3.4.0` C35 · 4 `PageHeader` C9 C10 | - |
 
 - Claims naming a concrete bound (px, viewport, contagem): C7, C8, C11–C14, C16, C17, C19, C23, C25–C29, C31, C32 - cada prova mede no navegador real, não por classe CSS
 - C3, C4 provam a API no jsdom; C5 prova que as regras só existem abaixo de 40rem; C16 prova o arranjo resultante no navegador. Os três somam, nenhum substitui o outro

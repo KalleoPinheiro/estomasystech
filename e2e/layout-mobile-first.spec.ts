@@ -723,6 +723,8 @@ test.describe("telas com defeito específico", () => {
     ]) {
       await page.goto(url);
       await settle(page);
+      // O documento renderizou de fato (moldura com a ação de imprimir), não uma página de erro.
+      await expect(page.getByRole("button", { name: "Imprimir / salvar PDF" }), url).toBeVisible();
       expect(await scrollWidth(page), url).toBeLessThanOrEqual(MOBILE.width + 2);
       const unwrapped = await page.evaluate(
         () =>
