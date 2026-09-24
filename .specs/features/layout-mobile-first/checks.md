@@ -57,7 +57,7 @@ Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "ações abaixo d
 **C12** - O e-mail da conta na sidebar ocupa uma linha (altura da linha <= 1,5 × `line-height`), com `text-overflow: ellipsis` e o e-mail completo no `title` (LAYOUT-06, AC 10)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "e-mail da sidebar em uma linha"`
 
-**C13** - Em 390x844, os cards de KPI de Dashboard, Faturamento e Relatórios formam 2 colunas (dois cards distintos com o mesmo `top` e `left` diferentes) (LAYOUT-06, AC 11)
+**C13** - Em 390x844, os cards de KPI de Dashboard, Faturamento e Relatórios formam 2 colunas: cada card mede metade da grade (±2px, descontado o gap) e os dois primeiros dividem a linha (LAYOUT-06, AC 11)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "KPIs em 2 colunas"`
 
 **C14** - No prontuário, o link "Pacientes" de voltar tem ícone e texto com centros verticais a no máximo 4px um do outro (LAYOUT-06, AC 12)
@@ -78,6 +78,17 @@ Proof: `npx playwright test e2e/layout-tabelas.spec.ts -g "tabela no desktop"`
 **C18** - Sem registros, Pacientes mostra a mensagem de vazio atual nos dois viewports (LAYOUT-08, AC 16)
 Proof: `npx playwright test e2e/layout-tabelas.spec.ts -g "vazio preservado"`
 
+**C33** - Cada uma das 13 tabelas do table set mostra a mesma mensagem de vazio de antes quando não há registros (o layout novo não mexeu nesses ramos; testes de página existentes, um por tabela) (LAYOUT-08, AC 16)
+Proof: `npx vitest run tests/pages/staff-pacientes-list.test.tsx -t "Dado nenhum paciente, Quando a página carrega, Então exibe mensagem de vazio"`
+Proof: `npx vitest run tests/pages/staff-operations.test.tsx -t "Dado nenhum parceiro, Quando a página carrega|Dado nenhum profissional, Quando a página carrega|Dado nenhum evento, Quando a página carrega|Dado nenhuma conta cadastrada"`
+Proof: `npx vitest run tests/pages/staff-procedimentos.test.tsx -t "Dado nenhum procedimento, Quando a página carrega"`
+Proof: `npx vitest run tests/pages/staff-materiais.test.tsx -t "Dado nenhum insumo, Quando a página carrega"`
+Proof: `npx vitest run tests/pages/staff-faturamento.test.tsx -t "Dado nenhuma fatura, Quando a página carrega"`
+Proof: `npx vitest run tests/pages/staff-relatorios.test.tsx -t "Dado nenhuma consulta concluída no mês|Dado produção sem nenhum registro"`
+Proof: `npx vitest run tests/pages/staff-repasses.test.tsx -t "Dado Profissional, Quando abre a tela, Então pede o próprio extrato"`
+Proof: `npx vitest run tests/pages/schedule-availability-ui.test.tsx -t "Dado nenhum bloqueio e atendente sem acesso a profissionais"`
+Proof: `npx vitest run tests/pages/staff-paciente-detail.test.tsx -t "Dado erro ao carregar avaliações, Quando expandir a condição"`
+
 ### S4 - telas com defeito específico · ~20 files · ~150 KB · ~38k
 
 **C19** - Em 390x844, a grade da Agenda mostra 7 colunas de dia dentro do viewport, cada célula com >= 44x44px (LAYOUT-09, AC 17)
@@ -95,13 +106,13 @@ Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "agenda: dia vazi
 **C23** - Em 390x844, o filtro de profissional da Agenda fica abaixo da navegação de mês e tem a largura da coluna de conteúdo (±2px) (LAYOUT-09, AC 21)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "agenda: filtro em largura total"`
 
-**C24** - Em 1440x900, a Agenda mostra a consulta como chip dentro da célula do dia (LAYOUT-09, AC 22)
+**C24** - Em 1440x900, a Agenda mostra a consulta como chip dentro da célula do dia dela (`[data-calendar-day]`) (LAYOUT-09, AC 22)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "agenda: chips no desktop"`
 
-**C25** - Em 390x844, a lista de abas do prontuário tem `scrollWidth > clientWidth` e rola dentro de si, a página não rola de lado, e depois de escolher "Pacotes" essa aba fica inteira dentro do viewport (LAYOUT-10, AC 23)
+**C25** - Em 390x844, a lista de abas do prontuário tem `scrollWidth > clientWidth` e rola dentro de si, a página não rola de lado, a aba ativa ao abrir (Anamnese) está inteira dentro do viewport, e depois de escolher "Pacotes" essa aba também fica (LAYOUT-10, AC 23)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "prontuário: abas rolam dentro de si"`
 
-**C26** - Nos dois viewports, o painel da aba Anamnese e o vazio da Triagem têm a largura do conteúdo de `main` (±2px) (LAYOUT-10, AC 24)
+**C26** - Nos dois viewports, o painel da aba Anamnese e o vazio da Triagem têm a largura útil de `main` (largura interna menos o padding, ±2px) (LAYOUT-10, AC 24)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "painéis na largura do conteúdo"`
 
 **C27** - Em 390x844, cada linha de "Retornos pendentes" do Dashboard mostra o nome completo e o motivo sem corte (`scrollWidth <= clientWidth`), com as ações abaixo do texto (LAYOUT-10, AC 25)
@@ -119,8 +130,9 @@ Proof: `npx vitest run tests/components/portal-layout.test.tsx -t "aviso de emer
 **C31** - Em 390x844, o `h1` de saudação do portal tem `font-size` igual ao degrau `headline` da lib (`--sv-fs-headline` ou equivalente resolvido), e em 1440x900 continua no degrau `display` (LAYOUT-11, AC 29)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "portal: saudação no degrau headline"`
 
-**C32** - Em 390x844, cada página de documento mantém suas tabelas dentro de um contêiner com rolagem horizontal e a página sem rolagem lateral (LAYOUT-11, AC 30)
+**C32** - Em 390x844, cada página de documento (atestado, consentimento, relatório, plano de cuidados, recibo) mantém suas tabelas dentro de um contêiner com rolagem horizontal e a página sem rolagem lateral; o comprovante de repasse mantém a tabela dentro de `.sv-table-container` (fechar repasse exige mês encerrado, então ele é provado pela estrutura) (LAYOUT-11, AC 30)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "documentos sem scroll lateral"`
+Proof: `npx vitest run tests/pages/documento-repasse.test.tsx -t "tabela do comprovante dentro de contêiner com rolagem"`
 
 ## Coverage
 
@@ -129,10 +141,11 @@ Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "documentos sem s
 | page set × viewport, sem scroll lateral (46) | C7, table-driven over all 46 (23 páginas × 390x844 e 1440x900) | - |
 | page set, alvo de toque (23) | C8, table-driven over all 23 | - |
 | páginas da equipe com `PageHeader` (14) | C10, table-driven over all 14 (`/` `/agenda` `/triagem` `/pacientes` `/pacientes/[id]` `/parceiros` `/profissionais` `/procedimentos` `/materiais` `/faturamento` `/repasses` `/relatorios` `/auditoria` `/configuracoes`) | - |
-| grupos de KPI (3) | Dashboard C13 · Faturamento C13 · Relatórios C13 | - |
+| grupos de KPI (3) | Dashboard C13 · Faturamento C13 · Relatórios C13 (largura de cada card = metade da grade) | - |
+| vazio das tabelas do table set (13) | pacientes C18 C33 · parceiros C33 · profissionais C33 · procedimentos C33 · materiais C33 · faturamento C33 · auditoria C33 · relatórios receita C33 · relatórios produção C33 · repasses C33 · configurações contas C33 · configurações feriados C33 · prontuário estomias e feridas C33 | - |
 | table set (13) | pacientes C16 C17 · parceiros C16 C17 · profissionais C16 C17 · procedimentos C16 C17 · materiais C16 C17 · faturamento C16 C17 · auditoria C16 C17 · relatórios receita C16 C17 · relatórios produção C16 C17 · repasses C16 C17 · configurações contas C16 C17 · configurações feriados C16 C17 · prontuário estomias e feridas C16 C17 | - |
 | telas públicas (3) | login C28 · esqueci-senha C28 · definir-senha C28 | - |
-| páginas de documento (4) | atestado C32 · consentimento C32 · relatório C32 · plano de cuidados C32 | - |
+| páginas de documento (6) | atestado C32 · consentimento C32 · relatório C32 · plano de cuidados C32 · recibo C32 · repasse C32 (estrutura, jsdom) | - |
 | estados da agenda no celular (4) | hoje selecionado C21 · dia com consulta C21 · dia vazio C22 · marcador C20 | - |
 | viewports da agenda (2) | 390x844 C19 · 1440x900 C24 | - |
 | `Table` `stack` (2 estados) | com `stack` C3 C5 · sem `stack` C3 | - |
@@ -168,7 +181,7 @@ Cost: 6 provas na lib (3 arquivos de teste) e ~26 no app (2 specs E2E novos + 3 
 ## Swept
 
 - validation: n/a - não há entrada nova; formulários existentes mantêm suas validações
-- failure modes: C18, C22 - estados vazios preservados no layout novo; erros de API seguem o `ErrorAlert` atual
+- failure modes: C18, C22, C33 - estados vazios preservados no layout novo; erros de API seguem o `ErrorAlert` atual
 - idempotency: n/a - só apresentação, nenhuma escrita nova
 - authorization: existing - proxy e `getRequestSession` decidem acesso; o layout não muda rota nem guarda
 - concurrency: n/a - nenhum estado compartilhado novo; a seleção de dia da agenda é estado local de componente
@@ -186,3 +199,4 @@ Divisão planejada, com a conta, antes de qualquer código:
 - Ordem: S1 (lib, PR, release) -> S2 -> S3 -> S4 no app, um PR, Verifier único sobre `origin/main..HEAD` dos dois repositórios
 
 - **Settled mid-build (2026-09-24):** C8 mede o `<label>` que envolve checkbox/radio, não a caixinha (decisão do usuário: tocar no rótulo já marca; a lib dá 44px ao rótulo em tela estreita/toque). Achados que viraram regra da lib além do plano original, todos aditivos e na mesma release 3.4.0: `.sv-btn` com `min-width` de 44px, `.sv-tabs__trigger` com 44px e `.sv-tabs__list` rolando dentro de si, `TabsContent` esticando à largura (`align-self: stretch`), título do `Hero` no degrau `headline` abaixo de 40rem.
+- **Round 1 do Verifier (2026-09-24, FAIL):** coluna de conteúdo da equipe encolhia até o conteúdo (wrapper sem `flex-1`/`w-full`, `staff-layout-client.tsx`) e a aba ativa do prontuário abria fora da tela (`.sv-tabs__list` centralizada com overflow; a lib agora alinha ao início em tela estreita/toque). C13, C24, C25, C26 e C32 tiveram a prova reforçada para medir o que a claim diz; C33 foi acrescentado para os estados vazios do AC 16. A agenda compacta vale abaixo de 768px (`md`), não de 40rem: a grade de chips precisa de 840px, então entre 640 e 768 ela também não cabe.

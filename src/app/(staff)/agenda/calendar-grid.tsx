@@ -135,6 +135,7 @@ export function CalendarGrid({
                   // biome-ignore lint/a11y/useSemanticElements: célula contém <Button> filhos (compromissos); trocar por <button> geraria <button> aninhado, HTML inválido.
                   <div
                     key={key}
+                    data-calendar-day={key}
                     role="button"
                     tabIndex={invalid ? -1 : 0}
                     onClick={() => !invalid && onDayClick(day)}

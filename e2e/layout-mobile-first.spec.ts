@@ -8,6 +8,8 @@ import {
 } from "@playwright/test";
 import {
   addAssessment,
+  apiGet,
+  apiPatch,
   apiPost,
   completeAppointment,
   createAppointment,
@@ -183,6 +185,16 @@ async function settle(page: Page): Promise<void> {
   await expect(page.locator(".sv-skeleton:visible")).toHaveCount(0, { timeout: 20_000 });
 }
 
+/** Largura útil de `main` (sem o padding): a coluna onde o conteúdo deve caber. */
+async function contentWidth(page: Page): Promise<number> {
+  return page.locator("main").first().evaluate((el) => {
+    const style = getComputedStyle(el);
+    return (
+      el.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight)
+    );
+  });
+}
+
 async function scrollWidth(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth);
 }
@@ -302,15 +314,19 @@ test.describe("casca e padrões compartilhados", () => {
       await page.setViewportSize(MOBILE);
       await page.goto(url);
       await settle(page);
-      const boxes = await page.locator("[data-kpi-grid] > *").evaluateAll((els) =>
-        els.slice(0, 2).map((el) => {
-          const r = el.getBoundingClientRect();
-          return { top: Math.round(r.top), left: Math.round(r.left) };
-        }),
-      );
-      expect(boxes).toHaveLength(2);
-      expect(boxes[0].top).toBe(boxes[1].top);
-      expect(boxes[0].left).not.toBe(boxes[1].left);
+      const layout = await page.locator("[data-kpi-grid]").evaluate((grid) => {
+        const gap = Number.parseFloat(getComputedStyle(grid).columnGap) || 0;
+        const half = (grid.getBoundingClientRect().width - gap) / 2;
+        const cards = Array.from(grid.children).map((el) => el.getBoundingClientRect());
+        return { half, widths: cards.map((r) => r.width), tops: cards.map((r) => r.top) };
+      });
+      // Duas colunas exatas: cada card ocupa metade da grade (4 colunas dariam 1/4,
+      // 1 coluna daria a largura toda), e os dois primeiros dividem a linha.
+      expect(layout.widths.length).toBeGreaterThanOrEqual(2);
+      for (const width of layout.widths) {
+        expect(Math.abs(width - layout.half)).toBeLessThanOrEqual(2);
+      }
+      expect(layout.tops[0]).toBe(layout.tops[1]);
     });
   }
 
@@ -362,6 +378,43 @@ function todayKeySaoPaulo(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }
 
+/**
+ * Fatura paga, para o recibo. O comprovante de repasse não entra aqui: fechar um
+ * repasse exige mês encerrado e a API recusa consulta no passado — ele é provado
+ * pela estrutura em `tests/pages/documento-repasse.test.tsx` e divide o
+ * `DocumentFrame` com o recibo medido aqui.
+ */
+async function seedReceipt(request: APIRequestContext) {
+  const professional = await apiPost<{ id: string }>(request, "/api/professionals", {
+    fullName: `Enf. Comprovante ${unique()}`,
+    registry: "COREN-SP 2",
+    commissionType: "percentage",
+    commissionPct: 30,
+  });
+  const patient = await createPatient(request, { fullName: `Paciente Recibo ${unique()}` });
+  const slot = slotForAttempt("layout-documentos-recibo", 30);
+  const appointment = await createAppointment(request, {
+    patientId: patient.id,
+    startsAt: slot.startsAt,
+    endsAt: slot.endsAt,
+    procedure: `Curativo recibo ${unique()}`,
+    priceCents: 18000,
+    professionalId: professional.id,
+  });
+  await completeAppointment(request, appointment.id);
+  const invoices = await apiGet<Array<{ id: string; patientId: string }>>(
+    request,
+    `/api/invoices?patientId=${patient.id}`,
+  );
+  const invoice = invoices.find((i) => i.patientId === patient.id)!;
+  const paid = await apiPatch<{ id: string; payments: Array<{ id: string }> }>(
+    request,
+    `/api/invoices/${invoice.id}`,
+    { action: "pay", method: "pix" },
+  );
+  return { receiptUrl: `/documentos/recibo/${paid.id}/${paid.payments[0].id}` };
+}
+
 test.describe("agenda", () => {
   test("agenda: 7 colunas no celular", async ({ page, request }) => {
     await world(request);
@@ -402,11 +455,12 @@ test.describe("agenda", () => {
     await page.setViewportSize(MOBILE);
     await page.goto("/agenda");
     await settle(page);
+    // A agenda abre no mês corrente com o dia de hoje selecionado.
     const today = todayKeySaoPaulo();
-    const firstMonth = today.slice(0, 7);
-    if (firstMonth === (await page.locator("[data-mobile-month] [data-day]").nth(10).getAttribute("data-day"))?.slice(0, 7)) {
-      await expect(page.locator(`[data-day="${today}"]`)).toHaveAttribute("aria-pressed", "true");
-    }
+    await expect(page.locator(`[data-mobile-month] [data-day="${today}"]`)).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await agendaToMonth(page, dayKey);
     await page.locator(`[data-mobile-month] [data-day="${dayKey}"]`).click();
     const list = page.locator("[data-day-list]");
@@ -442,9 +496,8 @@ test.describe("agenda", () => {
     await settle(page);
     const filter = await page.locator("[data-professional-filter]").boundingBox();
     const nav = await page.getByRole("button", { name: "Próximo mês" }).boundingBox();
-    const content = await page.locator("[data-page-header]").boundingBox();
     expect(filter!.y).toBeGreaterThanOrEqual(nav!.y + nav!.height);
-    expect(Math.abs(filter!.width - content!.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(filter!.width - (await contentWidth(page)))).toBeLessThanOrEqual(2);
   });
 
   test("agenda: chips no desktop", async ({ page, request }) => {
@@ -458,6 +511,8 @@ test.describe("agenda", () => {
       name: new RegExp(`^${slot.startTimeInput} Maria Aparecida Layout`),
     });
     await expect(chip.first()).toBeVisible();
+    // O chip mora dentro da célula do dia da consulta.
+    await expect(page.locator(`[data-calendar-day="${dayKey}"]`).locator(chip)).toHaveCount(1);
   });
 });
 
@@ -474,6 +529,10 @@ test.describe("telas com defeito específico", () => {
     }));
     expect(overflow.scroll).toBeGreaterThan(overflow.client);
     expect(await scrollWidth(page)).toBeLessThanOrEqual(MOBILE.width + 2);
+    // Ao abrir, a aba ativa (Anamnese) está inteira dentro da tela.
+    const active = await page.getByRole("tab", { name: "Anamnese" }).boundingBox();
+    expect(active!.x).toBeGreaterThanOrEqual(0);
+    expect(active!.x + active!.width).toBeLessThanOrEqual(MOBILE.width);
     await page.getByRole("tab", { name: "Pacotes" }).click();
     const tab = await page.getByRole("tab", { name: "Pacotes" }).boundingBox();
     expect(tab!.x).toBeGreaterThanOrEqual(0);
@@ -490,9 +549,9 @@ test.describe("telas com defeito específico", () => {
       ] as const) {
         await page.goto(url);
         await settle(page);
-        const content = await page.locator("[data-page-header]").boundingBox();
         const box = await page.locator(panel).first().boundingBox();
-        expect(Math.abs(box!.width - content!.width), `${url} ${viewport.width}`).toBeLessThanOrEqual(2);
+        const width = await contentWidth(page);
+        expect(Math.abs(box!.width - width), `${url} ${viewport.width}`).toBeLessThanOrEqual(2);
       }
     });
   }
@@ -592,12 +651,14 @@ test.describe("telas com defeito específico", () => {
 
   test("documentos sem scroll lateral", async ({ page, request }) => {
     const w = await world(request);
+    const { receiptUrl } = await seedReceipt(request);
     await page.setViewportSize(MOBILE);
     for (const url of [
       `/documentos/atestado/${w.appointmentId}`,
       `/documentos/consentimento/${w.patientId}`,
       `/documentos/relatorio/${w.conditionId}`,
       `/documentos/plano-cuidados/${w.carePlanId}`,
+      receiptUrl,
     ]) {
       await page.goto(url);
       await settle(page);

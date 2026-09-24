@@ -59,7 +59,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
           div (item flex único dessa linha) herda `min-width: auto` e cresce até
           caber o conteúdo do `<main>`, empurrando a página inteira além do
           viewport em mobile mesmo com a tabela já contida em overflow-x-auto. */}
-      <div className="flex min-h-screen min-w-0">
+      <div className="flex min-h-screen w-full min-w-0 flex-1">
         {/* O <main> não usa o <Layout> do pacote de propósito: `.sv-layout` limita
             a 1120px e as telas do staff são tabelas largas. */}
         <SidebarPanel className="w-56 shrink-0 justify-between border-border border-r p-5">
