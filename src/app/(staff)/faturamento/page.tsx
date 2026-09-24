@@ -58,13 +58,13 @@ function AmountCell({ invoice }: { invoice: InvoiceDto }) {
   return (
     <span>
       {invoice.discountCents > 0 && (
-        <span className="mr-1 text-ink-3 text-xs line-through">
+        <span className="mr-1 text-ink-3 text-xs line-through sm:mr-0 sm:block">
           {formatCurrency(invoice.amountCents)}
         </span>
       )}
       {formatCurrency(invoice.netAmountCents)}
       {invoice.status === 'pending' && invoice.paidCents > 0 && (
-        <span className="block font-normal text-warning text-xs">
+        <span className="block whitespace-nowrap font-normal text-warning text-xs">
           falta {formatCurrency(invoice.balanceCents)}
         </span>
       )}
@@ -88,7 +88,7 @@ function PaymentsCell({ invoice }: { invoice: InvoiceDto }) {
   return (
     <ul className="flex flex-col gap-0.5">
       {invoice.payments.map((payment) => (
-        <li key={payment.id}>
+        <li key={payment.id} className="sm:whitespace-nowrap">
           {formatCurrency(payment.amountCents)} via{' '}
           {PAYMENT_METHOD_LABELS[payment.method] ?? payment.method} em{' '}
           {formatDate(payment.paidAt)} ·{' '}
@@ -115,40 +115,40 @@ function InvoicesTable({
       <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
-            <TableHead className="px-4 py-3">Emissão</TableHead>
-            <TableHead className="px-4 py-3">Paciente</TableHead>
-            <TableHead className="px-4 py-3">Descrição</TableHead>
-            <TableHead className="px-4 py-3 text-right">Valor</TableHead>
-            <TableHead className="px-4 py-3">Status</TableHead>
-            <TableHead className="px-4 py-3">Pagamento</TableHead>
-            <TableHead className="px-4 py-3 text-right">Ações</TableHead>
+            <TableHead className="px-3 py-3">Emissão</TableHead>
+            <TableHead className="px-3 py-3">Paciente</TableHead>
+            <TableHead className="px-3 py-3">Descrição</TableHead>
+            <TableHead className="px-3 py-3 text-right">Valor</TableHead>
+            <TableHead className="px-3 py-3">Status</TableHead>
+            <TableHead className="px-3 py-3">Pagamento</TableHead>
+            <TableHead className="px-3 py-3 text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {invoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell label="Emissão" className="px-4 py-3 text-ink-2">
+              <TableCell label="Emissão" className="px-3 py-3 text-ink-2">
                 {formatDate(invoice.issuedAt)}
               </TableCell>
               <TableCell
                 label="Paciente"
-                className="px-4 py-3 font-medium sm:min-w-52"
+                className="px-3 py-3 font-medium sm:min-w-44"
               >
                 {invoice.patientName}
               </TableCell>
               <TableCell
                 label="Descrição"
-                className="px-4 py-3 text-ink-2 sm:max-w-44 sm:truncate"
+                className="px-3 py-3 text-ink-2 sm:max-w-32 sm:truncate"
               >
                 {invoice.description}
               </TableCell>
               <TableCell
                 label="Valor"
-                className="px-4 py-3 text-right font-medium tabular-nums"
+                className="px-3 py-3 text-right font-medium tabular-nums"
               >
                 <AmountCell invoice={invoice} />
               </TableCell>
-              <TableCell label="Status" className="px-4 py-3">
+              <TableCell label="Status" className="px-3 py-3">
                 <StatusBadge
                   status={invoice.status}
                   label={
@@ -158,13 +158,13 @@ function InvoicesTable({
               </TableCell>
               <TableCell
                 label="Pagamento"
-                className="px-4 py-3 text-ink-2 text-xs sm:min-w-44"
+                className="px-3 py-3 text-ink-2 text-xs"
               >
                 <PaymentsCell invoice={invoice} />
               </TableCell>
               <TableCell
                 label="Ações"
-                className="px-4 py-3 text-right sm:whitespace-nowrap"
+                className="px-3 py-3 text-right sm:whitespace-nowrap"
               >
                 {invoice.status === 'pending' ? (
                   <span className="inline-flex flex-wrap justify-end gap-x-2 sm:flex-nowrap">

@@ -137,11 +137,18 @@ const TABLE_SET: Member[] = [
         description: `Fatura parcial ${unique()}`,
         amountCents: 9000,
       }).then((partial) =>
+        // Dois recebimentos: a célula Pagamento lista um por linha.
         apiPatch(request, `/api/invoices/${partial.id}`, {
           action: "pay_partial",
           amountCents: 3000,
           method: "pix",
-        }),
+        }).then(() =>
+          apiPatch(request, `/api/invoices/${partial.id}`, {
+            action: "pay_partial",
+            amountCents: 2000,
+            method: "cash",
+          }),
+        ),
       );
       return { url: "/faturamento", header: "Pagamento" };
     },
@@ -296,6 +303,9 @@ for (const member of TABLE_SET) {
     await page.setViewportSize(DESKTOP);
     const table = await openTable(page, seeded);
     const report = await table.evaluate((el) => ({
+      // A tabela cabe na coluna de conteúdo: nenhuma coluna escondida atrás
+      // da rolagem horizontal do contêiner.
+      overflow: el.getBoundingClientRect().width - (el.parentElement?.clientWidth ?? 0),
       theadHeight: el.querySelector("thead")?.getBoundingClientRect().height ?? 0,
       tallRows: Array.from(el.querySelectorAll("tbody tr"))
         .map((tr) => tr.getBoundingClientRect().height)
@@ -303,6 +313,7 @@ for (const member of TABLE_SET) {
     }));
     expect(report.theadHeight).toBeGreaterThan(0);
     expect(report.tallRows).toBe(0);
+    expect(report.overflow).toBeLessThanOrEqual(1);
     await seeded.cleanup?.();
   });
 }
