@@ -104,35 +104,21 @@
   stroke-linecap: round;
 }
 
-/* --- Portal em tela estreita (#127) ---
-   O portal é a superfície do paciente e do parceiro, aberta no celular. Duas
-   lacunas do `.sv-layout`/`.sv-btn`/`.sv-field` da lib quebravam a tela em
-   390px e 375px; as regras ficam escopadas a `.portal-shell` (layout do portal). */
-
-/* sv-gap: layout-grid-min-content
-   `.sv-layout` usa `grid-template-columns: 1fr`, que é `minmax(auto, 1fr)`: a
-   coluna cresce até o min-content do conteúdo (linha de consulta com botão +
-   selo, título longo) e a página ganhava ~140px de scroll horizontal em 390px.
-   `minmax(0, 1fr)` é o que a própria lib já usa em `.sv-layout--with-sidebar`. */
-.portal-shell .sv-layout {
-  grid-template-columns: minmax(0, 1fr);
-}
+/* --- Alvo de toque em tela estreita (#127, layout mobile-first) ---
+   Desde a `@still-void/ui@3.4.0`, `.sv-btn` e `.sv-field` já chegam a 44px em
+   `(width < 40rem), (pointer: coarse)` e `.sv-layout` usa `minmax(0, 1fr)`.
+   Resta o link de texto, que a lib não dimensiona. */
 
 /* sv-gap: touch-target-size
-   A lib não tem tamanho de toque: `Button size="sm"` mede 36px, o default e o
-   `Input` 40px, e o link da marca no `Header` 24px — abaixo dos 44x44px de
-   WCAG 2.5.5. Em tela estreita ou ponteiro grosso (toque), todo controle do
-   portal ganha 44px (a mesma conta do `.sv-btn--lg`); desktop com mouse fica
-   como a lib desenha. `a[href]` vira inline-flex porque `min-height` não se
-   aplica a elemento inline. */
+   Link de texto não tem alvo de toque na lib: em tela estreita ou ponteiro
+   grosso, todo `a[href]` do conteúdo (`main`) e do portal ganha 44px (a mesma
+   conta que a lib usa em `.sv-btn`). `inline-flex` porque `min-height` não se
+   aplica a elemento inline. Desktop com mouse fica como está. */
 @media (width < 40rem), (pointer: coarse) {
-  .portal-shell :is(.sv-btn, .sv-field, a[href]) {
-    min-height: calc(var(--sv-space-10) + var(--sv-space-1));
-    min-width: calc(var(--sv-space-10) + var(--sv-space-1));
-  }
-
-  .portal-shell a[href] {
+  :is(main, .portal-shell) a[href] {
     display: inline-flex;
     align-items: center;
+    min-height: calc(var(--sv-space-10) + var(--sv-space-1));
+    min-width: calc(var(--sv-space-10) + var(--sv-space-1));
   }
 }

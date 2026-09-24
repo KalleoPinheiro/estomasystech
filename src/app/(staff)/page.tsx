@@ -11,6 +11,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { SummaryCard } from '@/components/summary-card';
 import { TriagePhotoList } from '@/components/triage-photo-list';
@@ -102,18 +103,23 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="sv-display pt-0 pb-6 font-bold text-2xl">Dashboard</h1>
+      <PageHeader title="Dashboard" />
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        data-kpi-grid
+        className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+      >
         {cards.map((card) => (
           <Link
             key={card.label}
             href={card.href}
             aria-label={`Ver ${card.label.toLowerCase()}`}
           >
-            <Card className="p-5 transition-colors hover:border-accent">
+            <Card className="h-full p-4 transition-colors hover:border-accent sm:p-5">
               <p className="text-ink-3 text-sm">{card.label}</p>
-              <p className={`mt-1 font-bold text-2xl ${card.tone}`}>
+              <p
+                className={`mt-1 font-bold text-xl tabular-nums sm:text-2xl ${card.tone}`}
+              >
                 {card.value}
               </p>
             </Card>

@@ -20,6 +20,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { PartnerDto } from '@/lib/dto';
@@ -58,20 +59,19 @@ export default function PartnersPage() {
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Parceiros</h1>
-        <Button
-          type="button"
-          onClick={() => setEditing('new')}
-          variant="accent"
-        >
-          + Novo parceiro
-        </Button>
-      </div>
-      <p className="mb-6 text-ink-3 text-sm">
-        Parceiros indicam pacientes e acompanham a evolução das suas indicações
-        pelo portal, entrando com a conta Google do email cadastrado aqui.
-      </p>
+      <PageHeader
+        title="Parceiros"
+        description="Parceiros indicam pacientes e acompanham a evolução das suas indicações pelo portal, entrando com a conta Google do email cadastrado aqui."
+        actions={
+          <Button
+            type="button"
+            onClick={() => setEditing('new')}
+            variant="accent"
+          >
+            + Novo parceiro
+          </Button>
+        }
+      />
 
       {(actionError ?? error) && (
         <ErrorAlert message={actionError ?? error ?? ''} />

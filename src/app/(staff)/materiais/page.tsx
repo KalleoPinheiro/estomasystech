@@ -25,6 +25,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, StockMovementDto, SupplyDto } from '@/lib/dto';
@@ -75,16 +76,18 @@ export default function SuppliesPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Materiais e estoque</h1>
-        <Button
-          type="button"
-          onClick={() => setEditing('new')}
-          variant="accent"
-        >
-          + Novo insumo
-        </Button>
-      </div>
+      <PageHeader
+        title="Materiais e estoque"
+        actions={
+          <Button
+            type="button"
+            onClick={() => setEditing('new')}
+            variant="accent"
+          >
+            + Novo insumo
+          </Button>
+        }
+      />
 
       {error && <ErrorAlert message={error} />}
       <LowStockBanner supplies={supplies} onRepor={setMoving} />

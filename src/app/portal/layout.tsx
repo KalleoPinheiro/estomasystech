@@ -1,10 +1,4 @@
-import {
-  Alert,
-  AlertDescription,
-  Header,
-  Icon,
-  Layout,
-} from '@still-void/ui/react';
+import { Alert, AlertDescription, Header, Layout } from '@still-void/ui/react';
 import type { Metadata } from 'next';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
@@ -19,8 +13,8 @@ export default function PortalLayout({
   children: React.ReactNode;
 }) {
   return (
-    // `portal-shell` escopa as correções mobile de globals.css (#127) ao portal —
-    // telas de staff não usam `.sv-layout` nem mudam de alvo de toque.
+    // `portal-shell` escopa ao portal a regra de toque de links de globals.css
+    // (#127) — o header do portal fica fora do `main` das telas da equipe.
     <div className="portal-shell">
       <Header
         logo={
@@ -42,9 +36,9 @@ export default function PortalLayout({
               não tem esse campo hoje (ver Assumptions do spec). */}
           <Alert variant="warning">
             <AlertDescription>
-              <Icon name="alert-circle" /> Em caso de sangramento, febre ou dor
-              intensa, procure atendimento presencial ou um pronto-socorro
-              imediatamente — não aguarde resposta pelo portal.
+              Em caso de sangramento, febre ou dor intensa, procure atendimento
+              presencial ou um pronto-socorro imediatamente — não aguarde
+              resposta pelo portal.
             </AlertDescription>
           </Alert>
           {children}

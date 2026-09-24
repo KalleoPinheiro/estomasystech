@@ -6,6 +6,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { PageHeader } from '@/components/page-header';
 import { TriagePhotoList } from '@/components/triage-photo-list';
 import { useTriageQueue } from '@/lib/use-triage-queue';
 
@@ -27,9 +28,7 @@ export default function TriagePage() {
 
   return (
     <div>
-      <h1 className="sv-display pt-0 pb-6 font-bold text-2xl">
-        Triagem de fotos
-      </h1>
+      <PageHeader title="Triagem de fotos" />
       <Card className="p-5">
         {isLoading ? (
           <LoadingIndicator />

@@ -22,12 +22,22 @@ export function SidebarIdentity() {
   const { data } = useApiQuery<SidebarIdentityDto>('/api/auth/identity');
 
   return (
-    <div>
+    <div className="min-w-0">
       <BrandLogo />
       <p className="mt-1 text-ink-3 text-xs">{data?.clinicLabel ?? ''}</p>
       {data?.account && (
-        <p className="mt-0.5 text-ink-3 text-xs">
-          {data.account.email} · {data.account.roleLabel}
+        <p className="mt-0.5 flex min-w-0 text-ink-3 text-xs">
+          <span
+            className="truncate"
+            title={data.account.email}
+            data-sidebar-email
+          >
+            {data.account.email}
+          </span>
+          <span className="shrink-0 whitespace-pre">
+            {' '}
+            · {data.account.roleLabel}
+          </span>
         </p>
       )}
     </div>
@@ -61,7 +71,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
           </div>
           <LogoutButton />
         </SidebarPanel>
-        <SidebarInset className="min-w-0 flex-1 p-6 lg:p-8">
+        <SidebarInset className="min-w-0 flex-1 px-4 py-5 sm:p-6 lg:p-8">
           <div className="mb-4 flex items-center gap-3 lg:hidden">
             {/* min-h-11/min-w-11 (44px): o padding padrão do still-void
                 (--sv-space-2 = 8px) rende um alvo de toque de ~38px — abaixo do

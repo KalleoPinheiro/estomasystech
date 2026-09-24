@@ -21,6 +21,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { ProcedureDto, SupplyDto } from '@/lib/dto';
@@ -65,23 +66,19 @@ export default function ProceduresPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">
-          Catálogo de procedimentos
-        </h1>
-        <Button
-          type="button"
-          onClick={() => setEditing('new')}
-          variant="accent"
-        >
-          + Novo procedimento
-        </Button>
-      </div>
-
-      <p className="mb-4 text-ink-3 text-sm">
-        Fonte única de nome, preço e duração — o agendamento preenche a partir
-        daqui e a margem por procedimento fica consistente.
-      </p>
+      <PageHeader
+        title="Catálogo de procedimentos"
+        description="Fonte única de nome, preço e duração — o agendamento preenche a partir daqui e a margem por procedimento fica consistente."
+        actions={
+          <Button
+            type="button"
+            onClick={() => setEditing('new')}
+            variant="accent"
+          >
+            + Novo procedimento
+          </Button>
+        }
+      />
 
       <ErrorAlertOrNull message={resolveErrorMessage(actionError, error)} />
 

@@ -4,6 +4,7 @@ import { Button, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { AuthCard } from '@/components/auth-card';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 
@@ -21,22 +22,18 @@ function SetPasswordCard() {
   const token = useSearchParams().get('token') ?? '';
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center">
-      {/* sv-gradient-border é a assinatura visual do Still Void — nunca trocada
-          por box-shadow, e cards do sistema não têm sombra. */}
-      <div className="sv-gradient-border w-full max-w-sm p-8">
-        <h1 className="sv-display font-bold text-xl">Defina sua senha</h1>
-        <p className="mt-1 mb-6 text-ink-3 text-sm">
-          Escolha uma senha de pelo menos {MIN_PASSWORD_LENGTH} caracteres para
-          acessar o VittaFlow.
-        </p>
-        {token ? (
-          <SetPasswordForm token={token} />
-        ) : (
-          <MissingLink message="Link incompleto — abra o link exatamente como veio no e-mail." />
-        )}
-      </div>
-    </div>
+    <AuthCard>
+      <h1 className="sv-display font-bold text-xl">Defina sua senha</h1>
+      <p className="mt-1 mb-6 text-ink-3 text-sm">
+        Escolha uma senha de pelo menos {MIN_PASSWORD_LENGTH} caracteres para
+        acessar o VittaFlow.
+      </p>
+      {token ? (
+        <SetPasswordForm token={token} />
+      ) : (
+        <MissingLink message="Link incompleto — abra o link exatamente como veio no e-mail." />
+      )}
+    </AuthCard>
   );
 }
 

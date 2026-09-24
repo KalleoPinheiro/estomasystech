@@ -24,6 +24,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import type { CancellationPolicy } from '@/domain/scheduling/schedule-config';
 import { apiFetch } from '@/lib/client';
@@ -79,7 +80,7 @@ interface ScheduleConfigDto {
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="sv-display font-bold text-2xl">Configurações</h1>
+      <PageHeader title="Configurações" />
       <ClinicInfoSection />
       <ScheduleSection />
       <ClosuresSection />

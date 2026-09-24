@@ -17,6 +17,7 @@ import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { LoadMoreButton } from '@/components/load-more-button';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import { PagedList } from '@/components/paged-list';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
@@ -223,16 +224,18 @@ export default function PatientsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Pacientes</h1>
-        <Button
-          type="button"
-          onClick={() => setEditing('new')}
-          variant="accent"
-        >
-          + Novo paciente
-        </Button>
-      </div>
+      <PageHeader
+        title="Pacientes"
+        actions={
+          <Button
+            type="button"
+            onClick={() => setEditing('new')}
+            variant="accent"
+          >
+            + Novo paciente
+          </Button>
+        }
+      />
 
       {error && <ErrorAlert message={error} />}
 

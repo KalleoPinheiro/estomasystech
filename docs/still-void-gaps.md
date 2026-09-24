@@ -38,39 +38,34 @@ publicado, não a documentação.
 
 ## Lacunas abertas
 
-Levantadas pela issue [#127](https://github.com/KalleoPinheiro/vitta-flow/issues/127) (portal em
-viewport mobile), conferidas contra `dist/style.css` da `@still-void/ui@3.3.1`. Os dois
-workarounds moram em [src/app/globals.css](../src/app/globals.css), escopados a `.portal-shell`
-([src/app/portal/layout.tsx](../src/app/portal/layout.tsx)), e são provados por
-[e2e/portal-responsivo.spec.ts](../e2e/portal-responsivo.spec.ts).
-
-### `layout-grid-min-content`
-
-**Defeito.** `.sv-layout` declara `grid-template-columns: 1fr`, que o CSS lê como
-`minmax(auto, 1fr)`: a coluna nunca fica menor que o min-content do conteúdo. No portal, a linha de
-consulta (data + "Confirmar presença" + selo) e o título do termo levaram a coluna a ~511px numa
-tela de 390px — scroll horizontal na página inteira. A própria lib já usa `minmax(0, 1fr)` em
-`.sv-layout--with-sidebar`.
-
-**Workaround local.** `.portal-shell .sv-layout { grid-template-columns: minmax(0, 1fr); }`.
-
-**Correção sugerida na lib (patch).** Trocar `1fr` por `minmax(0, 1fr)` em `.sv-layout`.
+Conferida contra `dist/style.css` da `@still-void/ui@3.4.0`. O workaround mora em
+[src/app/globals.css](../src/app/globals.css) e é provado por
+[e2e/portal-responsivo.spec.ts](../e2e/portal-responsivo.spec.ts) e
+[e2e/layout-mobile-first.spec.ts](../e2e/layout-mobile-first.spec.ts).
 
 ### `touch-target-size`
 
-**Lacuna.** Não há tamanho de alvo de toque em `Button` nem nos campos: `size="sm"` mede 36px,
-o default e `.sv-field` 40px, e o link da marca no `Header` 24px — abaixo dos 44x44px do WCAG
-2.5.5. Só o `.sv-btn--lg` (44px) e o menu aberto do `Header` chegam lá.
+**Lacuna.** A `3.4.0` dá 44px de toque a `.sv-btn` e `.sv-field` em
+`(width < 40rem), (pointer: coarse)`, mas link de texto não tem tamanho de toque na lib: "Ver
+agenda", "Prontuário" e os links de documento medem a altura da linha (~20px).
 
-**Workaround local.** Em `(width < 40rem), (pointer: coarse)`, `.sv-btn`, `.sv-field` e `a[href]`
-dentro de `.portal-shell` ganham `min-height`/`min-width` de
-`calc(var(--sv-space-10) + var(--sv-space-1))` (44px); links viram `inline-flex`. Desktop com
-mouse fica como a lib desenha.
+**Workaround local.** Na mesma media query, todo `a[href]` dentro de `main` (telas da equipe) e de
+`.portal-shell` ganha `min-height`/`min-width` de `calc(var(--sv-space-10) + var(--sv-space-1))`
+(44px) e vira `inline-flex`. Desktop com mouse fica como está.
 
-**Correção sugerida na lib (minor).** Um tamanho de toque — prop ou regra
-`@media (pointer: coarse)` — em `.sv-btn` e `.sv-field`, para o app não sobrescrever classe `sv-*`.
+**Correção sugerida na lib (minor).** Estender a regra de toque da `3.4.0` a um seletor de link
+(ex.: `.sv-link`, ou `a[href]` dentro de `.sv-app-shell`), para o app não precisar da regra própria.
 
 ---
+
+## Histórico — lacunas fechadas pela 3.4.0
+
+- **`layout-grid-min-content`** — `.sv-layout` passou a declarar `minmax(0, 1fr)`; o workaround
+  `.portal-shell .sv-layout` saiu de `globals.css`.
+- **`touch-target-size` (botões e campos)** — `.sv-btn` e `.sv-field` ganharam `min-height` de
+  44px em tela estreita/toque; o workaround ficou só para links (acima).
+- **Tabela no celular** (sem `sv-gap`, as telas usavam rolagem lateral) — `Table stack` +
+  `TableCell label` empilham a linha em pares rótulo/valor abaixo de 40rem.
 
 ## Histórico — lacunas fechadas pela 3.2.0
 

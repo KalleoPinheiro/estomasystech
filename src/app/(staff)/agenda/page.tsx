@@ -11,6 +11,7 @@ import { useToast } from '@still-void/ui/react/client';
 import { useMemo, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PageHeader } from '@/components/page-header';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
@@ -330,16 +331,18 @@ export default function AgendaPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Agenda</h1>
-        <Button
-          type="button"
-          onClick={() => setCreatingFor(new Date())}
-          variant="accent"
-        >
-          + Nova consulta
-        </Button>
-      </div>
+      <PageHeader
+        title="Agenda"
+        actions={
+          <Button
+            type="button"
+            onClick={() => setCreatingFor(new Date())}
+            variant="accent"
+          >
+            + Nova consulta
+          </Button>
+        }
+      />
 
       <AgendaNotices
         error={error}

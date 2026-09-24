@@ -20,6 +20,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { MetricCard } from '@/components/metric-card';
+import { PageHeader } from '@/components/page-header';
 import {
   APPOINTMENT_STATUS_LABELS,
   formatCurrency,
@@ -54,7 +55,10 @@ interface ReportKpisProps {
 
 function ReportKpis({ report, previousReport }: ReportKpisProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div
+      data-kpi-grid
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+    >
       <MetricCard
         label="Consultas no mês"
         value={String(report.totalAppointments)}
@@ -101,32 +105,34 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="sv-display font-bold text-2xl">Relatório gerencial</h1>
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            onClick={() => setMonth((m) => shiftMonth(m, -1))}
-            aria-label="Mês anterior"
-            variant="outline"
-            className="hover:bg-surface-2"
-          >
-            <Icon name="chevron-left" />
-          </Button>
-          <span className="min-w-40 text-center font-semibold text-lg">
-            {monthLabelPtBr(month)}
-          </span>
-          <Button
-            type="button"
-            onClick={() => setMonth((m) => shiftMonth(m, 1))}
-            aria-label="Próximo mês"
-            variant="outline"
-            className="hover:bg-surface-2"
-          >
-            <Icon name="chevron-right" />
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Relatório gerencial"
+        actions={
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              onClick={() => setMonth((m) => shiftMonth(m, -1))}
+              aria-label="Mês anterior"
+              variant="outline"
+              className="hover:bg-surface-2"
+            >
+              <Icon name="chevron-left" />
+            </Button>
+            <span className="min-w-40 text-center font-semibold text-lg">
+              {monthLabelPtBr(month)}
+            </span>
+            <Button
+              type="button"
+              onClick={() => setMonth((m) => shiftMonth(m, 1))}
+              aria-label="Próximo mês"
+              variant="outline"
+              className="hover:bg-surface-2"
+            >
+              <Icon name="chevron-right" />
+            </Button>
+          </div>
+        }
+      />
 
       {error ? (
         <ErrorAlert message={error} />

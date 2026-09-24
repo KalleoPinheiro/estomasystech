@@ -4,6 +4,7 @@ import { Button, CardSkeleton, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { AuthCard } from '@/components/auth-card';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -38,26 +39,22 @@ function LoginCard() {
     : null;
 
   return (
-    <main className="flex min-h-[70vh] items-center justify-center">
-      {/* sv-gradient-border é a assinatura visual do Still Void — nunca trocada
-          por box-shadow, e cards do sistema não têm sombra. */}
-      <div className="sv-gradient-border w-full max-w-sm p-8">
-        <h1 className="sv-display font-bold text-xl">VittaFlow</h1>
-        <p className="mt-1 mb-6 text-ink-3 text-sm">
-          Entre com seu e-mail e sua senha
-        </p>
-        {redirectErrorMessage && <ErrorAlert message={redirectErrorMessage} />}
-        {providers ? (
-          providers.password ? (
-            <PasswordForm />
-          ) : (
-            <ErrorAlert message="Autenticação não configurada no servidor." />
-          )
+    <AuthCard>
+      <h1 className="sv-display font-bold text-xl">VittaFlow</h1>
+      <p className="mt-1 mb-6 text-ink-3 text-sm">
+        Entre com seu e-mail e sua senha
+      </p>
+      {redirectErrorMessage && <ErrorAlert message={redirectErrorMessage} />}
+      {providers ? (
+        providers.password ? (
+          <PasswordForm />
         ) : (
-          <CardSkeleton />
-        )}
-      </div>
-    </main>
+          <ErrorAlert message="Autenticação não configurada no servidor." />
+        )
+      ) : (
+        <CardSkeleton />
+      )}
+    </AuthCard>
   );
 }
 
