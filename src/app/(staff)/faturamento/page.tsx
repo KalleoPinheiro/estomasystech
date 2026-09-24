@@ -111,7 +111,7 @@ function InvoicesTable({
 }: InvoicesTableProps) {
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="px-4 py-3">Emissão</TableHead>
@@ -126,19 +126,25 @@ function InvoicesTable({
         <TableBody>
           {invoices.map((invoice) => (
             <TableRow key={invoice.id}>
-              <TableCell className="px-4 py-3 text-ink-2">
+              <TableCell label="Emissão" className="px-4 py-3 text-ink-2">
                 {formatDate(invoice.issuedAt)}
               </TableCell>
-              <TableCell className="px-4 py-3 font-medium">
+              <TableCell label="Paciente" className="px-4 py-3 font-medium">
                 {invoice.patientName}
               </TableCell>
-              <TableCell className="max-w-56 truncate px-4 py-3 text-ink-2">
+              <TableCell
+                label="Descrição"
+                className="max-w-56 truncate px-4 py-3 text-ink-2"
+              >
                 {invoice.description}
               </TableCell>
-              <TableCell className="px-4 py-3 text-right font-medium tabular-nums">
+              <TableCell
+                label="Valor"
+                className="px-4 py-3 text-right font-medium tabular-nums"
+              >
                 <AmountCell invoice={invoice} />
               </TableCell>
-              <TableCell className="px-4 py-3">
+              <TableCell label="Status" className="px-4 py-3">
                 <StatusBadge
                   status={invoice.status}
                   label={
@@ -146,10 +152,13 @@ function InvoicesTable({
                   }
                 />
               </TableCell>
-              <TableCell className="px-4 py-3 text-ink-2 text-xs">
+              <TableCell
+                label="Pagamento"
+                className="px-4 py-3 text-ink-2 text-xs"
+              >
                 <PaymentsCell invoice={invoice} />
               </TableCell>
-              <TableCell className="px-4 py-3 text-right">
+              <TableCell label="Ações" className="px-4 py-3 text-right">
                 {invoice.status === 'pending' ? (
                   <>
                     <Button

@@ -49,7 +49,7 @@ function PatientsTable({
       className={`overflow-x-auto ${isStale ? 'pointer-events-none opacity-60' : ''}`}
       aria-busy={isStale || undefined}
     >
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="px-4 py-3">Nome</TableHead>
@@ -65,23 +65,23 @@ function PatientsTable({
               key={patient.id}
               className={patient.active ? '' : 'bg-surface-2/60'}
             >
-              <TableCell className="px-4 py-3 font-medium">
+              <TableCell label="Nome" className="px-4 py-3 font-medium">
                 {patient.fullName}
               </TableCell>
-              <TableCell className="px-4 py-3 text-ink-2">
+              <TableCell label="Contato" className="px-4 py-3 text-ink-2">
                 <div>{patient.email}</div>
                 <div className="text-ink-3 text-xs">{patient.phone}</div>
               </TableCell>
-              <TableCell className="px-4 py-3 text-ink-2">
+              <TableCell label="Nascimento" className="px-4 py-3 text-ink-2">
                 {patient.birthDate ? formatDate(patient.birthDate) : '—'}
               </TableCell>
-              <TableCell className="px-4 py-3">
+              <TableCell label="Situação" className="px-4 py-3">
                 <StatusBadge
                   status={patient.active ? 'confirmed' : 'cancelled'}
                   label={patient.active ? 'Ativo' : 'Inativo'}
                 />
               </TableCell>
-              <TableCell className="px-4 py-3 text-right">
+              <TableCell label="Ações" className="px-4 py-3 text-right">
                 <a
                   href={`/pacientes/${patient.id}`}
                   className="mr-2 font-semibold text-accent-ink hover:underline"

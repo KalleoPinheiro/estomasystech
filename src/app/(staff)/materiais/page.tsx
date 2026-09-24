@@ -235,11 +235,14 @@ function LowStockBanner({
     return null;
   }
   return (
-    <Alert variant="warning" className="mb-4">
+    <Alert
+      variant="warning"
+      className="mb-4"
+      icon={<Icon name="alert-triangle" />}
+    >
       <AlertDescription>
-        <Icon name="alert-triangle" /> {low.length}{' '}
-        {low.length === 1 ? 'insumo está' : 'insumos estão'} com estoque baixo
-        (≤ mínimo):{' '}
+        {low.length} {low.length === 1 ? 'insumo está' : 'insumos estão'} com
+        estoque baixo (≤ mínimo):{' '}
         {low.map((supply, index) => (
           <span key={supply.id}>
             {index > 0 && ', '}
@@ -271,9 +274,9 @@ function ExpiryBanner({ batches }: { batches: ExpiringBatchDto[] }) {
   return (
     <>
       {expired.length > 0 && (
-        <Alert variant="danger" className="mb-4">
+        <Alert variant="danger" className="mb-4" icon={<Icon name="blocked" />}>
           <AlertDescription>
-            <Icon name="blocked" /> {expired.length}{' '}
+            {expired.length}{' '}
             {expired.length === 1 ? 'lote vencido' : 'lotes vencidos'} com
             saldo:{' '}
             {expired
@@ -283,9 +286,13 @@ function ExpiryBanner({ batches }: { batches: ExpiringBatchDto[] }) {
         </Alert>
       )}
       {expiring.length > 0 && (
-        <Alert variant="warning" className="mb-4">
+        <Alert
+          variant="warning"
+          className="mb-4"
+          icon={<Icon name="pending" />}
+        >
           <AlertDescription>
-            <Icon name="pending" /> {expiring.length}{' '}
+            {expiring.length}{' '}
             {expiring.length === 1 ? 'lote vence' : 'lotes vencem'} em até 30
             dias:{' '}
             {expiring
@@ -331,7 +338,7 @@ function SuppliesTable({
         <EmptyState message="Nenhum insumo encontrado para a busca." />
       ) : (
         <div className="overflow-x-auto">
-          <Table className="w-full text-left text-sm">
+          <Table stack className="w-full text-left text-sm">
             <TableHeader>
               <TableRow>
                 <TableHead className="px-4 py-3">Insumo</TableHead>
@@ -411,8 +418,10 @@ function SupplyRow({
 }: SupplyRowProps) {
   return (
     <TableRow className={supply.active ? '' : 'opacity-50'}>
-      <TableCell className="px-4 py-3 font-medium">{supply.name}</TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Insumo" className="px-4 py-3 font-medium">
+        {supply.name}
+      </TableCell>
+      <TableCell label="Estoque" className="px-4 py-3">
         {supply.stockQty} {supply.unit}
         {supply.active && supply.isLowStock && (
           <span className="ml-2">
@@ -424,20 +433,25 @@ function SupplyRow({
           </span>
         )}
       </TableCell>
-      <TableCell className="px-4 py-3 text-ink-2">{supply.minQty}</TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Mínimo" className="px-4 py-3 text-ink-2">
+        {supply.minQty}
+      </TableCell>
+      <TableCell label="Previsão" className="px-4 py-3">
         <StockoutForecast insight={insight} insightsError={insightsError} />
       </TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Preço" className="px-4 py-3">
         {formatCurrency(supply.priceCents)}
       </TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Situação" className="px-4 py-3">
         <StatusBadge
           status={supply.active ? 'confirmed' : 'cancelled'}
           label={supply.active ? 'Ativo' : 'Inativo'}
         />
       </TableCell>
-      <TableCell className="px-4 py-3 text-right text-sm">
+      <TableCell
+        label="Ações"
+        className="px-4 py-3 text-right text-sm sm:whitespace-nowrap"
+      >
         <Button type="button" onClick={onMove} variant="ghost" size="sm">
           Movimentar
         </Button>

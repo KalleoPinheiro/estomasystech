@@ -146,6 +146,7 @@ export default function AuditPage() {
           render={(list) => (
             <div className="overflow-x-auto">
               <Table
+                stack
                 className={`w-full text-left text-sm ${isLoading ? 'opacity-60' : ''}`}
                 aria-busy={isLoading}
               >
@@ -162,29 +163,38 @@ export default function AuditPage() {
                 <TableBody>
                   {list.map((event) => (
                     <TableRow key={event.id}>
-                      <TableCell className="whitespace-nowrap px-4 py-2 text-ink-2">
+                      <TableCell
+                        label="Quando"
+                        className="whitespace-nowrap px-4 py-2 text-ink-2"
+                      >
                         {formatDateTimeWithSeconds(event.occurredAt)}
                       </TableCell>
-                      <TableCell className="px-4 py-2">
+                      <TableCell label="Ator" className="px-4 py-2">
                         <span className="font-medium">{event.actorRole}</span>
                         <span className="block text-ink-3 text-xs">
                           {event.actorId}
                         </span>
                       </TableCell>
-                      <TableCell className="px-4 py-2">
+                      <TableCell label="Ação" className="px-4 py-2">
                         {ACTION_LABELS[event.action] ?? event.action}
                       </TableCell>
-                      <TableCell className="px-4 py-2">
+                      <TableCell label="Recurso" className="px-4 py-2">
                         {RESOURCE_LABELS[event.resourceType] ??
                           event.resourceType}
                       </TableCell>
-                      <TableCell className="px-4 py-2 text-ink-2">
+                      <TableCell
+                        label="Paciente"
+                        className="px-4 py-2 text-ink-2"
+                      >
                         {event.patientId
                           ? (patientNames.get(event.patientId) ??
                             event.patientId)
                           : '—'}
                       </TableCell>
-                      <TableCell className="px-4 py-2 text-ink-3">
+                      <TableCell
+                        label="Detalhe"
+                        className="px-4 py-2 text-ink-3"
+                      >
                         {event.detail ?? '—'}
                       </TableCell>
                     </TableRow>

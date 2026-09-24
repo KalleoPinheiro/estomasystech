@@ -32,7 +32,7 @@ export function PayoutItemsTable({ items }: { items: PayoutItemDto[] }) {
   }
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="py-2">Sessão</TableHead>
@@ -44,10 +44,10 @@ export function PayoutItemsTable({ items }: { items: PayoutItemDto[] }) {
         <TableBody>
           {items.map((item) => (
             <TableRow key={`${item.appointmentId}:${item.kind}`}>
-              <TableCell className="py-2">
+              <TableCell label="Sessão" className="py-2">
                 {formatDate(item.sessionDate)}
               </TableCell>
-              <TableCell className="py-2">
+              <TableCell label="Procedimento" className="py-2">
                 {item.procedure}
                 {item.kind === 'reversal' && (
                   <span className="ml-2 text-danger text-xs">
@@ -55,12 +55,15 @@ export function PayoutItemsTable({ items }: { items: PayoutItemDto[] }) {
                   </span>
                 )}
               </TableCell>
-              <TableCell className="py-2 text-right text-ink-2">
+              <TableCell label="Base" className="py-2 text-right text-ink-2">
                 {item.kind === 'reversal'
                   ? '—'
                   : formatCurrency(item.baseCents)}
               </TableCell>
-              <TableCell className="py-2 text-right font-medium">
+              <TableCell
+                label="Repasse"
+                className="py-2 text-right font-medium"
+              >
                 {formatCurrency(item.commissionCents)}
               </TableCell>
             </TableRow>
@@ -147,7 +150,7 @@ export function PayoutHistoryTable({
   const cancellable = latestActiveIds(history);
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="py-2">Mês</TableHead>
@@ -164,28 +167,28 @@ export function PayoutHistoryTable({
         <TableBody>
           {history.map((payout) => (
             <TableRow key={payout.id}>
-              <TableCell className="py-2">
+              <TableCell label="Mês" className="py-2">
                 {monthLabelPtBr(payout.period)}
               </TableCell>
               {showProfessional && (
-                <TableCell className="py-2">
+                <TableCell label="Profissional" className="py-2">
                   {payout.professionalName}
                 </TableCell>
               )}
-              <TableCell className="py-2 text-right font-medium">
+              <TableCell label="Valor" className="py-2 text-right font-medium">
                 {formatCurrency(payout.totalCents)}
               </TableCell>
-              <TableCell className="py-2">
+              <TableCell label="Pago em" className="py-2">
                 {formatDate(payout.paidAt)}
               </TableCell>
-              <TableCell className="py-2">
+              <TableCell label="Forma" className="py-2">
                 {PAYMENT_METHOD_LABELS[payout.paymentMethod] ??
                   payout.paymentMethod}
               </TableCell>
-              <TableCell className="py-2">
+              <TableCell label="Situação" className="py-2">
                 <PayoutStatusCell payout={payout} />
               </TableCell>
-              <TableCell className="py-2 text-right">
+              <TableCell label="Ações" className="py-2 text-right">
                 <ItemsButton
                   title={`Repasse de ${monthLabelPtBr(payout.period)} — ${payout.professionalName}`}
                   items={payout.items}
@@ -240,7 +243,7 @@ export function ClinicStatementsTable({
   }
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="py-2">Profissional</TableHead>
@@ -254,22 +257,30 @@ export function ClinicStatementsTable({
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.professionalId}>
-              <TableCell className="py-2 font-medium">
+              <TableCell label="Profissional" className="py-2 font-medium">
                 {row.professionalName}
               </TableCell>
-              <TableCell className="py-2 text-ink-2">
+              <TableCell label="Regra" className="py-2 text-ink-2">
                 {formatCommissionRule(row.rule)}
               </TableCell>
-              <TableCell className="py-2 text-right font-medium">
+              <TableCell
+                label="A pagar"
+                className="py-2 text-right font-medium"
+              >
                 {formatCurrency(
                   row.closedPayout?.totalCents ?? row.payableCents,
                 )}
               </TableCell>
-              <TableCell className="py-2 text-right text-ink-2">
+              <TableCell
+                label="A liberar"
+                className="py-2 text-right text-ink-2"
+              >
                 {formatCurrency(row.pendingCents)}
               </TableCell>
-              <TableCell className="py-2">{statusLabel(row)}</TableCell>
-              <TableCell className="py-2 text-right">
+              <TableCell label="Situação" className="py-2">
+                {statusLabel(row)}
+              </TableCell>
+              <TableCell label="Ações" className="py-2 text-right">
                 <ItemsButton
                   title={`Sessões a pagar — ${row.professionalName}`}
                   items={row.closedPayout?.items ?? row.payable}

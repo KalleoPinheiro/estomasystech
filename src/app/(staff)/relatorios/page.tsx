@@ -170,7 +170,7 @@ export default function ReportsPage() {
               ) : (
                 <>
                   <div className="overflow-x-auto">
-                    <Table className="w-full text-left text-sm">
+                    <Table stack className="w-full text-left text-sm">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="py-2">Procedimento</TableHead>
@@ -191,19 +191,26 @@ export default function ReportsPage() {
                       <TableBody>
                         {report.revenueByProcedure.map((row) => (
                           <TableRow key={row.procedure}>
-                            <TableCell className="py-2">
+                            <TableCell label="Procedimento" className="py-2">
                               {row.procedure}
                             </TableCell>
-                            <TableCell className="py-2 text-right">
+                            <TableCell label="Qtde" className="py-2 text-right">
                               {row.count}
                             </TableCell>
-                            <TableCell className="py-2 text-right font-medium">
+                            <TableCell
+                              label="Receita"
+                              className="py-2 text-right font-medium"
+                            >
                               {formatCurrency(row.totalCents)}
                             </TableCell>
-                            <TableCell className="py-2 text-right text-ink-3">
+                            <TableCell
+                              label="Insumos"
+                              className="py-2 text-right text-ink-3"
+                            >
                               {formatCurrency(row.supplyCostCents)}
                             </TableCell>
                             <TableCell
+                              label="Margem"
                               className={`py-2 text-right font-medium ${
                                 row.marginCents >= 0
                                   ? 'text-success'
@@ -220,13 +227,19 @@ export default function ReportsPage() {
                           <TableCell className="py-2 font-semibold">
                             Total
                           </TableCell>
-                          <TableCell className="py-2 text-right font-semibold">
+                          <TableCell
+                            label="Qtde"
+                            className="py-2 text-right font-semibold"
+                          >
                             {report.revenueByProcedure.reduce(
                               (sum, row) => sum + row.count,
                               0,
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-right font-semibold">
+                          <TableCell
+                            label="Receita"
+                            className="py-2 text-right font-semibold"
+                          >
                             {formatCurrency(
                               report.revenueByProcedure.reduce(
                                 (sum, row) => sum + row.totalCents,
@@ -234,7 +247,10 @@ export default function ReportsPage() {
                               ),
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-right font-semibold">
+                          <TableCell
+                            label="Insumos"
+                            className="py-2 text-right font-semibold"
+                          >
                             {formatCurrency(
                               report.revenueByProcedure.reduce(
                                 (sum, row) => sum + row.supplyCostCents,
@@ -242,7 +258,10 @@ export default function ReportsPage() {
                               ),
                             )}
                           </TableCell>
-                          <TableCell className="py-2 text-right font-semibold">
+                          <TableCell
+                            label="Margem"
+                            className="py-2 text-right font-semibold"
+                          >
                             {formatCurrency(
                               report.revenueByProcedure.reduce(
                                 (sum, row) => sum + row.marginCents,

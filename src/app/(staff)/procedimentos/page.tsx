@@ -202,7 +202,7 @@ function ProceduresTable({
         <EmptyState message="Nenhum procedimento encontrado para a busca." />
       ) : (
         <div className="overflow-x-auto">
-          <Table className="w-full text-left text-sm">
+          <Table stack className="w-full text-left text-sm">
             <TableHeader>
               <TableRow>
                 <TableHead className="px-4 py-3">Procedimento</TableHead>
@@ -243,20 +243,22 @@ function ProcedureRow({
 }) {
   return (
     <TableRow className={procedure.active ? '' : 'opacity-50'}>
-      <TableCell className="px-4 py-3 font-medium">{procedure.name}</TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Procedimento" className="px-4 py-3 font-medium">
+        {procedure.name}
+      </TableCell>
+      <TableCell label="Preço padrão" className="px-4 py-3">
         {formatCurrency(procedure.priceCents)}
       </TableCell>
-      <TableCell className="px-4 py-3 text-ink-2">
+      <TableCell label="Duração" className="px-4 py-3 text-ink-2">
         {procedure.durationMinutes} min
       </TableCell>
-      <TableCell className="px-4 py-3">
+      <TableCell label="Situação" className="px-4 py-3">
         <StatusBadge
           status={procedure.active ? 'confirmed' : 'cancelled'}
           label={procedure.active ? 'Ativo' : 'Inativo'}
         />
       </TableCell>
-      <TableCell className="px-4 py-3 text-right">
+      <TableCell label="Ações" className="px-4 py-3 text-right">
         <Button type="button" onClick={onKit} variant="ghost" size="sm">
           {procedure.kitItemCount > 0
             ? `Kit (${procedure.kitItemCount})`

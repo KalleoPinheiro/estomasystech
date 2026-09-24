@@ -65,9 +65,9 @@ export function ConsentCard({
 
     return (
       <div className="flex flex-col gap-2">
-        <Alert variant="success">
+        <Alert variant="success" icon={<Icon name="check-circle" />}>
           <AlertDescription>
-            <Icon name="check-circle" /> Termo de consentimento aceito
+            Termo de consentimento aceito
             {status.acceptedAt
               ? ` em ${formatDateTime(status.acceptedAt)}`
               : ''}

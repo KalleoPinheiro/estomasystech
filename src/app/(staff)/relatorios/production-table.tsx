@@ -33,7 +33,7 @@ export function ProductionTable({ rows }: { rows: ProfessionalProduction[] }) {
       ) : (
         <>
           <div className="overflow-x-auto">
-            <Table className="w-full text-left text-sm">
+            <Table stack className="w-full text-left text-sm">
               <TableHeader>
                 <TableRow>
                   <TableHead className="py-2">Profissional</TableHead>
@@ -49,22 +49,31 @@ export function ProductionTable({ rows }: { rows: ProfessionalProduction[] }) {
               <TableBody>
                 {rows.map((row) => (
                   <TableRow key={row.professionalId ?? 'none'}>
-                    <TableCell className="py-2">
+                    <TableCell label="Profissional" className="py-2">
                       {row.professionalName}
                     </TableCell>
-                    <TableCell className="py-2 text-right">
+                    <TableCell label="Sessões" className="py-2 text-right">
                       {row.count}
                     </TableCell>
-                    <TableCell className="py-2 text-right font-medium">
+                    <TableCell
+                      label="Receita"
+                      className="py-2 text-right font-medium"
+                    >
                       {formatCurrency(row.totalCents)}
                     </TableCell>
-                    <TableCell className="py-2 text-right text-ink-2">
+                    <TableCell
+                      label="Repasse apurado"
+                      className="py-2 text-right text-ink-2"
+                    >
                       {money(row.commissionCents)}
                     </TableCell>
-                    <TableCell className="py-2 text-right">
+                    <TableCell label="Liberado" className="py-2 text-right">
                       {money(row.releasedCommissionCents)}
                     </TableCell>
-                    <TableCell className="py-2 text-right text-ink-2">
+                    <TableCell
+                      label="A liberar"
+                      className="py-2 text-right text-ink-2"
+                    >
                       {money(row.pendingCommissionCents)}
                     </TableCell>
                   </TableRow>
@@ -73,21 +82,36 @@ export function ProductionTable({ rows }: { rows: ProfessionalProduction[] }) {
               <TableFooter>
                 <TableRow>
                   <TableCell className="py-2 font-semibold">Total</TableCell>
-                  <TableCell className="py-2 text-right font-semibold">
+                  <TableCell
+                    label="Sessões"
+                    className="py-2 text-right font-semibold"
+                  >
                     {sum(rows, (row) => row.count)}
                   </TableCell>
-                  <TableCell className="py-2 text-right font-semibold">
+                  <TableCell
+                    label="Receita"
+                    className="py-2 text-right font-semibold"
+                  >
                     {formatCurrency(sum(rows, (row) => row.totalCents))}
                   </TableCell>
-                  <TableCell className="py-2 text-right font-semibold">
+                  <TableCell
+                    label="Repasse apurado"
+                    className="py-2 text-right font-semibold"
+                  >
                     {formatCurrency(sum(rows, (row) => row.commissionCents))}
                   </TableCell>
-                  <TableCell className="py-2 text-right font-semibold">
+                  <TableCell
+                    label="Liberado"
+                    className="py-2 text-right font-semibold"
+                  >
                     {formatCurrency(
                       sum(rows, (row) => row.releasedCommissionCents),
                     )}
                   </TableCell>
-                  <TableCell className="py-2 text-right font-semibold">
+                  <TableCell
+                    label="A liberar"
+                    className="py-2 text-right font-semibold"
+                  >
                     {formatCurrency(
                       sum(rows, (row) => row.pendingCommissionCents),
                     )}

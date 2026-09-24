@@ -575,7 +575,7 @@ function AccountsTable({
 
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full text-left text-sm">
+      <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>
             <TableHead className="py-2 pr-3">Email</TableHead>
@@ -613,15 +613,22 @@ function AccountRow({
 }) {
   return (
     <TableRow className={account.active ? '' : 'bg-surface-2/60'}>
-      <TableCell className="py-2 pr-3 font-medium">{account.email}</TableCell>
-      <TableCell className="py-2 pr-3 text-ink-2">{professionalName}</TableCell>
-      <TableCell className="py-2 pr-3">
+      <TableCell label="Email" className="py-2 pr-3 font-medium">
+        {account.email}
+      </TableCell>
+      <TableCell
+        label="Profissional vinculado"
+        className="py-2 pr-3 text-ink-2"
+      >
+        {professionalName}
+      </TableCell>
+      <TableCell label="Situação" className="py-2 pr-3">
         <StatusBadge
           status={account.active ? 'confirmed' : 'cancelled'}
           label={account.active ? 'Ativa' : 'Desativada'}
         />
       </TableCell>
-      <TableCell className="py-2 text-right">
+      <TableCell label="Ações" className="py-2 text-right">
         {account.active && !account.passwordSet && (
           <Button
             type="button"
