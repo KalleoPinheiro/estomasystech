@@ -120,7 +120,7 @@ const TABLE_SET: Member[] = [
       // o saldo e as três ações são os filhos mistos que a célula empilhada
       // precisa manter na coluna do valor.
       const patient = await createPatient(request, {
-        fullName: `Maria Aparecida Tabela Faturamento ${unique()}`,
+        fullName: `Maria Aparecida Faturamento ${unique()}`,
       });
       const invoice = await createInvoice(request, {
         patientId: patient.id,

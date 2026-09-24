@@ -132,13 +132,13 @@ function InvoicesTable({
               </TableCell>
               <TableCell
                 label="Paciente"
-                className="px-4 py-3 font-medium sm:min-w-44"
+                className="px-4 py-3 font-medium sm:min-w-52"
               >
                 {invoice.patientName}
               </TableCell>
               <TableCell
                 label="Descrição"
-                className="px-4 py-3 text-ink-2 sm:max-w-56 sm:truncate"
+                className="px-4 py-3 text-ink-2 sm:max-w-44 sm:truncate"
               >
                 {invoice.description}
               </TableCell>
@@ -158,7 +158,7 @@ function InvoicesTable({
               </TableCell>
               <TableCell
                 label="Pagamento"
-                className="px-4 py-3 text-ink-2 text-xs"
+                className="px-4 py-3 text-ink-2 text-xs sm:min-w-44"
               >
                 <PaymentsCell invoice={invoice} />
               </TableCell>
