@@ -307,12 +307,20 @@ for (const member of TABLE_SET) {
       // da rolagem horizontal do contêiner.
       overflow: el.getBoundingClientRect().width - (el.parentElement?.clientWidth ?? 0),
       theadHeight: el.querySelector("thead")?.getBoundingClientRect().height ?? 0,
-      tallRows: Array.from(el.querySelectorAll("tbody tr"))
-        .map((tr) => tr.getBoundingClientRect().height)
-        .filter((h) => h >= 80).length,
+      // Um registro = uma linha: toda célula é `table-cell` e começa na mesma
+      // altura das irmãs. Conteúdo que quebra linha (dois recebimentos, nome
+      // longo) aumenta a linha, mas não a desfaz em cartão.
+      brokenRows: Array.from(el.querySelectorAll("tbody tr")).filter((tr) => {
+        const cells = Array.from(tr.querySelectorAll(":scope > td"));
+        const tops = cells.map((td) => td.getBoundingClientRect().top);
+        return (
+          cells.some((td) => getComputedStyle(td).display !== "table-cell") ||
+          Math.max(...tops) - Math.min(...tops) > 1
+        );
+      }).length,
     }));
     expect(report.theadHeight).toBeGreaterThan(0);
-    expect(report.tallRows).toBe(0);
+    expect(report.brokenRows).toBe(0);
     expect(report.overflow).toBeLessThanOrEqual(1);
     await seeded.cleanup?.();
   });

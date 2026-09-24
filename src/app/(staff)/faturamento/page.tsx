@@ -88,7 +88,7 @@ function PaymentsCell({ invoice }: { invoice: InvoiceDto }) {
   return (
     <ul className="flex flex-col gap-0.5">
       {invoice.payments.map((payment) => (
-        <li key={payment.id} className="sm:whitespace-nowrap">
+        <li key={payment.id}>
           {formatCurrency(payment.amountCents)} via{' '}
           {PAYMENT_METHOD_LABELS[payment.method] ?? payment.method} em{' '}
           {formatDate(payment.paidAt)} ·{' '}
