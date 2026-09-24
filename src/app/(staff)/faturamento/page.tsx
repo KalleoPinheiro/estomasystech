@@ -158,7 +158,10 @@ function InvoicesTable({
               >
                 <PaymentsCell invoice={invoice} />
               </TableCell>
-              <TableCell label="Ações" className="px-4 py-3 text-right">
+              <TableCell
+                label="Ações"
+                className="px-4 py-3 text-right sm:whitespace-nowrap"
+              >
                 {invoice.status === 'pending' ? (
                   <>
                     <Button

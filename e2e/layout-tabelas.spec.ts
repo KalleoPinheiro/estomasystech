@@ -31,6 +31,8 @@ interface Seeded {
   header: string;
   /** Passos na página antes de medir (abrir um painel, trocar o mês). */
   prepare?: (page: Page) => Promise<void>;
+  /** Desfaz o dado que outro spec não espera encontrar. */
+  cleanup?: () => Promise<unknown>;
 }
 
 interface Member {
@@ -177,13 +179,18 @@ const TABLE_SET: Member[] = [
     name: "configurações feriados",
     seed: async (request) => {
       const day = ymdToDateInput(businessDay(40));
-      await apiPost(request, "/api/settings/schedule/closures", {
-        professionalId: null,
-        startsOn: day,
-        endsOn: null,
-        reason: `Recesso tabela ${unique()}`,
-      });
-      return { url: "/configuracoes", header: "Período" };
+      const created = await apiPost<{ closure: { id: string } }>(
+        request,
+        "/api/settings/schedule/closures",
+        { professionalId: null, startsOn: day, endsOn: null, reason: `Recesso tabela ${unique()}` },
+      );
+      return {
+        url: "/configuracoes",
+        header: "Período",
+        // Feriado de teste não pode vazar para outros specs (responsive-tables
+        // espera uma tabela só em Configurações).
+        cleanup: () => request.delete(`/api/settings/schedule/closures/${created.closure.id}`),
+      };
     },
   },
   {
@@ -244,6 +251,7 @@ for (const member of TABLE_SET) {
     expect(report.theadHeight).toBeLessThanOrEqual(1);
     expect(report.badLabels).toEqual([]);
     expect(report.offscreen).toBe(0);
+    await seeded.cleanup?.();
   });
 
   test(`tabela no desktop: ${member.name}`, async ({ page, request }) => {
@@ -258,6 +266,7 @@ for (const member of TABLE_SET) {
     }));
     expect(report.theadHeight).toBeGreaterThan(0);
     expect(report.tallRows).toBe(0);
+    await seeded.cleanup?.();
   });
 }
 
