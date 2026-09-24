@@ -195,7 +195,9 @@ async function tooSmallControls(page: Page): Promise<string[]> {
     )
       .filter((el) => el.checkVisibility({ visibilityProperty: true }))
       .map((el) => {
-        const r = el.getBoundingClientRect();
+        // Checkbox/radio: o alvo de toque é o rótulo que o envolve (C8, renegociado).
+        const isToggle = el instanceof HTMLInputElement && ["checkbox", "radio"].includes(el.type);
+        const r = (isToggle ? (el.closest("label") ?? el) : el).getBoundingClientRect();
         const name =
           el.getAttribute("aria-label") ??
           el.getAttribute("placeholder") ??
@@ -329,5 +331,285 @@ test.describe("casca e padrões compartilhados", () => {
       return { icon: icon.top + icon.height / 2, text: text.top + text.height / 2 };
     });
     expect(Math.abs(centers.icon - centers.text)).toBeLessThanOrEqual(4);
+  });
+});
+
+/** Consulta nova num dia futuro, com o paciente do mundo; devolve o dia e a hora. */
+async function seedAgendaAppointment(request: APIRequestContext, seed: string) {
+  const w = await world(request);
+  const slot = slotForAttempt(seed, 30);
+  await createAppointment(request, {
+    patientId: w.patientId,
+    startsAt: slot.startsAt,
+    endsAt: slot.endsAt,
+    procedure: `Avaliação agenda ${unique()}`,
+    priceCents: 10000,
+  });
+  return { slot, dayKey: slot.dateInput };
+}
+
+/** Avança a agenda até o mês de `dayKey` (YYYY-MM-DD). */
+async function agendaToMonth(page: Page, dayKey: string): Promise<void> {
+  const [year, month] = dayKey.split("-").map(Number);
+  const now = new Date();
+  const delta = (year - now.getFullYear()) * 12 + (month - 1 - now.getMonth());
+  for (let i = 0; i < delta; i += 1) {
+    await page.getByRole("button", { name: "Próximo mês" }).click();
+  }
+}
+
+function todayKeySaoPaulo(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+test.describe("agenda", () => {
+  test("agenda: 7 colunas no celular", async ({ page, request }) => {
+    await world(request);
+    await page.setViewportSize(MOBILE);
+    await page.goto("/agenda");
+    await settle(page);
+    const boxes = await page.locator("[data-mobile-month] [data-day]").evaluateAll((els) =>
+      els.slice(0, 7).map((el) => {
+        const r = el.getBoundingClientRect();
+        return { left: r.left, right: r.right, w: r.width, h: r.height };
+      }),
+    );
+    expect(boxes).toHaveLength(7);
+    expect(new Set(boxes.map((b) => Math.round(b.left))).size).toBe(7);
+    for (const box of boxes) {
+      expect(box.right).toBeLessThanOrEqual(MOBILE.width);
+      expect(box.w).toBeGreaterThanOrEqual(MIN_TOUCH_PX);
+      expect(box.h).toBeGreaterThanOrEqual(MIN_TOUCH_PX);
+    }
+  });
+
+  test("agenda: ponto no dia com consulta", async ({ page, request }) => {
+    const { dayKey } = await seedAgendaAppointment(request, "layout-agenda-ponto");
+    await page.setViewportSize(MOBILE);
+    await page.goto("/agenda");
+    await settle(page);
+    await agendaToMonth(page, dayKey);
+    const day = page.locator(`[data-mobile-month] [data-day="${dayKey}"]`);
+    await expect(day).toHaveAttribute("data-has-appointments", "true");
+    // Nenhum chip de consulta dentro da grade compacta — só número e ponto.
+    await expect(day.locator("button")).toHaveCount(0);
+    await expect(page.locator("[data-mobile-month] .min-w-\\[840px\\]")).toHaveCount(0);
+    expect((await day.innerText()).trim()).toMatch(/^\d{1,2}$/);
+  });
+
+  test("agenda: lista do dia", async ({ page, request }) => {
+    const { dayKey, slot } = await seedAgendaAppointment(request, "layout-agenda-lista");
+    await page.setViewportSize(MOBILE);
+    await page.goto("/agenda");
+    await settle(page);
+    const today = todayKeySaoPaulo();
+    const firstMonth = today.slice(0, 7);
+    if (firstMonth === (await page.locator("[data-mobile-month] [data-day]").nth(10).getAttribute("data-day"))?.slice(0, 7)) {
+      await expect(page.locator(`[data-day="${today}"]`)).toHaveAttribute("aria-pressed", "true");
+    }
+    await agendaToMonth(page, dayKey);
+    await page.locator(`[data-mobile-month] [data-day="${dayKey}"]`).click();
+    const list = page.locator("[data-day-list]");
+    await expect(list.getByText(slot.startTimeInput)).toBeVisible();
+    const w = await world(request);
+    await expect(list.getByText(/Maria Aparecida Layout/).first()).toBeVisible();
+    await expect(list.getByText(/Avaliação agenda/).first()).toBeVisible();
+    await expect(list.getByText("Agendada").first()).toBeVisible();
+    const listTop = (await list.boundingBox())!.y;
+    const gridBottom = await page
+      .locator("[data-mobile-month] [data-day]")
+      .last()
+      .evaluate((el) => el.getBoundingClientRect().bottom);
+    expect(listTop).toBeGreaterThanOrEqual(gridBottom);
+    void w;
+  });
+
+  test("agenda: dia vazio", async ({ page, request }) => {
+    await world(request);
+    await page.setViewportSize(MOBILE);
+    await page.goto("/agenda");
+    await settle(page);
+    // Um domingo do mês exibido: fora da grade padrão, sem consulta de seed.
+    const sunday = page.locator("[data-mobile-month] [data-day]").nth(7);
+    await sunday.click();
+    await expect(page.locator("[data-day-list]").getByText("Nenhuma consulta neste dia.")).toBeVisible();
+  });
+
+  test("agenda: filtro em largura total", async ({ page, request }) => {
+    await world(request);
+    await page.setViewportSize(MOBILE);
+    await page.goto("/agenda");
+    await settle(page);
+    const filter = await page.locator("[data-professional-filter]").boundingBox();
+    const nav = await page.getByRole("button", { name: "Próximo mês" }).boundingBox();
+    const content = await page.locator("[data-page-header]").boundingBox();
+    expect(filter!.y).toBeGreaterThanOrEqual(nav!.y + nav!.height);
+    expect(Math.abs(filter!.width - content!.width)).toBeLessThanOrEqual(2);
+  });
+
+  test("agenda: chips no desktop", async ({ page, request }) => {
+    const { dayKey, slot } = await seedAgendaAppointment(request, "layout-agenda-chips");
+    await page.setViewportSize(DESKTOP);
+    await page.goto("/agenda");
+    await settle(page);
+    await agendaToMonth(page, dayKey);
+    await expect(page.locator("[data-mobile-month]")).toHaveCount(0);
+    const chip = page.getByRole("button", {
+      name: new RegExp(`^${slot.startTimeInput} Maria Aparecida Layout`),
+    });
+    await expect(chip.first()).toBeVisible();
+  });
+});
+
+test.describe("telas com defeito específico", () => {
+  test("prontuário: abas rolam dentro de si", async ({ page, request }) => {
+    const w = await world(request);
+    await page.setViewportSize(MOBILE);
+    await page.goto(`/pacientes/${w.patientId}`);
+    await settle(page);
+    const tablist = page.getByRole("tablist", { name: "Seções do prontuário" });
+    const overflow = await tablist.evaluate((el) => ({
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+    }));
+    expect(overflow.scroll).toBeGreaterThan(overflow.client);
+    expect(await scrollWidth(page)).toBeLessThanOrEqual(MOBILE.width + 2);
+    await page.getByRole("tab", { name: "Pacotes" }).click();
+    const tab = await page.getByRole("tab", { name: "Pacotes" }).boundingBox();
+    expect(tab!.x).toBeGreaterThanOrEqual(0);
+    expect(tab!.x + tab!.width).toBeLessThanOrEqual(MOBILE.width);
+  });
+
+  for (const viewport of [MOBILE, DESKTOP]) {
+    test(`painéis na largura do conteúdo (${viewport.width})`, async ({ page, request }) => {
+      const w = await world(request);
+      await page.setViewportSize(viewport);
+      for (const [url, panel] of [
+        [`/pacientes/${w.patientId}`, "[role=tabpanel]"],
+        ["/triagem", "[data-page-header] + *"],
+      ] as const) {
+        await page.goto(url);
+        await settle(page);
+        const content = await page.locator("[data-page-header]").boundingBox();
+        const box = await page.locator(panel).first().boundingBox();
+        expect(Math.abs(box!.width - content!.width), `${url} ${viewport.width}`).toBeLessThanOrEqual(2);
+      }
+    });
+  }
+
+  test("retornos pendentes sem esmagar", async ({ page, request }) => {
+    await world(request);
+    await page.setViewportSize(MOBILE);
+    await page.goto("/");
+    await settle(page);
+    const rows = page.locator("[data-follow-up-row]");
+    await expect(rows.first()).toBeVisible();
+    const report = await rows.evaluateAll((els) =>
+      els.map((row) => {
+        const text = row.querySelector("[data-follow-up-text]")!;
+        const actions = row.querySelector("[data-follow-up-actions]")!;
+        const clipped = Array.from(text.querySelectorAll("*"))
+          .concat(text)
+          .some((el) => el.scrollWidth > el.clientWidth + 1);
+        return {
+          clipped,
+          below:
+            actions.getBoundingClientRect().top >= text.getBoundingClientRect().bottom - 1,
+        };
+      }),
+    );
+    for (const row of report) {
+      expect(row.clipped).toBe(false);
+      expect(row.below).toBe(true);
+    }
+  });
+
+  test("telas públicas com margem", async ({ browser }) => {
+    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const page = await context.newPage();
+    await page.setViewportSize(MOBILE);
+    for (const url of ["/login", "/esqueci-senha", "/definir-senha?token=invalido"]) {
+      await page.goto(url);
+      await settle(page);
+      const card = await page.locator(".sv-gradient-border").boundingBox();
+      expect(card!.x, url).toBeGreaterThanOrEqual(16);
+      expect(MOBILE.width - (card!.x + card!.width), url).toBeGreaterThanOrEqual(16);
+    }
+    await context.close();
+  });
+
+  test("portal: confirmar não sobrepõe a data", async ({ browser, request }) => {
+    const w = await world(request);
+    await seedAgendaAppointment(request, "layout-portal-confirmar");
+    const context = await browser.newContext({
+      storageState: { cookies: [], origins: [] },
+      timezoneId: "America/Sao_Paulo",
+    });
+    await context.addCookies([sessionCookie(w.patientEmail, "patient")]);
+    const page = await context.newPage();
+    await page.setViewportSize(MOBILE);
+    await page.goto("/portal");
+    await settle(page);
+    const item = page
+      .locator("section", { hasText: "Próximas consultas" })
+      .locator("li", { has: page.getByRole("button", { name: "Confirmar presença" }) })
+      .first();
+    const button = await item.getByRole("button", { name: "Confirmar presença" }).boundingBox();
+    const date = await item.locator("[data-appointment-when]").boundingBox();
+    const disjoint =
+      button!.x >= date!.x + date!.width ||
+      date!.x >= button!.x + button!.width ||
+      button!.y >= date!.y + date!.height ||
+      date!.y >= button!.y + button!.height;
+    expect(disjoint).toBe(true);
+    await context.close();
+  });
+
+  test("portal: saudação no degrau headline", async ({ browser, request }) => {
+    const w = await world(request);
+    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    await context.addCookies([sessionCookie(w.patientEmail, "patient")]);
+    const page = await context.newPage();
+    for (const [viewport, token] of [
+      [MOBILE, "--sv-text-2xl"],
+      [DESKTOP, "--sv-text-4xl"],
+    ] as const) {
+      await page.setViewportSize(viewport);
+      await page.goto("/portal");
+      await settle(page);
+      const sizes = await page.locator("h1").first().evaluate((el, name) => {
+        const probe = document.createElement("div");
+        probe.style.fontSize = `var(${name})`;
+        document.body.append(probe);
+        const expected = getComputedStyle(probe).fontSize;
+        probe.remove();
+        return { actual: getComputedStyle(el).fontSize, expected };
+      }, token);
+      expect(sizes.actual).toBe(sizes.expected);
+    }
+    await context.close();
+  });
+
+  test("documentos sem scroll lateral", async ({ page, request }) => {
+    const w = await world(request);
+    await page.setViewportSize(MOBILE);
+    for (const url of [
+      `/documentos/atestado/${w.appointmentId}`,
+      `/documentos/consentimento/${w.patientId}`,
+      `/documentos/relatorio/${w.conditionId}`,
+      `/documentos/plano-cuidados/${w.carePlanId}`,
+    ]) {
+      await page.goto(url);
+      await settle(page);
+      expect(await scrollWidth(page), url).toBeLessThanOrEqual(MOBILE.width + 2);
+      const unwrapped = await page.evaluate(
+        () =>
+          Array.from(document.querySelectorAll("table")).filter((t) => {
+            const scroller = t.closest(".overflow-x-auto, .sv-table-container");
+            return !scroller || getComputedStyle(scroller).overflowX !== "auto";
+          }).length,
+      );
+      expect(unwrapped, url).toBe(0);
+    }
   });
 });

@@ -42,7 +42,7 @@ Proof: `cd still-void && git diff --exit-code origin/main -- src/tokens/colors.t
 **C7** - Nenhuma página do page set tem `document.documentElement.scrollWidth` > largura + 2 em 390x844 e em 1440x900 (LAYOUT-04, AC 6)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "sem scroll lateral"`
 
-**C8** - Em 390x844, todo `button`, `a[href]`, `input`, `select` e `textarea` visível dentro de `main` mede no mínimo 44x44px, em cada página do page set (LAYOUT-04, AC 7)
+**C8** - Em 390x844, todo `button`, `a[href]`, `input`, `select` e `textarea` visível dentro de `main` mede no mínimo 44x44px, em cada página do page set; para `input` checkbox/radio, mede o `<label>` que o envolve (renegociado com o usuário em 2026-09-24) (LAYOUT-04, AC 7)
 Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "alvos de toque"`
 
 **C9** - `PageHeader` renderiza exatamente um `h1` com o título e as ações num grupo próprio (LAYOUT-05, AC 8)
@@ -184,3 +184,5 @@ Divisão planejada, com a conta, antes de qualquer código:
 - S1 = ~18k, sozinha em `still-void/` e publicada antes do resto -> fronteira natural: PR próprio na lib
 - S2 + S3 = ~73k, no app, dependem do `^3.4.0`; S4 = ~38k -> S2–S4 = ~111k, cabem num builder (budget padrão 150k)
 - Ordem: S1 (lib, PR, release) -> S2 -> S3 -> S4 no app, um PR, Verifier único sobre `origin/main..HEAD` dos dois repositórios
+
+- **Settled mid-build (2026-09-24):** C8 mede o `<label>` que envolve checkbox/radio, não a caixinha (decisão do usuário: tocar no rótulo já marca; a lib dá 44px ao rótulo em tela estreita/toque). Achados que viraram regra da lib além do plano original, todos aditivos e na mesma release 3.4.0: `.sv-btn` com `min-width` de 44px, `.sv-tabs__trigger` com 44px e `.sv-tabs__list` rolando dentro de si, `TabsContent` esticando à largura (`align-self: stretch`), título do `Hero` no degrau `headline` abaixo de 40rem.

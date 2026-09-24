@@ -238,10 +238,11 @@ function FollowUpsCard({
           {followUps.slice(0, 8).map((followUp) => (
             <li
               key={followUp.id}
-              className="flex items-center gap-3 py-3 text-sm"
+              data-follow-up-row
+              className="flex flex-col gap-1 py-3 text-sm sm:flex-row sm:items-center sm:gap-3"
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">
+              <div className="min-w-0 flex-1" data-follow-up-text>
+                <p className="break-words font-medium sm:truncate">
                   <Link
                     href={`/pacientes/${followUp.patientId}`}
                     className="hover:underline"
@@ -249,52 +250,59 @@ function FollowUpsCard({
                     {followUp.patientName}
                   </Link>
                 </p>
-                <p className="truncate text-ink-3">{followUp.reason}</p>
+                <p className="break-words text-ink-3 sm:truncate">
+                  {followUp.reason}
+                </p>
               </div>
-              <span
-                className={`shrink-0 font-medium text-xs ${
-                  followUp.isOverdue ? 'text-danger' : 'text-ink-3'
-                }`}
+              <div
+                className="flex flex-wrap items-center gap-x-3"
+                data-follow-up-actions
               >
-                {followUp.isOverdue ? (
-                  <>
-                    <Icon name="alert-triangle" /> Atrasado —{' '}
-                  </>
-                ) : null}
-                {formatDate(followUp.dueDate)}
-              </span>
-              <Link
-                href={`/agenda?followUpId=${followUp.id}&patientId=${followUp.patientId}&procedure=${encodeURIComponent(followUp.reason.replace(/^Retorno: /, ''))}`}
-                className="flex min-h-11 shrink-0 items-center font-medium text-accent-ink hover:underline"
-              >
-                Agendar
-              </Link>
-              <Button
-                type="button"
-                onClick={() => void resolve(followUp.id, 'done')}
-                variant="link"
-                disabled={submittingId === followUp.id}
-                className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-success"
-              >
-                {submittingId === followUp.id ? 'Enviando…' : 'Concluir'}
-              </Button>
-              <ConfirmAction
-                trigger={
-                  <Button
-                    type="button"
-                    variant="link"
-                    disabled={submittingId === followUp.id}
-                    className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-ink-3"
-                  >
-                    Cancelar
-                  </Button>
-                }
-                title="Cancelar retorno?"
-                description="O retorno agendado será cancelado e o paciente não será mais lembrado."
-                confirmLabel="Cancelar retorno"
-                variant="danger"
-                onConfirm={() => resolve(followUp.id, 'cancelled')}
-              />
+                <span
+                  className={`shrink-0 font-medium text-xs ${
+                    followUp.isOverdue ? 'text-danger' : 'text-ink-3'
+                  }`}
+                >
+                  {followUp.isOverdue ? (
+                    <>
+                      <Icon name="alert-triangle" /> Atrasado —{' '}
+                    </>
+                  ) : null}
+                  {formatDate(followUp.dueDate)}
+                </span>
+                <Link
+                  href={`/agenda?followUpId=${followUp.id}&patientId=${followUp.patientId}&procedure=${encodeURIComponent(followUp.reason.replace(/^Retorno: /, ''))}`}
+                  className="flex min-h-11 shrink-0 items-center font-medium text-accent-ink hover:underline"
+                >
+                  Agendar
+                </Link>
+                <Button
+                  type="button"
+                  onClick={() => void resolve(followUp.id, 'done')}
+                  variant="link"
+                  disabled={submittingId === followUp.id}
+                  className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-success"
+                >
+                  {submittingId === followUp.id ? 'Enviando…' : 'Concluir'}
+                </Button>
+                <ConfirmAction
+                  trigger={
+                    <Button
+                      type="button"
+                      variant="link"
+                      disabled={submittingId === followUp.id}
+                      className="h-auto min-h-11 min-w-11 shrink-0 p-0 text-ink-3"
+                    >
+                      Cancelar
+                    </Button>
+                  }
+                  title="Cancelar retorno?"
+                  description="O retorno agendado será cancelado e o paciente não será mais lembrado."
+                  confirmLabel="Cancelar retorno"
+                  variant="danger"
+                  onConfirm={() => resolve(followUp.id, 'cancelled')}
+                />
+              </div>
             </li>
           ))}
         </ul>

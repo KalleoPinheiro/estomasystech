@@ -315,24 +315,14 @@ function AppointmentList({
     <Card>
       <ul className="divide-y divide-border text-sm">
         {appointments.map((appointment) => (
-          <li key={appointment.id} className="flex flex-col gap-2 px-4 py-3">
-            <div className="flex items-center gap-3">
+          <li key={appointment.id} className="flex flex-col gap-3 px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="font-medium">
+                <p className="font-medium" data-appointment-when>
                   {formatDateTime(appointment.startsAt)}
                 </p>
                 <p className="truncate text-ink-3">{appointment.procedure}</p>
               </div>
-              {onConfirm && appointment.status === 'scheduled' && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => onConfirm(appointment)}
-                  variant="accent"
-                >
-                  Confirmar presença
-                </Button>
-              )}
               <StatusBadge
                 status={appointment.status}
                 label={
@@ -341,6 +331,17 @@ function AppointmentList({
                 }
               />
             </div>
+            {onConfirm && appointment.status === 'scheduled' && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onConfirm(appointment)}
+                variant="accent"
+                className="self-start"
+              >
+                Confirmar presença
+              </Button>
+            )}
             {renderActions?.(appointment)}
           </li>
         ))}
