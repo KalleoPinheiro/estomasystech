@@ -134,7 +134,7 @@ function InvoicesTable({
               </TableCell>
               <TableCell
                 label="Descrição"
-                className="max-w-56 truncate px-4 py-3 text-ink-2"
+                className="px-4 py-3 text-ink-2 sm:max-w-56 sm:truncate"
               >
                 {invoice.description}
               </TableCell>

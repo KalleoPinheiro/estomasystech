@@ -245,12 +245,19 @@ for (const member of TABLE_SET) {
       const offscreen = Array.from(el.querySelectorAll("tbody button, tbody a[href]"))
         .map((c) => c.getBoundingClientRect())
         .filter((r) => r.width > 0 && r.right > width + 1).length;
-      return { theadHeight, badLabels, offscreen, cells: cells.length };
+      // O rótulo mora numa coluna à esquerda: o valor começa depois dela, nunca por baixo.
+      const overlapped = cells.filter((td) => {
+        const box = td.getBoundingClientRect();
+        const start = Number.parseFloat(getComputedStyle(td).paddingInlineStart);
+        return start < box.width * 0.3;
+      }).length;
+      return { theadHeight, badLabels, offscreen, overlapped, cells: cells.length };
     }, PHONE.width);
     expect(report.cells).toBeGreaterThan(0);
     expect(report.theadHeight).toBeLessThanOrEqual(1);
     expect(report.badLabels).toEqual([]);
     expect(report.offscreen).toBe(0);
+    expect(report.overlapped).toBe(0);
     await seeded.cleanup?.();
   });
 
