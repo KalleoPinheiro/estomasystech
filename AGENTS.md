@@ -52,6 +52,10 @@ Setup, variáveis de ambiente e Docker: [`docs/engineering/onboarding.md`](docs/
    usuário: registre como pergunta aberta, não como requisito.
 6. **Doc no mesmo PR.** Mudou comportamento de um domínio → atualize `docs/domains/<slug>/`.
    Decisão arquitetural durável → novo ADR. → [`docs/governance.md`](docs/governance.md)
+7. **Merge só com CI 100% verde.** Nenhum PR é mergeado (nem dado como pronto para merge) com
+   qualquer step do CI falhando — inclusive quando a falha não foi causada pelo PR (ex.: também
+   vermelha na `main`). Nesse caso a falha é corrigida primeiro, no próprio PR ou em outro que
+   entre antes. Decisão de @KalleoPinheiro, 2026-09-25.
 
 ## Mapa de contexto
 
