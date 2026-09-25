@@ -144,7 +144,7 @@ Low impact. A default was taken; the diff is where it gets reviewed. Decisões d
 
 1. Conteúdo do e-mail com dado de saúde (procedimento, motivo do retorno) — default: e-mail leva só data, hora, clínica e link do portal; procedimento e motivo só no portal e no `wa.me` (minimização LGPD).
 2. Opt-out do e-mail de recall — default: sem opt-out nesta entrega; lembrete de cuidado do próprio paciente, com teto de tentativas.
-3. Cadência do recall (D1/D2 do RM-14) — default: D+1, D+7, D+30 e para; retorno fica `pending` com marcador. Bloqueia o bloco N2.
+3. Cadência do recall (D1/D2 do RM-14) — **respondido em 2026-09-25**: D+1, D+7, D+30 e para; retorno fica `pending` com marcador visível; retorno que já passou de várias marcas recebe só a tentativa mais alta cabível. Ver `.tasks/lembretes-custo-zero.md`.
 4. Anexo `.ics` no e-mail de confirmação — default: não nesta entrega (`EmailMessage` não tem anexo).
 5. Remetente do e-mail por clínica — default: `EMAIL_FROM` único do sistema, nome da clínica no corpo.
 
