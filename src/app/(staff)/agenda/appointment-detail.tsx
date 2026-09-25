@@ -4,6 +4,7 @@ import { Button, Input, NativeSelect } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
+import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
 import {
   type CancellationPolicy,
   DEFAULT_CANCELLATION_POLICY,
@@ -15,6 +16,7 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/format';
+import { useApiQuery } from '@/lib/use-api-query';
 import { CancelPanel, type CancelRequest, NoShowPanel } from './cancel-panel';
 
 type AppointmentAction = 'confirm' | 'cancel' | 'no_show' | 'complete';
@@ -100,6 +102,13 @@ export function AppointmentDetail({
     new Date(appointment.endsAt).getTime() -
     new Date(appointment.startsAt).getTime();
   const visibleActions = VISIBLE_ACTIONS[appointment.status] ?? [];
+  // Lembrete manual por WhatsApp só faz sentido antes da confirmação.
+  const canSendWhatsApp = appointment.status === 'scheduled';
+  const { data: whatsappSent } = useApiQuery<Record<string, string>>(
+    canSendWhatsApp
+      ? `/api/reminders/whatsapp-link?kind=confirmation&referenceIds=${appointment.id}`
+      : null,
+  );
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -166,6 +175,15 @@ export function AppointmentDetail({
           {formatTime(appointment.cancelledAt)}
           {appointment.cancelReason && ` — ${appointment.cancelReason}`}
         </p>
+      )}
+
+      {canSendWhatsApp && (
+        <WhatsAppReminderButton
+          kind="confirmation"
+          referenceId={appointment.id}
+          sentAt={whatsappSent?.[appointment.id] ?? null}
+          className="h-auto min-h-11 self-start p-0"
+        />
       )}
 
       <a

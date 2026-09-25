@@ -9,12 +9,15 @@ export interface FollowUpDto {
   reason: string;
   status: string;
   isOverdue?: boolean;
+  /** Recall por e-mail chegou à última tentativa sem o retorno ser resolvido. */
+  recallExhausted?: boolean;
 }
 
 export const toFollowUpDto = (
   followUp: FollowUp,
   patientName?: string,
   isOverdue?: boolean,
+  recallExhausted?: boolean,
 ): FollowUpDto => ({
   id: followUp.id,
   patientId: followUp.patientId,
@@ -24,4 +27,5 @@ export const toFollowUpDto = (
   reason: followUp.reason,
   status: followUp.status,
   isOverdue,
+  recallExhausted,
 });

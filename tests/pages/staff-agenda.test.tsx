@@ -1295,7 +1295,7 @@ describe('Feature: Formulário de nova consulta', () => {
 describe('Feature: Detalhe de consulta', () => {
   describe('Cenário: ações disponíveis por status', () => {
     it('Dado consulta agendada, Quando renderizar, Então exibe as quatro ações disponíveis', () => {
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={vi.fn().mockResolvedValue(undefined)}
@@ -1310,7 +1310,7 @@ describe('Feature: Detalhe de consulta', () => {
     });
 
     it('Dado consulta agendada, Quando renderizar, Então cada ação leva a sua cor semântica', () => {
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={vi.fn().mockResolvedValue(undefined)}
@@ -1333,7 +1333,7 @@ describe('Feature: Detalhe de consulta', () => {
     });
 
     it('Dado consulta confirmada, Quando renderizar, Então não exibe a ação de confirmar', () => {
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={{ ...appointmentFixture, status: 'confirmed' }}
           onAction={vi.fn().mockResolvedValue(undefined)}
@@ -1346,7 +1346,7 @@ describe('Feature: Detalhe de consulta', () => {
     });
 
     it('Dado consulta concluída, Quando renderizar, Então não exibe nenhuma ação', () => {
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={{ ...appointmentFixture, status: 'completed' }}
           onAction={vi.fn().mockResolvedValue(undefined)}
@@ -1361,7 +1361,7 @@ describe('Feature: Detalhe de consulta', () => {
 
   describe('Cenário: registro de cancelamento', () => {
     it('Dado consulta cancelada pelo paciente no portal, Quando renderizar, Então mostra quem cancelou, quando e o motivo', () => {
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={{
             ...appointmentFixture,
@@ -1381,7 +1381,7 @@ describe('Feature: Detalhe de consulta', () => {
     });
 
     it('Dado consulta cancelada pela clínica sem motivo, Quando renderizar, Então mostra a origem sem motivo', () => {
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={{
             ...appointmentFixture,
@@ -1401,7 +1401,7 @@ describe('Feature: Detalhe de consulta', () => {
   describe('Cenário: acionar ação', () => {
     it("Dado clique em Confirmar, Quando acionado, Então chama onAction com 'confirm'", async () => {
       const onAction = vi.fn().mockResolvedValue(undefined);
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={onAction}
@@ -1418,7 +1418,7 @@ describe('Feature: Detalhe de consulta', () => {
 
     it('Dado clique em Concluir + faturar com retorno selecionado, Quando acionado, Então chama onAction com dias de retorno', async () => {
       const onAction = vi.fn().mockResolvedValue(undefined);
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={onAction}
@@ -1437,7 +1437,7 @@ describe('Feature: Detalhe de consulta', () => {
       const onAction = vi
         .fn()
         .mockRejectedValue(new Error('Erro ao atualizar consulta'));
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={onAction}
@@ -1459,7 +1459,7 @@ describe('Feature: Detalhe de consulta', () => {
   describe('Cenário: remarcação', () => {
     it('Dado clique em Remarcar e confirmação, Quando acionado, Então chama onReschedule com novas datas', async () => {
       const onReschedule = vi.fn().mockResolvedValue(undefined);
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={vi.fn().mockResolvedValue(undefined)}
@@ -1481,7 +1481,7 @@ describe('Feature: Detalhe de consulta', () => {
 
     it('Dado alteração de data e horário no formulário de remarcação, Quando confirmado, Então chama onReschedule com os novos valores', async () => {
       const onReschedule = vi.fn().mockResolvedValue(undefined);
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={vi.fn().mockResolvedValue(undefined)}
@@ -1513,7 +1513,7 @@ describe('Feature: Detalhe de consulta', () => {
   describe('Cenário: retorno programado ao concluir', () => {
     it('Dado alteração do retorno programado, Quando concluir, Então chama onAction com os novos dias de retorno', async () => {
       const onAction = vi.fn().mockResolvedValue(undefined);
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={onAction}
@@ -1538,7 +1538,7 @@ describe('Feature: Detalhe de consulta', () => {
   describe('Cenário: erro não padronizado', () => {
     it('Dado onAction rejeitando com valor que não é Error, Quando acionado, Então exibe mensagem padrão de erro', async () => {
       const onAction = vi.fn().mockRejectedValue('falha inesperada');
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={appointmentFixture}
           onAction={onAction}
@@ -1559,7 +1559,7 @@ describe('Feature: Detalhe de consulta', () => {
 
   describe('Cenário: status sem rótulo mapeado', () => {
     it('Dado status não mapeado, Quando renderizar, Então exibe o status bruto como rótulo do badge', () => {
-      render(
+      renderWithToast(
         <AppointmentDetail
           appointment={{ ...appointmentFixture, status: 'rescheduled' }}
           onAction={vi.fn().mockResolvedValue(undefined)}
