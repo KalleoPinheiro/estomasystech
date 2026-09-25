@@ -3,20 +3,22 @@ title: "Integração: WhatsApp (Meta Cloud API)"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-25
 ---
 
 # WhatsApp (Meta Cloud API)
 
 ## Propósito
 
-Canal dos lembretes ao paciente ([comunicação](../../domains/comunicacao/README.md)): confirmação
-da consulta de amanhã e recall de retorno vencido. Disparado pelo [cron](cron.md).
+**Fora do job de lembretes.** O cron envia por [e-mail](resend.md); o WhatsApp chega ao paciente
+pelo botão **Enviar WhatsApp** da recepção (`wa.me`, sem API nem credencial —
+[comunicação](../../domains/comunicacao/README.md)). O gateway da Meta segue no código para o
+RM-14 (templates *utility*, opt-in por clínica, em Later), que custa por mensagem entregue.
 
 | Campo | Valor |
 | --- | --- |
 | Direção | saída |
-| Obrigatória? | não — sem credenciais o job roda em dry-run |
+| Obrigatória? | não — nenhum fluxo usa hoje |
 | Gateway | `src/infrastructure/messaging/meta-whatsapp-gateway.ts` |
 | Porta | `src/application/ports/messaging-gateway.ts` (`NullMessagingGateway` = dry-run) |
 | Doc oficial | https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages |
@@ -38,23 +40,17 @@ Content-Type: application/json
 { "messaging_product": "whatsapp", "to": "55DDDNUMERO", "type": "text", "text": { "body": "…" } }
 ```
 
-- Telefone normalizado para E.164 Brasil (`55` + DDD + número) quando vier no formato nacional.
+- Telefone normalizado para E.164 Brasil (`55` + DDD + número) quando vier no formato nacional
+  (`normalizeBrazilianPhone`, em `src/domain/messaging/whatsapp-link.ts`, também usado no `wa.me`).
 - Timeout de 10 s; status fora de `2xx` lança erro.
 - **Limitação da Meta:** mensagem de texto livre só chega dentro da janela de 24 h de conversa;
   fora dela a Meta exige template aprovado — hoje o gateway envia só texto.
 
 ## Modos de falha
 
-| Situação | Comportamento | Visível para |
-| --- | --- | --- |
-| sem credenciais | `NullMessagingGateway` loga `[mensageria desativada] Para …`; resumo sai com `channelEnabled: false` | log / resposta do cron |
-| falha de API numa mensagem | conta em `failed` no resumo; as demais seguem | resposta do cron |
-| mesma mensagem no mesmo dia | não reenvia — um lembrete por (tipo, referência, dia) | — |
+Sem uso no job, os modos de falha só voltam a valer com o RM-14: sem credenciais o gateway nulo
+loga `[mensageria desativada] Para …`; falha de API lança.
 
 ## Teste local
 
-```bash
-# dry-run
-CRON_SECRET=dev npm run dev
-curl -X POST -H "x-cron-secret: dev" http://localhost:3000/api/reminders/run
-```
+Nada a testar enquanto o RM-14 não religar o canal; o `wa.me` não precisa de credencial.

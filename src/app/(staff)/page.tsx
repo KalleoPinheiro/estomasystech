@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card, Icon } from '@still-void/ui/react';
+import { Badge, Button, Card, Icon } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { SummaryCard } from '@/components/summary-card';
 import { TriagePhotoList } from '@/components/triage-photo-list';
+import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
 import {
@@ -198,6 +199,9 @@ export default function DashboardPage() {
   );
 }
 
+// Mesmo cap das demais cards do dashboard (LowStockCard, TriageQueue).
+const FOLLOW_UPS_CAP = 8;
+
 interface FollowUpsCardProps {
   followUps: FollowUpDto[] | null;
   error: string | null;
@@ -214,6 +218,12 @@ function FollowUpsCard({
   onResolve,
 }: FollowUpsCardProps) {
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const visible = (followUps ?? []).slice(0, FOLLOW_UPS_CAP);
+  const { data: whatsappSent } = useApiQuery<Record<string, string>>(
+    visible.length > 0
+      ? `/api/reminders/whatsapp-link?kind=recall&referenceIds=${visible.map((f) => f.id).join(',')}`
+      : null,
+  );
 
   const resolve = async (id: string, status: 'done' | 'cancelled') => {
     setSubmittingId(id);
@@ -235,7 +245,7 @@ function FollowUpsCard({
     >
       {followUps && (
         <ul className="divide-y divide-border">
-          {followUps.slice(0, 8).map((followUp) => (
+          {visible.map((followUp) => (
             <li
               key={followUp.id}
               data-follow-up-row
@@ -253,6 +263,11 @@ function FollowUpsCard({
                 <p className="break-words text-ink-3 sm:truncate">
                   {followUp.reason}
                 </p>
+                {followUp.recallExhausted && (
+                  <Badge variant="secondary" data-recall-exhausted>
+                    3 lembretes sem resposta
+                  </Badge>
+                )}
               </div>
               <div
                 className="flex flex-wrap items-center gap-x-3"
@@ -276,6 +291,11 @@ function FollowUpsCard({
                 >
                   Agendar
                 </Link>
+                <WhatsAppReminderButton
+                  kind="recall"
+                  referenceId={followUp.id}
+                  sentAt={whatsappSent?.[followUp.id] ?? null}
+                />
                 <Button
                   type="button"
                   onClick={() => void resolve(followUp.id, 'done')}

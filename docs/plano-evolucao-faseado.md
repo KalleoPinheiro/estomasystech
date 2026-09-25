@@ -42,7 +42,7 @@ sempre linka a pasta de `.specs/features/` onde está a validação do Verifier.
 
 | id | Item | Objetivo de negócio | status | issue | spec |
 | --- | --- | --- | --- | --- | --- |
-| RM-14 | Lembretes por WhatsApp: templates, cadência de recall, escopo por empresa | lembrete que chega fora da janela de 24 h da Meta e não repete para sempre | especificado | — | [`lembretes-whatsapp-templates-cadencia/`](../.specs/features/lembretes-whatsapp-templates-cadencia/) |
+| RM-19 | Lembretes sem custo de mensageria: e-mail automático por empresa com cadência + botão `wa.me` | lembrete que chega ao paciente com R$ 0 de mensageria para a clínica | em-andamento | — | [`.tasks/lembretes-custo-zero.md`](../.tasks/lembretes-custo-zero.md) |
 
 ### Next
 
@@ -56,6 +56,7 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 | RM-15 | Relatório automático para o parceiro | fidelizar quem indica pacientes | backlog | — | — (decisão pendente: cadência e canal) |
 | RM-16 | Oferta de vaga da lista de espera por WhatsApp | ocupar horário cancelado | backlog | — | — (decisão pendente: expiração da oferta) |
 | RM-17 | TISS / convênios | faturar operadoras | backlog | — | — |
+| RM-14 | Lembretes por WhatsApp com templates da Meta, opt-in por clínica (cadência e escopo por empresa já entregues no RM-19) | lembrete automático no WhatsApp para a clínica que aceitar o custo por mensagem | especificado | — | [`lembretes-whatsapp-templates-cadencia/`](../.specs/features/lembretes-whatsapp-templates-cadencia/) |
 | RM-18 | Row-Level Security no Postgres ([ADR-001](./adr/001-multi-tenancy.md)) | isolamento de empresa também no banco | backlog | — | — |
 
 ### Entregue

@@ -28,15 +28,24 @@ export async function GET(request: NextRequest) {
     );
     const patientId =
       request.nextUrl.searchParams.get('patientId') ?? undefined;
-    const { followUps, patients } = await getRepositories(
+    const { followUps, patients, reminderLog } = await getRepositories(
       sessionScope(guard.session),
     );
     const result = await new ListFollowUps(followUps, patients).execute({
       status,
       patientId,
     });
+    // Selo "3 lembretes sem resposta": recall por e-mail na última tentativa.
+    const exhausted = await reminderLog.exhaustedRecalls(
+      result.map(({ followUp }) => followUp.id),
+    );
     return result.map(({ followUp, patientName, isOverdue }) =>
-      toFollowUpDto(followUp, patientName, isOverdue),
+      toFollowUpDto(
+        followUp,
+        patientName,
+        isOverdue,
+        exhausted.has(followUp.id),
+      ),
     );
   });
 }

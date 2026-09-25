@@ -242,9 +242,9 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
     it('Dado lembrete nunca enviado, Quando wasSent, Então retorna false', async () => {
       const repo = new InMemoryReminderLogRepository();
 
-      expect(await repo.wasSent('confirmation', 'appt-1', '2026-07-19')).toBe(
-        false,
-      );
+      expect(
+        await repo.wasSent('confirmation', 'appt-1', 'email', '2026-07-19'),
+      ).toBe(false);
     });
 
     it('Dado lembrete salvo, Quando wasSent no mesmo dia, Então retorna true', async () => {
@@ -253,10 +253,12 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
 
       await repo.save(ReminderLog.create('confirmation', 'appt-1', sentAt));
 
-      expect(await repo.wasSent('confirmation', 'appt-1', '2026-07-19')).toBe(
-        true,
-      );
-      expect(await repo.wasSent('recall', 'appt-1', '2026-07-19')).toBe(false);
+      expect(
+        await repo.wasSent('confirmation', 'appt-1', 'email', '2026-07-19'),
+      ).toBe(true);
+      expect(
+        await repo.wasSent('recall', 'appt-1', 'email', '2026-07-19'),
+      ).toBe(false);
     });
 
     it('Dado lembrete já registrado, Quando salvar de novo (mesma chave), Então é idempotente e não lança', async () => {
@@ -266,9 +268,43 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       await repo.save(ReminderLog.create('recall', 'followup-1', sentAt));
       await repo.save(ReminderLog.create('recall', 'followup-1', sentAt));
 
-      expect(await repo.wasSent('recall', 'followup-1', '2026-07-19')).toBe(
-        true,
+      expect(
+        await repo.wasSent('recall', 'followup-1', 'email', '2026-07-19'),
+      ).toBe(true);
+      expect(repo.items).toHaveLength(1);
+    });
+
+    it('Dado recall por e-mail e cliques de WhatsApp, Quando consultar tentativas, primeiro clique e esgotados, Então separa por canal', async () => {
+      const repo = new InMemoryReminderLogRepository();
+      const day = new Date('2026-07-19T10:00:00Z');
+      const later = new Date('2026-07-19T15:00:00Z');
+
+      await repo.save(
+        ReminderLog.create('recall', 'fu-1', day, { attempt: 3 }),
       );
+      await repo.save(
+        ReminderLog.create('recall', 'fu-2', later, {
+          channel: 'whatsapp_link',
+        }),
+      );
+      await repo.save(
+        ReminderLog.create('recall', 'fu-2', day, {
+          channel: 'whatsapp_link',
+        }),
+      );
+
+      expect(await repo.lastRecallAttempt('fu-1')).toBe(3);
+      expect(await repo.lastRecallAttempt('fu-2')).toBe(0);
+      expect(await repo.exhaustedRecalls(['fu-1', 'fu-2'])).toEqual(
+        new Set(['fu-1']),
+      );
+      const first = await repo.firstSentAt(
+        'recall',
+        'whatsapp_link',
+        ['fu-2'],
+        '2026-07-19',
+      );
+      expect(first.get('fu-2')).toEqual(later);
     });
   });
 

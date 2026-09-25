@@ -3,12 +3,13 @@ import { SendReminders } from '@/application/reminders/send-reminders';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { passwordMatches } from '@/lib/auth/session';
-import { systemScope } from '@/lib/auth/tenant-scope';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 
 /**
  * Disparo do job de lembretes (cron externo):
  *   curl -X POST -H "x-cron-secret: $CRON_SECRET" $APP_URL/api/reminders/run
- * Sem CRON_SECRET configurado, a rota fica desativada (503).
+ * Sem CRON_SECRET configurado, a rota fica desativada (503). Lembretes saem
+ * por e-mail (Resend), empresa a empresa; sem Resend fora de produção, dry-run.
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -24,14 +25,14 @@ export async function POST(request: NextRequest) {
   }
 
   return handleRequest(async () => {
-    const { appointments, followUps, patients, reminderLog, messaging } =
-      await getRepositories(systemScope());
+    // Listar as empresas é a única leitura cross-empresa; todo o resto do job
+    // roda no escopo de cada uma (N3).
+    const { clinics, email } = await getRepositories(systemScope());
+    const all = await clinics.findAll();
     return new SendReminders(
-      appointments,
-      followUps,
-      patients,
-      reminderLog,
-      messaging,
+      all.map((clinic) => ({ id: clinic.id, name: clinic.name })),
+      (clinicId) => getRepositories(clinicScope(clinicId)),
+      email,
     ).execute();
   });
 }

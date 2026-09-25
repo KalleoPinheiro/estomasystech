@@ -326,13 +326,15 @@ describe('Feature: Persistência PostgreSQL — auditoria, pacotes, equipe e int
       await repo.save(log);
       await repo.save(ReminderLog.create('confirmation', 'appt-1', sentAt));
 
-      expect(await repo.wasSent('confirmation', 'appt-1', '2026-07-15')).toBe(
-        true,
-      );
-      expect(await repo.wasSent('recall', 'appt-1', '2026-07-15')).toBe(false);
-      expect(await repo.wasSent('confirmation', 'appt-1', '2026-07-16')).toBe(
-        false,
-      );
+      expect(
+        await repo.wasSent('confirmation', 'appt-1', 'email', '2026-07-15'),
+      ).toBe(true);
+      expect(
+        await repo.wasSent('recall', 'appt-1', 'email', '2026-07-15'),
+      ).toBe(false);
+      expect(
+        await repo.wasSent('confirmation', 'appt-1', 'email', '2026-07-16'),
+      ).toBe(false);
     });
   });
 

@@ -3,7 +3,7 @@ title: "Integração: cron de lembretes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-25
 ---
 
 # Cron de lembretes (`POST /api/reminders/run`)
@@ -11,7 +11,7 @@ last_reviewed: 2026-09-23
 ## Propósito
 
 Um agendador externo (cron do host, Vercel Cron, GitHub Actions…) chama a rota uma vez por dia
-para enviar os lembretes pelo [WhatsApp](whatsapp-meta.md). Domínio: [comunicação](../../domains/comunicacao/README.md).
+para enviar os lembretes por [e-mail](resend.md), empresa a empresa. Domínio: [comunicação](../../domains/comunicacao/README.md).
 
 | Campo | Valor |
 | --- | --- |
@@ -33,16 +33,24 @@ POST /api/reminders/run
 x-cron-secret: $CRON_SECRET
 ```
 
-Resposta `200` no envelope `{ success, data }`, com `data = { sent, skipped, failed, channelEnabled }`.
+Resposta `200` no envelope `{ success, data }`:
 
-O que é enviado a cada execução, para todas as clínicas:
+```json
+{ "sent": 3, "skipped": 0, "failed": 0, "channelEnabled": true,
+  "clinics": [{ "clinicId": "…", "sent": 3, "skipped": 0, "failed": 0 }] }
+```
+
+Uma entrada por empresa; a que falhou ao ser lida aparece com `error: "<mensagem>"` e contadores
+zerados, e as demais seguem. O que é enviado a cada execução, em cada clínica (`clinicScope`):
 
 | Tipo | Quem recebe |
 | --- | --- |
-| `confirmation` | consulta de amanhã ainda `scheduled` |
-| `recall` | retorno `pending` com vencimento antes de hoje (com link do portal se `APP_URL` for http(s)) |
+| `confirmation` | consulta de amanhã (data local no fuso `TZ`) ainda `scheduled` |
+| `recall` | retorno `pending` vencido, em D+1, D+7 e D+30 (teto de 3 tentativas) |
 
-Idempotente no dia: um lembrete por (tipo, referência, data) — rodar duas vezes não duplica.
+Rodar duas vezes no mesmo dia não duplica: a confirmação é única por (referência, dia) e o recall
+por tentativa. Defina `TZ=America/Sao_Paulo` no ambiente — "amanhã" e o dia do registro usam o
+fuso do processo.
 
 ## Modos de falha
 
@@ -50,7 +58,8 @@ Idempotente no dia: um lembrete por (tipo, referência, data) — rodar duas vez
 | --- | --- |
 | `CRON_SECRET` não configurado | `503` — job desativado |
 | header ausente ou diferente | `401` |
-| canal WhatsApp sem credenciais | `200` com `channelEnabled: false` (dry-run) |
+| Resend sem credenciais (fora de produção) | `200` com `channelEnabled: false` (dry-run) |
+| falha ao ler uma empresa | `200`; a entrada da empresa traz `error` |
 
 ## Teste local
 

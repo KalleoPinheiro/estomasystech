@@ -1,51 +1,69 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CompleteAppointment } from '@/application/appointments/complete-appointment';
-import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { CreatePatient } from '@/application/patients/create-patient';
-import type { MessagingGateway } from '@/application/ports/messaging-gateway';
-import { NullMessagingGateway } from '@/application/ports/messaging-gateway';
-import { SendReminders } from '@/application/reminders/send-reminders';
+import {
+  type EmailGateway,
+  type EmailMessage,
+  NullEmailGateway,
+} from '@/application/ports/email-gateway';
+import {
+  type ClinicReminderServices,
+  SendReminders,
+} from '@/application/reminders/send-reminders';
+import { FollowUp } from '@/domain/followup/follow-up';
+import { ReminderLog } from '@/domain/messaging/reminder-log';
 import type { Patient } from '@/domain/patient/patient';
 import { Appointment } from '@/domain/scheduling/appointment';
 import { Money } from '@/domain/shared/money';
 import { TimeSlot } from '@/domain/shared/time-slot';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
-import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 import { InMemoryReminderLogRepository } from '@/infrastructure/persistence/in-memory/in-memory-reminder-log-repository';
 
-class FakeMessagingGateway implements MessagingGateway {
+class FakeEmailGateway implements EmailGateway {
   readonly enabled = true;
-  readonly sentMessages: Array<{ phone: string; message: string }> = [];
+  readonly sent: EmailMessage[] = [];
   failFor: string | null = null;
 
-  async sendText(phone: string, message: string): Promise<void> {
-    if (this.failFor && phone === this.failFor) {
+  async send(message: EmailMessage): Promise<void> {
+    if (this.failFor && message.to === this.failFor) {
       throw new Error('falha simulada de API');
     }
-    this.sentMessages.push({ phone, message });
+    this.sent.push(message);
   }
 }
 
-// now fixo: quinta 2026-07-16 12:00 UTC; consulta amanhã (sexta 17), útil.
-const NOW = new Date('2026-07-16T12:00:00Z');
+interface ClinicFixture extends ClinicReminderServices {
+  appointments: InMemoryAppointmentRepository;
+  followUps: InMemoryFollowUpRepository;
+  patients: InMemoryPatientRepository;
+  reminderLog: InMemoryReminderLogRepository;
+}
 
-describe('Feature: Lembretes de confirmação (D-1) e recall de retornos', () => {
-  let patientRepo: InMemoryPatientRepository;
-  let appointmentRepo: InMemoryAppointmentRepository;
-  let followUpRepo: InMemoryFollowUpRepository;
-  let reminderLog: InMemoryReminderLogRepository;
-  let gateway: FakeMessagingGateway;
+const newClinic = (): ClinicFixture => ({
+  appointments: new InMemoryAppointmentRepository(),
+  followUps: new InMemoryFollowUpRepository(),
+  patients: new InMemoryPatientRepository(),
+  reminderLog: new InMemoryReminderLogRepository(),
+});
+
+// now fixo: quinta 2026-07-16 12:00 UTC (suíte roda com TZ=UTC); amanhã = 17.
+const NOW = new Date('2026-07-16T12:00:00Z');
+const CLINIC = { id: 'clinic-a', name: 'Clínica Alfa' };
+
+const dayAfter = (base: Date, days: number) =>
+  new Date(base.getTime() + days * 86_400_000);
+
+describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retornos', () => {
+  let clinic: ClinicFixture;
+  let email: FakeEmailGateway;
   let maria: Patient;
 
   beforeEach(async () => {
-    patientRepo = new InMemoryPatientRepository();
-    appointmentRepo = new InMemoryAppointmentRepository();
-    followUpRepo = new InMemoryFollowUpRepository();
-    reminderLog = new InMemoryReminderLogRepository();
-    gateway = new FakeMessagingGateway();
-    maria = await new CreatePatient(patientRepo).execute({
+    clinic = newClinic();
+    email = new FakeEmailGateway();
+    vi.stubEnv('APP_URL', 'https://vitta.example.com');
+    maria = await new CreatePatient(clinic.patients).execute({
       fullName: 'Maria da Silva',
       email: 'maria@example.com',
       phone: '11999990000',
@@ -54,189 +72,393 @@ describe('Feature: Lembretes de confirmação (D-1) e recall de retornos', () =>
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
-  const run = (messaging: MessagingGateway = gateway) =>
-    new SendReminders(
-      appointmentRepo,
-      followUpRepo,
-      patientRepo,
-      reminderLog,
-      messaging,
-    ).execute(NOW);
+  const run = (now: Date = NOW, gateway: EmailGateway = email) =>
+    new SendReminders([CLINIC], async () => clinic, gateway).execute(now);
 
-  const scheduleTomorrow = () =>
-    new ScheduleAppointment(appointmentRepo, patientRepo).execute({
-      patientId: maria.id,
-      startsAt: new Date('2026-07-17T09:00:00Z'),
-      endsAt: new Date('2026-07-17T10:00:00Z'),
-      procedure: 'Troca de bolsa',
-      priceCents: 25000,
-    });
-
-  it('Dado consulta amanhã scheduled, Quando rodar, Então envia lembrete de confirmação', async () => {
-    await scheduleTomorrow();
-
-    const summary = await run();
-
-    expect(summary.sent).toBe(1);
-    expect(gateway.sentMessages[0].message).toContain('amanhã');
-  });
-
-  it('Dado job rodado duas vezes no dia, Quando repetir, Então segundo envio é pulado', async () => {
-    await scheduleTomorrow();
-
-    await run();
-    const second = await run();
-
-    expect(second.sent).toBe(0);
-    expect(second.skipped).toBe(1);
-    expect(gateway.sentMessages).toHaveLength(1);
-  });
-
-  it('Dado retorno vencido, Quando rodar, Então envia recall', async () => {
-    const invoiceRepo = new InMemoryInvoiceRepository();
-    const past = await new ScheduleAppointment(
-      appointmentRepo,
-      patientRepo,
-    ).execute({
-      patientId: maria.id,
-      startsAt: new Date('2026-06-01T09:00:00Z'),
-      endsAt: new Date('2026-06-01T10:00:00Z'),
-      procedure: 'Curativo',
-      priceCents: 15000,
-    });
-    // Conclui com retorno em 7 dias → vencido em 2026-06-08 (antes de NOW).
-    await new CompleteAppointment(
-      appointmentRepo,
-      invoiceRepo,
-      followUpRepo,
-    ).execute({
-      id: past.id,
-      followUpInDays: 7,
-    });
-
-    const summary = await run();
-
-    expect(summary.sent).toBe(1);
-    expect(gateway.sentMessages[0].message).toContain('retorno');
-  });
-
-  /** Consulta passada concluída com retorno em 7 dias → recall vencido. */
-  const overdueFollowUp = async () => {
-    const invoiceRepo = new InMemoryInvoiceRepository();
-    const past = await new ScheduleAppointment(
-      appointmentRepo,
-      patientRepo,
-    ).execute({
-      patientId: maria.id,
-      startsAt: new Date('2026-06-01T09:00:00Z'),
-      endsAt: new Date('2026-06-01T10:00:00Z'),
-      procedure: 'Curativo',
-      priceCents: 15000,
-    });
-    await new CompleteAppointment(
-      appointmentRepo,
-      invoiceRepo,
-      followUpRepo,
-    ).execute({
-      id: past.id,
-      followUpInDays: 7,
-    });
-  };
-
-  it('Dado APP_URL configurada, Quando enviar recall, Então a mensagem aponta para o portal (PORT4-09)', async () => {
-    // stubEnv restaura sozinho no unstubAllEnvs, mesmo se um expect falhar antes.
-    vi.stubEnv('APP_URL', 'https://clinica.example.com//');
-    await overdueFollowUp();
-
-    await run();
-
-    // Barras extras normalizadas — link quebrado numa mensagem ao paciente.
-    expect(gateway.sentMessages[0].message).toContain(
-      'Agende seu retorno no portal: https://clinica.example.com/portal.',
-    );
-    expect(gateway.sentMessages[0].message).not.toContain(
-      'Entre em contato com a clínica',
-    );
-  });
-
-  it('Dado APP_URL ausente, Quando enviar recall, Então mantém a orientação de contato (PORT4-09)', async () => {
-    vi.stubEnv('APP_URL', '');
-    await overdueFollowUp();
-
-    await run();
-
-    expect(gateway.sentMessages[0].message).toContain(
-      'Entre em contato com a clínica para agendar.',
-    );
-  });
-
-  it('Dado APP_URL sem esquema, Quando enviar recall, Então não monta link quebrado (PORT4-09)', async () => {
-    vi.stubEnv('APP_URL', 'clinica.example.com');
-    await overdueFollowUp();
-
-    await run();
-
-    expect(gateway.sentMessages[0].message).toContain(
-      'Entre em contato com a clínica para agendar.',
-    );
-    expect(gateway.sentMessages[0].message).not.toContain(
-      'clinica.example.com/portal',
-    );
-  });
-
-  it('Dado falha de envio em um lembrete, Quando rodar, Então lote continua e conta failed', async () => {
-    await scheduleTomorrow();
-    gateway.failFor = '11999990000';
-
-    const summary = await run();
-
-    expect(summary.failed).toBe(1);
-    expect(summary.sent).toBe(0);
-    // Falha não marca como enviado — próxima rodada tenta de novo.
-    const retryGateway = new FakeMessagingGateway();
-    const retry = await run(retryGateway);
-    expect(retry.sent).toBe(1);
-  });
-
-  it('Dado canal desativado (Null), Quando rodar, Então dry-run: nada enviado, tudo pulado', async () => {
-    await scheduleTomorrow();
-
-    const summary = await run(new NullMessagingGateway());
-
-    expect(summary.channelEnabled).toBe(false);
-    expect(summary.sent).toBe(0);
-    expect(summary.skipped).toBe(1);
-  });
-
-  it('Dado paciente desativado com consulta amanhã, Quando rodar, Então pula sem enviar', async () => {
-    await scheduleTomorrow();
-    await patientRepo.save(maria.deactivate());
-
-    const summary = await run();
-
-    expect(summary.sent).toBe(0);
-    expect(summary.skipped).toBe(1);
-    expect(gateway.sentMessages).toHaveLength(0);
-  });
-
-  it('Dado consulta órfã (paciente removido do cadastro), Quando rodar, Então pula sem enviar', async () => {
-    const orphan = Appointment.create({
-      patientId: 'paciente-removido',
-      slot: TimeSlot.create(
-        new Date('2026-07-17T09:00:00Z'),
-        new Date('2026-07-17T10:00:00Z'),
-      ),
+  const scheduleAt = async (
+    startsAt: Date,
+    patientId = maria.id,
+    repo = clinic.appointments,
+  ) => {
+    const appointment = Appointment.create({
+      patientId,
+      slot: TimeSlot.create(startsAt, new Date(startsAt.getTime() + 3_600_000)),
       procedure: 'Troca de bolsa',
       price: Money.fromCents(25000),
     });
-    await appointmentRepo.save(orphan);
+    await repo.save(appointment);
+    return appointment;
+  };
 
-    const summary = await run();
+  const scheduleTomorrow = () => scheduleAt(new Date('2026-07-17T09:30:00Z'));
 
-    expect(summary.sent).toBe(0);
-    expect(summary.skipped).toBe(1);
-    expect(gateway.sentMessages).toHaveLength(0);
+  const addFollowUp = async (
+    due: Date,
+    patientId = maria.id,
+    repo = clinic.followUps,
+  ) => {
+    const followUp = FollowUp.create({
+      patientId,
+      appointmentId: null,
+      dueDate: due,
+      reason: 'Retorno: Curativo de lesão sacral',
+    });
+    await repo.save(followUp);
+    return followUp;
+  };
+
+  describe('Confirmação D-1', () => {
+    it('C1 confirmação por e-mail traz nome, data, hora, clínica e portal, sem procedimento', async () => {
+      await scheduleTomorrow();
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(1);
+      expect(email.sent).toHaveLength(1);
+      const [message] = email.sent;
+      expect(message.to).toBe('maria@example.com');
+      expect(message.text).toContain('Maria');
+      expect(message.text).not.toContain('Maria da Silva');
+      expect(message.text).toContain('17/07/2026');
+      expect(message.text).toContain('09:30');
+      expect(message.text).toContain('Clínica Alfa');
+      expect(message.text).toContain('https://vitta.example.com/portal');
+      expect(message.text).not.toContain('Troca de bolsa');
+      expect(message.subject).not.toContain('Troca de bolsa');
+    });
+
+    it('C2 confirmação grava log de e-mail tentativa 1', async () => {
+      const appointment = await scheduleTomorrow();
+
+      await run();
+
+      expect(clinic.reminderLog.items).toHaveLength(1);
+      const [log] = clinic.reminderLog.items;
+      expect(log.kind).toBe('confirmation');
+      expect(log.referenceId).toBe(appointment.id);
+      expect(log.channel).toBe('email');
+      expect(log.attempt).toBe(1);
+      expect(log.sentOn).toBe('2026-07-16');
+    });
+
+    it('Dado consulta amanhã que não está scheduled, Quando rodar, Então não envia', async () => {
+      const appointment = await scheduleTomorrow();
+      await clinic.appointments.save(appointment.confirm());
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(0);
+      expect(email.sent).toHaveLength(0);
+    });
+  });
+
+  describe('Recall', () => {
+    it('C3 recall por e-mail traz nome, data, clínica e portal, sem motivo', async () => {
+      const followUp = await addFollowUp(new Date('2026-07-15T12:00:00Z'));
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(1);
+      const [message] = email.sent;
+      expect(message.to).toBe('maria@example.com');
+      expect(message.text).toContain('Maria');
+      expect(message.text).toContain('15/07/2026');
+      expect(message.text).toContain('Clínica Alfa');
+      expect(message.text).toContain(
+        'Agende seu retorno no portal: https://vitta.example.com/portal.',
+      );
+      expect(message.text).not.toContain('Curativo');
+      expect(message.text).not.toContain('lesão');
+      const [log] = clinic.reminderLog.items;
+      expect(log.kind).toBe('recall');
+      expect(log.referenceId).toBe(followUp.id);
+      expect(log.channel).toBe('email');
+      expect(log.attempt).toBe(1);
+    });
+
+    it('C4 APP_URL sem esquema não gera link', async () => {
+      vi.stubEnv('APP_URL', 'vitta.example.com');
+      await scheduleTomorrow();
+      await addFollowUp(new Date('2026-07-15T12:00:00Z'));
+
+      await run();
+
+      expect(email.sent).toHaveLength(2);
+      for (const message of email.sent) {
+        expect(message.text).not.toContain('vitta.example.com');
+        expect(message.text).toContain('Entre em contato com a clínica');
+      }
+    });
+
+    it('Dado APP_URL com barras extras, Quando enviar, Então normaliza o link', async () => {
+      vi.stubEnv('APP_URL', 'https://vitta.example.com//');
+      await addFollowUp(new Date('2026-07-15T12:00:00Z'));
+
+      await run();
+
+      expect(email.sent[0].text).toContain('https://vitta.example.com/portal.');
+    });
+  });
+
+  describe('Paciente, falha e dry-run', () => {
+    it('C5 paciente inativo é pulado', async () => {
+      await scheduleTomorrow();
+      await addFollowUp(new Date('2026-07-15T12:00:00Z'));
+      await clinic.patients.save(maria.deactivate());
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(0);
+      expect(summary.skipped).toBe(2);
+      expect(email.sent).toHaveLength(0);
+    });
+
+    it('Dado consulta órfã (paciente removido), Quando rodar, Então pula sem enviar', async () => {
+      await scheduleAt(new Date('2026-07-17T09:00:00Z'), 'paciente-removido');
+
+      const summary = await run();
+
+      expect(summary.skipped).toBe(1);
+      expect(email.sent).toHaveLength(0);
+    });
+
+    it('C6 falha de envio conta failed, não grava log e o lote segue', async () => {
+      const joao = await new CreatePatient(clinic.patients).execute({
+        fullName: 'João Souza',
+        email: 'joao@example.com',
+        phone: '11988880000',
+      });
+      await scheduleTomorrow();
+      await scheduleAt(new Date('2026-07-17T11:00:00Z'), joao.id);
+      email.failFor = 'maria@example.com';
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const summary = await run();
+
+      expect(summary.failed).toBe(1);
+      expect(summary.sent).toBe(1);
+      expect(email.sent.map((m) => m.to)).toEqual(['joao@example.com']);
+      expect(clinic.reminderLog.items).toHaveLength(1);
+      // Sem log, a próxima rodada tenta de novo.
+      email.failFor = null;
+      const retry = await run();
+      expect(retry.sent).toBe(1);
+    });
+
+    it('C7 dry-run loga, pula e não grava log', async () => {
+      await scheduleTomorrow();
+      const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+      const summary = await run(NOW, new NullEmailGateway());
+
+      expect(summary.channelEnabled).toBe(false);
+      expect(summary.sent).toBe(0);
+      expect(summary.skipped).toBe(1);
+      expect(clinic.reminderLog.items).toHaveLength(0);
+      expect(info).toHaveBeenCalledWith(
+        expect.stringContaining('maria@example.com'),
+      );
+      expect(info).toHaveBeenCalledWith(
+        expect.stringContaining('Clínica Alfa'),
+      );
+    });
+  });
+
+  describe('Por empresa', () => {
+    it('C9 falha de uma empresa não impede as demais', async () => {
+      await scheduleTomorrow();
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const summary = await new SendReminders(
+        [{ id: 'clinic-broken', name: 'Quebrada' }, CLINIC],
+        async (clinicId) => {
+          if (clinicId === 'clinic-broken') {
+            throw new Error('banco indisponível');
+          }
+          return clinic;
+        },
+        email,
+      ).execute(NOW);
+
+      expect(summary.clinics).toEqual([
+        {
+          clinicId: 'clinic-broken',
+          sent: 0,
+          skipped: 0,
+          failed: 0,
+          error: 'banco indisponível',
+        },
+        { clinicId: 'clinic-a', sent: 1, skipped: 0, failed: 0 },
+      ]);
+      expect(summary.sent).toBe(1);
+    });
+
+    it('Dado duas empresas, Quando rodar, Então cada e-mail leva o nome da própria clínica', async () => {
+      const other = newClinic();
+      const ana = await new CreatePatient(other.patients).execute({
+        fullName: 'Ana Lima',
+        email: 'ana@example.com',
+        phone: '11977770000',
+      });
+      await scheduleTomorrow();
+      await scheduleAt(
+        new Date('2026-07-17T10:00:00Z'),
+        ana.id,
+        other.appointments,
+      );
+
+      const summary = await new SendReminders(
+        [CLINIC, { id: 'clinic-b', name: 'Clínica Beta' }],
+        async (clinicId) => (clinicId === 'clinic-b' ? other : clinic),
+        email,
+      ).execute(NOW);
+
+      const toAna = email.sent.find((m) => m.to === 'ana@example.com');
+      expect(toAna?.text).toContain('Clínica Beta');
+      expect(toAna?.text).not.toContain('Clínica Alfa');
+      expect(summary.clinics.map((c) => [c.clinicId, c.sent])).toEqual([
+        ['clinic-a', 1],
+        ['clinic-b', 1],
+      ]);
+    });
+
+    it('C11 501 retornos geram 501 e-mails', async () => {
+      for (let i = 0; i < 501; i += 1) {
+        await addFollowUp(new Date('2026-07-15T12:00:00Z'));
+      }
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(501);
+      expect(email.sent).toHaveLength(501);
+    });
+  });
+
+  describe('Cadência do recall', () => {
+    // Vencimento em D = 01/06, meio-dia; execução diária também ao meio-dia.
+    const D = new Date('2026-06-01T12:00:00Z');
+
+    it('C12 cadência D+1, D+7, D+30', async () => {
+      await addFollowUp(D);
+      const sentOnDays: number[] = [];
+
+      for (let offset = 0; offset <= 31; offset += 1) {
+        const before = email.sent.length;
+        await run(dayAfter(D, offset));
+        if (email.sent.length > before) sentOnDays.push(offset);
+      }
+
+      expect(sentOnDays).toEqual([1, 7, 30]);
+      expect(email.sent).toHaveLength(3);
+      expect(clinic.reminderLog.items.map((log) => log.attempt)).toEqual([
+        1, 2, 3,
+      ]);
+    });
+
+    it('C13 após a 3ª tentativa não envia mais', async () => {
+      const followUp = await addFollowUp(D);
+      await clinic.reminderLog.save(
+        ReminderLog.create('recall', followUp.id, dayAfter(D, 30), {
+          attempt: 3,
+        }),
+      );
+
+      for (const offset of [31, 60, 365]) {
+        await run(dayAfter(D, offset));
+      }
+
+      expect(email.sent).toHaveLength(0);
+      expect((await clinic.followUps.findById(followUp.id))?.status).toBe(
+        'pending',
+      );
+    });
+
+    it('C14 envia só a tentativa mais alta cabível', async () => {
+      await addFollowUp(D);
+
+      await run(dayAfter(D, 60));
+      await run(dayAfter(D, 61));
+      await run(dayAfter(D, 90));
+
+      expect(email.sent).toHaveLength(1);
+      expect(clinic.reminderLog.items.map((log) => log.attempt)).toEqual([3]);
+    });
+
+    it('C15 retorno resolvido não recebe próxima tentativa', async () => {
+      const done = await addFollowUp(D);
+      const cancelled = await addFollowUp(D);
+      await run(dayAfter(D, 1));
+      expect(email.sent).toHaveLength(2);
+
+      await clinic.followUps.save(done.markDone());
+      await clinic.followUps.save(cancelled.cancel());
+      for (let offset = 2; offset <= 31; offset += 1) {
+        await run(dayAfter(D, offset));
+      }
+
+      expect(email.sent).toHaveLength(2);
+    });
+
+    it('C16 segunda execução do dia não reenvia', async () => {
+      await scheduleTomorrow();
+      await addFollowUp(new Date('2026-07-15T12:00:00Z'));
+
+      await run(NOW);
+      const second = await run(new Date('2026-07-16T18:00:00Z'));
+
+      expect(second.sent).toBe(0);
+      expect(email.sent).toHaveLength(2);
+    });
+
+    it('C17 virada 23:30 em São Paulo usa a data local', async () => {
+      vi.stubEnv('TZ', 'America/Sao_Paulo');
+      // Consulta 17/07 09:00 local (12:00 UTC).
+      await scheduleAt(new Date('2026-07-17T12:00:00Z'));
+
+      // 16/07 20:00 local (23:00 UTC) e 16/07 23:30 local (02:30 UTC do dia 17).
+      await run(new Date('2026-07-16T23:00:00Z'));
+      await run(new Date('2026-07-17T02:30:00Z'));
+
+      expect(email.sent).toHaveLength(1);
+      expect(clinic.reminderLog.items[0].sentOn).toBe('2026-07-16');
+      expect(email.sent[0].text).toContain('17/07/2026');
+      expect(email.sent[0].text).toContain('09:00');
+    });
+
+    it('C17 às 23:30 locais a consulta do dia seguinte local ainda é "amanhã"', async () => {
+      vi.stubEnv('TZ', 'America/Sao_Paulo');
+      // Consulta 17/07 08:00 local (11:00 UTC); job às 23:30 do dia 16 local.
+      await scheduleAt(new Date('2026-07-17T11:00:00Z'));
+
+      const summary = await run(new Date('2026-07-17T02:30:00Z'));
+
+      expect(summary.sent).toBe(1);
+      expect(clinic.reminderLog.items[0].sentOn).toBe('2026-07-16');
+    });
+  });
+
+  describe('Canais independentes', () => {
+    it('C26 clique de WhatsApp não suprime o e-mail', async () => {
+      const appointment = await scheduleTomorrow();
+      const followUp = await addFollowUp(new Date('2026-07-15T12:00:00Z'));
+      for (const [kind, id] of [
+        ['confirmation', appointment.id],
+        ['recall', followUp.id],
+      ] as const) {
+        await clinic.reminderLog.save(
+          ReminderLog.create(kind, id, new Date('2026-07-16T08:00:00Z'), {
+            channel: 'whatsapp_link',
+          }),
+        );
+      }
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(2);
+      expect(email.sent).toHaveLength(2);
+    });
   });
 });

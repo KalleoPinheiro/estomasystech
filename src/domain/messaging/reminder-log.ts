@@ -3,19 +3,38 @@ import { newId } from '../shared/id';
 export const REMINDER_KINDS = ['confirmation', 'recall'] as const;
 export type ReminderKind = (typeof REMINDER_KINDS)[number];
 
+/**
+ * Por onde o lembrete saiu: e-mail automático do job ou clique da recepção no
+ * link `wa.me`. `'whatsapp'` fica reservado ao canal automático da Meta (RM-14).
+ */
+export const REMINDER_CHANNELS = ['email', 'whatsapp_link'] as const;
+export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
+
 export interface ReminderLogState {
   id: string;
   kind: ReminderKind;
   /** Id da consulta (confirmation) ou do follow-up (recall). */
   referenceId: string;
-  /** Dia do envio (YYYY-MM-DD) — chave de idempotência diária. */
+  channel: ReminderChannel;
+  /** Tentativa do recall por e-mail (1–3); sempre 1 nos demais casos. */
+  attempt: number;
+  /** Dia do envio (YYYY-MM-DD) no fuso `TZ` — chave de idempotência diária. */
   sentOn: string;
   createdAt: Date;
 }
 
-export const dateKey = (date: Date): string => date.toISOString().slice(0, 10);
+const pad = (value: number): string => String(value).padStart(2, '0');
 
-/** Registro de lembrete enviado — impede reenvio no mesmo dia. */
+/** Data local (fuso `TZ` do processo), não UTC: o "amanhã" do job também é local. */
+export const dateKey = (date: Date): string =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+export interface ReminderLogOptions {
+  channel?: ReminderChannel;
+  attempt?: number;
+}
+
+/** Registro de lembrete enviado — impede reenvio pelo mesmo canal. */
 export class ReminderLog {
   private constructor(private readonly state: ReminderLogState) {}
 
@@ -23,11 +42,14 @@ export class ReminderLog {
     kind: ReminderKind,
     referenceId: string,
     sentAt: Date = new Date(),
+    options: ReminderLogOptions = {},
   ): ReminderLog {
     return new ReminderLog({
       id: newId(),
       kind,
       referenceId,
+      channel: options.channel ?? 'email',
+      attempt: options.attempt ?? 1,
       sentOn: dateKey(sentAt),
       createdAt: sentAt,
     });
@@ -49,6 +71,14 @@ export class ReminderLog {
     return this.state.referenceId;
   }
 
+  get channel(): ReminderChannel {
+    return this.state.channel;
+  }
+
+  get attempt(): number {
+    return this.state.attempt;
+  }
+
   get sentOn(): string {
     return this.state.sentOn;
   }
@@ -63,6 +93,18 @@ export interface ReminderLogRepository {
   wasSent(
     kind: ReminderKind,
     referenceId: string,
+    channel: ReminderChannel,
     onDay: string,
   ): Promise<boolean>;
+  /** Maior tentativa de recall por e-mail já gravada; 0 sem nenhuma. */
+  lastRecallAttempt(referenceId: string): Promise<number>;
+  /** Horário do primeiro registro do dia por referência (só as que têm registro). */
+  firstSentAt(
+    kind: ReminderKind,
+    channel: ReminderChannel,
+    referenceIds: readonly string[],
+    onDay: string,
+  ): Promise<Map<string, Date>>;
+  /** Retornos cujo recall por e-mail já chegou à última tentativa. */
+  exhaustedRecalls(referenceIds: readonly string[]): Promise<Set<string>>;
 }

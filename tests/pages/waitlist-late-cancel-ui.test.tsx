@@ -87,7 +87,7 @@ const policy = { noticeHours: 24, lateFeeCents: 5000 };
 describe('Feature: Cancelamento e falta pela agenda', () => {
   it('Dado paciente pedindo em cima da hora com taxa, Quando confirmar, Então envia origem, motivo e cobrança', async () => {
     const onAction = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderWithToast(
       <AppointmentDetail
         appointment={appointment()}
         cancellationPolicy={policy}
@@ -120,7 +120,7 @@ describe('Feature: Cancelamento e falta pela agenda', () => {
 
   it('Dado paciente tardio e a equipe desmarca a taxa, Então não cobra', async () => {
     const onAction = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderWithToast(
       <AppointmentDetail
         appointment={appointment()}
         cancellationPolicy={policy}
@@ -146,7 +146,7 @@ describe('Feature: Cancelamento e falta pela agenda', () => {
 
   it('Dado cancelamento pela clínica, Quando confirmar, Então nunca pede taxa', async () => {
     const onAction = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderWithToast(
       <AppointmentDetail
         appointment={appointment()}
         cancellationPolicy={policy}
@@ -166,7 +166,7 @@ describe('Feature: Cancelamento e falta pela agenda', () => {
   });
 
   it('Dado cancelamento pela clínica, Então não oferece taxa nem marca tardio', () => {
-    render(
+    renderWithToast(
       <AppointmentDetail
         appointment={appointment()}
         cancellationPolicy={policy}
@@ -184,7 +184,7 @@ describe('Feature: Cancelamento e falta pela agenda', () => {
 
   it('Dado clínica com taxa, Quando registrar falta, Então pergunta pela taxa antes', async () => {
     const onAction = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderWithToast(
       <AppointmentDetail
         appointment={appointment()}
         cancellationPolicy={policy}
@@ -204,7 +204,7 @@ describe('Feature: Cancelamento e falta pela agenda', () => {
 
   it('Dado clínica sem taxa, Quando registrar falta, Então registra direto', async () => {
     const onAction = vi.fn().mockResolvedValue(undefined);
-    render(
+    renderWithToast(
       <AppointmentDetail
         appointment={appointment()}
         onAction={onAction}
@@ -216,7 +216,7 @@ describe('Feature: Cancelamento e falta pela agenda', () => {
   });
 
   it('Dado cancelamento tardio registrado, Então o detalhe mostra "Cancelamento tardio"', () => {
-    render(
+    renderWithToast(
       <AppointmentDetail
         appointment={{
           ...appointment(),
