@@ -100,12 +100,12 @@ erDiagram
 - `REMINDER_CHANNELS = ['email', 'whatsapp_link'] as const` em `src/domain/messaging/reminder-log.ts`.
 - `POST /api/reminders/whatsapp-link` — `{ kind, referenceId }` → grava `ReminderLog` com `channel: 'whatsapp_link'` no escopo `writeScope(guard.session)`; retorna o link. Staff apenas.
 - Botão "Enviar WhatsApp" em `src/app/(staff)/agenda/appointment-detail.tsx` (status `scheduled`) e na lista de retornos pendentes em `src/app/(staff)/page.tsx`, com "enviado hoje às HH:MM".
-- Migração: `reminder_logs.channel text not null default 'email'`, `reminder_logs.attempt int not null default 1`; índice único `(kind, reference_id, channel, attempt)` substitui `uq_reminder_logs_daily` para recall; confirmação continua um por (kind, reference, channel, dia).
+- Migração: `reminder_logs.channel text not null default 'email'`, `reminder_logs.attempt int not null default 1`; dois índices únicos parciais — `(kind, reference_id, channel, attempt)` só para recall por e-mail e `(kind, reference_id, channel, sent_on)` para o resto (confirmação e `whatsapp_link`), porque `Appointment.reschedule` mantém o id da consulta. Backfill do recall existente numera `attempt` por `sent_on` (o recall diário atual já tem vários registros por retorno). Forma literal em `.tasks/lembretes-custo-zero.md`, Decided 1.
 
 ### Changes
 
 - `SendReminders` → depende de `EmailGateway` em vez de `MessagingGateway`; monta texto com `reminderContent`; aplica a cadência (RM-14 entrega 2).
-- `src/app/api/reminders/run/route.ts` → itera empresas com `clinicScope(clinic.id)`; sai da allowlist de `systemScope()` (RM-14 entrega 3).
+- `src/app/api/reminders/run/route.ts` → itera empresas com `clinicScope(clinic.id)` (RM-14 entrega 3). `ClinicRepository` não tem listagem hoje: listar as empresas é a única leitura cross-empresa que resta, e se exigir `systemScope()` a entrada da allowlist fica com a justificativa reduzida a isso.
 - `AppointmentDto` e `FollowUpDto` → ganham `patientPhone` (lado staff apenas).
 - `dateKey` → usa o fuso configurado, não UTC (RM-14 entrega 2).
 - Docs: `docs/domains/comunicacao/README.md` (canal e-mail + `wa.me`), `docs/engineering/integrations/resend.md` (novo uso e teto diário), `docs/engineering/integrations/whatsapp-meta.md` (fora do job até RM-14), `docs/plano-evolucao-faseado.md` (RM-14 → Later; novo item em Now).
