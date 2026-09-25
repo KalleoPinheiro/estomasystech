@@ -346,4 +346,27 @@ export class DrizzleFollowUpRepository implements FollowUpRepository {
       .limit(MAX_ROWS);
     return rows.map((row) => this.toEntity(row));
   }
+
+  /**
+   * Sem `MAX_ROWS`: o job de lembretes precisa de todos os vencidos da empresa
+   * (o corte em 500 deixava retornos sem recall — N3). Sempre filtrado pela
+   * empresa do escopo, então o conjunto é o de uma clínica.
+   */
+  async findPendingDueBefore(dueBefore: Date): Promise<FollowUp[]> {
+    const rows = await this.db
+      .select()
+      .from(followUps)
+      .where(
+        withTenant(
+          followUps,
+          this.clinicId,
+          and(
+            eq(followUps.status, 'pending'),
+            lt(followUps.dueDate, dueBefore),
+          ),
+        ),
+      )
+      .orderBy(asc(followUps.dueDate));
+    return rows.map((row) => this.toEntity(row));
+  }
 }

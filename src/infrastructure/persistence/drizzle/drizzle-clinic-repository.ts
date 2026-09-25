@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { Clinic } from '@/domain/clinic/clinic';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import type { AppDb } from './db';
@@ -38,6 +38,14 @@ export class DrizzleClinicRepository implements ClinicRepository {
       .where(eq(clinics.id, id))
       .limit(1);
     return rows[0] ? toClinic(rows[0]) : null;
+  }
+
+  async findAll(): Promise<Clinic[]> {
+    const rows = await this.db
+      .select()
+      .from(clinics)
+      .orderBy(asc(clinics.createdAt));
+    return rows.map(toClinic);
   }
 
   async update(clinic: Clinic): Promise<void> {

@@ -711,6 +711,10 @@ export const reminderLogs = pgTable(
       .references(() => clinics.id),
     kind: text('kind').notNull(),
     referenceId: text('reference_id').notNull(),
+    // 'email' (job) ou 'whatsapp_link' (clique da recepção) — REMINDER_CHANNELS.
+    channel: text('channel').notNull().default('email'),
+    // Tentativa do recall por e-mail (1–3); 1 nos demais casos.
+    attempt: integer('attempt').notNull().default(1),
     sentOn: text('sent_on').notNull(),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -718,13 +722,18 @@ export const reminderLogs = pgTable(
     }).notNull(),
   },
   (table) => [
-    // Idempotência diária: um lembrete por (tipo, referência, dia). referenceId já é
-    // um id de linha (uuid) globalmente único, então não precisa de clinic_id na chave.
-    uniqueIndex('uq_reminder_logs_daily').on(
-      table.kind,
-      table.referenceId,
-      table.sentOn,
-    ),
+    // referenceId já é um id de linha (uuid) globalmente único, então nenhuma
+    // chave precisa de clinic_id. Confirmação e whatsapp_link: um por dia (a
+    // consulta remarcada mantém o id e recebe o D-1 da nova data).
+    uniqueIndex('uq_reminder_logs_daily')
+      .on(table.kind, table.referenceId, table.channel, table.sentOn)
+      .where(
+        sql`not (${table.kind} = 'recall' and ${table.channel} = 'email')`,
+      ),
+    // Recall por e-mail: um por tentativa (cadência D+1/D+7/D+30 com teto).
+    uniqueIndex('uq_reminder_logs_recall_attempt')
+      .on(table.kind, table.referenceId, table.channel, table.attempt)
+      .where(sql`${table.kind} = 'recall' and ${table.channel} = 'email'`),
     index('idx_reminder_logs_clinic').on(table.clinicId),
   ],
 );

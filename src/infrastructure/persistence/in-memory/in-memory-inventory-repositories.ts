@@ -162,4 +162,8 @@ export class InMemoryFollowUpRepository implements FollowUpRepository {
       })
       .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
   }
+
+  async findPendingDueBefore(dueBefore: Date): Promise<FollowUp[]> {
+    return this.findAll({ status: 'pending', dueBefore });
+  }
 }

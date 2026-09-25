@@ -1,4 +1,8 @@
 import type { MessagingGateway } from '@/application/ports/messaging-gateway';
+import { normalizeBrazilianPhone } from '@/domain/messaging/whatsapp-link';
+
+// Movida para o domínio (link `wa.me`); reexportada para quem já importa daqui.
+export { normalizeBrazilianPhone };
 
 export interface MetaWhatsAppConfig {
   token: string;
@@ -43,15 +47,6 @@ export class MetaWhatsAppGateway implements MessagingGateway {
       throw new Error(`WhatsApp API ${response.status}: ${body.slice(0, 300)}`);
     }
   }
-}
-
-/** DDD+número nacional → E.164 Brasil (55...); mantém números já internacionais. */
-export function normalizeBrazilianPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('55') && digits.length >= 12) {
-    return digits;
-  }
-  return `55${digits}`;
 }
 
 export function metaWhatsAppConfigFromEnv(): MetaWhatsAppConfig | null {
