@@ -1,6 +1,8 @@
 # Lembretes por WhatsApp: templates, cadência de recall e escopo por empresa — Plano de ação
 
-- **Status:** 📋 Planejado — **não iniciado**, aguarda as decisões D1–D4 abaixo
+- **Status:** ⏸️ Entrega 1 (templates Meta) adiada para Later como opt-in por clínica. Entregas 2
+  (cadência) e 3 (por empresa) cobertas pelo canal e-mail em
+  [`.tasks/lembretes-custo-zero.md`](../../../.tasks/lembretes-custo-zero.md) (RM-19)
 - **Origem:** análise de negócio/arquitetura de 2026-09-22 (achados N1, N2, N3)
 - **Arquivos centrais:** `src/application/reminders/send-reminders.ts`,
   `src/infrastructure/messaging/meta-whatsapp-gateway.ts`,

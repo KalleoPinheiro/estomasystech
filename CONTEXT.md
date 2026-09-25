@@ -97,8 +97,11 @@
 
 **Reminder** (lembrete)
 
-- Notification sent to patient (e.g., appointment confirmation, follow-up due).
-- Idempotent daily: one per (kind, referenceId, date).
+- Notification sent to patient (e.g., appointment confirmation, follow-up due), by one channel.
+- Channel: `email` (automatic job) or `whatsapp_link` (staff click on the `wa.me` button).
+- Attempt: recall email attempt number (1–3, at D+1/D+7/D+30); always 1 otherwise.
+- Idempotent: confirmation and `whatsapp_link` one per (kind, referenceId, channel, local date);
+  recall email one per attempt.
 
 **Consent Record** (consentimento)
 

@@ -3,14 +3,16 @@ title: "Integração: Resend (e-mail transacional)"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-25
 ---
 
 # Resend (e-mail transacional)
 
 ## Propósito
 
-Entrega os links de **convite** (primeiro acesso, 24 h, uso único) e de **reset de senha** (1 h).
+Entrega os links de **convite** (primeiro acesso, 24 h, uso único) e de **reset de senha** (1 h),
+e os **lembretes ao paciente** do [cron](cron.md) — confirmação D-1 e recall de retorno
+([comunicação](../../domains/comunicacao/README.md)).
 Sem e-mail ninguém faz o primeiro acesso — por isso é a única integração obrigatória em produção
 ([ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md)). Domínio: [acesso](../../domains/acesso/README.md).
 
@@ -50,6 +52,8 @@ Timeout de 10 s. Qualquer status fora de `2xx` vira erro com os primeiros 300 ca
 | sem credenciais em produção | a construção do gateway lança erro explícito — o app não sobe | log de boot |
 | sem credenciais fora de produção | `NullEmailGateway`: loga o link (`[e-mail desativado] …`) | log do servidor |
 | API fora do ar / timeout / 4xx-5xx | a chamada lança; o bootstrap devolve `delivered: false` e `inviteUrl` | quem chamou a rota |
+| falha num lembrete (inclui e-mail recusado) | conta em `failed` no resumo da empresa, sem `reminder_log`; o lote segue e a próxima rodada tenta de novo | resposta do cron |
+| teto do plano grátis (100/dia, 3.000/mês) | os envios acima do teto voltam erro e contam `failed`, sem alarme | resposta do cron / painel Resend |
 
 ## Teste local
 
