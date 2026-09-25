@@ -29,7 +29,8 @@ const SYSTEM_SCOPE_ALLOWLIST: Record<string, string> = {
     'sem sessão; a clínica só é conhecida após autenticar (#125)',
   'app/api/auth/set-password/route.ts':
     'sem sessão; o token identifica a conta e sua clínica',
-  'app/api/reminders/run/route.ts': 'cron cross-empresa por natureza',
+  'app/api/reminders/run/route.ts':
+    'listar as empresas para o cron; o job roda com clinicScope de cada uma',
   'app/api/taxonomy/diagnoses/[code]/linked-terms/route.ts':
     'catálogo de taxonomia é global',
   'app/api/taxonomy/diagnoses/route.ts': 'catálogo de taxonomia é global',
