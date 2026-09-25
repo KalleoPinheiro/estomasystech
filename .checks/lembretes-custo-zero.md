@@ -53,6 +53,7 @@ Proof: `tests/infrastructure/drizzle-reminder-log.test.ts` › "C2 save grava ch
 
 **C3** - Recall por e-mail: primeiro nome, data prevista `dd/mm/aaaa`, nome da clínica, chamada do portal, sem o motivo; log `kind='recall'`, `channel='email'`, `attempt` da tentativa
 Proof: `tests/application/send-reminders.test.ts` › "C3 recall por e-mail traz nome, data, clínica e portal, sem motivo"
+Proof: `tests/api/reminders-routes.test.ts` › "C8 run separa por empresa" (`clinic_id` do log de recall)
 
 **C4** - `APP_URL` ausente ou sem http(s): nenhum link, orientação de fallback, na confirmação e no recall
 Proof: `tests/domain/reminder-content.test.ts` › "C4 sem portal a confirmação e o recall usam a orientação de contato"
@@ -78,6 +79,7 @@ Proof: `tests/application/send-reminders.test.ts` › "C9 falha de uma empresa n
 
 **C10** - Falha de empresa no resumo: entrada com `error: <mensagem>` e contadores zerados (Unresolved 8, default)
 Proof: `tests/application/send-reminders.test.ts` › "C9 falha de uma empresa não impede as demais"
+Proof: `tests/api/reminders-run-clinic-failure.test.ts` › "C10 resposta traz a empresa que falhou com error e contadores zerados"
 
 **C11** - 501 retornos vencidos com tentativa cabível → 501 e-mails (sem `MAX_ROWS`)
 Proof: `tests/application/send-reminders.test.ts` › "C11 501 retornos geram 501 e-mails"
@@ -87,6 +89,7 @@ Proof: `tests/infrastructure/drizzle-reminder-log.test.ts` › "C11 findPendingD
 
 **C12** - Execução diária de D+0 a D+31: e-mails exatamente em D+1 (1), D+7 (2), D+30 (3), total 3
 Proof: `tests/application/send-reminders.test.ts` › "C12 cadência D+1, D+7, D+30"
+Proof: `tests/domain/reminder-content.test.ts` › "Dado fuso de São Paulo, Quando contar dias, Então usa o calendário local"
 
 **C13** - Após `attempt=3`, nunca mais recall por e-mail; retorno segue `pending`
 Proof: `tests/application/send-reminders.test.ts` › "C13 após a 3ª tentativa não envia mais"
