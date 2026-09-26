@@ -1,17 +1,22 @@
 import { type MockInstance, vi } from 'vitest';
 
+import {
+  type EmailMessage,
+  NullEmailGateway,
+} from '@/application/ports/email-gateway';
+
 /**
  * invariant: depende de RESEND_API_KEY/EMAIL_FROM estarem vazios no processo
  * de teste (forçado em vitest.config.mts) — se vazarem do .env local,
  * buildEmailGateway() monta o gateway real e nenhum e-mail chega aqui.
  *
  * A suíte roda sem credenciais de e-mail, então o container monta o
- * `NullEmailGateway` — que, por contrato (AUTH-01), registra em log o que
- * enviaria. Capturar esse log é o jeito de observar o e-mail sem enviar nada,
- * equivalente ao dry-run já usado pelo canal de WhatsApp.
+ * `NullEmailGateway`. Espiar o `send` dele é o jeito de observar a mensagem
+ * inteira sem enviar nada — o log do gateway nulo só traz metadados
+ * mascarados (CWE-532), então não serve para conferir destinatário e corpo.
  */
 export interface EmailSpy {
-  /** Corpos registrados, na ordem de envio. */
+  /** Mensagens enviadas, na ordem de envio, como `destinatário — assunto\ncorpo`. */
   readonly bodies: string[];
   restore(): void;
 }
@@ -19,12 +24,9 @@ export interface EmailSpy {
 export function spyOnSentEmails(): EmailSpy {
   const bodies: string[] = [];
   const spy: MockInstance = vi
-    .spyOn(console, 'info')
-    .mockImplementation((...args: unknown[]) => {
-      const line = String(args[0] ?? '');
-      if (line.startsWith('[e-mail desativado]')) {
-        bodies.push(line);
-      }
+    .spyOn(NullEmailGateway.prototype, 'send')
+    .mockImplementation(async (message: EmailMessage) => {
+      bodies.push(`${message.to} — ${message.subject}\n${message.text}`);
     });
   return {
     bodies,
