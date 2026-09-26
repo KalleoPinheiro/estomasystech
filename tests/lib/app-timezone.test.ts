@@ -45,14 +45,36 @@ describe('Feature: checagem de fuso na inicialização (#205)', () => {
     expect(appTimeZone()).toBe(DEFAULT_APP_TIMEZONE);
   });
 
-  it('instrumentation.register roda a checagem só no runtime Node', async () => {
+  it('instrumentation.register encerra o processo em produção com fuso divergente (só no runtime Node)', async () => {
     const { register } = await import('@/instrumentation');
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
+    const exit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     vi.stubEnv('NEXT_RUNTIME', 'edge');
-    await expect(register()).resolves.toBeUndefined();
+    await register();
+    expect(exit).not.toHaveBeenCalled();
+
     vi.stubEnv('NEXT_RUNTIME', 'nodejs');
-    await expect(register()).rejects.toThrow(/APP_TIMEZONE/);
+    await register();
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(JSON.stringify(log.mock.calls)).toContain('APP_TIMEZONE');
+  });
+
+  it('instrumentation.register com fuso correto segue a subida', async () => {
+    const { register } = await import('@/instrumentation');
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_TIMEZONE', 'UTC');
+    vi.stubEnv('NEXT_RUNTIME', 'nodejs');
+    const exit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+
+    await register();
+
+    expect(exit).not.toHaveBeenCalled();
   });
 });
