@@ -173,6 +173,9 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
       expect(body.data.skipped).toBeGreaterThanOrEqual(1);
       expect(fetchSpy).not.toHaveBeenCalled();
       expect(info).toHaveBeenCalledWith(
+        expect.stringContaining('pa***@example.com'),
+      );
+      expect(info).not.toHaveBeenCalledWith(
         expect.stringContaining('paula.dry@example.com'),
       );
       expect(await logs()).toHaveLength(0);

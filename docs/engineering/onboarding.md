@@ -3,7 +3,7 @@ title: "Onboarding técnico e setup"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 related:
   - .env.example
   - docs/engineering/integrations/README.md
@@ -80,7 +80,9 @@ npm run dev                   # http://localhost:3000
 - **Modo aberto (só dev):** sem `AUTH_SECRET`, tudo responde 503. Para navegar sem login,
   `VITTA_ALLOW_OPEN_MODE=true` (ignorado em produção; auditoria registra `anonymous`).
 - **Migração manual:** `npm run db:migrate` e `VITTA_MIGRATE_ON_BOOT=false`.
-- **E-mail em dev:** sem `RESEND_API_KEY` o gateway é dry-run e o link sai no log (`[e-mail desativado] …`).
+- **E-mail em dev:** sem `RESEND_API_KEY` o gateway é dry-run: o log traz destinatário mascarado,
+  assunto e o link de definição de senha (`[e-mail desativado] Para fu***@x.com — …`) — nunca o
+  corpo. O link só sai com `NODE_ENV !== 'production'`.
 
 ## 4. Variáveis de ambiente
 

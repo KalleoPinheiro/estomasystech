@@ -3,7 +3,7 @@ title: "Integração: WhatsApp (Meta Cloud API)"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-25
+last_reviewed: 2026-09-26
 ---
 
 # WhatsApp (Meta Cloud API)
@@ -49,7 +49,8 @@ Content-Type: application/json
 ## Modos de falha
 
 Sem uso no job, os modos de falha só voltam a valer com o RM-14: sem credenciais o gateway nulo
-loga `[mensageria desativada] Para …`; falha de API lança.
+loga só `[mensageria desativada] WhatsApp para +55******7777 (N caracteres)` — telefone
+mascarado, nunca o corpo (CWE-532); falha de API lança.
 
 ## Teste local
 

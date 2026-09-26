@@ -3,7 +3,7 @@ title: "Integração: Resend (e-mail transacional)"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-25
+last_reviewed: 2026-09-26
 ---
 
 # Resend (e-mail transacional)
@@ -50,7 +50,7 @@ Timeout de 10 s. Qualquer status fora de `2xx` vira erro com os primeiros 300 ca
 | Situação | Comportamento | Visível para |
 | --- | --- | --- |
 | sem credenciais em produção | a construção do gateway lança erro explícito — o app não sobe | log de boot |
-| sem credenciais fora de produção | `NullEmailGateway`: loga o link (`[e-mail desativado] …`) | log do servidor |
+| sem credenciais fora de produção | `NullEmailGateway`: loga destinatário mascarado (`fu***@x.com`) e assunto; do corpo, só o link `/definir-senha` — nunca o texto (CWE-532). Com `NODE_ENV=production` nem o link sai | log do servidor |
 | API fora do ar / timeout / 4xx-5xx | a chamada lança; o bootstrap devolve `delivered: false` e `inviteUrl` | quem chamou a rota |
 | falha num lembrete (inclui e-mail recusado) | conta em `failed` no resumo da empresa, sem `reminder_log`; o lote segue e a próxima rodada tenta de novo | resposta do cron |
 | teto do plano grátis (100/dia, 3.000/mês) | os envios acima do teto voltam erro e contam `failed`, sem alarme | resposta do cron / painel Resend |
@@ -58,7 +58,7 @@ Timeout de 10 s. Qualquer status fora de `2xx` vira erro com os primeiros 300 ca
 ## Teste local
 
 ```bash
-# dry-run: deixe RESEND_API_KEY vazio e procure o link no log
+# dry-run: deixe RESEND_API_KEY vazio e procure o link de senha no log (só fora de produção)
 npm run dev
 # envio real com a conta de teste do Resend
 RESEND_API_KEY=re_... EMAIL_FROM="Teste <onboarding@resend.dev>" npm run dev
