@@ -3,7 +3,7 @@ title: "Domínio: Pacientes e prontuário"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 domain: pacientes-prontuario
 ---
 
@@ -24,7 +24,7 @@ requisitos, não detalhes.
 | --- | --- | --- |
 | PRO-RN-01 | Paciente: nome ≥ 3 caracteres, e-mail válido e único, telefone obrigatório; inativo não recebe agendamento | `src/domain/patient/patient.ts` |
 | PRO-RN-02 | Evolução SOAP é imutável após registrada (exigência COFEN) e exige ao menos um campo | `src/domain/clinical/evolution-note.ts` |
-| PRO-RN-03 | Autoria da evolução vem sempre da sessão — o corpo da requisição não escolhe o profissional | `.specs/features/fase-b-clinico-legal-critico/` |
+| PRO-RN-03 | Autoria da evolução **e do plano de cuidados (abertura, execução de intervenção, avaliação de resultado)** vem sempre da sessão — o corpo da requisição não escolhe o profissional; registrar "em nome de" outro profissional não existe (#200) | `src/lib/auth/session-professional.ts`, `.specs/features/fase-b-clinico-legal-critico/` |
 | PRO-RN-04 | Estomia exige tipo (colostomia, ileostomia, urostomia); ferida registra C×L×P em mm e área C×L | `src/domain/clinical/clinical-condition.ts`, `condition-assessment.ts` |
 | PRO-RN-05 | Condição resolvida não recebe novas avaliações | `src/application/clinical/add-condition-assessment.ts` |
 | PRO-RN-06 | Foto e registro exigem consentimento ativo; texto do termo versionado por hash | `src/domain/consent/consent-record.ts` |
