@@ -17,7 +17,7 @@ import {
 } from '@still-void/ui/react/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { use, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
@@ -193,6 +193,14 @@ export default function PatientRecordPage({
     setTabState(next);
     router.replace(`/pacientes/${id}?aba=${next}`, { scroll: false });
   };
+  const tabListRef = useRef<HTMLDivElement>(null);
+  // No celular a lista de abas rola na horizontal (#198): a aba ativa sempre
+  // entra na área visível, inclusive quando vem de `?aba=` na URL.
+  useEffect(() => {
+    tabListRef.current
+      ?.querySelector<HTMLElement>(`[data-tab-key="${tab}"]`)
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [tab]);
   const {
     pendingTab,
     setEvolutionsDirty,
@@ -242,12 +250,18 @@ export default function PatientRecordPage({
         value={tab}
         onValueChange={(next) => requestTabChange(next as TabKey, setTab)}
       >
-        <TabsList aria-label="Seções do prontuário">
+        <TabsList ref={tabListRef} aria-label="Seções do prontuário">
           {TABS.map((item) => (
             <TabsTrigger
               key={item.key}
               value={item.key}
-              className={item.key === 'pacotes' ? 'ml-auto' : undefined}
+              data-tab-key={item.key}
+              // shrink-0 (#198): o gatilho da lib é flex-shrink 1 com
+              // nowrap — em 390px os rótulos encolhiam e se sobrepunham em
+              // vez de a lista rolar.
+              className={
+                item.key === 'pacotes' ? 'ml-auto shrink-0' : 'shrink-0'
+              }
             >
               {tabLabel(
                 item,

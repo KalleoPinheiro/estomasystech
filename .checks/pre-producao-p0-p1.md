@@ -181,7 +181,7 @@ Proof: `tests/pages/patient-selectors-sweep.test.ts` › "C34 telas não usam a 
 ### S10 - Abas do prontuário no celular (#198) · 3 files · ~10k
 
 **C35** - Nenhum gatilho de aba com `scrollWidth > clientWidth` em 360, 390 e 768 px
-Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "prontuário: abas"`
+Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "prontuário: nenhum gatilho de aba corta o rótulo"`
 
 ### S11 - Navegação e dashboard por papel (#199) · 10 files · ~30k
 

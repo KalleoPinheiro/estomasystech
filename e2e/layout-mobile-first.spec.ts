@@ -599,6 +599,41 @@ test.describe("telas com defeito específico", () => {
     expect(tab!.x + tab!.width).toBeLessThanOrEqual(MOBILE.width);
   });
 
+  // #198: a lista tinha overflow-x, mas os gatilhos encolhiam (flex-shrink)
+  // abaixo do próprio texto e se sobrepunham — o teste acima não via isso.
+  for (const width of [360, 390, 768]) {
+    test(`prontuário: nenhum gatilho de aba corta o rótulo (${width})`, async ({
+      page,
+      request,
+    }) => {
+      const w = await world(request);
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/pacientes/${w.patientId}`);
+      await settle(page);
+      const tablist = page.getByRole("tablist", { name: "Seções do prontuário" });
+      const triggers = await tablist.getByRole("tab").evaluateAll((els) =>
+        els.map((el) => ({
+          label: el.textContent,
+          scroll: el.scrollWidth,
+          client: el.clientWidth,
+          left: el.getBoundingClientRect().left,
+          right: el.getBoundingClientRect().right,
+        })),
+      );
+      expect(triggers.length).toBeGreaterThan(0);
+      for (const t of triggers) {
+        expect(t.scroll, `${t.label} @${width}`).toBeLessThanOrEqual(t.client);
+      }
+      // Sem sobreposição: cada gatilho começa depois do fim do anterior.
+      for (let i = 1; i < triggers.length; i++) {
+        expect(triggers[i].left, `${triggers[i].label} @${width}`).toBeGreaterThanOrEqual(
+          triggers[i - 1].right - 1,
+        );
+      }
+      expect(await scrollWidth(page)).toBeLessThanOrEqual(width + 2);
+    });
+  }
+
   for (const viewport of [MOBILE, DESKTOP]) {
     test(`painéis na largura do conteúdo (${viewport.width})`, async ({ page, request }) => {
       const w = await world(request);
