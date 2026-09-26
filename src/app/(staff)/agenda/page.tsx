@@ -20,7 +20,7 @@ import { apiFetch } from '@/lib/client';
 import type {
   AppointmentDto,
   PatientDto,
-  ProfessionalDto,
+  ProfessionalOptionDto,
   ScheduleClosureDto,
   WaitlistEntryDto,
 } from '@/lib/dto';
@@ -39,7 +39,7 @@ function ProfessionalFilter({
   onChange,
   compact,
 }: {
-  professionals: ProfessionalDto[];
+  professionals: ProfessionalOptionDto[];
   value: string;
   onChange: (value: string) => void;
   /** Celular: largura total abaixo da navegação de mês; desktop: largura limitada (AGENDA-04). */
@@ -176,8 +176,10 @@ export default function AgendaPage() {
     refresh,
   } = useApiQuery<AppointmentDto[]>(appointmentsUrl);
   const { data: patients } = useApiQuery<PatientDto[]>('/api/patients');
-  const { data: professionals } =
-    useApiQuery<ProfessionalDto[]>('/api/professionals');
+  // Lista reduzida (#188): Atendente e Profissional também leem — sem comissão.
+  const { data: professionals, error: professionalsError } = useApiQuery<
+    ProfessionalOptionDto[]
+  >('/api/options/professionals');
   const { data: scheduleData } = useApiQuery<{
     config: ScheduleConfig;
     isDefault: boolean;
@@ -427,6 +429,7 @@ export default function AgendaPage() {
           <AppointmentForm
             patients={patients ?? []}
             professionals={(professionals ?? []).filter((p) => p.active)}
+            professionalsError={professionalsError}
             defaultDate={creatingFor}
             defaultPatientId={fromWaitlist?.patientId ?? recall?.patientId}
             defaultProcedure={

@@ -272,6 +272,67 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
     );
   });
 
+  describe('Cenário: listas auxiliares por papel (#188)', () => {
+    const requestWith = (
+      method: string,
+      path: string,
+      cookie: string,
+    ): NextRequest =>
+      new NextRequest(`http://localhost${path}`, {
+        method,
+        headers: { 'x-forwarded-for': '10.0.0.9', cookie },
+      });
+
+    it.each(['/api/options/procedures'])(
+      'Dado atendente, Quando GET %s, Então passa pelo proxy',
+      async (path) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestWith('GET', path, sessionCookie('atendente')),
+        );
+
+        expect(isNext(response)).toBe(true);
+      },
+    );
+
+    it('Dado atendente, Quando GET /api/options/professionals, Então passa pelo proxy', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'GET',
+          '/api/options/professionals',
+          sessionCookie('atendente'),
+        ),
+      );
+
+      expect(isNext(response)).toBe(true);
+    });
+
+    it('Dado atendente, Quando escreve no cadastro de profissionais e procedimentos, Então responde 403', async () => {
+      const cookie = sessionCookie('atendente');
+      const attempts: Array<[string, string]> = [
+        ['POST', '/api/professionals'],
+        ['PATCH', '/api/professionals/prof-1'],
+        ['POST', '/api/procedures'],
+        ['PATCH', '/api/procedures/proc-1'],
+        // A lista completa (comissão, kit) continua administrativa.
+        ['GET', '/api/professionals'],
+        ['GET', '/api/procedures'],
+      ];
+
+      for (const [method, path] of attempts) {
+        const proxy = await loadProxy();
+        const response = await proxy(requestWith(method, path, cookie));
+        expect(response.status, `${method} ${path}`).toBe(403);
+        expect((await body(response)).error).toBe(
+          'Acesso restrito à equipe da clínica',
+        );
+      }
+    });
+  });
+
   describe('Cenário: CSP estrita com nonce (issue #76)', () => {
     it('Dada requisição autenticada, Quando passa pelo proxy, Então gera CSP com nonce único e sem unsafe-inline em script/style de elemento', async () => {
       const proxy = await loadProxy();

@@ -43,6 +43,12 @@ const NON_CLINICAL_PATIENT_SUBROUTES: readonly string[] = [];
  * contas Patient/Partner ali — a checagem fina de "quem pode criar quem" é
  * feita pelo use-case `CreateAccount`, não pela família de rota.
  */
+/*
+ * Os seletores da equipe (agenda, lista de espera, autoria no prontuário) leem
+ * profissionais e procedimentos por `/api/options/*`, que cai na família
+ * `operational` por não estar em lista nenhuma (#188/#189) — o cadastro
+ * completo, com comissão e kit, fica aqui.
+ */
 const ADMINISTRATIVE_PREFIXES = [
   '/api/professionals',
   '/api/supplies',

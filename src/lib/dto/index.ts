@@ -9,6 +9,7 @@ export * from './clinical-condition';
 export * from './evolution-note';
 export * from './followup';
 export * from './inventory';
+export * from './options';
 export * from './partner';
 export * from './patient';
 export * from './payout';

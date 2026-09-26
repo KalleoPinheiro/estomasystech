@@ -30,6 +30,8 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/audit', 'administrative'],
       ['/api/commission-payouts', 'administrative'],
       ['/api/my-payouts', 'professional_self'],
+      ['/api/options/professionals', 'operational'],
+      ['/api/options/procedures', 'operational'],
     ] as const)(
       'Dado o pathname %s, Quando classificar, Então família %s',
       (pathname, family) => {

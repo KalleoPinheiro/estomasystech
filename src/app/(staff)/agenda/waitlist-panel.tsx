@@ -16,15 +16,15 @@ import { formatDateKey } from '@/domain/scheduling/schedule-availability';
 import { apiFetch } from '@/lib/client';
 import type {
   PatientDto,
-  ProcedureDto,
-  ProfessionalDto,
+  ProcedureOptionDto,
+  ProfessionalOptionDto,
   WaitlistEntryDto,
 } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 
 interface WaitlistPanelProps {
   patients: PatientDto[];
-  professionals: ProfessionalDto[];
+  professionals: ProfessionalOptionDto[];
   /** Muda quando a agenda muda (ex.: entrada marcada pelo formulário). */
   version: number;
   onSchedule: (entry: WaitlistEntryDto) => void;
@@ -172,11 +172,13 @@ function WaitlistForm({
   onSaved,
 }: {
   patients: PatientDto[];
-  professionals: ProfessionalDto[];
+  professionals: ProfessionalOptionDto[];
   onSaved: () => void;
 }) {
   const { toast } = useToast();
-  const { data: catalog } = useApiQuery<ProcedureDto[]>('/api/procedures');
+  const { data: catalog, error: catalogError } = useApiQuery<
+    ProcedureOptionDto[]
+  >('/api/options/procedures');
   const [draft, setDraft] = useState<WaitlistDraft>({
     patientId: '',
     procedureId: '',
@@ -221,6 +223,11 @@ function WaitlistForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
+      {catalogError && (
+        <ErrorAlert
+          message={`Não foi possível carregar o catálogo de procedimentos: ${catalogError}`}
+        />
+      )}
       <label className="font-medium text-sm">
         Paciente *
         <NativeSelect

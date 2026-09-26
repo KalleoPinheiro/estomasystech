@@ -9,7 +9,11 @@ import {
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { ApiError } from '@/lib/client';
-import type { PatientDto, ProcedureDto, ProfessionalDto } from '@/lib/dto';
+import type {
+  PatientDto,
+  ProcedureOptionDto,
+  ProfessionalOptionDto,
+} from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 import { dayKey } from './calendar-grid';
 
@@ -29,7 +33,9 @@ export interface AppointmentFormValues {
 
 interface AppointmentFormProps {
   patients: PatientDto[];
-  professionals?: ProfessionalDto[];
+  professionals?: ProfessionalOptionDto[];
+  /** Falha ao carregar a lista de profissionais — vira alerta, nunca campo escondido (#188). */
+  professionalsError?: string | null;
   defaultDate?: Date;
   defaultPatientId?: string;
   defaultProcedure?: string;
@@ -59,6 +65,7 @@ function resolveScheduleConfig(
 export function AppointmentForm({
   patients,
   professionals = [],
+  professionalsError = null,
   defaultDate,
   defaultPatientId,
   defaultProcedure,
@@ -83,7 +90,9 @@ export function AppointmentForm({
   const [saving, setSaving] = useState(false);
 
   const activePatients = patients.filter((p) => p.active);
-  const { data: catalog } = useApiQuery<ProcedureDto[]>('/api/procedures');
+  const { data: catalog, error: catalogError } = useApiQuery<
+    ProcedureOptionDto[]
+  >('/api/options/procedures');
   const activeCatalog = (catalog ?? []).filter((p) => p.active);
   const { data: scheduleData } = useApiQuery<{ config: ScheduleConfig }>(
     '/api/settings/schedule',
@@ -165,25 +174,14 @@ export function AppointmentForm({
           ))}
         </NativeSelect>
       </label>
-      {professionals.length > 0 && (
-        <label className="font-medium text-sm">
-          Profissional
-          <NativeSelect
-            value={values.professionalId}
-            onChange={(e) =>
-              setValues((prev) => ({ ...prev, professionalId: e.target.value }))
-            }
-            className="mt-1"
-          >
-            <option value="">— sem atribuição —</option>
-            {professionals.map((professional) => (
-              <option key={professional.id} value={professional.id}>
-                {professional.fullName}
-              </option>
-            ))}
-          </NativeSelect>
-        </label>
-      )}
+      <ProfessionalField
+        professionals={professionals}
+        error={professionalsError}
+        value={values.professionalId}
+        onChange={(professionalId) =>
+          setValues((prev) => ({ ...prev, professionalId }))
+        }
+      />
       <div className="grid grid-cols-3 gap-3">
         <label className="font-medium text-sm">
           Data *
@@ -229,23 +227,12 @@ export function AppointmentForm({
           </NativeSelect>
         </label>
       </div>
-      {activeCatalog.length > 0 && (
-        <label className="font-medium text-sm">
-          Procedimento do catálogo
-          <NativeSelect
-            value={values.procedureId}
-            onChange={(e) => applyCatalogProcedure(e.target.value)}
-            className="mt-1"
-          >
-            <option value="">— escolher do catálogo —</option>
-            {activeCatalog.map((procedure) => (
-              <option key={procedure.id} value={procedure.id}>
-                {procedure.name} ({procedure.durationMinutes} min)
-              </option>
-            ))}
-          </NativeSelect>
-        </label>
-      )}
+      <CatalogField
+        catalog={activeCatalog}
+        error={catalogError}
+        value={values.procedureId}
+        onChange={applyCatalogProcedure}
+      />
 
       <label className="font-medium text-sm">
         Procedimento *
@@ -288,5 +275,89 @@ export function AppointmentForm({
         {saving ? 'Agendando…' : 'Agendar consulta'}
       </Button>
     </form>
+  );
+}
+
+/**
+ * Lista auxiliar que falhou vira alerta com o motivo — antes o campo sumia em
+ * silêncio e a consulta nascia sem profissional (#188).
+ */
+function ProfessionalField({
+  professionals,
+  error,
+  value,
+  onChange,
+}: {
+  professionals: ProfessionalOptionDto[];
+  error: string | null;
+  value: string;
+  onChange: (professionalId: string) => void;
+}) {
+  if (error) {
+    return (
+      <ErrorAlert
+        message={`Não foi possível carregar os profissionais: ${error}`}
+      />
+    );
+  }
+  if (professionals.length === 0) {
+    return null;
+  }
+  return (
+    <label className="font-medium text-sm">
+      Profissional
+      <NativeSelect
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1"
+      >
+        <option value="">— sem atribuição —</option>
+        {professionals.map((professional) => (
+          <option key={professional.id} value={professional.id}>
+            {professional.fullName}
+          </option>
+        ))}
+      </NativeSelect>
+    </label>
+  );
+}
+
+function CatalogField({
+  catalog,
+  error,
+  value,
+  onChange,
+}: {
+  catalog: ProcedureOptionDto[];
+  error: string | null;
+  value: string;
+  onChange: (procedureId: string) => void;
+}) {
+  if (error) {
+    return (
+      <ErrorAlert
+        message={`Não foi possível carregar o catálogo de procedimentos: ${error}`}
+      />
+    );
+  }
+  if (catalog.length === 0) {
+    return null;
+  }
+  return (
+    <label className="font-medium text-sm">
+      Procedimento do catálogo
+      <NativeSelect
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1"
+      >
+        <option value="">— escolher do catálogo —</option>
+        {catalog.map((procedure) => (
+          <option key={procedure.id} value={procedure.id}>
+            {procedure.name} ({procedure.durationMinutes} min)
+          </option>
+        ))}
+      </NativeSelect>
+    </label>
   );
 }
