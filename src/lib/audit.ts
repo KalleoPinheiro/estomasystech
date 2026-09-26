@@ -3,6 +3,7 @@ import { type AuditAction, AuditEvent } from '@/domain/audit/audit-event';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import type { Session } from '@/lib/auth/session';
+import { logError } from '@/lib/log-error';
 
 export interface AuditActorOverride {
   role: string;
@@ -44,7 +45,7 @@ export function recordAudit(
     try {
       await persistAuditEvent(auditEvents, session, input);
     } catch (error) {
-      console.error('Auditoria: falha ao registrar evento', error);
+      logError('Auditoria: falha ao registrar evento', error);
     }
   });
 }

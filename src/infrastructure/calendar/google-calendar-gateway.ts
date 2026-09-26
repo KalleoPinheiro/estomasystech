@@ -3,6 +3,7 @@ import type {
   CalendarEventInput,
   CalendarGateway,
 } from '@/application/ports/calendar-gateway';
+import { logError } from '@/lib/log-error';
 
 export interface GoogleCalendarConfig {
   serviceAccountEmail: string;
@@ -80,7 +81,7 @@ export class GoogleCalendarGateway implements CalendarGateway {
       });
       return response.data.id ?? null;
     } catch (error) {
-      console.error('Google Calendar: falha ao criar evento', error);
+      logError('Google Calendar: falha ao criar evento', error);
       return null;
     }
   }
@@ -93,7 +94,7 @@ export class GoogleCalendarGateway implements CalendarGateway {
         requestBody: this.toEventBody(input),
       });
     } catch (error) {
-      console.error('Google Calendar: falha ao atualizar evento', error);
+      logError('Google Calendar: falha ao atualizar evento', error);
     }
   }
 
@@ -104,7 +105,7 @@ export class GoogleCalendarGateway implements CalendarGateway {
         eventId,
       });
     } catch (error) {
-      console.error('Google Calendar: falha ao remover evento', error);
+      logError('Google Calendar: falha ao remover evento', error);
     }
   }
 }

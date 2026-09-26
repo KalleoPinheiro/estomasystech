@@ -54,6 +54,22 @@ describe('Feature: Texto único do lembrete (reminderContent)', () => {
     ).toContain('(Retorno: Curativo)');
   });
 
+  it('C29 horário do lembrete no fuso da aplicação', () => {
+    vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
+    try {
+      const { text } = reminderContent('confirmation', {
+        firstName: 'Maria',
+        clinicName: 'Clínica Alfa',
+        portalUrl: null,
+        startsAt: new Date('2026-07-17T12:00:00Z'),
+      });
+
+      expect(text).toContain('17/07/2026 às 09:00');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('C4 sem portal a confirmação e o recall usam a orientação de contato', () => {
     const confirmation = reminderContent('confirmation', {
       firstName: 'Maria',
@@ -119,6 +135,7 @@ describe('Feature: Cadência do recall (D+1, D+7, D+30)', () => {
 
   it('Dado fuso de São Paulo, Quando contar dias, Então usa o calendário local', () => {
     vi.stubEnv('TZ', 'America/Sao_Paulo');
+    vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
     // Vence 01/06 22:00 local (02/06 01:00 UTC); 02/06 00:30 local é D+1.
     expect(
       daysSinceDue(

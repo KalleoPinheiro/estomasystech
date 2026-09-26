@@ -5,6 +5,7 @@ import {
   resolveCalendarGateway,
 } from '@/application/ports/calendar-gateway';
 import type { Services } from '@/infrastructure/container';
+import { logError } from '@/lib/log-error';
 
 type CalendarServices = Pick<
   Services,
@@ -38,10 +39,7 @@ export function scheduleCalendarSync(
         ),
       );
     } catch (error) {
-      console.error(
-        'Google Calendar: falha na sincronização pós-request',
-        error,
-      );
+      logError('Google Calendar: falha na sincronização pós-request', error);
     }
   });
 }

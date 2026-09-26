@@ -4,10 +4,14 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: vitta
-      POSTGRES_PASSWORD: vitta
+      # Sem senha fixa (#191): a subida falha se POSTGRES_PASSWORD não existir.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD (ex. openssl rand -hex 24)}
       POSTGRES_DB: vitta
+    # Só no loopback do host (#191): o app fala com o banco pela rede interna do
+    # compose; a porta local existe apenas para a Via B do onboarding (npm run
+    # dev contra este banco). Nunca publicado em todas as interfaces.
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,8 +27,9 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://vitta:vitta@db:5432/vitta
-      TZ: America/Sao_Paulo
+      DATABASE_URL: postgres://vitta:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@db:5432/vitta
+      TZ: ${TZ:-America/Sao_Paulo}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
       AUTH_SECRET: ${AUTH_SECRET:?defina AUTH_SECRET (ex. openssl rand -hex 32)}
       APP_URL: ${APP_URL:-http://localhost:3000}
       # Convite e reset de senha (ADR-004). A imagem roda com NODE_ENV=production,
@@ -47,8 +52,35 @@ services:
       S3_REGION: ${S3_REGION:-}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-}
+      # Fotos em disco local: sempre dentro do volume `uploads` abaixo.
+      UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
+      # Job de lembretes (POST /api/reminders/run): sem ele a rota responde 503.
+      CRON_SECRET: ${CRON_SECRET:-}
+      # Proxies reversos confiáveis à frente do app (Nginx/Caddy = 1, Cloudflare + Nginx = 2).
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX:-}
+      VITTA_MIGRATE_ON_BOOT: ${VITTA_MIGRATE_ON_BOOT:-}
+      PG_POOL_MAX: ${PG_POOL_MAX:-}
+      PG_CONNECT_TIMEOUT_MS: ${PG_CONNECT_TIMEOUT_MS:-}
+      PG_IDLE_TIMEOUT_MS: ${PG_IDLE_TIMEOUT_MS:-}
+      PG_STATEMENT_TIMEOUT_MS: ${PG_STATEMENT_TIMEOUT_MS:-}
+    volumes:
+      # Fotos clínicas fora da camada gravável do container (#191): sem isto
+      # elas somem no próximo `docker compose up --build` (perda de prontuário).
+      - uploads:/app/uploads
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/auth/providers').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     ports:
       - "${APP_PORT:-3000}:3000"
 
 volumes:
   pgdata:
+  uploads:

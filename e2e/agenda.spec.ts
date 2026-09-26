@@ -4,6 +4,7 @@ import { expectToast } from "./support/assertions";
 import { DEFAULT_SCHEDULE_CONFIG } from "./support/constants";
 import { goToMonth } from "./support/calendar";
 import { businessDay, slotForAttempt, outsideBusinessHoursSlot } from "./support/dates";
+import { pickPatient } from "./support/patient-picker";
 
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: describe agrupa 6 fluxos e2e independentes da agenda
 test.describe("agenda", () => {
@@ -14,7 +15,7 @@ test.describe("agenda", () => {
     await page.goto("/agenda");
     await page.getByRole("button", { name: "+ Nova consulta" }).click();
 
-    await page.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+    await pickPatient(page, patient.fullName);
     await page.getByLabel("Data *").fill(slot.dateInput);
     await page.getByLabel("Início *").fill(slot.startTimeInput);
     await page.getByLabel("Procedimento *").fill("Troca de bolsa — E2E");
@@ -47,7 +48,7 @@ test.describe("agenda", () => {
 
     await page.goto("/agenda");
     await page.getByRole("button", { name: "+ Nova consulta" }).click();
-    await page.getByLabel("Paciente *").selectOption({ label: patientB.fullName });
+    await pickPatient(page, patientB.fullName);
     await page.getByLabel("Data *").fill(slot.dateInput);
     await page.getByLabel("Início *").fill(slot.startTimeInput);
     await page.getByLabel("Procedimento *").fill("Consulta conflitante");
@@ -65,7 +66,7 @@ test.describe("agenda", () => {
 
     await page.goto("/agenda");
     await page.getByRole("button", { name: "+ Nova consulta" }).click();
-    await page.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+    await pickPatient(page, patient.fullName);
     await page.getByLabel("Data *").fill(slot.dateInput);
     await page.getByLabel("Início *").fill(slot.startTimeInput);
     await page.getByLabel("Procedimento *").fill("Fora do horário");
@@ -115,7 +116,7 @@ test.describe("agenda", () => {
 
     await page.goto("/agenda");
     await page.getByRole("button", { name: "+ Nova consulta" }).click();
-    await page.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+    await pickPatient(page, patient.fullName);
     await page.getByLabel("Repetição").selectOption({ label: "Semanal — 4 sessões" });
     await page.getByLabel("Data *").fill(slot.dateInput);
     await page.getByLabel("Início *").fill(slot.startTimeInput);
@@ -143,7 +144,7 @@ test.describe("agenda", () => {
       // 08:00 estava dentro da grade padrão, mas fica fora da nova janela (10h–12h).
       await page.goto("/agenda");
       await page.getByRole("button", { name: "+ Nova consulta" }).click();
-      await page.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+      await pickPatient(page, patient.fullName);
       await page.getByLabel("Data *").fill(
         `${day.year}-${String(day.month).padStart(2, "0")}-${String(day.day).padStart(2, "0")}`,
       );

@@ -296,25 +296,23 @@ test.describe("casca e padrões compartilhados", () => {
     });
   }
 
-  test("e-mail da sidebar em uma linha", async ({ page, request }) => {
+  // #199: o e-mail truncado ("ad…") não identificava quem estava logado.
+  test("e-mail da sidebar inteiro, sem cortar", async ({ page, request }) => {
     await world(request);
     await page.setViewportSize(DESKTOP);
     await page.goto("/");
     await settle(page);
     const email = page.locator("[data-sidebar-email]");
     await expect(email).toBeVisible();
-    const metrics = await email.evaluate((el) => {
-      const style = getComputedStyle(el);
-      return {
-        height: el.getBoundingClientRect().height,
-        lineHeight: Number.parseFloat(style.lineHeight),
-        overflow: style.textOverflow,
-        title: el.getAttribute("title"),
-        text: el.textContent,
-      };
-    });
-    expect(metrics.height).toBeLessThanOrEqual(metrics.lineHeight * 1.5);
-    expect(metrics.overflow).toBe("ellipsis");
+    const metrics = await email.evaluate((el) => ({
+      overflow: getComputedStyle(el).textOverflow,
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+      title: el.getAttribute("title"),
+      text: el.textContent,
+    }));
+    expect(metrics.overflow).not.toBe("ellipsis");
+    expect(metrics.scroll).toBeLessThanOrEqual(metrics.client);
     expect(metrics.title).toBe(metrics.text);
   });
 
@@ -598,6 +596,41 @@ test.describe("telas com defeito específico", () => {
     expect(tab!.x).toBeGreaterThanOrEqual(0);
     expect(tab!.x + tab!.width).toBeLessThanOrEqual(MOBILE.width);
   });
+
+  // #198: a lista tinha overflow-x, mas os gatilhos encolhiam (flex-shrink)
+  // abaixo do próprio texto e se sobrepunham — o teste acima não via isso.
+  for (const width of [360, 390, 768]) {
+    test(`prontuário: nenhum gatilho de aba corta o rótulo (${width})`, async ({
+      page,
+      request,
+    }) => {
+      const w = await world(request);
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/pacientes/${w.patientId}`);
+      await settle(page);
+      const tablist = page.getByRole("tablist", { name: "Seções do prontuário" });
+      const triggers = await tablist.getByRole("tab").evaluateAll((els) =>
+        els.map((el) => ({
+          label: el.textContent,
+          scroll: el.scrollWidth,
+          client: el.clientWidth,
+          left: el.getBoundingClientRect().left,
+          right: el.getBoundingClientRect().right,
+        })),
+      );
+      expect(triggers.length).toBeGreaterThan(0);
+      for (const t of triggers) {
+        expect(t.scroll, `${t.label} @${width}`).toBeLessThanOrEqual(t.client);
+      }
+      // Sem sobreposição: cada gatilho começa depois do fim do anterior.
+      for (let i = 1; i < triggers.length; i++) {
+        expect(triggers[i].left, `${triggers[i].label} @${width}`).toBeGreaterThanOrEqual(
+          triggers[i - 1].right - 1,
+        );
+      }
+      expect(await scrollWidth(page)).toBeLessThanOrEqual(width + 2);
+    });
+  }
 
   for (const viewport of [MOBILE, DESKTOP]) {
     test(`painéis na largura do conteúdo (${viewport.width})`, async ({ page, request }) => {

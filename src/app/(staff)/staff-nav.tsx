@@ -3,22 +3,7 @@
 import { headerClasses } from '@still-void/ui/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/agenda', label: 'Agenda' },
-  { href: '/triagem', label: 'Triagem' },
-  { href: '/pacientes', label: 'Pacientes' },
-  { href: '/parceiros', label: 'Parceiros' },
-  { href: '/profissionais', label: 'Profissionais' },
-  { href: '/faturamento', label: 'Faturamento' },
-  { href: '/procedimentos', label: 'Procedimentos' },
-  { href: '/materiais', label: 'Materiais' },
-  { href: '/relatorios', label: 'Relatórios' },
-  { href: '/repasses', label: 'Repasses' },
-  { href: '/auditoria', label: 'Auditoria' },
-  { href: '/configuracoes', label: 'Configurações' },
-];
+import { STAFF_PAGES, useStaffAccess } from '@/lib/staff-access';
 
 function isActive(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -27,13 +12,16 @@ function isActive(pathname: string, href: string) {
 /**
  * Navegação do staff com os links do design system (`sv-header__link`, que já
  * garante o alvo mínimo de 24px da WCAG 2.5.8) e estado ativo derivado da rota.
+ * Só lista as telas que o papel da sessão pode usar (#199) — Atendente e
+ * Profissional não caem mais em telas que respondem 403.
  */
 export function StaffNav() {
   const pathname = usePathname();
+  const can = useStaffAccess();
 
   return (
     <nav className="flex flex-col gap-3">
-      {NAV_ITEMS.map((item) => {
+      {STAFF_PAGES.filter((item) => can(item.api)).map((item) => {
         const active = isActive(pathname, item.href);
         return (
           <Link

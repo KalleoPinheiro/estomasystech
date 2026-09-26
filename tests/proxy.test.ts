@@ -105,18 +105,52 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       expect((await body(blocked)).error).toMatch(/Limite de requisições/);
     });
 
-    it('Dado outro IP, Quando o primeiro estourou o limite, Então não é afetado', async () => {
+    it('Dado outro IP, Quando o primeiro estourou o limite anônimo, Então não é afetado', async () => {
       process.env.API_RATE_LIMIT_MAX = '1';
       const proxy = await loadProxy();
-      const cookie = sessionCookie('company_admin');
 
-      await proxy(request('/api/patients', cookie, '10.0.0.1'));
+      await proxy(request('/api/patients', undefined, '10.0.0.1'));
       expect(
-        (await proxy(request('/api/patients', cookie, '10.0.0.1'))).status,
+        (await proxy(request('/api/patients', undefined, '10.0.0.1'))).status,
       ).toBe(429);
       expect(
-        isNext(await proxy(request('/api/patients', cookie, '10.0.0.2'))),
+        (await proxy(request('/api/patients', undefined, '10.0.0.2'))).status,
+      ).toBe(401);
+    });
+
+    it('C24 contas diferentes no mesmo IP têm baldes separados', async () => {
+      process.env.API_RATE_LIMIT_MAX = '1';
+      const proxy = await loadProxy();
+      const recepcao = sessionCookie('atendente', 'recepcao@clinica.com');
+      const consultorio = sessionCookie('profissional', 'dra@clinica.com');
+
+      expect(
+        isNext(await proxy(request('/api/appointments', recepcao, '10.0.0.9'))),
       ).toBe(true);
+      expect(
+        (await proxy(request('/api/appointments', recepcao, '10.0.0.9')))
+          .status,
+      ).toBe(429);
+      expect(
+        isNext(
+          await proxy(request('/api/appointments', consultorio, '10.0.0.9')),
+        ),
+      ).toBe(true);
+    });
+
+    it('C25 anônimos do mesmo IP dividem o balde', async () => {
+      process.env.API_RATE_LIMIT_MAX = '1';
+      const proxy = await loadProxy();
+
+      expect(
+        (await proxy(request('/api/auth/providers', undefined, '10.0.0.7')))
+          .status,
+      ).not.toBe(429);
+      const blocked = await proxy(
+        request('/api/auth/providers', undefined, '10.0.0.7'),
+      );
+
+      expect(blocked.status).toBe(429);
     });
 
     it('Dado o limite estourado, Quando a rota é de página, Então não aplica rate limit', async () => {
@@ -238,6 +272,19 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       },
     );
 
+    it('C40 staff sem acesso à família recebe mensagem de papel', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        request('/api/invoices', sessionCookie('atendente')),
+      );
+
+      expect(response.status).toBe(403);
+      expect((await body(response)).error).toBe(
+        'Seu papel não tem acesso a este recurso',
+      );
+    });
+
     it('Dada sessão de atendente no export LGPD, Então responde 403 na borda (#185)', async () => {
       const proxy = await loadProxy();
 
@@ -326,8 +373,9 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
         const proxy = await loadProxy();
         const response = await proxy(requestWith(method, path, cookie));
         expect(response.status, `${method} ${path}`).toBe(403);
+        // Equipe sem acesso à família recebe a mensagem de papel (#199).
         expect((await body(response)).error).toBe(
-          'Acesso restrito à equipe da clínica',
+          'Seu papel não tem acesso a este recurso',
         );
       }
     });

@@ -34,6 +34,9 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-10 | Acesso do Super Admin a dado de outra empresa é sempre auditado | `src/lib/audit.ts` |
 | ACE-RN-11 | Editar conta existente (senha, ativar/desativar, reenviar convite) segue a matriz do ACE-RN-05: papel fora da matriz → `403`, conta de outra empresa → `404`. Atendente/Profissional só listam e alteram contas `patient`/`partner`. Ninguém desativa a própria conta nem o último `company_admin` ativo (`400`). Senha, ativação e reenvio gravam auditoria antes da alteração; se a auditoria falha, nada muda | `src/domain/auth/account-management.ts`, `src/app/api/accounts/` (#184) |
 | ACE-RN-12 | Toda sub-rota de `/api/patients/:id/*` é família `clinical` por padrão (Atendente 403); exceção só por allowlist explícita, hoje vazia. Inclui a exportação LGPD, que também exige vínculo R4 do Profissional (404 sem vínculo) | `src/lib/auth/route-family.ts`, `.specs/STATE.md` AD-025 |
+| ACE-RN-13 | A interface esconde o que o papel não pode usar, pela mesma matriz de famílias de rota (sem regra duplicada): menu, blocos do dashboard, abas da ficha; tela proibida mostra "sem permissão" sem chamar a API. Esconder é UX — a API continua barrando (#199) | `src/lib/staff-access.tsx`, `src/lib/auth/route-family.ts` |
+| ACE-RN-14 | Equipe autenticada sem acesso à família de rota recebe `403` "Seu papel não tem acesso a este recurso" também no proxy — "restrito à equipe" fica para sessões de paciente/parceiro (#199) | `src/proxy.ts` |
+| ACE-RN-15 | Limite geral da API por conta autenticada (empresa + e-mail) e por IP só para anônimos — clínicas atrás de NAT não dividem o teto (#201) | `src/proxy.ts` |
 
 ### Papéis
 

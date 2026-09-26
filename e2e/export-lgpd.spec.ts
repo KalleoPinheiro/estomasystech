@@ -9,6 +9,7 @@ import {
 } from "./support/api";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
+import { pickPatient } from "./support/patient-picker";
 
 test.describe("exportação de dados do titular (LGPD art. 18)", () => {
   test("exporta todos os dados do paciente em um único JSON", async ({ page, request }) => {
@@ -74,7 +75,7 @@ test.describe("exportação de dados do titular (LGPD art. 18)", () => {
       // Espera a lista já filtrada: sem isso a asserção vê a trilha inteira,
       // com leituras de outros specs.
       const filtered = page.waitForResponse((r) => r.url().includes(`patientId=${patient.id}`));
-      await page.getByRole("combobox").selectOption({ label: patient.fullName });
+      await pickPatient(page, patient.fullName, "Filtrar por paciente");
       await filtered;
       await expect(page.getByRole("row", { name: /Leitura/ }).first()).toBeVisible({
         timeout: 2_000,

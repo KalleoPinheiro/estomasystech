@@ -1,3 +1,5 @@
+import { logError } from '@/lib/log-error';
+
 interface WindowState {
   count: number;
   resetAtMs: number;
@@ -116,7 +118,7 @@ export class SharedRateLimiter {
     try {
       return await this.sync(fullKey, (state?.pending ?? 0) + 1, nowMs);
     } catch (error) {
-      console.error(
+      logError(
         `Rate limit ${this.name}: falha no contador compartilhado — usando o da réplica`,
         error,
       );

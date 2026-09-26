@@ -1,4 +1,5 @@
 import { newId } from '../shared/id';
+import { zonedDateKey } from '../shared/time-zone';
 
 export const REMINDER_KINDS = ['confirmation', 'recall'] as const;
 export type ReminderKind = (typeof REMINDER_KINDS)[number];
@@ -23,11 +24,8 @@ export interface ReminderLogState {
   createdAt: Date;
 }
 
-const pad = (value: number): string => String(value).padStart(2, '0');
-
-/** Data local (fuso `TZ` do processo), não UTC: o "amanhã" do job também é local. */
-export const dateKey = (date: Date): string =>
-  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+/** Dia no fuso da aplicação (#205), não UTC nem o fuso do processo. */
+export const dateKey = (date: Date): string => zonedDateKey(date);
 
 export interface ReminderLogOptions {
   channel?: ReminderChannel;

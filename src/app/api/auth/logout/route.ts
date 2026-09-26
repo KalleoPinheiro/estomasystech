@@ -4,6 +4,7 @@ import { recordAuditNow } from '@/lib/audit';
 import { getRequestSession } from '@/lib/auth/request-session';
 import { SESSION_COOKIE } from '@/lib/auth/session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 
 export async function POST(request: NextRequest) {
   // Lê a sessão ANTES de limpar o cookie — sem sessão só não audita, não vira
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // Falha de auditoria nunca pode impedir o logout — indisponibilidade
       // transitória do banco não pode travar quem está tentando sair.
-      console.error('Auditoria: falha ao registrar logout', error);
+      logError('Auditoria: falha ao registrar logout', error);
     }
   }
 

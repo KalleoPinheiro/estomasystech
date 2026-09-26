@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { clientIpFromHeader } from '@/lib/auth/client-ip';
+import { NextRequest } from 'next/server';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  clientIp,
+  clientIpFromHeader,
+  resetClientIpWarning,
+} from '@/lib/auth/client-ip';
 
 describe('Feature: IP do cliente por cadeia de proxy confiável (SEC1-10..12)', () => {
   it('Dado XFF com 3 IPs e 1 hop confiável, Quando derivar, Então usa o último da cadeia', () => {
@@ -39,5 +44,41 @@ describe('Feature: IP do cliente por cadeia de proxy confiável (SEC1-10..12)', 
     expect(clientIpFromHeader('203.0.113.7, 10.0.0.2', Number.NaN)).toBe(
       '10.0.0.2',
     );
+  });
+});
+
+describe('Feature: aviso de proxy mal configurado (#201)', () => {
+  const bare = () => new NextRequest('http://localhost/api/patients');
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    resetClientIpWarning();
+  });
+
+  it('C26 produção sem x-forwarded-for avisa uma vez', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('TRUSTED_PROXY_HOPS', '1');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(clientIp(bare())).toBe('unknown');
+    expect(clientIp(bare())).toBe('unknown');
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/x-forwarded-for/);
+  });
+
+  it('fora de produção ou com o cabeçalho presente não avisa', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    clientIp(bare());
+    vi.stubEnv('NODE_ENV', 'production');
+    clientIp(
+      new NextRequest('http://localhost/api/patients', {
+        headers: { 'x-forwarded-for': '203.0.113.7' },
+      }),
+    );
+
+    expect(warn).not.toHaveBeenCalled();
   });
 });

@@ -2,13 +2,12 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { AddEvolutionNote } from '@/application/clinical/add-evolution-note';
 import { ListEvolutionNotes } from '@/application/clinical/list-evolution-notes';
-import type { UserAccountRepository } from '@/domain/auth/user-account';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import type { Session } from '@/lib/auth/session';
+import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
 import {
   clinicScope,
   sessionScope,
@@ -26,31 +25,6 @@ const evolutionSchema = z.object({
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-/**
- * Autoria automática: sempre a conta autenticada na sessão, nunca o corpo da
- * requisição (issue #64) — sem isso, qualquer papel podia atribuir a nota a
- * outro profissional (autoria forjada), risco de compliance com conselhos
- * profissionais (COFEN). Extraída do handler POST para manter a complexidade
- * dentro do limite do projeto (issue #48).
- */
-async function resolveProfessionalId(
-  session: Session | null | undefined,
-  userAccounts: UserAccountRepository,
-): Promise<string | null> {
-  if (session?.role === 'profissional') {
-    return session.professionalId;
-  }
-  const subject = session?.subject;
-  if (!subject || subject === 'local') {
-    return null;
-  }
-  const account = await userAccounts.findByEmail(subject);
-  if (!account) {
-    return null;
-  }
-  return account.professionalId;
-}
 
 export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
@@ -99,7 +73,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       id,
       professionalPatientLinks,
     );
-    const professionalId = await resolveProfessionalId(session, userAccounts);
+    const professionalId = await resolveSessionProfessionalId(
+      session,
+      userAccounts,
+    );
     const note = await new AddEvolutionNote(evolutions, patients).execute({
       patientId: id,
       appointmentId: body.appointmentId ?? null,

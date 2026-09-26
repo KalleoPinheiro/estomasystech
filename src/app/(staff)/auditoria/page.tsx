@@ -3,7 +3,6 @@
 import {
   Card,
   Input,
-  NativeSelect,
   Table,
   TableBody,
   TableCell,
@@ -16,8 +15,8 @@ import { ErrorAlert } from '@/components/feedback';
 import { LoadMoreButton } from '@/components/load-more-button';
 import { PageHeader } from '@/components/page-header';
 import { PagedList } from '@/components/paged-list';
-import type { AuditEventDto, PatientDto } from '@/lib/dto';
-import { useApiQuery } from '@/lib/use-api-query';
+import { PatientPicker } from '@/components/patient-picker';
+import type { AuditEventDto } from '@/lib/dto';
 import { usePagedQuery } from '@/lib/use-paged-query';
 
 const PAGE_SIZE = 100;
@@ -77,7 +76,6 @@ export default function AuditPage() {
   const [patientId, setPatientId] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const { data: patients } = useApiQuery<PatientDto[]>('/api/patients');
 
   const params = new URLSearchParams();
   if (patientId) params.set('patientId', patientId);
@@ -91,8 +89,6 @@ export default function AuditPage() {
     isLoading,
     loadMore,
   } = usePagedQuery<AuditEventDto>(`/api/audit${query}`, PAGE_SIZE);
-
-  const patientNames = new Map((patients ?? []).map((p) => [p.id, p.fullName]));
 
   return (
     <div>
@@ -116,18 +112,14 @@ export default function AuditPage() {
                 onChange={(e) => setTo(e.target.value)}
               />
             </label>
-            <NativeSelect
-              aria-label="Filtrar por paciente"
-              value={patientId}
-              onChange={(e) => setPatientId(e.target.value)}
-            >
-              <option value="">Todos os pacientes</option>
-              {(patients ?? []).map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.fullName}
-                </option>
-              ))}
-            </NativeSelect>
+            <div className="min-w-64">
+              <PatientPicker
+                label="Filtrar por paciente"
+                value={patientId}
+                onChange={setPatientId}
+                includeInactive
+              />
+            </div>
           </div>
         }
       />
@@ -187,8 +179,7 @@ export default function AuditPage() {
                         className="px-4 py-2 text-ink-2"
                       >
                         {event.patientId
-                          ? (patientNames.get(event.patientId) ??
-                            event.patientId)
+                          ? (event.patientName ?? event.patientId)
                           : '—'}
                       </TableCell>
                       <TableCell

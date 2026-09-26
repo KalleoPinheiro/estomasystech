@@ -23,6 +23,7 @@ import type {
   ProfessionalOptionDto,
 } from '@/lib/dto';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { WithStaffIdentity } from '../support/staff-identity';
 
 const { routerMock, searchParamsRef } = vi.hoisted(() => {
   return {
@@ -80,7 +81,12 @@ afterEach(() => {
 
 async function renderDetail(id = 'pac-1') {
   await act(async () => {
-    renderWithToast(<PatientRecordPage params={Promise.resolve({ id })} />);
+    // Mesmo provider do layout da equipe (#199): as abas seguem o papel.
+    renderWithToast(
+      <WithStaffIdentity>
+        <PatientRecordPage params={Promise.resolve({ id })} />
+      </WithStaffIdentity>,
+    );
   });
 }
 

@@ -6,12 +6,12 @@ import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toOutcomeEvaluationDto } from '@/lib/dto';
 
 const evaluationSchema = z.object({
   score: z.number().int().min(1).max(5),
-  professionalId: z.string().min(1).nullish(),
   notes: z.string().max(2000).nullish(),
 });
 
@@ -31,8 +31,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       repos,
     );
     const body = evaluationSchema.parse(await request.json());
-    const { outcomeEvaluations, carePlanOutcomes, carePlans, auditEvents } =
-      repos;
+    const {
+      outcomeEvaluations,
+      carePlanOutcomes,
+      carePlans,
+      auditEvents,
+      userAccounts,
+    } = repos;
     const evaluation = await new EvaluateOutcome(
       outcomeEvaluations,
       carePlanOutcomes,
@@ -40,7 +45,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ).execute({
       outcomeId: id,
       score: body.score,
-      professionalId: body.professionalId ?? null,
+      // Autoria pela sessão (#200) — o corpo não escolhe o profissional.
+      professionalId: await resolveSessionProfessionalId(
+        guard.session,
+        userAccounts,
+      ),
       notes: body.notes ?? null,
     });
     const outcome = await carePlanOutcomes.findById(id);

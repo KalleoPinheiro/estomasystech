@@ -53,9 +53,8 @@ test.describe("pacientes", () => {
     // Paciente inativo não aparece no seletor de novo agendamento.
     await page.goto("/agenda");
     await page.getByRole("button", { name: "+ Nova consulta" }).click();
-    await expect(
-      page.getByLabel("Paciente *").locator("option", { hasText: patient.fullName }),
-    ).toHaveCount(0);
+    await page.getByLabel("Paciente *").fill(patient.fullName);
+    await expect(page.getByText("Nenhum paciente encontrado.")).toBeVisible();
 
     // Defesa em profundidade: a API também recusa agendar para paciente inativo.
     const response = await request.post("/api/appointments", {

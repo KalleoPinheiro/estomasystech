@@ -1,9 +1,9 @@
 'use client';
 
-import { Button, Input, NativeSelect } from '@still-void/ui/react';
+import { Button, Input } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
-import type { PatientDto } from '@/lib/dto';
+import { PatientPicker } from '@/components/patient-picker';
 
 export interface InvoiceFormValues {
   patientId: string;
@@ -13,11 +13,10 @@ export interface InvoiceFormValues {
 }
 
 interface InvoiceFormProps {
-  patients: PatientDto[];
   onSubmit: (values: InvoiceFormValues) => Promise<void>;
 }
 
-export function InvoiceForm({ patients, onSubmit }: InvoiceFormProps) {
+export function InvoiceForm({ onSubmit }: InvoiceFormProps) {
   const [values, setValues] = useState<InvoiceFormValues>({
     patientId: '',
     description: '',
@@ -29,8 +28,12 @@ export function InvoiceForm({ patients, onSubmit }: InvoiceFormProps) {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setError(null);
+    if (!values.patientId) {
+      setError('Selecione o paciente');
+      return;
+    }
+    setSaving(true);
     try {
       await onSubmit(values);
     } catch (err) {
@@ -43,24 +46,11 @@ export function InvoiceForm({ patients, onSubmit }: InvoiceFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
-      <label className="font-medium text-sm">
-        Paciente *
-        <NativeSelect
-          required
-          value={values.patientId}
-          onChange={(e) =>
-            setValues((prev) => ({ ...prev, patientId: e.target.value }))
-          }
-          className="mt-1"
-        >
-          <option value="">Selecione…</option>
-          {patients.map((patient) => (
-            <option key={patient.id} value={patient.id}>
-              {patient.fullName}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
+      <PatientPicker
+        label="Paciente *"
+        value={values.patientId}
+        onChange={(patientId) => setValues((prev) => ({ ...prev, patientId }))}
+      />
       <label className="font-medium text-sm">
         Descrição *
         <Input

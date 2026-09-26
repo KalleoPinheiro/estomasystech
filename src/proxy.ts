@@ -4,6 +4,7 @@ import {
   AUTH_NOT_CONFIGURED_MESSAGE,
   isAllowedForRole,
   isPublicPath,
+  ROLE_FAMILY_DENIED_MESSAGE,
   resolveAuthMode,
   STAFF_ONLY_MESSAGE,
   UNAUTHENTICATED_MESSAGE,
@@ -11,7 +12,9 @@ import {
 import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { getRequestSession } from '@/lib/auth/request-session';
+import type { Session } from '@/lib/auth/session';
 import { isStaffSessionRevoked } from '@/lib/auth/staff-revocation';
+import { isStaffRole } from '@/lib/auth/staff-roles';
 
 /**
  * Camada 1 de autorização (borda). No Next.js 16 este arquivo se chama `proxy.ts`
@@ -27,8 +30,9 @@ import { isStaffSessionRevoked } from '@/lib/auth/staff-revocation';
 // Configurável via env para permitir relaxar em ambientes de teste E2E (muitas
 // chamadas de setup em sequência) sem afetar o padrão de produção.
 const API_RATE_LIMIT_MAX = Number(process.env.API_RATE_LIMIT_MAX) || 120;
-// Teto por IP somado entre réplicas (issue #77). Cada réplica sincroniza com o
-// banco no máximo 1×/s por IP — não uma escrita por request.
+// Teto por conta (ou por IP, se anônimo) somado entre réplicas (issues #77 e
+// #201). Cada réplica sincroniza com o banco no máximo 1×/s por chave — não
+// uma escrita por request.
 const API_RATE_LIMIT_SYNC_MS = 1_000;
 const API_RATE_LIMIT = new SharedRateLimiter(
   'api',
@@ -40,6 +44,21 @@ const API_RATE_LIMIT = new SharedRateLimiter(
 
 const isApiPath = (pathname: string): boolean => pathname.startsWith('/api/');
 
+/**
+ * Chave do limite geral da API (#201). Autenticado: a conta (empresa +
+ * sujeito) — recepção, consultórios e tablets de uma clínica saem pelo mesmo
+ * IP público (NAT) e dividiam 120 req/min, com cada tela fazendo de 2 a 8
+ * chamadas ao abrir. Anônimo: o IP. Com 8 chamadas por tela, 120/min por conta
+ * comportam uma troca de tela a cada 4s sustentada por um minuto.
+ */
+function apiRateLimitKey(request: NextRequest): string {
+  const session = getRequestSession(request);
+  if (session) {
+    return `acct:${session.clinicId ?? 'system'}:${session.subject}`;
+  }
+  return `ip:${clientIp(request)}`;
+}
+
 function unauthorized(request: NextRequest): NextResponse {
   if (isApiPath(request.nextUrl.pathname)) {
     return fail(UNAUTHENTICATED_MESSAGE, 401);
@@ -47,9 +66,16 @@ function unauthorized(request: NextRequest): NextResponse {
   return NextResponse.redirect(new URL('/login', request.url));
 }
 
-function forbidden(request: NextRequest): NextResponse {
+function forbidden(request: NextRequest, session: Session): NextResponse {
   if (isApiPath(request.nextUrl.pathname)) {
-    return fail(STAFF_ONLY_MESSAGE, 403);
+    // Equipe sem acesso à família de rota lê a mesma mensagem do handler
+    // (#199) — "restrito à equipe" confundia quem É da equipe.
+    return fail(
+      isStaffRole(session.role)
+        ? ROLE_FAMILY_DENIED_MESSAGE
+        : STAFF_ONLY_MESSAGE,
+      403,
+    );
   }
   return NextResponse.redirect(new URL('/portal', request.url));
 }
@@ -104,7 +130,10 @@ function nextWithCsp(request: NextRequest): NextResponse {
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
-  if (isApiPath(pathname) && !(await API_RATE_LIMIT.allow(clientIp(request)))) {
+  if (
+    isApiPath(pathname) &&
+    !(await API_RATE_LIMIT.allow(apiRateLimitKey(request)))
+  ) {
     return fail(
       'Limite de requisições excedido, tente novamente em instantes',
       429,
@@ -132,7 +161,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return unauthorized(request);
   }
   if (!isAllowedForRole(pathname, session.role)) {
-    return forbidden(request);
+    return forbidden(request, session);
   }
 
   return nextWithCsp(request);

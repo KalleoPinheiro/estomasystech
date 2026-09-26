@@ -324,7 +324,16 @@ async function seedClinicInfo(cookie: string): Promise<void> {
   });
 }
 
-export default async function globalSetup(): Promise<void> {
+export interface GlobalSetupOptions {
+  /**
+   * Contas reais por papel (#204). O convite delas só aparece no log do
+   * `NullEmailGateway`; a suíte contra o build de produção (#203) sobe com canal
+   * de e-mail e não usa essas contas, então desliga o passo.
+   */
+  roleAccounts: boolean;
+}
+
+export async function runGlobalSetup({ roleAccounts }: GlobalSetupOptions): Promise<void> {
   await consumeInvite(await bootstrapSuperAdmin(), E2E_ADMIN_PASSWORD, "Super Admin");
   const cookie = await login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD, "Super Admin");
   await writeStorageState(ADMIN_STORAGE_STATE_PATH, cookie);
@@ -335,7 +344,12 @@ export default async function globalSetup(): Promise<void> {
   await writeFile(SEED_DATA_PATH, JSON.stringify({ ...seed, ...roleSeed }, null, 2));
   // Catálogo de taxonomias (NANDA-I/NOC/NIC) — subset curado de estomaterapia.
   await post(cookie, "/api/admin/taxonomy/import", {});
+  if (!roleAccounts) return;
   for (const role of E2E_STAFF_ROLES) {
     await provisionRoleAccount(cookie, role, seed.professionalId);
   }
+}
+
+export default function globalSetup(): Promise<void> {
+  return runGlobalSetup({ roleAccounts: true });
 }

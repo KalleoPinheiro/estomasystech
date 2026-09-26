@@ -17,11 +17,10 @@ import {
 } from '@still-void/ui/react/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { use, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
-import type { UserRole } from '@/domain/auth/user-role';
 import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
 import type {
   AnamnesisDto,
@@ -32,6 +31,7 @@ import type {
   SidebarIdentityDto,
 } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
+import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { AnamnesisSection } from './anamnesis-section';
 import { CarePlansSection } from './care-plans-section';
@@ -39,38 +39,31 @@ import { ConditionsSection } from './conditions-section';
 import { EvolutionsSection } from './evolutions-section';
 import { PackagesSection } from './packages-section';
 
+/**
+ * `api`: rota de que a aba depende — a aba só aparece para o papel que pode
+ * usá-la (#199, mesma matriz da autorização). Atendente não vê as abas
+ * clínicas nem dispara as leituras 403.
+ */
 const TABS = [
-  { key: 'anamnese', label: 'Anamnese' },
-  { key: 'condicoes', label: 'Estomias e feridas' },
-  { key: 'evolucoes', label: 'Evoluções (SOAP)' },
-  { key: 'planoCuidados', label: 'Plano de Cuidados (SAE)' },
-  { key: 'pacotes', label: 'Pacotes' },
+  { key: 'anamnese', label: 'Anamnese', api: '/api/patients/_/anamnesis' },
+  { key: 'condicoes', label: 'Estomias e feridas', api: '/api/conditions' },
+  {
+    key: 'evolucoes',
+    label: 'Evoluções (SOAP)',
+    api: '/api/patients/_/evolutions',
+  },
+  {
+    key: 'planoCuidados',
+    label: 'Plano de Cuidados (SAE)',
+    api: '/api/care-plans',
+  },
+  { key: 'pacotes', label: 'Pacotes', api: '/api/packages' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
 type Tab = (typeof TABS)[number];
 
 const TAB_KEYS = TABS.map((t) => t.key);
-
-/**
- * Pacotes carrega preço (dado financeiro) e `/api/packages` é administrativo:
- * a aba some para o Profissional até a decisão de produto da #189, e só
- * aparece quando o papel já é conhecido — na dúvida, fica fora.
- */
-function tabsForRole(role: UserRole | undefined): readonly Tab[] {
-  const showPackages = role !== undefined && role !== 'profissional';
-  return showPackages ? TABS : TABS.filter((t) => t.key !== 'pacotes');
-}
-
-function useVisibleTabs(requested: TabKey) {
-  const { data: identity } =
-    useApiQuery<SidebarIdentityDto>('/api/auth/identity');
-  const tabs = tabsForRole(identity?.account?.role);
-  const activeTab = tabs.some((t) => t.key === requested)
-    ? requested
-    : 'anamnese';
-  return { tabs, activeTab };
-}
 
 /** 404 sem o id cru: a mensagem do servidor traz o UUID, que não ajuda ninguém (#189). */
 function patientErrorMessage(error: string, status: number | null): string {
@@ -188,6 +181,38 @@ function AllergyBanner({ allergies }: { allergies?: string }) {
   );
 }
 
+/** Leituras clínicas da ficha, só para quem pode ver cada aba (#199). */
+function useClinicalRecord(id: string, can: (api: string) => boolean) {
+  const allowed = (key: TabKey) =>
+    can(TABS.find((t) => t.key === key)?.api ?? '');
+  const anamnesis = useApiQuery<AnamnesisDto | null>(
+    allowed('anamnese') ? `/api/patients/${id}/anamnesis` : null,
+  );
+  const conditions = useApiQuery<ConditionDto[]>(
+    allowed('condicoes') ? `/api/patients/${id}/conditions` : null,
+  );
+  const evolutions = useApiQuery<EvolutionNoteDto[]>(
+    allowed('evolucoes') ? `/api/patients/${id}/evolutions` : null,
+  );
+  const carePlans = useApiQuery<CarePlanDto[]>(
+    allowed('planoCuidados') ? `/api/patients/${id}/care-plans` : null,
+  );
+  return { anamnesis, conditions, evolutions, carePlans };
+}
+
+/** Papel sem nenhuma aba (ex.: Atendente): aviso em vez de alerta de erro. */
+function NoRecordSections({ loading }: { loading: boolean }) {
+  if (loading) return <LoadingIndicator />;
+  return (
+    <Card className="p-5" data-record-restricted>
+      <p className="text-ink-2 text-sm">
+        As seções clínicas do prontuário são restritas a profissionais e
+        administradores da clínica.
+      </p>
+    </Card>
+  );
+}
+
 /**
  * Guarda de troca de aba (issue #66): SOAP em edição ou anamnese alterada
  * pedem confirmação antes de descartar. Extraído em hook próprio para manter
@@ -239,14 +264,28 @@ export default function PatientRecordPage({
   const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [requestedTab, setTabState] = useState<TabKey>(() =>
+  const [tab, setTabState] = useState<TabKey>(() =>
     resolveInitialTab(searchParams.get('aba')),
   );
-  const { tabs, activeTab: tab } = useVisibleTabs(requestedTab);
   const setTab = (next: TabKey) => {
     setTabState(next);
     router.replace(`/pacientes/${id}?aba=${next}`, { scroll: false });
   };
+  const can = useStaffAccess();
+  const identity = useStaffIdentity();
+  const visibleTabs = TABS.filter((item) => can(item.api));
+  // Aba pedida (URL/clique) se o papel a vê; senão a primeira visível.
+  const activeTab: TabKey | undefined = visibleTabs.some((t) => t.key === tab)
+    ? tab
+    : visibleTabs[0]?.key;
+  const tabListRef = useRef<HTMLDivElement>(null);
+  // No celular a lista de abas rola na horizontal (#198): a aba ativa sempre
+  // entra na área visível, inclusive quando vem de `?aba=` na URL.
+  useEffect(() => {
+    tabListRef.current
+      ?.querySelector<HTMLElement>(`[data-tab-key="${activeTab}"]`)
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [activeTab]);
   const {
     pendingTab,
     setEvolutionsDirty,
@@ -254,37 +293,38 @@ export default function PatientRecordPage({
     requestTabChange,
     confirmDiscardAndSwitch,
     cancelPendingTab,
-  } = useDirtyTabGuard(tab);
+  } = useDirtyTabGuard(activeTab ?? tab);
 
   const {
     data: patient,
     error,
     errorStatus,
   } = useApiQuery<PatientDto>(`/api/patients/${id}`);
+  const record = useClinicalRecord(id, can);
   const {
     data: anamnesis,
     error: anamnesisError,
     isLoading: anamnesisLoading,
     refresh: refreshAnamnesis,
-  } = useApiQuery<AnamnesisDto | null>(`/api/patients/${id}/anamnesis`);
+  } = record.anamnesis;
   const {
     data: conditions,
     error: conditionsError,
     isLoading: conditionsLoading,
     refresh: refreshConditions,
-  } = useApiQuery<ConditionDto[]>(`/api/patients/${id}/conditions`);
+  } = record.conditions;
   const {
     data: evolutions,
     error: evolutionsError,
     isLoading: evolutionsLoading,
     refresh: refreshEvolutions,
-  } = useApiQuery<EvolutionNoteDto[]>(`/api/patients/${id}/evolutions`);
+  } = record.evolutions;
   const {
     data: carePlans,
     error: carePlansError,
     isLoading: carePlansLoading,
     refresh: refreshCarePlans,
-  } = useApiQuery<CarePlanDto[]>(`/api/patients/${id}/care-plans`);
+  } = record.carePlans;
 
   if (error) {
     return <ErrorAlert message={patientErrorMessage(error, errorStatus)} />;
@@ -296,54 +336,64 @@ export default function PatientRecordPage({
       <PatientHeader patient={patient} />
       <AllergyBanner allergies={anamnesis?.allergies} />
 
-      <Tabs
-        value={tab}
-        onValueChange={(next) => requestTabChange(next as TabKey, setTab)}
-      >
-        <TabsList aria-label="Seções do prontuário">
-          {tabs.map((item) => (
-            <TabsTrigger
-              key={item.key}
-              value={item.key}
-              className={item.key === 'pacotes' ? 'ml-auto' : undefined}
-            >
-              {tabLabel(
-                item,
-                conditions ?? [],
-                evolutions ?? [],
-                carePlans ?? [],
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {activeTab === undefined ? (
+        <NoRecordSections loading={identity?.loading ?? false} />
+      ) : (
+        <Tabs
+          value={activeTab}
+          onValueChange={(next) => requestTabChange(next as TabKey, setTab)}
+        >
+          <TabsList ref={tabListRef} aria-label="Seções do prontuário">
+            {visibleTabs.map((item) => (
+              <TabsTrigger
+                key={item.key}
+                value={item.key}
+                data-tab-key={item.key}
+                // shrink-0 (#198): o gatilho da lib é flex-shrink 1 com
+                // nowrap — em 390px os rótulos encolhiam e se sobrepunham em
+                // vez de a lista rolar.
+                className={
+                  item.key === 'pacotes' ? 'ml-auto shrink-0' : 'shrink-0'
+                }
+              >
+                {tabLabel(
+                  item,
+                  conditions ?? [],
+                  evolutions ?? [],
+                  carePlans ?? [],
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <TabsContent value={tab}>
-          <Card className="p-5">
-            <RecordTabPanel
-              tab={tab}
-              patientId={id}
-              anamnesis={anamnesis ?? null}
-              anamnesisError={anamnesisError}
-              anamnesisLoading={anamnesisLoading}
-              onAnamnesisDirtyChange={setAnamnesisDirty}
-              conditions={conditions ?? []}
-              conditionsError={conditionsError}
-              conditionsLoading={conditionsLoading}
-              evolutions={evolutions ?? []}
-              evolutionsError={evolutionsError}
-              evolutionsLoading={evolutionsLoading}
-              onEvolutionsDirtyChange={setEvolutionsDirty}
-              carePlans={carePlans ?? []}
-              carePlansError={carePlansError}
-              carePlansLoading={carePlansLoading}
-              refreshAnamnesis={refreshAnamnesis}
-              refreshConditions={refreshConditions}
-              refreshEvolutions={refreshEvolutions}
-              refreshCarePlans={refreshCarePlans}
-            />
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value={activeTab}>
+            <Card className="p-5">
+              <RecordTabPanel
+                tab={activeTab}
+                patientId={id}
+                anamnesis={anamnesis ?? null}
+                anamnesisError={anamnesisError}
+                anamnesisLoading={anamnesisLoading}
+                onAnamnesisDirtyChange={setAnamnesisDirty}
+                conditions={conditions ?? []}
+                conditionsError={conditionsError}
+                conditionsLoading={conditionsLoading}
+                evolutions={evolutions ?? []}
+                evolutionsError={evolutionsError}
+                evolutionsLoading={evolutionsLoading}
+                onEvolutionsDirtyChange={setEvolutionsDirty}
+                carePlans={carePlans ?? []}
+                carePlansError={carePlansError}
+                carePlansLoading={carePlansLoading}
+                refreshAnamnesis={refreshAnamnesis}
+                refreshConditions={refreshConditions}
+                refreshEvolutions={refreshEvolutions}
+                refreshCarePlans={refreshCarePlans}
+              />
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
 
       <AlertDialog
         open={pendingTab !== null}

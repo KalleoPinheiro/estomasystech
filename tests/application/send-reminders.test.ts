@@ -155,6 +155,25 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
     });
   });
 
+  describe('Fuso da aplicação (#205)', () => {
+    it('C30 amanhã calculado no fuso da aplicação', async () => {
+      // Processo em UTC; clínica em São Paulo (UTC-3). 02:00Z do dia 17 ainda
+      // é 23:00 do dia 16 em Brasília: "amanhã" é o dia 17 de Brasília
+      // (03:00Z do 17 até 03:00Z do 18), não o 18 do relógio UTC.
+      vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
+      const now = new Date('2026-07-17T02:00:00Z');
+      await scheduleAt(new Date('2026-07-17T12:00:00Z')); // 09:00 BRT do 17
+      await scheduleAt(new Date('2026-07-18T12:00:00Z')); // 09:00 BRT do 18
+
+      const summary = await run(now);
+
+      expect(summary.sent).toBe(1);
+      expect(email.sent[0].text).toContain('17/07/2026');
+      expect(email.sent[0].text).toContain('09:00');
+      expect(clinic.reminderLog.items[0].sentOn).toBe('2026-07-16');
+    });
+  });
+
   describe('Recall', () => {
     it('C3 recall por e-mail traz nome, data, clínica e portal, sem motivo', async () => {
       const followUp = await addFollowUp(new Date('2026-07-15T12:00:00Z'));
@@ -419,6 +438,7 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
 
     it('C17 virada 23:30 em São Paulo usa a data local', async () => {
       vi.stubEnv('TZ', 'America/Sao_Paulo');
+      vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
       // Consulta 17/07 09:00 local (12:00 UTC).
       await scheduleAt(new Date('2026-07-17T12:00:00Z'));
 
@@ -434,6 +454,7 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
 
     it('C17 às 23:30 locais a consulta do dia seguinte local ainda é "amanhã"', async () => {
       vi.stubEnv('TZ', 'America/Sao_Paulo');
+      vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
       // Consulta 17/07 08:00 local (11:00 UTC); job às 23:30 do dia 16 local.
       await scheduleAt(new Date('2026-07-17T11:00:00Z'));
 

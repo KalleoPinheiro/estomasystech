@@ -1,4 +1,5 @@
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
+import { logError } from '@/lib/log-error';
 
 /**
  * Concede/renova o vínculo profissional-paciente em melhor esforço (issue
@@ -16,7 +17,7 @@ export async function ensureLinkBestEffort(
   try {
     await links.ensureLink(professionalId, patientId);
   } catch (error) {
-    console.error(
+    logError(
       `Vínculo profissional-paciente pendente (profissional ${professionalId}, paciente ${patientId}):`,
       error,
     );

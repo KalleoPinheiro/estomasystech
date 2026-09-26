@@ -8,55 +8,10 @@ import { type ApiFailure, dangerAlerts, roleStorageState, trackApiFailures } fro
  * página. Foi a falta disso que deixou os 403 da #188/#189 passarem com a
  * suíte inteira verde (ela só rodava como Super Admin).
  *
- * Menu e dashboard ainda ignoram o papel (#199): mostram ao Atendente e ao
- * Profissional telas e cartões que não são deles. Essas lacunas ficam em
- * `KNOWN_GAPS`, sempre com a issue que as cobre: nelas só o `403` das rotas
- * listadas é tolerado (a política nega na borda, como deve) e fica anotado no
- * relatório — qualquer outro erro (5xx, 404, 401, 403 em outra rota) reprova.
- * Quando a #199 esconder o item do menu, a entrada vira inútil e o teste avisa.
+ * Menu e dashboard seguem o papel (#199): o Atendente e o Profissional só
+ * veem telas e cartões que a política libera, então nenhuma tela do menu pode
+ * responder erro — não há lacuna tolerada.
  */
-interface KnownGap {
-  issue: string;
-  /** Prefixos de `/api/*` cujo 403 é esperado nesta tela; `"*"` = tela inteira fora do papel. */
-  apis: readonly string[] | "*";
-}
-
-const OUT_OF_ROLE: KnownGap = { issue: "#199", apis: "*" };
-/** Dashboard mostra cartões de faturamento/estoque a todo papel (#199). */
-const DASHBOARD_GAP: KnownGap = { issue: "#199", apis: ["/api/summary", "/api/supplies"] };
-
-const KNOWN_GAPS: Record<E2EStaffRole, Readonly<Record<string, KnownGap>>> = {
-  company_admin: {},
-  atendente: {
-    "/": DASHBOARD_GAP,
-    // Triagem de fotos é dado clínico: família `clinical`, negada ao Atendente (R3).
-    "/triagem": OUT_OF_ROLE,
-    "/profissionais": OUT_OF_ROLE,
-    "/faturamento": OUT_OF_ROLE,
-    "/procedimentos": OUT_OF_ROLE,
-    "/materiais": OUT_OF_ROLE,
-    "/relatorios": OUT_OF_ROLE,
-    "/repasses": OUT_OF_ROLE,
-    "/auditoria": OUT_OF_ROLE,
-    "/configuracoes": OUT_OF_ROLE,
-  },
-  profissional: {
-    "/": DASHBOARD_GAP,
-    "/profissionais": OUT_OF_ROLE,
-    "/faturamento": OUT_OF_ROLE,
-    "/procedimentos": OUT_OF_ROLE,
-    "/materiais": OUT_OF_ROLE,
-    "/relatorios": OUT_OF_ROLE,
-    "/auditoria": OUT_OF_ROLE,
-    "/configuracoes": OUT_OF_ROLE,
-  },
-};
-
-const isKnown = (gap: KnownGap | undefined, failure: ApiFailure): boolean =>
-  gap !== undefined &&
-  failure.status === 403 &&
-  (gap.apis === "*" || gap.apis.some((api) => failure.path.startsWith(api)));
-
 const TEST_NAMES: Record<E2EStaffRole, string> = {
   company_admin: "company_admin percorre o menu sem erro",
   atendente: "atendente percorre o menu do papel sem erro",
@@ -95,28 +50,11 @@ for (const role of Object.keys(ROLE_ACCOUNTS) as E2EStaffRole[]) {
       const menu = await visibleMenu(page);
       expect(menu.length).toBeGreaterThan(0);
 
-      const gaps = KNOWN_GAPS[role];
       for (const href of menu) {
         const report = await visit(page, href, tracker);
-        const gap = gaps[href];
-        const unexpected = report.failures.filter((failure) => !isKnown(gap, failure));
-        expect.soft(unexpected, `${href}: respostas de erro em /api/*`).toEqual([]);
-        if (gap) {
-          test.info().annotations.push({
-            type: `lacuna conhecida (${gap.issue})`,
-            description: `${href}: ${report.failures.map((f) => `${f.status} ${f.path}`).join(", ") || "sem erro"}`,
-          });
-          continue;
-        }
+        expect.soft(report.failures, `${href}: respostas de erro em /api/*`).toEqual([]);
         expect.soft(report.alerts, `${href}: alerta de erro na página`).toEqual([]);
       }
-
-      // Tela fora do papel que já saiu do menu: a #199 chegou e a entrada
-      // precisa sair de KNOWN_GAPS.
-      const stale = Object.entries(gaps)
-        .filter(([href, gap]) => gap.apis === "*" && !menu.includes(href))
-        .map(([href]) => href);
-      expect(stale, "telas fora do papel que o menu já esconde").toEqual([]);
     });
 
     test(`sessão de ${role} vem do login real`, async ({ page }) => {

@@ -21,10 +21,11 @@ import { MetricCard } from '@/components/metric-card';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
 import { PagedList } from '@/components/paged-list';
+import { PatientPicker } from '@/components/patient-picker';
 import { StatusBadge } from '@/components/status-badge';
 import type { InvoiceSummary } from '@/domain/billing/invoice-repository';
 import { apiFetch } from '@/lib/client';
-import type { InvoiceDto, PatientDto, ProcedureDto } from '@/lib/dto';
+import type { InvoiceDto, ProcedureDto } from '@/lib/dto';
 import {
   formatCurrency,
   formatDate,
@@ -255,7 +256,6 @@ export default function BillingPage() {
     PAGE_SIZE,
   );
 
-  const { data: patients } = useApiQuery<PatientDto[]>('/api/patients');
   const { data: summary, refresh: refreshSummary } =
     useApiQuery<InvoiceSummary>('/api/invoices/summary');
   const error = actionError ?? loadError;
@@ -428,7 +428,6 @@ export default function BillingPage() {
 
       <PackageSaleModal
         open={sellingPackage}
-        patients={(patients ?? []).filter((p) => p.active)}
         onClose={() => setSellingPackage(false)}
         onSaved={() => {
           setSellingPackage(false);
@@ -439,10 +438,7 @@ export default function BillingPage() {
 
       {creating && (
         <Modal title="Nova fatura" onClose={() => setCreating(false)}>
-          <InvoiceForm
-            patients={(patients ?? []).filter((p) => p.active)}
-            onSubmit={handleCreate}
-          />
+          <InvoiceForm onSubmit={handleCreate} />
         </Modal>
       )}
 
@@ -473,12 +469,10 @@ export default function BillingPage() {
 
 function PackageSaleModal({
   open,
-  patients,
   onClose,
   onSaved,
 }: {
   open: boolean;
-  patients: PatientDto[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -487,19 +481,13 @@ function PackageSaleModal({
   }
   return (
     <Modal title="Vender pacote de sessões" onClose={onClose}>
-      <PackageForm patients={patients} onSaved={onSaved} />
+      <PackageForm onSaved={onSaved} />
     </Modal>
   );
 }
 
 /** Venda de pacote (O3.3): fatura única; sessões consomem saldo na conclusão. */
-function PackageForm({
-  patients,
-  onSaved,
-}: {
-  patients: PatientDto[];
-  onSaved: () => void;
-}) {
+function PackageForm({ onSaved }: { onSaved: () => void }) {
   const { toast } = useToast();
   const { data: procedures } = useApiQuery<ProcedureDto[]>('/api/procedures');
   const [patientId, setPatientId] = useState('');
@@ -513,8 +501,12 @@ function PackageForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setError(null);
+    if (!patientId) {
+      setError('Selecione o paciente');
+      return;
+    }
+    setSaving(true);
     try {
       await apiFetch('/api/packages', {
         method: 'POST',
@@ -544,22 +536,11 @@ function PackageForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
-      <label className="font-medium text-sm">
-        Paciente *
-        <NativeSelect
-          required
-          value={patientId}
-          onChange={(e) => setPatientId(e.target.value)}
-          className="mt-1"
-        >
-          <option value="">Selecione…</option>
-          {patients.map((patient) => (
-            <option key={patient.id} value={patient.id}>
-              {patient.fullName}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
+      <PatientPicker
+        label="Paciente *"
+        value={patientId}
+        onChange={setPatientId}
+      />
       <label className="font-medium text-sm">
         Procedimento *
         <NativeSelect

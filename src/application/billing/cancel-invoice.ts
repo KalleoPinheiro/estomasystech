@@ -6,7 +6,7 @@ export class CancelInvoice {
   constructor(private readonly invoices: InvoiceRepository) {}
 
   async execute(input: { id: string }): Promise<Invoice> {
-    const invoice = await this.invoices.findById(input.id);
+    const invoice = await this.invoices.findByIdForUpdate(input.id);
     if (!invoice) {
       throw new NotFoundError('Fatura', input.id);
     }

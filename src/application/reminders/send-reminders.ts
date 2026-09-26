@@ -14,6 +14,8 @@ import {
 } from '@/domain/messaging/reminder-log';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import { startOfZonedDay, zonedParts } from '@/domain/shared/time-zone';
+import { logError } from '@/lib/log-error';
 import { portalUrlFromEnv } from './portal-url';
 
 export interface ClinicReminderSummary {
@@ -95,7 +97,7 @@ export class SendReminders {
       const services = await this.servicesFor(clinic.id);
       return await new ClinicReminders(clinic, services, this.email).run(now);
     } catch (error) {
-      console.error(`Lembretes da empresa ${clinic.id}: falha`, error);
+      logError(`Lembretes da empresa ${clinic.id}: falha`, error);
       return {
         clinicId: clinic.id,
         sent: 0,
@@ -161,7 +163,7 @@ class ClinicReminders {
     try {
       await this.email.send(message);
     } catch (error) {
-      console.error(
+      logError(
         `Lembrete ${reminder.kind}/${reminder.referenceId}: falha no envio`,
         error,
       );
@@ -177,21 +179,23 @@ class ClinicReminders {
   }
 
   private async confirmationReminders(now: Date): Promise<PendingReminder[]> {
-    const startOfTomorrow = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1,
+    // "Amanhã" no fuso da aplicação (#205), não no do processo.
+    const today = zonedParts(now);
+    const startOfTomorrow = startOfZonedDay(
+      today.year,
+      today.month,
+      today.day + 1,
     );
-    const endOfTomorrow = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 2,
+    const endOfTomorrow = startOfZonedDay(
+      today.year,
+      today.month,
+      today.day + 2,
     );
     const appointments = await this.services.appointments.findInRange(
       startOfTomorrow,
       endOfTomorrow,
     );
-    const today = dateKey(now);
+    const todayKey = dateKey(now);
 
     const reminders: PendingReminder[] = [];
     for (const appointment of appointments) {
@@ -201,7 +205,7 @@ class ClinicReminders {
           'confirmation',
           appointment.id,
           'email',
-          today,
+          todayKey,
         )
       ) {
         continue;

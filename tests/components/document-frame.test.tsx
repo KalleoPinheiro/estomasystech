@@ -194,4 +194,29 @@ describe('Feature: Moldura de documento', () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe('Cenário: fuso explícito (#205)', () => {
+    it('C31 data de emissão no fuso da aplicação', () => {
+      vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
+      try {
+        // 02:30Z do dia 4 = 23:30 do dia 3 em Brasília.
+        const { container } = render(
+          <DocumentFrame
+            clinic={minimalClinic}
+            title="Atestado"
+            documentNumber={documentNumber}
+            issuedAt="2026-09-04T02:30:00.000Z"
+          >
+            <p>Corpo</p>
+          </DocumentFrame>,
+        );
+
+        expect(container.textContent).toContain('03 de setembro de 2026');
+        expect(container.textContent).toContain('23:30');
+        expect(container.textContent).not.toContain('04 de setembro');
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+  });
 });

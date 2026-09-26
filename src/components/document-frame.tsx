@@ -2,6 +2,7 @@
 
 import { Button, Icon } from '@still-void/ui/react';
 import type { ReactNode } from 'react';
+import { appTimeZone } from '@/domain/shared/time-zone';
 import type { ClinicInfoDto } from '@/lib/dto';
 
 export type { ClinicInfoDto };
@@ -130,10 +131,13 @@ export function DocumentFrame({
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+    timeZone: appTimeZone(),
   });
+  // Fuso explícito (#205): documento impresso nunca herda o fuso do processo.
   const timeLabel = issuedDate.toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: appTimeZone(),
   });
 
   return (

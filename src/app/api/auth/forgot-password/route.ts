@@ -7,6 +7,7 @@ import { fail, ok } from '@/lib/api-response';
 import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { systemScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 
 /** Mesmo limite do login: a rota é um oráculo em potencial se puder ser martelada. */
 const FORGOT_RATE_LIMIT = new SharedRateLimiter('forgot-password', 5, 60_000);
@@ -70,6 +71,6 @@ async function issueResetLink(email: string): Promise<void> {
       ),
     );
   } catch (error) {
-    console.error('Reset de senha: falha ao emitir o link', error);
+    logError('Reset de senha: falha ao emitir o link', error);
   }
 }

@@ -22,8 +22,8 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 
 | ID | Regra | Onde é garantida |
 | --- | --- | --- |
-| AGE-RN-01 | Consulta só dentro da grade da empresa, no fuso `TZ`; fora dela, `400` | `src/domain/scheduling/business-hours.ts`, `schedule-config.ts` |
-| AGE-RN-02 | Folga mínima entre consultas (padrão 15 min, expandida para os dois lados); conflito dá `409`; cancelada/falta libera o horário | `TimeSlot.expand`, trigger `endsAtBuffered` |
+| AGE-RN-01 | Consulta só dentro da grade da empresa, na hora de parede de `APP_TIMEZONE` (padrão `America/Sao_Paulo`), nunca no fuso do processo; fora dela, `400` (#205) | `src/domain/scheduling/business-hours.ts`, `schedule-config.ts`, `src/domain/shared/time-zone.ts` |
+| AGE-RN-02 | Folga mínima entre consultas (padrão 15 min, expandida para os dois lados); conflito dá `409`; cancelada/falta libera o horário. O conflito é **por empresa e profissional** — consultas de empresas diferentes nunca conflitam (#187) | `TimeSlot.expand`, trigger `endsAtBuffered`, constraint `appointments_no_overlap` (`clinic_id`, profissional, intervalo — migração `0038`) |
 | AGE-RN-03 | Uma regra em todo lugar — grade → almoço → fechamentos → horário do profissional → folga | `src/application/appointments/assert-slot-available.ts` |
 | AGE-RN-04 | Estados: `scheduled → confirmed → completed`, com desvios para `cancelled`/`no_show`; transição inválida é rejeitada | `src/domain/scheduling/appointment.ts` |
 | AGE-RN-05 | Concluir gera fatura pendente (idempotente) e pode programar retorno em 7/15/30/60/90 dias | `src/application/appointments/complete-appointment.ts` |
@@ -39,6 +39,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
 | Calendário mensal, nova consulta, ações por status, remarcação | entregue | `/agenda` |
+| Seleção de paciente por busca (nome, e-mail ou telefone; 20 resultados) em nova consulta e lista de espera — sem teto de 100 pacientes (#197). Mesmo seletor no Faturamento (fatura avulsa e pacote) e no filtro da Auditoria | entregue | `src/components/patient-picker.tsx` |
 | Agenda no celular (abaixo de 768px): mês compacto de 7 colunas com ponto no dia que tem consulta e, abaixo, a lista das consultas do dia escolhido (hoje por padrão); "Agendar neste dia" só em dia válido | entregue | `/agenda` (`mobile-month.tsx`) |
 | Consultas recorrentes | entregue | `/agenda` |
 | Grade, almoço, política de cancelamento, feriados e ausências | entregue | Configurações, Profissionais |

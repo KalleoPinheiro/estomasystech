@@ -219,6 +219,10 @@ serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
 
 Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto.
 
+## Revisão pré-produção #183 — lote P0 + P1 (2026-09-26) — EM ANDAMENTO
+
+P0 #187, #191; P1 #192, #193, #197–#203, #205 via `tlc-implement` ([checklist](../.checks/pre-producao-p0-p1.md)), branch `feature/trusting-johnson-yvvp0j`. CI (#203): jobs `build-e2e-prod` e `docker` (tempo real no CI, 1º verde em `2fa73c4` e de novo em `7778ef8`: `build-e2e-prod` ~2 min 40 s com build; `docker` ~2 min 30 s; rodam em paralelo ao `ci` ~6–9 min e ao `e2e` ~13 min, então não alongam o CI). Achado: `node:crypto` em `shared/id.ts` violava a CSP de produção no cliente. Next: P2/P3 (#207–#224) em outro PR.
+
 ## Sequência `/improve-codebase-architecture` (2026-09-06, 2ª rodada) — EM ANDAMENTO
 
 Novo relatório de arquitetura rodado em 2026-09-06 (hot spots: `container.ts`, `dto.ts`, `configuracoes/page.tsx`), 3 achados viraram issues via `triage-issue`, resolução via `tlc-spec-driven` um por vez.

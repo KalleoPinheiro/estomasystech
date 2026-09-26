@@ -4,6 +4,7 @@ import { expectToast } from "./support/assertions";
 import { goToMonth } from "./support/calendar";
 import { businessDay, slotForAttempt, ymdToDateInput } from "./support/dates";
 import { roleStorageState, trackApiFailures } from "./support/roles";
+import { pickPatient } from "./support/patient-picker";
 import { loadSeedData } from "./support/seed-data";
 
 /**
@@ -39,7 +40,7 @@ test.describe("atendente", () => {
     await page.getByRole("button", { name: "+ Nova consulta" }).click();
     // O nome acessível do <select> inclui a opção escolhida ("Profissional— sem atribuição").
     const form = page.getByRole("dialog", { name: "Nova consulta" });
-    await form.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+    await pickPatient(form, patient.fullName);
     await form.getByLabel(/^Profissional/).selectOption({ label: SEED_PROFESSIONAL });
     await form.getByLabel(/^Procedimento do catálogo/).selectOption({ label: `${CATALOG_PROCEDURE} (30 min)` });
     await expect(form.getByLabel("Procedimento *")).toHaveValue(CATALOG_PROCEDURE);
@@ -78,7 +79,7 @@ test.describe("atendente", () => {
     await page.goto("/agenda");
     await page.getByRole("button", { name: "+ Adicionar" }).click();
     const dialog = page.getByRole("dialog", { name: "Adicionar à lista de espera" });
-    await dialog.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+    await pickPatient(dialog, patient.fullName);
     await dialog.getByLabel(/^Procedimento/).selectOption({ label: CATALOG_PROCEDURE });
     await dialog.getByLabel(/^Profissional/).selectOption({ label: SEED_PROFESSIONAL });
     await dialog.getByLabel("Aceita a partir de *").fill(from);

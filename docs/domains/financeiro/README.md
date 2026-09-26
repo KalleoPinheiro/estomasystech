@@ -3,7 +3,7 @@ title: "Domínio: Financeiro"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 domain: financeiro
 ---
 
@@ -32,6 +32,7 @@ em centavos inteiros.
 | FIN-RN-09 | Fatura cancelada depois do repasse vira estorno no próximo fechamento; saldo ≤ 0 é recusado | idem |
 | FIN-RN-10 | Cancelar repasse exige motivo, é auditado, e só vale para o último repasse ativo do profissional | `POST /api/commission-payouts/:id/cancel` |
 | FIN-RN-11 | Venda de pacote é atômica (pacote + fatura) | `src/application/billing/sell-session-package.ts` |
+| FIN-RN-12 | Pagamento, desconto e cancelamento da mesma fatura são serializados (lock da linha na transação): duas ações simultâneas nunca gravam recebimento em dobro — a segunda vê o saldo atualizado e é recusada se exceder (#192) | `PATCH /api/invoices/:id`, `InvoiceRepository.findByIdForUpdate` |
 
 ## Funcionalidades
 

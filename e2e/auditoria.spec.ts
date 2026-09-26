@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createCondition, createPatient, unique } from "./support/api";
+import { pickPatient } from "./support/patient-picker";
 
 test.describe("auditoria de prontuário", () => {
   test("criação de condição clínica gera evento de auditoria visível na trilha", async ({
@@ -16,7 +17,7 @@ test.describe("auditoria de prontuário", () => {
     await expect(page.getByRole("heading", { name: "Auditoria de prontuário" })).toBeVisible();
 
     // Filtra pelo paciente para achar o evento de forma determinística.
-    await page.getByRole("combobox").selectOption({ label: patient.fullName });
+    await pickPatient(page, patient.fullName, "Filtrar por paciente");
 
     const row = page.getByRole("row", { name: /Criação/ }).filter({ hasText: "Condição" });
     await expect(row).toBeVisible();
@@ -31,7 +32,7 @@ test.describe("auditoria de prontuário", () => {
     await createCondition(request, other.id, { kind: "wound", title: `Ferida outra ${unique()}` });
 
     await page.goto("/auditoria");
-    await page.getByRole("combobox").selectOption({ label: target.fullName });
+    await pickPatient(page, target.fullName, "Filtrar por paciente");
 
     await expect(page.getByRole("cell", { name: target.fullName }).first()).toBeVisible();
     await expect(page.getByRole("cell", { name: other.fullName })).toHaveCount(0);

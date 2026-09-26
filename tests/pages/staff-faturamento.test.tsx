@@ -8,6 +8,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { pickPatient } from '@/../tests/support/patient-picker';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import BillingPage from '@/app/(staff)/faturamento/page';
 import type { InvoiceDto, PatientDto, ProcedureDto } from '@/lib/dto';
@@ -531,9 +532,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('+ Nova fatura'));
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Descrição/), {
         target: { value: 'Sessão avulsa' },
       });
@@ -564,9 +563,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('+ Nova fatura'));
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Descrição/), {
         target: { value: 'Sessão avulsa' },
       });
@@ -597,9 +594,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('+ Nova fatura'));
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Descrição/), {
         target: { value: 'Sessão avulsa' },
       });
@@ -641,11 +636,9 @@ describe('Feature: Faturamento', () => {
       expect(screen.queryByText('Emitir fatura')).not.toBeInTheDocument();
     });
 
-    it('Dado pacientes ainda não carregados, Quando o modal de nova fatura abre, Então exibe apenas a opção padrão', async () => {
-      mockFetch(({ url }) => {
+    it('Dado modal de nova fatura aberto, Quando nada foi buscado, Então não carrega a lista de pacientes (#197)', async () => {
+      const fetchMock = mockFetch(({ url }) => {
         if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return { ok: true, json: () => new Promise(() => {}) };
         return jsonResponse(null, false);
       });
 
@@ -654,11 +647,13 @@ describe('Feature: Faturamento', () => {
 
       fireEvent.click(screen.getByText('+ Nova fatura'));
 
-      const select = (await screen.findByLabelText(
-        /Paciente/,
-      )) as HTMLSelectElement;
-      expect(select.options.length).toBe(1);
-      expect(select.options[0]?.value).toBe('');
+      expect(await screen.findByLabelText(/Paciente/)).toHaveValue('');
+      expect(screen.getByText(/Digite ao menos 2 letras/)).toBeInTheDocument();
+      expect(
+        fetchMock.mock.calls.some(([url]) =>
+          String(url).startsWith('/api/patients'),
+        ),
+      ).toBe(false);
     });
 
     it("Dado sucesso ao emitir fatura, Quando submetido, Então exibe toast de sucesso 'Fatura criada'", async () => {
@@ -677,9 +672,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('+ Nova fatura'));
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Descrição/), {
         target: { value: 'Sessão avulsa' },
       });
@@ -715,9 +708,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('Vender pacote'));
-      fireEvent.change(await screen.findByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento/), {
         target: { value: 'proc-1' },
       });
@@ -749,9 +740,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('Vender pacote'));
-      fireEvent.change(await screen.findByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento/), {
         target: { value: 'proc-1' },
       });
@@ -806,9 +795,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('Vender pacote'));
-      fireEvent.change(await screen.findByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento/), {
         target: { value: 'proc-1' },
       });
@@ -842,9 +829,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('Vender pacote'));
-      fireEvent.change(await screen.findByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento/), {
         target: { value: 'proc-1' },
       });
@@ -893,9 +878,7 @@ describe('Feature: Faturamento', () => {
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('Vender pacote'));
-      fireEvent.change(await screen.findByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento/), {
         target: { value: 'proc-1' },
       });

@@ -59,6 +59,7 @@ import { decryptSecret } from '@/lib/auth/crypto';
 import { googleCalendarOAuthConfigFromEnv } from '@/lib/auth/google-calendar-oauth';
 import { getAuthConfig } from '@/lib/auth/session';
 import type { TenantScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 import {
   GoogleCalendarGateway,
   googleCalendarConfigFromEnv,
@@ -216,7 +217,7 @@ async function oauthCalendarGateway(
       }),
     };
   } catch (error) {
-    console.error('Google Calendar: falha ao decifrar credencial OAuth', error);
+    logError('Google Calendar: falha ao decifrar credencial OAuth', error);
     return null;
   }
 }

@@ -116,7 +116,7 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
     expect(body.error).toBe('Erro interno do servidor');
     expect(consoleSpy).toHaveBeenCalledWith(
       'Erro inesperado na API:',
-      expect.any(Error),
+      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
     );
   });
 });

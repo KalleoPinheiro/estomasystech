@@ -4,7 +4,7 @@ import { NotFoundError } from '@/domain/shared/errors';
 import { Money } from '@/domain/shared/money';
 
 async function load(invoices: InvoiceRepository, id: string): Promise<Invoice> {
-  const invoice = await invoices.findById(id);
+  const invoice = await invoices.findByIdForUpdate(id);
   if (!invoice) {
     throw new NotFoundError('Fatura', id);
   }

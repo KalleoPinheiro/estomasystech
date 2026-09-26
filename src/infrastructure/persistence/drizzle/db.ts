@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
+import { logError } from '@/lib/log-error';
 import * as schema from './schema';
 
 export type AppDb = PgDatabase<PgQueryResultHKT, typeof schema>;
@@ -51,9 +52,23 @@ function intFromEnv(name: string, fallback: number): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+interface ErrorEmitter {
+  on(event: 'error', listener: (error: Error) => void): unknown;
+}
+
+/**
+ * Erro de cliente ocioso do pool (banco reiniciou, conexão cortada) é emitido
+ * como evento `error`; sem listener, o Node derruba o processo inteiro (#193).
+ * O cliente com erro é descartado pelo próprio pool.
+ */
+export function attachPoolErrorLogger(pool: ErrorEmitter): void {
+  pool.on('error', (error) => {
+    logError('Banco: erro em conexão ociosa do pool (descartada)', error);
+  });
+}
+
 async function createPostgresDb(): Promise<AppDb> {
   const { drizzle } = await import('drizzle-orm/node-postgres');
-  const { migrate } = await import('drizzle-orm/node-postgres/migrator');
   const { Pool } = await import('pg');
 
   const connectionString = process.env.DATABASE_URL;
@@ -67,30 +82,62 @@ async function createPostgresDb(): Promise<AppDb> {
     idleTimeoutMillis: intFromEnv('PG_IDLE_TIMEOUT_MS', 30_000),
     statement_timeout: intFromEnv('PG_STATEMENT_TIMEOUT_MS', 15_000),
   });
+  attachPoolErrorLogger(pool);
   const db = drizzle(pool, { schema });
 
   // Preferir `npm run db:migrate` no deploy; VITTA_MIGRATE_ON_BOOT=false desliga o boot-migrate.
   if (process.env.VITTA_MIGRATE_ON_BOOT !== 'false') {
-    const client = await pool.connect();
     try {
-      await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
-      await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
-    } finally {
-      await client
-        .query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY])
-        .catch(() => undefined);
-      client.release();
+      await migrateWithLock(pool, db);
+    } catch (error) {
+      // Sem isto cada nova tentativa de getDb deixaria um pool órfão aberto.
+      await pool.end().catch(() => undefined);
+      throw error;
     }
   }
   return db as unknown as AppDb;
 }
 
+async function migrateWithLock(
+  pool: import('pg').Pool,
+  db: Parameters<
+    typeof import('drizzle-orm/node-postgres/migrator').migrate
+  >[0],
+): Promise<void> {
+  const { migrate } = await import('drizzle-orm/node-postgres/migrator');
+  const client = await pool.connect();
+  try {
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+  } finally {
+    await client
+      .query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY])
+      .catch(() => undefined);
+    client.release();
+  }
+}
+
+/**
+ * Conexão única por processo. Uma falha na inicialização (banco reiniciando,
+ * rede, timeout, migração) NÃO fica em cache (#193): a Promise rejeitada é
+ * descartada e a próxima chamada tenta de novo — antes, a instância ficava em
+ * 500 permanente até reiniciar. Chamadas simultâneas compartilham a mesma
+ * tentativa (um pool só). A falha é logada alto a cada tentativa.
+ */
 export function getDb(): Promise<AppDb> {
   if (!globalForDb.vittaDbPromise) {
-    globalForDb.vittaDbPromise =
+    const attempt = (
       process.env.VITTA_DB_DRIVER === 'pglite'
         ? createPgliteDb()
-        : createPostgresDb();
+        : createPostgresDb()
+    ).catch((error: unknown) => {
+      if (globalForDb.vittaDbPromise === attempt) {
+        globalForDb.vittaDbPromise = undefined;
+      }
+      logError('Banco: falha ao inicializar a conexão/migração', error);
+      throw error;
+    });
+    globalForDb.vittaDbPromise = attempt;
   }
   return globalForDb.vittaDbPromise;
 }

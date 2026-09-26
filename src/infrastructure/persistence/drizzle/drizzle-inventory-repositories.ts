@@ -55,10 +55,14 @@ export class DrizzleSupplyRepository implements SupplyRepository {
       active: supply.isActive,
       createdAt: supply.createdAt,
     };
+    // Na atualização, `stock_qty` fica de fora (#192): estoque só muda por
+    // `adjustStock` (atômico). Gravar o snapshot lido desfaria uma baixa
+    // concorrente feita entre a leitura e esta gravação.
+    const { stockQty: _stockQty, ...editable } = values;
     await this.db
       .insert(supplies)
       .values(values)
-      .onConflictDoUpdate({ target: supplies.id, set: values });
+      .onConflictDoUpdate({ target: supplies.id, set: editable });
   }
 
   async findById(id: string): Promise<Supply | null> {

@@ -11,6 +11,7 @@ import { createOAuthClient } from '@/lib/auth/google-oauth-client';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { getAuthConfig, type Session } from '@/lib/auth/session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 
 /** Base pública p/ redirects: a URL interna do container não é acessível ao navegador. */
 const publicBaseUrl = (request: NextRequest): string =>
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
         : redirectWithReason(request, result),
     );
   } catch (error) {
-    console.error('Google Agenda: falha ao concluir a conexão', error);
+    logError('Google Agenda: falha ao concluir a conexão', error);
     return clearState(redirectWithReason(request, 'falha_conexao'));
   }
 }

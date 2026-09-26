@@ -10,6 +10,7 @@ import { recordAuditNow } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { systemScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 
 /** Mesmo limite do login: adivinhar um token é força bruta como qualquer outra. */
 const SET_PASSWORD_RATE_LIMIT = new SharedRateLimiter(
@@ -65,10 +66,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (error) {
-      console.error(
-        'Auditoria: falha ao registrar definição/reset de senha',
-        error,
-      );
+      logError('Auditoria: falha ao registrar definição/reset de senha', error);
     }
     return { ok: true };
   });

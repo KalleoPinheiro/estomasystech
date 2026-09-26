@@ -12,10 +12,10 @@ import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { EmptyState, ErrorAlert } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { PatientPicker } from '@/components/patient-picker';
 import { formatDateKey } from '@/domain/scheduling/schedule-availability';
 import { apiFetch } from '@/lib/client';
 import type {
-  PatientDto,
   ProcedureOptionDto,
   ProfessionalOptionDto,
   WaitlistEntryDto,
@@ -23,7 +23,6 @@ import type {
 import { useApiQuery } from '@/lib/use-api-query';
 
 interface WaitlistPanelProps {
-  patients: PatientDto[];
   professionals: ProfessionalOptionDto[];
   /** Muda quando a agenda muda (ex.: entrada marcada pelo formulário). */
   version: number;
@@ -35,7 +34,6 @@ interface WaitlistPanelProps {
  * oferece a vaga a quem aceita aquele dia e marca pela agenda ("Agendar").
  */
 export function WaitlistPanel({
-  patients,
   professionals,
   version,
   onSchedule,
@@ -144,7 +142,6 @@ export function WaitlistPanel({
           onClose={() => setAdding(false)}
         >
           <WaitlistForm
-            patients={patients.filter((p) => p.active)}
             professionals={professionals}
             onSaved={() => {
               setAdding(false);
@@ -167,11 +164,9 @@ interface WaitlistDraft {
 }
 
 function WaitlistForm({
-  patients,
   professionals,
   onSaved,
 }: {
-  patients: PatientDto[];
   professionals: ProfessionalOptionDto[];
   onSaved: () => void;
 }) {
@@ -194,8 +189,12 @@ function WaitlistForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setError(null);
+    if (!draft.patientId) {
+      setError('Selecione o paciente');
+      return;
+    }
+    setSaving(true);
     try {
       await apiFetch('/api/waitlist', {
         method: 'POST',
@@ -228,22 +227,11 @@ function WaitlistForm({
           message={`Não foi possível carregar o catálogo de procedimentos: ${catalogError}`}
         />
       )}
-      <label className="font-medium text-sm">
-        Paciente *
-        <NativeSelect
-          required
-          value={draft.patientId}
-          onChange={(e) => set({ patientId: e.target.value })}
-          className="mt-1"
-        >
-          <option value="">Selecione…</option>
-          {patients.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.fullName}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
+      <PatientPicker
+        label="Paciente *"
+        value={draft.patientId}
+        onChange={(patientId) => set({ patientId })}
+      />
       <label className="font-medium text-sm">
         Procedimento
         <NativeSelect

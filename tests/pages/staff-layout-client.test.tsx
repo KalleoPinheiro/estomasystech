@@ -51,13 +51,13 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     await waitFor(() => {
       expect(screen.getByText('Clínica VittaFlow Ltda')).toBeInTheDocument();
     });
-    // E-mail e papel ficam em elementos separados: o e-mail trunca com reticências
-    // (layout mobile-first, AC 10) e o papel continua sempre visível.
+    // E-mail e papel em linhas separadas: o e-mail aparece inteiro (#199) e
+    // o papel continua sempre visível.
     expect(screen.getByText('ana@clinica.com')).toHaveAttribute(
       'title',
       'ana@clinica.com',
     );
-    expect(screen.getByText(/· Admin de Empresa/)).toBeInTheDocument();
+    expect(screen.getByText('Admin de Empresa')).toBeInTheDocument();
   });
 
   it('Dado super_admin (clinicId null), Quando carrega, Então mostra "Conta de sistema" no lugar do nome da clínica', async () => {
@@ -106,5 +106,24 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     expect(
       screen.queryByText('Clínica de Estomaterapia'),
     ).not.toBeInTheDocument();
+  });
+
+  it('C42 e-mail da sidebar quebra linha em vez de truncar', async () => {
+    mockIdentityFetch({
+      clinicLabel: 'Clínica VittaFlow Ltda',
+      account: {
+        email: 'recepcao.turno.manha@clinica-estomaterapia.com.br',
+        role: 'atendente',
+        roleLabel: 'Atendente',
+      },
+    });
+
+    renderWithToast(<SidebarIdentity />);
+
+    const email = await screen.findByText(
+      'recepcao.turno.manha@clinica-estomaterapia.com.br',
+    );
+    expect(email).not.toHaveClass('truncate');
+    expect(email).toHaveClass('break-all');
   });
 });
