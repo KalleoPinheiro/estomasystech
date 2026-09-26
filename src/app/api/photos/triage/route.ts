@@ -3,6 +3,7 @@ import type { ClinicalCondition } from '@/domain/clinical/clinical-condition';
 import type { ConditionAssessment } from '@/domain/clinical/condition-assessment';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
+import { linkedPatientFilter } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 
@@ -30,18 +31,31 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   return handleRequest(async () => {
-    const { conditionPhotos, conditions, patients, assessments } =
-      await getRepositories(sessionScope(guard.session));
-    const pending = await conditionPhotos.findPendingTriage();
+    const {
+      conditionPhotos,
+      conditions,
+      patients,
+      assessments,
+      professionalPatientLinks,
+    } = await getRepositories(sessionScope(guard.session));
+    const allPending = await conditionPhotos.findPendingTriage();
 
-    const conditionIds = [
-      ...new Set(pending.map((photo) => photo.conditionId)),
-    ];
     // Uma query em lote (CONS2-09) — padrão anti-N+1 do restante do projeto.
-    const conditionList = await conditions.findByIds(conditionIds);
+    const conditionList = await conditions.findByIds([
+      ...new Set(allPending.map((photo) => photo.conditionId)),
+    ]);
+    // Escopo R4 (#186): o Profissional só vê a fila dos pacientes vinculados.
+    const isLinked = await linkedPatientFilter(
+      guard.session,
+      professionalPatientLinks,
+    );
     const conditionById = new Map(conditionList.map((c) => [c.id, c]));
+    const pending = allPending.filter((photo) =>
+      isLinked(conditionById.get(photo.conditionId)?.patientId ?? ''),
+    );
+    const conditionIds = [...new Set(pending.map((p) => p.conditionId))];
     const patientList = await patients.findByIds(
-      [...conditionById.values()].map((c) => c.patientId),
+      conditionIds.flatMap((id) => conditionById.get(id)?.patientId ?? []),
     );
     const patientById = new Map(patientList.map((p) => [p.id, p]));
 

@@ -7,6 +7,7 @@ import {
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
+import { linkedPatientFilter } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { waitlistWithNames } from '@/lib/waitlist-names';
@@ -41,7 +42,15 @@ export async function GET(request: NextRequest) {
     const entries = date
       ? await findWaitlistMatches(services.waitlist, date, professionalId)
       : await services.waitlist.listWaiting();
-    return waitlistWithNames(services, entries);
+    // Escopo R4 (#186): o Profissional só vê a fila dos pacientes vinculados.
+    const isLinked = await linkedPatientFilter(
+      guard.session,
+      services.professionalPatientLinks,
+    );
+    return waitlistWithNames(
+      services,
+      entries.filter((entry) => isLinked(entry.patientId)),
+    );
   });
 }
 

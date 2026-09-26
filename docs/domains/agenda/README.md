@@ -3,7 +3,7 @@ title: "Domínio: Agenda"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-24
+last_reviewed: 2026-09-26
 domain: agenda
 ---
 
@@ -31,6 +31,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | AGE-RN-07 | Cancelamento a pedido do paciente dentro do aviso (padrão 24 h) é tardio; taxa opcional vira fatura pendente, nunca comissão | `cancellationPolicy`, `cancel-appointment-by-staff.ts` |
 | AGE-RN-08 | Lista de espera: janela ≤ 180 dias, sem duplicar; o sistema nunca agenda sozinho | `src/domain/scheduling/waitlist.ts` |
 | AGE-RN-09 | Falha do Google Calendar nunca impede a operação | `src/application/appointments/sync-appointment-calendar.ts` |
+| AGE-RN-10 | Profissional vê em `GET /api/follow-ups` e `GET /api/waitlist` só os pacientes vinculados (R4, #186); os demais papéis veem a fila inteira da empresa | `src/lib/auth/clinical-resource-scope.ts` (`linkedPatientFilter`) |
 
 ## Funcionalidades
 

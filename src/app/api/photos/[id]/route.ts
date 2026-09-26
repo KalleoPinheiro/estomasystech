@@ -6,6 +6,7 @@ import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit, recordAuditNow } from '@/lib/audit';
+import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 
@@ -17,10 +18,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
 
   const { id } = await context.params;
-  const { conditionPhotos, photoStorage } = await getRepositories(
-    writeScope(guard.session),
+  const repos = await getRepositories(writeScope(guard.session));
+  const accessible = await assertClinicalResourceAccessible(
+    guard.session,
+    'photo',
+    id,
+    repos,
+  ).then(
+    () => true,
+    (error: unknown) => {
+      if (error instanceof NotFoundError) return false;
+      throw error;
+    },
   );
+  if (!accessible) {
+    return fail('Foto não encontrada', 404);
+  }
 
+  const { conditionPhotos, photoStorage } = repos;
   const photo = await conditionPhotos.findById(id);
   const data = photo ? await photoStorage.read(photo.id) : null;
   if (!photo || !data) {
@@ -43,8 +58,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { conditionPhotos, photoStorage, conditions, auditEvents } =
-      await getRepositories(writeScope(guard.session));
+    const repos = await getRepositories(writeScope(guard.session));
+    await assertClinicalResourceAccessible(guard.session, 'photo', id, repos);
+    const { conditionPhotos, photoStorage, conditions, auditEvents } = repos;
 
     const photo = await conditionPhotos.findById(id);
     const condition = photo
@@ -80,9 +96,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
+    const repos = await getRepositories(writeScope(guard.session));
+    await assertClinicalResourceAccessible(guard.session, 'photo', id, repos);
     const body = triageSchema.parse(await request.json());
-    const { conditionPhotos, conditions, followUps, auditEvents } =
-      await getRepositories(writeScope(guard.session));
+    const { conditionPhotos, conditions, followUps, auditEvents } = repos;
 
     const photo = await conditionPhotos.findById(id);
     if (!photo) {

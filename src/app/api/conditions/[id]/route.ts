@@ -4,6 +4,7 @@ import { ResolveCondition } from '@/application/clinical/resolve-condition';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
+import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toConditionDto } from '@/lib/dto';
@@ -18,9 +19,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { conditions, auditEvents } = await getRepositories(
-      sessionScope(guard.session),
+    const repos = await getRepositories(sessionScope(guard.session));
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'condition',
+      id,
+      repos,
     );
+    const { conditions, auditEvents } = repos;
     const condition = await conditions.findById(id);
     if (!condition) {
       return null;
@@ -41,10 +47,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    actionSchema.parse(await request.json());
-    const { conditions, auditEvents } = await getRepositories(
-      writeScope(guard.session),
+    const repos = await getRepositories(writeScope(guard.session));
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'condition',
+      id,
+      repos,
     );
+    actionSchema.parse(await request.json());
+    const { conditions, auditEvents } = repos;
     const condition = await new ResolveCondition(conditions).execute({ id });
     recordAudit(auditEvents, guard.session, {
       action: 'update',

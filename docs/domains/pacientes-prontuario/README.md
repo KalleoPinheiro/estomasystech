@@ -29,7 +29,7 @@ requisitos, não detalhes.
 | PRO-RN-05 | Condição resolvida não recebe novas avaliações | `src/application/clinical/add-condition-assessment.ts` |
 | PRO-RN-06 | Foto e registro exigem consentimento ativo; texto do termo versionado por hash | `src/domain/consent/consent-record.ts` |
 | PRO-RN-07 | Metadados de imagem (EXIF/GPS) removidos antes de gravar | `src/domain/clinical/image-sanitizer.ts` (AD-002) |
-| PRO-RN-08 | Profissional só vê pacientes com quem tem consulta ou evolução | `src/domain/clinical/professional-patient-link.ts` |
+| PRO-RN-08 | Profissional só vê pacientes com quem tem consulta ou evolução — também nas rotas endereçadas por id de condição, foto, plano, intervenção ou resultado (sem vínculo: `404`) e na fila de triagem, filtrada pelos vinculados (#186) | `src/domain/clinical/professional-patient-link.ts`, `src/lib/auth/clinical-resource-scope.ts`, `tests/api/clinical-resource-scope-conformance.test.ts` |
 | PRO-RN-09 | Atestado, relatório e plano de cuidados bloqueiam sem CNPJ e responsável técnico da empresa; atestado exige consulta `completed` | `src/app/documentos/` |
 | PRO-RN-10 | Alergias aparecem em destaque no topo do prontuário | UI do prontuário |
 | PRO-RN-11 | Exportação LGPD do titular (JSON com o prontuário completo) só para Admins e Profissional com vínculo; o link "Exportar dados (LGPD)" some para quem não pode exportar | `src/app/api/patients/[id]/export/`, `.specs/STATE.md` AD-025 |
