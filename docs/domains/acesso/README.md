@@ -29,7 +29,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-05 | Catálogo fechado de 6 papéis; ninguém se autocadastra; cada papel cria só os papéis abaixo dele | [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md), `src/domain/auth/role-hierarchy.ts` |
 | ACE-RN-06 | Autorização em duas camadas (proxy + handler), fail-closed | [ADR-002](../../adr/002-autorizacao-em-duas-camadas.md), `src/lib/auth/access-policy.ts` |
 | ACE-RN-07 | Leitura e escrita escopadas pela empresa da sessão via `TenantScope`; `{ clinicId }` literal não compila | `src/lib/auth/tenant-scope.ts` |
-| ACE-RN-08 | Conta desativada perde o acesso em até 60 s mesmo com cookie válido (deny-list) | `.specs/STATE.md` AD-001 |
+| ACE-RN-08 | Conta desativada, logout, reset ou troca de senha revogam todas as sessões da conta em até 60 s, mesmo com cookie válido, para todos os papéis (inclusive portal) — `session_version` no token × na conta | [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md), `src/lib/auth/staff-revocation.ts` |
 | ACE-RN-09 | Mesmo e-mail pode existir em empresas diferentes; login testa a senha contra cada conta e nega se houver ambiguidade | `.specs/features/fix-login-email-ambiguo/` |
 | ACE-RN-10 | Acesso do Super Admin a dado de outra empresa é sempre auditado | `src/lib/audit.ts` |
 | ACE-RN-11 | Editar conta existente (senha, ativar/desativar, reenviar convite) segue a matriz do ACE-RN-05: papel fora da matriz → `403`, conta de outra empresa → `404`. Atendente/Profissional só listam e alteram contas `patient`/`partner`. Ninguém desativa a própria conta nem o último `company_admin` ativo (`400`). Senha, ativação e reenvio gravam auditoria antes da alteração; se a auditoria falha, nada muda | `src/domain/auth/account-management.ts`, `src/app/api/accounts/` (#184) |
@@ -78,4 +78,5 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 - [ADR-002](../../adr/002-autorizacao-em-duas-camadas.md) — proxy + handler
 - [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — seis papéis, vínculo dinâmico do Profissional
 - [ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md) — login nativo; Google só como integração
+- [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md) — revogação de sessão por `session_version`
 - Integração: [Resend](../../engineering/integrations/resend.md) (convite e reset)

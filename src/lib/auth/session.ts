@@ -32,6 +32,11 @@ export interface Session {
   clinicId: string | null;
   /** Profissional vinculado à conta (só quando role === "profissional"), para o escopo dinâmico do R4. */
   professionalId: string | null;
+  /**
+   * Versão das sessões da conta no momento do login (#194, ADR-005). Ausente
+   * em token antigo = 0. Diferente de `user_accounts.session_version` = revogada.
+   */
+  sessionVersion?: number;
 }
 
 export function createSessionToken(
@@ -41,6 +46,7 @@ export function createSessionToken(
   role: UserRole = 'company_admin',
   clinicId: string | null = null,
   professionalId: string | null = null,
+  sessionVersion = 0,
 ): string {
   const payload = Buffer.from(
     JSON.stringify({
@@ -49,6 +55,7 @@ export function createSessionToken(
       role,
       clinicId,
       professionalId,
+      sv: sessionVersion,
     }),
   ).toString('base64url');
   return `${payload}.${sign(secret, payload)}`;
@@ -82,6 +89,7 @@ function parsePayload(payload: string): Session | null {
       role?: unknown;
       clinicId?: unknown;
       professionalId?: unknown;
+      sv?: unknown;
     };
     if (typeof parsed.exp !== 'number' || typeof parsed.sub !== 'string') {
       return null;
@@ -95,6 +103,14 @@ function parsePayload(payload: string): Session | null {
     ) {
       return null;
     }
+    // Token anterior ao #194 não tem `sv`: vale como versão 0.
+    const sessionVersion = parsed.sv ?? 0;
+    if (
+      !Number.isSafeInteger(sessionVersion) ||
+      (sessionVersion as number) < 0
+    ) {
+      return null;
+    }
     return {
       expiresAtMs: parsed.exp,
       subject: parsed.sub,
@@ -102,6 +118,7 @@ function parsePayload(payload: string): Session | null {
       clinicId: parsed.clinicId ?? null,
       professionalId:
         (parsed.professionalId as string | null | undefined) ?? null,
+      sessionVersion: sessionVersion as number,
     };
   } catch {
     return null;

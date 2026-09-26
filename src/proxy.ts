@@ -13,7 +13,7 @@ import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { getRequestSession } from '@/lib/auth/request-session';
 import type { Session } from '@/lib/auth/session';
-import { isStaffSessionRevoked } from '@/lib/auth/staff-revocation';
+import { isSessionRevoked } from '@/lib/auth/staff-revocation';
 import { isStaffRole } from '@/lib/auth/staff-roles';
 
 /**
@@ -156,8 +156,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (!session) {
     return unauthorized(request);
   }
-  // Conta staff desativada perde o acesso em ≤ 60s, mesmo com cookie válido.
-  if (await isStaffSessionRevoked(session)) {
+  // Conta desativada ou com sessões revogadas (logout, troca de senha) perde
+  // o acesso em ≤ 60s, mesmo com cookie válido (#194, ADR-005).
+  if (await isSessionRevoked(session)) {
     return unauthorized(request);
   }
   if (!isAllowedForRole(pathname, session.role)) {

@@ -58,7 +58,7 @@ const roleMessage = (roles: readonly UserRole[]): string => {
  * não vive aqui — acontece no próprio handler, que conhece o `:id` da rota.
  *
  * LIMITAÇÃO CONHECIDA — revogação de conta desativada roda só na camada 1
- * (`src/proxy.ts`, via `isStaffSessionRevoked`). Esta guarda é síncrona e a
+ * (`src/proxy.ts`, via `isSessionRevoked`). Esta guarda é síncrona e a
  * checagem exige I/O; torná-la assíncrona muda a assinatura consumida por ~75
  * handlers. Consequência: nos cenários em que a camada 1 é contornada (matcher
  * alterado, chamada fora do pipeline HTTP), uma sessão de conta desativada

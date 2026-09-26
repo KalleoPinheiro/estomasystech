@@ -12,12 +12,21 @@ export interface UserAccountProps {
   clinicId: string | null;
   /** Profissional vinculado — autoria automática de evoluções. */
   professionalId?: string | null;
+  /** Cadastro de paciente dono da conta de portal (#196) — só no papel `patient`. */
+  patientId?: string | null;
+  /** Cadastro de parceiro dono da conta de portal (#196) — só no papel `partner`. */
+  partnerId?: string | null;
 }
 
 export interface UserAccountState extends UserAccountProps {
   id: string;
   active: boolean;
   createdAt: Date;
+  /**
+   * Versão das sessões da conta (#194, ADR-005). Token com `sv` diferente é
+   * revogado. Só o repositório incrementa (`revokeSessions`, atômico).
+   */
+  sessionVersion?: number;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -40,9 +49,12 @@ export class UserAccount {
       role: props.role,
       clinicId: props.clinicId,
       professionalId: props.professionalId ?? null,
+      patientId: props.patientId ?? null,
+      partnerId: props.partnerId ?? null,
       id: newId(),
       active: true,
       createdAt: new Date(),
+      sessionVersion: 0,
     });
   }
 
@@ -81,6 +93,18 @@ export class UserAccount {
     return this.state.professionalId ?? null;
   }
 
+  get patientId(): string | null {
+    return this.state.patientId ?? null;
+  }
+
+  get partnerId(): string | null {
+    return this.state.partnerId ?? null;
+  }
+
+  get sessionVersion(): number {
+    return this.state.sessionVersion ?? 0;
+  }
+
   get role(): UserRole {
     return this.state.role;
   }
@@ -117,6 +141,17 @@ export interface UserAccountRepository {
    * token de uso único, não do tenant.
    */
   updatePasswordHash(id: string, passwordHash: string): Promise<void>;
+  /**
+   * Invalida todas as sessões emitidas para a conta (#194, ADR-005):
+   * incrementa `session_version` numa única instrução — `save` nunca grava
+   * esse campo, então dois incrementos concorrentes nunca se anulam.
+   * `updatePasswordHash` já incrementa por conta própria.
+   */
+  revokeSessions(id: string): Promise<void>;
+  /** Conta de portal já vinculada a este cadastro (#196), se houver. */
+  findByPortalLink(
+    link: { patientId: string } | { partnerId: string },
+  ): Promise<UserAccount | null>;
   /** Existe ao menos uma conta na instalação? Guarda do bootstrap do primeiro Super Admin. */
   hasAnyAccount(): Promise<boolean>;
 }

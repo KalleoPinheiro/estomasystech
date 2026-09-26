@@ -42,9 +42,12 @@ test.describe("login por e-mail e senha", () => {
     await expect(page).toHaveURL("/");
   });
 
-  test("sai da sessão e volta para o login", async ({ page }) => {
-    await page.goto("/login");
-    await signIn(page, E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
+  test("sai da sessão e volta para o login", async ({ page, context }) => {
+    // Sessão própria, nunca a do Super Admin: logout revoga TODAS as sessões
+    // da conta (#194), inclusive o storageState que os demais specs usam em
+    // paralelo. A revogação em si é provada em tests/api/session-revocation.
+    await context.addCookies([sessionCookie("logout-e2e@vitta.test", "company_admin")]);
+    await page.goto("/");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
     await page.getByRole("button", { name: "Sair" }).click();

@@ -12,6 +12,7 @@ import { recordAuditNow } from '@/lib/audit';
 import { accountManager } from '@/lib/auth/account-manager';
 import { hashPassword } from '@/lib/auth/password';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { forgetSessionStatus } from '@/lib/auth/staff-revocation';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toUserAccountDto } from '@/lib/dto';
 
@@ -61,6 +62,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       });
     }
     await userAccounts.save(updated);
+    // Senha trocada ou conta desativada derruba as sessões existentes (#194).
+    if (body.password || body.active === false) {
+      await userAccounts.revokeSessions(updated.id);
+      forgetSessionStatus(updated.email, updated.clinicId);
+    }
     return toUserAccountDto(updated);
   });
 }

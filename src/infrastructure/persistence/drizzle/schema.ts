@@ -125,13 +125,27 @@ export const userAccounts = pgTable(
     // Um dos 6 valores de UserRole (RBAC-01).
     role: text('role').notNull(),
     professionalId: text('professional_id').references(() => professionals.id),
+    // Titular da conta de portal (#196): o portal resolve paciente/parceiro
+    // por aqui, nunca pelo e-mail (mutável) do cadastro.
+    patientId: text('patient_id').references(() => patients.id),
+    partnerId: text('partner_id').references(() => partners.id),
     active: boolean('active').notNull().default(true),
+    // Versão das sessões (#194, ADR-005): o token carrega `sv`; diferente
+    // daqui = revogado. Só `revokeSessions`/`updatePasswordHash` incrementam.
+    sessionVersion: integer('session_version').notNull().default(0),
     createdAt: timestamp('created_at', {
       withTimezone: true,
       mode: 'date',
     }).notNull(),
   },
   (table) => [
+    // Um acesso de portal por cadastro, dentro da empresa (#196).
+    uniqueIndex('uq_user_accounts_clinic_patient')
+      .on(table.clinicId, table.patientId)
+      .where(sql`${table.patientId} IS NOT NULL`),
+    uniqueIndex('uq_user_accounts_clinic_partner')
+      .on(table.clinicId, table.partnerId)
+      .where(sql`${table.partnerId} IS NOT NULL`),
     // E-mail de login único por empresa, não globalmente (MT-06, ADR-003).
     uniqueIndex('uq_user_accounts_clinic_email').on(
       table.clinicId,
