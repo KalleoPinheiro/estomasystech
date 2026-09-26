@@ -10,6 +10,12 @@ import { describe, expect, it } from 'vitest';
  */
 const APP_ROOT = path.join(process.cwd(), 'src', 'app');
 const ALLOWED = new Set(['(staff)/pacientes/page.tsx']);
+/**
+ * Qualquer consumidor (useApiQuery com ou sem tipo, apiFetch, fetch,
+ * paginação) de `/api/patients` sem `?search=` — a listagem crua.
+ */
+const LISTING =
+  /(?:useApiQuery|usePagedQuery|useCursorPagedQuery|apiFetch|fetch)\s*(?:<[^>]*>)?\(\s*['"`]\/api\/patients(?:['"`]|\?(?!search=))/;
 
 function collect(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -26,9 +32,7 @@ describe('Varredura: seletores de paciente (#197)', () => {
       .map((file) => path.relative(APP_ROOT, file))
       .filter((file) => !ALLOWED.has(file))
       .filter((file) =>
-        /useApiQuery<[^>]*>\(\s*['"`]\/api\/patients['"`?]/.test(
-          readFileSync(path.join(APP_ROOT, file), 'utf8'),
-        ),
+        LISTING.test(readFileSync(path.join(APP_ROOT, file), 'utf8')),
       );
 
     expect(offenders).toEqual([]);

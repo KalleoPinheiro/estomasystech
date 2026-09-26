@@ -122,8 +122,11 @@ describe('Feature: Conflito de agenda por empresa (#187)', () => {
     await expect(
       insert('overlap-raw-b', CLINIC_B_ID, patientB),
     ).resolves.toBeDefined();
+    // Mesma empresa, mesmo horário: a exclusão do banco rejeita (23P01).
     await expect(
       insert('overlap-raw-a2', CLINIC_A_ID, patientA2),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({
+      cause: { code: '23P01', constraint: 'appointments_no_overlap' },
+    });
   });
 });

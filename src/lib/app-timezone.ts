@@ -27,3 +27,19 @@ export function assertProcessTimeZone(): void {
   }
   console.warn(`[config] ${message}`);
 }
+
+/**
+ * Para o `instrumentation.ts`: erro lançado no `register()` o Next só loga
+ * ("Failed to prepare server") e o processo segue vivo sem servir. Aqui a
+ * configuração inválida é logada e encerra com código 1, para o orquestrador
+ * ver a falha. Módulo só carregado no runtime Node.
+ */
+export async function enforceProcessTimeZone(): Promise<void> {
+  try {
+    assertProcessTimeZone();
+  } catch (error) {
+    const { logError } = await import('@/lib/log-error');
+    logError('[config] Inicialização abortada', error);
+    process.exit(1);
+  }
+}

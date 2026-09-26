@@ -66,7 +66,7 @@ Proof: `tests/api/appointment-overlap-per-clinic.test.ts` › "C1 mesmo horário
 **C2** - Mesmo horário, sem profissional, na mesma empresa: segundo → 409
 Proof: `tests/api/appointment-overlap-per-clinic.test.ts` › "C2 mesmo horário sem profissional na mesma empresa: 409"
 
-**C3** - A constraint inclui `clinic_id` (INSERT direto no banco, contornando a aplicação, em outra empresa não viola)
+**C3** - A constraint inclui `clinic_id`: INSERT direto no banco em outra empresa não viola; na mesma empresa falha com `23P01` em `appointments_no_overlap`
 Proof: `tests/api/appointment-overlap-per-clinic.test.ts` › "C3 constraint do banco aceita o mesmo horário em outra empresa"
 
 ### S2 - Compose/Dockerfile (#191) · 4 files · ~4k
@@ -125,13 +125,16 @@ Proof: `tests/api/care-plan-authorship.test.ts` › "C18 execução de interven�
 **C19** - `POST /api/care-plan-outcomes/:id/evaluations` idem → avaliação com A
 Proof: `tests/api/care-plan-authorship.test.ts` › "C19 avaliação de resultado usa o profissional da sessão"
 
-**C20** - A evolução SOAP usa a mesma função extraída (`resolveSessionProfessionalId`)
+**C20** - A evolução SOAP usa a mesma função extraída (`resolveSessionProfessionalId`): profissional A enviando `professionalId` de B grava A
+Proof: `tests/api/care-plan-authorship.test.ts` › "C20 evolução SOAP usa o profissional da sessão (mesma função da SAE)"
 Proof: `tests/lib/session-professional.test.ts` › "C20 conta sem profissional vinculado resolve null"
 
 ### S6 - Concorrência de fatura e estoque (#192) · 10 files · ~12k
 
 **C21** - Dois `PATCH pay_partial 10000` concorrentes numa fatura de 10000: exatamente um 200, o outro ≥ 400; 1 pagamento gravado; recebido = 10000
 Proof: `tests/api/invoice-concurrent-payment.test.ts` › "C21 pagamentos concorrentes não duplicam o recebimento"
+Proof: `tests/infrastructure/drizzle-invoice-lock.test.ts` › "C21 findByIdForUpdate trava a linha da fatura (SELECT … FOR UPDATE)" (o PGlite serializa transações; esta prova falha sem o lock)
+Proof: `tests/application/invoice-actions-lock.test.ts` › "lê a fatura com findByIdForUpdate" (as 4 ações)
 
 **C22** - Edição de insumo após `adjustStock` concorrente preserva o estoque baixado
 Proof: `tests/infrastructure/drizzle-supply-stock.test.ts` › "C22 save de insumo não sobrescreve stock_qty"
@@ -152,7 +155,7 @@ Proof: `tests/lib/client-ip.test.ts` › "C26 produção sem x-forwarded-for avi
 
 ### S8 - Fuso explícito (#205) · 8 files · ~8k
 
-**C27** - Boot em produção com fuso do processo ≠ `APP_TIMEZONE` lança erro; fora de produção só loga
+**C27** - Com o processo em UTC (suíte, `vitest.config.mts`) e `APP_TIMEZONE=America/Sao_Paulo`: em produção a checagem lança e o `register()` encerra com código 1; fora de produção só loga
 Proof: `tests/lib/app-timezone.test.ts` › "C27 produção com fuso divergente falha na inicialização"
 Proof: `tests/lib/app-timezone.test.ts` › "C27 fora de produção fuso divergente só loga"
 
@@ -192,7 +195,7 @@ Proof: `tests/pages/staff-nav-role.test.tsx` › "C36 atendente vê só itens pe
 **C37** - Menu do Profissional mostra Triagem e não mostra itens administrativos
 Proof: `tests/pages/staff-nav-role.test.tsx` › "C37 profissional vê triagem e não vê administrativos"
 
-**C38** - Dashboard do Atendente não renderiza alerta de erro quando `/api/summary` responde 403; mostra consultas do dia e retornos
+**C38** - Dashboard do Atendente não chama `/api/summary`, `/api/supplies` nem `/api/photos/triage` e não renderiza alerta de erro; mostra consultas do dia e retornos
 Proof: `tests/pages/dashboard-role.test.tsx` › "C38 atendente vê consultas do dia e retornos sem alerta"
 
 **C39** - Ficha do paciente para o Atendente não mostra abas clínicas nem chama as rotas clínicas
@@ -202,7 +205,7 @@ Proof: `tests/pages/patient-record-role.test.tsx` › "C39 atendente não vê ab
 Proof: `tests/proxy.test.ts` › "C40 staff sem acesso à família recebe mensagem de papel"
 
 **C41** - Página proibida para o papel mostra estado "sem permissão" amigável, sem alerta de erro de API
-Proof: `tests/pages/role-page-guard.test.tsx` › "C41 página proibida mostra sem permissão"
+Proof: `tests/pages/staff-nav-role.test.tsx` › "C41 página proibida mostra sem permissão"
 
 **C42** - E-mail da sidebar sem `truncate` (quebra de linha)
 Proof: `tests/pages/staff-layout-client.test.tsx` › "C42 e-mail da sidebar quebra linha em vez de truncar"
@@ -234,3 +237,15 @@ Proof: `tests/infrastructure/ci-workflow.test.ts` › "C45 CI roda E2E de produ�
 
 - Claims naming a status code, route or response shape: C1, C2, C15, C17-C19, C21, C24, C25, C40 - cada um com
   proof que atravessa a rota/proxy
+
+## Handoff
+
+- **Onde parou**: build contínuo num agente só (handoff off). C1–C45 fechadas em `3e5ed13..f35948a`; round 1 do
+  Verifier: FAIL 42/45 — correções em commit próprio e round 2 escopado.
+- **Decidido durante o build**: C4 passou a "Postgres só no loopback" (a issue aceita; sem `ports` quebrava a Via B
+  do onboarding); proofs de tela movidas de `tests/app/` para `tests/pages/` (convenção do repo); o E2E de produção
+  revelou `node:crypto` no bundle do cliente (CSP) — corrigido em `shared/id.ts` dentro do #203; `process.exit` no
+  boot com fuso divergente (o Next só logava e seguia vivo sem servir).
+- **Abandonado**: `apk add tzdata` na imagem (o Node resolve o fuso pelo ICU embutido; testado no container);
+  checar só `console.error(` no guarda de log (amplo demais para escapar por alias).
+

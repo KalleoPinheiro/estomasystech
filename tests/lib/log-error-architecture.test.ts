@@ -9,6 +9,9 @@ import { describe, expect, it } from 'vitest';
  */
 const SRC_ROOT = path.join(process.cwd(), 'src');
 const HELPER = path.join(SRC_ROOT, 'lib', 'log-error.ts');
+/** `console.error(`, `console['error']` e desestruturação `{ error } = console`. */
+const FORBIDDEN =
+  /console\s*\.\s*error\b|console\s*\[\s*['"`]error['"`]\s*\]|\{[^}]*\berror\b[^}]*\}\s*=\s*console\b/;
 
 function collectSourceFiles(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -26,7 +29,7 @@ describe('Arquitetura: log de erro centralizado (#202)', () => {
   it('C16 console.error só no helper de log', () => {
     const offenders = collectSourceFiles(SRC_ROOT)
       .filter((file) => file !== HELPER)
-      .filter((file) => /console\.error\s*\(/.test(readFileSync(file, 'utf8')))
+      .filter((file) => FORBIDDEN.test(readFileSync(file, 'utf8')))
       .map((file) => path.relative(SRC_ROOT, file));
 
     expect(offenders).toEqual([]);

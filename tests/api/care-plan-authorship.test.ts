@@ -86,27 +86,14 @@ describe('Feature: autoria do plano de cuidados pela sessão (#200)', () => {
       ),
     );
     patientId = ((await patient.json()) as Envelope<{ id: string }>).data.id;
-  });
 
-  it('C17 abertura do plano usa o profissional da sessão', async () => {
-    const route = await import('@/app/api/patients/[id]/care-plans/route');
-    const response = await route.POST(
-      jsonRequest(
-        `/api/patients/${patientId}/care-plans`,
-        'POST',
-        { professionalId: drB },
-        asDrA,
-      ),
+    // Plano, intervenção e resultado próprios (C18/C19 independem do C17).
+    const plans = await import('@/app/api/patients/[id]/care-plans/route');
+    const plan = await plans.POST(
+      jsonRequest(`/api/patients/${patientId}/care-plans`, 'POST', {}, asDrA),
       context(patientId),
     );
-    const body = (await response.json()) as Envelope<{
-      id: string;
-      professionalId: string | null;
-    }>;
-
-    expect(response.status).toBe(200);
-    expect(body.data.professionalId).toBe(drA);
-    carePlanId = body.data.id;
+    carePlanId = ((await plan.json()) as Envelope<{ id: string }>).data.id;
 
     const interventions = await import(
       '@/app/api/care-plans/[id]/interventions/route'
@@ -140,8 +127,46 @@ describe('Feature: autoria do plano de cuidados pela sessão (#200)', () => {
     outcomeId = ((await outcome.json()) as Envelope<{ id: string }>).data.id;
   });
 
+  it('C17 abertura do plano usa o profissional da sessão', async () => {
+    const route = await import('@/app/api/patients/[id]/care-plans/route');
+    const response = await route.POST(
+      jsonRequest(
+        `/api/patients/${patientId}/care-plans`,
+        'POST',
+        { professionalId: drB },
+        asDrA,
+      ),
+      context(patientId),
+    );
+    const body = (await response.json()) as Envelope<{
+      id: string;
+      professionalId: string | null;
+    }>;
+
+    expect(response.status).toBe(200);
+    expect(body.data.professionalId).toBe(drA);
+  });
+
+  it('C20 evolução SOAP usa o profissional da sessão (mesma função da SAE)', async () => {
+    const route = await import('@/app/api/patients/[id]/evolutions/route');
+    const response = await route.POST(
+      jsonRequest(
+        `/api/patients/${patientId}/evolutions`,
+        'POST',
+        { professionalId: drB, subjective: 'Sem dor' },
+        asDrA,
+      ),
+      context(patientId),
+    );
+    const body = (await response.json()) as Envelope<{
+      professionalId: string | null;
+    }>;
+
+    expect(response.status).toBe(200);
+    expect(body.data.professionalId).toBe(drA);
+  });
+
   it('C18 execução de intervenção usa o profissional da sessão', async () => {
-    expect(interventionId).toBeTruthy();
     const route = await import(
       '@/app/api/care-plan-interventions/[id]/records/route'
     );
@@ -163,7 +188,6 @@ describe('Feature: autoria do plano de cuidados pela sessão (#200)', () => {
   });
 
   it('C19 avaliação de resultado usa o profissional da sessão', async () => {
-    expect(outcomeId).toBeTruthy();
     const route = await import(
       '@/app/api/care-plan-outcomes/[id]/evaluations/route'
     );
