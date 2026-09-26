@@ -85,6 +85,11 @@ export function sanitizeError(error: unknown, depth = 0): SafeErrorLog {
     message: error.message,
     stack: error.stack,
   };
+  // Erros de sistema do Node (ECONNREFUSED, ETIMEDOUT…) — sem dado pessoal.
+  const code = stringField(error as unknown as Record<string, unknown>, 'code');
+  if (code !== undefined) {
+    safe.code = code;
+  }
   if (error.cause !== undefined && depth < MAX_CAUSE_DEPTH) {
     safe.cause = sanitizeError(error.cause, depth + 1);
   }

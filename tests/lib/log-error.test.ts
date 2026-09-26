@@ -71,6 +71,14 @@ describe('logError (#202)', () => {
     expect(JSON.stringify(safe)).not.toContain('fulano@x.com');
   });
 
+  it('erro de sistema do Node mantém o código', () => {
+    const error = Object.assign(new Error('connect ECONNREFUSED'), {
+      code: 'ECONNREFUSED',
+    });
+
+    expect(sanitizeError(error)).toMatchObject({ code: 'ECONNREFUSED' });
+  });
+
   it('valor não-Error lançado não é serializado', () => {
     expect(sanitizeError({ email: 'fulano@x.com' })).toEqual({
       name: 'object',
