@@ -21,12 +21,14 @@ import { use, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
+import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
 import type {
   AnamnesisDto,
   CarePlanDto,
   ConditionDto,
   EvolutionNoteDto,
   PatientDto,
+  SidebarIdentityDto,
 } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -71,7 +73,30 @@ function tabLabel(
   return count > 0 ? `${tab.label} (${count})` : tab.label;
 }
 
+/**
+ * O link de exportação LGPD só aparece para quem a API deixa exportar (#185):
+ * mesma matriz de família de rota do servidor. Sem identidade carregada (ou
+ * com erro) o link fica escondido; `account: null` é o modo aberto, em que o
+ * servidor libera tudo.
+ */
+function useCanExport(exportPath: string): boolean {
+  const { data: identity } =
+    useApiQuery<SidebarIdentityDto>('/api/auth/identity');
+  if (!identity) {
+    return false;
+  }
+  if (identity.account === null) {
+    return true;
+  }
+  return isFamilyAllowedForRole(
+    classifyRoute(exportPath),
+    identity.account.role,
+  );
+}
+
 function PatientHeader({ patient }: { patient: PatientDto }) {
+  const exportPath = `/api/patients/${patient.id}/export`;
+  const canExport = useCanExport(exportPath);
   return (
     <PageHeader
       leading={
@@ -103,15 +128,17 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
           >
             Termo de consentimento
           </a>
-          <a
-            href={`/api/patients/${patient.id}/export`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-ink-3 hover:underline"
-            title="Exportação completa dos dados do titular (LGPD art. 18)"
-          >
-            Exportar dados (LGPD)
-          </a>
+          {canExport ? (
+            <a
+              href={exportPath}
+              target="_blank"
+              rel="noreferrer"
+              className="text-ink-3 hover:underline"
+              title="Exportação completa dos dados do titular (LGPD art. 18)"
+            >
+              Exportar dados (LGPD)
+            </a>
+          ) : null}
         </span>
       }
     />

@@ -3,7 +3,7 @@ title: "Domínio: Pacientes e prontuário"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 domain: pacientes-prontuario
 ---
 
@@ -32,6 +32,7 @@ requisitos, não detalhes.
 | PRO-RN-08 | Profissional só vê pacientes com quem tem consulta ou evolução | `src/domain/clinical/professional-patient-link.ts` |
 | PRO-RN-09 | Atestado, relatório e plano de cuidados bloqueiam sem CNPJ e responsável técnico da empresa; atestado exige consulta `completed` | `src/app/documentos/` |
 | PRO-RN-10 | Alergias aparecem em destaque no topo do prontuário | UI do prontuário |
+| PRO-RN-11 | Exportação LGPD do titular (JSON com o prontuário completo) só para Admins e Profissional com vínculo; o link "Exportar dados (LGPD)" some para quem não pode exportar | `src/app/api/patients/[id]/export/`, `.specs/STATE.md` AD-025 |
 
 ## Funcionalidades
 

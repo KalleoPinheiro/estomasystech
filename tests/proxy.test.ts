@@ -238,6 +238,17 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       },
     );
 
+    it('Dada sessão de atendente no export LGPD, Então responde 403 na borda (#185)', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        request('/api/patients/abc/export', sessionCookie('atendente')),
+      );
+
+      expect(response.status).toBe(403);
+      expect((await body(response)).data).toBeNull();
+    });
+
     it('Dada sessão de paciente numa página da equipe, Então redireciona para /portal', async () => {
       const proxy = await loadProxy();
 

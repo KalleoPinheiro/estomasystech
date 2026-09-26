@@ -202,6 +202,12 @@
 - **Date**: 2026-09-26
 - **Status**: active — perguntas abertas no PR da #184
 
+### AD-025
+- **Decision**: `GET /api/patients/:id/export` (exportação LGPD, art. 18) é família `clinical` e aplica o vínculo R4: Atendente recebe 403, Profissional sem vínculo recebe 404. Toda sub-rota de `/api/patients/:id/*` passa a ser clínica por padrão; a exceção é uma allowlist explícita (`NON_CLINICAL_PATIENT_SUBROUTES` em `src/lib/auth/route-family.ts`, hoje vazia).
+- **Reason**: o export devolve anamnese, SOAP, condições e fotos; qualquer subrota nova nascia `operational` e aberta ao Atendente porque a regra antiga listava só as clínicas e casava com `pathname.includes`.
+- **Trade-off**: a recepção não gera a portabilidade sozinha. **Pergunta aberta** (issue #185): o Atendente deve poder gerar uma exportação **sem** dado clínico? Até o usuário decidir, padrão seguro: negar.
+- **Scope / Date / Status**: lib/auth/route-family, api/patients/[id]/export, (staff)/pacientes/[id] · 2026-09-26 · active — issue #185
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).

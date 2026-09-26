@@ -3,7 +3,7 @@ title: "Domínio: Acesso, empresas e auditoria"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 domain: acesso
 ---
 
@@ -33,6 +33,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-09 | Mesmo e-mail pode existir em empresas diferentes; login testa a senha contra cada conta e nega se houver ambiguidade | `.specs/features/fix-login-email-ambiguo/` |
 | ACE-RN-10 | Acesso do Super Admin a dado de outra empresa é sempre auditado | `src/lib/audit.ts` |
 | ACE-RN-11 | Editar conta existente (senha, ativar/desativar, reenviar convite) segue a matriz do ACE-RN-05: papel fora da matriz → `403`, conta de outra empresa → `404`. Atendente/Profissional só listam e alteram contas `patient`/`partner`. Ninguém desativa a própria conta nem o último `company_admin` ativo (`400`). Senha, ativação e reenvio gravam auditoria antes da alteração; se a auditoria falha, nada muda | `src/domain/auth/account-management.ts`, `src/app/api/accounts/` (#184) |
+| ACE-RN-12 | Toda sub-rota de `/api/patients/:id/*` é família `clinical` por padrão (Atendente 403); exceção só por allowlist explícita, hoje vazia. Inclui a exportação LGPD, que também exige vínculo R4 do Profissional (404 sem vínculo) | `src/lib/auth/route-family.ts`, `.specs/STATE.md` AD-025 |
 
 ### Papéis
 
@@ -53,7 +54,7 @@ cada tela faz com o dado é dos outros domínios.
 | Contas e papéis (criar, desativar, reenviar convite) | entregue | Configurações → Contas |
 | Dados cadastrais da empresa (CNPJ, responsável técnico) | entregue | Configurações → Dados da clínica |
 | Trilha de auditoria | entregue | `/auditoria` |
-| Consentimento LGPD e exportação de dados do paciente | entregue | portal, `patients/[id]/export` |
+| Consentimento LGPD e exportação de dados do paciente | entregue (exportação só para Admins e Profissional com vínculo; Atendente sem acesso, pergunta aberta em AD-025) | portal, `patients/[id]/export` |
 
 Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,fundacao-multi-tenancy,fase-c-lgpd-seguranca-dado}/`.
 

@@ -26,12 +26,16 @@ const CLINICAL_PREFIXES = [
   '/api/care-plans',
 ];
 
-const CLINICAL_PATIENT_SUBROUTES = [
-  '/evolutions',
-  '/conditions',
-  '/anamnesis',
-  '/care-plans',
-];
+const PATIENT_RECORD_PREFIX = '/api/patients/';
+
+/**
+ * Fail-closed (#185): toda sub-rota de `/api/patients/:id/*` é clínica, exceto
+ * as listadas aqui (primeiro segmento depois do `:id`). Hoje nenhuma é
+ * operacional — `anamnesis`, `care-plans`, `conditions`, `evolutions` e
+ * `export` são todas prontuário. Sub-rota nova nasce negada ao Atendente até
+ * alguém decidir incluí-la nesta lista.
+ */
+const NON_CLINICAL_PATIENT_SUBROUTES: readonly string[] = [];
 
 /**
  * `/api/accounts` fica de fora desta lista de propósito: a hierarquia de
@@ -80,10 +84,14 @@ function startsWithAny(pathname: string, prefixes: readonly string[]): boolean {
 }
 
 function isClinicalPatientSubroute(pathname: string): boolean {
-  if (!pathname.startsWith('/api/patients/')) {
+  if (!pathname.startsWith(PATIENT_RECORD_PREFIX)) {
     return false;
   }
-  return CLINICAL_PATIENT_SUBROUTES.some((suffix) => pathname.includes(suffix));
+  const [, subroute] = pathname.slice(PATIENT_RECORD_PREFIX.length).split('/');
+  if (subroute === undefined) {
+    return false;
+  }
+  return !NON_CLINICAL_PATIENT_SUBROUTES.includes(subroute);
 }
 
 export function classifyRoute(pathname: string): RouteFamily {

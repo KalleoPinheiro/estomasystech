@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import type { PackageDto } from '@/app/(staff)/pacientes/[id]/packages-section';
 import PatientRecordPage from '@/app/(staff)/pacientes/[id]/page';
+import type { UserRole } from '@/domain/auth/user-role';
 import type {
   AnamnesisDto,
   AssessmentDto,
@@ -453,6 +454,83 @@ describe('Feature: PatientRecordPage', () => {
       await screen.findByText('Maria Souza');
 
       expect(screen.getByText('Pacotes')).toHaveClass('ml-auto');
+    });
+  });
+
+  describe('Cenário: link de exportação LGPD por papel (#185)', () => {
+    const identityRouter = (identity: MockedResponse) =>
+      buildRouter({
+        extra: ({ url }) =>
+          url === '/api/auth/identity' ? identity : undefined,
+      });
+
+    const identityFor = (role: UserRole | null) =>
+      jsonResponse({
+        clinicLabel: 'Clínica Teste',
+        account: role
+          ? { email: `${role}@x.com`, role, roleLabel: role }
+          : null,
+      });
+
+    it.each(['company_admin', 'super_admin', 'profissional'] as const)(
+      'Dado papel %s, Quando renderizar, Então mostra o link de exportação',
+      async (role) => {
+        mockFetch(identityRouter(identityFor(role)));
+
+        await renderDetail();
+
+        const link = await screen.findByRole('link', {
+          name: 'Exportar dados (LGPD)',
+        });
+        expect(link).toHaveAttribute('href', '/api/patients/pac-1/export');
+      },
+    );
+
+    it('Dado modo aberto (sem conta na sessão), Quando renderizar, Então mostra o link de exportação', async () => {
+      mockFetch(identityRouter(identityFor(null)));
+
+      await renderDetail();
+
+      expect(
+        await screen.findByRole('link', { name: 'Exportar dados (LGPD)' }),
+      ).toBeInTheDocument();
+    });
+
+    it('Dado papel atendente, Quando renderizar, Então NÃO mostra o link de exportação', async () => {
+      const fetchMock = mockFetch(identityRouter(identityFor('atendente')));
+
+      await renderDetail();
+
+      expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([url]) => url === '/api/auth/identity'),
+        ).toBe(true),
+      );
+      expect(
+        screen.queryByRole('link', { name: 'Exportar dados (LGPD)' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Termo de consentimento' }),
+      ).toBeInTheDocument();
+    });
+
+    it('Dado falha ao carregar a identidade, Quando renderizar, Então NÃO mostra o link (fail-closed)', async () => {
+      const fetchMock = mockFetch(
+        identityRouter(errorResponse('Falha na identidade')),
+      );
+
+      await renderDetail();
+
+      expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([url]) => url === '/api/auth/identity'),
+        ).toBe(true),
+      );
+      expect(
+        screen.queryByRole('link', { name: 'Exportar dados (LGPD)' }),
+      ).not.toBeInTheDocument();
     });
   });
 
