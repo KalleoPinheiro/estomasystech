@@ -125,6 +125,8 @@ export const SLOT_SEEDS = [
   "layout-tabelas-producao",
   "layout-tabelas-receita",
   "layout-tabelas-repasses-2",
+  "papeis-atendente-agenda",
+  "papeis-vinculo-profissional",
   "portal-paciente-cancel",
   "portal-paciente-confirm",
   "portal-paciente-ownership",

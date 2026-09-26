@@ -394,7 +394,7 @@ describe('Feature: Lista de espera na agenda', () => {
           fail ? failure('O período desejado já passou') : ok(entry),
       },
       {
-        path: '/api/procedures',
+        path: '/api/options/procedures',
         respond: () => ok([{ id: 'proc-1', name: 'Curativo', active: true }]),
       },
       { path: '/api/waitlist', respond: () => ok([]) },

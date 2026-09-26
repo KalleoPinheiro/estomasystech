@@ -64,6 +64,39 @@ export const E2E_ADMIN_EMAIL = "e2e-super-admin@vitta.test";
 export const E2E_ADMIN_PASSWORD = secretFromEnv("E2E_ADMIN_PASSWORD", 18);
 
 export const ADMIN_STORAGE_STATE_PATH = "e2e/.auth/admin-storage.json";
+
+/**
+ * Log do servidor principal (`playwright.config.ts` grava via `tee`). Sem canal de
+ * e-mail configurado, o `NullEmailGateway` imprime o convite ali — é por onde o
+ * `global-setup` alcança o link das contas por papel, como faria quem lê o e-mail.
+ */
+export const MAIN_SERVER_LOG_PATH = "e2e/.auth/main-server.log";
+
+/** Senha que cada conta por papel define no próprio convite (gerada por execução). */
+export const E2E_ROLE_PASSWORD = secretFromEnv("E2E_ROLE_PASSWORD", 18);
+
+/** Papéis de equipe com conta própria na suíte (#204); o Super Admin segue acima. */
+export const E2E_STAFF_ROLES = ["company_admin", "atendente", "profissional"] as const;
+export type E2EStaffRole = (typeof E2E_STAFF_ROLES)[number];
+
+/** Conta de cada papel: criada por `POST /api/accounts` + convite + login no `global-setup`. */
+export const ROLE_ACCOUNTS: Record<E2EStaffRole, { email: string; storageState: string }> = {
+  company_admin: {
+    email: "e2e-company-admin@vitta.test",
+    storageState: "e2e/.auth/company_admin-storage.json",
+  },
+  atendente: {
+    email: "e2e-atendente@vitta.test",
+    storageState: "e2e/.auth/atendente-storage.json",
+  },
+  profissional: {
+    email: "e2e-profissional@vitta.test",
+    storageState: "e2e/.auth/profissional-storage.json",
+  },
+};
+
+/** Espelha `LEGACY_CLINIC_ID` — a empresa onde o `global-setup` semeia tudo. */
+export const E2E_CLINIC_ID = "legacy-clinic";
 export const SEED_DATA_PATH = "e2e/support/seed-data.json";
 
 /** Mesmo nome de cookie de `src/lib/auth/session.ts` (SESSION_COOKIE). */

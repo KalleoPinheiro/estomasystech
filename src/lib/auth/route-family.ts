@@ -24,6 +24,10 @@ const CLINICAL_PREFIXES = [
   '/api/care-plan-interventions',
   '/api/care-plan-outcomes',
   '/api/care-plans',
+  // Busca NANDA-I/NOC/NIC da SAE (#189): catálogo global só de leitura, usado
+  // pelo prontuário. A importação (`/api/admin/taxonomy/import`) continua
+  // administrativa pelo prefixo `/api/admin`.
+  '/api/taxonomy',
 ];
 
 const PATIENT_RECORD_PREFIX = '/api/patients/';
@@ -42,6 +46,12 @@ const NON_CLINICAL_PATIENT_SUBROUTES: readonly string[] = [];
  * provisionamento (RBAC-07..10) permite Atendente e Profissional cadastrarem
  * contas Patient/Partner ali — a checagem fina de "quem pode criar quem" é
  * feita pelo use-case `CreateAccount`, não pela família de rota.
+ */
+/*
+ * Os seletores da equipe (agenda, lista de espera, autoria no prontuário) leem
+ * profissionais e procedimentos por `/api/options/*`, que cai na família
+ * `operational` por não estar em lista nenhuma (#188/#189) — o cadastro
+ * completo, com comissão e kit, fica aqui.
  */
 const ADMINISTRATIVE_PREFIXES = [
   '/api/professionals',
@@ -62,7 +72,6 @@ const ADMINISTRATIVE_PREFIXES = [
   // qualquer papel de equipe pode precisar imprimir um documento — não só
   // admin (CodeRabbit, review do PR #81).
   '/api/settings/clinic-info',
-  '/api/taxonomy',
   // Conectar a agenda do Google é ato administrativo da empresa, não operação
   // de atendimento — mesma família de /api/settings/clinic-info.
   '/api/integrations',

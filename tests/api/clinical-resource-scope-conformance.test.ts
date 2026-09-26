@@ -57,10 +57,29 @@ function handlersWithoutR4Check(source: string): string[] {
     .map((match) => match[1]);
 }
 
-const resourceAddressedClinicalRoutes = collect(API_ROOT)
+/**
+ * Catálogo clínico global, sem dado de paciente (#189): a busca NANDA/NOC/NIC
+ * da SAE é família `clinical` só para negar o Atendente — não há recurso de
+ * paciente para vincular, então o R4 não se aplica. A exceção é vigiada abaixo:
+ * uma rota daqui que passar a tocar em paciente reprova.
+ */
+const PATIENTLESS_CLINICAL_PREFIXES = ['/api/taxonomy/'];
+
+const isPatientlessCatalog = (file: ClinicalRouteFile): boolean =>
+  PATIENTLESS_CLINICAL_PREFIXES.some((prefix) =>
+    file.pathname.startsWith(prefix),
+  );
+
+const clinicalOutsidePatients = collect(API_ROOT)
   .filter((file) => classifyRoute(file.pathname) === 'clinical')
   .filter((file) => !file.pathname.startsWith('/api/patients/'))
   .sort((a, b) => a.relative.localeCompare(b.relative));
+
+const resourceAddressedClinicalRoutes = clinicalOutsidePatients.filter(
+  (file) => !isPatientlessCatalog(file),
+);
+const patientlessCatalogRoutes =
+  clinicalOutsidePatients.filter(isPatientlessCatalog);
 
 describe('Feature: Conformidade R4 nas rotas clínicas por id de recurso (#186)', () => {
   it('Dado a varredura, Quando filtrar a família clinical fora de /api/patients, Então cobre as rotas da issue', () => {
@@ -97,6 +116,16 @@ describe('Feature: Conformidade R4 nas rotas clínicas por id de recurso (#186)'
         handlersWithoutR4Check(file.source),
         `${file.relative}: handler(s) sem assertClinicalResourceAccessible/linkedPatientFilter — Profissional sem vínculo leria/escreveria dado clínico (R4)`,
       ).toEqual([]);
+    },
+  );
+
+  it.each(patientlessCatalogRoutes.map((f) => [f.relative, f] as const))(
+    'Dado %s (catálogo sem paciente), Quando inspecionar, Então não toca em dado de paciente',
+    (_relative, file) => {
+      expect(
+        file.source,
+        `${file.relative}: rota fora do R4 por ser catálogo global não pode ler paciente`,
+      ).not.toMatch(/patient/i);
     },
   );
 });

@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from './client';
+import { ApiError, apiFetch } from './client';
 
 export interface ApiQueryResult<T> {
   data: T | null;
   error: string | null;
+  /** Status HTTP do erro, quando houve resposta (ex.: 404 vira mensagem própria na tela). */
+  errorStatus: number | null;
   isLoading: boolean;
   refresh: () => void;
 }
@@ -13,6 +15,7 @@ export interface ApiQueryResult<T> {
 export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [version, setVersion] = useState(0);
   // Chave da última requisição já resolvida (sucesso ou erro). Enquanto a
   // chave atual (`url:version`) não coincidir, a requisição está pendente —
@@ -32,6 +35,7 @@ export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
         if (!cancelled) {
           setData(result);
           setError(null);
+          setErrorStatus(null);
           setSettledKey(requestKey);
         }
       })
@@ -40,6 +44,7 @@ export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
           setError(
             err instanceof Error ? err.message : 'Erro ao carregar dados',
           );
+          setErrorStatus(err instanceof ApiError ? err.status : null);
           setSettledKey(requestKey);
         }
       });
@@ -51,6 +56,6 @@ export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
   const refresh = useCallback(() => setVersion((current) => current + 1), []);
 
   return url == null
-    ? { data: null, error: null, isLoading: false, refresh }
-    : { data, error, isLoading, refresh };
+    ? { data: null, error: null, errorStatus: null, isLoading: false, refresh }
+    : { data, error, errorStatus, isLoading, refresh };
 }

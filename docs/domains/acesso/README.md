@@ -41,8 +41,8 @@ cada tela faz com o dado é dos outros domínios.
 | --- | --- |
 | `super_admin` | todas as empresas, inclusive dado clínico (auditado) |
 | `company_admin` | tudo dentro da própria empresa: operacional, clínico, configurações, contas |
-| `atendente` | só operacional: agenda e cadastro de paciente/parceiro |
-| `profissional` | clínico, só dos pacientes com quem tem consulta ou evolução |
+| `atendente` | só operacional: agenda e cadastro de paciente/parceiro; lê profissionais e procedimentos só pela lista reduzida `/api/options/*`, sem comissão nem kit (#188) |
+| `profissional` | clínico, só dos pacientes com quem tem consulta ou evolução; busca NANDA-I/NOC/NIC da SAE (`/api/taxonomy/**`, família `clinical`) e nomes de profissionais por `/api/options/professionals`; a aba Pacotes do prontuário fica oculta até a decisão de produto (#189) |
 | `partner` | portal com os pacientes que indicou (sem financeiro e sem anamnese) |
 | `patient` | portal com os próprios dados |
 
@@ -67,7 +67,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 | borda e política | `src/proxy.ts`, `src/lib/auth/` |
 | API | `src/app/api/{auth,accounts,admin,audit,settings,clinic-info}/` |
 | UI | `src/app/{login,definir-senha,esqueci-senha}/`, `src/app/(staff)/{auditoria,configuracoes}/` |
-| testes | `tests/lib/`, `tests/proxy.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd}.spec.ts` |
+| testes | `tests/lib/`, `tests/proxy.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
 
 ## Decisões
 

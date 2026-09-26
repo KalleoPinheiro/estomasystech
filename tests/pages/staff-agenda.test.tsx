@@ -112,6 +112,7 @@ interface AgendaFetchOptions {
   closures?: ScheduleClosureDto[];
   appointmentsPostStatus?: number;
   appointmentsPostError?: string;
+  professionalsError?: string;
 }
 
 const DEFAULT_TEST_SCHEDULE_CONFIG = {
@@ -130,6 +131,7 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
     closures = [],
     appointmentsPostStatus,
     appointmentsPostError,
+    professionalsError,
   } = options;
   vi.stubGlobal(
     'fetch',
@@ -166,10 +168,12 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
       if (url.startsWith('/api/patients')) {
         return jsonResponse(true, patients);
       }
-      if (url.startsWith('/api/professionals')) {
-        return jsonResponse(true, professionals);
+      if (url.startsWith('/api/options/professionals')) {
+        return professionalsError
+          ? jsonResponse(false, null, professionalsError)
+          : jsonResponse(true, professionals);
       }
-      if (url.startsWith('/api/procedures')) {
+      if (url.startsWith('/api/options/procedures')) {
         return jsonResponse(true, []);
       }
       if (url.startsWith('/api/waitlist')) {
@@ -318,9 +322,10 @@ describe('Feature: Página de agenda', () => {
             return jsonResponse(true, []);
           if (url.startsWith('/api/patients'))
             return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/professionals'))
+          if (url.startsWith('/api/options/professionals'))
             return jsonResponse(true, []);
-          if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/options/procedures'))
+            return jsonResponse(true, []);
           if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
@@ -383,9 +388,10 @@ describe('Feature: Página de agenda', () => {
             return jsonResponse(true, []);
           if (url.startsWith('/api/patients'))
             return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/professionals'))
+          if (url.startsWith('/api/options/professionals'))
             return jsonResponse(true, [professionalFixture]);
-          if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/options/procedures'))
+            return jsonResponse(true, []);
           if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
@@ -511,9 +517,10 @@ describe('Feature: Página de agenda', () => {
             return jsonResponse(true, []);
           if (url.startsWith('/api/patients'))
             return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/professionals'))
+          if (url.startsWith('/api/options/professionals'))
             return jsonResponse(true, []);
-          if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/options/procedures'))
+            return jsonResponse(true, []);
           if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
@@ -572,9 +579,10 @@ describe('Feature: Página de agenda', () => {
             return jsonResponse(true, []);
           if (url.startsWith('/api/patients'))
             return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/professionals'))
+          if (url.startsWith('/api/options/professionals'))
             return jsonResponse(true, []);
-          if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/options/procedures'))
+            return jsonResponse(true, []);
           if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
@@ -662,9 +670,10 @@ describe('Feature: Página de agenda', () => {
             return jsonResponse(true, [appointmentFixture]);
           if (url.startsWith('/api/patients'))
             return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/professionals'))
+          if (url.startsWith('/api/options/professionals'))
             return jsonResponse(true, []);
-          if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/options/procedures'))
+            return jsonResponse(true, []);
           if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
@@ -713,9 +722,10 @@ describe('Feature: Página de agenda', () => {
             return jsonResponse(true, [appointmentFixture]);
           if (url.startsWith('/api/patients'))
             return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/professionals'))
+          if (url.startsWith('/api/options/professionals'))
             return jsonResponse(true, []);
-          if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/options/procedures'))
+            return jsonResponse(true, []);
           if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
@@ -756,9 +766,10 @@ describe('Feature: Página de agenda', () => {
             return jsonResponse(true, [appointmentFixture]);
           if (url.startsWith('/api/patients'))
             return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/professionals'))
+          if (url.startsWith('/api/options/professionals'))
             return jsonResponse(true, []);
-          if (url.startsWith('/api/procedures')) return jsonResponse(true, []);
+          if (url.startsWith('/api/options/procedures'))
+            return jsonResponse(true, []);
           if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         },
@@ -986,7 +997,7 @@ describe('Feature: Formulário de nova consulta', () => {
         'fetch',
         vi.fn(async (input: RequestInfo | URL) => {
           const url = typeof input === 'string' ? input : input.toString();
-          if (url.startsWith('/api/procedures')) {
+          if (url.startsWith('/api/options/procedures')) {
             return jsonResponse(true, [
               {
                 id: 'proc-1',
@@ -1025,7 +1036,7 @@ describe('Feature: Formulário de nova consulta', () => {
         'fetch',
         vi.fn(async (input: RequestInfo | URL) => {
           const url = typeof input === 'string' ? input : input.toString();
-          if (url.startsWith('/api/procedures')) {
+          if (url.startsWith('/api/options/procedures')) {
             return jsonResponse(true, [
               {
                 id: 'proc-1',
@@ -1061,6 +1072,52 @@ describe('Feature: Formulário de nova consulta', () => {
 
       expect(screen.getByDisplayValue('Curativo simples')).toBeInTheDocument();
       expect(screen.getByDisplayValue('80')).toBeInTheDocument();
+    });
+  });
+
+  describe('Cenário: lista auxiliar indisponível (#188)', () => {
+    it('Dado o catálogo indisponível, Então o formulário mostra o erro em vez de esconder o campo', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = typeof input === 'string' ? input : input.toString();
+          if (url.startsWith('/api/options/procedures')) {
+            return jsonResponse(false, null, 'Acesso negado');
+          }
+          return jsonResponse(true, []);
+        }),
+      );
+      render(
+        <AppointmentForm
+          patients={[patientFixture]}
+          defaultDate={new Date(2026, 6, 19)}
+          onSubmit={vi.fn()}
+        />,
+      );
+
+      expect(
+        await screen.findByText(
+          'Não foi possível carregar o catálogo de procedimentos: Acesso negado',
+        ),
+      ).toBeInTheDocument();
+      // O preenchimento manual continua possível.
+      expect(screen.getByLabelText(/Procedimento \*/)).toBeInTheDocument();
+    });
+
+    it('Dada a lista de profissionais indisponível, Então o formulário mostra o erro', async () => {
+      mockAgendaFetch({ professionalsError: 'Acesso negado' });
+      renderWithToast(<AgendaPage />);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('+ Nova consulta'));
+
+      expect(
+        await screen.findByText(
+          'Não foi possível carregar os profissionais: Acesso negado',
+        ),
+      ).toBeInTheDocument();
     });
   });
 
