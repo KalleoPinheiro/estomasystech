@@ -813,20 +813,48 @@ describe('Feature: Página de agenda', () => {
       });
     });
 
-    it('Dado clique em um dia vazio da grade, Quando acionado, Então abre o modal de nova consulta para aquele dia', async () => {
-      mockAgendaFetch();
-      const { container } = renderWithToast(<AgendaPage />);
+    // A grade mostra o mês de "hoje" e só dias não passados são clicáveis:
+    // congela o relógio (só `Date`, para o `waitFor` seguir com timers reais)
+    // e escolhe o dia pela data. O caso do último dia do mês é a prova de
+    // regressão da #190 — ali sobra um único dia útil clicável no mês.
+    it.each([
+      {
+        now: new Date(2026, 6, 15, 10),
+        day: '2026-07-20',
+        label: 'meio do mês',
+      },
+      {
+        now: new Date(2026, 8, 30, 10),
+        day: '2026-09-30',
+        label: 'último dia do mês',
+      },
+    ])(
+      'Dado clique em um dia vazio da grade ($label), Quando acionado, Então abre o modal de nova consulta para aquele dia',
+      async ({ now, day }) => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(now);
+        try {
+          mockAgendaFetch();
+          const { container } = renderWithToast(<AgendaPage />);
 
-      await waitFor(() =>
-        expect(screen.queryByText('Carregando…')).not.toBeInTheDocument(),
-      );
-      const dayCells = container.querySelectorAll('.cursor-pointer');
-      fireEvent.click(dayCells[10]);
+          await waitFor(() =>
+            expect(screen.queryByText('Carregando…')).not.toBeInTheDocument(),
+          );
+          const dayCell = container.querySelector(
+            `[data-calendar-day="${day}"]`,
+          );
+          expect(dayCell).not.toBeNull();
+          expect(dayCell).not.toHaveAttribute('aria-disabled');
+          fireEvent.click(dayCell as HTMLElement);
 
-      await waitFor(() => {
-        expect(screen.getByText('Nova consulta')).toBeInTheDocument();
-      });
-    });
+          await waitFor(() => {
+            expect(screen.getByText('Nova consulta')).toBeInTheDocument();
+          });
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
 
     it('Dado modal de detalhes aberto, Quando fechado sem executar ação, Então o modal desaparece', async () => {
       mockAgendaFetch({ appointments: [appointmentFixture] });
