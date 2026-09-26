@@ -31,6 +31,8 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | AGE-RN-07 | Cancelamento a pedido do paciente dentro do aviso (padrão 24 h) é tardio; taxa opcional vira fatura pendente, nunca comissão | `cancellationPolicy`, `cancel-appointment-by-staff.ts` |
 | AGE-RN-08 | Lista de espera: janela ≤ 180 dias, sem duplicar; o sistema nunca agenda sozinho | `src/domain/scheduling/waitlist.ts` |
 | AGE-RN-09 | Falha do Google Calendar nunca impede a operação | `src/application/appointments/sync-appointment-calendar.ts` |
+| AGE-RN-10 | Profissional vê em `GET /api/follow-ups` e `GET /api/waitlist` só os pacientes vinculados (R4, #186); os demais papéis veem a fila inteira da empresa | `src/lib/auth/clinical-resource-scope.ts` (`linkedPatientFilter`) |
+| AGE-RN-11 | Agenda e lista de espera leem profissionais (`{ id, fullName, active }`) e procedimentos (`{ id, name, priceCents, durationMinutes, active }`) por `GET /api/options/*`, liberado a toda a equipe e sem comissão nem kit; o cadastro (`/api/professionals`, `/api/procedures`) continua só do Admin. Lista auxiliar que falha vira alerta no formulário, nunca campo escondido (#188) | `src/app/api/options/`, `src/app/(staff)/agenda/appointment-form.tsx` |
 
 ## Funcionalidades
 
@@ -53,9 +55,9 @@ Specs de execução: `.specs/features/{agenda-p1-p3-pontuais,catalogo-p0-p3-pont
 | --- | --- |
 | domínio | `src/domain/{scheduling,followup,catalog}/` |
 | casos de uso | `src/application/{appointments,scheduling,followups}/` |
-| API | `src/app/api/{appointments,follow-ups,procedures,waitlist,settings}/` |
+| API | `src/app/api/{appointments,follow-ups,procedures,waitlist,settings,options}/` |
 | UI | `src/app/(staff)/{agenda,procedimentos}/` |
-| testes | `tests/domain/`, `tests/application/`, `e2e/{agenda,followup,lista-espera,feriados-ausencias,layout-mobile-first}.spec.ts` |
+| testes | `tests/domain/`, `tests/application/`, `tests/api/options-routes.test.ts`, `e2e/{agenda,followup,lista-espera,feriados-ausencias,layout-mobile-first,papeis-atendente}.spec.ts` |
 
 ## Decisões
 

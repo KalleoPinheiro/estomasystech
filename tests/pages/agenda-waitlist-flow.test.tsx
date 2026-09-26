@@ -52,7 +52,9 @@ const entry: WaitlistEntryDto = {
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
-function mockAgenda(options: { waitlistPatchFails?: boolean } = {}): Call[] {
+function mockAgenda(
+  options: { waitlistPatchFails?: boolean; catalogFails?: boolean } = {},
+): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
     'fetch',
@@ -84,8 +86,10 @@ function mockAgenda(options: { waitlistPatchFails?: boolean } = {}): Call[] {
       if (url.startsWith('/api/patients')) {
         return ok([{ id: 'pat-1', fullName: 'Maria Souza', active: true }]);
       }
-      if (url.startsWith('/api/professionals')) return ok([]);
-      if (url.startsWith('/api/procedures')) return ok([]);
+      if (url.startsWith('/api/options/professionals')) return ok([]);
+      if (url.startsWith('/api/options/procedures')) {
+        return options.catalogFails ? failure('Acesso negado') : ok([]);
+      }
       if (url.startsWith('/api/settings/schedule/closures')) return ok([]);
       if (url.startsWith('/api/settings/schedule')) {
         return ok({
@@ -111,6 +115,19 @@ afterEach(() => {
 });
 
 describe('Feature: Agenda com lista de espera e cancelamento tardio', () => {
+  it('Dado o catálogo indisponível, Então a lista de espera mostra o erro', async () => {
+    mockAgenda({ catalogFails: true });
+    renderWithToast(<AgendaPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }));
+
+    expect(
+      await screen.findByText(
+        'Não foi possível carregar o catálogo de procedimentos: Acesso negado',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('Dado paciente na fila, Quando agendar a partir dela, Então o formulário vem preenchido e a entrada sai da fila', async () => {
     const calls = mockAgenda();
     renderWithToast(<AgendaPage />);

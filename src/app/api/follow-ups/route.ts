@@ -5,6 +5,7 @@ import { ListFollowUps } from '@/application/followups/list-follow-ups';
 import { FOLLOW_UP_STATUSES } from '@/domain/followup/follow-up';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
+import { linkedPatientFilter } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toFollowUpDto } from '@/lib/dto';
@@ -28,13 +29,20 @@ export async function GET(request: NextRequest) {
     );
     const patientId =
       request.nextUrl.searchParams.get('patientId') ?? undefined;
-    const { followUps, patients, reminderLog } = await getRepositories(
-      sessionScope(guard.session),
+    const { followUps, patients, reminderLog, professionalPatientLinks } =
+      await getRepositories(sessionScope(guard.session));
+    // Escopo R4 (#186): o motivo do retorno é clínico — o Profissional só vê
+    // os retornos dos pacientes vinculados.
+    const isLinked = await linkedPatientFilter(
+      guard.session,
+      professionalPatientLinks,
     );
-    const result = await new ListFollowUps(followUps, patients).execute({
-      status,
-      patientId,
-    });
+    const result = (
+      await new ListFollowUps(followUps, patients).execute({
+        status,
+        patientId,
+      })
+    ).filter(({ followUp }) => isLinked(followUp.patientId));
     // Selo "3 lembretes sem resposta": recall por e-mail na última tentativa.
     const exhausted = await reminderLog.exhaustedRecalls(
       result.map(({ followUp }) => followUp.id),

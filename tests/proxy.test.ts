@@ -285,6 +285,17 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       );
     });
 
+    it('Dada sessão de atendente no export LGPD, Então responde 403 na borda (#185)', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        request('/api/patients/abc/export', sessionCookie('atendente')),
+      );
+
+      expect(response.status).toBe(403);
+      expect((await body(response)).data).toBeNull();
+    });
+
     it('Dada sessão de paciente numa página da equipe, Então redireciona para /portal', async () => {
       const proxy = await loadProxy();
 
@@ -306,6 +317,140 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
         ).toBe(true);
       },
     );
+  });
+
+  describe('Cenário: listas auxiliares e taxonomia por papel (#188, #189)', () => {
+    const requestWith = (
+      method: string,
+      path: string,
+      cookie: string,
+    ): NextRequest =>
+      new NextRequest(`http://localhost${path}`, {
+        method,
+        headers: { 'x-forwarded-for': '10.0.0.9', cookie },
+      });
+
+    it.each(['/api/options/procedures'])(
+      'Dado atendente, Quando GET %s, Então passa pelo proxy',
+      async (path) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestWith('GET', path, sessionCookie('atendente')),
+        );
+
+        expect(isNext(response)).toBe(true);
+      },
+    );
+
+    it('Dado atendente, Quando GET /api/options/professionals, Então passa pelo proxy', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'GET',
+          '/api/options/professionals',
+          sessionCookie('atendente'),
+        ),
+      );
+
+      expect(isNext(response)).toBe(true);
+    });
+
+    it('Dado atendente, Quando escreve no cadastro de profissionais e procedimentos, Então responde 403', async () => {
+      const cookie = sessionCookie('atendente');
+      const attempts: Array<[string, string]> = [
+        ['POST', '/api/professionals'],
+        ['PATCH', '/api/professionals/prof-1'],
+        ['POST', '/api/procedures'],
+        ['PATCH', '/api/procedures/proc-1'],
+        // A lista completa (comissão, kit) continua administrativa.
+        ['GET', '/api/professionals'],
+        ['GET', '/api/procedures'],
+      ];
+
+      for (const [method, path] of attempts) {
+        const proxy = await loadProxy();
+        const response = await proxy(requestWith(method, path, cookie));
+        expect(response.status, `${method} ${path}`).toBe(403);
+        // Equipe sem acesso à família recebe a mensagem de papel (#199).
+        expect((await body(response)).error).toBe(
+          'Seu papel não tem acesso a este recurso',
+        );
+      }
+    });
+
+    it('Dado profissional, Quando GET /api/options/professionals, Então passa pelo proxy', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'GET',
+          '/api/options/professionals',
+          sessionCookie('profissional'),
+        ),
+      );
+
+      expect(isNext(response)).toBe(true);
+    });
+
+    it('Dado profissional, Quando busca na taxonomia, Então passa pelo proxy', async () => {
+      const paths = [
+        '/api/taxonomy/diagnoses?q=pele',
+        '/api/taxonomy/outcomes?q=tissular',
+        '/api/taxonomy/interventions?q=lesao',
+        '/api/taxonomy/diagnoses/00046/linked-terms',
+      ];
+
+      for (const path of paths) {
+        const proxy = await loadProxy();
+        const response = await proxy(
+          requestWith('GET', path, sessionCookie('profissional')),
+        );
+        expect(isNext(response), path).toBe(true);
+      }
+    });
+
+    it('Dado profissional, Quando importa a taxonomia, Então responde 403', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'POST',
+          '/api/admin/taxonomy/import',
+          sessionCookie('profissional'),
+        ),
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    it.each(['/api/professionals', '/api/packages?patientId=p-1'])(
+      'Dado profissional, Quando GET %s, Então continua 403',
+      async (path) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestWith('GET', path, sessionCookie('profissional')),
+        );
+
+        expect(response.status).toBe(403);
+      },
+    );
+
+    it('Dado atendente, Quando busca na taxonomia, Então responde 403 (família clínica)', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'GET',
+          '/api/taxonomy/diagnoses?q=pele',
+          sessionCookie('atendente'),
+        ),
+      );
+
+      expect(response.status).toBe(403);
+    });
   });
 
   describe('Cenário: CSP estrita com nonce (issue #76)', () => {

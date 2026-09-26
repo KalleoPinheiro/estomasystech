@@ -3,6 +3,7 @@ import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
+import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 import {
@@ -21,6 +22,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 /**
  * Exportação completa dos dados do titular (LGPD art. 18 — portabilidade).
  * JSON único com tudo que o sistema mantém sobre o paciente; geração auditada.
+ * Família `clinical` (route-family.ts): Atendente é barrado na guarda (403).
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
@@ -29,6 +31,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const response = await handleRequest(async () => {
     const { id } = await context.params;
     const repos = await getRepositories(sessionScope(guard.session));
+    // R4: Profissional sem vínculo recebe 404, como nas demais subrotas clínicas (#185).
+    await assertPatientAccessibleToProfessional(
+      guard.session,
+      id,
+      repos.professionalPatientLinks,
+    );
 
     const patient = await repos.patients.findById(id);
     if (!patient) {

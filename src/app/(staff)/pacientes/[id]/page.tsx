@@ -21,12 +21,14 @@ import { use, useEffect, useRef, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
+import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
 import type {
   AnamnesisDto,
   CarePlanDto,
   ConditionDto,
   EvolutionNoteDto,
   PatientDto,
+  SidebarIdentityDto,
 } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
 import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
@@ -63,6 +65,11 @@ type Tab = (typeof TABS)[number];
 
 const TAB_KEYS = TABS.map((t) => t.key);
 
+/** 404 sem o id cru: a mensagem do servidor traz o UUID, que não ajuda ninguém (#189). */
+function patientErrorMessage(error: string, status: number | null): string {
+  return status === 404 ? 'Paciente não encontrado.' : error;
+}
+
 /** Só a chave válida — qualquer outro valor de `?aba=` cai no padrão "anamnese" (PRONT-04). */
 function resolveInitialTab(param: string | null): TabKey {
   return TAB_KEYS.includes(param as TabKey) ? (param as TabKey) : 'anamnese';
@@ -85,7 +92,30 @@ function tabLabel(
   return count > 0 ? `${tab.label} (${count})` : tab.label;
 }
 
+/**
+ * O link de exportação LGPD só aparece para quem a API deixa exportar (#185):
+ * mesma matriz de família de rota do servidor. Sem identidade carregada (ou
+ * com erro) o link fica escondido; `account: null` é o modo aberto, em que o
+ * servidor libera tudo.
+ */
+function useCanExport(exportPath: string): boolean {
+  const { data: identity } =
+    useApiQuery<SidebarIdentityDto>('/api/auth/identity');
+  if (!identity) {
+    return false;
+  }
+  if (identity.account === null) {
+    return true;
+  }
+  return isFamilyAllowedForRole(
+    classifyRoute(exportPath),
+    identity.account.role,
+  );
+}
+
 function PatientHeader({ patient }: { patient: PatientDto }) {
+  const exportPath = `/api/patients/${patient.id}/export`;
+  const canExport = useCanExport(exportPath);
   return (
     <PageHeader
       leading={
@@ -117,15 +147,17 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
           >
             Termo de consentimento
           </a>
-          <a
-            href={`/api/patients/${patient.id}/export`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-ink-3 hover:underline"
-            title="Exportação completa dos dados do titular (LGPD art. 18)"
-          >
-            Exportar dados (LGPD)
-          </a>
+          {canExport ? (
+            <a
+              href={exportPath}
+              target="_blank"
+              rel="noreferrer"
+              className="text-ink-3 hover:underline"
+              title="Exportação completa dos dados do titular (LGPD art. 18)"
+            >
+              Exportar dados (LGPD)
+            </a>
+          ) : null}
         </span>
       }
     />
@@ -263,9 +295,11 @@ export default function PatientRecordPage({
     cancelPendingTab,
   } = useDirtyTabGuard(activeTab ?? tab);
 
-  const { data: patient, error } = useApiQuery<PatientDto>(
-    `/api/patients/${id}`,
-  );
+  const {
+    data: patient,
+    error,
+    errorStatus,
+  } = useApiQuery<PatientDto>(`/api/patients/${id}`);
   const record = useClinicalRecord(id, can);
   const {
     data: anamnesis,
@@ -292,7 +326,9 @@ export default function PatientRecordPage({
     refresh: refreshCarePlans,
   } = record.carePlans;
 
-  if (error) return <ErrorAlert message={error} />;
+  if (error) {
+    return <ErrorAlert message={patientErrorMessage(error, errorStatus)} />;
+  }
   if (!patient) return <LoadingIndicator />;
 
   return (

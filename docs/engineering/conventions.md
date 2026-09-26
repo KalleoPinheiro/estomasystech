@@ -3,7 +3,7 @@ title: "Convenções de código e testes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 ---
 
 # Convenções de código e testes
@@ -50,6 +50,14 @@ last_reviewed: 2026-09-23
 - Estilo BDD nos nomes (`Feature / Cenário / Dado-Quando-Então`); fixtures via `tests/support/builders.ts`.
 - Cobertura ≥ 90% em linhas, funções, branches e statements — limiar em `vitest.config.mts`, CI roda a suíte completa.
 - Nunca enfraqueça uma asserção nem use `skip` para ficar verde; flake é causa a investigar, não motivo para pular.
+- **Toda feature de tela precisa de cobertura para os papéis que a usam** (#204). Rota nova: teste
+  pelo proxy (`tests/proxy.test.ts`) para cada papel que deve passar e cada um que deve levar `403`
+  — chamar o handler direto não exercita a borda. Tela nova ou fluxo novo: E2E com a sessão real do
+  papel (`test.use({ storageState: roleStorageState("atendente") })`, de `e2e/support/roles.ts`);
+  o `global-setup` cria `company_admin`, `atendente` e `profissional` (vinculado a um paciente
+  semeado) pelo convite + login reais. Item novo no menu entra no smoke por papel
+  (`e2e/papeis-smoke.spec.ts`), que falha em qualquer `4xx/5xx` de `/api/*` ou alerta de erro.
+  Rodar só como Super Admin foi o que deixou passar os `403` da #188/#189.
 
 ## Commits e PRs
 

@@ -24,20 +24,34 @@ const CLINICAL_PREFIXES = [
   '/api/care-plan-interventions',
   '/api/care-plan-outcomes',
   '/api/care-plans',
+  // Busca NANDA-I/NOC/NIC da SAE (#189): catálogo global só de leitura, usado
+  // pelo prontuário. A importação (`/api/admin/taxonomy/import`) continua
+  // administrativa pelo prefixo `/api/admin`.
+  '/api/taxonomy',
 ];
 
-const CLINICAL_PATIENT_SUBROUTES = [
-  '/evolutions',
-  '/conditions',
-  '/anamnesis',
-  '/care-plans',
-];
+const PATIENT_RECORD_PREFIX = '/api/patients/';
+
+/**
+ * Fail-closed (#185): toda sub-rota de `/api/patients/:id/*` é clínica, exceto
+ * as listadas aqui (primeiro segmento depois do `:id`). Hoje nenhuma é
+ * operacional — `anamnesis`, `care-plans`, `conditions`, `evolutions` e
+ * `export` são todas prontuário. Sub-rota nova nasce negada ao Atendente até
+ * alguém decidir incluí-la nesta lista.
+ */
+const NON_CLINICAL_PATIENT_SUBROUTES: readonly string[] = [];
 
 /**
  * `/api/accounts` fica de fora desta lista de propósito: a hierarquia de
  * provisionamento (RBAC-07..10) permite Atendente e Profissional cadastrarem
  * contas Patient/Partner ali — a checagem fina de "quem pode criar quem" é
  * feita pelo use-case `CreateAccount`, não pela família de rota.
+ */
+/*
+ * Os seletores da equipe (agenda, lista de espera, autoria no prontuário) leem
+ * profissionais e procedimentos por `/api/options/*`, que cai na família
+ * `operational` por não estar em lista nenhuma (#188/#189) — o cadastro
+ * completo, com comissão e kit, fica aqui.
  */
 const ADMINISTRATIVE_PREFIXES = [
   '/api/professionals',
@@ -58,7 +72,6 @@ const ADMINISTRATIVE_PREFIXES = [
   // qualquer papel de equipe pode precisar imprimir um documento — não só
   // admin (CodeRabbit, review do PR #81).
   '/api/settings/clinic-info',
-  '/api/taxonomy',
   // Conectar a agenda do Google é ato administrativo da empresa, não operação
   // de atendimento — mesma família de /api/settings/clinic-info.
   '/api/integrations',
@@ -80,10 +93,14 @@ function startsWithAny(pathname: string, prefixes: readonly string[]): boolean {
 }
 
 function isClinicalPatientSubroute(pathname: string): boolean {
-  if (!pathname.startsWith('/api/patients/')) {
+  if (!pathname.startsWith(PATIENT_RECORD_PREFIX)) {
     return false;
   }
-  return CLINICAL_PATIENT_SUBROUTES.some((suffix) => pathname.includes(suffix));
+  const [, subroute] = pathname.slice(PATIENT_RECORD_PREFIX.length).split('/');
+  if (subroute === undefined) {
+    return false;
+  }
+  return !NON_CLINICAL_PATIENT_SUBROUTES.includes(subroute);
 }
 
 export function classifyRoute(pathname: string): RouteFamily {

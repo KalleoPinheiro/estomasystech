@@ -12,6 +12,7 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/patients/abc/conditions', 'clinical'],
       ['/api/patients/abc/anamnesis', 'clinical'],
       ['/api/patients/abc/care-plans', 'clinical'],
+      ['/api/patients/abc/export', 'clinical'],
       ['/api/conditions/abc', 'clinical'],
       ['/api/photos/abc', 'clinical'],
       ['/api/care-plans', 'clinical'],
@@ -29,12 +30,40 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/audit', 'administrative'],
       ['/api/commission-payouts', 'administrative'],
       ['/api/my-payouts', 'professional_self'],
+      ['/api/options/professionals', 'operational'],
+      ['/api/options/procedures', 'operational'],
     ] as const)(
       'Dado o pathname %s, Quando classificar, Então família %s',
       (pathname, family) => {
         expect(classifyRoute(pathname)).toBe(family);
       },
     );
+  });
+
+  describe('Cenário: subrotas de paciente fail-closed (#185)', () => {
+    it.each([
+      ['/api/patients/abc/nova-subrota', 'clinical'],
+      ['/api/patients/abc/export/extra', 'clinical'],
+      ['/api/patients/abc/', 'clinical'],
+      ['/api/patients', 'operational'],
+      ['/api/patients/abc', 'operational'],
+      ['/api/patients/conditions-report', 'operational'],
+    ] as const)(
+      'Dado o pathname %s, Quando classificar, Então família %s',
+      (pathname, family) => {
+        expect(classifyRoute(pathname)).toBe(family);
+      },
+    );
+  });
+
+  it('taxonomia é clínica e a importação continua administrativa', () => {
+    expect(classifyRoute('/api/taxonomy/diagnoses')).toBe('clinical');
+    expect(classifyRoute('/api/taxonomy/outcomes')).toBe('clinical');
+    expect(classifyRoute('/api/taxonomy/interventions')).toBe('clinical');
+    expect(classifyRoute('/api/taxonomy/diagnoses/00046/linked-terms')).toBe(
+      'clinical',
+    );
+    expect(classifyRoute('/api/admin/taxonomy/import')).toBe('administrative');
   });
 
   describe('Cenário: matriz papel × família', () => {

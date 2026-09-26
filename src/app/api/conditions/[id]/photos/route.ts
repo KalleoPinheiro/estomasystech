@@ -4,6 +4,7 @@ import { MAX_PHOTO_BYTES } from '@/domain/clinical/condition-photo';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
+import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toConditionPhotoDto } from '@/lib/dto';
@@ -16,9 +17,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { conditionPhotos, conditions, auditEvents } = await getRepositories(
-      sessionScope(guard.session),
+    const repos = await getRepositories(sessionScope(guard.session));
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'condition',
+      id,
+      repos,
     );
+    const { conditionPhotos, conditions, auditEvents } = repos;
     const [photos, condition] = await Promise.all([
       conditionPhotos.findByConditionId(id),
       conditions.findById(id),
@@ -50,8 +56,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const assessmentId = form?.get('assessmentId');
 
   return handleRequest(async () => {
-    const { conditionPhotos, conditions, photoStorage, auditEvents } =
-      await getRepositories(writeScope(guard.session));
+    const repos = await getRepositories(writeScope(guard.session));
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'condition',
+      id,
+      repos,
+    );
+    const { conditionPhotos, conditions, photoStorage, auditEvents } = repos;
     const photo = await new AddConditionPhoto(
       conditionPhotos,
       conditions,

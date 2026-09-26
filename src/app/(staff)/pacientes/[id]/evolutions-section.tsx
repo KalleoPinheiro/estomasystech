@@ -9,7 +9,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
-import type { EvolutionNoteDto, ProfessionalDto } from '@/lib/dto';
+import type { EvolutionNoteDto, ProfessionalOptionDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 
@@ -76,8 +76,10 @@ export function EvolutionsSection({
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const { data: professionals } =
-    useApiQuery<ProfessionalDto[]>('/api/professionals');
+  // Lista reduzida (#189): o Profissional também lê o nome do autor.
+  const { data: professionals } = useApiQuery<ProfessionalOptionDto[]>(
+    '/api/options/professionals',
+  );
   const professionalName = (id: string | null) =>
     (professionals ?? []).find((p) => p.id === id)?.fullName ?? null;
 
