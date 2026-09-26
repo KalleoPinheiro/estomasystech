@@ -20,8 +20,7 @@ describe('Ações da fatura leem com lock (#192)', () => {
     });
     await repo.save(invoice);
     const locked = vi.spyOn(repo, 'findByIdForUpdate');
-    const plain = vi.spyOn(repo, 'findById');
-    return { repo, id: invoice.id, locked, plain };
+    return { repo, id: invoice.id, locked };
   };
 
   it.each([

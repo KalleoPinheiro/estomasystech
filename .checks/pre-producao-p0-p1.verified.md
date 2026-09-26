@@ -1,153 +1,122 @@
 # Revisão pré-produção P0+P1 — Verification
 
-**Verdict**: FAIL
+**Verdict**: PASS
 **Profile**: light (AGENTS.md não declara perfil `tlc-implement`)
-**Diff range**: 308c2e0..f35948a (HEAD, branch feature/trusting-johnson-yvvp0j)
-**Round**: 1 - full
+**Diff range**: 308c2e0..6e2aa89 (fix do round 2: f35948a..6e2aa89)
+**Round**: 2 - scoped
 **Verifier**: independent sub-agent (author != verifier)
 
-Passos que rodaram: 2 (rodar todos os proofs), 3 (assertion + Swept). Não rodaram por perfil: 1 (sem
-fonte de design vinculante; #197/#198/#199 ajustam telas existentes), junção de `Coverage`, `Test
-policy` (artefato não tem a seção), injeção de falhas. Um único experimento de mutação foi feito fora
-do protocolo para confirmar uma suspeita sobre C21 (ver Findings, item 1).
+Escopo do round 2: o diff do fix (`f35948a..6e2aa89`: `src/instrumentation.ts`, `src/lib/app-timezone.ts`,
+5 arquivos de teste, checklist) mais todo veredito não-PASS do round 1 (C3, C18, C19, C20, C21, caminho do
+C41, alcance dos guards C16/C34, redação de C27/C38). Todos os proofs vitest rodaram de novo em 6e2aa89.
+No perfil light não rodam: passo 1 (sem fonte vinculante), junção de `Coverage`, `Test policy`, injeção de
+falhas. As mutações abaixo foram pedidas pelo coordenador para confirmar o C21.
 
-## Binding sources
+## Binding sources — carried from f35948a
 
-Nenhuma fonte vinculante (perfil light; o checklist declara "Sem design de tela vinculante"). Passo 1 não se aplica.
+Nenhuma fonte vinculante (perfil light; "Sem design de tela vinculante"). Passo 1 não se aplica.
 
-## Findings (ranked)
+## Findings remanescentes (ranked, nenhum bloqueante)
 
-1. **C21 não prova o `SELECT … FOR UPDATE` (mutante sobrevive).** Em worktree descartável, removi
-   `.for('update')` de `src/infrastructure/persistence/drizzle/drizzle-invoice-repository.ts:163` e
-   `tests/api/invoice-concurrent-payment.test.ts` continuou verde (1 passed). A suíte roda em PGlite
-   (uma conexão só; o `transaction` serializa os corpos por mutex), então o teste prova só que a ação roda
-   dentro de `transactions.run`. O guard que importa em Postgres real (READ COMMITTED, duas conexões do pool)
-   é exatamente o lock, e nenhum proof o exercita. Worktree removido; porcelain do tree real inalterado.
-2. **C18 e C19 falham como proof literal.** O comando do checklist
-   (`npx vitest run tests/api/care-plan-authorship.test.ts -t "C18 execução…"`) sai com 1 failed:
-   `interventionId`/`outcomeId` são preenchidos dentro do `it('C17 …')`
-   (`care-plan-authorship.test.ts:108-139`), então C18/C19 (e o teste de admin) só passam se C17 rodar
-   antes no mesmo processo. Passam no lote completo, falham isolados. Testes acoplados por ordem.
-3. **C41: caminho do proof errado no checklist.** `tests/pages/role-page-guard.test.tsx` não existe
-   (`ls` → No such file). O teste está em `tests/pages/staff-nav-role.test.tsx:92` e passa. O comando
-   literal do checklist acharia zero arquivos.
-4. **C3: assertion fraca.** `await expect(insert('overlap-raw-a2', …)).rejects.toThrow()`
-   (`appointment-overlap-per-clinic.test.ts:125-127`) aceita qualquer erro; não fixa SQLSTATE `23P01` nem o
-   nome `appointments_no_overlap`. A metade que importa para #187 (outra empresa aceita,
-   `resolves.toBeDefined()`, :122-124) está correta.
-5. **C20: o proof não afirma o claim.** Claim: "a evolução SOAP usa a mesma função extraída". O teste só
-   verifica `resolveSessionProfessionalId` → `null` para conta sem vínculo (`session-professional.test.ts:47`).
-   O uso fica provado por código (`src/app/api/patients/[id]/evolutions/route.ts:10,76`) e pelo teste de rota
-   já existente `tests/api/professional-patient-link-on-appointment-evolution.test.ts:117`, não pelo proof citado.
-6. **C16 / C34: guards de arquitetura estreitos.** C16 casa só `/console\.error\s*\(/`
-   (`log-error-architecture.test.ts:30`): `const log = console.error`, `console['error']` ou
-   `console.warn(err)` passam batido. C34 casa só `useApiQuery<…>('/api/patients…` com genérico
-   (`patient-selectors-sweep.test.ts:29`): `useApiQuery('/api/patients')` sem `<T>`, `fetch(…)` ou
-   `apiFetch(…)` não são pegos. Hoje o código está limpo (conferi com `rg` mais amplo: única listagem sem
-   `search` é `(staff)/pacientes/page.tsx:155`), mas os guards não seguram regressão.
-7. **Precisão (checklist).** C27 depende do processo estar em UTC (`app-timezone.test.ts:16`
-   `expect(processTimeZone()).toBe('UTC')`), garantido por `vitest.config.mts:20`; ok na suíte, mas o teste
-   quebra se rodado fora do config. C38 afirma "quando `/api/summary` responde 403", mas a implementação
-   simplesmente não chama `/api/summary` e o teste afirma isso (`dashboard-role.test.tsx:93`) — mais forte que
-   o claim, sem o cenário 403. C43–C45 são checagens textuais do workflow; a prova real é a execução no CI.
-8. **Fora do escopo, observado (#202 correlato).** `NullEmailGateway`/`NullMessagingGateway`
-   (`src/application/ports/email-gateway.ts:21`, `messaging-gateway.ts:13`) fazem `console.info` do
-   destinatário e do corpo da mensagem. Uma instância sem canal configurado grava e-mail/telefone e texto do
-   lembrete no log. Preexistente, fora do diff; vale issue própria.
-9. **Aviso de build.** Ao subir o dev server o Next avisa que `process.exit` em `src/instrumentation.ts:20`
-   não é suportado no Edge Runtime ("Ecmascript file had an error"). O código guarda por
-   `NEXT_RUNTIME !== 'nodejs'` e o servidor sobe; confirmar que `npm run build` não trata isso como erro (o
-   job `build-e2e-prod` do CI vai dizer).
+1. **O guard C34 ainda tem pontos cegos.** Testei a regex `LISTING` (`tests/pages/patient-selectors-sweep.test.ts:17`) com node:
+   ela pega `useApiQuery('/api/patients')` e `fetch('/api/patients?limit=500')`, mas **deixa passar**
+   `useApiQuery<Paged<PatientDto>>('/api/patients')` (genérico aninhado: `<[^>]*>` para no primeiro `>`),
+   `` useApiQuery(`/api/patients${q}`) `` (template literal, a mesma forma usada em `(staff)/pacientes/page.tsx:155`)
+   e URL passada por variável. O código de hoje está limpo; é um guard de regressão parcial.
+2. **`tests/application/invoice-actions-lock.test.ts:24-25` cria o spy `plain` (findById) e nunca o verifica.** O teste
+   afirma `locked).toHaveBeenCalledWith(id)` (:61), mas não `plain).not.toHaveBeenCalled()`. Uma ação que
+   lesse pelos dois caminhos passaria. A mutação que troca um pelo outro é pega (ver Faults).
+3. **O C21 prova que o SQL do lock é emitido, não a contenção real.** `drizzle-invoice-lock.test.ts:52` afirma que o `SELECT`
+   de `invoices` termina em `for update`. Junto com a prova das 4 ações e o teste de rota, isso cobre a cadeia.
+   Um teste com duas conexões num Postgres real continua ausente; é aceitável para a suíte em PGlite.
+4. **Carregado do round 1, fora do diff:** `NullEmailGateway`/`NullMessagingGateway`
+   (`src/application/ports/email-gateway.ts:21`, `messaging-gateway.ts:13`) fazem `console.info` do destinatário e do corpo. Vale issue própria.
+
+Resolvidos neste round: C3 (SQLSTATE e constraint afirmados), C18/C19 independentes, C20 com proof de rota,
+C21 com mutante morto, caminho do C41, guard C16 ampliado, redação de C27/C38, aviso de Edge Runtime no build.
 
 ## Checks
 
-Rodada única do vitest: 26 arquivos, `-t` com alternação dos 45 títulos, `--reporter=verbose` → **45 passed | 103 skipped**, exit 0. Cada título abaixo apareceu com ✓.
+Rodada única do vitest em 6e2aa89: 28 arquivos, `-t` com alternação de todos os títulos (incluindo os novos),
+`--reporter=verbose` → **51 passed | 104 skipped**, exit 0. Cada título abaixo apareceu com ✓.
+Rodadas isoladas (`-t` com um título só): C18 ✓, C19 ✓, C20 (rota) ✓, "Admin sem profissional…" ✓, C3 ✓.
 
-| Check | Claim | Proof run | Evidence | Result |
+| Check | Proof run | Evidence | Result | Marca |
 |---|---|---|---|---|
-| C1 | 2 empresas, mesmo horário sem profissional → ambas 200 | lote vitest ✓ | `tests/api/appointment-overlap-per-clinic.test.ts:88-89` - `expect(first.status).toBe(200); expect(second.status).toBe(200)` | PASS |
-| C2 | mesma empresa → 2º 409 | lote ✓; isolado ✓ | `appointment-overlap-per-clinic.test.ts:106-107` - `expect(second.status).toBe(409)` | PASS |
-| C3 | constraint inclui `clinic_id` (INSERT direto) | lote ✓; isolado ✓ | `:122-127` - outra empresa `resolves.toBeDefined()`; mesma empresa `rejects.toThrow()`; migração `drizzle/0038_overlap-per-clinic.sql` bate com o Landing | PASS (fraco, item 4) |
-| C4 | Postgres só em 127.0.0.1 | lote ✓ | `tests/infrastructure/deploy-config.test.ts:30-33` - `toHaveLength(1)` + `toMatch(/- "127\.0\.0\.1:\$\{POSTGRES_PORT:-5432\}:5432"$/)` | PASS |
-| C5 | senha obrigatória e no DATABASE_URL | lote ✓ | `deploy-config.test.ts:40-44` - `toMatch(/POSTGRES_PASSWORD: \$\{POSTGRES_PASSWORD:\?/)`, `DATABASE_URL: postgres:\/\/vitta:\$\{POSTGRES_PASSWORD:\?…\}@db` | PASS |
-| C6 | volume nomeado em /app/uploads | lote ✓ | `deploy-config.test.ts:50-51` - `toMatch(/^ {6}- uploads:\/app\/uploads$/m)` + volume raiz `uploads:` | PASS |
-| C7 | mkdir+chown antes do USER | lote ✓ | `deploy-config.test.ts:61-62` - `expect(user).toBeGreaterThan(mkdir)` com `'RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads'` | PASS |
-| C8 | ENV TZ e APP_TIMEZONE | lote ✓ | `deploy-config.test.ts:68-69` - `toMatch(/^ENV TZ=America\/Sao_Paulo$/m)`, `/^ENV APP_TIMEZONE=America\/Sao_Paulo$/m` | PASS |
-| C9 | 8 variáveis repassadas | lote ✓ | `deploy-config.test.ts:74-89` - lista literal das 8 + `toMatch(^ {6}NAME: \$\{NAME:-)` | PASS |
-| C10 | healthcheck /api/auth/providers | lote ✓ | `deploy-config.test.ts:96-99` - `toContain("fetch('http://127.0.0.1:3000/api/auth/providers')")` | PASS |
-| C11 | falha não fica em cache; próxima resolve | lote ✓ | `tests/infrastructure/db-retry.test.ts:40-47` - `rejects.toThrow()`, `vittaDbPromise` `toBeUndefined()`, depois `db` `toBeDefined()` | PASS |
-| C12 | concorrentes compartilham Promise | lote ✓; isolado ✓ | `db-retry.test.ts:60` - `expect(second).toBe(first)` | PASS |
-| C13 | pool.on('error') loga via logError | lote ✓; isolado ✓ | `db-retry.test.ts:70-74` - `listenerCount('error')` `toBe(1)` + `console.error` com mensagem; ligação real em `src/infrastructure/persistence/drizzle/db.ts:85` `attachPoolErrorLogger(pool)` | PASS |
-| C14 | DrizzleQueryError sem params/query, com code | lote ✓ | `tests/lib/log-error.test.ts:38-45` - `not.toContain('fulano@x.com')`, `not.toContain('insert into')`, `toMatchObject({ code: '23505', … })` | PASS |
-| C15 | unicidade em POST /api/patients não loga e-mail/nome | lote ✓ | `tests/api/patient-error-log-redaction.test.ts:37-43` - statuses `[200, 500]`; `not.toContain('maria.sigilosa@exemplo.com')`, `not.toContain('Sigilosa')`, `toContain('23505')` | PASS |
-| C16 | console.error só no helper | lote ✓ | `tests/lib/log-error-architecture.test.ts:33` - `expect(offenders).toEqual([])` | PASS (regex estreita, item 6) |
-| C17 | care-plans usa profissional da sessão | lote ✓ | `tests/api/care-plan-authorship.test.ts:107-108` - `status 200`, `body.data.professionalId).toBe(drA)` (corpo com `drB`) | PASS |
-| C18 | records usa profissional da sessão | lote ✓; **proof literal isolado ✗ (1 failed)** | `care-plan-authorship.test.ts:161-162` - `toBe(drA)` | FAIL (acoplado a C17, item 2) |
-| C19 | evaluations usa profissional da sessão | lote ✓; **proof literal isolado ✗ (1 failed)** | `care-plan-authorship.test.ts:183-184` - `toBe(drA)` | FAIL (acoplado a C17, item 2) |
-| C20 | SOAP usa `resolveSessionProfessionalId` | lote ✓ | proof: `tests/lib/session-professional.test.ts:47` - `expect(id).toBeNull()` (não afirma o claim); código: `src/app/api/patients/[id]/evolutions/route.ts:76` | PASS (fraco, item 5) |
-| C21 | 2 pay_partial concorrentes: um 200, outro 4xx, 1 pagamento, 10000 | lote ✓ | `tests/api/invoice-concurrent-payment.test.ts:67-79` - `statuses[0]).toBe(200)`, `statuses[1]` ≥400 <500, `payments).toHaveLength(1)`, `paidCents).toBe(10000)` | FAIL (mutante sem `FOR UPDATE` sobrevive, item 1) |
-| C22 | save de insumo preserva stock_qty | lote ✓ | `tests/infrastructure/drizzle-supply-stock.test.ts:42-43` - `name` novo e `stockQty).toBe(7)` após snapshot de 10 e baixa de 3; código `drizzle-inventory-repositories.ts:65` `set: editable` | PASS |
-| C23 | botões desabilitados em voo | lote ✓ | `tests/pages/invoice-payment-in-flight.test.tsx:38-41` - `onPay` `toHaveBeenCalledTimes(1)` após 2 cliques; todo botão `toBeDisabled()` | PASS |
-| C24 | contas diferentes, mesmo IP, baldes separados | lote ✓ | `tests/proxy.test.ts:130-137` - recepção 2ª req `toBe(429)`; consultório no mesmo IP `isNext(...)).toBe(true)`; chave em `src/proxy.ts:57` `acct:${clinicId ?? 'system'}:${subject}` | PASS |
-| C25 | anônimos mesmo IP, mesmo balde | lote ✓ | `proxy.test.ts:153` - `expect(blocked.status).toBe(429)` | PASS |
-| C26 | prod sem XFF avisa uma vez | lote ✓ | `tests/lib/client-ip.test.ts:67-68` - `warn).toHaveBeenCalledTimes(1)`, `toMatch(/x-forwarded-for/)` | PASS |
-| C27 | prod lança; fora só loga | lote ✓ (2 testes) | `tests/lib/app-timezone.test.ts:17-19` - `toThrow(/Fuso do processo \(UTC\) difere de APP_TIMEZONE \(America\/Sao_Paulo\)/)`; `:27-30` - `not.toThrow()` + `warn` `stringContaining('TZ=America/Sao_Paulo')`. `process.exit(1)` coberto em `:57-60` | PASS |
-| C28 | 12:00Z aceito, 21:30Z rejeitado (UTC, APP_TZ=SP) | lote ✓ | `tests/domain/business-hours-timezone.test.ts:28-39` - `12:00Z–13:00Z` `not.toThrow()`; `21:30Z–22:30Z` `toThrow(ValidationError)` | PASS |
-| C29 | 12:00Z → "09:00" | lote ✓ | `tests/domain/reminder-content.test.ts:66` - `toContain('17/07/2026 às 09:00')` | PASS |
-| C30 | now=02:00Z pega consultas de D+1 BRT | lote ✓ | `tests/application/send-reminders.test.ts:170-173` - `summary.sent).toBe(1)`, texto `17/07/2026` e `09:00` (a do dia 18 fica de fora) | PASS |
-| C31 | data de emissão no fuso da aplicação | lote ✓ | `tests/components/document-frame.test.tsx:212-214` - `toContain('03 de setembro de 2026')`, `'23:30'`, `not.toContain('04 de setembro')` | PASS |
-| C32 | PatientPicker busca `?search=&limit=20` e seleciona | lote ✓ | `tests/components/patient-picker.test.tsx:51-58` - `toHaveBeenCalledWith('/api/patients?search=Zuleica&limit=20', …)`, `value` `toHaveTextContent('p-150')` | PASS |
-| C33 | paciente 150 encontrado e agendável | lote ✓ | `tests/api/patient-search-beyond-first-page.test.ts:48-69` - 1ª página `toHaveLength(100)` e `not.toContain('Paciente Volume 150')`; busca `target` definido; agendamento `status).toBe(200)` | PASS |
-| C34 | telas não chamam /api/patients sem search | lote ✓ | `tests/pages/patient-selectors-sweep.test.ts:34` - `expect(offenders).toEqual([])` | PASS (regex estreita, item 6) |
-| C35 | nenhum gatilho de aba com scrollWidth > clientWidth em 360/390/768 | `npx playwright test -c playwright.sandbox.config.ts e2e/layout-mobile-first.spec.ts -g "prontuário: nenhum gatilho de aba corta o rótulo"` → **3 passed (32.2s)**, exit 0 | `e2e/layout-mobile-first.spec.ts:602` loop `[360, 390, 768]`; `:623` - `expect(t.scroll).toBeLessThanOrEqual(t.client)`; `:627` sem sobreposição `left >= prev.right - 1` | PASS |
-| C36 | menu do Atendente sem os 9 itens | lote ✓ | `tests/pages/staff-nav-role.test.tsx:70-73` - `toEqual(['Dashboard','Agenda','Pacientes','Parceiros'])` + `not.toContain` para os 7 admin + Repasses + Triagem | PASS |
-| C37 | Profissional vê Triagem, sem administrativos | lote ✓ | `staff-nav-role.test.tsx:80-84` - `toContain('Triagem')`; `not.toContain` para os 7 de `ADMIN_ONLY` | PASS |
-| C38 | dashboard do Atendente sem alerta; consultas e retornos | lote ✓ | `tests/pages/dashboard-role.test.tsx:81-93` - `Maria Souza`/`João Lima` presentes, `queryByRole('alert')).not.toBeInTheDocument()`, nenhuma chamada `/api/summary` | PASS |
-| C39 | ficha do Atendente sem abas clínicas nem rotas clínicas | lote ✓ | `tests/pages/patient-record-role.test.tsx:74-77` - `queryByRole('tab')).not.toBeInTheDocument()`, `urls.filter(CLINICAL)).toEqual([])` | PASS |
-| C40 | proxy responde `ROLE_FAMILY_DENIED_MESSAGE` | lote ✓ | `tests/proxy.test.ts:282-285` - `status).toBe(403)`, `error).toBe('Seu papel não tem acesso a este recurso')` | PASS |
-| C41 | página proibida mostra "sem permissão" sem alerta | lote ✓ (arquivo real) | `tests/pages/staff-nav-role.test.tsx:109-116` - `findByText('Seu papel não tem acesso a esta tela.')`, `queryByRole('alert')).not…`, `pageFetch).not.toHaveBeenCalled()`; `RoleGate` montado em `src/app/(staff)/staff-layout-client.tsx:88` | PASS (caminho do checklist errado, item 3) |
-| C42 | e-mail da sidebar sem truncate | lote ✓ | `tests/pages/staff-layout-client.test.tsx:131-132` - `not.toHaveClass('truncate')`, `toHaveClass('break-all')` | PASS |
-| C43 | CI roda `npm run build` bloqueante | lote ✓ | `tests/infrastructure/ci-workflow.test.ts:30-32` - `toMatch(/^ {8}run: npm run build$/m)`, `not.toMatch(/continue-on-error:\s*true/)` | PASS (textual) |
-| C44 | docker build + smoke providers + escrita em uploads | lote ✓ | `ci-workflow.test.ts:42-47` - `run: docker compose build`, `run: bash scripts/docker-smoke.sh`; smoke `toContain('/api/auth/providers')`, `'/app/uploads/.smoke'` | PASS (textual) |
-| C45 | E2E contra next build/start com CSP | lote ✓ | `ci-workflow.test.ts:57-71` - `npx playwright test -c playwright.prod.config.ts` após `npm run build`; config `command: "npm run start"` + 5 specs incl. `csp-producao.spec.ts` (`e2e/csp-producao.spec.ts:47,62,78` `violations()).toEqual([])`) | PASS (textual) |
+| C1 | lote ✓ | `tests/api/appointment-overlap-per-clinic.test.ts:88-89` - `first.status).toBe(200)`, `second.status).toBe(200)` | PASS | verified at 6e2aa89 |
+| C2 | lote ✓ | `appointment-overlap-per-clinic.test.ts:106-107` - `second.status).toBe(409)` | PASS | verified at 6e2aa89 |
+| C3 | lote ✓; isolado ✓ | `appointment-overlap-per-clinic.test.ts:122-130` - outra empresa `resolves.toBeDefined()`; mesma empresa `rejects.toMatchObject({ cause: { code: '23P01', constraint: 'appointments_no_overlap' } })` | PASS | verified at 6e2aa89 (corrigido) |
+| C4 | lote ✓ | `tests/infrastructure/deploy-config.test.ts:30-33` - 1 porta, `"127.0.0.1:${POSTGRES_PORT:-5432}:5432"` | PASS | verified at 6e2aa89 |
+| C5 | lote ✓ | `deploy-config.test.ts:40-44` - `${POSTGRES_PASSWORD:?` no db e no `DATABASE_URL` | PASS | verified at 6e2aa89 |
+| C6 | lote ✓ | `deploy-config.test.ts:50-51` - `- uploads:/app/uploads` + volume raiz | PASS | verified at 6e2aa89 |
+| C7 | lote ✓ | `deploy-config.test.ts:61-62` - `user).toBeGreaterThan(mkdir)` | PASS | verified at 6e2aa89 |
+| C8 | lote ✓ | `deploy-config.test.ts:68-69` - `^ENV TZ=America/Sao_Paulo$`, `^ENV APP_TIMEZONE=America/Sao_Paulo$` | PASS | verified at 6e2aa89 |
+| C9 | lote ✓ | `deploy-config.test.ts:74-89` - lista literal das 8 variáveis | PASS | verified at 6e2aa89 |
+| C10 | lote ✓ | `deploy-config.test.ts:96-99` - `fetch('http://127.0.0.1:3000/api/auth/providers')` | PASS | verified at 6e2aa89 |
+| C11 | lote ✓ | `tests/infrastructure/db-retry.test.ts:40-47` - `rejects.toThrow()`, cache `toBeUndefined()`, depois `toBeDefined()` | PASS | verified at 6e2aa89 |
+| C12 | lote ✓ | `db-retry.test.ts:60` - `second).toBe(first)` | PASS | verified at 6e2aa89 |
+| C13 | lote ✓ | `db-retry.test.ts:70-74` - `listenerCount('error')).toBe(1)`; ligação em `db.ts:85` | PASS | verified at 6e2aa89 |
+| C14 | lote ✓ | `tests/lib/log-error.test.ts:38-45` - sem e-mail, nome ou `insert into`; `code: '23505'` | PASS | verified at 6e2aa89 |
+| C15 | lote ✓ | `tests/api/patient-error-log-redaction.test.ts:37-43` - `[200, 500]`, sem e-mail/nome/telefone, `toContain('23505')` | PASS | verified at 6e2aa89 |
+| C16 | lote ✓ | `tests/lib/log-error-architecture.test.ts:13-15` `FORBIDDEN` (`console.error`, `console['error']`, `{ error } = console`); `:35` `offenders).toEqual([])` | PASS | verified at 6e2aa89 (guard ampliado) |
+| C17 | lote ✓ | `tests/api/care-plan-authorship.test.ts:146-147` - `status 200`, `professionalId).toBe(drA)` com `drB` no corpo | PASS | verified at 6e2aa89 |
+| C18 | lote ✓; **isolado ✓** | `care-plan-authorship.test.ts:187` - `professionalId).toBe(drA)`; fixture movida para `beforeAll` | PASS | verified at 6e2aa89 (corrigido) |
+| C19 | lote ✓; **isolado ✓** | `care-plan-authorship.test.ts:208` - `professionalId).toBe(drA)` | PASS | verified at 6e2aa89 (corrigido) |
+| C20 | lote ✓ (2 proofs); isolado ✓ | `care-plan-authorship.test.ts:165-166` - `POST /api/patients/:id/evolutions` com `drB` → `status 200`, `professionalId).toBe(drA)`; `tests/lib/session-professional.test.ts:47` `toBeNull()` | PASS | verified at 6e2aa89 (corrigido) |
+| C21 | lote ✓ (rota + lock + 4 ações) | `tests/api/invoice-concurrent-payment.test.ts:67-79` - um 200, outro 4xx, `payments).toHaveLength(1)`, `paidCents).toBe(10000)`; `tests/infrastructure/drizzle-invoice-lock.test.ts:52` - `invoiceSelect).toMatch(/for update$/i)`; `tests/application/invoice-actions-lock.test.ts:61` - `locked).toHaveBeenCalledWith(id)` (pagar, parcial, desconto, cancelar) | PASS (mutante morto) | verified at 6e2aa89 (corrigido) |
+| C22 | lote ✓ | `tests/infrastructure/drizzle-supply-stock.test.ts:42-43` - `stockQty).toBe(7)` | PASS | verified at 6e2aa89 |
+| C23 | lote ✓ | `tests/pages/invoice-payment-in-flight.test.tsx:38-41` - `onPay` 1x, todos `toBeDisabled()` | PASS | verified at 6e2aa89 |
+| C24 | lote ✓ | `tests/proxy.test.ts:130-137` - recepção 429, consultório no mesmo IP passa; chave `src/proxy.ts:57` | PASS | verified at 6e2aa89 |
+| C25 | lote ✓ | `proxy.test.ts:153` - `blocked.status).toBe(429)` | PASS | verified at 6e2aa89 |
+| C26 | lote ✓ | `tests/lib/client-ip.test.ts:67-68` - `toHaveBeenCalledTimes(1)`, `/x-forwarded-for/` | PASS | verified at 6e2aa89 |
+| C27 | lote ✓ (2); arquivo inteiro 6/6 ✓ | `tests/lib/app-timezone.test.ts:17-19` - `toThrow(/Fuso do processo \(UTC\) difere de APP_TIMEZONE \(America\/Sao_Paulo\)/)`; `:27-30` - `not.toThrow()` + aviso; `process.exit(1)` via `register()` → `enforceProcessTimeZone` (`src/lib/app-timezone.ts:37-43`) coberto em `:57-60` | PASS | verified at 6e2aa89 (redação corrigida; src tocado) |
+| C28 | lote ✓ | `tests/domain/business-hours-timezone.test.ts:28-39` - 12:00Z `not.toThrow()`, 21:30Z `toThrow(ValidationError)` | PASS | verified at 6e2aa89 |
+| C29 | lote ✓ | `tests/domain/reminder-content.test.ts:66` - `toContain('17/07/2026 às 09:00')` | PASS | verified at 6e2aa89 |
+| C30 | lote ✓ | `tests/application/send-reminders.test.ts:170-173` - `sent).toBe(1)`, `17/07/2026`, `09:00` | PASS | verified at 6e2aa89 |
+| C31 | lote ✓ | `tests/components/document-frame.test.tsx:212-214` - `'03 de setembro de 2026'`, `'23:30'`, sem `'04 de setembro'` | PASS | verified at 6e2aa89 |
+| C32 | lote ✓ | `tests/components/patient-picker.test.tsx:51-58` - `'/api/patients?search=Zuleica&limit=20'`, valor `p-150` | PASS | verified at 6e2aa89 |
+| C33 | lote ✓ | `tests/api/patient-search-beyond-first-page.test.ts:48-69` - 1ª página 100 sem o 150; busca acha; agendamento 200 | PASS | verified at 6e2aa89 |
+| C34 | lote ✓ | `tests/pages/patient-selectors-sweep.test.ts:17-18` `LISTING`; `:38` `offenders).toEqual([])` | PASS (guard parcial, finding 1) | verified at 6e2aa89 |
+| C35 | Playwright (sandbox config) → 3 passed (360/390/768) | `e2e/layout-mobile-first.spec.ts:623` - `t.scroll).toBeLessThanOrEqual(t.client)`; `:627` sem sobreposição | PASS | carried from f35948a (o fix não toca `e2e/` nem as telas) |
+| C36 | lote ✓ | `tests/pages/staff-nav-role.test.tsx:70-73` - `toEqual(['Dashboard','Agenda','Pacientes','Parceiros'])` + 9 ausentes | PASS | verified at 6e2aa89 |
+| C37 | lote ✓ | `staff-nav-role.test.tsx:80-84` - `Triagem` presente, 7 administrativos ausentes | PASS | verified at 6e2aa89 |
+| C38 | lote ✓ | `tests/pages/dashboard-role.test.tsx:81-95` - consultas e retornos visíveis, sem `alert`, nenhuma chamada a `/api/summary`, `/api/supplies`, `/api/photos/triage` (bate com a nova redação) | PASS | verified at 6e2aa89 (redação corrigida) |
+| C39 | lote ✓ | `tests/pages/patient-record-role.test.tsx:74-77` - sem `tab`, rotas clínicas `toEqual([])` | PASS | verified at 6e2aa89 |
+| C40 | lote ✓ | `tests/proxy.test.ts:282-285` - `403`, `'Seu papel não tem acesso a este recurso'` | PASS | verified at 6e2aa89 |
+| C41 | lote ✓ (caminho do checklist agora correto) | `tests/pages/staff-nav-role.test.tsx:109-116` - `'Seu papel não tem acesso a esta tela.'`, sem `alert`, `pageFetch).not.toHaveBeenCalled()` | PASS | verified at 6e2aa89 (corrigido) |
+| C42 | lote ✓ | `tests/pages/staff-layout-client.test.tsx:131-132` - `not.toHaveClass('truncate')`, `toHaveClass('break-all')` | PASS | verified at 6e2aa89 |
+| C43 | lote ✓ | `tests/infrastructure/ci-workflow.test.ts:30-32` - `run: npm run build`, sem `continue-on-error` | PASS (textual) | verified at 6e2aa89 |
+| C44 | lote ✓ | `ci-workflow.test.ts:42-47` - `docker compose build`, `docker-smoke.sh` com providers e `/app/uploads/.smoke` | PASS (textual) | verified at 6e2aa89 |
+| C45 | lote ✓ | `ci-workflow.test.ts:57-71` - `playwright.prod.config.ts` após o build, `npm run start`, 5 specs incl. CSP | PASS (textual) | verified at 6e2aa89 |
 
-**Proven: 42/45** (C18, C19 falham como proof literal; C21 prova um mecanismo diferente do que o Landing
-declara e não pega a remoção do lock). Fracos, mas contados como provados: C3, C16, C20, C34; C41 com caminho corrigido.
+**Proven: 45/45.**
 
-## Diff exercise
-
-Todos os arquivos de proof estão no diff `308c2e0..HEAD` (novos ou alterados), exceto
-`e2e/layout-mobile-first.spec.ts`, que também está (+59). Cada proof importa código alterado no diff
-(rotas SAE, `db.ts`, `log-error.ts`, `proxy.ts`/`client-ip.ts`, `time-zone.ts`, `patient-picker.tsx`,
-`role-gate.tsx`, `staff-nav.tsx`, `staff-layout-client.tsx`, migração 0038, Dockerfile/compose/ci.yml).
-
-## Swept (re-leitura contra o código)
+## Swept — verified at 6e2aa89
 
 | Row | Constraint citada | No código |
 |---|---|---|
-| state transitions: C21 "fatura paga não aceita 2º pagamento — regra de domínio existente" | pagamento > saldo rejeitado | sim - `src/domain/billing/invoice.ts:122-124` `if (input.amount.cents > this.balance.cents)` → "Pagamento maior que o saldo" |
-| validation: C17-C19 campo do corpo ignorado | `professionalId` vem da sessão | sim - `records/route.ts:39`, `evaluations/route.ts:41`, `care-plans/route.ts:74` usam `resolveSessionProfessionalId` |
-| validation: C5 senha obrigatória | `${POSTGRES_PASSWORD:?` | sim (C4/C5 leem `docker-compose.yml`) |
+| state transitions: C21 (regra de domínio existente) | pagamento > saldo rejeitado | sim - `src/domain/billing/invoice.ts:122-124` |
+| validation: C17-C20 | autoria pela sessão | sim - `records/route.ts:39`, `evaluations/route.ts:41`, `care-plans/route.ts:74`, `evolutions/route.ts:76` |
 | dependency failure: C13 | listener no pool real | sim - `db.ts:85` |
-| failure modes: C27 | encerra em produção | sim - `src/instrumentation.ts:15-21` (`process.exit(1)`) |
-| demais rows | apontam para checks deste lote, não para comportamento existente | n/a |
+| failure modes: C27 | encerra em produção | sim - `src/instrumentation.ts:8-11` → `src/lib/app-timezone.ts:37-43` (`process.exit(1)`) |
 
-## Faults injected
+## Faults injected — verified at 6e2aa89
 
-Não roda no perfil light. Experimento único fora do protocolo, para confirmar a suspeita do item 1:
+Worktrees descartáveis (`git worktree add --detach`, sem `git stash`); porcelain do tree real idêntico antes e depois (`PORCELAIN_UNCHANGED`).
 
-| Mutation | Location | Killed |
-|---|---|---|
-| removido `.for('update')` de `findByIdForUpdate` | `src/infrastructure/persistence/drizzle/drizzle-invoice-repository.ts:163` | **não** - C21 segue verde (PGlite serializa transações) |
+| Mutation | Location | Covering proof | Killed |
+|---|---|---|---|
+| removido `.for('update')` de `findByIdForUpdate` | `src/infrastructure/persistence/drizzle/drizzle-invoice-repository.ts:163` | `drizzle-invoice-lock.test.ts` "C21 findByIdForUpdate trava…" | **sim** - `expected 'select "id", … ' to match /for update$/i` (o teste de rota continua verde, como no round 1) |
+| `PayInvoice` lê com `findById` em vez de `findByIdForUpdate` | `src/application/billing/pay-invoice.ts:15` | `invoice-actions-lock.test.ts` "pagar lê a fatura com findByIdForUpdate" | **sim** - × pagar; as outras 3 ações ✓ |
 
-## Gate
+## Gate — verified at 6e2aa89
 
-- vitest (proofs, lote único): 45 passed, 0 failed (103 skipped por `-t`)
-- vitest isolado: C18 ✗, C19 ✗, "Admin sem profissional…" ✗ (acoplamento de ordem); C2, C3, C12, C13 ✓
-- Playwright C35: 3 passed, 0 failed
+- vitest (proofs, lote único): 51 passed, 0 failed (104 skipped por `-t`)
+- vitest isolado: C3, C18, C19, C20 (rota), "Admin sem profissional…" - 1 passed cada
+- `npm run build` - exit 0; o log (142 linhas) não traz aviso de Edge Runtime nem menção a `instrumentation` (o aviso do round 1 sumiu com a extração para `enforceProcessTimeZone`)
 - `npm run typecheck` - exit 0
 - `npm run lint` - exit 0 (1 info preexistente em `tests/docs/structure.test.ts:72`, fora do diff)
-- `npm run check:sv` - exit 0 (adoção completa)
-- `npm run check:docs` - exit 0 (0 avisos)
-- `npm run test:coverage` - exit 0; 239 files, 3540 passed, 0 failed; lines 96.32% (stmts), branches 91.53%, funcs 95.82% (≥ 90%)
-- Tree limpo após o Playwright (`git checkout AGENTS.md`); nenhum commit.
+- `npm run check:sv`, `npm run check:docs` - carried from f35948a (o fix não toca JSX nem `docs/`)
+- `npm run test:coverage` - exit 0; 241 files, 3547 passed, 0 failed; statements 96.33%, branches 91.53%, funcs 95.82% (≥ 90%)
+- Playwright C35 - carried from f35948a
+- Nenhum commit; tree limpo, a não ser por este relatório.
