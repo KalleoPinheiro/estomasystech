@@ -32,6 +32,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-08 | Conta desativada perde o acesso em até 60 s mesmo com cookie válido (deny-list) | `.specs/STATE.md` AD-001 |
 | ACE-RN-09 | Mesmo e-mail pode existir em empresas diferentes; login testa a senha contra cada conta e nega se houver ambiguidade | `.specs/features/fix-login-email-ambiguo/` |
 | ACE-RN-10 | Acesso do Super Admin a dado de outra empresa é sempre auditado | `src/lib/audit.ts` |
+| ACE-RN-11 | Editar conta existente (senha, ativar/desativar, reenviar convite) segue a matriz do ACE-RN-05: papel fora da matriz → `403`, conta de outra empresa → `404`. Atendente/Profissional só listam e alteram contas `patient`/`partner`. Ninguém desativa a própria conta nem o último `company_admin` ativo (`400`). Senha, ativação e reenvio gravam auditoria antes da alteração; se a auditoria falha, nada muda | `src/domain/auth/account-management.ts`, `src/app/api/accounts/` (#184) |
 
 ### Papéis
 

@@ -2,11 +2,13 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CreateAccount } from '@/application/auth/create-account';
 import { sendInvite } from '@/application/auth/send-invite';
+import { visibleAccounts } from '@/domain/auth/account-management';
 import { USER_ROLES } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
+import { accountManager } from '@/lib/auth/account-manager';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import {
@@ -40,7 +42,9 @@ export async function GET(request: NextRequest) {
   return handleRequest(async () => {
     const { userAccounts } = await getRepositories(sessionScope(guard.session));
     const accounts = await userAccounts.findAll();
-    return accounts.map(toUserAccountDto);
+    // Atendente/Profissional só enxergam patient/partner (#184).
+    const { role } = accountManager(guard.session);
+    return visibleAccounts(role, accounts).map(toUserAccountDto);
   });
 }
 
