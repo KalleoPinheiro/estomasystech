@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { createPatient, unique } from "./support/api";
 import { expectToast } from "./support/assertions";
 import { businessDay, ymdToDateInput } from "./support/dates";
+import { pickPatient } from "./support/patient-picker";
 
 test.describe("lista de espera", () => {
   test("recepção põe paciente na lista de espera pela agenda e remove", async ({ page, request }) => {
@@ -12,7 +13,7 @@ test.describe("lista de espera", () => {
     await page.goto("/agenda");
     await page.getByRole("button", { name: "+ Adicionar" }).click();
     const dialog = page.getByRole("dialog", { name: "Adicionar à lista de espera" });
-    await dialog.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+    await pickPatient(dialog, patient.fullName);
     await dialog.getByLabel("Aceita a partir de *").fill(from);
     await dialog.getByLabel("Até *").fill(to);
     await dialog.getByLabel("Observação").fill("Só de manhã");

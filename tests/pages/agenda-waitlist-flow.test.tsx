@@ -78,6 +78,9 @@ function mockAgenda(options: { waitlistPatchFails?: boolean } = {}): Call[] {
         return ok(appointment);
       }
       if (url.startsWith('/api/appointments')) return ok([appointment]);
+      if (url === '/api/patients/pat-1') {
+        return ok({ id: 'pat-1', fullName: 'Maria Souza', active: true });
+      }
       if (url.startsWith('/api/patients')) {
         return ok([{ id: 'pat-1', fullName: 'Maria Souza', active: true }]);
       }
@@ -114,7 +117,12 @@ describe('Feature: Agenda com lista de espera e cancelamento tardio', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Agendar' }));
     expect(await screen.findByText('Nova consulta')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Paciente/)).toHaveValue('pat-1');
+    // Paciente da fila já selecionado no PatientPicker (#197).
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-patient-picker-selected]'),
+      ).toHaveTextContent('Maria Souza'),
+    );
     expect(screen.getByLabelText(/Procedimento \*/)).toHaveValue('Curativo');
     fireEvent.change(screen.getByLabelText(/Valor/), {
       target: { value: '100' },

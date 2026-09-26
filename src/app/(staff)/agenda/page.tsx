@@ -19,7 +19,6 @@ import {
 import { apiFetch } from '@/lib/client';
 import type {
   AppointmentDto,
-  PatientDto,
   ProfessionalDto,
   ScheduleClosureDto,
   WaitlistEntryDto,
@@ -175,7 +174,6 @@ export default function AgendaPage() {
     error,
     refresh,
   } = useApiQuery<AppointmentDto[]>(appointmentsUrl);
-  const { data: patients } = useApiQuery<PatientDto[]>('/api/patients');
   const { data: professionals } =
     useApiQuery<ProfessionalDto[]>('/api/professionals');
   const { data: scheduleData } = useApiQuery<{
@@ -407,7 +405,6 @@ export default function AgendaPage() {
       )}
 
       <WaitlistPanel
-        patients={patients ?? []}
         professionals={professionals ?? []}
         version={waitlistVersion}
         onSchedule={(entry) => {
@@ -425,7 +422,6 @@ export default function AgendaPage() {
           }}
         >
           <AppointmentForm
-            patients={patients ?? []}
             professionals={(professionals ?? []).filter((p) => p.active)}
             defaultDate={creatingFor}
             defaultPatientId={fromWaitlist?.patientId ?? recall?.patientId}

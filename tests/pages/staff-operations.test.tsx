@@ -8,6 +8,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { pickPatient } from '@/../tests/support/patient-picker';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import AuditPage from '@/app/(staff)/auditoria/page';
 import SettingsPage from '@/app/(staff)/configuracoes/page';
@@ -70,6 +71,7 @@ describe('Feature: AuditPage', () => {
               action: 'update',
               resourceType: 'evolution',
               patientId: 'p1',
+              patientName: 'Maria Silva',
               detail: 'Editou evolução',
               occurredAt: '2026-01-01T10:00:00.000Z',
             },
@@ -119,7 +121,9 @@ describe('Feature: AuditPage', () => {
     it('Dado seleção de paciente no filtro, Quando alterado, Então refaz a busca com patientId', async () => {
       const fetchMock = mockFetch(({ url }) => {
         if (url.startsWith('/api/patients')) {
-          return jsonResponse([{ id: 'p1', fullName: 'Maria Silva' }]);
+          return jsonResponse([
+            { id: 'p1', fullName: 'Maria Silva', active: true },
+          ]);
         }
         if (url.startsWith('/api/audit')) return jsonResponse([]);
         return jsonResponse(null, false);
@@ -128,8 +132,7 @@ describe('Feature: AuditPage', () => {
       render(<AuditPage />);
       await screen.findByText('Nenhum evento de auditoria registrado.');
 
-      const select = screen.getByDisplayValue('Todos os pacientes');
-      fireEvent.change(select, { target: { value: 'p1' } });
+      await pickPatient('Maria Silva', 'Filtrar por paciente');
 
       await waitFor(() => {
         expect(

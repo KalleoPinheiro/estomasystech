@@ -8,6 +8,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { pickPatient } from '@/../tests/support/patient-picker';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { AppointmentDetail } from '@/app/(staff)/agenda/appointment-detail';
 import { AppointmentForm } from '@/app/(staff)/agenda/appointment-form';
@@ -254,9 +255,7 @@ describe('Feature: Página de agenda', () => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument();
       });
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Curativo' },
       });
@@ -287,9 +286,7 @@ describe('Feature: Página de agenda', () => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument();
       });
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Curativo' },
       });
@@ -336,9 +333,7 @@ describe('Feature: Página de agenda', () => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument();
       });
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Curativo' },
       });
@@ -528,9 +523,7 @@ describe('Feature: Página de agenda', () => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument(),
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Repetição/), {
         target: { value: '4' },
       });
@@ -589,9 +582,7 @@ describe('Feature: Página de agenda', () => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument(),
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Repetição/), {
         target: { value: '4' },
       });
@@ -623,9 +614,7 @@ describe('Feature: Página de agenda', () => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument(),
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Repetição/), {
         target: { value: '4' },
       });
@@ -896,7 +885,10 @@ describe('Feature: Página de agenda', () => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument();
       });
       expect(screen.getByDisplayValue('Troca de curativo')).toBeInTheDocument();
-      expect(screen.getByLabelText(/Paciente/)).toHaveValue('pat-1');
+      // Paciente do recall já selecionado no PatientPicker (#197).
+      expect(
+        document.querySelector('[data-patient-picker-selected]'),
+      ).not.toBeNull();
     });
 
     it('Dado apenas o followUpId presente na URL, Quando a página carrega, Então abre o formulário sem paciente ou procedimento pré-selecionados', async () => {
@@ -909,6 +901,9 @@ describe('Feature: Página de agenda', () => {
       });
       expect(screen.getByLabelText(/Procedimento \*/)).toHaveValue('');
       expect(screen.getByLabelText(/Paciente/)).toHaveValue('');
+      expect(
+        document.querySelector('[data-patient-picker-selected]'),
+      ).toBeNull();
     });
   });
 });
@@ -920,16 +915,13 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           professionals={[professionalFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Avaliação de ferida' },
       });
@@ -958,15 +950,12 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Curativo' },
       });
@@ -1003,7 +992,6 @@ describe('Feature: Formulário de nova consulta', () => {
       const onSubmit = vi.fn().mockResolvedValue(undefined);
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
@@ -1041,7 +1029,6 @@ describe('Feature: Formulário de nova consulta', () => {
       );
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={vi.fn().mockResolvedValue(undefined)}
         />,
@@ -1067,10 +1054,7 @@ describe('Feature: Formulário de nova consulta', () => {
   describe('Cenário: ausência de data padrão', () => {
     it('Dado formulário sem data padrão informada, Quando renderizar, Então usa a data atual como valor inicial', () => {
       render(
-        <AppointmentForm
-          patients={[patientFixture]}
-          onSubmit={vi.fn().mockResolvedValue(undefined)}
-        />,
+        <AppointmentForm onSubmit={vi.fn().mockResolvedValue(undefined)} />,
       );
 
       expect(screen.getByLabelText(/Data \*/)).toHaveValue(dayKey(new Date()));
@@ -1083,15 +1067,12 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Repetição/), {
         target: { value: '4' },
       });
@@ -1115,16 +1096,13 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           professionals={[professionalFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Profissional/), {
         target: { value: 'prof-1' },
       });
@@ -1148,15 +1126,12 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Data \*/), {
         target: { value: '2026-08-01' },
       });
@@ -1196,15 +1171,12 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Curativo' },
       });
@@ -1233,7 +1205,6 @@ describe('Feature: Formulário de nova consulta', () => {
       });
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={vi.fn().mockResolvedValue(undefined)}
         />,
@@ -1263,15 +1234,12 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Curativo' },
       });
@@ -1294,15 +1262,12 @@ describe('Feature: Formulário de nova consulta', () => {
       mockAgendaFetch();
       render(
         <AppointmentForm
-          patients={[patientFixture]}
           defaultDate={new Date(2026, 6, 19)}
           onSubmit={onSubmit}
         />,
       );
 
-      fireEvent.change(screen.getByLabelText(/Paciente/), {
-        target: { value: 'pat-1' },
-      });
+      await pickPatient('Maria Souza');
       fireEvent.change(screen.getByLabelText(/Procedimento \*/), {
         target: { value: 'Curativo' },
       });

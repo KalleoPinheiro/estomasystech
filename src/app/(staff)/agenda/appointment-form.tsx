@@ -3,13 +3,14 @@
 import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { PatientPicker } from '@/components/patient-picker';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   describeSchedule,
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { ApiError } from '@/lib/client';
-import type { PatientDto, ProcedureDto, ProfessionalDto } from '@/lib/dto';
+import type { ProcedureDto, ProfessionalDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 import { dayKey } from './calendar-grid';
 
@@ -28,7 +29,6 @@ export interface AppointmentFormValues {
 }
 
 interface AppointmentFormProps {
-  patients: PatientDto[];
   professionals?: ProfessionalDto[];
   defaultDate?: Date;
   defaultPatientId?: string;
@@ -57,7 +57,6 @@ function resolveScheduleConfig(
 }
 
 export function AppointmentForm({
-  patients,
   professionals = [],
   defaultDate,
   defaultPatientId,
@@ -82,7 +81,6 @@ export function AppointmentForm({
   );
   const [saving, setSaving] = useState(false);
 
-  const activePatients = patients.filter((p) => p.active);
   const { data: catalog } = useApiQuery<ProcedureDto[]>('/api/procedures');
   const activeCatalog = (catalog ?? []).filter((p) => p.active);
   const { data: scheduleData } = useApiQuery<{ config: ScheduleConfig }>(
@@ -106,9 +104,13 @@ export function AppointmentForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setError(null);
     setErrorVariant('danger');
+    if (!values.patientId) {
+      setError('Selecione o paciente');
+      return;
+    }
+    setSaving(true);
     try {
       await onSubmit(values);
     } catch (err) {
@@ -127,24 +129,11 @@ export function AppointmentForm({
         Atendimento de {describeSchedule(scheduleConfig)}, com intervalo mínimo
         de {scheduleConfig.minGapMinutes} minutos entre consultas.
       </p>
-      <label className="font-medium text-sm">
-        Paciente *
-        <NativeSelect
-          required
-          value={values.patientId}
-          onChange={(e) =>
-            setValues((prev) => ({ ...prev, patientId: e.target.value }))
-          }
-          className="mt-1"
-        >
-          <option value="">Selecione…</option>
-          {activePatients.map((patient) => (
-            <option key={patient.id} value={patient.id}>
-              {patient.fullName}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
+      <PatientPicker
+        label="Paciente *"
+        value={values.patientId}
+        onChange={(patientId) => setValues((prev) => ({ ...prev, patientId }))}
+      />
       <label className="font-medium text-sm">
         Repetição
         <NativeSelect

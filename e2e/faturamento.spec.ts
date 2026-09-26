@@ -11,6 +11,7 @@ import {
 } from "./support/api";
 import { slotForAttempt } from "./support/dates";
 import { literal } from "./support/regexp";
+import { pickPatient } from "./support/patient-picker";
 
 test.describe("faturamento", () => {
   test("concluir consulta gera fatura pendente", async ({ page, request }) => {
@@ -118,7 +119,7 @@ test.describe("faturamento", () => {
 
     await page.goto("/faturamento");
     await page.getByRole("button", { name: "Vender pacote" }).click();
-    await page.getByLabel("Paciente *").selectOption({ label: patient.fullName });
+    await pickPatient(page, patient.fullName);
     await page.getByLabel("Procedimento *").selectOption({ label: procedure.name });
     await page.getByLabel("Sessões *").fill("5");
     await page.getByLabel("Preço total (R$) *").fill("500");

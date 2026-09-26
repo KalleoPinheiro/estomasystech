@@ -8,11 +8,16 @@ export interface AuditEventDto {
   resourceType: string;
   resourceId: string;
   patientId: string | null;
+  /** Nome resolvido no servidor (#197) — a tela não depende de lista de pacientes. */
+  patientName?: string | null;
   detail: string | null;
   occurredAt: string;
 }
 
-export const toAuditEventDto = (event: AuditEvent): AuditEventDto => ({
+export const toAuditEventDto = (
+  event: AuditEvent,
+  patientName?: string | null,
+): AuditEventDto => ({
   id: event.id,
   actorRole: event.actorRole,
   actorId: event.actorId,
@@ -20,6 +25,7 @@ export const toAuditEventDto = (event: AuditEvent): AuditEventDto => ({
   resourceType: event.resourceType,
   resourceId: event.resourceId,
   patientId: event.patientId,
+  ...(patientName === undefined ? {} : { patientName }),
   detail: event.detail,
   occurredAt: event.occurredAt.toISOString(),
 });

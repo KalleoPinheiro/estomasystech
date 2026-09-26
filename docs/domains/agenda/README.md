@@ -37,6 +37,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
 | Calendário mensal, nova consulta, ações por status, remarcação | entregue | `/agenda` |
+| Seleção de paciente por busca (nome, e-mail ou telefone; 20 resultados) em nova consulta e lista de espera — sem teto de 100 pacientes (#197). Mesmo seletor no Faturamento (fatura avulsa e pacote) e no filtro da Auditoria | entregue | `src/components/patient-picker.tsx` |
 | Agenda no celular (abaixo de 768px): mês compacto de 7 colunas com ponto no dia que tem consulta e, abaixo, a lista das consultas do dia escolhido (hoje por padrão); "Agendar neste dia" só em dia válido | entregue | `/agenda` (`mobile-month.tsx`) |
 | Consultas recorrentes | entregue | `/agenda` |
 | Grade, almoço, política de cancelamento, feriados e ausências | entregue | Configurações, Profissionais |

@@ -3,12 +3,12 @@ title: "Lacunas do `@still-void/ui` — backlog para a lib"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 ---
 
 # Lacunas do `@still-void/ui` — backlog para a lib
 
-- **Status:** Aberto — 2 seções abertas (`layout-grid-min-content`, `touch-target-size`)
+- **Status:** Aberto — seções abertas: `touch-target-size`, `combobox` (só relato)
 - **Data:** 2026-08-26
 - **Versão verificada:** `@still-void/ui@3.2.0`
 - **Origem:** migração 2.0 → 3.1 do VittaFlow (`.specs/features/still-void-v3-migration/`); as
@@ -55,6 +55,20 @@ agenda", "Prontuário" e os links de documento medem a altura da linha (~20px).
 
 **Correção sugerida na lib (minor).** Estender a regra de toque da `3.4.0` a um seletor de link
 (ex.: `.sv-link`, ou `a[href]` dentro de `.sv-app-shell`), para o app não precisar da regra própria.
+
+### `combobox`
+
+<!-- sv-gap-doc-only -->
+
+**Lacuna.** A `3.4.0` não exporta combobox/autocomplete (campo de busca com lista de resultados
+assíncrona e seleção). O `Select`/`NativeSelect` exigem a lista inteira carregada — o que quebrou a
+seleção de paciente a partir do 101º (#197).
+
+**Composição local (sem elemento cru).** `src/components/patient-picker.tsx` compõe `Input`
+(`type="search"`) + lista de `Button` `ghost`; não precisa de marcação `sv-gap` no código.
+
+**Correção sugerida na lib (minor).** `Combobox` com `onSearch` assíncrono, estado de carregando/vazio
+e navegação por teclado (`role="combobox"` + `listbox`), para substituir a composição.
 
 ---
 

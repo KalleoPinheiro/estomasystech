@@ -9,6 +9,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { pickPatient } from '@/../tests/support/patient-picker';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { AppointmentDetail } from '@/app/(staff)/agenda/appointment-detail';
 import { WaitlistPanel } from '@/app/(staff)/agenda/waitlist-panel';
@@ -293,7 +294,6 @@ describe('Feature: Lista de espera na agenda', () => {
     const onSchedule = vi.fn();
     renderWithToast(
       <WaitlistPanel
-        patients={patients}
         professionals={professionals}
         version={0}
         onSchedule={onSchedule}
@@ -314,7 +314,6 @@ describe('Feature: Lista de espera na agenda', () => {
     mockFetch([{ path: '/api/waitlist', respond: () => ok([]) }]);
     renderWithToast(
       <WaitlistPanel
-        patients={patients}
         professionals={professionals}
         version={0}
         onSchedule={vi.fn()}
@@ -336,7 +335,6 @@ describe('Feature: Lista de espera na agenda', () => {
     ]);
     renderWithToast(
       <WaitlistPanel
-        patients={patients}
         professionals={professionals}
         version={0}
         onSchedule={vi.fn()}
@@ -367,7 +365,6 @@ describe('Feature: Lista de espera na agenda', () => {
     ]);
     renderWithToast(
       <WaitlistPanel
-        patients={patients}
         professionals={professionals}
         version={0}
         onSchedule={vi.fn()}
@@ -398,10 +395,10 @@ describe('Feature: Lista de espera na agenda', () => {
         respond: () => ok([{ id: 'proc-1', name: 'Curativo', active: true }]),
       },
       { path: '/api/waitlist', respond: () => ok([]) },
+      { path: '/api/patients', respond: () => ok(patients) },
     ]);
     renderWithToast(
       <WaitlistPanel
-        patients={patients}
         professionals={professionals}
         version={0}
         onSchedule={vi.fn()}
@@ -410,9 +407,7 @@ describe('Feature: Lista de espera na agenda', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText('Paciente *'), {
-      target: { value: 'pat-1' },
-    });
+    await pickPatient('Maria Souza', 'Paciente *');
     await within(dialog).findByRole('option', { name: 'Curativo' });
     fireEvent.change(within(dialog).getByLabelText('Procedimento'), {
       target: { value: 'proc-1' },

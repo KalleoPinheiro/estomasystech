@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
       offset: params.get('offset') ?? undefined,
     });
 
-    const { auditEvents } = await getRepositories(sessionScope(guard.session));
+    const { auditEvents, patients } = await getRepositories(
+      sessionScope(guard.session),
+    );
     const events = await auditEvents.findAll(
       {
         // Trilha da empresa da sessão; papel de sistema (sem clínica) vê todas.
@@ -39,6 +41,22 @@ export async function GET(request: NextRequest) {
       },
       { limit: query.limit, offset: query.offset },
     );
-    return events.map(toAuditEventDto);
+    // Nome do paciente em lote, no escopo da sessão (#197): antes a tela
+    // cruzava com a 1ª página de /api/patients e mostrava o id dos demais.
+    const ids = [
+      ...new Set(events.flatMap((e) => (e.patientId ? [e.patientId] : []))),
+    ];
+    const names = new Map(
+      (ids.length > 0 ? await patients.findByIds(ids) : []).map((p) => [
+        p.id,
+        p.fullName,
+      ]),
+    );
+    return events.map((event) =>
+      toAuditEventDto(
+        event,
+        event.patientId ? (names.get(event.patientId) ?? null) : null,
+      ),
+    );
   });
 }
