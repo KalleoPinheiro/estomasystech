@@ -296,25 +296,23 @@ test.describe("casca e padrões compartilhados", () => {
     });
   }
 
-  test("e-mail da sidebar em uma linha", async ({ page, request }) => {
+  // #199: o e-mail truncado ("ad…") não identificava quem estava logado.
+  test("e-mail da sidebar inteiro, sem cortar", async ({ page, request }) => {
     await world(request);
     await page.setViewportSize(DESKTOP);
     await page.goto("/");
     await settle(page);
     const email = page.locator("[data-sidebar-email]");
     await expect(email).toBeVisible();
-    const metrics = await email.evaluate((el) => {
-      const style = getComputedStyle(el);
-      return {
-        height: el.getBoundingClientRect().height,
-        lineHeight: Number.parseFloat(style.lineHeight),
-        overflow: style.textOverflow,
-        title: el.getAttribute("title"),
-        text: el.textContent,
-      };
-    });
-    expect(metrics.height).toBeLessThanOrEqual(metrics.lineHeight * 1.5);
-    expect(metrics.overflow).toBe("ellipsis");
+    const metrics = await email.evaluate((el) => ({
+      overflow: getComputedStyle(el).textOverflow,
+      scroll: el.scrollWidth,
+      client: el.clientWidth,
+      title: el.getAttribute("title"),
+      text: el.textContent,
+    }));
+    expect(metrics.overflow).not.toBe("ellipsis");
+    expect(metrics.scroll).toBeLessThanOrEqual(metrics.client);
     expect(metrics.title).toBe(metrics.text);
   });
 
