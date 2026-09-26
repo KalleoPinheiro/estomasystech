@@ -40,6 +40,15 @@ specs novos `e2e/papeis-*.spec.ts`). Reaproveita `requireStaffSession`, `session
 
 - Nada mais aqui é difícil de reverter
 
+Decisões tomadas durante o build (alternativa rejeitada registrada antes do código):
+
+| Decisão | Escolha | Alternativa rejeitada |
+| --- | --- | --- |
+| Menu/dashboard que ignoram o papel (#199) no smoke | `KNOWN_GAPS` por papel e tela, cada entrada com a issue; só `403` nas rotas listadas é tolerado e anotado; tela fora do papel que sair do menu reprova ("entrada inútil") | pular a tela - esconderia 5xx/404 nas mesmas telas; ou corrigir o menu aqui - é a #199 |
+| Limite de login (5/min por IP) no setup | logins das contas por papel com `x-forwarded-for: 198.51.100.204` (RFC 5737); o Next só preenche o cabeçalho quando ausente | esperar 60 s no setup - +1 min em toda execução; ou subir o limite por env - mexe na proteção de produção |
+| 404 da ficha sem UUID | `useApiQuery` expõe `errorStatus`; a ficha troca a mensagem só para 404 | casar o texto "não encontrado(a):" - acopla a tela ao formato da mensagem do domínio; mudar `NotFoundError` - é a #219 |
+| `goToMonth` | movido de `e2e/agenda.spec.ts` para `e2e/support/calendar.ts` (reuso nos specs de papel) | duplicar nos specs novos |
+
 ## Unwritten requirements (varredura)
 
 | Requisito | Onde caiu |
@@ -125,7 +134,7 @@ Proof: `e2e/papeis-profissional.spec.ts` › "profissional vê a própria consul
 Proof: `e2e/papeis-profissional.spec.ts` › "profissional registra evolução no paciente vinculado"
 
 **C16** - Specs atuais (Super Admin) continuam verdes
-Proof: `npm run test:e2e` (suíte completa)
+Proof: `npm run test:e2e` (suíte completa: 216 passed, 0 flaky)
 
 **C17** - `docs/engineering/conventions.md` (níveis de teste): toda feature de tela precisa de cobertura para os papéis que a usam; `docs/domains/{agenda,acesso}/README.md` atualizados
 Proof: `npm run check:docs`

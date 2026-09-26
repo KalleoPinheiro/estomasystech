@@ -7,6 +7,9 @@ export interface SeedData {
   procedureNoKitId: string;
   supplyIds: [string, string];
   batchLabel: string;
+  /** Paciente com vínculo R4 ao profissional semeado (consulta atribuída no setup). */
+  linkedPatientId: string;
+  linkedPatientName: string;
 }
 
 /** Lê `e2e/support/seed-data.json`, gerado por `e2e/global-setup.ts`. */

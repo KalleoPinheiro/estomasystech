@@ -1,9 +1,11 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import {
   ADMIN_STORAGE_STATE_PATH,
   E2E_AUTH_SECRET,
   E2E_BOOTSTRAP_TOKEN,
   MAIN_BASE_URL,
+  MAIN_SERVER_LOG_PATH,
   OPEN_MODE_BASE_URL,
   OPEN_MODE_PORT,
 } from "./e2e/support/constants";
@@ -14,7 +16,9 @@ import {
  * `src/lib/auth/request-session.ts`). Por isso o servidor principal (porta 3000)
  * roda sempre com autenticação ligada: specs de equipe reaproveitam uma sessão
  * do Super Admin já logada via `storageState` (criada em `global-setup.ts` pelo
- * fluxo real de bootstrap + convite + login); specs de portal assinam um cookie de
+ * fluxo real de bootstrap + convite + login); specs de papel (`papeis-*.spec.ts`)
+ * trocam para o `storageState` de `company_admin`, `atendente` ou `profissional`,
+ * também criados pelo convite + login real (#204); specs de portal assinam um cookie de
  * sessão paciente/parceiro na hora (mesmo segredo); `auth.spec.ts` testa o fluxo de
  * login de verdade.
  *
@@ -57,7 +61,10 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npm run dev",
+      // `tee` grava o log que o global-setup lê para achar o convite das contas
+      // por papel (#204): sem e-mail configurado, o NullEmailGateway imprime o
+      // link ali. Ver MAIN_SERVER_LOG_PATH em e2e/support/constants.ts.
+      command: `mkdir -p ${path.dirname(MAIN_SERVER_LOG_PATH)} && npm run dev 2>&1 | tee ${MAIN_SERVER_LOG_PATH}`,
       url: MAIN_BASE_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
