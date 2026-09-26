@@ -89,14 +89,22 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
       discountCents: invoice.discount?.amount.cents ?? 0,
       discountReason: invoice.discount?.reason ?? null,
     };
-    await this.db
-      .insert(invoices)
-      .values(values)
-      .onConflictDoUpdate({ target: invoices.id, set: values });
-    // Recebimentos são imutáveis: só os novos entram.
+    // Fatura e recebimentos gravam juntos ou nada grava (#192); dentro de uma
+    // transação externa vira savepoint.
+    await this.db.transaction(async (tx) => {
+      await tx
+        .insert(invoices)
+        .values(values)
+        .onConflictDoUpdate({ target: invoices.id, set: values });
+      await this.insertNewPayments(tx, invoice);
+    });
+  }
+
+  /** Recebimentos são imutáveis: só os novos entram. */
+  private async insertNewPayments(tx: AppDb, invoice: Invoice): Promise<void> {
     const payments = invoice.payments;
     if (payments.length > 0) {
-      await this.db
+      await tx
         .insert(invoicePayments)
         .values(
           payments.map((payment) => ({
@@ -143,6 +151,16 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
       .from(invoices)
       .where(withTenant(invoices, this.clinicId, eq(invoices.id, id)))
       .limit(1);
+    return (await this.withPayments(rows))[0] ?? null;
+  }
+
+  async findByIdForUpdate(id: string): Promise<Invoice | null> {
+    const rows = await this.db
+      .select()
+      .from(invoices)
+      .where(withTenant(invoices, this.clinicId, eq(invoices.id, id)))
+      .limit(1)
+      .for('update');
     return (await this.withPayments(rows))[0] ?? null;
   }
 

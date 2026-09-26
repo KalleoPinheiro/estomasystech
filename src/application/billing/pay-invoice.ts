@@ -12,7 +12,7 @@ export class PayInvoice {
   constructor(private readonly invoices: InvoiceRepository) {}
 
   async execute(input: PayInvoiceInput): Promise<Invoice> {
-    const invoice = await this.invoices.findById(input.id);
+    const invoice = await this.invoices.findByIdForUpdate(input.id);
     if (!invoice) {
       throw new NotFoundError('Fatura', input.id);
     }

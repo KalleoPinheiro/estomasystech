@@ -3,7 +3,7 @@ title: "Domínio: Estoque"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 domain: estoque
 ---
 
@@ -25,6 +25,7 @@ entrada e saída e o consumo automático por kit de procedimento.
 | EST-RN-03 | Preço unitário congelado no momento da movimentação | idem |
 | EST-RN-04 | Alerta de estoque baixo quando quantidade ≤ mínimo | `src/application/inventory/get-supply-insights.ts` |
 | EST-RN-05 | Kit do procedimento baixa os insumos ao ser dispensado | `src/application/inventory/dispense-procedure-kit.ts`, `src/domain/catalog/procedure-kit.ts` |
+| EST-RN-06 | Saldo muda só por movimentação atômica (`adjustStock`); editar o cadastro do insumo nunca regrava o saldo, então não desfaz baixa concorrente (#192) | `DrizzleSupplyRepository.save` |
 
 ## Funcionalidades
 

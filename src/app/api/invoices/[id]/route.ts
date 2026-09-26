@@ -67,10 +67,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = actionSchema.parse(await request.json());
-    const { invoices, auditEvents } = await getRepositories(
+    const { transactions, auditEvents } = await getRepositories(
       writeScope(guard.session),
     );
-    const updated = await applyAction(invoices, id, body);
+    // Ler (com lock da linha), aplicar a regra e gravar na mesma transação:
+    // duas ações simultâneas na mesma fatura viram fila, e a segunda vê o
+    // saldo já atualizado — nunca recebimento em dobro (#192).
+    const updated = await transactions.run((tx) =>
+      applyAction(tx.invoices, id, body),
+    );
     recordAudit(auditEvents, guard.session, {
       action: 'update',
       resourceType: 'invoice',

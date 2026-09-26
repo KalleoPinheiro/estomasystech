@@ -23,6 +23,11 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     return this.invoices.get(id) ?? null;
   }
 
+  /** Memória não tem concorrência entre processos — igual a `findById`. */
+  findByIdForUpdate(id: string): Promise<Invoice | null> {
+    return this.findById(id);
+  }
+
   async findByAppointmentId(appointmentId: string): Promise<Invoice | null> {
     return (
       [...this.invoices.values()].find(
