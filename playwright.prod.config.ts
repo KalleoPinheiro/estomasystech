@@ -17,6 +17,8 @@ import {
  */
 export default defineConfig({
   ...base,
+  // Sem as contas por papel (#204): o convite delas só sai no log sem e-mail.
+  globalSetup: "./e2e/global-setup.prod.ts",
   testMatch: [
     "csp-producao.spec.ts",
     "auth.spec.ts",
