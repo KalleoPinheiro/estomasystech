@@ -56,6 +56,16 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
     );
   });
 
+  it('taxonomia é clínica e a importação continua administrativa', () => {
+    expect(classifyRoute('/api/taxonomy/diagnoses')).toBe('clinical');
+    expect(classifyRoute('/api/taxonomy/outcomes')).toBe('clinical');
+    expect(classifyRoute('/api/taxonomy/interventions')).toBe('clinical');
+    expect(classifyRoute('/api/taxonomy/diagnoses/00046/linked-terms')).toBe(
+      'clinical',
+    );
+    expect(classifyRoute('/api/admin/taxonomy/import')).toBe('administrative');
+  });
+
   describe('Cenário: matriz papel × família', () => {
     const expected: Record<UserRole, Record<string, boolean>> = {
       super_admin: {

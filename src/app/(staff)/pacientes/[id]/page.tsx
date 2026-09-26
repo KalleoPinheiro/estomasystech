@@ -21,6 +21,7 @@ import { use, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
+import type { UserRole } from '@/domain/auth/user-role';
 import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
 import type {
   AnamnesisDto,
@@ -50,6 +51,31 @@ type TabKey = (typeof TABS)[number]['key'];
 type Tab = (typeof TABS)[number];
 
 const TAB_KEYS = TABS.map((t) => t.key);
+
+/**
+ * Pacotes carrega preço (dado financeiro) e `/api/packages` é administrativo:
+ * a aba some para o Profissional até a decisão de produto da #189, e só
+ * aparece quando o papel já é conhecido — na dúvida, fica fora.
+ */
+function tabsForRole(role: UserRole | undefined): readonly Tab[] {
+  const showPackages = role !== undefined && role !== 'profissional';
+  return showPackages ? TABS : TABS.filter((t) => t.key !== 'pacotes');
+}
+
+function useVisibleTabs(requested: TabKey) {
+  const { data: identity } =
+    useApiQuery<SidebarIdentityDto>('/api/auth/identity');
+  const tabs = tabsForRole(identity?.account?.role);
+  const activeTab = tabs.some((t) => t.key === requested)
+    ? requested
+    : 'anamnese';
+  return { tabs, activeTab };
+}
+
+/** 404 sem o id cru: a mensagem do servidor traz o UUID, que não ajuda ninguém (#189). */
+function patientErrorMessage(error: string, status: number | null): string {
+  return status === 404 ? 'Paciente não encontrado.' : error;
+}
 
 /** Só a chave válida — qualquer outro valor de `?aba=` cai no padrão "anamnese" (PRONT-04). */
 function resolveInitialTab(param: string | null): TabKey {
@@ -213,9 +239,10 @@ export default function PatientRecordPage({
   const { id } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTabState] = useState<TabKey>(() =>
+  const [requestedTab, setTabState] = useState<TabKey>(() =>
     resolveInitialTab(searchParams.get('aba')),
   );
+  const { tabs, activeTab: tab } = useVisibleTabs(requestedTab);
   const setTab = (next: TabKey) => {
     setTabState(next);
     router.replace(`/pacientes/${id}?aba=${next}`, { scroll: false });
@@ -229,9 +256,11 @@ export default function PatientRecordPage({
     cancelPendingTab,
   } = useDirtyTabGuard(tab);
 
-  const { data: patient, error } = useApiQuery<PatientDto>(
-    `/api/patients/${id}`,
-  );
+  const {
+    data: patient,
+    error,
+    errorStatus,
+  } = useApiQuery<PatientDto>(`/api/patients/${id}`);
   const {
     data: anamnesis,
     error: anamnesisError,
@@ -257,7 +286,9 @@ export default function PatientRecordPage({
     refresh: refreshCarePlans,
   } = useApiQuery<CarePlanDto[]>(`/api/patients/${id}/care-plans`);
 
-  if (error) return <ErrorAlert message={error} />;
+  if (error) {
+    return <ErrorAlert message={patientErrorMessage(error, errorStatus)} />;
+  }
   if (!patient) return <LoadingIndicator />;
 
   return (
@@ -270,7 +301,7 @@ export default function PatientRecordPage({
         onValueChange={(next) => requestTabChange(next as TabKey, setTab)}
       >
         <TabsList aria-label="Seções do prontuário">
-          {TABS.map((item) => (
+          {tabs.map((item) => (
             <TabsTrigger
               key={item.key}
               value={item.key}

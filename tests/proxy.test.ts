@@ -272,7 +272,7 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
     );
   });
 
-  describe('Cenário: listas auxiliares por papel (#188)', () => {
+  describe('Cenário: listas auxiliares e taxonomia por papel (#188, #189)', () => {
     const requestWith = (
       method: string,
       path: string,
@@ -330,6 +330,78 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
           'Acesso restrito à equipe da clínica',
         );
       }
+    });
+
+    it('Dado profissional, Quando GET /api/options/professionals, Então passa pelo proxy', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'GET',
+          '/api/options/professionals',
+          sessionCookie('profissional'),
+        ),
+      );
+
+      expect(isNext(response)).toBe(true);
+    });
+
+    it('Dado profissional, Quando busca na taxonomia, Então passa pelo proxy', async () => {
+      const paths = [
+        '/api/taxonomy/diagnoses?q=pele',
+        '/api/taxonomy/outcomes?q=tissular',
+        '/api/taxonomy/interventions?q=lesao',
+        '/api/taxonomy/diagnoses/00046/linked-terms',
+      ];
+
+      for (const path of paths) {
+        const proxy = await loadProxy();
+        const response = await proxy(
+          requestWith('GET', path, sessionCookie('profissional')),
+        );
+        expect(isNext(response), path).toBe(true);
+      }
+    });
+
+    it('Dado profissional, Quando importa a taxonomia, Então responde 403', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'POST',
+          '/api/admin/taxonomy/import',
+          sessionCookie('profissional'),
+        ),
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    it.each(['/api/professionals', '/api/packages?patientId=p-1'])(
+      'Dado profissional, Quando GET %s, Então continua 403',
+      async (path) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestWith('GET', path, sessionCookie('profissional')),
+        );
+
+        expect(response.status).toBe(403);
+      },
+    );
+
+    it('Dado atendente, Quando busca na taxonomia, Então responde 403 (família clínica)', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        requestWith(
+          'GET',
+          '/api/taxonomy/diagnoses?q=pele',
+          sessionCookie('atendente'),
+        ),
+      );
+
+      expect(response.status).toBe(403);
     });
   });
 

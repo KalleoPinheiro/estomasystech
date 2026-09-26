@@ -24,6 +24,10 @@ const CLINICAL_PREFIXES = [
   '/api/care-plan-interventions',
   '/api/care-plan-outcomes',
   '/api/care-plans',
+  // Busca NANDA-I/NOC/NIC da SAE (#189): catálogo global só de leitura, usado
+  // pelo prontuário. A importação (`/api/admin/taxonomy/import`) continua
+  // administrativa pelo prefixo `/api/admin`.
+  '/api/taxonomy',
 ];
 
 const PATIENT_RECORD_PREFIX = '/api/patients/';
@@ -68,7 +72,6 @@ const ADMINISTRATIVE_PREFIXES = [
   // qualquer papel de equipe pode precisar imprimir um documento — não só
   // admin (CodeRabbit, review do PR #81).
   '/api/settings/clinic-info',
-  '/api/taxonomy',
   // Conectar a agenda do Google é ato administrativo da empresa, não operação
   // de atendimento — mesma família de /api/settings/clinic-info.
   '/api/integrations',

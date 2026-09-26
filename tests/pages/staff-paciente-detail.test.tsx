@@ -20,6 +20,7 @@ import type {
   EvolutionNoteDto,
   PatientDto,
   ProfessionalDto,
+  ProfessionalOptionDto,
 } from '@/lib/dto';
 import { formatDate, formatDateTime } from '@/lib/format';
 
@@ -39,7 +40,11 @@ interface FetchCall {
   url: string;
   init?: RequestInit;
 }
-type MockedResponse = { ok: boolean; json: () => Promise<unknown> };
+type MockedResponse = {
+  ok: boolean;
+  status?: number;
+  json: () => Promise<unknown>;
+};
 
 const jsonResponse = (data: unknown, ok = true): MockedResponse => ({
   ok,
@@ -226,10 +231,13 @@ interface RouterOptions {
   conditionsError?: string;
   evolutions?: EvolutionNoteDto[];
   evolutionsError?: string;
-  professionals?: ProfessionalDto[];
+  professionals?: ProfessionalOptionDto[];
   assessmentsByCondition?: Record<string, AssessmentDto[]>;
   photosByCondition?: Record<string, ConditionPhotoDto[]>;
   packages?: PackageDto[];
+  /** Papel devolvido por `/api/auth/identity` — decide a aba Pacotes (#189). */
+  role?: string;
+  patientStatus?: number;
   extra?: (
     call: FetchCall,
   ) => MockedResponse | Promise<MockedResponse> | undefined;
@@ -264,11 +272,15 @@ function buildRouter({
   assessmentsByCondition = {},
   photosByCondition = {},
   packages = [] as PackageDto[],
+  role = 'company_admin',
+  patientStatus,
   extra,
 }: RouterOptions = {}) {
   const exactRoutes: Record<string, () => MockedResponse> = {
     '/api/patients/pac-1': () =>
-      patientError ? errorResponse(patientError) : jsonResponse(patient),
+      patientError
+        ? { ...errorResponse(patientError), status: patientStatus }
+        : jsonResponse(patient),
     '/api/patients/pac-1/anamnesis': () =>
       anamnesisError ? errorResponse(anamnesisError) : jsonResponse(anamnesis),
     '/api/patients/pac-1/conditions': () =>
@@ -279,7 +291,12 @@ function buildRouter({
       evolutionsError
         ? errorResponse(evolutionsError)
         : jsonResponse(evolutions),
-    '/api/professionals': () => jsonResponse(professionals),
+    '/api/options/professionals': () => jsonResponse(professionals),
+    '/api/auth/identity': () =>
+      jsonResponse({
+        clinicLabel: 'Clínica',
+        account: { email: 'x@y.com', role, roleLabel: role },
+      }),
     '/api/packages?patientId=pac-1': () => jsonResponse(packages),
   };
 
@@ -531,6 +548,65 @@ describe('Feature: PatientRecordPage', () => {
       expect(
         screen.queryByRole('link', { name: 'Exportar dados (LGPD)' }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Cenário: acesso do Profissional (#189)', () => {
+    it('Dado profissional, Então a aba Pacotes não aparece', async () => {
+      mockFetch(buildRouter({ role: 'profissional' }));
+
+      await renderDetail();
+      await screen.findByText('Maria Souza');
+
+      await waitFor(() => {
+        expect(screen.getByRole('tab', { name: /Anamnese/ })).toBeVisible();
+      });
+      expect(
+        screen.queryByRole('tab', { name: 'Pacotes' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('Dado admin, Então a aba Pacotes aparece', async () => {
+      mockFetch(buildRouter({ role: 'company_admin' }));
+
+      await renderDetail();
+
+      expect(
+        await screen.findByRole('tab', { name: 'Pacotes' }),
+      ).toBeInTheDocument();
+    });
+
+    it('Dado profissional com ?aba=pacotes, Então abre a anamnese sem chamar /api/packages', async () => {
+      searchParamsRef.current = new URLSearchParams('aba=pacotes');
+      const fetchMock = mockFetch(
+        buildRouter({ role: 'profissional', anamnesis: anamnesisFixture }),
+      );
+
+      await renderDetail();
+      await screen.findByText('Maria Souza');
+
+      expect(
+        await screen.findByDisplayValue('Diabetes tipo 2'),
+      ).toBeInTheDocument();
+      const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+      expect(urls.some((url) => url.startsWith('/api/packages'))).toBe(false);
+    });
+
+    it('Dado 404 do paciente, Então a mensagem não expõe o id', async () => {
+      mockFetch(
+        buildRouter({
+          patientError:
+            'Paciente não encontrado(a): 0b7a5c1e-1111-4222-8333-944445555666',
+          patientStatus: 404,
+        }),
+      );
+
+      await renderDetail();
+
+      expect(
+        await screen.findByText('Paciente não encontrado.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/0b7a5c1e/)).not.toBeInTheDocument();
     });
   });
 
@@ -2275,6 +2351,23 @@ describe('Feature: PatientRecordPage', () => {
         }),
       ).toBeInTheDocument();
       expect(screen.getByText(/Dra\. Ana/)).toBeInTheDocument();
+    });
+
+    it('Evolução mostra o autor pela lista reduzida de profissionais', async () => {
+      const fetchMock = mockFetch(
+        buildRouter({
+          evolutions: [evolutionFixture],
+          professionals: [{ id: 'prof-1', fullName: 'Dra. Ana', active: true }],
+          role: 'profissional',
+        }),
+      );
+
+      await openEvolutionsTab();
+
+      expect(await screen.findByText(/Dra\. Ana/)).toBeInTheDocument();
+      const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+      expect(urls).toContain('/api/options/professionals');
+      expect(urls).not.toContain('/api/professionals');
     });
 
     it('Dado preenchimento do formulário SOAP, Quando submetido, Então envia POST e fecha o formulário', async () => {
