@@ -1,3 +1,4 @@
+import { appTimeZone } from '../shared/time-zone';
 import type { ReminderKind } from './reminder-log';
 
 export interface ReminderContent {
@@ -29,10 +30,17 @@ export interface ReminderData {
   recall: RecallData;
 }
 
-const formatDay = (date: Date): string => date.toLocaleDateString('pt-BR');
+// Fuso explícito (#205): sem ele o paciente lia "12:00" numa consulta das
+// 09:00 quando o processo rodava em UTC.
+const formatDay = (date: Date): string =>
+  date.toLocaleDateString('pt-BR', { timeZone: appTimeZone() });
 
 const formatTime = (date: Date): string =>
-  date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: appTimeZone(),
+  });
 
 function confirmation(data: ConfirmationData): ReminderContent {
   const what = data.procedure ? `consulta de ${data.procedure}` : 'consulta';

@@ -45,12 +45,13 @@ zerados, e as demais seguem. O que é enviado a cada execução, em cada clínic
 
 | Tipo | Quem recebe |
 | --- | --- |
-| `confirmation` | consulta de amanhã (data local no fuso `TZ`) ainda `scheduled` |
+| `confirmation` | consulta de amanhã (data local no fuso `APP_TIMEZONE`) ainda `scheduled` |
 | `recall` | retorno `pending` vencido, em D+1, D+7 e D+30 (teto de 3 tentativas) |
 
 Rodar duas vezes no mesmo dia não duplica: a confirmação é única por (referência, dia) e o recall
-por tentativa. Defina `TZ=America/Sao_Paulo` no ambiente — "amanhã" e o dia do registro usam o
-fuso do processo.
+por tentativa. "Amanhã", o dia do registro e a data/hora do e-mail usam `APP_TIMEZONE` (padrão
+`America/Sao_Paulo`); defina também `TZ` com o mesmo valor — em produção o app recusa subir se os
+dois divergirem (#205).
 
 ## Modos de falha
 

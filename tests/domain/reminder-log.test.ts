@@ -71,6 +71,7 @@ describe('Feature: Chave de idempotência diária (dateKey)', () => {
 
   it('C17 dateKey usa a data local do fuso TZ', () => {
     vi.stubEnv('TZ', 'America/Sao_Paulo');
+    vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
 
     // 23:30 de 16/07 em São Paulo = 02:30 UTC de 17/07.
     expect(dateKey(new Date('2026-07-17T02:30:00Z'))).toBe('2026-07-16');

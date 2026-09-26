@@ -18,6 +18,9 @@ export default defineConfig({
     hookTimeout: 30_000,
     env: {
       TZ: "UTC",
+      // Fuso das regras (#205) igual ao do processo da suíte: os testes
+      // existentes seguem valendo; os de fuso sobrescrevem localmente.
+      APP_TIMEZONE: "UTC",
       // As rotas exigem sessão (src/lib/auth/require-session.ts) — a suíte roda
       // com autenticação LIGADA e assina cookies com este segredo
       // (tests/support/session.ts), em vez de exercitar um caminho sem sessão

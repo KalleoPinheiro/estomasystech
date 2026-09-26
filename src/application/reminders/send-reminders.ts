@@ -14,6 +14,7 @@ import {
 } from '@/domain/messaging/reminder-log';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import { startOfZonedDay, zonedParts } from '@/domain/shared/time-zone';
 import { logError } from '@/lib/log-error';
 import { portalUrlFromEnv } from './portal-url';
 
@@ -178,21 +179,23 @@ class ClinicReminders {
   }
 
   private async confirmationReminders(now: Date): Promise<PendingReminder[]> {
-    const startOfTomorrow = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1,
+    // "Amanhã" no fuso da aplicação (#205), não no do processo.
+    const today = zonedParts(now);
+    const startOfTomorrow = startOfZonedDay(
+      today.year,
+      today.month,
+      today.day + 1,
     );
-    const endOfTomorrow = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 2,
+    const endOfTomorrow = startOfZonedDay(
+      today.year,
+      today.month,
+      today.day + 2,
     );
     const appointments = await this.services.appointments.findInRange(
       startOfTomorrow,
       endOfTomorrow,
     );
-    const today = dateKey(now);
+    const todayKey = dateKey(now);
 
     const reminders: PendingReminder[] = [];
     for (const appointment of appointments) {
@@ -202,7 +205,7 @@ class ClinicReminders {
           'confirmation',
           appointment.id,
           'email',
-          today,
+          todayKey,
         )
       ) {
         continue;
