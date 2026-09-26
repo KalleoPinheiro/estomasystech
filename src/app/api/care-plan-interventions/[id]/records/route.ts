@@ -4,6 +4,7 @@ import { RecordIntervention } from '@/application/clinical/record-intervention';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
+import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toInterventionRecordDto } from '@/lib/dto';
@@ -21,13 +22,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
+    const repos = await getRepositories(writeScope(guard.session));
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'carePlanIntervention',
+      id,
+      repos,
+    );
     const body = recordSchema.parse(await request.json());
     const {
       interventionRecords,
       carePlanInterventions,
       carePlans,
       auditEvents,
-    } = await getRepositories(writeScope(guard.session));
+    } = repos;
     const record = await new RecordIntervention(
       interventionRecords,
       carePlanInterventions,

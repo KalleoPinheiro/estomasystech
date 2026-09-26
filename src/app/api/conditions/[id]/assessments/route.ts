@@ -5,6 +5,7 @@ import { EXUDATE_LEVELS } from '@/domain/clinical/condition-assessment';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
+import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toAssessmentDto } from '@/lib/dto';
@@ -39,9 +40,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { assessments, conditions, auditEvents } = await getRepositories(
-      sessionScope(guard.session),
+    const repos = await getRepositories(sessionScope(guard.session));
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'condition',
+      id,
+      repos,
     );
+    const { assessments, conditions, auditEvents } = repos;
     const [result, condition] = await Promise.all([
       assessments.findByConditionId(id),
       conditions.findById(id),
@@ -62,10 +68,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const body = assessmentSchema.parse(await request.json());
-    const { assessments, conditions, auditEvents } = await getRepositories(
-      writeScope(guard.session),
+    const repos = await getRepositories(writeScope(guard.session));
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'condition',
+      id,
+      repos,
     );
+    const body = assessmentSchema.parse(await request.json());
+    const { assessments, conditions, auditEvents } = repos;
     const assessment = await new AddConditionAssessment(
       assessments,
       conditions,
