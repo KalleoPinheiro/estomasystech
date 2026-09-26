@@ -49,6 +49,7 @@ Reaproveita `TransactionManager`, `withTenant`, `isAllowedForRole`, `/api/auth/i
 | Log de erro (#202) | `logError(context, error)` em `src/lib/log-error.ts`; teste de arquitetura proíbe `console.error` em `src/` fora dele | regra Biome `noConsole` - não distingue o helper e exigiria `biome-ignore` no próprio helper |
 | Autoria SAE (#200) | `resolveSessionProfessionalId` em `src/lib/auth/session-professional.ts`; campo `professionalId` sai do schema zod (chave desconhecida é descartada, valor nunca lido) | 400 quando o corpo traz o campo - quebraria a tela atual sem ganho, o valor já não é lido |
 | Seletor de paciente (#197) | componente `PatientPicker` (busca assíncrona em `/api/patients?search=&limit=20`) com `@still-void/ui` | carregar todas as páginas no cliente - O(n) e lento com volume real |
+| Gerador de id do domínio (#203) | `newId = () => globalThis.crypto.randomUUID()` em `src/domain/shared/id.ts` | manter `node:crypto` e trocar os imports do cliente - o módulo é base de várias entidades que as telas importam; qualquer import novo reintroduziria o polyfill e a violação de CSP que o E2E de produção pegou |
 | Menu por papel (#199) | `NAV_ITEMS[].api` = rota de API que a tela exige; filtro via `isAllowedForRole(api, role)` da identidade | lista de papéis por item - duplicaria a matriz de `route-family.ts` |
 
 - Nada mais aqui é difícil de reverter

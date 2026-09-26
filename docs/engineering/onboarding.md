@@ -133,6 +133,21 @@ reaproveitar um `npm run dev` já no ar: `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN`
 `AUTH_SECRET`/`VITTA_BOOTSTRAP_TOKEN` (servidor) precisam ter os mesmos valores.
 Estilo e níveis de teste: [conventions.md](conventions.md#testes).
 
+**Artefato de produção (CI, #203):** além de `test:coverage` e `test:e2e` (contra `next dev`), o
+CI roda:
+
+```bash
+npm run build && npx playwright test -c playwright.prod.config.ts   # E2E contra `next start`
+docker compose build && bash scripts/docker-smoke.sh                # imagem + smoke do container
+```
+
+O E2E de produção cobre login, agenda, prontuário e portal com a CSP estrita (sem
+`'unsafe-eval'`/`'unsafe-inline'`) e falha em qualquer violação de CSP
+(`e2e/csp-producao.spec.ts`). Módulo que chega ao bundle do cliente não pode importar `node:*`:
+o polyfill do Node usa `Function(...)` e a CSP de produção bloqueia. O smoke sobe o
+`docker-compose.yml`, espera o healthcheck, confere `/api/auth/providers` e que o usuário
+`nextjs` grava no volume `uploads` e o arquivo sobrevive à recriação do container.
+
 **Build:** `npm run build` fixa o heap em 4 GB (`--max-old-space-size=4096`) porque o pico é
 ~2,5 GB; em máquina de ~8 GB o heap padrão do V8 morre com `Ineffective mark-compacts`. Não remova.
 

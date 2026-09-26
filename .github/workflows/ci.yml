@@ -75,3 +75,59 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Issue #203: o artefato que vai para produção é verificado antes do deploy.
+  # Build de produção (bloqueante) + subconjunto do E2E contra `next start`,
+  # com a CSP estrita de produção e falha em qualquer violação de CSP.
+  build-e2e-prod:
+    name: Build de produção + E2E (next start)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Test (e2e contra o build de produção)
+        run: npx playwright test -c playwright.prod.config.ts
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report-prod
+          path: playwright-report/
+          retention-days: 7
+
+  docker:
+    name: Imagem Docker + smoke do container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Docker build (sem push)
+        env:
+          # O compose valida as variáveis obrigatórias até no build.
+          POSTGRES_PASSWORD: build-only
+          AUTH_SECRET: build-only
+          RESEND_API_KEY: build-only
+          EMAIL_FROM: build-only
+        run: docker compose build
+
+      - name: Smoke do container
+        run: bash scripts/docker-smoke.sh
