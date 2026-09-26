@@ -43,6 +43,7 @@ Reaproveita `TransactionManager`, `withTenant`, `isAllowedForRole`, `/api/auth/i
 | Constraint de agenda (#187) | migração `0038`: `appointments_no_overlap EXCLUDE USING gist (clinic_id WITH =, COALESCE(professional_id,'*any*') WITH =, tstzrange(starts_at, ends_at_buffered) WITH &&) WHERE status IN ('scheduled','confirmed')` | sentinel por empresa no COALESCE (`'*any*:'||clinic_id`) - mistura dois conceitos numa coluna e não serve de prefixo de índice |
 | Serialização de fatura (#192) | `InvoiceRepository.findByIdForUpdate(id)` (`SELECT … FOR UPDATE`) usado pelos 4 use cases; a rota roda a ação em `transactions.run`; `save` grava fatura + pagamentos numa transação | coluna `version` + 409 otimista - migração nova e o cliente teria de reenviar; o lock já rejeita o 2º pagamento pelo saldo |
 | Estoque só por `adjustStock` (#192) | `DrizzleSupplyRepository.save` exclui `stockQty` do `ON CONFLICT DO UPDATE SET` | manter e reler antes de gravar - ainda janela TOCTOU |
+| Porta do Postgres no compose (#191) | `"127.0.0.1:${POSTGRES_PORT:-5432}:5432"` | sem `ports:` - quebra a Via B do onboarding (`npm run dev` local contra o banco do compose); a issue aceita as duas |
 | Chave do rate limit (#201) | autenticado: `acct:<clinicId|system>:<subject>`; anônimo: `ip:<ip>`; mesmo teto `API_RATE_LIMIT_MAX` (120/min) | teto por empresa - uma recepção ocupada derrubaria o consultório |
 | Fuso da aplicação (#205) | env `APP_TIMEZONE` (default `America/Sao_Paulo`) em `src/lib/app-timezone.ts`; `instrumentation.ts` compara com o fuso do processo: `throw` em produção, `console.error` fora | só `TZ` - não dá para testar "processo UTC, clínica SP" sem mudar o fuso do processo inteiro |
 | Log de erro (#202) | `logError(context, error)` em `src/lib/log-error.ts`; teste de arquitetura proíbe `console.error` em `src/` fora dele | regra Biome `noConsole` - não distingue o helper e exigiria `biome-ignore` no próprio helper |
@@ -69,8 +70,8 @@ Proof: `tests/api/appointment-overlap-per-clinic.test.ts` › "C3 constraint do 
 
 ### S2 - Compose/Dockerfile (#191) · 4 files · ~4k
 
-**C4** - Postgres sem `ports:` publicados por padrão
-Proof: `tests/infrastructure/deploy-config.test.ts` › "C4 compose não publica a porta do Postgres"
+**C4** - Porta do Postgres publicada só em `127.0.0.1` (nunca em todas as interfaces)
+Proof: `tests/infrastructure/deploy-config.test.ts` › "C4 compose publica o Postgres só no loopback"
 
 **C5** - Senha do Postgres obrigatória (`${POSTGRES_PASSWORD:?`) e usada no `DATABASE_URL`
 Proof: `tests/infrastructure/deploy-config.test.ts` › "C5 senha do Postgres é obrigatória e entra no DATABASE_URL"
@@ -135,7 +136,7 @@ Proof: `tests/api/invoice-concurrent-payment.test.ts` › "C21 pagamentos concor
 Proof: `tests/infrastructure/drizzle-supply-stock.test.ts` › "C22 save de insumo não sobrescreve stock_qty"
 
 **C23** - Botões de pagamento desabilitados durante a requisição
-Proof: `tests/app/invoice-payment-in-flight.test.tsx` › "C23 botão de registrar pagamento fica desabilitado em voo"
+Proof: `tests/pages/invoice-payment-in-flight.test.tsx` › "C23 botão de registrar pagamento fica desabilitado em voo"
 
 ### S7 - Rate limit por conta (#201) · 5 files · ~6k
 
@@ -175,7 +176,7 @@ Proof: `tests/components/patient-picker.test.tsx` › "C32 busca assíncrona e s
 Proof: `tests/api/patient-search-beyond-first-page.test.ts` › "C33 paciente 150 é encontrado pela busca e agendado"
 
 **C34** - Agenda, Faturamento e Auditoria não chamam `/api/patients` sem `search`
-Proof: `tests/app/patient-selectors-sweep.test.ts` › "C34 telas não usam a listagem paginada como lista completa"
+Proof: `tests/pages/patient-selectors-sweep.test.ts` › "C34 telas não usam a listagem paginada como lista completa"
 
 ### S10 - Abas do prontuário no celular (#198) · 3 files · ~10k
 
@@ -185,25 +186,25 @@ Proof: `npx playwright test e2e/layout-mobile-first.spec.ts -g "prontuário: aba
 ### S11 - Navegação e dashboard por papel (#199) · 10 files · ~30k
 
 **C36** - Menu do Atendente não mostra Faturamento, Procedimentos, Materiais, Relatórios, Repasses, Auditoria, Profissionais, Configurações, Triagem
-Proof: `tests/app/staff-nav-role.test.tsx` › "C36 atendente vê só itens permitidos"
+Proof: `tests/pages/staff-nav-role.test.tsx` › "C36 atendente vê só itens permitidos"
 
 **C37** - Menu do Profissional mostra Triagem e não mostra itens administrativos
-Proof: `tests/app/staff-nav-role.test.tsx` › "C37 profissional vê triagem e não vê administrativos"
+Proof: `tests/pages/staff-nav-role.test.tsx` › "C37 profissional vê triagem e não vê administrativos"
 
 **C38** - Dashboard do Atendente não renderiza alerta de erro quando `/api/summary` responde 403; mostra consultas do dia e retornos
-Proof: `tests/app/dashboard-role.test.tsx` › "C38 atendente vê consultas do dia e retornos sem alerta"
+Proof: `tests/pages/dashboard-role.test.tsx` › "C38 atendente vê consultas do dia e retornos sem alerta"
 
 **C39** - Ficha do paciente para o Atendente não mostra abas clínicas nem chama as rotas clínicas
-Proof: `tests/app/patient-record-role.test.tsx` › "C39 atendente não vê abas clínicas"
+Proof: `tests/pages/patient-record-role.test.tsx` › "C39 atendente não vê abas clínicas"
 
 **C40** - Proxy responde `ROLE_FAMILY_DENIED_MESSAGE` a staff autenticado sem acesso à família
 Proof: `tests/proxy.test.ts` › "C40 staff sem acesso à família recebe mensagem de papel"
 
 **C41** - Página proibida para o papel mostra estado "sem permissão" amigável, sem alerta de erro de API
-Proof: `tests/app/role-page-guard.test.tsx` › "C41 página proibida mostra sem permissão"
+Proof: `tests/pages/role-page-guard.test.tsx` › "C41 página proibida mostra sem permissão"
 
 **C42** - E-mail da sidebar sem `truncate` (quebra de linha)
-Proof: `tests/app/staff-layout-client.test.tsx` › "C42 e-mail da sidebar quebra linha em vez de truncar"
+Proof: `tests/pages/staff-layout-client.test.tsx` › "C42 e-mail da sidebar quebra linha em vez de truncar"
 
 ### S12 - CI de produção (#203) · 4 files · ~6k
 
