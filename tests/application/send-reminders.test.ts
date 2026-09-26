@@ -258,12 +258,16 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
       expect(summary.sent).toBe(0);
       expect(summary.skipped).toBe(1);
       expect(clinic.reminderLog.items).toHaveLength(0);
+      // Só metadados: destinatário mascarado e assunto — nunca o corpo (CWE-532).
       expect(info).toHaveBeenCalledWith(
-        expect.stringContaining('maria@example.com'),
+        expect.stringContaining('ma***@example.com'),
       );
       expect(info).toHaveBeenCalledWith(
         expect.stringContaining('Clínica Alfa'),
       );
+      const logged = info.mock.calls.map((call) => String(call[0])).join('\n');
+      expect(logged).not.toContain('maria@example.com');
+      expect(logged).not.toContain('Olá');
     });
   });
 

@@ -40,7 +40,7 @@ const inviteFor = async (email: string): Promise<string> => {
     );
     expect(response.status).toBe(200);
     // why: envio de e-mail é fire-and-forget (rota responde antes de despachar) —
-    // sem esperar, a leitura corre contra o console.info assíncrono (flake sob carga).
+    // sem esperar, a leitura corre contra o envio assíncrono (flake sob carga).
     await waitForEmails(emails, 1);
     return tokenFromLastEmail(emails);
   } finally {

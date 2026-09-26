@@ -2,7 +2,7 @@
 
 ## Decisions
 
-Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022.
+Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023.
 
 ### AD-001
 - **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
@@ -117,14 +117,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Date**: 2026-08-25
 - **Status**: active
 
-### AD-015
-- **Decision**: O `Modal` do app mantém o próprio botão de fechar (`aria-label="Fechar"`) e passa `showCloseButton={false}` ao `DialogContent` da `3.x`.
-- **Reason**: o botão que a `3.0.0` passou a renderizar por padrão tem nome acessível `"Close dialog"` **hardcoded** — verificado em `dist/react/client/index.js`; `DialogContentProps` expõe só `showCloseButton`, nenhuma prop de rótulo. Numa interface pt-BR isso é regressão de acessibilidade, e o contrato do app já é asserido por `tests/components/modal.test.tsx`.
-- **Trade-off**: a lacuna `dialog-close-button` continua tecnicamente fechada pela lib, mas o app não a consome; a dívida migra para uma lacuna nova, `dialog-close-label`, que é pedido de i18n na lib.
-- **Scope**: src/components/modal.tsx, docs/still-void-gaps.md
-- **Date**: 2026-08-25
-- **Status**: superseded by AD-016
-
 ### AD-016
 - **Decision**: O `Modal` do app passa a usar `closeLabel="Fechar"` nativo do `DialogContent` da `3.2.0` em vez do botão de fechar manual (`DialogClose`/`Icon` próprios); `showCloseButton={false}` sai, `DialogContent` volta ao botão nativo com `closeLabel="Fechar"`.
 - **Reason**: a `3.2.0` passa a expor `DialogContentProps.closeLabel?: string`, que controla o texto do `<span className="sv-sr-only">` interno do botão de fechar nativo (antes hardcoded em inglês, `"Close dialog"`, motivo original de AD-015) — a lacuna `dialog-close-label` de `docs/still-void-gaps.md` fecha porque a lib passa a suportar i18n do rótulo sem precisar desabilitar o botão.
@@ -173,14 +165,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Date**: 2026-09-02
 - **Status**: active
 
-### AD-023
-- **Decision**: Filtro temporal fino por registro (Dr. A só vê o histórico do período em que atendeu, Dr. B só o que registra dali em diante) **não será implementado**. O comportamento atual — profissional com vínculo (`ProfessionalPatientLink`) vê o prontuário inteiro do paciente, vínculo nunca revogado — é aceito como definitivo.
-- **Reason**: decisão de produto do usuário (issue #43), confirmando a leitura já registrada em `.specs/features/rbac-catalogo-papeis/design.md` ("Approach Exploration", abordagem 2): acesso nunca revogado "por construção" é o requisito central de RBAC-21/AC5, e é mais importante que a leitura estrita de P4-AC4 (spec `rbac-catalogo-papeis`) como filtro por período.
-- **Trade-off**: após transferência de caso, tanto Dr. A quanto Dr. B continuam vendo registros clínicos fora do período em que cada um atendeu — aceito.
-- **Scope**: nenhum código alterado; decisão de escopo apenas.
-- **Date**: 2026-09-05
-- **Status**: resolved — issue #43 (fechada sem PR, "não fazer")
-
 ### AD-024
 - **Decision**: Gestão de conta existente (`PATCH /api/accounts/[id]`, `POST /api/accounts/[id]/resend-invite`) usa a matriz `canProvision` do cadastro; negação → `403` (`ProvisioningDeniedError`, mesmo status do `POST`); `GET /api/accounts` lista só as contas que o papel pode gerir; desativar a própria conta ou o último `company_admin` ativo → `400`; senha/ativação/reenvio auditados write-ahead (`recordAuditNow` antes do `save`). Issue #184.
 - **Reason**: P0 da revisão pré-produção (#183): atendente/profissional trocavam a senha do Admin e o desativavam, sem trilha.
@@ -207,6 +191,12 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Decision**: Padrão seguro até decisão de produto — a aba "Pacotes" do prontuário fica **oculta para o Profissional** (e `/api/packages` continua `administrative`); só aparece com o papel da sessão já conhecido e diferente de `profissional`. **Pergunta aberta**: o Profissional deve ver os pacotes dos pacientes vinculados (com preço? só saldo de sessões?)
 - **Reason**: pacote carrega preço (dado financeiro); a #189 deixa a pergunta aberta e indica esconder como padrão seguro (regra 5 do `AGENTS.md`). Trade-off: o Profissional não vê saldo de sessões do pacote até a decisão.
 - **Scope / Date / Status**: `src/app/(staff)/pacientes/[id]/page.tsx` · 2026-09-26 · active — issue #189 (pergunta aberta)
+
+### AD-028
+- **Decision**: Gateways nulos (`NullEmailGateway`, `NullMessagingGateway`) logam só metadados: canal, assunto (e-mail) ou tamanho do texto (WhatsApp) e destinatário mascarado por `src/lib/redact.ts` (`fu***@x.com`, `+55******7777`) — nunca o corpo. Exceção decidida por @KalleoPinheiro: com `NODE_ENV !== 'production'` o e-mail nulo também loga o link `/definir-senha?token=…`, porque o dev e o `e2e/global-setup.ts` definem senha por ele.
+- **Reason**: mesma classe de vazamento da #202 (CWE-532, LGPD art. 46) — o corpo leva nome do paciente e data da consulta, e o link de convite/reset é credencial.
+- **Trade-off**: em dev o link-credencial ainda vai para o log local (aceito pelo produto). Em produção o e-mail nulo nem é montado (`buildEmailGateway` lança), então o corte por `NODE_ENV` é defesa em profundidade. Os testes deixaram de ler o log e espiam `NullEmailGateway.prototype.send` (`tests/support/email.ts`); o E2E acha o convite no trecho do log escrito após o cadastro, porque as máscaras das contas por papel colidem.
+- **Scope / Date / Status**: `src/application/ports/{email,messaging}-gateway.ts`, `src/lib/redact.ts`, `e2e/support/invite-log.ts` · 2026-09-26 · active
 
 ### Baseline de segurança medido em `fcd6110`
 
