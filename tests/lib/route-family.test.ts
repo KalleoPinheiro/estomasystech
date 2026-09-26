@@ -12,6 +12,7 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/patients/abc/conditions', 'clinical'],
       ['/api/patients/abc/anamnesis', 'clinical'],
       ['/api/patients/abc/care-plans', 'clinical'],
+      ['/api/patients/abc/export', 'clinical'],
       ['/api/conditions/abc', 'clinical'],
       ['/api/photos/abc', 'clinical'],
       ['/api/care-plans', 'clinical'],
@@ -29,6 +30,22 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/audit', 'administrative'],
       ['/api/commission-payouts', 'administrative'],
       ['/api/my-payouts', 'professional_self'],
+    ] as const)(
+      'Dado o pathname %s, Quando classificar, Então família %s',
+      (pathname, family) => {
+        expect(classifyRoute(pathname)).toBe(family);
+      },
+    );
+  });
+
+  describe('Cenário: subrotas de paciente fail-closed (#185)', () => {
+    it.each([
+      ['/api/patients/abc/nova-subrota', 'clinical'],
+      ['/api/patients/abc/export/extra', 'clinical'],
+      ['/api/patients/abc/', 'clinical'],
+      ['/api/patients', 'operational'],
+      ['/api/patients/abc', 'operational'],
+      ['/api/patients/conditions-report', 'operational'],
     ] as const)(
       'Dado o pathname %s, Quando classificar, Então família %s',
       (pathname, family) => {
