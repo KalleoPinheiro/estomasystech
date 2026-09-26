@@ -79,7 +79,7 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
     await expect(afterTasks[0]?.()).resolves.toBeUndefined();
     expect(consoleSpy).toHaveBeenCalledWith(
       'Google Calendar: falha na sincronização pós-request',
-      expect.any(Error),
+      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
     );
   });
 
@@ -126,7 +126,7 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
     expect(action).not.toHaveBeenCalled();
     expect(consoleSpy).toHaveBeenCalledWith(
       'Google Calendar: falha na sincronização pós-request',
-      expect.any(Error),
+      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
     );
   });
 });

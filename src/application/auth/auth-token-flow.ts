@@ -12,6 +12,7 @@ import type {
 import type { UserRole } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
 import { hashPassword } from '@/lib/auth/password';
+import { logError } from '@/lib/log-error';
 
 /**
  * Mensagem única para link inexistente, expirado, já usado ou de conta inativa.
@@ -78,7 +79,7 @@ export class IssueAuthToken {
       return { inviteUrl, delivered: this.email.enabled };
     } catch (error) {
       // Só o id: o endereço é dado pessoal e log não é lugar para ele (CWE-532).
-      console.error(
+      logError(
         `Convite: falha ao enviar e-mail (conta ${input.account.id})`,
         error,
       );

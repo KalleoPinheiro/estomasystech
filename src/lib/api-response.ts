@@ -9,6 +9,7 @@ import {
   ProvisioningDeniedError,
   SchedulingConflictError,
 } from '@/domain/shared/errors';
+import { logError } from '@/lib/log-error';
 
 export interface ApiEnvelope<T> {
   success: boolean;
@@ -66,7 +67,7 @@ export async function handleRequest<T>(
     if (error instanceof DomainError) {
       return fail(error.message, statusForDomainError(error));
     }
-    console.error('Erro inesperado na API:', error);
+    logError('Erro inesperado na API:', error);
     return fail('Erro interno do servidor', 500);
   }
 }

@@ -118,7 +118,7 @@ describe('Feature: Registro de auditoria best-effort (após a resposta)', () => 
     await expect(afterTasks[0]?.()).resolves.toBeUndefined();
     expect(consoleSpy).toHaveBeenCalledWith(
       'Auditoria: falha ao registrar evento',
-      expect.any(Error),
+      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
     );
   });
 });

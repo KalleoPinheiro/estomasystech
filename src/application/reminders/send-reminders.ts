@@ -14,6 +14,7 @@ import {
 } from '@/domain/messaging/reminder-log';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import { logError } from '@/lib/log-error';
 import { portalUrlFromEnv } from './portal-url';
 
 export interface ClinicReminderSummary {
@@ -95,7 +96,7 @@ export class SendReminders {
       const services = await this.servicesFor(clinic.id);
       return await new ClinicReminders(clinic, services, this.email).run(now);
     } catch (error) {
-      console.error(`Lembretes da empresa ${clinic.id}: falha`, error);
+      logError(`Lembretes da empresa ${clinic.id}: falha`, error);
       return {
         clinicId: clinic.id,
         sent: 0,
@@ -161,7 +162,7 @@ class ClinicReminders {
     try {
       await this.email.send(message);
     } catch (error) {
-      console.error(
+      logError(
         `Lembrete ${reminder.kind}/${reminder.referenceId}: falha no envio`,
         error,
       );

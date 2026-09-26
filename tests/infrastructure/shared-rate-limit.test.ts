@@ -116,7 +116,7 @@ describe('Feature: Rate limit compartilhado entre réplicas (issue #77)', () => 
       expect(results).toEqual([true, true, false]);
       expect(log).toHaveBeenCalledWith(
         expect.stringContaining('Rate limit login'),
-        expect.any(Error),
+        expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
       );
       log.mockRestore();
     });

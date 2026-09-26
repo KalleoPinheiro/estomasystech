@@ -1,3 +1,4 @@
+import { logError } from '@/lib/log-error';
 import type { Session } from './session';
 import { isStaffRole } from './staff-roles';
 
@@ -63,7 +64,7 @@ export async function isStaffSessionRevoked(
     });
     return revoked;
   } catch (error) {
-    console.error(
+    logError(
       'Revogação de sessão: falha ao consultar conta — fail-open (AD-004)',
       error,
     );
