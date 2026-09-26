@@ -272,6 +272,19 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       },
     );
 
+    it('C40 staff sem acesso à família recebe mensagem de papel', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(
+        request('/api/invoices', sessionCookie('atendente')),
+      );
+
+      expect(response.status).toBe(403);
+      expect((await body(response)).error).toBe(
+        'Seu papel não tem acesso a este recurso',
+      );
+    });
+
     it('Dada sessão de paciente numa página da equipe, Então redireciona para /portal', async () => {
       const proxy = await loadProxy();
 

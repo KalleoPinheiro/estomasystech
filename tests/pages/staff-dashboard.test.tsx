@@ -163,7 +163,8 @@ describe('Feature: Dashboard do painel interno', () => {
       mockFetch();
       renderWithToast(<DashboardPage />);
 
-      expect(screen.getByText('Carregando…')).toBeInTheDocument();
+      // KPIs e "Consultas de hoje" dependem do resumo: os dois carregam.
+      expect(screen.getAllByText('Carregando…').length).toBeGreaterThan(0);
     });
   });
 
@@ -173,7 +174,11 @@ describe('Feature: Dashboard do painel interno', () => {
       renderWithToast(<DashboardPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Erro ao buscar resumo')).toBeInTheDocument();
+        // O erro fica no bloco que depende do resumo — a página continua.
+        expect(
+          screen.getAllByText('Erro ao buscar resumo').length,
+        ).toBeGreaterThan(0);
+        expect(screen.getByText('Retornos pendentes')).toBeInTheDocument();
       });
     });
   });

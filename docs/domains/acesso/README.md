@@ -3,7 +3,7 @@ title: "Domínio: Acesso, empresas e auditoria"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-26
 domain: acesso
 ---
 
@@ -32,6 +32,9 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-08 | Conta desativada perde o acesso em até 60 s mesmo com cookie válido (deny-list) | `.specs/STATE.md` AD-001 |
 | ACE-RN-09 | Mesmo e-mail pode existir em empresas diferentes; login testa a senha contra cada conta e nega se houver ambiguidade | `.specs/features/fix-login-email-ambiguo/` |
 | ACE-RN-10 | Acesso do Super Admin a dado de outra empresa é sempre auditado | `src/lib/audit.ts` |
+| ACE-RN-11 | A interface esconde o que o papel não pode usar, pela mesma matriz de famílias de rota (sem regra duplicada): menu, blocos do dashboard, abas da ficha; tela proibida mostra "sem permissão" sem chamar a API. Esconder é UX — a API continua barrando (#199) | `src/lib/staff-access.tsx`, `src/lib/auth/route-family.ts` |
+| ACE-RN-12 | Equipe autenticada sem acesso à família de rota recebe `403` "Seu papel não tem acesso a este recurso" também no proxy — "restrito à equipe" fica para sessões de paciente/parceiro (#199) | `src/proxy.ts` |
+| ACE-RN-13 | Limite geral da API por conta autenticada (empresa + e-mail) e por IP só para anônimos — clínicas atrás de NAT não dividem o teto (#201) | `src/proxy.ts` |
 
 ### Papéis
 

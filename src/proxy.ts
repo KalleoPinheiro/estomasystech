@@ -4,6 +4,7 @@ import {
   AUTH_NOT_CONFIGURED_MESSAGE,
   isAllowedForRole,
   isPublicPath,
+  ROLE_FAMILY_DENIED_MESSAGE,
   resolveAuthMode,
   STAFF_ONLY_MESSAGE,
   UNAUTHENTICATED_MESSAGE,
@@ -11,7 +12,9 @@ import {
 import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { getRequestSession } from '@/lib/auth/request-session';
+import type { Session } from '@/lib/auth/session';
 import { isStaffSessionRevoked } from '@/lib/auth/staff-revocation';
+import { isStaffRole } from '@/lib/auth/staff-roles';
 
 /**
  * Camada 1 de autorização (borda). No Next.js 16 este arquivo se chama `proxy.ts`
@@ -63,9 +66,16 @@ function unauthorized(request: NextRequest): NextResponse {
   return NextResponse.redirect(new URL('/login', request.url));
 }
 
-function forbidden(request: NextRequest): NextResponse {
+function forbidden(request: NextRequest, session: Session): NextResponse {
   if (isApiPath(request.nextUrl.pathname)) {
-    return fail(STAFF_ONLY_MESSAGE, 403);
+    // Equipe sem acesso à família de rota lê a mesma mensagem do handler
+    // (#199) — "restrito à equipe" confundia quem É da equipe.
+    return fail(
+      isStaffRole(session.role)
+        ? ROLE_FAMILY_DENIED_MESSAGE
+        : STAFF_ONLY_MESSAGE,
+      403,
+    );
   }
   return NextResponse.redirect(new URL('/portal', request.url));
 }
@@ -151,7 +161,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return unauthorized(request);
   }
   if (!isAllowedForRole(pathname, session.role)) {
-    return forbidden(request);
+    return forbidden(request, session);
   }
 
   return nextWithCsp(request);

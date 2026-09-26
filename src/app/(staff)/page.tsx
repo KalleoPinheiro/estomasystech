@@ -6,11 +6,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { BillingSummary } from '@/application/billing/get-billing-summary';
 import { ConfirmAction } from '@/components/confirm-action';
-import {
-  EmptyState,
-  ErrorAlert,
-  LoadingIndicator,
-} from '@/components/feedback';
+import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { SummaryCard } from '@/components/summary-card';
@@ -24,6 +20,7 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/format';
+import { useStaffAccess } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useTriageQueue } from '@/lib/use-triage-queue';
 
@@ -33,9 +30,27 @@ interface SummaryData {
   today: AppointmentDto[];
 }
 
+/** Início e fim do dia local — janela de "Consultas de hoje" sem o resumo. */
+function todayRange(): string {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return `from=${start.toISOString()}&to=${end.toISOString()}`;
+}
+
 export default function DashboardPage() {
   const { toast } = useToast();
-  const { data: summary, error } = useApiQuery<SummaryData>('/api/summary');
+  // Cada bloco só existe para quem pode usá-lo e trata o próprio erro (#199):
+  // Atendente e Profissional não têm resumo financeiro nem estoque, e um bloco
+  // negado não derruba mais a tela inicial inteira.
+  const can = useStaffAccess();
+  const showFinance = can('/api/summary');
+  const showStock = can('/api/supplies');
+  const showTriage = can('/api/photos/triage');
+  const summaryQuery = useApiQuery<SummaryData>(
+    showFinance ? '/api/summary' : null,
+  );
   const {
     data: followUps,
     error: followUpsError,
@@ -47,7 +62,7 @@ export default function DashboardPage() {
     error: suppliesError,
     isLoading: suppliesLoading,
     refresh: refreshSupplies,
-  } = useApiQuery<SupplyDto[]>('/api/supplies');
+  } = useApiQuery<SupplyDto[]>(showStock ? '/api/supplies' : null);
 
   const lowStock = (supplies ?? []).filter((s) => s.active && s.isLowStock);
 
@@ -72,6 +87,50 @@ export default function DashboardPage() {
     }
   };
 
+  return (
+    <div>
+      <PageHeader title="Dashboard" />
+
+      {showFinance && (
+        <KpiGrid summary={summaryQuery.data} error={summaryQuery.error} />
+      )}
+
+      {showTriage && <TriageQueue />}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <TodayAppointmentsCard
+          fromSummary={showFinance ? summaryQuery : null}
+        />
+
+        <div className="flex flex-col gap-6">
+          <FollowUpsCard
+            followUps={followUps}
+            error={followUpsError}
+            isLoading={followUpsLoading}
+            onRetry={refreshFollowUps}
+            onResolve={resolveFollowUp}
+          />
+          {showStock && (
+            <LowStockCard
+              lowStock={lowStock}
+              error={suppliesError}
+              isLoading={suppliesLoading}
+              onRetry={refreshSupplies}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KpiGrid({
+  summary,
+  error,
+}: {
+  summary: SummaryData | null;
+  error: string | null;
+}) {
   if (error) return <ErrorAlert message={error} />;
   if (!summary) return <LoadingIndicator />;
 
@@ -103,99 +162,85 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div>
-      <PageHeader title="Dashboard" />
-
-      <div
-        data-kpi-grid
-        className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-      >
-        {cards.map((card) => (
-          <Link
-            key={card.label}
-            href={card.href}
-            aria-label={`Ver ${card.label.toLowerCase()}`}
-          >
-            <Card className="h-full p-4 transition-colors hover:border-accent sm:p-5">
-              <p className="text-ink-3 text-sm">{card.label}</p>
-              <p
-                className={`mt-1 font-bold text-xl tabular-nums sm:text-2xl ${card.tone}`}
-              >
-                {card.value}
-              </p>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      <TriageQueue />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Consultas de hoje</h2>
-            <Link
-              href="/agenda"
-              className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-accent-ink text-sm hover:underline"
+    <div
+      data-kpi-grid
+      className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+    >
+      {cards.map((card) => (
+        <Link
+          key={card.label}
+          href={card.href}
+          aria-label={`Ver ${card.label.toLowerCase()}`}
+        >
+          <Card className="h-full p-4 transition-colors hover:border-accent sm:p-5">
+            <p className="text-ink-3 text-sm">{card.label}</p>
+            <p
+              className={`mt-1 font-bold text-xl tabular-nums sm:text-2xl ${card.tone}`}
             >
-              Ver agenda completa <Icon name="chevron-right" />
-            </Link>
-          </div>
-          {summary.today.length === 0 ? (
-            <EmptyState
-              message="Nenhuma consulta agendada para hoje."
-              icon="check-circle"
-              action={{ label: 'Ver agenda', href: '/agenda' }}
-            />
-          ) : (
-            <ul className="divide-y divide-border">
-              {summary.today.map((appointment) => (
-                <li
-                  key={appointment.id}
-                  className="flex items-center gap-4 py-3"
-                >
-                  <span className="w-24 shrink-0 font-mono text-ink-2 text-sm">
-                    {formatTime(appointment.startsAt)}–
-                    {formatTime(appointment.endsAt)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {appointment.patientName}
-                    </p>
-                    <p className="truncate text-ink-3 text-sm">
-                      {appointment.procedure}
-                    </p>
-                  </div>
-                  <StatusBadge
-                    status={appointment.status}
-                    label={
-                      APPOINTMENT_STATUS_LABELS[appointment.status] ??
-                      appointment.status
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
-        <div className="flex flex-col gap-6">
-          <FollowUpsCard
-            followUps={followUps}
-            error={followUpsError}
-            isLoading={followUpsLoading}
-            onRetry={refreshFollowUps}
-            onResolve={resolveFollowUp}
-          />
-          <LowStockCard
-            lowStock={lowStock}
-            error={suppliesError}
-            isLoading={suppliesLoading}
-            onRetry={refreshSupplies}
-          />
-        </div>
-      </div>
+              {card.value}
+            </p>
+          </Card>
+        </Link>
+      ))}
     </div>
+  );
+}
+
+/**
+ * Consultas de hoje: do resumo, para quem o recebe (Admin); senão, da agenda
+ * do dia — que para o Profissional já vem restrita à própria agenda (R4).
+ */
+function TodayAppointmentsCard({
+  fromSummary,
+}: {
+  fromSummary: {
+    data: SummaryData | null;
+    error: string | null;
+    isLoading: boolean;
+    refresh: () => void;
+  } | null;
+}) {
+  const own = useApiQuery<AppointmentDto[]>(
+    fromSummary ? null : `/api/appointments?${todayRange()}`,
+  );
+  const today = fromSummary ? (fromSummary.data?.today ?? null) : own.data;
+  const source = fromSummary ?? own;
+
+  return (
+    <SummaryCard
+      title="Consultas de hoje"
+      href={{ label: 'Ver agenda completa', url: '/agenda' }}
+      error={source.error}
+      isLoading={source.isLoading}
+      onRetry={source.refresh}
+      isEmpty={!today || today.length === 0}
+      emptyMessage="Nenhuma consulta agendada para hoje."
+      emptyIcon="check-circle"
+    >
+      <ul className="divide-y divide-border">
+        {(today ?? []).map((appointment) => (
+          <li key={appointment.id} className="flex items-center gap-4 py-3">
+            <span className="w-24 shrink-0 font-mono text-ink-2 text-sm">
+              {formatTime(appointment.startsAt)}–
+              {formatTime(appointment.endsAt)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{appointment.patientName}</p>
+              <p className="truncate text-ink-3 text-sm">
+                {appointment.procedure}
+              </p>
+            </div>
+            <StatusBadge
+              status={appointment.status}
+              label={
+                APPOINTMENT_STATUS_LABELS[appointment.status] ??
+                appointment.status
+              }
+            />
+          </li>
+        ))}
+      </ul>
+    </SummaryCard>
   );
 }
 
