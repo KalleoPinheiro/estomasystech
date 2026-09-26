@@ -39,7 +39,7 @@ src/
 ## Fluxo de uma requisição
 
 1. `src/proxy.ts` — sem `AUTH_SECRET` responde `503`; valida o cookie assinado, o papel da
-   família de rota e o rate limit (somado entre réplicas no Postgres); gera o nonce da CSP.
+   família de rota e o rate limit (por conta autenticada ou por IP se anônimo, somado entre réplicas no Postgres); gera o nonce da CSP.
 2. Route handler em `src/app/api/**` — `require-session` reautoriza (camada 2, [ADR-002](../adr/002-autorizacao-em-duas-camadas.md)).
 3. `getRepositories(sessionScope(guard.session))` — repositórios já filtrados pela clínica da sessão ([ADR-001](../adr/001-multi-tenancy.md)).
 4. Caso de uso em `src/application/**` aplica as regras do `domain`.
