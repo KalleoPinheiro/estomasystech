@@ -234,3 +234,200 @@ describe('Feature: Página de login', () => {
     });
   });
 });
+
+/** B2 (ADR-007): segundo fator do super_admin dentro de /login. */
+describe('Feature: Segundo fator do super_admin na tela de login', () => {
+  type Handler = (
+    body: Record<string, string>,
+  ) => ReturnType<typeof jsonResponse>;
+
+  function mockMfa(routes: Record<string, Handler>) {
+    const calls: Array<{ url: string; body: Record<string, string> }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.startsWith('/api/auth/providers')) {
+          return jsonResponse(true, { password: true });
+        }
+        const body = JSON.parse(String(init?.body ?? '{}'));
+        calls.push({ url, body });
+        const handler = routes[url];
+        if (!handler) throw new Error(`URL não mapeada no mock: ${url}`);
+        return handler(body);
+      }),
+    );
+    return calls;
+  }
+
+  async function signIn() {
+    render(<LoginPage />);
+    fireEvent.change(await screen.findByLabelText('Email'), {
+      target: { value: 'dono@vitta.test' },
+    });
+    fireEvent.change(screen.getByLabelText('Senha'), {
+      target: { value: 'senha-do-dono' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+  }
+
+  const codes = Array.from({ length: 10 }, (_, i) => `abcde-fgh${i + 2}k`);
+
+  it('Dado login que pede o código, Quando enviar o código, Então a etapa do código chama verify e leva a /plataforma', async () => {
+    const calls = mockMfa({
+      '/api/auth/login': () =>
+        jsonResponse(true, { mfaRequired: true, pendingToken: 'mfa.p.s' }),
+      '/api/auth/mfa/verify': () => jsonResponse(true, { ok: true }),
+    });
+    await signIn();
+
+    const field = await screen.findByLabelText('Código do autenticador');
+    expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument();
+    fireEvent.change(field, { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verificar' }));
+
+    await waitFor(() =>
+      expect(routerMock.push).toHaveBeenCalledWith('/plataforma'),
+    );
+    expect(calls.at(-1)).toEqual({
+      url: '/api/auth/mfa/verify',
+      body: { pendingToken: 'mfa.p.s', code: '123456' },
+    });
+    expect(window.location.search).not.toContain('mfa.');
+  });
+
+  it('Dado código errado, Quando verificar, Então mostra o erro e volta ao login pelo link', async () => {
+    mockMfa({
+      '/api/auth/login': () =>
+        jsonResponse(true, { mfaRequired: true, pendingToken: 'mfa.p.s' }),
+      '/api/auth/mfa/verify': () =>
+        jsonResponse(false, null, 'Código inválido'),
+    });
+    await signIn();
+    fireEvent.change(await screen.findByLabelText('Código do autenticador'), {
+      target: { value: '000000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verificar' }));
+
+    expect(await screen.findByText('Código inválido')).toBeInTheDocument();
+    expect(routerMock.push).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar ao login' }));
+    expect(await screen.findByLabelText('Senha')).toBeInTheDocument();
+  });
+
+  it('Dado login sem fator, Quando cadastrar, Então o cadastro do segundo fator mostra chave e link sem QR, e os códigos uma vez', async () => {
+    const calls = mockMfa({
+      '/api/auth/login': () =>
+        jsonResponse(true, {
+          mfaEnrollmentRequired: true,
+          pendingToken: 'mfa.e.s',
+        }),
+      '/api/auth/mfa/enroll': () =>
+        jsonResponse(true, {
+          secret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+          otpauthUri:
+            'otpauth://totp/VittaFlow:dono%40vitta.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+          pendingToken: 'mfa.c.s',
+        }),
+      '/api/auth/mfa/verify': () =>
+        jsonResponse(true, { recoveryCodes: codes }),
+    });
+    await signIn();
+
+    expect(
+      await screen.findByText('JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Abrir no app autenticador' }),
+    ).toHaveAttribute(
+      'href',
+      'otpauth://totp/VittaFlow:dono%40vitta.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+    );
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(document.querySelector('canvas, svg[aria-label*="QR"]')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Código do autenticador'), {
+      target: { value: '654321' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    const list = await screen.findByRole('list', {
+      name: 'Códigos de recuperação',
+    });
+    expect(list.querySelectorAll('li')).toHaveLength(10);
+    expect(screen.getByText(codes[0])).toBeInTheDocument();
+    expect(calls.map((c) => c.url)).toEqual([
+      '/api/auth/login',
+      '/api/auth/mfa/enroll',
+      '/api/auth/mfa/verify',
+    ]);
+    expect(calls[2].body).toEqual({ pendingToken: 'mfa.c.s', code: '654321' });
+    expect(routerMock.push).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(routerMock.push).toHaveBeenCalledWith('/plataforma');
+  });
+
+  it('Dado a etapa do código, Quando usar um código de recuperação válido, Então o código de recuperação abre o cadastro', async () => {
+    const calls = mockMfa({
+      '/api/auth/login': () =>
+        jsonResponse(true, { mfaRequired: true, pendingToken: 'mfa.p.s' }),
+      '/api/auth/mfa/verify': () =>
+        jsonResponse(true, {
+          mfaEnrollmentRequired: true,
+          pendingToken: 'mfa.e2.s',
+        }),
+      '/api/auth/mfa/enroll': () =>
+        jsonResponse(true, {
+          secret: 'ABCDEFGH',
+          otpauthUri: 'otpauth://totp/x',
+          pendingToken: 'mfa.c2.s',
+        }),
+    });
+    await signIn();
+    await screen.findByLabelText('Código do autenticador');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Usar um código de recuperação' }),
+    );
+    fireEvent.change(screen.getByLabelText('Código de recuperação'), {
+      target: { value: 'abcde-fgh2k' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verificar' }));
+
+    expect(
+      await screen.findByText('Cadastre o app autenticador'),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('ABCDEFGH')).toBeInTheDocument();
+    expect(calls[1].body).toEqual({
+      pendingToken: 'mfa.p.s',
+      recoveryCode: 'abcde-fgh2k',
+    });
+    expect(calls[2]).toEqual({
+      url: '/api/auth/mfa/enroll',
+      body: { pendingToken: 'mfa.e2.s' },
+    });
+    expect(routerMock.push).not.toHaveBeenCalled();
+  });
+
+  it('Dado token de cadastro expirado, Quando abrir o cadastro, Então mostra o erro e não habilita a confirmação', async () => {
+    mockMfa({
+      '/api/auth/login': () =>
+        jsonResponse(true, {
+          mfaEnrollmentRequired: true,
+          pendingToken: 'mfa.e.s',
+        }),
+      '/api/auth/mfa/enroll': () =>
+        jsonResponse(
+          false,
+          null,
+          'Verificação expirada. Entre novamente com e-mail e senha.',
+        ),
+    });
+    await signIn();
+
+    expect(
+      await screen.findByText(
+        'Verificação expirada. Entre novamente com e-mail e senha.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+  });
+});

@@ -8,6 +8,14 @@ import { AuthCard } from '@/components/auth-card';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 import { useApiQuery } from '@/lib/use-api-query';
+import {
+  type LoginStep,
+  MfaCodeStep,
+  MfaEnrollStep,
+  nextStep,
+  type PendingLoginData,
+  RecoveryCodesStep,
+} from './mfa-steps';
 
 interface Providers {
   password: boolean;
@@ -37,6 +45,16 @@ function LoginCard() {
   const redirectErrorMessage = redirectErrorCode
     ? (LOGIN_ERROR_MESSAGES[redirectErrorCode] ?? GENERIC_LOGIN_ERROR)
     : null;
+  const [step, setStep] = useState<LoginStep>({ kind: 'password' });
+
+  if (step.kind !== 'password') {
+    return (
+      <AuthCard>
+        <h1 className="sv-display mb-4 font-bold text-xl">VittaFlow</h1>
+        <SecondFactor step={step} onStep={setStep} />
+      </AuthCard>
+    );
+  }
 
   return (
     <AuthCard>
@@ -47,7 +65,7 @@ function LoginCard() {
       {redirectErrorMessage && <ErrorAlert message={redirectErrorMessage} />}
       {providers ? (
         providers.password ? (
-          <PasswordForm />
+          <PasswordForm onStep={setStep} />
         ) : (
           <ErrorAlert message="Autenticação não configurada no servidor." />
         )
@@ -58,7 +76,31 @@ function LoginCard() {
   );
 }
 
-function PasswordForm() {
+/** Segundo fator do super_admin (ADR-007, bloco B2). */
+function SecondFactor({
+  step,
+  onStep,
+}: {
+  step: Exclude<LoginStep, { kind: 'password' }>;
+  onStep: (step: LoginStep) => void;
+}) {
+  if (step.kind === 'code') {
+    return <MfaCodeStep pendingToken={step.pendingToken} onStep={onStep} />;
+  }
+  if (step.kind === 'enroll') {
+    // `key`: um recadastro depois de outro recomeça o componente do zero.
+    return (
+      <MfaEnrollStep
+        key={step.pendingToken}
+        pendingToken={step.pendingToken}
+        onStep={onStep}
+      />
+    );
+  }
+  return <RecoveryCodesStep codes={step.codes} />;
+}
+
+function PasswordForm({ onStep }: { onStep: (step: LoginStep) => void }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,10 +112,16 @@ function PasswordForm() {
     setSubmitting(true);
     setError(null);
     try {
-      await apiFetch('/api/auth/login', {
+      const data = await apiFetch<PendingLoginData>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
+      // Super_admin: a senha só abre o segundo fator (ADR-007).
+      const step = nextStep(data);
+      if (step) {
+        onStep(step);
+        return;
+      }
       router.push('/');
       router.refresh();
     } catch (err) {
