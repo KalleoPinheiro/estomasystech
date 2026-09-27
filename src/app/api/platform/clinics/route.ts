@@ -1,0 +1,91 @@
+import type { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { sendInvite } from '@/application/auth/send-invite';
+import { adminStatusOf } from '@/application/platform/clinic-overview';
+import { CreateClinic } from '@/application/platform/create-clinic';
+import { getRepositories } from '@/infrastructure/container';
+import { handleRequest } from '@/lib/api-response';
+import { recordAudit } from '@/lib/audit';
+import { requireStaffSession } from '@/lib/auth/require-session';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
+import {
+  toPlatformClinicDto,
+  toPlatformClinicSummaryDto,
+  toUserAccountDto,
+} from '@/lib/dto';
+
+const createSchema = z.object({
+  name: z.string().max(200),
+  cnpj: z.string().max(30),
+  contactPhone: z.string().max(50),
+  contactEmail: z.string().max(200),
+  adminEmail: z.string().min(3).max(200),
+  professionalName: z.string().max(200).nullish(),
+  professionalRegistry: z.string().max(60).nullish(),
+});
+
+/**
+ * Clínicas da plataforma (B4, #214). O catálogo de clínicas não tem empresa
+ * (`systemScope`); o estado do admin de cada uma é lido no escopo dela.
+ */
+export async function GET(request: NextRequest) {
+  const guard = requireStaffSession(request);
+  if (!guard.ok) return guard.response;
+
+  return handleRequest(async () => {
+    const { clinics } = await getRepositories(systemScope());
+    const all = await clinics.findAll();
+    const rows = await Promise.all(
+      all.map(async (clinic) => {
+        const { userAccounts } = await getRepositories(clinicScope(clinic.id));
+        const admins = await userAccounts.findByRole('company_admin');
+        return toPlatformClinicSummaryDto(clinic, adminStatusOf(admins));
+      }),
+    );
+    return rows.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  });
+}
+
+/**
+ * Cria a clínica e o primeiro `company_admin` (numa transação) e convida o
+ * admin. A resposta nunca traz o link do convite (B1, critério 14).
+ */
+export async function POST(request: NextRequest) {
+  const guard = requireStaffSession(request);
+  if (!guard.ok) return guard.response;
+
+  return handleRequest(async () => {
+    const body = createSchema.parse(await request.json());
+    const { clinics, clinicProvisioning } = await getRepositories(
+      systemScope(),
+    );
+    const { clinic, admin } = await new CreateClinic(
+      clinics,
+      clinicProvisioning,
+    ).execute({ ...body, createdBy: guard.session?.subject ?? 'anonymous' });
+
+    const services = await getRepositories(clinicScope(clinic.id));
+    const { delivered } = await sendInvite(services, admin);
+    recordAudit(services.auditEvents, guard.session, {
+      action: 'create',
+      resourceType: 'clinic',
+      resourceId: clinic.id,
+      clinicId: clinic.id,
+    });
+    recordAudit(services.auditEvents, guard.session, {
+      action: 'create',
+      resourceType: 'account',
+      resourceId: admin.id,
+      clinicId: clinic.id,
+    });
+    return {
+      clinic: toPlatformClinicDto(clinic),
+      admin: {
+        ...toUserAccountDto(admin),
+        role: admin.role,
+        clinicId: admin.clinicId,
+        delivered,
+      },
+    };
+  });
+}

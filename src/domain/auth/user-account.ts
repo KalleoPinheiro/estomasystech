@@ -140,6 +140,8 @@ export interface UserAccountRepository {
   findAllByEmail(email: string): Promise<UserAccount[]>;
   findById(id: string): Promise<UserAccount | null>;
   findAll(): Promise<UserAccount[]>;
+  /** Contas de um papel, na ordem do e-mail — sem o teto de `findAll` (B4). */
+  findByRole(role: UserRole): Promise<UserAccount[]>;
   /**
    * Troca só o hash de senha, identificando a conta pelo id. Existe separado de
    * `save` porque o fluxo de convite/reset roda ANTES de haver sessão: não há

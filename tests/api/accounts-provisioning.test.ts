@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
-import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
+import {
+  CLINIC_A_ID,
+  CLINIC_B_ID,
+  ensureTestClinics,
+} from '../support/clinics';
 import { seedPortalRecord } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -188,5 +192,27 @@ describe('Feature: Hierarquia de provisionamento via POST /api/accounts (RBAC-11
       expect(second.response.status).toBe(400);
       expect(second.json.error).toBe('Este paciente já tem acesso ao portal');
     });
+  });
+
+  it('Dado company_admin da clínica A mandando clinicId da B, Quando cadastrar, Então clinicId no corpo é ignorado e a conta nasce na A', async () => {
+    await ensureTestClinics();
+
+    const { response, json } = await create('company_admin', {
+      email: 'desviada@example.com',
+      role: 'atendente',
+      clinicId: CLINIC_B_ID,
+    });
+
+    expect(response.status).toBe(200);
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { clinicScope } = await import('@/lib/auth/tenant-scope');
+    const inA = await getRepositories(clinicScope(CLINIC_A_ID));
+    const inB = await getRepositories(clinicScope(CLINIC_B_ID));
+    expect((await inA.userAccounts.findById(json.data.id))?.clinicId).toBe(
+      CLINIC_A_ID,
+    );
+    expect(
+      await inB.userAccounts.findAllByEmail('desviada@example.com'),
+    ).toEqual([]);
   });
 });

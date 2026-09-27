@@ -17,7 +17,21 @@ const toClinic = (row: ClinicRow): Clinic =>
     city: row.city,
     professionalName: row.professionalName,
     professionalRegistry: row.professionalRegistry,
+    contactPhone: row.contactPhone,
+    contactEmail: row.contactEmail,
   });
+
+/** Dados cadastrais gravados por `create` e `update`. */
+const infoColumns = (clinic: Clinic) => ({
+  name: clinic.name,
+  cnpj: clinic.cnpj,
+  address: clinic.address,
+  city: clinic.city,
+  professionalName: clinic.professionalName,
+  professionalRegistry: clinic.professionalRegistry,
+  contactPhone: clinic.contactPhone,
+  contactEmail: clinic.contactEmail,
+});
 
 export class DrizzleClinicRepository implements ClinicRepository {
   constructor(private readonly db: AppDb) {}
@@ -25,10 +39,19 @@ export class DrizzleClinicRepository implements ClinicRepository {
   async create(clinic: Clinic): Promise<void> {
     await this.db.insert(clinics).values({
       id: clinic.id,
-      name: clinic.name,
       createdBy: clinic.createdBy,
       createdAt: clinic.createdAt,
+      ...infoColumns(clinic),
     });
+  }
+
+  async findByCnpj(cnpj: string): Promise<Clinic | null> {
+    const rows = await this.db
+      .select()
+      .from(clinics)
+      .where(eq(clinics.cnpj, cnpj))
+      .limit(1);
+    return rows[0] ? toClinic(rows[0]) : null;
   }
 
   async findById(id: string): Promise<Clinic | null> {
@@ -51,14 +74,7 @@ export class DrizzleClinicRepository implements ClinicRepository {
   async update(clinic: Clinic): Promise<void> {
     await this.db
       .update(clinics)
-      .set({
-        name: clinic.name,
-        cnpj: clinic.cnpj,
-        address: clinic.address,
-        city: clinic.city,
-        professionalName: clinic.professionalName,
-        professionalRegistry: clinic.professionalRegistry,
-      })
+      .set(infoColumns(clinic))
       .where(eq(clinics.id, clinic.id));
   }
 }

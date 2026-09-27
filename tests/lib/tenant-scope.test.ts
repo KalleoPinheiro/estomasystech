@@ -31,6 +31,8 @@ const SYSTEM_SCOPE_ALLOWLIST: Record<string, string> = {
     'segundo fator do super_admin: sem sessão; o token pendente identifica a conta (sem clínica)',
   'app/api/reminders/run/route.ts':
     'listar as empresas para o cron; o job roda com clinicScope de cada uma',
+  'app/api/platform/clinics/route.ts':
+    'lista e cria clínicas (B4): o catálogo de clínicas não tem empresa; contas e convite usam clinicScope de cada uma',
   'app/api/platform/taxonomy/import/route.ts':
     'catálogo de taxonomia é global (sem clinic_id); ato de plataforma (ADR-007)',
   'app/api/taxonomy/diagnoses/[code]/linked-terms/route.ts':

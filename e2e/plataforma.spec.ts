@@ -19,6 +19,34 @@ test.describe("área da plataforma", () => {
       await expect(page.getByRole("navigation")).toHaveCount(0);
     });
 
+    test("cria clínica pela tela e vê o admin aguardando primeiro acesso", async ({ page }) => {
+      // CNPJ novo a cada execução: `uq_clinics_cnpj` recusa repetido (B4).
+      const digits = String(Date.now()).slice(-12).padStart(12, "0");
+      const cnpj = `${digits}00`;
+      const name = `Clínica E2E ${digits}`;
+
+      await page.goto("/plataforma");
+      await expect(page.getByRole("cell", { name: "Clínica E2E", exact: true })).toBeVisible();
+      await page.getByRole("link", { name: "Nova clínica" }).click();
+
+      await page.getByLabel("Razão social").fill(name);
+      await page.getByLabel("CNPJ").fill(cnpj);
+      await page.getByLabel("Telefone/WhatsApp de contato").fill("11 3333-4444");
+      await page.getByLabel("E-mail de contato").fill("contato@nova-e2e.test");
+      await page.getByLabel("E-mail do primeiro admin").fill(`admin-${digits}@nova-e2e.test`);
+      await page.getByRole("button", { name: "Criar clínica e convidar admin" }).click();
+
+      await expect(page).toHaveURL(/\/plataforma\/clinicas\/[^/]+$/);
+      await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+      const adminRow = page.getByRole("row").filter({ hasText: `admin-${digits}@nova-e2e.test` });
+      await expect(adminRow.getByText("Aguardando primeiro acesso")).toBeVisible();
+
+      await page.getByRole("link", { name: "Clínicas" }).click();
+      const row = page.getByRole("row").filter({ hasText: name });
+      await expect(row.getByText("Aguardando primeiro acesso")).toBeVisible();
+      await expect(row.getByText("Cadastro completo")).toBeVisible();
+    });
+
     test("tela da clínica leva o super_admin a /plataforma", async ({ page }) => {
       await page.goto("/agenda");
 

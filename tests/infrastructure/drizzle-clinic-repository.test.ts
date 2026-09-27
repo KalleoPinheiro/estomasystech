@@ -1,10 +1,15 @@
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Clinic } from '@/domain/clinic/clinic';
+import { newId } from '@/domain/shared/id';
 import type { AppDb } from '@/infrastructure/persistence/drizzle/db';
 import { DrizzleClinicRepository } from '@/infrastructure/persistence/drizzle/drizzle-clinic-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
 import { createPgliteFromTemplate } from '../support/pglite-template';
+
+/** Clínica só com nome, como a `legacy-clinic` nasceu (migração 0019). */
+const bareClinic = (name: string, createdBy: string): Clinic =>
+  Clinic.restore({ id: newId(), name, createdBy, createdAt: new Date() });
 
 describe('Feature: Persistência de Clinic (Drizzle)', () => {
   let db: PgliteDatabase<typeof schema>;
@@ -24,10 +29,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
 
   describe('Cenário: clínica ida e volta (roundtrip)', () => {
     it('Dado uma clínica criada, Quando buscar por id, Então retorna os campos salvos', async () => {
-      const clinic = Clinic.create({
-        name: 'Clínica Alfa',
-        createdBy: 'super-admin@vitta.com',
-      });
+      const clinic = bareClinic('Clínica Alfa', 'super-admin@vitta.com');
 
       await clinicRepo.create(clinic);
       const stored = await clinicRepo.findById(clinic.id);
@@ -49,10 +51,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
 
   describe('Cenário: update de dados cadastrais (issue #61)', () => {
     it('Dada uma clínica criada, Quando atualizar os dados cadastrais, Então findById reflete os novos valores', async () => {
-      const clinic = Clinic.create({
-        name: 'Clínica Beta',
-        createdBy: 'admin@vitta.com',
-      });
+      const clinic = bareClinic('Clínica Beta', 'admin@vitta.com');
       await clinicRepo.create(clinic);
 
       const updated = clinic.updateInfo({
@@ -75,10 +74,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
     });
 
     it('Dada uma clínica criada, Quando atualizar a razão social, Então findById reflete o novo nome', async () => {
-      const clinic = Clinic.create({
-        name: 'Clínica Delta',
-        createdBy: 'admin3@vitta.com',
-      });
+      const clinic = bareClinic('Clínica Delta', 'admin3@vitta.com');
       await clinicRepo.create(clinic);
 
       await clinicRepo.update(
@@ -90,10 +86,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
     });
 
     it('Dado update parcial, Quando buscar por id, Então name/createdBy/createdAt permanecem intactos', async () => {
-      const clinic = Clinic.create({
-        name: 'Clínica Gama',
-        createdBy: 'admin2@vitta.com',
-      });
+      const clinic = bareClinic('Clínica Gama', 'admin2@vitta.com');
       await clinicRepo.create(clinic);
 
       await clinicRepo.update(
@@ -112,14 +105,8 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
     });
 
     it('Dadas duas clínicas, Quando atualizar uma, Então a outra permanece sem dados cadastrais', async () => {
-      const clinicA = Clinic.create({
-        name: 'Clínica A',
-        createdBy: 'a@vitta.com',
-      });
-      const clinicB = Clinic.create({
-        name: 'Clínica B',
-        createdBy: 'b@vitta.com',
-      });
+      const clinicA = bareClinic('Clínica A', 'a@vitta.com');
+      const clinicB = bareClinic('Clínica B', 'b@vitta.com');
       await clinicRepo.create(clinicA);
       await clinicRepo.create(clinicB);
 
@@ -129,6 +116,38 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       const storedB = await clinicRepo.findById(clinicB.id);
 
       expect(storedB?.cnpj).toBeNull();
+    });
+  });
+
+  describe('Cenário: contato da clínica (B4)', () => {
+    it('Dada clínica criada pela plataforma, Quando gravar e editar o contato, Então findById e findByCnpj devolvem o contato', async () => {
+      const clinic = Clinic.create({
+        name: 'Clínica Contato',
+        cnpj: '12345678000195',
+        contactPhone: '11 3333-4444',
+        contactEmail: 'Contato@Clinica.com',
+        createdBy: 'dono@vitta.app',
+      });
+      await clinicRepo.create(clinic);
+
+      const created = await clinicRepo.findById(clinic.id);
+      expect(created?.contactPhone).toBe('11 3333-4444');
+      expect(created?.contactEmail).toBe('contato@clinica.com');
+      expect(created?.cnpj).toBe('12.345.678/0001-95');
+      expect((await clinicRepo.findByCnpj('12.345.678/0001-95'))?.id).toBe(
+        clinic.id,
+      );
+
+      await clinicRepo.update(
+        clinic.updateInfo({
+          contactPhone: '11 98888-7777',
+          contactEmail: 'novo@clinica.com',
+        }),
+      );
+      const edited = await clinicRepo.findById(clinic.id);
+      expect(edited?.contactPhone).toBe('11 98888-7777');
+      expect(edited?.contactEmail).toBe('novo@clinica.com');
+      expect(await clinicRepo.findByCnpj('99.999.999/0001-99')).toBeNull();
     });
   });
 });

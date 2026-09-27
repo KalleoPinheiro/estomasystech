@@ -67,15 +67,15 @@ async function post<T>(cookie: string | null, url: string, data: unknown): Promi
   return body.data;
 }
 
-async function put<T>(cookie: string, url: string, data: unknown): Promise<T> {
+async function put<T>(cookie: string, url: string, data: unknown, method = "PUT"): Promise<T> {
   const response = await fetch(`${MAIN_BASE_URL}${url}`, {
-    method: "PUT",
+    method,
     headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify(data),
   });
   const body = (await response.json()) as Envelope<T>;
   if (!response.ok || !body.success || body.data === null) {
-    throw new Error(`Seed PUT ${url} falhou (${response.status}): ${body.error ?? "?"}`);
+    throw new Error(`Seed ${method} ${url} falhou (${response.status}): ${body.error ?? "?"}`);
   }
   return body.data;
 }
@@ -363,14 +363,35 @@ async function seedBaseData(cookie: string): Promise<SeedIds> {
  * cuidados) bateria no bloqueio fail-closed do #62 — a clínica nasce sem
  * CNPJ/responsável técnico cadastrados.
  */
+const E2E_CLINIC_CNPJ = "12.345.678/0001-90";
+
 async function seedClinicInfo(cookie: string): Promise<void> {
   await put(cookie, "/api/settings/clinic-info", {
-    cnpj: "12.345.678/0001-90",
+    cnpj: E2E_CLINIC_CNPJ,
     address: "Rua Semente E2E, 100",
     city: "São Paulo",
     professionalName: "Enf. Semente E2E",
     professionalRegistry: "COREN-SP 000001",
   });
+}
+
+/**
+ * A `legacy-clinic` nasce só com nome; o convite do primeiro admin exige nome,
+ * CNPJ, telefone e e-mail de contato (B4). O super_admin completa o cadastro
+ * pela plataforma, como fará no go-live — sem SQL.
+ */
+async function completeClinicRegistration(superAdminCookie: string): Promise<void> {
+  await put(
+    superAdminCookie,
+    `/api/platform/clinics/${E2E_CLINIC_ID}`,
+    {
+      name: "Clínica E2E",
+      cnpj: E2E_CLINIC_CNPJ,
+      contactPhone: "11 3333-4444",
+      contactEmail: "contato@clinica-e2e.test",
+    },
+    "PATCH",
+  );
 }
 
 /**
@@ -413,6 +434,7 @@ export async function runGlobalSetup({ roleAccounts }: GlobalSetupOptions): Prom
   // Catálogo de taxonomias (NANDA-I/NOC/NIC), subset curado de estomaterapia.
   // O catálogo é global: importar é ato de plataforma (ADR-007).
   await post(superAdminCookie, "/api/platform/taxonomy/import", {});
+  await completeClinicRegistration(superAdminCookie);
 
   const cookie = roleAccounts ? await provisionClinicAdmin(superAdminCookie) : mintedClinicAdminCookie();
   await writeStorageState(ADMIN_STORAGE_STATE_PATH, cookie);

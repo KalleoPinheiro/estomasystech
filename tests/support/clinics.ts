@@ -27,3 +27,30 @@ export async function ensureTestClinics(): Promise<void> {
     }),
   );
 }
+
+/** CNPJ de exemplo por clínica de teste — `uq_clinics_cnpj` não aceita repetido. */
+const TEST_CNPJ: Record<string, string> = {
+  [CLINIC_A_ID]: '11.111.111/0001-11',
+  [CLINIC_B_ID]: '22.222.222/0001-22',
+};
+
+/**
+ * Completa o cadastro exigido pela plataforma (B4): nome, CNPJ, telefone e
+ * e-mail de contato. Sem ele, o convite do primeiro admin é recusado.
+ */
+export async function completeClinicRegistration(
+  clinicId: string,
+): Promise<void> {
+  const { clinics } = await getRepositories(systemScope());
+  const clinic = await clinics.findById(clinicId);
+  if (!clinic || clinic.isRegistrationComplete()) {
+    return;
+  }
+  await clinics.update(
+    clinic.updateInfo({
+      cnpj: TEST_CNPJ[clinicId] ?? '33.333.333/0001-33',
+      contactPhone: '11 3333-4444',
+      contactEmail: `contato@${clinicId}.test`,
+    }),
+  );
+}

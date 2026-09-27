@@ -24,8 +24,6 @@ const createSchema = z
     // Sem `password`: quem define a senha é a própria pessoa, pelo link do
     // convite enviado por e-mail (ADR-004). A conta nasce sem senha usável.
     role: z.enum(USER_ROLES),
-    // Só super_admin (clinicId de sessão nulo) pode/precisa escolher a empresa-alvo.
-    clinicId: z.string().max(100).nullish(),
     professionalId: z.string().max(100).nullish(),
     // Conta de portal nasce vinculada ao cadastro (#196).
     patientId: z.string().max(100).nullish(),
@@ -57,16 +55,15 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
-    // "Modo aberto" (sem autenticação configurada) equivale ao acesso total de
-    // antes — trata a chamada como super_admin, exigindo clinicId explícito.
-    const actor = guard.session
-      ? { role: guard.session.role, clinicId: guard.session.clinicId }
-      : { role: 'super_admin' as const, clinicId: null };
-
-    const targetClinicId =
-      actor.role === 'super_admin'
-        ? writeClinicId({ clinicId: body.clinicId ?? null })
-        : writeClinicId(actor);
+    // A conta nasce sempre na empresa da sessão: o super_admin convida pela
+    // plataforma (`/api/platform/clinics/[id]/admins`, ADR-007). O "modo
+    // aberto" (sem sessão, só dev) age como Admin de Empresa da clínica de
+    // escrita.
+    const targetClinicId = writeClinicId(guard.session);
+    const actor = {
+      role: guard.session?.role ?? ('company_admin' as const),
+      clinicId: targetClinicId,
+    };
 
     const services = await getRepositories(clinicScope(targetClinicId));
     const { userAccounts, professionals, patients, partners, auditEvents } =

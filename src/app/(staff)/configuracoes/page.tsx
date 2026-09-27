@@ -17,6 +17,10 @@ import {
 import { useToast } from '@still-void/ui/react/client';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import {
+  ALL_CLINIC_FIELDS,
+  ClinicFieldsGrid,
+} from '@/components/clinic-fields';
 import { ConfirmAction } from '@/components/confirm-action';
 import {
   EmptyState,
@@ -30,7 +34,7 @@ import type { CancellationPolicy } from '@/domain/scheduling/schedule-config';
 import { apiFetch } from '@/lib/client';
 import type {
   CalendarIntegrationStatusDto,
-  ClinicInfoDto,
+  ClinicRegistrationDto,
   ProfessionalDto,
   UserAccountDto,
 } from '@/lib/dto';
@@ -91,36 +95,13 @@ export default function SettingsPage() {
   );
 }
 
-type ClinicInfoDraft = ClinicInfoDto;
-
-const CLINIC_INFO_FIELDS: {
-  key: keyof ClinicInfoDraft;
-  label: string;
-  placeholder: string;
-}[] = [
-  { key: 'name', label: 'Razão social', placeholder: 'Nome da clínica' },
-  { key: 'cnpj', label: 'CNPJ', placeholder: '00.000.000/0001-00' },
-  {
-    key: 'professionalName',
-    label: 'Responsável técnico',
-    placeholder: 'Nome completo',
-  },
-  {
-    key: 'professionalRegistry',
-    label: 'Registro profissional',
-    placeholder: 'COREN-SP 000000',
-  },
-  { key: 'address', label: 'Endereço', placeholder: 'Rua, número, bairro' },
-  { key: 'city', label: 'Cidade', placeholder: 'Cidade/UF' },
-];
-
 /**
  * Dados cadastrais da clínica (issue #61) — CNPJ e responsável técnico
  * alimentam o cabeçalho/rodapé dos documentos emitidos (#62); sem eles, a
  * emissão é bloqueada (fail-closed) nas páginas de documento.
  */
 function ClinicInfoSection() {
-  const { data, error } = useApiQuery<{ info: ClinicInfoDto }>(
+  const { data, error } = useApiQuery<{ info: ClinicRegistrationDto }>(
     '/api/settings/clinic-info',
   );
 
@@ -130,7 +111,7 @@ function ClinicInfoSection() {
   return <ClinicInfoForm info={data.info} />;
 }
 
-function ClinicInfoForm({ info }: { info: ClinicInfoDto }) {
+function ClinicInfoForm({ info }: { info: ClinicRegistrationDto }) {
   const { draft, setDraft, saveError, save } = useSavableForm({
     endpoint: '/api/settings/clinic-info',
     initialValue: info,
@@ -143,25 +124,16 @@ function ClinicInfoForm({ info }: { info: ClinicInfoDto }) {
       <h2 className="mb-1 font-semibold text-lg">Dados da clínica</h2>
       <p className="mb-4 text-ink-3 text-sm">
         Razão social, CNPJ e responsável técnico aparecem em todo documento
-        clínico emitido (atestado, relatório, plano de cuidados).
+        clínico emitido (atestado, relatório, plano de cuidados). Telefone e
+        e-mail de contato são por onde a plataforma fala com a clínica.
       </p>
       {saveError && <ErrorAlert message={saveError} />}
 
-      <div className="grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
-        {CLINIC_INFO_FIELDS.map((field) => (
-          <label key={field.key} className="font-medium text-sm">
-            {field.label}
-            <Input
-              value={draft[field.key] ?? ''}
-              placeholder={field.placeholder}
-              onChange={(e) =>
-                setDraft({ ...draft, [field.key]: e.target.value })
-              }
-              className="mt-1"
-            />
-          </label>
-        ))}
-      </div>
+      <ClinicFieldsGrid
+        draft={draft}
+        keys={ALL_CLINIC_FIELDS}
+        onChange={setDraft}
+      />
 
       <Button
         type="button"
