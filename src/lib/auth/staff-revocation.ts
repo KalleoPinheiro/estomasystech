@@ -8,8 +8,9 @@ import type { Session } from './session';
  * troca/reset de senha e desativação incrementam a versão — #194). Vale para
  * todos os papéis, inclusive `patient`/`partner`. Subject sem linha
  * correspondente (sessões forjadas pela suíte E2E, cookies de instalações
- * antigas) segue válido — semântica de deny-list. Falha de infraestrutura é
- * fail-open com log (AD-004).
+ * antigas) segue válido — semântica de deny-list. Exceção: sessão sem empresa
+ * é da conta de sistema, que é achada pelo papel e revoga se o e-mail mudou
+ * (ADR-009). Falha de infraestrutura é fail-open com log (AD-004).
  */
 export const REVOCATION_CACHE_TTL_MS = 60_000;
 
@@ -44,13 +45,31 @@ async function lookupAccountStatus(
       '@/infrastructure/persistence/drizzle/drizzle-foundation-repositories'
     ),
   ]);
-  const account = await new DrizzleUserAccountRepository(
-    await getDb(),
-    clinicId,
-  ).findByEmail(email);
+  const accounts = new DrizzleUserAccountRepository(await getDb(), clinicId);
+  if (clinicId === null) {
+    return systemAccountStatus(email, await accounts.findSystemAccount());
+  }
+  const account = await accounts.findByEmail(email);
   return account
     ? { isActive: account.isActive, sessionVersion: account.sessionVersion }
     : null;
+}
+
+/**
+ * Sessão sem empresa é da conta de sistema, achada pelo papel (B3, ADR-009):
+ * a recuperação pode trocar o e-mail, e o cookie antigo — com o e-mail velho —
+ * não acharia conta e seguiria válido pela lista negra. E-mail diferente do da
+ * conta = revogada; sem conta de sistema, a lista negra do ADR-005 vale.
+ */
+function systemAccountStatus(
+  email: string,
+  account: { email: string; isActive: boolean; sessionVersion: number } | null,
+): AccountSessionStatus | null {
+  if (!account) return null;
+  return {
+    isActive: account.isActive && account.email === email.trim().toLowerCase(),
+    sessionVersion: account.sessionVersion,
+  };
 }
 
 async function accountStatus(

@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   ADMIN_STORAGE_STATE_PATH,
+  SUPER_ADMIN_STORAGE_STATE_PATH,
   E2E_BOOTSTRAP_TOKEN,
   E2E_CLINIC_ADMIN_EMAIL,
   E2E_CLINIC_ADMIN_PASSWORD,
@@ -408,6 +409,7 @@ export interface GlobalSetupOptions {
 export async function runGlobalSetup({ roleAccounts }: GlobalSetupOptions): Promise<void> {
   await consumeInvite(await bootstrapSuperAdmin(), E2E_SUPER_ADMIN_PASSWORD, "Super Admin");
   const superAdminCookie = await loginSuperAdmin();
+  await writeStorageState(SUPER_ADMIN_STORAGE_STATE_PATH, superAdminCookie);
   // Catálogo de taxonomias (NANDA-I/NOC/NIC), subset curado de estomaterapia.
   // O catálogo é global: importar é ato de plataforma (ADR-007).
   await post(superAdminCookie, "/api/platform/taxonomy/import", {});

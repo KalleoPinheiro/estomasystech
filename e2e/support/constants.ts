@@ -80,6 +80,13 @@ export const E2E_CLINIC_ADMIN_PASSWORD = secretFromEnv("E2E_CLINIC_ADMIN_PASSWOR
 export const ADMIN_STORAGE_STATE_PATH = "e2e/.auth/admin-storage.json";
 
 /**
+ * Sessão real do Super Admin (senha + segundo fator) gravada pelo global-setup.
+ * Sessão de sistema forjada não vale: ela é conferida contra a conta de sistema
+ * pelo papel (ADR-009), e o e-mail do cookie precisa ser o dela.
+ */
+export const SUPER_ADMIN_STORAGE_STATE_PATH = "e2e/.auth/super-admin-storage.json";
+
+/**
  * Log do servidor principal (`playwright.config.ts` grava via `tee`). Sem canal de
  * e-mail configurado, o `NullEmailGateway` imprime o convite ali — é por onde o
  * `global-setup` alcança o link das contas por papel, como faria quem lê o e-mail.

@@ -125,6 +125,7 @@
 
 - TOTP (RFC 6238) from any authenticator app; mandatory for Super Admin, not offered to other roles ([ADR-008](./docs/adr/008-segundo-fator-do-super-admin.md)).
 - **Recovery code** (código de recuperação): ten single-use codes shown once at enrollment. Using one does not open a session — it forces re-enrolling the authenticator, which replaces all ten.
+- **Emergency recovery** (recuperação de emergência): when the Super Admin lost everything (password, e-mail, or authenticator and recovery codes), `npm run admin:recover` on the server clears the second factor, voids the password, optionally changes the e-mail, drops every session and prints a one-hour set-password link ([ADR-009](./docs/adr/009-recuperacao-de-emergencia-do-super-admin.md)). No public route does this.
 - Session claims: user email, role, clinic (Super Admin has no clinic — it operates the platform, outside every clinic), assigned professional (if Profissional).
 
 **Role** (papel)
@@ -303,3 +304,4 @@ See `src/` structure:
 - [ADR-006: Chave de dados clínicos](./docs/adr/006-chave-de-dados-clinicos.md) — `DATA_ENCRYPTION_KEY` versionada, separada do `AUTH_SECRET`; todo texto clínico cifrado.
 - [ADR-007: Super Admin é o operador da plataforma](./docs/adr/007-super-admin-operador-da-plataforma.md) — um único super_admin, família `platform`, sem acesso a dado de clínica; emenda o ADR-003.
 - [ADR-008: Segundo fator do Super Admin](./docs/adr/008-segundo-fator-do-super-admin.md) — TOTP obrigatório, login em duas etapas, códigos de recuperação que levam ao recadastro.
+- [ADR-009: Recuperação de emergência do Super Admin](./docs/adr/009-recuperacao-de-emergencia-do-super-admin.md) — script no servidor em vez de SQL à mão; sessão de sistema conferida pelo papel; emenda o ADR-004 e o ADR-005.
