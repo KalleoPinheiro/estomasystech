@@ -47,7 +47,7 @@ estoque (#192) e `drizzle-kit migrate`.
 | SSE das fotos (#195) | `PutObject` com `ServerSideEncryption` = `S3_SSE` (`AES256` padrão, `aws:kms`, ou `provider` = sem cabeçalho para provedor que já cifra e rejeita o cabeçalho) | sempre `AES256` fixo - alguns S3-compatíveis rejeitam o cabeçalho |
 | Fuso na Vercel (#206) | `instrumentation.ts`: se o fuso do processo ≠ `APP_TIMEZONE`, grava `process.env.TZ = APP_TIMEZONE` e só então verifica (falha se ainda divergir) | exigir `TZ` no ambiente - `TZ` é reservado na Vercel e as funções rodam em UTC: o app nem subiria |
 | Cron na Vercel (#206) | `GET /api/reminders/run` com `Authorization: Bearer $CRON_SECRET` (formato do Vercel Cron) além do `POST` + `x-cron-secret`; `vercel.json` com `crons` | só POST - o Vercel Cron só faz GET |
-| Foto em disco na Vercel (#206) | com `VERCEL` definido e sem `PHOTO_STORAGE=s3`, `buildPhotoStorage` lança com mensagem | deixar o disco local - sistema de arquivos efêmero, foto some |
+| Foto em disco na Vercel (#206) | com `VERCEL` definido e sem `PHOTO_STORAGE=s3`, `buildPhotoStorage` devolve `UnavailablePhotoStorage`, que lança com mensagem ao gravar/ler/remover | lançar na montagem (forma original desta linha) - os serviços são montados a cada requisição, então login e agenda cairiam junto; deixar o disco local - sistema de arquivos efêmero, foto some |
 
 - Nada mais aqui é difícil de reverter
 
@@ -144,7 +144,7 @@ Proof: `tests/lib/data-cipher.test.ts -t "unknown key id throws"`
 **C27** - Produção sem `DATA_ENCRYPTION_KEY` → erro; chave < 32 caracteres → erro
 Proof: `tests/lib/data-cipher.test.ts -t "production requires key"`
 
-**C28** - Os 16 campos clínicos ficam cifrados no banco e voltam em claro pelo repositório
+**C28** - Os campos clínicos da lista de Coverage (21 colunas) ficam cifrados no banco e voltam em claro pelo repositório
 Proof: `tests/infrastructure/clinical-field-encryption.test.ts -t "stores ciphertext"` (table-driven)
 
 **C29** - Recifra: texto em claro e payload da chave anterior viram payload da atual; segunda execução não altera nada
@@ -165,18 +165,18 @@ Proof: `tests/lib/app-timezone.test.ts -t "aligns process timezone"`
 **C33** - `GET /api/reminders/run` sem Bearer → 401; com `Bearer $CRON_SECRET` executa
 Proof: `tests/api/reminders-run.test.ts -t "vercel cron bearer"`
 
-**C34** - Na Vercel sem S3, montar o storage de fotos lança
+**C34** - Na Vercel sem S3, gravar/ler/remover foto lança (montar os serviços não)
 Proof: `tests/infrastructure/photo-storage-selection.test.ts -t "vercel requires s3"`
 
 **C35** - `vercel.json` agenda `/api/reminders/run`
-Proof: `tests/docs/deploy-config.test.ts -t "vercel cron"`
+Proof: `tests/infrastructure/deploy-config.test.ts -t "vercel cron"`
 
 **C36** - `docs/engineering/producao.md` existe com as seções Vercel+Supabase, VPS+compose, TLS, backup/restore, segredos/rotação, migrações, cron, primeiro acesso, perguntas abertas; linkado em `docs/README.md` e `AGENTS.md`
-Proof: `tests/docs/deploy-config.test.ts -t "runbook sections"`
+Proof: `tests/infrastructure/deploy-config.test.ts -t "runbook sections"`
 Proof: `npm run check:docs`
 
 **C37** - Compose e CI definem `DATA_ENCRYPTION_KEY` (produção falharia sem ela)
-Proof: `tests/docs/deploy-config.test.ts -t "data key in compose and ci"`
+Proof: `tests/infrastructure/deploy-config.test.ts -t "data key in compose and ci"`
 
 ## Swept
 
@@ -196,7 +196,7 @@ Proof: `tests/docs/deploy-config.test.ts -t "data key in compose and ci"`
 | --- | --- | --- |
 | eventos que incrementam versão (5) | logout C6 · reset/definição C7 · troca pelo admin C8 · desativação C8 · mudança de papel: sem caminho no código (Out of scope) | mudança de papel |
 | papéis revogáveis (6) | staff (4) C2 · `patient` C3 · `partner` C3 | - |
-| campos clínicos cifrados (16) | C28 table-driven: SOAP ×4, `clinical_conditions.notes`, `condition_assessments.notes`, anamnese ×5, `patients.notes`, `appointments.notes`, `waitlist_entries.notes`, `condition_photos.patient_note`, `care_plan_diagnoses.related_factors`, `care_plan_diagnoses.defining_characteristics`, `outcome_evaluations.notes`, `intervention_records.notes` | - (C28 conta 21 colunas em 16 grupos) |
+| campos clínicos cifrados (21 colunas) | C28 table-driven: SOAP ×4, `clinical_conditions.notes`, `condition_assessments.notes`, `condition_assessments.skin_condition`, `condition_assessments.complications`, anamnese ×5, `patients.notes`, `appointments.notes`, `waitlist_entries.notes`, `condition_photos.patient_note`, `care_plan_diagnoses.related_factors`, `care_plan_diagnoses.defining_characteristics`, `outcome_evaluations.notes`, `intervention_records.notes` | - (C28 conta 21 colunas em 11 tabelas) |
 | formatos lidos (4) | `v1` atual C22 · `v1` anterior C23 · legado C24 · texto em claro C26 | - |
 | resolução de titular no portal (2 papéis) | paciente C11/C12 · parceiro C13 | - |
 | montagens com chave de dados (4 assemblies) | `getRepositories` (C27 via `dataCipherFromEnv`) · compose C37 · CI C37 · script de recifra (usa o mesmo `dataCipherFromEnv`) | - |
@@ -210,3 +210,19 @@ S1–S4 = ~72k de leitura (piso), abaixo de 150k: **lote único**, sem troca de 
 (auth, portal, cifra, deploy), mas todas pequenas; a ordem S1 → S2 → S3 → S4 segue a dependência de
 `user_accounts` (S1 e S2 migram a mesma tabela). Verificador fresco após o último commit, sobre
 `origin/main..HEAD`.
+
+- **Onde o lote fechou:** C1–C37 em `8927783` (S1), `ed60e45` (S2), `445fdfe` (S3) e no commit de S4
+  que traz esta linha. Lote único, sem troca de agente.
+- **Acertado durante o build (sem conversa nova com o dono):** C28 passou de "16 campos" para 21
+  colunas — a lista original somava 19 e deixava de fora `condition_assessments.skin_condition` e
+  `.complications`, textos livres da avaliação que a decisão "todos os textos clínicos livres"
+  cobre; C34 e sua linha de Landing passaram de "lançar na montagem" para "lançar no uso" (a
+  montagem roda a cada requisição); proofs de C35–C37 foram para o arquivo que já existia,
+  `tests/infrastructure/deploy-config.test.ts`. Dois testes antigos foram substituídos porque
+  afirmavam a regra que o dono mudou: "patient/partner nunca são checados" (revogação, #194) e
+  "fuso divergente encerra o processo" (#205 → alinhamento para a Vercel, #206). O E2E de logout
+  passou a usar sessão própria: sair revoga todas as sessões da conta e derrubaria o
+  `storageState` de admin compartilhado.
+- **Abandonado:** lançar em `encrypt('')` (payload sem ciphertext seria lido como texto em claro)
+  — vazio segue vazio; resolver o titular do portal por claim no token — ficaria velho sem novo
+  login e duplicaria a fonte.

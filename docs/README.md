@@ -45,6 +45,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | Arquivo | Para quê |
 | --- | --- |
 | [`engineering/onboarding.md`](engineering/onboarding.md) | requisitos, Docker, Node local, **variáveis de ambiente**, testes, gates |
+| [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: Vercel + Supabase, VPS + compose, TLS, backup/restore, segredos e rotação, migrações, cron |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
 | [`engineering/api.md`](engineering/api.md) | rotas REST centrais |
@@ -66,6 +67,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/003-modelo-de-papeis-multi-empresa.md`](adr/003-modelo-de-papeis-multi-empresa.md) | catálogo fechado de seis papéis |
 | [`adr/004-remocao-google-oauth-autenticacao.md`](adr/004-remocao-google-oauth-autenticacao.md) | login nativo; Google só como integração |
 | [`adr/005-revogacao-de-sessao-por-versao.md`](adr/005-revogacao-de-sessao-por-versao.md) | `session_version` revoga sessões (logout, senha, desativação) |
+| [`adr/006-chave-de-dados-clinicos.md`](adr/006-chave-de-dados-clinicos.md) | `DATA_ENCRYPTION_KEY` versionada cifra o texto clínico |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 

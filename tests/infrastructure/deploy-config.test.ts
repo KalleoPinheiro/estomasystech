@@ -99,3 +99,74 @@ describe('Feature: compose e Dockerfile seguros para produção (#191)', () => {
     );
   });
 });
+
+const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
+
+/** #195/#206: preparação para Vercel + Supabase e para VPS + compose. */
+describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', () => {
+  it('vercel cron: vercel.json agenda GET /api/reminders/run uma vez por dia', () => {
+    const config = JSON.parse(read('vercel.json')) as {
+      crons: { path: string; schedule: string }[];
+    };
+
+    expect(config.crons).toEqual([
+      {
+        path: '/api/reminders/run',
+        schedule: expect.stringMatching(/^\d+ \d+ \* \* \*$/),
+      },
+    ]);
+  });
+
+  it('data key in compose and ci: produção não sobe sem DATA_ENCRYPTION_KEY em nenhuma montagem', () => {
+    const app = serviceBlock('app');
+    expect(app).toMatch(
+      /^ {6}DATA_ENCRYPTION_KEY: \$\{DATA_ENCRYPTION_KEY:\?/m,
+    );
+    expect(app).toMatch(
+      /^ {6}DATA_ENCRYPTION_KEY_PREVIOUS: \$\{DATA_ENCRYPTION_KEY_PREVIOUS:-\}/m,
+    );
+    expect(app).toMatch(/^ {6}S3_SSE: \$\{S3_SSE:-\}/m);
+
+    expect(read('.github/workflows/ci.yml')).toMatch(
+      /^ {10}DATA_ENCRYPTION_KEY: build-only$/m,
+    );
+    expect(read('scripts/docker-smoke.sh')).toContain(
+      'export DATA_ENCRYPTION_KEY="${DATA_ENCRYPTION_KEY:-$(openssl rand -hex 32)}"',
+    );
+    expect(read('playwright.prod.config.ts')).toContain(
+      'DATA_ENCRYPTION_KEY: E2E_DATA_ENCRYPTION_KEY',
+    );
+    expect(read('.env.example')).toMatch(/^DATA_ENCRYPTION_KEY=$/m);
+  });
+
+  it('runbook sections: producao.md cobre as duas topologias e a operação, e está linkado', () => {
+    const runbook = read('docs/engineering/producao.md');
+    for (const section of [
+      '## 1. Perguntas abertas',
+      '### Vercel + Supabase (alvo)',
+      '### VPS + docker compose (alternativa pronta)',
+      '## 3. TLS e URL pública',
+      '## 4. Migrações',
+      '## 5. Backup e restore',
+      '## 6. Segredos e rotação',
+      '## 7. Cron de lembretes',
+      '## 8. Primeiro acesso',
+    ]) {
+      expect(runbook, section).toContain(section);
+    }
+    expect(runbook).toContain('npm run data:reencrypt');
+    expect(runbook).toContain('npm run db:portal-orphans');
+    expect(read('docs/README.md')).toContain('(engineering/producao.md)');
+    expect(read('AGENTS.md')).toContain('(docs/engineering/producao.md)');
+
+    const scripts = (
+      JSON.parse(read('package.json')) as { scripts: Record<string, string> }
+    ).scripts;
+    expect(scripts['data:reencrypt']).toBe(
+      'tsx scripts/reencrypt-clinical-data.ts',
+    );
+    expect(scripts['db:portal-orphans']).toBe(
+      'tsx scripts/report-portal-orphans.ts',
+    );
+  });
+});

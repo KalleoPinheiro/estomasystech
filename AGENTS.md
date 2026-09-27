@@ -35,6 +35,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run build` | — | **não remova** `--max-old-space-size=4096` |
 
 Setup, variáveis de ambiente e Docker: [`docs/engineering/onboarding.md`](docs/engineering/onboarding.md).
+Deploy, backup, segredos e rotação em produção: [`docs/engineering/producao.md`](docs/engineering/producao.md).
 
 ## Regras invioláveis
 
