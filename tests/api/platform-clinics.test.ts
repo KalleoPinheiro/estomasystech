@@ -127,6 +127,9 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       professionalName: 'Enf. Ana',
       professionalRegistry: 'COREN-SP 123456',
       registrationComplete: true,
+      status: 'active',
+      statusChangedAt: null,
+      statusChangedBy: null,
       createdAt: expect.any(String),
     });
     const clinicId = json.data.clinic.id;
@@ -359,6 +362,7 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       name: 'Alfa Feridas',
       cnpj: active.json.data.clinic.cnpj,
       registrationComplete: true,
+      status: 'active',
       adminStatus: 'active',
       createdAt: expect.any(String),
     });

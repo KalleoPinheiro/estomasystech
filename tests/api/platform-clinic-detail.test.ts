@@ -87,6 +87,9 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
       professionalName: null,
       professionalRegistry: null,
       registrationComplete: true,
+      status: 'active',
+      statusChangedAt: null,
+      statusChangedBy: null,
       createdAt: clinic.createdAt.toISOString(),
     });
 
