@@ -222,6 +222,10 @@ describe('Feature: Conformidade das guardas de rota', () => {
             response.status,
             `${method} ${file.pathname} deveria ser exclusivo da equipe (recebido ${response.status})`,
           ).toBe(403);
+          const body = (await response.json()) as { error: string };
+          expect(body.error, `${method} ${file.pathname}`).toBe(
+            'Acesso restrito à equipe da clínica',
+          );
         }
       },
     );
@@ -243,6 +247,10 @@ describe('Feature: Conformidade das guardas de rota', () => {
             response.status,
             `${method} ${file.pathname} deveria ser exclusivo da equipe (recebido ${response.status})`,
           ).toBe(403);
+          const body = (await response.json()) as { error: string };
+          expect(body.error, `${method} ${file.pathname}`).toBe(
+            'Acesso restrito à equipe da clínica',
+          );
         }
       },
     );
@@ -254,20 +262,56 @@ describe('Feature: Conformidade das guardas de rota', () => {
     );
 
     /**
-     * Papéis restritos (Atendente, Profissional) recebem 403 nas famílias que
-     * a matriz de `route-family.ts` nega — Atendente: clinical/administrative/
-     * professional_self; Profissional: administrative (o escopo fino do R4 é
-     * testado à parte).
+     * Famílias que a matriz de `route-family.ts` nega a cada papel de equipe —
+     * Atendente: clinical/administrative/professional_self; Profissional:
+     * administrative (o escopo fino do R4 é testado à parte). A família
+     * `platform` é só do super_admin, que por sua vez não entra em nenhuma
+     * família da clínica (ADR-007).
      */
-    const RESTRICTED_ROLE_DENIED_FAMILIES = {
-      atendente: new Set(['clinical', 'administrative', 'professional_self']),
-      profissional: new Set(['administrative']),
+    const DENIED_FAMILIES = {
+      super_admin: new Set([
+        'clinical',
+        'operational',
+        'administrative',
+        'professional_self',
+      ]),
+      company_admin: new Set(['platform']),
+      atendente: new Set([
+        'clinical',
+        'administrative',
+        'professional_self',
+        'platform',
+      ]),
+      profissional: new Set(['administrative', 'platform']),
     } as const;
 
-    for (const role of Object.keys(RESTRICTED_ROLE_DENIED_FAMILIES) as Array<
-      keyof typeof RESTRICTED_ROLE_DENIED_FAMILIES
+    /** O super_admin não tem clínica: a sessão dele nasce com `clinicId` nulo. */
+    const headersFor = (role: keyof typeof DENIED_FAMILIES) =>
+      cookieHeaderFor(
+        role,
+        `${role}@example.com`,
+        role === 'super_admin' ? null : undefined,
+      );
+
+    it('Dado a varredura, Quando classificar, Então existe rota de plataforma e de cada família da clínica', () => {
+      const families = new Set(
+        staffGuarded.map((f) => classifyRoute(f.pathname)),
+      );
+      for (const family of [
+        'platform',
+        'clinical',
+        'operational',
+        'administrative',
+        'professional_self',
+      ]) {
+        expect(families.has(family as never), family).toBe(true);
+      }
+    });
+
+    for (const role of Object.keys(DENIED_FAMILIES) as Array<
+      keyof typeof DENIED_FAMILIES
     >) {
-      const deniedFamilies = RESTRICTED_ROLE_DENIED_FAMILIES[role];
+      const deniedFamilies: ReadonlySet<string> = DENIED_FAMILIES[role];
       const deniedRoutes = staffGuarded.filter((f) =>
         deniedFamilies.has(classifyRoute(f.pathname)),
       );
@@ -275,18 +319,21 @@ describe('Feature: Conformidade das guardas de rota', () => {
       it.each(deniedRoutes.map((f) => [f.relative, f] as const))(
         `Dado %s com sessão de ${role}, Quando chamar cada handler, Então responde 403 (família negada)`,
         async (_relative, file) => {
-          const headers = cookieHeaderFor(role, `${role}@example.com`);
           const handlers = await loadHandlers(file);
 
           for (const [method, handler] of handlers) {
             const response = await handler(
-              requestFor(file.pathname, method, headers),
+              requestFor(file.pathname, method, headersFor(role)),
               anyContext(),
             );
             expect(
               response.status,
               `${method} ${file.pathname} deveria negar o papel ${role} (família ${classifyRoute(file.pathname)}, recebido ${response.status})`,
             ).toBe(403);
+            const body = (await response.json()) as { error: string };
+            expect(body.error, `${method} ${file.pathname}`).toBe(
+              'Seu papel não tem acesso a este recurso',
+            );
           }
         },
       );
@@ -298,38 +345,16 @@ describe('Feature: Conformidade das guardas de rota', () => {
       it.each(allowedRoutes.map((f) => [f.relative, f] as const))(
         `Dado %s com sessão de ${role}, Quando chamar cada handler, Então NÃO responde 401/403 (família permitida)`,
         async (_relative, file) => {
-          const headers = cookieHeaderFor(role, `${role}@example.com`);
           const handlers = await loadHandlers(file);
 
           for (const [method, handler] of handlers) {
             const response = await handler(
-              requestFor(file.pathname, method, headers),
+              requestFor(file.pathname, method, headersFor(role)),
               anyContext(),
             );
             expect(
               [401, 403].includes(response.status),
               `${method} ${file.pathname} deveria permitir o papel ${role} passar da guarda de papel (família ${classifyRoute(file.pathname)}, recebido ${response.status})`,
-            ).toBe(false);
-          }
-        },
-      );
-    }
-
-    for (const role of ['super_admin', 'company_admin'] as const) {
-      it.each(staffGuarded.map((f) => [f.relative, f] as const))(
-        `Dado %s com sessão de ${role}, Quando chamar cada handler, Então NÃO responde 401/403 (acesso total)`,
-        async (_relative, file) => {
-          const headers = cookieHeaderFor(role, `${role}@example.com`);
-          const handlers = await loadHandlers(file);
-
-          for (const [method, handler] of handlers) {
-            const response = await handler(
-              requestFor(file.pathname, method, headers),
-              anyContext(),
-            );
-            expect(
-              [401, 403].includes(response.status),
-              `${method} ${file.pathname} deveria permitir o papel ${role} (recebido ${response.status})`,
             ).toBe(false);
           }
         },

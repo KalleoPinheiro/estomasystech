@@ -119,13 +119,13 @@
 **Session** (sessão)
 
 - User authenticated with their own password (scrypt hash), set via an emailed invite or self-service reset. Google OAuth is not an authentication method — it is unrelated to login.
-- Session claims: user email, role, clinic (Super Admin has no clinic — it is cross-clinic by definition), assigned professional (if Profissional).
+- Session claims: user email, role, clinic (Super Admin has no clinic — it operates the platform, outside every clinic), assigned professional (if Profissional).
 
 **Role** (papel)
 
 Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or permissions.
 
-- **Super Admin** (sistema): the one system-wide operator. Full access to every Clinic, including clinical data; every cross-clinic access is audited. Creates Admin de Empresa (and, if needed, any other role) in any Clinic. No one creates a Super Admin except itself.
+- **Super Admin** (sistema, operador da plataforma): the one platform operator ([ADR-007](./docs/adr/007-super-admin-operador-da-plataforma.md)). Reaches only the `platform` route family (`/plataforma`, `/api/platform/**`) plus logout; no access to any Clinic's data — no patient record, schedule, billing or settings. Invites the first Admin de Empresa of a Clinic and imports the global taxonomy catalog. There is exactly one: it comes from bootstrap, no one creates another, and the database refuses a second one.
 - **Admin de Empresa** (equipe, admin da clínica): full access within its own Clinic only — operational data, clinical data, clinic settings, account management. A Clinic may have more than one. Creates Profissional, Atendente, Patient, Partner, and other Admin de Empresa accounts, all within its own Clinic.
 - **Atendente** (equipe, recepção): operational access only — scheduling and patient/partner registration. No access to clinical data (evolution notes, condition assessments, photos). Creates Patient and Partner accounts.
 - **Profissional** (equipe): clinical access, but scoped dynamically — sees only patients it has at least one appointment or evolution note with. Not a fixed "ownership": a patient can accumulate access for several professionals over time (coverage, transfer, return). Creates Patient and Partner accounts.
@@ -135,7 +135,8 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 **Account provisioning** (cadastro de contas)
 
 - No self-registration for any role: every account is created by someone else in the hierarchy above (see Role).
-- First Clinic and its first Admin de Empresa are created manually by Super Admin — no self-service onboarding yet.
+- A Clinic's first Admin de Empresa is invited by Super Admin through the platform (`POST /api/platform/clinics/[id]/admins`); the response never carries the invite link. No self-service onboarding yet.
+- No one creates a Super Admin (`ck_user_accounts_system_role_has_no_clinic` + `uq_user_accounts_single_system_account`).
 
 **Authorization** (autorização)
 
@@ -143,9 +144,9 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
   1. **Proxy layer** (`src/proxy.ts`): edge-level checks, rate limiting, early rejects.
   2. **Handler layer** (`src/lib/auth/require-session.ts`): per-route authorization, fail-closed.
 - Policy source: `src/lib/auth/access-policy.ts`.
-- Scoped by Clinic (`clinic_id`) for every role except Super Admin, and additionally by professional assignment for Profissional.
-- **Tenant scope** (`src/lib/auth/tenant-scope.ts`): `getRepositories` only accepts a branded `TenantScope` built by `sessionScope` (reads — exact session clinic, `null` for Super Admin), `writeScope`/`writeClinicId` (writes — falls back to the legacy clinic when the session has none), `clinicScope` (explicit clinic) or `systemScope` (cross-clinic, allowlisted in `tests/lib/tenant-scope.test.ts`). A raw `{ clinicId: … }` literal does not compile.
-- Audit: all changes record the authenticated actor (no anonymous actions); Super Admin access to another Clinic's data is always audited.
+- Scoped by Clinic (`clinic_id`) for every clinic role, and additionally by professional assignment for Profissional. Super Admin is kept out of every clinic route family and only reaches `platform`.
+- **Tenant scope** (`src/lib/auth/tenant-scope.ts`): `getRepositories` only accepts a branded `TenantScope` built by `sessionScope` (reads — exact session clinic, `null` when the session has none), `writeScope`/`writeClinicId` (writes — falls back to the legacy clinic when the session has none), `clinicScope` (explicit clinic) or `systemScope` (cross-clinic, allowlisted in `tests/lib/tenant-scope.test.ts`). A raw `{ clinicId: … }` literal does not compile.
+- Audit: all changes record the authenticated actor (no anonymous actions); a Super Admin action on a Clinic (inviting its first admin) is recorded in that Clinic's audit trail.
 
 ### Business Rules
 
@@ -212,7 +213,7 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 
 **Commission payout** (repasse — `src/domain/billing/commission-payout.ts`, screen `/repasses`)
 
-- **Monthly closing per professional**, one per month, recorded only by Admin de Empresa (Super Admin too). Closing month M pays everything released up to the end of M and not yet paid — including late releases from earlier months. Only months already ended can be closed.
+- **Monthly closing per professional**, one per month, recorded only by Admin de Empresa. Closing month M pays everything released up to the end of M and not yet paid — including late releases from earlier months. Only months already ended can be closed.
 - Each session is paid **at most once** (unique `(appointment_id, kind)` among *active* items of `commission_payout_items`); the amount is **frozen** in the item, and the rule in force is snapshotted on the payout, so a later rule change never recalculates what was paid.
 - A paid session whose invoice is cancelled afterwards becomes a **reversal** (negative item) deducted in the next closing; a closing whose balance is zero or negative is refused and the reversal waits.
 - Access is declared by route family (`src/lib/auth/route-family.ts`): `/api/commission-payouts` (clinic view + closing) is `administrative` (Admin only); `/api/my-payouts` is the new `professional_self` family (Admin and Profissional, never Atendente) and always scopes to the session's `professionalId`. **Profissional** sees only their own statement (to receive, awaiting patient payment, history).
@@ -294,3 +295,4 @@ See `src/` structure:
 - [ADR-004: Remoção do Google OAuth como autenticação](./docs/adr/004-remocao-google-oauth-autenticacao.md) — login 100% nativo, Calendar sync desacoplado.
 - [ADR-005: Revogação de sessão por versão](./docs/adr/005-revogacao-de-sessao-por-versao.md) — `session_version` na conta × `sv` no token; logout, senha e desativação revogam.
 - [ADR-006: Chave de dados clínicos](./docs/adr/006-chave-de-dados-clinicos.md) — `DATA_ENCRYPTION_KEY` versionada, separada do `AUTH_SECRET`; todo texto clínico cifrado.
+- [ADR-007: Super Admin é o operador da plataforma](./docs/adr/007-super-admin-operador-da-plataforma.md) — um único super_admin, família `platform`, sem acesso a dado de clínica; emenda o ADR-003.

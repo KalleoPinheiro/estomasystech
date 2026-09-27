@@ -202,15 +202,13 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
       );
 
       const route = await import('@/app/api/audit/route');
-      const listFor = async (clinicId: string | null) => {
+      const listFor = async (clinicId: string) => {
         const response = await route.GET(
           jsonRequest(
             `/api/audit?patientId=${patientId}`,
             'GET',
             undefined,
-            clinicId === null
-              ? cookieHeaderFor('super_admin', 'root@sistema', null)
-              : adminCookieHeader(clinicId),
+            adminCookieHeader(clinicId),
           ),
         );
         return ((await response.json()) as Envelope<unknown[]>).data;
@@ -218,8 +216,16 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
 
       expect(await listFor(CLINIC_A_ID)).toHaveLength(0);
       expect(await listFor(CLINIC_B_ID)).toHaveLength(1);
-      // Papel de sistema mantém a visão cross-empresa.
-      expect(await listFor(null)).toHaveLength(1);
+      // O super_admin não lê a trilha de nenhuma clínica (ADR-007).
+      const system = await route.GET(
+        jsonRequest(
+          `/api/audit?patientId=${patientId}`,
+          'GET',
+          undefined,
+          cookieHeaderFor('super_admin', 'root@sistema', null),
+        ),
+      );
+      expect(system.status).toBe(403);
     });
   });
 

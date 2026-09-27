@@ -495,7 +495,7 @@ describe('Feature: PatientRecordPage', () => {
           : null,
       });
 
-    it.each(['company_admin', 'super_admin', 'profissional'] as const)(
+    it.each(['company_admin', 'profissional'] as const)(
       'Dado papel %s, Quando renderizar, Então mostra o link de exportação',
       async (role) => {
         mockFetch(identityRouter(identityFor(role)));
@@ -519,24 +519,29 @@ describe('Feature: PatientRecordPage', () => {
       ).toBeInTheDocument();
     });
 
-    it('Dado papel atendente, Quando renderizar, Então NÃO mostra o link de exportação', async () => {
-      const fetchMock = mockFetch(identityRouter(identityFor('atendente')));
+    // O super_admin nem chega à ficha (o proxy o leva a /plataforma, ADR-007);
+    // se chegasse, a mesma matriz esconderia o link.
+    it.each(['atendente', 'super_admin'] as const)(
+      'Dado papel %s, Quando renderizar, Então NÃO mostra o link de exportação',
+      async (role) => {
+        const fetchMock = mockFetch(identityRouter(identityFor(role)));
 
-      await renderDetail();
+        await renderDetail();
 
-      expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
-      await waitFor(() =>
+        expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
+        await waitFor(() =>
+          expect(
+            fetchMock.mock.calls.some(([url]) => url === '/api/auth/identity'),
+          ).toBe(true),
+        );
         expect(
-          fetchMock.mock.calls.some(([url]) => url === '/api/auth/identity'),
-        ).toBe(true),
-      );
-      expect(
-        screen.queryByRole('link', { name: 'Exportar dados (LGPD)' }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole('link', { name: 'Termo de consentimento' }),
-      ).toBeInTheDocument();
-    });
+          screen.queryByRole('link', { name: 'Exportar dados (LGPD)' }),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByRole('link', { name: 'Termo de consentimento' }),
+        ).toBeInTheDocument();
+      },
+    );
 
     it('Dado falha ao carregar a identidade, Quando renderizar, Então NÃO mostra o link (fail-closed)', async () => {
       const fetchMock = mockFetch(

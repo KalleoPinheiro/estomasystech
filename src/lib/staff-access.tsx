@@ -3,7 +3,7 @@
 import { createContext, type ReactNode, useContext } from 'react';
 import type { UserRole } from '@/domain/auth/user-role';
 import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
-import { STAFF_ROLES } from '@/lib/auth/staff-roles';
+import { CLINIC_STAFF_ROLES } from '@/lib/auth/staff-roles';
 import type { SidebarIdentityDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 
@@ -39,9 +39,9 @@ export function canRoleAccess(api: string, role: UserRole): boolean {
   return isFamilyAllowedForRole(classifyRoute(api), role);
 }
 
-/** Rota que qualquer papel de equipe usa — não precisa esperar a identidade. */
+/** Rota que qualquer papel da clínica usa — não precisa esperar a identidade. */
 export function isOpenToAllStaff(api: string): boolean {
-  return STAFF_ROLES.every((role) => canRoleAccess(api, role));
+  return CLINIC_STAFF_ROLES.every((role) => canRoleAccess(api, role));
 }
 
 /** Tela da equipe a que o caminho pertence (prefixo mais longo; `/` só exato). */

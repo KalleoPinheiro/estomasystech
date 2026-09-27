@@ -43,7 +43,7 @@ Operador único: o super_admin (dono do produto). Estados confirmados:
 7. **Suspender.** Todas as contas da clínica (equipe, paciente, parceiro) perdem a sessão em até 60 s e não conseguem entrar; lembretes param; os dados ficam intactos. O super_admin continua vendo o cadastro e pode reativar.
 8. **Reativar.** As contas voltam a entrar (com novo login); lembretes voltam no próximo ciclo.
 9. **Super_admin abre uma tela da clínica** (`/agenda`, `/pacientes`, …) → redirecionado para `/plataforma`; API responde `403`.
-10. **`company_admin` tenta abrir `/plataforma`** → "sem permissão"; API `403`.
+10. **`company_admin` tenta abrir `/plataforma`** → redireciona para `/` (o mesmo vale para `atendente` e `profissional`; paciente e parceiro vão a `/portal`); API `403`.
 11. **Perdeu o celular do autenticador** → entra com código de recuperação e recadastra o segundo fator.
 12. **Perdeu tudo** (senha, e-mail ou autenticador e códigos) → procedimento de emergência no servidor (`scripts/recover-super-admin.ts`), documentado no runbook.
 

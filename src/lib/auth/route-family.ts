@@ -1,5 +1,5 @@
 import type { UserRole } from '@/domain/auth/user-role';
-import { STAFF_ROLES } from './staff-roles';
+import { CLINIC_STAFF_ROLES, STAFF_ROLES } from './staff-roles';
 
 /**
  * Classificação grosseira de rota por família (RBAC-05), consumida por
@@ -12,9 +12,16 @@ export type RouteFamily =
   | 'operational'
   | 'administrative'
   | 'professional_self'
+  | 'platform'
   | 'shared';
 
 const SHARED_PREFIXES = ['/portal', '/api/portal', '/api/auth/logout'];
+
+/**
+ * Área do operador da plataforma (ADR-007): só o super_admin entra, e ele não
+ * entra em mais nada da clínica. Classificada antes de todas as outras.
+ */
+const PLATFORM_PREFIXES = ['/plataforma', '/api/platform'];
 
 /** Sub-rotas de `/api/patients/:id/*` são tratadas à parte (ver `isClinicalPatientSubroute`). */
 const CLINICAL_PREFIXES = [
@@ -25,8 +32,8 @@ const CLINICAL_PREFIXES = [
   '/api/care-plan-outcomes',
   '/api/care-plans',
   // Busca NANDA-I/NOC/NIC da SAE (#189): catálogo global só de leitura, usado
-  // pelo prontuário. A importação (`/api/admin/taxonomy/import`) continua
-  // administrativa pelo prefixo `/api/admin`.
+  // pelo prontuário. A importação é ato de plataforma
+  // (`/api/platform/taxonomy/import`, ADR-007).
   '/api/taxonomy',
 ];
 
@@ -62,10 +69,9 @@ const ADMINISTRATIVE_PREFIXES = [
   '/api/reports',
   '/api/summary',
   '/api/audit',
-  '/api/admin',
   // Edição dos dados cadastrais da clínica (#61) — ato administrativo da
-  // empresa. Camada 2 (route.ts) ainda restringe o PUT a
-  // company_admin/super_admin como defesa em profundidade (ADR-002).
+  // empresa. Camada 2 (route.ts) ainda restringe o PUT a company_admin como
+  // defesa em profundidade (ADR-002).
   // A LEITURA (`/api/clinic-info`, sem "/settings/") fica de fora desta
   // lista de propósito: toda página de documento (Atestado/Relatório/Plano
   // de Cuidados/Consentimento) consulta essa rota antes de renderizar, e
@@ -104,6 +110,9 @@ function isClinicalPatientSubroute(pathname: string): boolean {
 }
 
 export function classifyRoute(pathname: string): RouteFamily {
+  if (startsWithAny(pathname, PLATFORM_PREFIXES)) {
+    return 'platform';
+  }
   if (startsWithAny(pathname, SHARED_PREFIXES)) {
     return 'shared';
   }
@@ -122,12 +131,17 @@ export function classifyRoute(pathname: string): RouteFamily {
   return 'operational';
 }
 
+/**
+ * O super_admin só aparece em `platform` e `shared` (logout, portal): sem
+ * acesso clínico nem operacional (ADR-007, emenda ao ADR-003).
+ */
 const FAMILY_ALLOWED_ROLES: Record<RouteFamily, readonly UserRole[]> = {
   shared: [...STAFF_ROLES, 'patient', 'partner'],
-  operational: STAFF_ROLES,
-  clinical: ['super_admin', 'company_admin', 'profissional'],
-  administrative: ['super_admin', 'company_admin'],
-  professional_self: ['super_admin', 'company_admin', 'profissional'],
+  operational: CLINIC_STAFF_ROLES,
+  clinical: ['company_admin', 'profissional'],
+  administrative: ['company_admin'],
+  professional_self: ['company_admin', 'profissional'],
+  platform: ['super_admin'],
 };
 
 export function isFamilyAllowedForRole(
