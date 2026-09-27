@@ -125,7 +125,7 @@ Proof: `tests/api/platform-clinic-admins.test.ts -t "auditoria"`
 **C23** - super_admin `POST /api/platform/taxonomy/import` → 200 com as contagens; 2ª chamada não duplica
 Proof: `tests/api/platform-taxonomy-import.test.ts -t "importa e é idempotente"`
 
-**C24** - `POST /api/admin/taxonomy/import` não existe (404 no Next: sem arquivo de rota)
+**C24** - `POST /api/admin/taxonomy/import` não existe: sem arquivo de rota, e o `company_admin` (quem a chamava antes) recebe 404. Sem sessão o proxy responde 401 e o super_admin recebe 403 antes do roteamento (a família da rota decide primeiro)
 Proof: `tests/api/platform-taxonomy-import.test.ts -t "rota antiga não existe"`
 Proof: `e2e/plataforma.spec.ts -g "rota antiga de importação responde 404"`
 
