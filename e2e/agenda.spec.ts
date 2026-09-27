@@ -152,7 +152,9 @@ test.describe("agenda", () => {
       await page.getByLabel("Procedimento *").fill("Fora da grade custom");
       await page.getByLabel("Valor (R$) *").fill("100");
       await page.getByRole("button", { name: "Agendar consulta" }).click();
-      await expect(page.getByText(/10:00 às 12:00/)).toBeVisible();
+      // Só o alerta de erro: a dica do formulário também descreve a grade e,
+      // já recarregada, repete "10:00 às 12:00" (modo estrito do Playwright).
+      await expect(page.getByText(/Atendimento somente em:.*10:00 às 12:00/)).toBeVisible();
 
       // 10:30 está dentro da nova janela — deve funcionar.
       await page.getByLabel("Início *").fill("10:30");
