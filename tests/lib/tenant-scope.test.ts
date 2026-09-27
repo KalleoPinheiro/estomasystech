@@ -27,6 +27,8 @@ const SYSTEM_SCOPE_ALLOWLIST: Record<string, string> = {
     'sem sessão; a clínica só é conhecida após autenticar (#125)',
   'app/api/auth/set-password/route.ts':
     'sem sessão; o token identifica a conta e sua clínica',
+  'lib/auth/mfa-route.ts':
+    'segundo fator do super_admin: sem sessão; o token pendente identifica a conta (sem clínica)',
   'app/api/reminders/run/route.ts':
     'listar as empresas para o cron; o job roda com clinicScope de cada uma',
   'app/api/platform/taxonomy/import/route.ts':

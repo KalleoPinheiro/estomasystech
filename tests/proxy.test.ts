@@ -174,6 +174,26 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
     );
   });
 
+  describe('Cenário: segundo fator do super_admin (B2)', () => {
+    it.each(['/api/auth/mfa/enroll', '/api/auth/mfa/verify'])(
+      'Dado %s, Então as rotas de segundo fator são públicas: passam sem sessão e com qualquer sessão',
+      async (path) => {
+        const proxy = await loadProxy();
+
+        expect(isNext(await proxy(request(path)))).toBe(true);
+        for (const role of [
+          'super_admin',
+          'company_admin',
+          'patient',
+        ] as const) {
+          expect(isNext(await proxy(request(path, sessionCookie(role))))).toBe(
+            true,
+          );
+        }
+      },
+    );
+  });
+
   describe('Cenário: autenticação não configurada', () => {
     it('Dado produção sem autenticação, Então responde 503 e não deixa passar', async () => {
       delete process.env.AUTH_SECRET;

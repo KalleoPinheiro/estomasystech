@@ -30,6 +30,10 @@ export const PUBLIC_PATHS = [
   '/api/auth/providers',
   '/api/auth/set-password',
   '/api/auth/forgot-password',
+  // Segunda etapa do login do super_admin (ADR-007, bloco B2): ainda não há
+  // sessão; as rotas exigem o token pendente assinado que o login entrega.
+  '/api/auth/mfa/enroll',
+  '/api/auth/mfa/verify',
   // Bootstrap do primeiro Super Admin: por definição não há sessão nem conta.
   // A própria rota exige o segredo `VITTA_BOOTSTRAP_TOKEN` e só funciona
   // enquanto a instalação está vazia.

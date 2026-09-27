@@ -48,6 +48,8 @@ const emptyInstallation = async (): Promise<void> => {
   const schema = await import('@/infrastructure/persistence/drizzle/schema');
   const db = await getDb();
   await db.delete(schema.authTokens);
+  await db.delete(schema.mfaRecoveryCodes);
+  await db.delete(schema.userMfa);
   await db.delete(schema.userAccounts);
 };
 
@@ -144,7 +146,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     emails.restore();
   });
 
-  it('Dado o convite do bootstrap, Quando definir a senha e logar, Então a sessão nasce com papel super_admin', async () => {
+  it('Dado o convite do bootstrap, Quando definir a senha e logar, Então o primeiro login exige cadastrar o segundo fator e só depois a sessão nasce super_admin (B2)', async () => {
     const route = await import('@/app/api/auth/bootstrap/route');
     const emails = spyOnSentEmails();
     await route.POST(
@@ -181,12 +183,47 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('set-cookie')).toBeNull();
+    const pending = (await response.json()) as Envelope<{
+      mfaEnrollmentRequired: boolean;
+      pendingToken: string;
+    }>;
+    expect(pending.data.mfaEnrollmentRequired).toBe(true);
+
+    const post = (url: string, body: unknown) =>
+      new NextRequest(`http://localhost${url}`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    const enroll = await import('@/app/api/auth/mfa/enroll/route');
+    const enrolled = (await (
+      await enroll.POST(
+        post('/api/auth/mfa/enroll', {
+          pendingToken: pending.data.pendingToken,
+        }),
+      )
+    ).json()) as Envelope<{ secret: string; pendingToken: string }>;
+    const { totpCode, totpStep } = await import('@/domain/auth/totp');
+    const verify = await import('@/app/api/auth/mfa/verify/route');
+    const confirmed = await verify.POST(
+      post('/api/auth/mfa/verify', {
+        pendingToken: enrolled.data.pendingToken,
+        code: totpCode(enrolled.data.secret, totpStep(Date.now())),
+      }),
+    );
+
+    expect(confirmed.status).toBe(200);
     const { verifySessionToken } = await import('@/lib/auth/session');
-    const cookie = response.headers.get('set-cookie') ?? '';
+    const cookie = confirmed.headers.get('set-cookie') ?? '';
     const value = cookie.split(';')[0].split('=')[1];
     expect(
       verifySessionToken(process.env.AUTH_SECRET as string, value)?.role,
     ).toBe('super_admin');
+    const codes = (await confirmed.json()) as Envelope<{
+      recoveryCodes: string[];
+    }>;
+    expect(codes.data.recoveryCodes).toHaveLength(10);
   });
 
   it('Dado que já existe uma conta, Quando POST de novo, Então responde 403 e não cria nada', async () => {

@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { startMfaLogin } from '@/application/auth/mfa-login';
 import type { UserAccount } from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
-import { getRepositories } from '@/infrastructure/container';
-import { fail } from '@/lib/api-response';
+import { currentDataCipher, getRepositories } from '@/infrastructure/container';
+import { fail, ok } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { verifyPassword } from '@/lib/auth/password';
@@ -66,16 +67,23 @@ export async function POST(request: NextRequest) {
     return fail(identity.error, identity.status);
   }
 
+  const mfaRequired = identity.role === 'super_admin';
   await recordAuditNow(auditEvents, null, {
     action: 'read',
     resourceType: 'session',
     resourceId: identity.subject,
+    // Senha aceita não é sessão para o super_admin: falta o segundo fator.
+    detail: mfaRequired ? 'mfa_required' : null,
     actorOverride: {
       role: identity.role,
       id: identity.subject,
       clinicId: identity.clinicId,
     },
   });
+
+  if (mfaRequired) {
+    return ok(await superAdminPendingLogin(auth.secret, identity.account));
+  }
 
   const expiresAtMs = Date.now() + SESSION_TTL_MS;
   const response = NextResponse.json({
@@ -101,6 +109,7 @@ export async function POST(request: NextRequest) {
 
 type AuthResult =
   | {
+      account: UserAccount;
       subject: string;
       role: UserRole;
       clinicId: string | null;
@@ -136,6 +145,7 @@ async function authenticateAccount(
   // O papel e a empresa vêm sempre da própria conta — nunca um valor fixo por
   // padrão (fix do bug "senha sempre vira admin", RBAC-02/RBAC-04).
   return {
+    account,
     subject: account.email,
     role: account.role,
     clinicId: account.clinicId,
@@ -158,4 +168,26 @@ async function filterByValidPassword(
     candidates.map((account) => verifyPassword(password, account.passwordHash)),
   );
   return candidates.filter((_, index) => checks[index]);
+}
+
+/**
+ * Super_admin (ADR-007, bloco B2): a senha rende só um token pendente de 5
+ * min — `mfaRequired` com fator cadastrado, `mfaEnrollmentRequired` sem ele.
+ * Nunca existe sessão de super_admin sem segundo fator.
+ */
+async function superAdminPendingLogin(
+  authSecret: string,
+  account: UserAccount,
+) {
+  const { userAccounts, mfa } = await getRepositories(systemScope());
+  return startMfaLogin(
+    {
+      userAccounts,
+      mfa,
+      cipher: currentDataCipher(),
+      authSecret,
+      nowMs: Date.now(),
+    },
+    account,
+  );
 }
