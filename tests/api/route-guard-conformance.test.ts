@@ -222,6 +222,10 @@ describe('Feature: Conformidade das guardas de rota', () => {
             response.status,
             `${method} ${file.pathname} deveria ser exclusivo da equipe (recebido ${response.status})`,
           ).toBe(403);
+          const body = (await response.json()) as { error: string };
+          expect(body.error, `${method} ${file.pathname}`).toBe(
+            'Acesso restrito à equipe da clínica',
+          );
         }
       },
     );
@@ -243,6 +247,10 @@ describe('Feature: Conformidade das guardas de rota', () => {
             response.status,
             `${method} ${file.pathname} deveria ser exclusivo da equipe (recebido ${response.status})`,
           ).toBe(403);
+          const body = (await response.json()) as { error: string };
+          expect(body.error, `${method} ${file.pathname}`).toBe(
+            'Acesso restrito à equipe da clínica',
+          );
         }
       },
     );

@@ -134,6 +134,12 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
     ['email numérico', { email: 12345 }, 400],
     ['email com 2 caracteres', { email: 'ab' }, 400],
     ['email com 201 caracteres', { email: 'a'.repeat(201) }, 400],
+    // Bem formados: só o limite de tamanho da rota decide.
+    [
+      'email válido com 201 caracteres',
+      { email: `${'a'.repeat(195)}@b.com` },
+      400,
+    ],
     // 3 caracteres passa no limite, mas nenhum e-mail válido tem menos de 5
     // (`a@b.c`): o formato do domínio responde 400.
     ['email com 3 caracteres', { email: 'a@b' }, 400],

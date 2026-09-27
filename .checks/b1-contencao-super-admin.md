@@ -33,6 +33,7 @@ Reaproveita `requireStaffSession` (a família `platform` já decide o papel), `C
 | Contrato do convite do 1º admin | `POST /api/platform/clinics/[id]/admins` · in `{ email: string(3..200) }` · out `{ ...toUserAccountDto, role, clinicId, delivered }`, sem link · 404 `Clínica não encontrada` · 23505 → 400 `Já existe conta com este email` · auditoria `create/account` com `clinicId` = `[id]` | `POST /api/accounts` com `clinicId` - rota da clínica, contradiz critério 4 |
 | Rota da importação | `POST /api/platform/taxonomy/import`; `src/app/api/admin/taxonomy/import` removida sem alias | alias - continuaria `administrative`, aberta ao `company_admin` |
 | Guarda das rotas de plataforma | `requireStaffSession` (família `platform` só admite `super_admin`); sem guarda nova | `requirePlatformSession` nova - duplicaria a mesma decisão, que já mora na matriz de famílias |
+| Rota removida responde pela família antes do roteamento (C24) | `/api/admin/**` sem prefixo próprio cai em `operational`: sem sessão 401, super_admin 403, equipe da clínica 404 do Next | proxy com exceção para devolver 404 a qualquer um - abriria um caminho sem família na política só para uma rota que não existe; o critério 21 fala de quem a chamava (equipe da clínica) |
 | Sessão padrão do E2E | `ADMIN_STORAGE_STATE_PATH` = `company_admin` `e2e-admin@vitta.test` da `legacy-clinic`, convidado pelo super_admin pela rota nova; na suíte de produção (sem link de convite) é cookie assinado de `company_admin` sem conta | manter super_admin - perde acesso a toda rota da clínica |
 
 - Nada mais aqui é difícil de reverter
@@ -61,6 +62,7 @@ Proof: `tests/api/route-guard-conformance.test.ts -t "com sessão de super_admin
 
 **C5** - Proxy: super_admin em `GET /api/patients`, `/api/audit`, `PUT /api/settings/clinic-info`, `/api/auth/identity`, `POST /api/accounts` → 403 com a mensagem
 Proof: `tests/proxy.test.ts -t "super_admin recebe 403 nas rotas da clínica"`
+Proof: `tests/api/auth-identity.test.ts -t "a identidade da equipe é rota da clínica"` (handler de `/api/auth/identity`, fora da varredura por ficar em `api/auth/`)
 
 **C6** - Proxy: super_admin em `/`, `/agenda`, `/pacientes/x`, `/configuracoes`, `/documentos/x` → 307 para `/plataforma`
 Proof: `tests/proxy.test.ts -t "super_admin é levado a /plataforma"`
@@ -82,6 +84,7 @@ Proof: `tests/proxy.test.ts -t "família platform nega a API aos demais papéis"
 **C11** - Idem no handler (camada 2), para toda rota de `platform`
 Proof: `tests/api/route-guard-conformance.test.ts -t "família negada"`
 Proof: `tests/api/route-guard-conformance.test.ts -t "com sessão de paciente"`
+Proof: `tests/api/route-guard-conformance.test.ts -t "com sessão de parceiro"`
 
 **C12** - `/plataforma`: equipe não-super_admin → 307 `/`; `patient`/`partner` → 307 `/portal`
 Proof: `tests/proxy.test.ts -t "página /plataforma redireciona os demais papéis"`
@@ -91,6 +94,7 @@ Proof: `tests/proxy.test.ts -t "sem sessão, /plataforma"`
 
 **C14** - `/plataforma` do super_admin mostra título `Plataforma` e botão `Sair`, sem sidebar; `Sair` faz `POST /api/auth/logout` e leva a `/login`
 Proof: `tests/pages/plataforma.test.tsx -t "título Plataforma e botão Sair"`
+Proof: `tests/pages/plataforma.test.tsx -t "encerra a sessão e leva a /login"`
 Proof: `e2e/plataforma.spec.ts -g "Sair encerra a sessão"`
 
 ### S4 - Primeiro admin de uma clínica · 6 arquivos · 45 KB · ~11k
@@ -104,7 +108,7 @@ Proof: `tests/api/platform-clinic-admins.test.ts -t "sem link de convite"`
 **C17** - Clínica inexistente → 404 `Clínica não encontrada`, nenhuma conta criada
 Proof: `tests/api/platform-clinic-admins.test.ts -t "clínica inexistente"`
 
-**C18** - `email` ausente, não texto, 2 ou 201 caracteres → 400; e-mail válido com 200 caracteres aceito (3 caracteres cai no formato do domínio, `a@b` → 400)
+**C18** - `email` ausente, não texto, 2 ou 201 caracteres (inclusive e-mail bem formado de 201) → 400; e-mail válido com 200 caracteres aceito (3 caracteres cai no formato do domínio, `a@b` → 400)
 Proof: `tests/api/platform-clinic-admins.test.ts -t "valida o e-mail"`
 
 **C19** - E-mail já existente na clínica → 400 `Já existe conta com este email`
@@ -128,6 +132,7 @@ Proof: `tests/api/platform-taxonomy-import.test.ts -t "importa e é idempotente"
 **C24** - `POST /api/admin/taxonomy/import` não existe: sem arquivo de rota, e o `company_admin` (quem a chamava antes) recebe 404. Sem sessão o proxy responde 401 e o super_admin recebe 403 antes do roteamento (a família da rota decide primeiro)
 Proof: `tests/api/platform-taxonomy-import.test.ts -t "rota antiga não existe"`
 Proof: `e2e/plataforma.spec.ts -g "rota antiga de importação responde 404"`
+Proof: `tests/proxy.test.ts -t "o proxy decide pela família antes do roteamento"`
 
 **C25** - `company_admin` → 403 e o catálogo não muda
 Proof: `tests/api/platform-taxonomy-import.test.ts -t "company_admin recebe 403"`

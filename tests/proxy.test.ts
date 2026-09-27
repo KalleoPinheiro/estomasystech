@@ -442,6 +442,23 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       },
     );
 
+    it('Dada a rota antiga de importação, Quando chamar, Então o proxy decide pela família antes do roteamento', async () => {
+      const path = '/api/admin/taxonomy/import';
+      const anonymous = await (await loadProxy())(requestAs('POST', path));
+      expect(anonymous.status).toBe(401);
+
+      const operator = await (await loadProxy())(
+        requestAs('POST', path, sessionCookie('super_admin', 'dono@vitta.app')),
+      );
+      expect(operator.status).toBe(403);
+
+      // Admin de Empresa passa pelo proxy e cai no roteamento do Next (404).
+      const admin = await (await loadProxy())(
+        requestAs('POST', path, sessionCookie('company_admin')),
+      );
+      expect(isNext(admin)).toBe(true);
+    });
+
     it('Dado sem sessão, Quando abre a plataforma, Então sem sessão, /plataforma vai a /login e a API responde 401', async () => {
       const page = await (await loadProxy())(requestAs('GET', '/plataforma'));
       expect(page.status).toBe(307);
