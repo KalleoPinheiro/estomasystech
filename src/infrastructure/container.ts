@@ -12,6 +12,7 @@ import type { PhotoStorage } from '@/application/ports/photo-storage';
 import type { TransactionManager } from '@/application/ports/transaction-manager';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { AuthTokenRepository } from '@/domain/auth/auth-token';
+import type { MfaRepository } from '@/domain/auth/mfa';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
 import type { ProducedSessionRepository } from '@/domain/billing/commission';
 import type { CommissionPayoutRepository } from '@/domain/billing/commission-payout';
@@ -105,6 +106,7 @@ import {
   DrizzleSupplyRepository,
 } from './persistence/drizzle/drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './persistence/drizzle/drizzle-invoice-repository';
+import { DrizzleMfaRepository } from './persistence/drizzle/drizzle-mfa-repository';
 import { DrizzleSessionPackageRepository } from './persistence/drizzle/drizzle-package-repository';
 import { DrizzlePartnerRepository } from './persistence/drizzle/drizzle-partner-repository';
 import { DrizzlePatientRepository } from './persistence/drizzle/drizzle-patient-repository';
@@ -145,6 +147,7 @@ export interface Services {
   sessionPackages: SessionPackageRepository;
   userAccounts: UserAccountRepository;
   authTokens: AuthTokenRepository;
+  mfa: MfaRepository;
   scheduleConfig: ScheduleConfigRepository;
   scheduleAvailability: ScheduleAvailabilityRepository;
   waitlist: WaitlistRepository;
@@ -335,6 +338,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     sessionPackages: new DrizzleSessionPackageRepository(db, tenant.clinicId),
     userAccounts: new DrizzleUserAccountRepository(db, tenant.clinicId),
     authTokens: new DrizzleAuthTokenRepository(db),
+    mfa: new DrizzleMfaRepository(db, cipher),
     scheduleConfig: new DrizzleScheduleConfigRepository(db, tenant.clinicId),
     scheduleAvailability: new DrizzleScheduleAvailabilityRepository(
       db,
