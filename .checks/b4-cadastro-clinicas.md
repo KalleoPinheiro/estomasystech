@@ -159,7 +159,7 @@ Proof: `tests/api/clinic-info-settings.test.ts -t "contato da clínica"`
 Proof: `tests/api/clinic-info-settings.test.ts -t "CNPJ de outra clínica"`
 
 **C29** - `PUT /api/settings/clinic-info` segue só do `company_admin` (atendente → `403`)
-Proof: `tests/api/clinic-info-settings.test.ts -t "atendente recebe 403"`
+Proof: `tests/api/clinic-info-settings.test.ts -t "Dado papel atendente, Quando tentar salvar"` (teste existente; a checagem não muda)
 
 ### S6 - Telas da plataforma e Configurações · 12 arquivos · 140 KB · ~35k
 

@@ -1,20 +1,12 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
+import { UpdateClinicInfo } from '@/application/platform/update-clinic-info';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
-import { toClinicInfoDto } from '@/lib/dto';
-
-const infoSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  cnpj: z.string().max(30).nullish(),
-  address: z.string().max(300).nullish(),
-  city: z.string().max(120).nullish(),
-  professionalName: z.string().max(200).nullish(),
-  professionalRegistry: z.string().max(60).nullish(),
-});
+import { clinicInfoChangesSchema } from '@/lib/clinic-info-schema';
+import { toClinicRegistrationDto } from '@/lib/dto';
 
 /**
  * Só quem administra a empresa edita os dados cadastrais da clínica (#61). O
@@ -35,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (!clinic) {
       throw new Error('Clínica não encontrada');
     }
-    return { info: toClinicInfoDto(clinic) };
+    return { info: toClinicRegistrationDto(clinic) };
   });
 }
 
@@ -48,21 +40,20 @@ export async function PUT(request: NextRequest) {
   const clinicId = writeClinicId(guard.session);
 
   return handleRequest(async () => {
-    const body = infoSchema.parse(await request.json());
+    const body = clinicInfoChangesSchema.parse(await request.json());
     const { clinics, auditEvents } = await getRepositories(
       clinicScope(clinicId),
     );
-    const clinic = await clinics.findById(clinicId);
-    if (!clinic) {
+    // Mesma regra da plataforma (B4): CNPJ canônico e único, contato válido.
+    const updated = await new UpdateClinicInfo(clinics).execute(clinicId, body);
+    if (!updated) {
       throw new Error('Clínica não encontrada');
     }
-    const updated = clinic.updateInfo(body);
-    await clinics.update(updated);
     recordAudit(auditEvents, guard.session, {
       action: 'update',
       resourceType: 'clinic-info',
       resourceId: clinicId,
     });
-    return { info: toClinicInfoDto(updated) };
+    return { info: toClinicRegistrationDto(updated) };
   });
 }

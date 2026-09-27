@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
 import { clinicScope } from '@/lib/auth/tenant-scope';
-import type { ClinicInfoDto } from '@/lib/dto';
+import type { ClinicInfoDto, ClinicRegistrationDto } from '@/lib/dto';
 import {
   CLINIC_A_ID,
   CLINIC_B_ID,
@@ -224,5 +224,72 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     );
 
     expect(response.status).toBe(401);
+  });
+
+  it('Dado Admin de Empresa, Quando salvar o contato da clínica, Então o GET devolve telefone e e-mail; e-mail inválido responde 400', async () => {
+    await ensureTestClinics();
+    const route = await import('@/app/api/settings/clinic-info/route');
+    const put = (body: unknown) =>
+      route.PUT(
+        jsonRequest(
+          '/api/settings/clinic-info',
+          'PUT',
+          body,
+          adminCookieHeader(CLINIC_B_ID),
+        ),
+      );
+
+    const saved = await put({
+      contactPhone: ' 11 95555-6666 ',
+      contactEmail: 'Recepcao@ClinicaB.com',
+    });
+    const invalid = await put({ contactEmail: 'sem-arroba' });
+    const response = await route.GET(
+      jsonRequest(
+        '/api/settings/clinic-info',
+        'GET',
+        undefined,
+        adminCookieHeader(CLINIC_B_ID),
+      ),
+    );
+    const body = (await response.json()) as Envelope<{
+      info: ClinicRegistrationDto;
+    }>;
+
+    expect(saved.status).toBe(200);
+    expect(invalid.status).toBe(400);
+    expect(body.data?.info.contactPhone).toBe('11 95555-6666');
+    expect(body.data?.info.contactEmail).toBe('recepcao@clinicab.com');
+  });
+
+  it('Dado CNPJ de outra clínica, Quando o Admin de Empresa salvar, Então 400 e o CNPJ não muda', async () => {
+    await ensureTestClinics();
+    const route = await import('@/app/api/settings/clinic-info/route');
+    await route.PUT(
+      jsonRequest(
+        '/api/settings/clinic-info',
+        'PUT',
+        { cnpj: '55.666.777/0001-88' },
+        adminCookieHeader(CLINIC_A_ID),
+      ),
+    );
+
+    const response = await route.PUT(
+      jsonRequest(
+        '/api/settings/clinic-info',
+        'PUT',
+        { cnpj: '55666777000188' },
+        adminCookieHeader(CLINIC_B_ID),
+      ),
+    );
+    const body = (await response.json()) as Envelope<never>;
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe('Já existe clínica com este CNPJ');
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { clinics } = await getRepositories(clinicScope(CLINIC_B_ID));
+    expect((await clinics.findById(CLINIC_B_ID))?.cnpj).not.toBe(
+      '55.666.777/0001-88',
+    );
   });
 });
