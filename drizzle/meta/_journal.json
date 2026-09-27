@@ -309,6 +309,13 @@
       "when": 1790528790709,
       "tag": "0043_clinic-contact-cnpj-unique",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790542861517,
+      "tag": "0044_clinic-status",
+      "breakpoints": true
     }
   ]
 }

@@ -33,8 +33,20 @@ export const clinics = pgTable(
     // nasceu sem ele e aparece como "cadastro incompleto".
     contactPhone: text('contact_phone'),
     contactEmail: text('contact_email'),
+    // Estado da clínica (B5, #214): `suspended` nega o login de toda conta dela
+    // e pausa os lembretes; nenhum dado é apagado.
+    status: text('status').notNull().default('active'),
+    statusChangedAt: timestamp('status_changed_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    statusChangedBy: text('status_changed_by'),
   },
   (table) => [
+    check(
+      'clinics_status_check',
+      sql`${table.status} IN ('active', 'suspended')`,
+    ),
     // CNPJ repetido entre clínicas é recusado (design, Open 1); filiais têm CNPJ
     // próprio. Gravado na forma canônica (`normalizeCnpj`).
     uniqueIndex('uq_clinics_cnpj')

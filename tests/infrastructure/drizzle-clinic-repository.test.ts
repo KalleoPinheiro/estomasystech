@@ -150,4 +150,31 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       expect(await clinicRepo.findByCnpj('99.999.999/0001-99')).toBeNull();
     });
   });
+
+  describe('Cenário: estado da clínica (B5, #214)', () => {
+    it('Dada clínica suspensa por saveStatus, Quando um update de cadastro usa a instância antiga, Então o estado persiste e findById/findAll o devolvem', async () => {
+      const clinic = bareClinic('Clínica Estado', 'root@vitta.com');
+      await clinicRepo.create(clinic);
+      const at = new Date('2026-09-27T12:00:00.000Z');
+
+      await clinicRepo.saveStatus(clinic.suspend('root@vitta.com', at));
+      // Edição concorrente com a instância lida antes da suspensão.
+      await clinicRepo.update(clinic.updateInfo({ city: 'Recife' }));
+
+      const stored = await clinicRepo.findById(clinic.id);
+      expect(stored?.status).toBe('suspended');
+      expect(stored?.statusChangedAt).toEqual(at);
+      expect(stored?.statusChangedBy).toBe('root@vitta.com');
+      expect(stored?.city).toBe('Recife');
+      const listed = (await clinicRepo.findAll()).find(
+        (c) => c.id === clinic.id,
+      );
+      expect(listed?.status).toBe('suspended');
+
+      await clinicRepo.saveStatus(
+        (stored as Clinic).reactivate('root@vitta.com', new Date()),
+      );
+      expect((await clinicRepo.findById(clinic.id))?.status).toBe('active');
+    });
+  });
 });

@@ -19,6 +19,9 @@ const toClinic = (row: ClinicRow): Clinic =>
     professionalRegistry: row.professionalRegistry,
     contactPhone: row.contactPhone,
     contactEmail: row.contactEmail,
+    status: row.status === 'suspended' ? 'suspended' : 'active',
+    statusChangedAt: row.statusChangedAt,
+    statusChangedBy: row.statusChangedBy,
   });
 
 /** Dados cadastrais gravados por `create` e `update`. */
@@ -33,6 +36,13 @@ const infoColumns = (clinic: Clinic) => ({
   contactEmail: clinic.contactEmail,
 });
 
+/** Estado da clínica (B5) — gravado por `create` e `saveStatus`. */
+const statusColumns = (clinic: Clinic) => ({
+  status: clinic.status,
+  statusChangedAt: clinic.statusChangedAt,
+  statusChangedBy: clinic.statusChangedBy,
+});
+
 export class DrizzleClinicRepository implements ClinicRepository {
   constructor(private readonly db: AppDb) {}
 
@@ -42,6 +52,7 @@ export class DrizzleClinicRepository implements ClinicRepository {
       createdBy: clinic.createdBy,
       createdAt: clinic.createdAt,
       ...infoColumns(clinic),
+      ...statusColumns(clinic),
     });
   }
 
@@ -75,6 +86,13 @@ export class DrizzleClinicRepository implements ClinicRepository {
     await this.db
       .update(clinics)
       .set(infoColumns(clinic))
+      .where(eq(clinics.id, clinic.id));
+  }
+
+  async saveStatus(clinic: Clinic): Promise<void> {
+    await this.db
+      .update(clinics)
+      .set(statusColumns(clinic))
       .where(eq(clinics.id, clinic.id));
   }
 }

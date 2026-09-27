@@ -156,6 +156,12 @@ export interface UserAccountRepository {
    * `updatePasswordHash` já incrementa por conta própria.
    */
   revokeSessions(id: string): Promise<void>;
+  /**
+   * Invalida as sessões de TODAS as contas da empresa do escopo (suspensão da
+   * clínica, B5): `session_version + 1` numa única instrução. Exige repositório
+   * escopado a uma clínica.
+   */
+  revokeAllSessions(): Promise<void>;
   /** Conta de portal já vinculada a este cadastro (#196), se houver. */
   findByPortalLink(
     link: { patientId: string } | { partnerId: string },

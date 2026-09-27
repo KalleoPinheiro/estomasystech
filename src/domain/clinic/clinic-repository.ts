@@ -7,5 +7,11 @@ export interface ClinicRepository {
   findByCnpj(cnpj: string): Promise<Clinic | null>;
   /** Todas as empresas — o cron de lembretes e a plataforma listam (escopo de sistema). */
   findAll(): Promise<Clinic[]>;
+  /** Grava só o cadastro — nunca o estado. */
   update(clinic: Clinic): Promise<void>;
+  /**
+   * Grava só o estado (`status`, `status_changed_at`, `status_changed_by`, B5):
+   * uma edição de cadastro concorrente não regrava o estado lido antes dela.
+   */
+  saveStatus(clinic: Clinic): Promise<void>;
 }
