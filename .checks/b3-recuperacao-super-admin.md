@@ -39,6 +39,7 @@ Toca `scripts/recover-super-admin.ts` (fino, como `reencrypt-clinical-data.ts`),
 | E-mail novo | normalizado (trim + minúsculas) e validado por `UserAccount`; igual ao atual → sem troca; usado por **qualquer** outra conta (de qualquer clínica) → saída 2 `O e-mail <x> já é usado por outra conta. Nada foi alterado.` | aceitar como o MT-06 aceita entre clínicas - o login desempata pela senha e o reset por e-mail atingiria as duas contas; a identidade da plataforma fica separada |
 | Conta desativada | reativada (`active = true`) e dito no stdout | recusar - deixaria "intervenção direta no banco" como único caminho, que é o que o B3 elimina |
 | Auditoria | `recordAuditNow` dentro da transação: `action: 'update'`, `resourceType: 'account-recovery'`, `resourceId: <accountId>`, `detail: 'super_admin_recovered'` ou `'super_admin_recovered;email_changed'`, `actorOverride: { role: 'super_admin', id: 'script:recover-super-admin', clinicId: null }` → hoje `legacy-clinic`, depois do B6 plataforma. Sem e-mail no evento | gravar `clinic_id` nulo agora - é o B6; dono escolheu o caminho do login |
+| Revogação da sessão de sistema (descoberta no build) | `lookupAccountStatus` com `clinicId = null` procura a **conta de sistema pelo papel** (`role = 'super_admin' AND clinic_id IS NULL`), não pelo e-mail; e-mail do cookie ≠ e-mail da conta → `isActive: false` (revogada); sem conta de sistema → `null` (lista negra do ADR-005 intacta). Sessões de clínica inalteradas. `e2e/plataforma.spec.ts` deixa o cookie forjado e entra de verdade (senha + TOTP pela API) | manter a busca por e-mail - com `--novo-email`, o cookie antigo (e-mail velho) não acha conta e vale até expirar (12 h): a sessão de quem tomou a conta sobrevive à recuperação |
 | Registro da decisão | ADR-009 novo, "emenda o ADR-004" (recuperação por script em vez de "intervenção direta no banco"); ADR-004 intocado | nota no ADR-004 - `docs/governance.md`: ADR aceito nunca é editado |
 
 - Nada mais aqui é difícil de reverter
@@ -116,6 +117,16 @@ Proof: `tests/api/recover-super-admin.test.ts -t "perdeu tudo"`
 **C21** - O cookie de sessão emitido antes da recuperação deixa de valer (`sv` antigo)
 Proof: `tests/api/recover-super-admin.test.ts -t "sessão anterior cai"`
 
+**C23** - Sessão de sistema cujo e-mail não é o da conta de sistema (e-mail trocado pela recuperação) → `isSessionRevoked` devolve `true`
+Proof: `tests/api/recover-super-admin.test.ts -t "sessão com o e-mail antigo cai"`
+
+**C24** - Sessão de sistema com o e-mail e a `session_version` da conta → válida; sem conta de sistema → válida (lista negra)
+Proof: `tests/api/recover-super-admin.test.ts -t "sessão de sistema vigente"`
+
+**C25** - A suíte E2E da plataforma roda com o super_admin real (nas duas configs)
+Proof: `npx playwright test e2e/plataforma.spec.ts`
+Proof: `npm run build && npx playwright test -c playwright.prod.config.ts`
+
 ### S4 - Docs · 5 arquivos · 40 KB · ~10k
 
 **C22** - `producao.md` tem a seção de recuperação do super_admin com o comando, as flags, os códigos de saída e o link de 1 h; ADR-009 aceito emenda o ADR-004; acesso README cita o procedimento
@@ -141,11 +152,12 @@ Proof: `npm run check:docs`
 | códigos de saída (3) | `0` C13, C14 · `2` C15, C16, C17 · `1` C18 | - |
 | pré-condições que recusam (4) | sem super_admin C7/C17 · e-mail em uso C8/C17 · e-mail inválido C9/C17 · `APP_URL` C16 | - |
 | efeitos da recuperação (7) | fator/códigos C1 · `session_version` C2 · senha C3 · e-mail C4 · link/tokens C5 · auditoria C6 · `active` C11 | - |
+| sessão de sistema × conta (3) | e-mail diferente → revogada C23 · mesmo e-mail e `sv` → válida C24 · sem conta de sistema → válida C24 | - |
 | `APP_URL` (3) | ausente, `http://` externo → recusa; `https://` → aceita - C16 e C13 | - |
 
-- Claims naming a status code, route or response shape: C20, C21 - proof chama os handlers de `set-password` e `login`
+- Claims naming a status code, route or response shape: C20, C21, C23 - proof chama os handlers de `set-password` e `login`
 - Nenhuma outra check afirma mais do que o caso que a proof exercita
 
 ## Handoff
 
-Lote único: S1–S4 somam ~34k de leitura, abaixo de 150k; nada a passar adiante.
+Lote único: S1–S4 somam ~40k (com a revogação e o E2E da plataforma) de leitura, abaixo de 150k; nada a passar adiante.
