@@ -64,3 +64,29 @@ describe('Feature: Registro da decisão do B1 (ADR-007)', () => {
     }
   });
 });
+
+/** B2 (#214): o segundo fator do super_admin fica no ADR-008 e nos docs de acesso. */
+describe('Feature: Registro da decisão do B2 (ADR-008)', () => {
+  it('Dado o ADR-008 e os documentos de acesso, Quando ler, Então registram o segundo fator obrigatório, os códigos de recuperação e o recadastro', () => {
+    const adr = read('docs/adr/008-segundo-fator-do-super-admin.md');
+    const acesso = read('docs/domains/acesso/README.md');
+    const context = read('CONTEXT.md');
+
+    expect(adr).toMatch(/^---\n[\s\S]*?status: frozen\n/);
+    expect(adr).toMatch(/\*\*Status:\*\* aceito/);
+    expect(adr).toContain('RFC 6238');
+    expect(adr).toContain('last_used_step');
+    expect(adr).toContain('mfaEnrollmentRequired');
+    expect(adr).toContain('10 códigos de uso único');
+    expect(adr).toContain('recadastro obrigatório');
+    expect(acesso).toMatch(/\| ACE-RN-18 \| Super Admin entra em duas etapas/);
+    expect(acesso).toMatch(/\| ACE-RN-19 \| Sem fator cadastrado/);
+    expect(acesso).toMatch(
+      /\| ACE-RN-20 \| Código de recuperação válido não abre sessão/,
+    );
+    expect(acesso).toContain('008-segundo-fator-do-super-admin.md');
+    expect(context).toContain('**Second factor** (segundo fator)');
+    expect(context).toContain('**Recovery code** (código de recuperação)');
+    expect(context).toContain('008-segundo-fator-do-super-admin.md');
+  });
+});

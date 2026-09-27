@@ -14,7 +14,7 @@ domain: acesso
 Quem entra, em qual empresa (Clinic, o tenant) e o que pode ver. Todo acesso é por e-mail + senha
 própria; toda conta, exceto o Super Admin, pertence a exatamente uma empresa; toda mudança
 registra o ator. O Super Admin é o operador da plataforma: cuida das clínicas e dos admins delas,
-sem acesso a dado de clínica ([ADR-007](../../adr/007-super-admin-operador-da-plataforma.md)). Fronteira: começa no login/convite e termina na decisão de autorização — o que
+sem acesso a dado de clínica ([ADR-007](../../adr/007-super-admin-operador-da-plataforma.md)), e entra com senha **e** segundo fator ([ADR-008](../../adr/008-segundo-fator-do-super-admin.md)). Fronteira: começa no login/convite e termina na decisão de autorização — o que
 cada tela faz com o dado é dos outros domínios.
 
 **Termos ([`CONTEXT.md`](../../../CONTEXT.md) § Access Control):** `Clinic`, `Session`, `Role`, `Audit Event`, `Consent Record`.
@@ -40,12 +40,15 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-15 | Limite geral da API por conta autenticada (empresa + e-mail) e por IP só para anônimos — clínicas atrás de NAT não dividem o teto (#201) | `src/proxy.ts` |
 | ACE-RN-16 | O primeiro `company_admin` de uma clínica é convidado pelo Super Admin em `POST /api/platform/clinics/[id]/admins` (`{ email }`): nasce sem senha usável, recebe o convite (24 h, uso único) e a resposta nunca traz o link. Clínica inexistente → `404`; e-mail repetido na clínica (inclusive em corrida) → `400`; falha do e-mail → `200` com `delivered: false`. O evento fica na auditoria da clínica com o ator `super_admin` | `src/app/api/platform/clinics/[id]/admins/` (#214) |
 | ACE-RN-17 | Importar o catálogo global de taxonomias (NANDA-I/NOC/NIC) é ato de plataforma: `POST /api/platform/taxonomy/import`, só Super Admin; `/api/admin/taxonomy/import` não existe mais | `src/app/api/platform/taxonomy/import/` (#214) |
+| ACE-RN-18 | Super Admin entra em duas etapas: a senha certa não emite sessão, só `{ mfaRequired: true, pendingToken }` (fator cadastrado) ou `{ mfaEnrollmentRequired: true, pendingToken }` (sem fator). O token pendente vale 5 min, é assinado com chave derivada do `AUTH_SECRET` e morre se a `session_version` da conta mudar. `POST /api/auth/mfa/verify` confere o código TOTP (6 dígitos, 30 s, janela ±1, mesmo código não entra duas vezes) e emite a sessão. Código errado → `401` "Código inválido"; token ausente, expirado ou de outra etapa → `401` "Verificação expirada. Entre novamente com e-mail e senha."; 6ª tentativa da conta no minuto → `429` | [ADR-008](../../adr/008-segundo-fator-do-super-admin.md), `src/application/auth/mfa-login.ts`, `src/app/api/auth/mfa/` (#214) |
+| ACE-RN-19 | Sem fator cadastrado, o Super Admin cadastra um antes de qualquer sessão (`POST /api/auth/mfa/enroll`: chave em texto e link `otpauth://`, sem QR). A chave só é gravada (cifrada, ADR-006) quando o código dela é confirmado; a confirmação devolve 10 códigos de recuperação de uso único, exibidos uma única vez e guardados como hash scrypt, e derruba sessões e tokens pendentes anteriores | [ADR-008](../../adr/008-segundo-fator-do-super-admin.md), `drizzle/0042_*` (#214) |
+| ACE-RN-20 | Código de recuperação válido não abre sessão: é consumido e leva ao recadastro obrigatório do autenticador; o fator antigo vale até o novo ser confirmado, e o recadastro troca os 10 códigos. Usado ou inexistente → `401` "Código de recuperação inválido" | [ADR-008](../../adr/008-segundo-fator-do-super-admin.md) (#214) |
 
 ### Papéis
 
 | Papel | O que acessa |
 | --- | --- |
-| `super_admin` | só a plataforma (`/plataforma`, `/api/platform/**`): convida o primeiro `company_admin` de cada clínica e importa o catálogo de taxonomias. Nenhum dado de clínica — nem prontuário, nem agenda, nem configurações. Existe um só |
+| `super_admin` | só a plataforma (`/plataforma`, `/api/platform/**`): convida o primeiro `company_admin` de cada clínica e importa o catálogo de taxonomias. Nenhum dado de clínica — nem prontuário, nem agenda, nem configurações. Existe um só, e entra com segundo fator (ACE-RN-18) |
 | `company_admin` | tudo dentro da própria empresa: operacional, clínico, configurações, contas |
 | `atendente` | só operacional: agenda e cadastro de paciente/parceiro; lê profissionais e procedimentos só pela lista reduzida `/api/options/*`, sem comissão nem kit (#188) |
 | `profissional` | clínico, só dos pacientes com quem tem consulta ou evolução; busca NANDA-I/NOC/NIC da SAE (`/api/taxonomy/**`, família `clinical`) e nomes de profissionais por `/api/options/professionals`; a aba Pacotes do prontuário fica oculta até a decisão de produto (#189) |
@@ -57,6 +60,7 @@ cada tela faz com o dado é dos outros domínios.
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
 | Login, convite, definir senha, esqueci a senha | entregue | `/login`, `/definir-senha`, `/esqueci-senha` |
+| Segundo fator do Super Admin (código do autenticador, cadastro, códigos de recuperação) | entregue; recuperação de emergência no servidor: bloco B3 | `/login` (etapas depois da senha), `/api/auth/mfa/**` |
 | Contas e papéis (criar, desativar, reenviar convite) | entregue | Configurações → Contas |
 | Dados cadastrais da empresa (CNPJ, responsável técnico) | entregue | Configurações → Dados da clínica |
 | Trilha de auditoria | entregue | `/auditoria` |
@@ -74,7 +78,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 | borda e política | `src/proxy.ts`, `src/lib/auth/` |
 | API | `src/app/api/{auth,accounts,audit,settings,clinic-info,platform}/` |
 | UI | `src/app/{login,definir-senha,esqueci-senha,plataforma}/`, `src/app/(staff)/{auditoria,configuracoes}/` |
-| testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
+| testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `tests/api/mfa-login.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
 
 ## Decisões
 
@@ -84,4 +88,5 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 - [ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md) — login nativo; Google só como integração
 - [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md) — revogação de sessão por `session_version`
 - [ADR-007](../../adr/007-super-admin-operador-da-plataforma.md) — Super Admin é o operador da plataforma, único e sem dado de clínica
+- [ADR-008](../../adr/008-segundo-fator-do-super-admin.md) — segundo fator TOTP obrigatório para o Super Admin
 - Integração: [Resend](../../engineering/integrations/resend.md) (convite e reset)
