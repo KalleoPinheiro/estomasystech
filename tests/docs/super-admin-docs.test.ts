@@ -152,6 +152,7 @@ describe('Feature: Documentação da suspensão de clínica (B5)', () => {
     const context = read('CONTEXT.md');
 
     expect(acesso).toContain('POST /api/platform/clinics/[id]/suspend');
+    expect(acesso).toContain('`.../reactivate`');
     expect(acesso).toContain(
       'O acesso desta clínica está suspenso. Fale com o responsável pela clínica.',
     );

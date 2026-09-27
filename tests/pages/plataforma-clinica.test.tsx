@@ -236,6 +236,7 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
     expect(callsWith(fetchMock, 'POST')[0][0]).toBe(
       '/api/platform/clinics/c1/suspend',
     );
+    expect(await screen.findByText('Clínica suspensa')).toBeInTheDocument();
   });
 
   it('Dada clínica suspensa, Quando abrir o detalhe, Então selo, data e autor, reativar direto, convite desabilitado e sem reenviar', async () => {
@@ -248,7 +249,10 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
     expect(
       await screen.findByText(`Suspensa em ${since} por dono@vitta.app.`),
     ).toBeInTheDocument();
-    expect(screen.getAllByText('Suspensa').length).toBeGreaterThanOrEqual(1);
+    const title = screen.getByRole('heading', { level: 1, name: 'Clínica Um' });
+    expect(
+      within(title.parentElement as HTMLElement).getByText('Suspensa'),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Suspender clínica' }),
     ).toBeNull();
@@ -273,6 +277,7 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
     expect(callsWith(fetchMock, 'POST')[0][0]).toBe(
       '/api/platform/clinics/c1/reactivate',
     );
+    expect(await screen.findByText('Clínica reativada')).toBeInTheDocument();
     expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 });

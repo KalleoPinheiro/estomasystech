@@ -68,7 +68,11 @@ const versionOf = async (clinicId: string, id: string) =>
   (await (await repositories(clinicId)).userAccounts.findById(id))
     ?.sessionVersion;
 
-const change = async (action: 'suspend' | 'reactivate', clinicId: string) => {
+const change = async (
+  action: 'suspend' | 'reactivate',
+  clinicId: string,
+  cookie: Record<string, string> = SUPER_ADMIN,
+) => {
   const route =
     action === 'suspend'
       ? await import('@/app/api/platform/clinics/[id]/suspend/route')
@@ -78,7 +82,7 @@ const change = async (action: 'suspend' | 'reactivate', clinicId: string) => {
       `/api/platform/clinics/${clinicId}/${action}`,
       'POST',
       undefined,
-      SUPER_ADMIN,
+      cookie,
     ),
     { params: Promise.resolve({ id: clinicId }) },
   );
@@ -130,17 +134,20 @@ describe('Feature: Suspender e reativar clínica pela plataforma (B5, Journey 7 
     const clinicId = await freshClinic();
     const admin = await seedAccount(clinicId);
     const suspended = await change('suspend', clinicId);
+    await new Promise((resolve) => setTimeout(resolve, 5));
 
-    const { response, json } = await change('reactivate', clinicId);
+    const { response, json } = await change(
+      'reactivate',
+      clinicId,
+      cookieHeaderFor('super_admin', 'recuperado@vitta.app', null),
+    );
 
     expect(response.status).toBe(200);
     expect(json.data).toMatchObject({
       status: 'active',
-      statusChangedBy: OPERATOR,
+      statusChangedBy: 'recuperado@vitta.app',
     });
-    expect(
-      Date.parse(json.data.statusChangedAt as string),
-    ).toBeGreaterThanOrEqual(
+    expect(Date.parse(json.data.statusChangedAt as string)).toBeGreaterThan(
       Date.parse(suspended.json.data.statusChangedAt as string),
     );
     expect(await versionOf(clinicId, admin.id)).toBe(1);
@@ -310,7 +317,10 @@ describe('Feature: Suspender e reativar clínica pela plataforma (B5, Journey 7 
 
     expect((await act(pending.id, 'deactivate')).status).toBe(200);
     expect((await act(pending.id, 'reactivate')).status).toBe(200);
-    expect(active.isActive).toBe(true);
+    expect(
+      (await (await repositories(clinicId)).userAccounts.findById(active.id))
+        ?.isActive,
+    ).toBe(true);
 
     const detail = await import('@/app/api/platform/clinics/[id]/route');
     const edit = await detail.PATCH(

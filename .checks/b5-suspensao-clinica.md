@@ -64,7 +64,7 @@ Proof: `tests/domain/clinic.test.ts -t "estado da clínica"`
 Proof: `tests/infrastructure/drizzle-clinic-repository.test.ts -t "estado"`
 
 **C4** - `revokeAllSessions()` escopado à clínica incrementa `session_version` de todas as contas dela e de nenhuma outra
-Proof: `tests/infrastructure/drizzle-user-account-revoke-all.test.ts -t "revoga todas as sessões da clínica"`
+Proof: `tests/infrastructure/drizzle-user-account-revoke-all.test.ts -t "Quando revogar todas as sessões da clínica A"`
 
 ### S2 - Suspender e reativar pela API · ~10k
 
@@ -180,3 +180,4 @@ Registro do build (lote único, sem passagem de bastão):
 - **Ajustado durante o build:** a prova do C21 mudou de arquivo (`tests/api/reminders-run-suspended.test.ts`, com clínica própria semeada) e o texto ficou mais preciso ("ela fora de `clinics`; ... a processa e o e-mail sai"); a checagem não baixou. Os fixtures `CLINIC`/`summary` dos testes de tela do B4 ganharam `status` (contrato novo do DTO). `readServerLog`/`waitForInviteUrl` saíram do `global-setup` para `e2e/support/server-log.ts`, para o spec do C27 ler o convite.
 - **Descartado:** exportar a mensagem de suspensão do `route.ts` do login (o Next só aceita exports de handler em rota) — foi para `src/application/auth/suspended-clinic-message.ts`.
 - **Ambiente local:** Chromium do container é a revisão 1194; as suítes E2E rodaram com um config temporário (não commitado) que só troca `launchOptions.executablePath` para `/opt/pw-browsers/chromium`, e com `NODE_USE_ENV_PROXY=1` (o `next/font/google` precisa sair pelo proxy do container).
+- **Verifier, rodada 1 (FAIL 28/29):** C4 — o filtro da prova não casava com o nome do teste (`revoga` × `revogar`); a prova agora usa o nome do teste existente, a checagem não mudou. Achados menores fechados no mesmo commit: C6 reativa com outro operador e exige data estritamente posterior; C11 lê o admin ativo do banco; C24 amarra o selo `Suspensa` ao título e confere os toasts; C29 confere também `.../reactivate`; mensagem do portal com contato parcial ganhou `tests/application/suspended-clinic-message.test.ts`. Mantidos: revogação de `partner` pelo proxy sem teste próprio (mesmo caminho de `patient`, e C13 cobre `partner` no login); consulta da clínica fora do `handleRequest` no handler de estado (mesmo padrão das rotas do B4).
