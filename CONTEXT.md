@@ -10,7 +10,8 @@
 
 - The tenant boundary: every account except Super Admin belongs to exactly one Clinic, and only sees that Clinic's data.
 - Becoming a real entity now (Phase 1 of [ADR-001](./docs/adr/001-multi-tenancy.md): `clinics` table + `clinic_id` on existing tables). Isolation is enforced in the application layer (session carries `clinic_id`, repositories filter by it); Postgres Row-Level Security is deferred to a later phase.
-- Created only by Super Admin (no self-service onboarding yet — that's Phase 3 of ADR-001).
+- Created only by Super Admin, through the platform (`/plataforma`, `POST /api/platform/clinics`) — no self-service onboarding yet (Phase 3 of ADR-001).
+- **Registration** (cadastro): name, CNPJ (unique across Clinics, stored as `AA.AAA.AAA/AAAA-DD`), **contact phone/WhatsApp** and **contact e-mail** — how the platform reaches the Clinic — are required at creation; technical lead (name + registry), address and city are optional. A Clinic missing any of the four required fields is shown as **cadastro incompleto** and cannot get an Admin de Empresa invited (the go-live `legacy-clinic` starts that way).
 
 **Patient** (paciente)
 
@@ -142,7 +143,7 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 **Account provisioning** (cadastro de contas)
 
 - No self-registration for any role: every account is created by someone else in the hierarchy above (see Role).
-- A Clinic's first Admin de Empresa is invited by Super Admin through the platform (`POST /api/platform/clinics/[id]/admins`); the response never carries the invite link. No self-service onboarding yet.
+- A Clinic's Admin de Empresa is invited by Super Admin through the platform (created with the Clinic, or later via `POST /api/platform/clinics/[id]/admins`); the response never carries the invite link. Super Admin can also resend the invite, deactivate and reactivate an Admin de Empresa — never any other account. While no Admin de Empresa has set a password, the Clinic shows as **aguardando primeiro acesso**. No self-service onboarding yet.
 - No one creates a Super Admin (`ck_user_accounts_system_role_has_no_clinic` + `uq_user_accounts_single_system_account`).
 
 **Authorization** (autorização)

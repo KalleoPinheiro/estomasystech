@@ -125,3 +125,22 @@ describe('Feature: Registro da decisão do B3 (ADR-009)', () => {
     expect(context).toContain('**Emergency recovery**');
   });
 });
+
+describe('Feature: Documentação do cadastro de clínicas (B4)', () => {
+  it('Dado acesso e CONTEXT, Quando ler, Então descrevem o cadastro de clínicas, o gate do convite e a gestão de admins', () => {
+    const acesso = read('docs/domains/acesso/README.md');
+    const context = read('CONTEXT.md');
+
+    expect(acesso).toContain('POST /api/platform/clinics');
+    expect(acesso).toContain('uq_clinics_cnpj');
+    expect(acesso).toContain(
+      'Complete o cadastro da clínica (nome, CNPJ, telefone e e-mail de contato) antes de convidar o admin',
+    );
+    expect(acesso).toContain('`resend-invite`, `deactivate` ou `reactivate`');
+    expect(acesso).toContain('`POST /api/accounts` não aceita `clinicId`');
+    expect(acesso).not.toContain('bloco B4');
+    expect(context).toContain('contact phone/WhatsApp');
+    expect(context).toContain('cadastro incompleto');
+    expect(context).toContain('aguardando primeiro acesso');
+  });
+});
