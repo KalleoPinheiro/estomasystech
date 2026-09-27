@@ -18,9 +18,16 @@ import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import type { PlatformClinicSummaryDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
-import { ADMIN_STATUS_LABEL, registrationLabel } from './clinic-labels';
+import {
+  ADMIN_STATUS_LABEL,
+  CLINIC_STATUS_LABEL,
+  registrationLabel,
+} from './clinic-labels';
 
-/** Clínicas da plataforma (B4, #214): cadastro e estado do admin de cada uma. */
+/**
+ * Clínicas da plataforma (B4, #214): situação (B5), cadastro e estado do admin
+ * de cada uma.
+ */
 export default function PlatformPage() {
   const { data, error, refresh } = useApiQuery<PlatformClinicSummaryDto[]>(
     '/api/platform/clinics',
@@ -66,6 +73,7 @@ function ClinicsContent({
           <TableRow>
             <TableHead className="py-2 pr-3">Nome</TableHead>
             <TableHead className="py-2 pr-3">CNPJ</TableHead>
+            <TableHead className="py-2 pr-3">Situação</TableHead>
             <TableHead className="py-2 pr-3">Cadastro</TableHead>
             <TableHead className="py-2">Admin</TableHead>
           </TableRow>
@@ -83,6 +91,7 @@ function ClinicsContent({
 function ClinicRow({ clinic }: { clinic: PlatformClinicSummaryDto }) {
   const registration = registrationLabel(clinic.registrationComplete);
   const admin = ADMIN_STATUS_LABEL[clinic.adminStatus];
+  const situation = CLINIC_STATUS_LABEL[clinic.status];
   return (
     <TableRow>
       <TableCell label="Nome" className="py-2 pr-3 font-medium">
@@ -95,6 +104,9 @@ function ClinicRow({ clinic }: { clinic: PlatformClinicSummaryDto }) {
       </TableCell>
       <TableCell label="CNPJ" className="py-2 pr-3 text-ink-2">
         {clinic.cnpj ?? '—'}
+      </TableCell>
+      <TableCell label="Situação" className="py-2 pr-3">
+        <StatusBadge status={situation.status} label={situation.label} />
       </TableCell>
       <TableCell label="Cadastro" className="py-2 pr-3">
         <StatusBadge status={registration.status} label={registration.label} />

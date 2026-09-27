@@ -12,6 +12,7 @@
 - Becoming a real entity now (Phase 1 of [ADR-001](./docs/adr/001-multi-tenancy.md): `clinics` table + `clinic_id` on existing tables). Isolation is enforced in the application layer (session carries `clinic_id`, repositories filter by it); Postgres Row-Level Security is deferred to a later phase.
 - Created only by Super Admin, through the platform (`/plataforma`, `POST /api/platform/clinics`) — no self-service onboarding yet (Phase 3 of ADR-001).
 - **Registration** (cadastro): name, CNPJ (unique across Clinics, stored as `AA.AAA.AAA/AAAA-DD`), **contact phone/WhatsApp** and **contact e-mail** — how the platform reaches the Clinic — are required at creation; technical lead (name + registry), address and city are optional. A Clinic missing any of the four required fields is shown as **cadastro incompleto** and cannot get an Admin de Empresa invited (the go-live `legacy-clinic` starts that way).
+- **Clínica suspensa** (status `suspended`, the opposite of `active`): set and lifted only by Super Admin. While suspended, no account of the Clinic (staff, patient, partner) can log in, existing sessions are revoked within 60 s, and reminders stop; no data is deleted. Reactivating lets accounts log in again (with a new login) and reminders resume on the next run.
 
 **Patient** (paciente)
 

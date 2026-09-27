@@ -144,3 +144,24 @@ describe('Feature: Documentação do cadastro de clínicas (B4)', () => {
     expect(context).toContain('aguardando primeiro acesso');
   });
 });
+
+describe('Feature: Documentação da suspensão de clínica (B5)', () => {
+  it('Dados acesso, comunicação e CONTEXT, Quando ler, Então descrevem a suspensão de clínica', () => {
+    const acesso = read('docs/domains/acesso/README.md');
+    const comunicacao = read('docs/domains/comunicacao/README.md');
+    const context = read('CONTEXT.md');
+
+    expect(acesso).toContain('POST /api/platform/clinics/[id]/suspend');
+    expect(acesso).toContain('`.../reactivate`');
+    expect(acesso).toContain(
+      'O acesso desta clínica está suspenso. Fale com o responsável pela clínica.',
+    );
+    expect(acesso).toContain('≤ 60 s');
+    expect(acesso).toContain(
+      'Clínica suspensa: reative a clínica antes de convidar o admin',
+    );
+    expect(acesso).not.toContain('suspensão (B5)');
+    expect(comunicacao).toMatch(/\| COM-RN-09 \| Clínica suspensa/);
+    expect(context).toContain('**Clínica suspensa**');
+  });
+});

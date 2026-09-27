@@ -212,6 +212,16 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .where(withTenant(userAccounts, this.clinicId, eq(userAccounts.id, id)));
   }
 
+  async revokeAllSessions(): Promise<void> {
+    if (this.clinicId === null) {
+      throw new Error('revokeAllSessions exige repositório escopado à clínica');
+    }
+    await this.db
+      .update(userAccounts)
+      .set({ sessionVersion: sql`${userAccounts.sessionVersion} + 1` })
+      .where(eq(userAccounts.clinicId, this.clinicId));
+  }
+
   async findByPortalLink(
     link: { patientId: string } | { partnerId: string },
   ): Promise<UserAccount | null> {

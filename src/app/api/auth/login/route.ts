@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { startMfaLogin } from '@/application/auth/mfa-login';
+import { suspendedClinicMessage } from '@/application/auth/suspended-clinic-message';
 import type { UserAccount } from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
+import type { Clinic } from '@/domain/clinic/clinic';
 import { currentDataCipher, getRepositories } from '@/infrastructure/container';
 import { fail, ok } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
@@ -52,17 +54,14 @@ export async function POST(request: NextRequest) {
   );
   if ('error' in identity) {
     // Ator anônimo pré-sessão: nunca revela no evento se a conta existe além
-    // do que a própria resposta HTTP já revela (AC-02).
+    // do que a própria resposta HTTP já revela (AC-02). A clínica suspensa só
+    // chega aqui com a senha provada, e o evento fica com a conta (B5).
     await recordAuditNow(auditEvents, null, {
       action: 'read',
       resourceType: 'session',
       resourceId: parsed.data.email,
       detail: identity.auditDetail ?? 'invalid_credentials',
-      actorOverride: {
-        role: 'anonymous',
-        id: parsed.data.email,
-        clinicId: null,
-      },
+      actorOverride: deniedActor(identity.deniedAccount, parsed.data.email),
     });
     return fail(identity.error, identity.status);
   }
@@ -107,6 +106,16 @@ export async function POST(request: NextRequest) {
   return response;
 }
 
+/**
+ * Ator do evento de login recusado: anônimo, salvo quando a conta provou a
+ * senha e foi barrada pela clínica suspensa — aí o evento é dela, na clínica.
+ */
+function deniedActor(account: UserAccount | undefined, email: string) {
+  return account
+    ? { role: account.role, id: account.email, clinicId: account.clinicId }
+    : { role: 'anonymous' as const, id: email, clinicId: null };
+}
+
 type AuthResult =
   | {
       account: UserAccount;
@@ -116,7 +125,13 @@ type AuthResult =
       professionalId: string | null;
       sessionVersion: number;
     }
-  | { error: string; status: number; auditDetail?: string };
+  | {
+      error: string;
+      status: number;
+      auditDetail?: string;
+      /** Conta que provou a senha mas foi barrada (clínica suspensa, B5). */
+      deniedAccount?: UserAccount;
+    };
 
 async function authenticateAccount(
   email: string,
@@ -134,6 +149,22 @@ async function authenticateAccount(
   if (matches.length === 0) {
     return { error: 'Email ou senha incorretos', status: 401 };
   }
+  // Clínica suspensa (B5): a conta sai das candidatas. Só quem provou a senha
+  // chega aqui, então a suspensão nunca revela a existência do e-mail.
+  const { usable, suspended } = await splitBySuspendedClinic(matches);
+  if (usable.length === 0) {
+    const [denied] = suspended;
+    return {
+      error: suspendedClinicMessage(denied.account.role, denied.clinic),
+      status: 403,
+      auditDetail: 'clinic_suspended',
+      deniedAccount: denied.account,
+    };
+  }
+  return singleAccountResult(usable);
+}
+
+function singleAccountResult(matches: UserAccount[]): AuthResult {
   if (matches.length > 1) {
     return {
       error: 'Email ou senha incorretos',
@@ -153,6 +184,24 @@ async function authenticateAccount(
     // Versão vigente (#194): logout/troca de senha posteriores revogam este token.
     sessionVersion: account.sessionVersion,
   };
+}
+
+/** Separa as contas de clínica suspensa, guardando a clínica para a mensagem. */
+async function splitBySuspendedClinic(accounts: UserAccount[]): Promise<{
+  usable: UserAccount[];
+  suspended: { account: UserAccount; clinic: Clinic }[];
+}> {
+  const { clinics } = await getRepositories(systemScope());
+  const usable: UserAccount[] = [];
+  const suspended: { account: UserAccount; clinic: Clinic }[] = [];
+  for (const account of accounts) {
+    const clinic = account.clinicId
+      ? await clinics.findById(account.clinicId)
+      : null;
+    if (clinic?.isSuspended) suspended.push({ account, clinic });
+    else usable.push(account);
+  }
+  return { usable, suspended };
 }
 
 // hazard: 1 scrypt call por candidata, em paralelo. Response time cresce com

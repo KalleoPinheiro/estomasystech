@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   ADMIN_STORAGE_STATE_PATH,
@@ -10,14 +10,13 @@ import {
   E2E_ROLE_PASSWORD,
   E2E_STAFF_ROLES,
   MAIN_BASE_URL,
-  MAIN_SERVER_LOG_PATH,
   ROLE_ACCOUNTS,
   SEED_DATA_PATH,
   E2E_SUPER_ADMIN_EMAIL,
   E2E_SUPER_ADMIN_PASSWORD,
   SESSION_COOKIE_NAME,
 } from "./support/constants";
-import { findInviteUrl } from "./support/invite-log";
+import { readServerLog, waitForInviteUrl } from "./support/server-log";
 import { mintSessionToken } from "./support/session-token";
 import { slotFromSeed } from "./support/slots";
 import { saveTotpState, SUPER_ADMIN_TOTP_PATH, totpCode, totpStep } from "./support/totp";
@@ -227,32 +226,6 @@ interface SeedIds {
 interface RoleSeed {
   linkedPatientId: string;
   linkedPatientName: string;
-}
-
-const INVITE_WAIT_MS = 15_000;
-const INVITE_POLL_MS = 250;
-
-const readServerLog = (): Promise<string> =>
-  readFile(MAIN_SERVER_LOG_PATH, "utf-8").catch(() => "");
-
-/**
- * `logStart` é o tamanho do log antes de pedir o convite: o destinatário sai
- * mascarado no log e as contas por papel colidem na máscara, então só o que
- * foi escrito depois do pedido identifica o convite certo.
- */
-async function waitForInviteUrl(email: string, logStart: number): Promise<string> {
-  const deadline = Date.now() + INVITE_WAIT_MS;
-  while (Date.now() < deadline) {
-    const log = await readServerLog();
-    const url = findInviteUrl(log.slice(logStart), email);
-    if (url) return url;
-    await new Promise((resolve) => setTimeout(resolve, INVITE_POLL_MS));
-  }
-  throw new Error(
-    `Convite de ${email} não apareceu em ${MAIN_SERVER_LOG_PATH} em ${INVITE_WAIT_MS}ms. ` +
-      "O servidor principal precisa ser o do playwright.config.ts (grava o log via tee) " +
-      "e rodar sem RESEND_API_KEY/EMAIL_FROM.",
-  );
 }
 
 /** Conta real por papel: cadastro pela API da tela de Contas → convite → senha → login. */

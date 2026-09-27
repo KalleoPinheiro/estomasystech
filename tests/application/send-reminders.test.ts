@@ -348,6 +348,39 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
       ]);
     });
 
+    it('Dada uma empresa ativa e uma suspensa (B5), Quando rodar, Então ignora clínica suspensa: não abre o escopo, não envia e ela fica fora do resumo', async () => {
+      const other = newClinic();
+      const ana = await new CreatePatient(other.patients).execute({
+        fullName: 'Ana Lima',
+        email: 'ana@example.com',
+        phone: '11977770000',
+      });
+      await scheduleTomorrow();
+      await scheduleAt(
+        new Date('2026-07-17T10:00:00Z'),
+        ana.id,
+        other.appointments,
+      );
+      const servicesFor = vi.fn(async (clinicId: string) =>
+        clinicId === 'clinic-b' ? other : clinic,
+      );
+
+      const summary = await new SendReminders(
+        [
+          { ...CLINIC, status: 'active' },
+          { id: 'clinic-b', name: 'Clínica Beta', status: 'suspended' },
+        ],
+        servicesFor,
+        email,
+      ).execute(NOW);
+
+      expect(servicesFor).toHaveBeenCalledTimes(1);
+      expect(servicesFor).toHaveBeenCalledWith('clinic-a');
+      expect(email.sent.map((m) => m.to)).toEqual(['maria@example.com']);
+      expect(summary.clinics.map((c) => c.clinicId)).toEqual(['clinic-a']);
+      expect(summary.sent).toBe(1);
+    });
+
     it('C11 501 retornos geram 501 e-mails', async () => {
       for (let i = 0; i < 501; i += 1) {
         await addFollowUp(new Date('2026-07-15T12:00:00Z'));

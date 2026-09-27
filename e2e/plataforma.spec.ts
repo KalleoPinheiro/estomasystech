@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, SUPER_ADMIN_STORAGE_STATE_PATH } from "./support/constants";
+import { apiPost } from "./support/api";
 import { nextTotpCode } from "./support/totp";
 
 /**
@@ -45,6 +46,37 @@ test.describe("área da plataforma", () => {
       const row = page.getByRole("row").filter({ hasText: name });
       await expect(row.getByText("Aguardando primeiro acesso")).toBeVisible();
       await expect(row.getByText("Cadastro completo")).toBeVisible();
+    });
+
+    test("suspende e reativa pela tela", async ({ page }) => {
+      // B5: clínica própria do teste — suspender a da sessão padrão derrubaria a suíte.
+      const digits = String(Date.now()).slice(-12).padStart(12, "0");
+      const name = `Clínica Suspensão ${digits}`;
+      const created = await apiPost<{ clinic: { id: string } }>(page.request, "/api/platform/clinics", {
+        name,
+        cnpj: `${digits}01`,
+        contactPhone: "11 3333-4444",
+        contactEmail: "contato@suspensao-e2e.test",
+        adminEmail: `admin-${digits}@suspensao-e2e.test`,
+      });
+
+      await page.goto(`/plataforma/clinicas/${created.clinic.id}`);
+      await expect(page.getByText("Clínica ativa.")).toBeVisible();
+      await page.getByRole("button", { name: "Suspender clínica" }).click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Suspender" }).click();
+      await expect(page.getByText(/^Suspensa em .+ por /)).toBeVisible();
+      await expect(page.getByRole("button", { name: "Convidar admin" })).toBeDisabled();
+
+      await page.getByRole("link", { name: "Clínicas" }).click();
+      const row = page.getByRole("row").filter({ hasText: name });
+      await expect(row.getByText("Suspensa")).toBeVisible();
+
+      await row.getByRole("link", { name }).click();
+      await page.getByRole("button", { name: "Reativar clínica" }).click();
+      await expect(page.getByText("Clínica ativa.")).toBeVisible();
+
+      await page.getByRole("link", { name: "Clínicas" }).click();
+      await expect(page.getByRole("row").filter({ hasText: name }).getByText("Ativa", { exact: true })).toBeVisible();
     });
 
     test("tela da clínica leva o super_admin a /plataforma", async ({ page }) => {

@@ -1,6 +1,6 @@
 import type { AdminStatus } from '@/application/platform/clinic-overview';
 import type { UserAccount } from '@/domain/auth/user-account';
-import type { Clinic } from '@/domain/clinic/clinic';
+import type { Clinic, ClinicStatus } from '@/domain/clinic/clinic';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 
 /** Dados cadastrais da clínica — cabeçalho/rodapé de documentos emitidos (#61/#62). */
@@ -39,10 +39,13 @@ export const toClinicRegistrationDto = (
   contactEmail: clinic.contactEmail,
 });
 
-/** Clínica vista pela plataforma (B4): cadastro + se ele está completo. */
+/** Clínica vista pela plataforma (B4): cadastro, se ele está completo e o estado (B5). */
 export interface PlatformClinicDto extends ClinicRegistrationDto {
   id: string;
   registrationComplete: boolean;
+  status: ClinicStatus;
+  statusChangedAt: string | null;
+  statusChangedBy: string | null;
   createdAt: string;
 }
 
@@ -50,6 +53,9 @@ export const toPlatformClinicDto = (clinic: Clinic): PlatformClinicDto => ({
   id: clinic.id,
   ...toClinicRegistrationDto(clinic),
   registrationComplete: clinic.isRegistrationComplete(),
+  status: clinic.status,
+  statusChangedAt: clinic.statusChangedAt?.toISOString() ?? null,
+  statusChangedBy: clinic.statusChangedBy,
   createdAt: clinic.createdAt.toISOString(),
 });
 
@@ -59,6 +65,7 @@ export interface PlatformClinicSummaryDto {
   name: string;
   cnpj: string | null;
   registrationComplete: boolean;
+  status: ClinicStatus;
   adminStatus: AdminStatus;
   createdAt: string;
 }
@@ -71,6 +78,7 @@ export const toPlatformClinicSummaryDto = (
   name: clinic.name,
   cnpj: clinic.cnpj,
   registrationComplete: clinic.isRegistrationComplete(),
+  status: clinic.status,
   adminStatus,
   createdAt: clinic.createdAt.toISOString(),
 });

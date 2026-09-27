@@ -47,8 +47,8 @@ Resposta `200` no envelope `{ success, data }`:
   "clinics": [{ "clinicId": "…", "sent": 3, "skipped": 0, "failed": 0 }] }
 ```
 
-Uma entrada por empresa; a que falhou ao ser lida aparece com `error: "<mensagem>"` e contadores
-zerados, e as demais seguem. O que é enviado a cada execução, em cada clínica (`clinicScope`):
+Uma entrada por empresa ativa; clínica suspensa (COM-RN-09) fica de fora, sem entrada. A que falhou
+ao ser lida aparece com `error: "<mensagem>"` e contadores zerados, e as demais seguem. O que é enviado a cada execução, em cada clínica (`clinicScope`):
 
 | Tipo | Quem recebe |
 | --- | --- |

@@ -120,6 +120,12 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
     }
   }
 
+  async revokeAllSessions(): Promise<void> {
+    for (const [id, account] of this.items) {
+      this.items.set(id, bumpSessionVersion(account));
+    }
+  }
+
   async findByPortalLink(
     link: { patientId: string } | { partnerId: string },
   ): Promise<UserAccount | null> {

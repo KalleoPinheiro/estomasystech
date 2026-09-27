@@ -242,3 +242,51 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     }
   });
 });
+
+describe('Feature: Estado da clínica (B5, #214)', () => {
+  const props = {
+    name: 'Clínica Estado',
+    cnpj: '12.345.678/0001-95',
+    contactPhone: '11 3333-4444',
+    contactEmail: 'contato@estado.com',
+    createdBy: 'root@vitta.com',
+  };
+
+  it('Dada clínica nova, Quando suspender e reativar, Então o estado da clínica segue as transições e updateInfo o preserva', () => {
+    const clinic = Clinic.create(props);
+    expect(clinic.status).toBe('active');
+    expect(clinic.isSuspended).toBe(false);
+    expect(clinic.statusChangedAt).toBeNull();
+    expect(clinic.statusChangedBy).toBeNull();
+
+    const at = new Date('2026-09-27T12:00:00Z');
+    const suspended = clinic.suspend('root@vitta.com', at);
+    expect(suspended.status).toBe('suspended');
+    expect(suspended.isSuspended).toBe(true);
+    expect(suspended.statusChangedAt).toEqual(at);
+    expect(suspended.statusChangedBy).toBe('root@vitta.com');
+    expect(clinic.status).toBe('active');
+
+    const edited = suspended.updateInfo({ name: 'Outro nome' });
+    expect(edited.status).toBe('suspended');
+    expect(edited.statusChangedAt).toEqual(at);
+
+    const later = new Date('2026-09-28T12:00:00Z');
+    const reactivated = suspended.reactivate('outro@vitta.com', later);
+    expect(reactivated.status).toBe('active');
+    expect(reactivated.isSuspended).toBe(false);
+    expect(reactivated.statusChangedAt).toEqual(later);
+    expect(reactivated.statusChangedBy).toBe('outro@vitta.com');
+  });
+
+  it('Dada clínica restaurada sem estado, Quando ler o estado da clínica, Então é active', () => {
+    const clinic = Clinic.restore({
+      id: 'x',
+      name: 'Sem estado',
+      createdBy: 'fixture',
+      createdAt: new Date(),
+    });
+    expect(clinic.status).toBe('active');
+    expect(clinic.statusChangedAt).toBeNull();
+  });
+});

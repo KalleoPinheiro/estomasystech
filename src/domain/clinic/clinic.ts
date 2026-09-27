@@ -30,11 +30,20 @@ export interface ClinicProps {
   createdBy: string;
 }
 
+/**
+ * Estado da clínica (B5, #214): `suspended` nega o login de toda conta dela e
+ * pausa os lembretes, sem apagar nenhum dado.
+ */
+export type ClinicStatus = 'active' | 'suspended';
+
 export interface ClinicState extends ClinicInfoFields {
   id: string;
   name: string;
   createdBy: string;
   createdAt: Date;
+  status?: ClinicStatus;
+  statusChangedAt?: Date | null;
+  statusChangedBy?: string | null;
 }
 
 /**
@@ -117,6 +126,12 @@ const REQUIRED_ON_CREATE: readonly [keyof ClinicProps, string][] = [
   ['createdBy', 'Criador da clínica é obrigatório'],
 ];
 
+const EMPTY_STATUS = {
+  status: 'active' as ClinicStatus,
+  statusChangedAt: null,
+  statusChangedBy: null,
+};
+
 const EMPTY_INFO: Required<ClinicInfoFields> = {
   cnpj: null,
   address: null,
@@ -144,12 +159,19 @@ export class Clinic {
       name: name.trim(),
       createdBy,
       createdAt: new Date(),
+      ...EMPTY_STATUS,
       ...resolveInfoFields(EMPTY_INFO, info),
     });
   }
 
   static restore(state: ClinicState): Clinic {
-    return new Clinic({ ...EMPTY_INFO, ...state });
+    return new Clinic({
+      ...EMPTY_INFO,
+      ...state,
+      status: state.status ?? EMPTY_STATUS.status,
+      statusChangedAt: state.statusChangedAt ?? null,
+      statusChangedBy: state.statusChangedBy ?? null,
+    });
   }
 
   get id(): string {
@@ -194,6 +216,41 @@ export class Clinic {
 
   get contactEmail(): string | null {
     return this.state.contactEmail ?? null;
+  }
+
+  get status(): ClinicStatus {
+    return this.state.status ?? 'active';
+  }
+
+  get statusChangedAt(): Date | null {
+    return this.state.statusChangedAt ?? null;
+  }
+
+  get statusChangedBy(): string | null {
+    return this.state.statusChangedBy ?? null;
+  }
+
+  get isSuspended(): boolean {
+    return this.status === 'suspended';
+  }
+
+  /** Suspende a clínica (Journey 7): nenhum dado muda além do estado. */
+  suspend(by: string, at: Date): Clinic {
+    return this.withStatus('suspended', by, at);
+  }
+
+  /** Reativa a clínica (Journey 8). */
+  reactivate(by: string, at: Date): Clinic {
+    return this.withStatus('active', by, at);
+  }
+
+  private withStatus(status: ClinicStatus, by: string, at: Date): Clinic {
+    return new Clinic({
+      ...this.state,
+      status,
+      statusChangedAt: at,
+      statusChangedBy: by,
+    });
   }
 
   /** Retorna uma nova instância com os campos cadastrais atualizados (imutável). */

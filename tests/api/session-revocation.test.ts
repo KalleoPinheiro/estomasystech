@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { CreatePatient } from '@/application/patients/create-patient';
 import { UserAccount } from '@/domain/auth/user-account';
+import { Clinic } from '@/domain/clinic/clinic';
 import { getRepositories } from '@/infrastructure/container';
 import { hashPassword } from '@/lib/auth/password';
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/session';
@@ -38,8 +40,15 @@ async function seedAccount(role: UserAccount['role'] = 'atendente') {
   return account;
 }
 
-const versionOf = async (id: string): Promise<number> =>
-  (await (await repos()).userAccounts.findById(id))?.sessionVersion ?? -1;
+const versionOf = async (
+  id: string,
+  clinicId: string = CLINIC_A_ID,
+): Promise<number> =>
+  (
+    await (
+      await getRepositories(clinicScope(clinicId))
+    ).userAccounts.findById(id)
+  )?.sessionVersion ?? -1;
 
 let ipCounter = 0;
 const freshIp = (): Record<string, string> => {
@@ -65,9 +74,12 @@ async function loginCookie(email: string): Promise<string> {
 }
 
 /** Status que o proxy (camada 1) dá para uma chamada de API com este cookie. */
-async function proxyStatus(cookie: string): Promise<number> {
+async function proxyStatus(
+  cookie: string,
+  path = '/api/patients',
+): Promise<number> {
   const response = await proxy(
-    new NextRequest('http://localhost/api/patients', {
+    new NextRequest(`http://localhost${path}`, {
       headers: { cookie, ...freshIp() },
     }),
   );
@@ -199,5 +211,106 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
     const stored = await userAccounts.findById(account.id);
     expect(stored?.sessionVersion).toBe(1);
     expect(stored?.isActive).toBe(false);
+  });
+
+  describe('Cenário: clínica suspensa (B5, #214)', () => {
+    let clinicSeq = 0;
+
+    /** Clínica nova com um membro da equipe e um paciente com senha. */
+    async function seedSuspendableClinic() {
+      clinicSeq += 1;
+      const clinicId = `revoga-clinica-${clinicSeq}`;
+      const { clinics } = await getRepositories(clinicScope(clinicId));
+      await clinics.create(
+        Clinic.restore({
+          id: clinicId,
+          name: `Clínica ${clinicId}`,
+          createdBy: 'fixture',
+          createdAt: new Date(),
+        }),
+      );
+      const services = await getRepositories(clinicScope(clinicId));
+      const patient = await new CreatePatient(services.patients).execute({
+        fullName: 'Paciente Revoga',
+        email: `paciente-${clinicId}@clinica.com`,
+        phone: '11999990000',
+      });
+      const hash = await hashPassword(PASSWORD);
+      const staff = UserAccount.create({
+        email: `equipe-${clinicId}@clinica.com`,
+        passwordHash: hash,
+        role: 'atendente',
+        clinicId,
+      });
+      const portal = UserAccount.create({
+        email: `paciente-${clinicId}@clinica.com`,
+        passwordHash: hash,
+        role: 'patient',
+        clinicId,
+        patientId: patient.id,
+      });
+      await services.userAccounts.save(staff);
+      await services.userAccounts.save(portal);
+      return { clinicId, staff, portal };
+    }
+
+    const platformAction = async (
+      action: 'suspend' | 'reactivate',
+      clinicId: string,
+    ) => {
+      const route =
+        action === 'suspend'
+          ? await import('@/app/api/platform/clinics/[id]/suspend/route')
+          : await import('@/app/api/platform/clinics/[id]/reactivate/route');
+      const response = await route.POST(
+        jsonRequest(
+          `/api/platform/clinics/${clinicId}/${action}`,
+          'POST',
+          undefined,
+          cookieHeaderFor('super_admin', 'dono@vitta.app', null),
+        ),
+        { params: Promise.resolve({ id: clinicId }) },
+      );
+      expect(response.status).toBe(200);
+    };
+
+    it('suspensão da clínica revoga: cookies de equipe e de paciente caem na hora, continuam fora após reativar, e login novo volta', async () => {
+      const { clinicId, staff, portal } = await seedSuspendableClinic();
+      const staffCookie = await loginCookie(staff.email);
+      const portalCookie = await loginCookie(portal.email);
+      expect(await proxyStatus(staffCookie)).toBe(200);
+      expect(await proxyStatus(portalCookie, '/api/portal/me')).toBe(200);
+
+      await platformAction('suspend', clinicId);
+
+      expect(await proxyStatus(staffCookie)).toBe(401);
+      expect(await proxyStatus(portalCookie, '/api/portal/me')).toBe(401);
+
+      await platformAction('reactivate', clinicId);
+      clearSessionRevocationCache();
+
+      expect(await proxyStatus(staffCookie)).toBe(401);
+      expect(await proxyStatus(portalCookie, '/api/portal/me')).toBe(401);
+      expect(await proxyStatus(await loginCookie(staff.email))).toBe(200);
+      expect(
+        await proxyStatus(await loginCookie(portal.email), '/api/portal/me'),
+      ).toBe(200);
+    });
+
+    it('estado da clínica na consulta: só marcar a clínica suspensa (sem incrementar versões) revoga; ativa, vale', async () => {
+      const { clinicId, staff } = await seedSuspendableClinic();
+      const cookie = await loginCookie(staff.email);
+      const { clinics } = await getRepositories(clinicScope(clinicId));
+      const clinic = (await clinics.findById(clinicId)) as Clinic;
+
+      await clinics.saveStatus(clinic.suspend('dono@vitta.app', new Date()));
+      clearSessionRevocationCache();
+      expect(await proxyStatus(cookie)).toBe(401);
+      expect(await versionOf(staff.id, clinicId)).toBe(0);
+
+      await clinics.saveStatus(clinic.reactivate('dono@vitta.app', new Date()));
+      clearSessionRevocationCache();
+      expect(await proxyStatus(cookie)).toBe(200);
+    });
   });
 });

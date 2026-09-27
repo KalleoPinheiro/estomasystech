@@ -11,10 +11,12 @@ import { useApiQuery } from '@/lib/use-api-query';
 import { registrationLabel } from '../../clinic-labels';
 import { ClinicAdminsSection } from './clinic-admins-section';
 import { ClinicRegistrationForm } from './clinic-registration-form';
+import { ClinicStatusSection } from './clinic-status-section';
 
 /**
- * Detalhe de uma clínica na plataforma (B4, Journey 4–6): cadastro editável e
- * Admins de Empresa (convidar, reenviar convite, desativar, reativar).
+ * Detalhe de uma clínica na plataforma (B4, Journey 4–6): situação (suspender
+ * e reativar, B5), cadastro editável e Admins de Empresa (convidar, reenviar
+ * convite, desativar, reativar).
  */
 export default function PlatformClinicPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,11 +36,7 @@ export default function PlatformClinicPage() {
           </Link>
         }
         title={data?.name ?? 'Clínica'}
-        badge={
-          data ? (
-            <RegistrationBadge complete={data.registrationComplete} />
-          ) : null
-        }
+        badge={data ? <ClinicBadges clinic={data} /> : null}
       />
       <ClinicContent
         clinic={data}
@@ -50,9 +48,16 @@ export default function PlatformClinicPage() {
   );
 }
 
-function RegistrationBadge({ complete }: { complete: boolean }) {
-  const { status, label } = registrationLabel(complete);
-  return <StatusBadge status={status} label={label} />;
+function ClinicBadges({ clinic }: { clinic: PlatformClinicDto }) {
+  const { status, label } = registrationLabel(clinic.registrationComplete);
+  return (
+    <>
+      {clinic.status === 'suspended' && (
+        <StatusBadge status="cancelled" label="Suspensa" />
+      )}
+      <StatusBadge status={status} label={label} />
+    </>
+  );
 }
 
 function ClinicContent({
@@ -70,6 +75,7 @@ function ClinicContent({
   if (!clinic) return <LoadingIndicator />;
   return (
     <div className="flex flex-col gap-8">
+      <ClinicStatusSection clinic={clinic} onChanged={onSaved} />
       <ClinicRegistrationForm
         key={clinic.id}
         clinic={clinic}
