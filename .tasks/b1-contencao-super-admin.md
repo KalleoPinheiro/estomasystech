@@ -23,7 +23,7 @@ outro. O convite do primeiro `company_admin` de uma clínica passa a ser feito p
 `POST /api/platform/clinics/[id]/admins`. A importação do catálogo de taxonomias vira ato
 exclusivo do super_admin.
 
-24 critérios em 6 fatias · 5 portas sem volta (1 migração) · 4 abertas, nenhuma bloqueia
+24 critérios em 6 fatias · 5 portas sem volta (1 migração) · 4 perguntas decididas pelo dono em 2026-09-27
 
 ## Criteria
 
@@ -209,9 +209,12 @@ This task is the record of decision. If a linked document diverges, ask before b
 
 ## Unresolved
 
-| # | Kind | Question | Until answered |
+None. As 4 perguntas abertas foram confirmadas pelo dono do produto (@KalleoPinheiro) em
+2026-09-27, todas com a recomendação padrão:
+
+| # | Kind | Question | Decision (2026-09-27) |
 |---|---|---|---|
-| 1 | open | O convite do primeiro `company_admin` (`POST /api/platform/clinics/[id]/admins`) sai do B4 e entra no B1? | Escrito assim nos critérios 13–19. Sem ele, depois do B1 não existe caminho para criar um `company_admin`, e a suíte E2E (gate de CI, regra 7 do AGENTS.md) fica sem admin. O design foi emendado para refletir |
-| 2 | open | A migração do critério 2 deve **falhar** diante de linhas inválidas ou **sanear** (pôr `legacy-clinic` em conta não-super_admin sem clínica)? | Escrito "falha sem alterar nada" (critério 3). Nada está em produção, e sanear em silêncio mudaria conta de empresa sem ninguém ver |
-| 3 | open | `company_admin` que abre `/plataforma` deve ir para `/` ou ver uma tela "sem permissão"? O Journey 10 do design diz "sem permissão" | Escrito "redireciona para `/`" (critério 10), o mesmo padrão do proxy para a equipe; a API responde `403` nos dois casos |
-| 4 | open | O super_admin pode convidar o próprio e-mail como `company_admin` de uma clínica? Isso lhe daria acesso clínico por essa conta | Nada impede em B1; o evento fica na auditoria da clínica (critério 19). Um bloqueio por e-mail igual seria fácil de contornar com outro e-mail |
+| 1 | decided | O convite do primeiro `company_admin` (`POST /api/platform/clinics/[id]/admins`) sai do B4 e entra no B1? | Sim, entra no B1 (critérios 13–19) |
+| 2 | decided | A migração do critério 2 deve **falhar** diante de linhas inválidas ou **sanear**? | Falha sem alterar nada (critério 3) |
+| 3 | decided | `company_admin` que abre `/plataforma` deve ir para `/` ou ver uma tela "sem permissão"? | Redireciona para `/` — vale para `company_admin`, `atendente` e `profissional` (critério 10); o Journey 10 do design foi ajustado |
+| 4 | decided | O super_admin pode convidar o próprio e-mail como `company_admin` de uma clínica? | Sem bloqueio; o evento fica na auditoria da clínica (critério 19) |
