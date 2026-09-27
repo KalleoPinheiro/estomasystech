@@ -152,15 +152,15 @@ Also in the field, for perspective and not as candidates:
 
 | Block | Delivers | Clarity |
 |---|---|---|
-| B1 Contenção do super_admin | Só um super_admin possível (matriz + check constraint); super_admin fora das famílias da clínica e redirecionado para `/plataforma`; família `platform`; importação de taxonomia movida; ADR-007 | clear |
+| B1 Contenção do super_admin | Só um super_admin possível (matriz + check constraint); super_admin fora das famílias da clínica e redirecionado para `/plataforma`; família `platform`; convite do primeiro `company_admin` (`POST /api/platform/clinics/[id]/admins`); importação de taxonomia movida; ADR-007. Tarefa: [`.tasks/b1-contencao-super-admin.md`](../.tasks/b1-contencao-super-admin.md) | clear |
 | B2 Segundo fator do super_admin | Login em duas etapas, cadastro obrigatório no primeiro acesso, códigos de recuperação | clear |
 | B3 Recuperação de emergência | `scripts/recover-super-admin.ts` + runbook em `producao.md` | clear |
-| B4 Cadastro de clínicas | Colunas de contato, API e telas de listar/criar/editar clínica, convite e gestão de admins | clear |
+| B4 Cadastro de clínicas | Colunas de contato, API e telas de listar/criar/editar clínica; listar admins, reenviar convite, desativar e reativar; tela de convite sobre a rota que o B1 criou | clear |
 | B5 Suspensão e reativação | Estado da clínica, login negado, revogação em ≤ 60 s, lembretes pausados | clear |
 | B6 Auditoria de plataforma | `audit_events.clinic_id` nullable, trilha de plataforma, repositório escopado ([#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210) itens 1 e 4) | clear |
 | B7 Parceiro por empresa | `partners.email` único por `(clinic_id, email)` ([#211](https://github.com/KalleoPinheiro/vitta-flow/issues/211)) | clear |
 
-Ordem: B1 primeiro (cria a família `platform` que B4–B6 usam); B2 e B3 juntos; B4 → B5; B6 e B7 independentes. Tudo antes do go-live; B7 no máximo antes da segunda clínica.
+Ordem: B1 primeiro (cria a família `platform` que B4–B6 usam). O convite do primeiro admin saiu do B4 para o B1: sem ele, depois que o super_admin deixa as rotas da clínica, não existe caminho para criar um `company_admin`, e a suíte E2E (que hoje roda como super_admin) fica sem admin; B2 e B3 juntos; B4 → B5; B6 e B7 independentes. Tudo antes do go-live; B7 no máximo antes da segunda clínica.
 
 ## Decisions
 
