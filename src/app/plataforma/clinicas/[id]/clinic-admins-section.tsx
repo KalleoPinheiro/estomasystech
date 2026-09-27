@@ -79,6 +79,7 @@ export function ClinicAdminsSection({ clinic }: { clinic: PlatformClinicDto }) {
       <AdminsTable
         admins={data}
         error={error}
+        suspended={clinic.status === 'suspended'}
         onRetry={refresh}
         onAction={(admin, action) => void act(admin, action)}
       />
@@ -90,11 +91,14 @@ export function ClinicAdminsSection({ clinic }: { clinic: PlatformClinicDto }) {
 function AdminsTable({
   admins,
   error,
+  suspended,
   onRetry,
   onAction,
 }: {
   admins: ClinicAdminDto[] | null;
   error: string | null;
+  /** Clínica suspensa (B5) não reenvia convite. */
+  suspended: boolean;
   onRetry: () => void;
   onAction: (admin: ClinicAdminDto, action: AdminAction) => void;
 }) {
@@ -118,6 +122,7 @@ function AdminsTable({
             <AdminRow
               key={admin.id}
               admin={admin}
+              canResend={!suspended}
               onAction={(action) => onAction(admin, action)}
             />
           ))}
@@ -129,9 +134,11 @@ function AdminsTable({
 
 function AdminRow({
   admin,
+  canResend,
   onAction,
 }: {
   admin: ClinicAdminDto;
+  canResend: boolean;
   onAction: (action: AdminAction) => void;
 }) {
   const situation = adminSituation(admin);
@@ -144,7 +151,7 @@ function AdminRow({
         <StatusBadge status={situation.status} label={situation.label} />
       </TableCell>
       <TableCell label="Ações" className="py-2 text-right">
-        <AdminActions admin={admin} onAction={onAction} />
+        <AdminActions admin={admin} canResend={canResend} onAction={onAction} />
       </TableCell>
     </TableRow>
   );
@@ -152,9 +159,11 @@ function AdminRow({
 
 function AdminActions({
   admin,
+  canResend,
   onAction,
 }: {
   admin: ClinicAdminDto;
+  canResend: boolean;
   onAction: (action: AdminAction) => void;
 }) {
   if (!admin.active) {
@@ -171,7 +180,7 @@ function AdminActions({
   }
   return (
     <>
-      {!admin.passwordSet && (
+      {canResend && !admin.passwordSet && (
         <Button
           type="button"
           variant="link"
@@ -214,6 +223,7 @@ function InviteAdminForm({
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const suspended = clinic.status === 'suspended';
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -245,11 +255,17 @@ function InviteAdminForm({
   return (
     <form onSubmit={handleSubmit} className="mt-6 flex max-w-xl flex-col gap-3">
       <h3 className="font-semibold text-base">Convidar Admin de Empresa</h3>
-      {!clinic.registrationComplete && (
+      {suspended ? (
         <p className="text-ink-3 text-sm">
-          Complete o cadastro (nome, CNPJ, telefone e e-mail de contato) antes
-          de convidar o admin.
+          Clínica suspensa: reative a clínica antes de convidar o admin.
         </p>
+      ) : (
+        !clinic.registrationComplete && (
+          <p className="text-ink-3 text-sm">
+            Complete o cadastro (nome, CNPJ, telefone e e-mail de contato) antes
+            de convidar o admin.
+          </p>
+        )
       )}
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
@@ -267,7 +283,7 @@ function InviteAdminForm({
         <Button
           type="submit"
           variant="accent"
-          disabled={saving || !clinic.registrationComplete}
+          disabled={saving || suspended || !clinic.registrationComplete}
         >
           {saving ? 'Convidando…' : 'Convidar admin'}
         </Button>

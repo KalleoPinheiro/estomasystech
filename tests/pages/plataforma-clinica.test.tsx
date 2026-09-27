@@ -28,7 +28,17 @@ const CLINIC = {
   professionalName: null,
   professionalRegistry: null,
   registrationComplete: true,
+  status: 'active',
+  statusChangedAt: null,
+  statusChangedBy: null,
   createdAt: '2026-09-27T00:00:00.000Z',
+};
+
+const SUSPENDED_CLINIC = {
+  ...CLINIC,
+  status: 'suspended',
+  statusChangedAt: '2026-09-27T15:30:00.000Z',
+  statusChangedBy: 'dono@vitta.app',
 };
 
 const ADMINS = [
@@ -196,5 +206,73 @@ describe('Feature: Detalhe da clínica na plataforma (B4, Journey 4–6)', () =>
     expect(
       screen.queryByRole('button', { name: 'Tentar novamente' }),
     ).toBeNull();
+  });
+});
+
+describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 8)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Dada clínica ativa, Quando clicar em Suspender clínica, Então suspende com confirmação: o POST só sai depois de confirmar', async () => {
+    const fetchMock = mockApi();
+    renderWithToast(<PlatformClinicPage />);
+
+    expect(await screen.findByText('Clínica ativa.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Suspender clínica' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Suspender clínica?')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'Todas as contas da clínica — equipe, pacientes e parceiros — perdem o acesso em até 1 minuto e os lembretes param. Nenhum dado é apagado.',
+      ),
+    ).toBeInTheDocument();
+    expect(callsWith(fetchMock, 'POST')).toHaveLength(0);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Suspender' }));
+
+    await waitFor(() => expect(callsWith(fetchMock, 'POST')).toHaveLength(1));
+    expect(callsWith(fetchMock, 'POST')[0][0]).toBe(
+      '/api/platform/clinics/c1/suspend',
+    );
+  });
+
+  it('Dada clínica suspensa, Quando abrir o detalhe, Então selo, data e autor, reativar direto, convite desabilitado e sem reenviar', async () => {
+    const fetchMock = mockApi(envelope(SUSPENDED_CLINIC));
+    renderWithToast(<PlatformClinicPage />);
+
+    const since = `${new Date(SUSPENDED_CLINIC.statusChangedAt).toLocaleDateString('pt-BR')} ${new Date(
+      SUSPENDED_CLINIC.statusChangedAt,
+    ).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    expect(
+      await screen.findByText(`Suspensa em ${since} por dono@vitta.app.`),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Suspensa').length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.queryByRole('button', { name: 'Suspender clínica' }),
+    ).toBeNull();
+
+    const pendingRow = (await screen.findByText('pendente@um.com')).closest(
+      'tr',
+    ) as HTMLElement;
+    expect(
+      within(pendingRow).queryByRole('button', { name: 'Reenviar convite' }),
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        'Clínica suspensa: reative a clínica antes de convidar o admin.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Convidar admin' }),
+    ).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reativar clínica' }));
+    await waitFor(() => expect(callsWith(fetchMock, 'POST')).toHaveLength(1));
+    expect(callsWith(fetchMock, 'POST')[0][0]).toBe(
+      '/api/platform/clinics/c1/reactivate',
+    );
+    expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 });

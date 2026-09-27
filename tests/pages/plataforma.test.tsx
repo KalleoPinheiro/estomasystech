@@ -70,6 +70,7 @@ const summary = (overrides: Record<string, unknown>) => ({
   name: 'Clínica',
   cnpj: '12.345.678/0001-95',
   registrationComplete: true,
+  status: 'active',
   adminStatus: 'active',
   createdAt: '2026-09-27T00:00:00.000Z',
   ...overrides,
@@ -149,5 +150,39 @@ describe('Feature: Lista de clínicas da plataforma (B4)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Banco fora do ar',
     );
+  });
+});
+
+describe('Feature: Situação das clínicas na lista (B5)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Dadas uma clínica ativa e uma suspensa, Quando listar, Então a coluna situação da clínica mostra Ativa e Suspensa', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          envelope([
+            summary({ id: 'a', name: 'Clínica Ativa' }),
+            summary({ id: 's', name: 'Clínica Suspensa', status: 'suspended' }),
+          ]),
+        ),
+    );
+    render(<PlatformPage />);
+
+    const activeRow = (await screen.findByText('Clínica Ativa')).closest(
+      'tr',
+    ) as HTMLElement;
+    const suspendedRow = screen
+      .getByText('Clínica Suspensa')
+      .closest('tr') as HTMLElement;
+    expect(
+      screen.getByRole('columnheader', { name: 'Situação' }),
+    ).toBeInTheDocument();
+    expect(within(activeRow).getByText('Ativa')).toBeInTheDocument();
+    expect(within(suspendedRow).getByText('Suspensa')).toBeInTheDocument();
   });
 });
