@@ -87,7 +87,7 @@ Proof: `tests/api/mfa-login.test.ts -t "com fator, o login pede o código"`
 Proof: `tests/api/mfa-login.test.ts -t "sem fator, o login exige o cadastro"`
 
 **C10** - Demais papéis continuam recebendo a sessão direto no login
-Proof: `tests/api/auth-routes.test.ts -t "cria sessão"`
+Proof: `tests/api/mfa-login.test.ts -t "recebe a sessão direto, sem segundo fator"`
 
 **C11** - `verify` com código TOTP correto → 200 + cookie de sessão `super_admin` com a `session_version` da conta
 Proof: `tests/api/mfa-login.test.ts -t "código correto emite a sessão"`

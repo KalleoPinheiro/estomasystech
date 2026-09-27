@@ -184,7 +184,10 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
         for (const role of [
           'super_admin',
           'company_admin',
+          'atendente',
+          'profissional',
           'patient',
+          'partner',
         ] as const) {
           expect(isNext(await proxy(request(path, sessionCookie(role))))).toBe(
             true,

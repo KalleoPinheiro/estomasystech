@@ -440,7 +440,13 @@ describe('Feature: Login do super_admin em duas etapas (B2, ADR-007)', () => {
       const db = await getDb();
       const stored = await db.select().from(mfaRecoveryCodes);
       for (const code of first.body.data.recoveryCodes) {
-        expect(stored.some((row) => row.codeHash.includes(code))).toBe(false);
+        const compact = code.replace('-', '');
+        expect(
+          stored.some(
+            (row) =>
+              row.codeHash.includes(code) || row.codeHash.includes(compact),
+          ),
+        ).toBe(false);
       }
       clock += 30_000;
       const replay = await verify({
