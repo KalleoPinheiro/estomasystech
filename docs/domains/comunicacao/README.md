@@ -3,7 +3,7 @@ title: "Domínio: Comunicação"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-09-27
 domain: comunicacao
 ---
 
@@ -30,6 +30,7 @@ e-mails transacionais de acesso (convite e reset, detalhados em [acesso](../aces
 | COM-RN-06 | Cadência do recall: D+1, D+7 e D+30 após o vencimento (dias no fuso `APP_TIMEZONE`), no máximo 3 tentativas. Retorno que passou de várias marcas recebe só a mais alta; `done`/`cancelled` para a sequência; esgotado, segue `pending` com o selo "3 lembretes sem resposta" | `src/domain/messaging/recall-cadence.ts` |
 | COM-RN-07 | Job por empresa: cada clínica é lida com `clinicScope(id)`, o texto leva o nome dela, o log grava o `clinic_id` dela; falha numa empresa não impede as demais | `src/application/reminders/send-reminders.ts` |
 | COM-RN-08 | Botão **Enviar WhatsApp** (agenda, consulta `scheduled`; retornos pendentes): registra o clique e abre `wa.me` com o texto que inclui procedimento/motivo. Mostra "enviado hoje às HH:MM" (primeiro clique do dia) para toda a equipe | `src/application/reminders/send-whatsapp-reminder.ts`, `src/components/whatsapp-reminder-button.tsx` |
+| COM-RN-09 | Clínica suspensa (ACE-RN-27) fica fora do job: o escopo dela nem é aberto, nenhum lembrete sai e ela não aparece no resumo do disparo. Reativada, volta no próximo disparo. O botão Enviar WhatsApp não tem como ser usado: a equipe dela não entra | `src/application/reminders/send-reminders.ts` |
 
 ## Funcionalidades
 

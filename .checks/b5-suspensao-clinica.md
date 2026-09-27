@@ -173,3 +173,10 @@ Proof: `npm run check:docs`
 ## Handoff
 
 Lote único: S1–S6 somam ~78k de leitura estimada, abaixo de 150k; nada a passar adiante.
+
+Registro do build (lote único, sem passagem de bastão):
+
+- **Fronteira:** C1–C29 fechadas no próprio lote (`df17e8b..HEAD`).
+- **Ajustado durante o build:** a prova do C21 mudou de arquivo (`tests/api/reminders-run-suspended.test.ts`, com clínica própria semeada) e o texto ficou mais preciso ("ela fora de `clinics`; ... a processa e o e-mail sai"); a checagem não baixou. Os fixtures `CLINIC`/`summary` dos testes de tela do B4 ganharam `status` (contrato novo do DTO). `readServerLog`/`waitForInviteUrl` saíram do `global-setup` para `e2e/support/server-log.ts`, para o spec do C27 ler o convite.
+- **Descartado:** exportar a mensagem de suspensão do `route.ts` do login (o Next só aceita exports de handler em rota) — foi para `src/application/auth/suspended-clinic-message.ts`.
+- **Ambiente local:** Chromium do container é a revisão 1194; as suítes E2E rodaram com um config temporário (não commitado) que só troca `launchOptions.executablePath` para `/opt/pw-browsers/chromium`, e com `NODE_USE_ENV_PROXY=1` (o `next/font/google` precisa sair pelo proxy do container).
