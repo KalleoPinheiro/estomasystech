@@ -38,8 +38,8 @@ test.describe("área da plataforma", () => {
 
       await expect(page).toHaveURL(/\/plataforma\/clinicas\/[^/]+$/);
       await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
-      await expect(page.getByText(`admin-${digits}@nova-e2e.test`)).toBeVisible();
-      await expect(page.getByText("Aguardando primeiro acesso")).toBeVisible();
+      const adminRow = page.getByRole("row").filter({ hasText: `admin-${digits}@nova-e2e.test` });
+      await expect(adminRow.getByText("Aguardando primeiro acesso")).toBeVisible();
 
       await page.getByRole("link", { name: "Clínicas" }).click();
       const row = page.getByRole("row").filter({ hasText: name });

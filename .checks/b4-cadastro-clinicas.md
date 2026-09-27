@@ -227,3 +227,10 @@ Proof: `npm run check:docs`
 ## Handoff
 
 Lote único: S1–S7 somam ~76k de leitura (`wc -c`/4 sobre os arquivos tocados), abaixo de 150k; nada a passar adiante.
+
+Registro do build (lote único, sem passagem de bastão):
+
+- **Fronteira:** C1–C37 fechadas no próprio lote (`7bea366..HEAD`).
+- **Ajustado durante o build:** a prova do C29 aponta para o teste existente `Dado papel atendente, Quando tentar salvar` (o nome inicial não existia; a checagem não mudou). `UserAccountRepository.findByRole` entrou para listar os `company_admin` sem o teto de 500 de `findAll`. `ClinicInfoDto` (documentos) ficou sem contato; o contato vive em `ClinicRegistrationDto` (Configurações e plataforma), para não tocar os documentos emitidos.
+- **Descartado:** reusar `TransactionManager` na criação da clínica (preso ao escopo da empresa, ver Landing); `Button asChild` para o link "Nova clínica" (o `Button` do `@still-void/ui` não aceita `asChild`) — ficou `Link` estilizado como os demais links de ação.
+- **Ambiente local:** o Chromium do container é a revisão 1194; o Playwright do repositório pede outra. As suítes E2E rodaram localmente com um config temporário (não commitado) que só troca `launchOptions.executablePath` para `/opt/pw-browsers/chromium`.
