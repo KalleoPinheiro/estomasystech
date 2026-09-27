@@ -385,6 +385,53 @@ describe('Feature: SettingsPage', () => {
       ).toBeInTheDocument();
     });
 
+    it('Dado o contato da clínica, Quando editar e salvar, Então mostra e envia telefone e e-mail de contato', async () => {
+      const fetchMock = mockFetch(({ url, init }) => {
+        const schedule = routeSchedule(url);
+        if (schedule) return schedule;
+        if (url.startsWith('/api/accounts')) return jsonResponse([]);
+        if (url.startsWith('/api/professionals')) return jsonResponse([]);
+        if (url.startsWith('/api/settings/clinic-info'))
+          return jsonResponse({
+            info: {
+              ...EMPTY_CLINIC_INFO,
+              contactPhone: '11 3333-4444',
+              contactEmail: null,
+              ...(init?.method === 'PUT' ? { contactEmail: 'c@x.com' } : {}),
+            },
+          });
+        if (url.startsWith('/api/settings/calendar-integration'))
+          return jsonResponse({
+            connected: false,
+            email: null,
+            connectedAt: null,
+          });
+        return jsonResponse(null, false);
+      });
+
+      renderWithToast(<SettingsPage />);
+      await screen.findByText('Dados da clínica');
+
+      expect(screen.getByLabelText('Telefone/WhatsApp de contato')).toHaveValue(
+        '11 3333-4444',
+      );
+      fireEvent.change(screen.getByLabelText('E-mail de contato'), {
+        target: { value: 'c@x.com' },
+      });
+      fireEvent.click(screen.getByText('Salvar dados da clínica'));
+
+      await waitFor(() => {
+        const put = fetchMock.mock.calls.find(
+          ([url, init]) =>
+            url === '/api/settings/clinic-info' && init?.method === 'PUT',
+        );
+        expect(JSON.parse(put?.[1]?.body as string)).toMatchObject({
+          contactPhone: '11 3333-4444',
+          contactEmail: 'c@x.com',
+        });
+      });
+    });
+
     it('Dado erro ao salvar, Quando a chamada falha, Então exibe alerta de erro', async () => {
       mockFetch(({ url, init }) => {
         const schedule = routeSchedule(url);
