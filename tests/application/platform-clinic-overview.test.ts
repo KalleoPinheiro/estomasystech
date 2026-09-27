@@ -16,32 +16,32 @@ const admin = (state: { password: boolean; active: boolean }) => {
 
 describe('Feature: Estado do admin na lista da plataforma (B4)', () => {
   it.each([
-    ['nenhum admin', [], 'none'],
-    ['só admin desativado', [admin({ password: true, active: false })], 'none'],
+    ['nenhum admin', 'none', []],
+    ['só admin desativado', 'none', [admin({ password: true, active: false })]],
     [
       'admin ativo só com convite',
-      [admin({ password: false, active: true })],
       'pending',
+      [admin({ password: false, active: true })],
     ],
     [
       'admin desativado com senha e outro pendente',
+      'pending',
       [
         admin({ password: true, active: false }),
         admin({ password: false, active: true }),
       ],
-      'pending',
     ],
     [
       'admin ativo com senha',
+      'active',
       [
         admin({ password: false, active: true }),
         admin({ password: true, active: true }),
       ],
-      'active',
     ],
   ] as const)(
     'Dado %s, Quando derivar o estado do admin, Então %s',
-    (_label, accounts, expected) => {
+    (_label, expected, accounts) => {
       expect(adminStatusOf(accounts)).toBe(expected);
     },
   );

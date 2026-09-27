@@ -260,6 +260,14 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     expect(invalid.status).toBe(400);
     expect(body.data?.info.contactPhone).toBe('11 95555-6666');
     expect(body.data?.info.contactEmail).toBe('recepcao@clinicab.com');
+
+    const cleared = await put({ contactEmail: null });
+    const clearedBody = (await cleared.json()) as Envelope<{
+      info: ClinicRegistrationDto;
+    }>;
+    expect(cleared.status).toBe(200);
+    expect(clearedBody.data?.info.contactEmail).toBeNull();
+    expect(clearedBody.data?.info.contactPhone).toBe('11 95555-6666');
   });
 
   it('Dado CNPJ de outra clínica, Quando o Admin de Empresa salvar, Então 400 e o CNPJ não muda', async () => {

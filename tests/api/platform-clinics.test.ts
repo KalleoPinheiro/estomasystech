@@ -91,6 +91,14 @@ const repositories = async (clinicId: string) => {
   return getRepositories(clinicScope(clinicId));
 };
 
+/** Contas com o e-mail em qualquer clínica — a clínica recusada nem tem id. */
+const accountsAnywhere = async (email: string) => {
+  const { getRepositories } = await import('@/infrastructure/container');
+  const { systemScope } = await import('@/lib/auth/tenant-scope');
+  const { userAccounts } = await getRepositories(systemScope());
+  return userAccounts.findAllByEmail(email);
+};
+
 const clinicCount = async () => {
   const { clinics } = await repositories('legacy-clinic');
   return (await clinics.findAll()).length;
@@ -182,12 +190,16 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     async (_label, overrides) => {
       spyOnSentEmails();
       const before = await clinicCount();
+      const adminEmail = `invalido-${cnpjSeq}@x.com`;
 
-      const { response, json } = await create(validBody(overrides));
+      const { response, json } = await create(
+        validBody({ adminEmail, ...overrides }),
+      );
 
       expect(response.status).toBe(400);
       expect(json.success).toBe(false);
       expect(await clinicCount()).toBe(before);
+      expect(await accountsAnywhere(adminEmail)).toEqual([]);
     },
   );
 
@@ -204,6 +216,7 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     expect(response.status).toBe(400);
     expect(json.error).toBe('Já existe clínica com este CNPJ');
     expect(await clinicCount()).toBe(before);
+    expect(await accountsAnywhere('segunda@x.com')).toEqual([]);
   });
 
   it('Dadas criações concorrentes com o mesmo CNPJ, Quando criar, Então uma 200, outra 400 e uma clínica só', async () => {

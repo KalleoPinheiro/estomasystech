@@ -107,6 +107,8 @@ Proof: `tests/application/platform-clinic-overview.test.ts -t "estado do admin"`
 
 **C15** - Toda rota nova de `platform` responde `403` à equipe da clínica e ao portal no handler (varredura)
 Proof: `tests/api/route-guard-conformance.test.ts -t "família negada"`
+Proof: `tests/api/route-guard-conformance.test.ts -t "com sessão de paciente"`
+Proof: `tests/api/route-guard-conformance.test.ts -t "com sessão de parceiro"`
 
 ### S3 - Detalhe e edição do cadastro pela plataforma · 4 arquivos · 12 KB · ~3k
 

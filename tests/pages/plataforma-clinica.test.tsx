@@ -125,6 +125,9 @@ describe('Feature: Detalhe da clínica na plataforma (B4, Journey 4–6)', () =>
     expect(
       within(inactiveRow).queryByRole('button', { name: 'Desativar' }),
     ).toBeNull();
+    expect(
+      within(inactiveRow).queryByRole('button', { name: 'Reenviar convite' }),
+    ).toBeNull();
 
     fireEvent.click(
       within(pendingRow).getByRole('button', { name: 'Reenviar convite' }),

@@ -158,6 +158,22 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
     },
   );
 
+  it('Dada clínica completa, Quando o super_admin limpa o contato, Então 200 e a clínica volta a cadastro incompleto', async () => {
+    const clinic = await seedClinic('47.000.000/0001-00');
+
+    const { response, json } = await patch(clinic.id, {
+      contactEmail: null,
+      contactPhone: '',
+    });
+
+    expect(response.status).toBe(200);
+    expect(json.data).toMatchObject({
+      contactEmail: null,
+      contactPhone: null,
+      registrationComplete: false,
+    });
+  });
+
   it('Dado CNPJ de outra clínica, Quando editar, Então 400 e a clínica não muda; o próprio CNPJ passa', async () => {
     const owner = await seedClinic('44.000.000/0001-00');
     const other = await seedClinic('45.000.000/0001-00');

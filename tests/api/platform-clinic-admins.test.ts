@@ -332,6 +332,7 @@ describe('Feature: Admins da clínica na plataforma (B4)', () => {
       'company_admin',
     );
     await seedAccount(CLINIC_B_ID, 'lista-atendente@b.com', 'atendente');
+    await seedAccount(CLINIC_B_ID, 'lista-paciente@b.com', 'patient');
     await seedAccount('legacy-clinic', 'lista-admin-a@a.com', 'company_admin');
 
     const { response, json } = await listAdmins(CLINIC_B_ID);
@@ -340,6 +341,7 @@ describe('Feature: Admins da clínica na plataforma (B4)', () => {
     const emails = json.data.map((row) => row.email);
     expect(emails).toContain('lista-admin@b.com');
     expect(emails).not.toContain('lista-atendente@b.com');
+    expect(emails).not.toContain('lista-paciente@b.com');
     expect(emails).not.toContain('lista-admin-a@a.com');
     expect(json.data.find((row) => row.id === admin.id)).toEqual({
       id: admin.id,
