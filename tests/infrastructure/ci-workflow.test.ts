@@ -67,6 +67,8 @@ describe('CI de produção (#203)', () => {
       'agenda.spec.ts',
       'pacientes.spec.ts',
       'portal-paciente.spec.ts',
+      // B3 (ADR-009): a sessão real do super_admin também contra o build.
+      'plataforma.spec.ts',
     ]) {
       expect(config).toContain(`"${spec}"`);
     }

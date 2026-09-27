@@ -26,6 +26,7 @@ export default defineConfig({
     "agenda.spec.ts",
     "pacientes.spec.ts",
     "portal-paciente.spec.ts",
+    "plataforma.spec.ts",
   ],
   grepInvert: /modo aberto/,
   // Build de produção não compila rota sob demanda: sem retry para mascarar.

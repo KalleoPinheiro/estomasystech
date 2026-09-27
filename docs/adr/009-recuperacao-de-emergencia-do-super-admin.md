@@ -59,8 +59,9 @@ Roteiro em [`producao.md` § 10](../engineering/producao.md).
   (decisão do dono, 2026-09-27).
 - **Sessão de sistema pelo papel.** Sessão sem empresa é conferida contra a conta de sistema
   (`role = 'super_admin' AND clinic_id IS NULL`), não pelo e-mail: e-mail do cookie diferente do
-  da conta revoga. Sem conta de sistema, a lista negra do ADR-005 vale. Sessões de clínica não
-  mudam.
+  da conta revoga. Vale para toda sessão sem empresa, não só para as de papel `super_admin`
+  (hoje só ele existe sem empresa, pela constraint do ADR-007). Sem conta de sistema, a lista
+  negra do ADR-005 vale. Sessões de clínica não mudam.
 
 B perde porque abre uma porta pública para contornar exatamente o login que o ADR-008 endureceu. C
 perde porque é SQL à mão, sem validação nem trilha.

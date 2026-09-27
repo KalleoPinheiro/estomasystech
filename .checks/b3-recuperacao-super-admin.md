@@ -125,7 +125,7 @@ Proof: `tests/api/recover-super-admin.test.ts -t "sessão de sistema vigente"`
 
 **C25** - A suíte E2E da plataforma roda com o super_admin real (nas duas configs)
 Proof: `npx playwright test e2e/plataforma.spec.ts`
-Proof: `npm run build && npx playwright test -c playwright.prod.config.ts`
+Proof: `npm run build && npx playwright test -c playwright.prod.config.ts plataforma.spec.ts` (spec incluído no `testMatch` da config de produção; `tests/infrastructure/ci-workflow.test.ts` confere)
 
 ### S4 - Docs · 5 arquivos · 40 KB · ~10k
 
