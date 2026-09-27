@@ -44,7 +44,11 @@ async function runReminders(provided: string) {
     const { clinics, email } = await getRepositories(systemScope());
     const all = await clinics.findAll();
     return new SendReminders(
-      all.map((clinic) => ({ id: clinic.id, name: clinic.name })),
+      all.map((clinic) => ({
+        id: clinic.id,
+        name: clinic.name,
+        status: clinic.status,
+      })),
       (clinicId) => getRepositories(clinicScope(clinicId)),
       email,
     ).execute();

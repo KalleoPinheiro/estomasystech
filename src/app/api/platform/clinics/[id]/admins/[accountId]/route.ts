@@ -27,9 +27,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { id: clinicId, accountId } = await context.params;
   const services = await getRepositories(clinicScope(clinicId));
-  if (!(await services.clinics.findById(clinicId))) {
-    return fail('Clínica não encontrada', 404);
-  }
+  const clinic = await services.clinics.findById(clinicId);
+  if (!clinic) return fail('Clínica não encontrada', 404);
   const admins = new ManageClinicAdmins(services);
   const account = await admins.find(accountId);
   if (!account) return fail('Admin não encontrado', 404);
@@ -37,6 +36,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { action } = bodySchema.parse(await request.json());
     const { account: updated, delivered } = await admins.apply(
+      clinic,
       account,
       action,
       () =>

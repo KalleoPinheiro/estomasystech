@@ -8,9 +8,10 @@ import type { Session } from './session';
  * troca/reset de senha e desativação incrementam a versão — #194). Vale para
  * todos os papéis, inclusive `patient`/`partner`. Subject sem linha
  * correspondente (sessões forjadas pela suíte E2E, cookies de instalações
- * antigas) segue válido — semântica de deny-list. Exceção: sessão sem empresa
- * é da conta de sistema, que é achada pelo papel e revoga se o e-mail mudou
- * (ADR-009). Falha de infraestrutura é fail-open com log (AD-004).
+ * antigas) segue válido — semântica de deny-list. Conta de clínica
+ * `suspended` conta como inativa (B5). Exceção: sessão sem empresa é da conta
+ * de sistema, que é achada pelo papel e revoga se o e-mail mudou (ADR-009).
+ * Falha de infraestrutura é fail-open com log (AD-004).
  */
 export const REVOCATION_CACHE_TTL_MS = 60_000;
 
@@ -45,14 +46,25 @@ async function lookupAccountStatus(
       '@/infrastructure/persistence/drizzle/drizzle-foundation-repositories'
     ),
   ]);
-  const accounts = new DrizzleUserAccountRepository(await getDb(), clinicId);
+  const db = await getDb();
+  const accounts = new DrizzleUserAccountRepository(db, clinicId);
   if (clinicId === null) {
     return systemAccountStatus(email, await accounts.findSystemAccount());
   }
-  const account = await accounts.findByEmail(email);
-  return account
-    ? { isActive: account.isActive, sessionVersion: account.sessionVersion }
-    : null;
+  const { DrizzleClinicRepository } = await import(
+    '@/infrastructure/persistence/drizzle/drizzle-clinic-repository'
+  );
+  const [account, clinic] = await Promise.all([
+    accounts.findByEmail(email),
+    new DrizzleClinicRepository(db).findById(clinicId),
+  ]);
+  if (!account) return null;
+  // Clínica suspensa (B5) revoga como conta inativa; sem linha da clínica, vale
+  // o estado da conta.
+  return {
+    isActive: account.isActive && !clinic?.isSuspended,
+    sessionVersion: account.sessionVersion,
+  };
 }
 
 /**
@@ -123,6 +135,17 @@ export function forgetSessionStatus(
   clinicId: string | null,
 ): void {
   cache.delete(cacheKey(subject, clinicId));
+}
+
+/**
+ * Esquece o status em cache de todas as contas de uma clínica — chamado logo
+ * depois de suspendê-la (B5), para que ESTE processo revogue na hora.
+ */
+export function forgetClinicSessionStatus(clinicId: string): void {
+  const prefix = `${clinicId}|`;
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) cache.delete(key);
+  }
 }
 
 /** Limpa o cache — uso em testes. */

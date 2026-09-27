@@ -1,4 +1,5 @@
 import type { EmailGateway } from '@/application/ports/email-gateway';
+import type { ClinicStatus } from '@/domain/clinic/clinic';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
 import { dueRecallAttempt } from '@/domain/messaging/recall-cadence';
 import {
@@ -46,6 +47,8 @@ export interface ClinicReminderServices {
 export interface ReminderClinic {
   id: string;
   name: string;
+  /** Clínica `suspended` (B5) não recebe lembretes; ausente = `active`. */
+  status?: ClinicStatus;
 }
 
 interface PendingReminder {
@@ -60,7 +63,7 @@ interface PendingReminder {
  * Job de lembretes por e-mail, empresa a empresa: confirmação D-1 (consultas
  * de amanhã ainda "scheduled") e recall de retornos vencidos na cadência
  * D+1/D+7/D+30. Falha de envio individual não aborta o lote; falha ao ler uma
- * empresa não impede as demais.
+ * empresa não impede as demais. Clínica suspensa é ignorada.
  */
 export class SendReminders {
   constructor(
@@ -79,7 +82,12 @@ export class SendReminders {
       channelEnabled: this.email.enabled,
       clinics: [],
     };
-    for (const clinic of this.clinics) {
+    // Clínica suspensa (B5) fica fora do lote: nem o escopo dela é aberto, e
+    // ela volta no primeiro disparo depois da reativação.
+    const active = this.clinics.filter(
+      (clinic) => clinic.status !== 'suspended',
+    );
+    for (const clinic of active) {
       const result = await this.runClinic(clinic, now);
       summary.sent += result.sent;
       summary.skipped += result.skipped;

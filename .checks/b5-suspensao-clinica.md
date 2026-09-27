@@ -125,8 +125,8 @@ Proof: `tests/api/session-revocation.test.ts -t "estado da clínica na consulta"
 **C20** - `SendReminders` com uma clínica ativa e uma `suspended`: a suspensa não abre escopo (`servicesFor` não é chamado para ela), não envia e não aparece em `summary.clinics`; a ativa envia
 Proof: `tests/application/send-reminders.test.ts -t "ignora clínica suspensa"`
 
-**C21** - `POST /api/reminders/run` com consulta de amanhã em clínica suspensa → nenhum e-mail para ela; reativada, o próximo disparo envia
-Proof: `tests/api/reminders-run.test.ts -t "clínica suspensa"`
+**C21** - `POST /api/reminders/run` com consulta de amanhã em clínica suspensa → nenhum e-mail para ela e ela fora de `clinics`; reativada, o próximo disparo a processa e o e-mail sai
+Proof: `tests/api/reminders-run-suspended.test.ts -t "clínica suspensa com consulta amanhã"`
 
 ### S5 - Telas · ~25k
 

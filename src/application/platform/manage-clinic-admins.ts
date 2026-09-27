@@ -25,6 +25,8 @@ export type AdminAction = (typeof ADMIN_ACTIONS)[number];
 
 export const INCOMPLETE_REGISTRATION_MESSAGE =
   'Complete o cadastro da clínica (nome, CNPJ, telefone e e-mail de contato) antes de convidar o admin';
+export const SUSPENDED_CLINIC_INVITE_MESSAGE =
+  'Clínica suspensa: reative a clínica antes de convidar o admin';
 const DUPLICATE_EMAIL_MESSAGE = 'Já existe conta com este email';
 
 export interface ManageClinicAdminsServices extends InviteServices {
@@ -36,6 +38,16 @@ export interface AdminActionResult {
   account: UserAccount;
   /** Só no reenvio; `null` nas ações sem e-mail. */
   delivered: boolean | null;
+}
+
+/**
+ * Clínica suspensa (B5) não recebe convite nem reenvio: o convidado definiria
+ * a senha e toparia com o login negado. Desativar/reativar admin seguem.
+ */
+function assertNotSuspended(clinic: Clinic): void {
+  if (clinic.isSuspended) {
+    throw new ValidationError(SUSPENDED_CLINIC_INVITE_MESSAGE);
+  }
 }
 
 /**
@@ -64,6 +76,7 @@ export class ManageClinicAdmins {
     clinic: Clinic,
     email: string,
   ): Promise<{ account: UserAccount; delivered: boolean }> {
+    assertNotSuspended(clinic);
     if (!clinic.isRegistrationComplete()) {
       throw new ValidationError(INCOMPLETE_REGISTRATION_MESSAGE);
     }
@@ -90,11 +103,13 @@ export class ManageClinicAdmins {
    * nada muda.
    */
   async apply(
+    clinic: Clinic,
     account: UserAccount,
     action: AdminAction,
     audit: () => Promise<void>,
   ): Promise<AdminActionResult> {
     if (action === 'resend-invite') {
+      assertNotSuspended(clinic);
       return this.resendInvite(account, audit);
     }
     if (action === 'deactivate') {
