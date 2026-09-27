@@ -30,7 +30,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-05 | Catálogo fechado de 6 papéis; ninguém se autocadastra; cada papel cria só os papéis abaixo dele; ninguém cria `super_admin` — o único nasce do bootstrap, e o banco recusa `super_admin` com clínica e conta de empresa sem clínica (`ck_user_accounts_system_role_has_no_clinic`) | [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md), [ADR-007](../../adr/007-super-admin-operador-da-plataforma.md), `src/domain/auth/role-hierarchy.ts`, `drizzle/0041_*` |
 | ACE-RN-06 | Autorização em duas camadas (proxy + handler), fail-closed | [ADR-002](../../adr/002-autorizacao-em-duas-camadas.md), `src/lib/auth/access-policy.ts` |
 | ACE-RN-07 | Leitura e escrita escopadas pela empresa da sessão via `TenantScope`; `{ clinicId }` literal não compila | `src/lib/auth/tenant-scope.ts` |
-| ACE-RN-08 | Conta desativada, logout, reset ou troca de senha revogam todas as sessões da conta em até 60 s, mesmo com cookie válido, para todos os papéis (inclusive portal) — `session_version` no token × na conta | [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md), `src/lib/auth/staff-revocation.ts` |
+| ACE-RN-08 | Conta desativada, logout, reset ou troca de senha revogam todas as sessões da conta em até 60 s, mesmo com cookie válido, para todos os papéis (inclusive portal) — `session_version` no token × na conta. Sessão sem empresa é conferida contra a conta de sistema pelo papel: e-mail do cookie diferente do da conta revoga (ADR-009) | [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md), `src/lib/auth/staff-revocation.ts` |
 | ACE-RN-09 | Mesmo e-mail pode existir em empresas diferentes; login testa a senha contra cada conta e nega se houver ambiguidade | `.specs/features/fix-login-email-ambiguo/` |
 | ACE-RN-10 | Super Admin só acessa a família `platform` (`/plataforma`, `/api/platform/**`) e as rotas compartilhadas (logout, portal). Toda rota da clínica responde `403` "Seu papel não tem acesso a este recurso" no proxy e no handler; toda página da clínica redireciona para `/plataforma`. Equipe da clínica que abre `/plataforma` vai a `/`; paciente e parceiro, a `/portal` | [ADR-007](../../adr/007-super-admin-operador-da-plataforma.md), `src/lib/auth/route-family.ts`, `src/proxy.ts` |
 | ACE-RN-11 | Editar conta existente (senha, ativar/desativar, reenviar convite) segue a matriz do ACE-RN-05: papel fora da matriz → `403`, conta de outra empresa → `404`. Atendente/Profissional só listam e alteram contas `patient`/`partner`. Ninguém desativa a própria conta nem o último `company_admin` ativo (`400`). Senha, ativação e reenvio gravam auditoria antes da alteração; se a auditoria falha, nada muda | `src/domain/auth/account-management.ts`, `src/app/api/accounts/` (#184) |
@@ -43,6 +43,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-18 | Super Admin entra em duas etapas: a senha certa não emite sessão, só `{ mfaRequired: true, pendingToken }` (fator cadastrado) ou `{ mfaEnrollmentRequired: true, pendingToken }` (sem fator). O token pendente vale 5 min, é assinado com chave derivada do `AUTH_SECRET` e morre se a `session_version` da conta mudar. `POST /api/auth/mfa/verify` confere o código TOTP (6 dígitos, 30 s, janela ±1, mesmo código não entra duas vezes) e emite a sessão. Código errado → `401` "Código inválido"; token ausente, expirado ou de outra etapa → `401` "Verificação expirada. Entre novamente com e-mail e senha."; 6ª tentativa da conta no minuto → `429` | [ADR-008](../../adr/008-segundo-fator-do-super-admin.md), `src/application/auth/mfa-login.ts`, `src/app/api/auth/mfa/` (#214) |
 | ACE-RN-19 | Sem fator cadastrado, o Super Admin cadastra um antes de qualquer sessão (`POST /api/auth/mfa/enroll`: chave em texto e link `otpauth://`, sem QR). A chave só é gravada (cifrada, ADR-006) quando o código dela é confirmado; a confirmação devolve 10 códigos de recuperação de uso único, exibidos uma única vez e guardados como hash scrypt, e derruba sessões e tokens pendentes anteriores | [ADR-008](../../adr/008-segundo-fator-do-super-admin.md), `drizzle/0042_*` (#214) |
 | ACE-RN-20 | Código de recuperação válido não abre sessão: é consumido e leva ao recadastro obrigatório do autenticador; o fator antigo vale até o novo ser confirmado, e o recadastro troca os 10 códigos. Usado ou inexistente → `401` "Código de recuperação inválido" | [ADR-008](../../adr/008-segundo-fator-do-super-admin.md) (#214) |
+| ACE-RN-21 | Super Admin que perdeu tudo (senha, e-mail ou autenticador e códigos) só volta pelo servidor: `npm run admin:recover` remove o segundo fator e os códigos, invalida a senha, troca o e-mail se pedido (recusa e-mail de outra conta), derruba as sessões, audita e imprime um link de definir senha de 1 hora — só no terminal. Não existe rota pública de recuperação. Roteiro: [`producao.md` § 10](../../engineering/producao.md) | [ADR-009](../../adr/009-recuperacao-de-emergencia-do-super-admin.md), `src/infrastructure/persistence/drizzle/recover-super-admin.ts` (#214) |
 
 ### Papéis
 
@@ -60,7 +61,7 @@ cada tela faz com o dado é dos outros domínios.
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
 | Login, convite, definir senha, esqueci a senha | entregue | `/login`, `/definir-senha`, `/esqueci-senha` |
-| Segundo fator do Super Admin (código do autenticador, cadastro, códigos de recuperação) | entregue; recuperação de emergência no servidor: bloco B3 | `/login` (etapas depois da senha), `/api/auth/mfa/**` |
+| Segundo fator do Super Admin (código do autenticador, cadastro, códigos de recuperação) | entregue, com recuperação de emergência no servidor (`npm run admin:recover`) | `/login` (etapas depois da senha), `/api/auth/mfa/**` |
 | Contas e papéis (criar, desativar, reenviar convite) | entregue | Configurações → Contas |
 | Dados cadastrais da empresa (CNPJ, responsável técnico) | entregue | Configurações → Dados da clínica |
 | Trilha de auditoria | entregue | `/auditoria` |
@@ -78,7 +79,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 | borda e política | `src/proxy.ts`, `src/lib/auth/` |
 | API | `src/app/api/{auth,accounts,audit,settings,clinic-info,platform}/` |
 | UI | `src/app/{login,definir-senha,esqueci-senha,plataforma}/`, `src/app/(staff)/{auditoria,configuracoes}/` |
-| testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `tests/api/mfa-login.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
+| testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `tests/api/mfa-login.test.ts`, `tests/{api,infrastructure}/recover-super-admin.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
 
 ## Decisões
 
@@ -89,4 +90,5 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 - [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md) — revogação de sessão por `session_version`
 - [ADR-007](../../adr/007-super-admin-operador-da-plataforma.md) — Super Admin é o operador da plataforma, único e sem dado de clínica
 - [ADR-008](../../adr/008-segundo-fator-do-super-admin.md) — segundo fator TOTP obrigatório para o Super Admin
+- [ADR-009](../../adr/009-recuperacao-de-emergencia-do-super-admin.md) — recuperação de emergência do Super Admin por script no servidor
 - Integração: [Resend](../../engineering/integrations/resend.md) (convite e reset)

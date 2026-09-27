@@ -90,3 +90,38 @@ describe('Feature: Registro da decisão do B2 (ADR-008)', () => {
     expect(context).toContain('008-segundo-fator-do-super-admin.md');
   });
 });
+
+/** B3 (#214): a recuperação de emergência fica no ADR-009, no runbook e nos docs de acesso. */
+describe('Feature: Registro da decisão do B3 (ADR-009)', () => {
+  it('Dado o ADR-009, o runbook e os documentos de acesso, Quando ler, Então registram a recuperação de emergência', () => {
+    const adr = read(
+      'docs/adr/009-recuperacao-de-emergencia-do-super-admin.md',
+    );
+    const runbook = read('docs/engineering/producao.md');
+    const acesso = read('docs/domains/acesso/README.md');
+    const context = read('CONTEXT.md');
+
+    expect(adr).toMatch(/^---\n[\s\S]*?status: frozen\n/);
+    expect(adr).toMatch(/\*\*Status:\*\* aceito/);
+    expect(adr).toMatch(/\*\*Emenda:\*\* \[ADR-004\]/);
+    expect(adr).toContain('[ADR-005]');
+    expect(adr).toContain('npm run admin:recover');
+
+    expect(runbook).toContain(
+      '## 10. Recuperação de emergência do Super Admin',
+    );
+    expect(runbook).toContain(
+      'npm run admin:recover -- --novo-email=novo@clinica.com.br',
+    );
+    expect(runbook).toContain('`--confirmar`');
+    expect(runbook).toContain('**1 hora**');
+    for (const code of ['| `0` |', '| `2` |', '| `1` |']) {
+      expect(runbook).toContain(code);
+    }
+
+    expect(acesso).toMatch(/\| ACE-RN-21 \| Super Admin que perdeu tudo/);
+    expect(acesso).toContain('009-recuperacao-de-emergencia-do-super-admin.md');
+    expect(acesso).not.toContain('bloco B3');
+    expect(context).toContain('**Emergency recovery**');
+  });
+});

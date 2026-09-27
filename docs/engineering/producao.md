@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-09-27
 ---
 
 # Runbook de produção
@@ -159,3 +159,35 @@ Mínimo até a issue de observabilidade ([#212](https://github.com/KalleoPinheir
 healthcheck em `GET /api/auth/providers`, logs da Vercel (ou `docker compose logs app`),
 alerta de uso de conexões e disco no painel do Supabase. Os logs não carregam dado pessoal
 (`logError`, [#202](https://github.com/KalleoPinheiro/vitta-flow/issues/202)).
+
+## 10. Recuperação de emergência do Super Admin
+
+Quando o Super Admin perdeu **tudo** — a senha, o e-mail ou o autenticador **e** os códigos de
+recuperação. Perdeu só o celular: entre com um código de recuperação, sem script
+([ADR-008](../adr/008-segundo-fator-do-super-admin.md)). Não há rota pública para isto: quem
+tem `DATABASE_URL` já tem o banco ([ADR-009](../adr/009-recuperacao-de-emergencia-do-super-admin.md)).
+
+1. De um checkout do repositório (Vercel) ou do host (VPS), com `DATABASE_URL` (conexão direta)
+   e `APP_URL` (a URL pública `https://`), simule:
+   `npm run admin:recover -- --novo-email=novo@clinica.com.br`
+   (sem `--novo-email` o e-mail não muda). A simulação mostra a conta, o e-mail novo e o que
+   será feito, e não grava nada.
+2. Confira e aplique: repita o comando com `--confirmar`. Numa única transação o script:
+   - remove o segundo fator e os códigos de recuperação;
+   - invalida a senha atual (nenhuma senha entra) e reativa a conta se estiver desativada;
+   - troca o e-mail, se pedido;
+   - incrementa `session_version`: toda sessão aberta cai em até 60 s, inclusive a de quem
+     tomou a conta com o e-mail antigo;
+   - invalida convites e links de reset pendentes e grava o evento `account-recovery` na
+     auditoria (hoje na trilha da clínica legada, até a trilha de plataforma existir).
+3. O script imprime o link de definir senha — **só no terminal, nunca por e-mail**. Ele vale
+   **1 hora** e uma vez. Não cole o link em chat ou ticket; se a hora passar, rode de novo (o link
+   anterior deixa de valer).
+4. Abra o link, defina a senha, entre em `/login` e cadastre o autenticador de novo; guarde os 10
+   códigos de recuperação.
+
+| Saída | Significado |
+| --- | --- |
+| `0` | aplicado, ou simulado sem `--confirmar` |
+| `2` | comando ou pré-condição: flag desconhecida, `APP_URL` ausente ou sem `https://`, e-mail inválido, e-mail já usado por outra conta, nenhum Super Admin (use o § 8). Nada foi gravado |
+| `1` | falha inesperada (banco fora, erro no meio). A transação foi desfeita: nada foi alterado; corrija e rode de novo |
