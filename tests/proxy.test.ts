@@ -7,7 +7,7 @@ import { createSessionToken, type UserRole } from '@/lib/auth/session';
  * banco — aqui fica neutra para os cenários de política da borda.
  */
 vi.mock('@/lib/auth/staff-revocation', () => ({
-  isStaffSessionRevoked: vi.fn().mockResolvedValue(false),
+  isSessionRevoked: vi.fn().mockResolvedValue(false),
 }));
 
 // O limite de /api é contado no Postgres (issue #77) — PGlite na suíte.

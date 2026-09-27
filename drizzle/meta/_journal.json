@@ -274,6 +274,20 @@
       "when": 1790448429163,
       "tag": "0038_overlap-per-clinic",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790460244446,
+      "tag": "0039_session-version",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1790460245673,
+      "tag": "0040_portal-account-link",
+      "breakpoints": true
     }
   ]
 }

@@ -13,7 +13,8 @@ export const PATIENT_PICKER_LIMIT = 20;
 interface PatientPickerProps {
   /** Id do paciente selecionado ('' = nenhum). */
   value: string;
-  onChange: (patientId: string) => void;
+  /** `patient` vem junto quando a escolha acabou de ser feita na busca. */
+  onChange: (patientId: string, patient?: PatientDto) => void;
   label?: string;
   /** Inclui pacientes inativos nos resultados (ex.: filtro da auditoria). */
   includeInactive?: boolean;
@@ -157,7 +158,7 @@ export function PatientPicker({
         onPick={(patient) => {
           setTerm('');
           setPicked(patient);
-          onChange(patient.id);
+          onChange(patient.id, patient);
         }}
       />
     </div>

@@ -29,7 +29,7 @@ import {
   type ConsentRecordKind,
   type ConsentRecordRepository,
 } from '@/domain/consent/consent-record';
-import { decryptField, encryptField } from '@/lib/auth/crypto';
+import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import {
   anamneses,
@@ -45,6 +45,7 @@ export class DrizzleAnamnesisRepository implements AnamnesisRepository {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   async save(anamnesis: Anamnesis): Promise<void> {
@@ -56,11 +57,12 @@ export class DrizzleAnamnesisRepository implements AnamnesisRepository {
     const values = {
       clinicId: this.clinicId,
       patientId: anamnesis.patientId,
-      comorbidities: anamnesis.comorbidities,
-      allergies: anamnesis.allergies,
-      medications: anamnesis.medications,
-      surgicalHistory: anamnesis.surgicalHistory,
-      notes: anamnesis.notes,
+      comorbidities: this.cipher.encryptNullable(anamnesis.comorbidities) ?? '',
+      allergies: this.cipher.encryptNullable(anamnesis.allergies) ?? '',
+      medications: this.cipher.encryptNullable(anamnesis.medications) ?? '',
+      surgicalHistory:
+        this.cipher.encryptNullable(anamnesis.surgicalHistory) ?? '',
+      notes: this.cipher.encryptNullable(anamnesis.notes) ?? '',
       updatedAt: anamnesis.updatedAt,
     };
     await this.db
@@ -81,7 +83,17 @@ export class DrizzleAnamnesisRepository implements AnamnesisRepository {
         ),
       )
       .limit(1);
-    return rows[0] ? Anamnesis.restore(rows[0]) : null;
+    const row = rows[0];
+    if (!row) return null;
+    // Anamnese cifrada em repouso (#195); "" segue "" (nada a proteger).
+    return Anamnesis.restore({
+      ...row,
+      comorbidities: this.cipher.decryptNullable(row.comorbidities) ?? '',
+      allergies: this.cipher.decryptNullable(row.allergies) ?? '',
+      medications: this.cipher.decryptNullable(row.medications) ?? '',
+      surgicalHistory: this.cipher.decryptNullable(row.surgicalHistory) ?? '',
+      notes: this.cipher.decryptNullable(row.notes) ?? '',
+    });
   }
 }
 
@@ -89,16 +101,16 @@ export class DrizzleEvolutionNoteRepository implements EvolutionNoteRepository {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
-    private readonly secret: string,
+    private readonly cipher: FieldCipher,
   ) {}
 
   private toEntity(row: typeof evolutionNotes.$inferSelect): EvolutionNote {
     return EvolutionNote.restore({
       ...row,
-      subjective: decryptField(row.subjective, this.secret) ?? '',
-      objective: decryptField(row.objective, this.secret) ?? '',
-      assessment: decryptField(row.assessment, this.secret) ?? '',
-      plan: decryptField(row.plan, this.secret) ?? '',
+      subjective: this.cipher.decryptNullable(row.subjective) ?? '',
+      objective: this.cipher.decryptNullable(row.objective) ?? '',
+      assessment: this.cipher.decryptNullable(row.assessment) ?? '',
+      plan: this.cipher.decryptNullable(row.plan) ?? '',
     });
   }
 
@@ -114,10 +126,10 @@ export class DrizzleEvolutionNoteRepository implements EvolutionNoteRepository {
       patientId: note.patientId,
       appointmentId: note.appointmentId,
       professionalId: note.professionalId,
-      subjective: encryptField(note.subjective, this.secret) ?? '',
-      objective: encryptField(note.objective, this.secret) ?? '',
-      assessment: encryptField(note.assessment, this.secret) ?? '',
-      plan: encryptField(note.plan, this.secret) ?? '',
+      subjective: this.cipher.encryptNullable(note.subjective) ?? '',
+      objective: this.cipher.encryptNullable(note.objective) ?? '',
+      assessment: this.cipher.encryptNullable(note.assessment) ?? '',
+      plan: this.cipher.encryptNullable(note.plan) ?? '',
       createdAt: note.createdAt,
     });
   }
@@ -144,7 +156,7 @@ export class DrizzleClinicalConditionRepository
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
-    private readonly secret: string,
+    private readonly cipher: FieldCipher,
   ) {}
 
   private toEntity(
@@ -152,7 +164,7 @@ export class DrizzleClinicalConditionRepository
   ): ClinicalCondition {
     return ClinicalCondition.restore({
       ...row,
-      notes: decryptField(row.notes, this.secret),
+      notes: this.cipher.decryptNullable(row.notes),
       kind: row.kind as ConditionKind,
       stomaType: row.stomaType as StomaType | null,
       status: row.status as ConditionStatus,
@@ -173,7 +185,7 @@ export class DrizzleClinicalConditionRepository
       title: condition.title,
       stomaType: condition.stomaType,
       startedAt: condition.startedAt,
-      notes: encryptField(condition.notes, this.secret),
+      notes: this.cipher.encryptNullable(condition.notes),
       status: condition.status,
       createdAt: condition.createdAt,
     };
@@ -257,7 +269,7 @@ export class DrizzleConditionAssessmentRepository
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
-    private readonly secret: string,
+    private readonly cipher: FieldCipher,
   ) {}
 
   private toEntity(
@@ -265,7 +277,9 @@ export class DrizzleConditionAssessmentRepository
   ): ConditionAssessment {
     return ConditionAssessment.restore({
       ...row,
-      notes: decryptField(row.notes, this.secret),
+      notes: this.cipher.decryptNullable(row.notes),
+      skinCondition: this.cipher.decryptNullable(row.skinCondition),
+      complications: this.cipher.decryptNullable(row.complications),
       exudate: row.exudate as ExudateLevel | null,
     });
   }
@@ -286,8 +300,8 @@ export class DrizzleConditionAssessmentRepository
       tissueType: assessment.tissueType,
       exudate: assessment.exudate,
       painScale: assessment.painScale,
-      skinCondition: assessment.skinCondition,
-      complications: assessment.complications,
+      skinCondition: this.cipher.encryptNullable(assessment.skinCondition),
+      complications: this.cipher.encryptNullable(assessment.complications),
       complicationCodes:
         assessment.complicationCodes.length > 0
           ? assessment.complicationCodes.join(',')
@@ -298,7 +312,7 @@ export class DrizzleConditionAssessmentRepository
       detErosionSeverity: assessment.detErosionSeverity,
       detOvergrowthArea: assessment.detOvergrowthArea,
       detOvergrowthSeverity: assessment.detOvergrowthSeverity,
-      notes: encryptField(assessment.notes, this.secret),
+      notes: this.cipher.encryptNullable(assessment.notes),
       createdAt: assessment.createdAt,
     });
   }
@@ -352,6 +366,7 @@ export class DrizzleConditionPhotoRepository
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   private toEntity(row: typeof conditionPhotos.$inferSelect): ConditionPhoto {
@@ -360,6 +375,7 @@ export class DrizzleConditionPhotoRepository
       contentType: row.contentType as PhotoContentType,
       origin: row.origin as PhotoOrigin,
       triageStatus: row.triageStatus as TriageStatus | null,
+      patientNote: this.cipher.decryptNullable(row.patientNote),
     });
   }
 
@@ -377,7 +393,7 @@ export class DrizzleConditionPhotoRepository
       contentType: photo.contentType,
       sizeBytes: photo.sizeBytes,
       origin: photo.origin,
-      patientNote: photo.patientNote,
+      patientNote: this.cipher.encryptNullable(photo.patientNote),
       triageStatus: photo.triageStatus,
       createdAt: photo.createdAt,
     };

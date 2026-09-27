@@ -1,15 +1,15 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
-import { isStaffSessionRevoked } from '@/lib/auth/staff-revocation';
+import { isSessionRevoked } from '@/lib/auth/staff-revocation';
 import { proxy } from '@/proxy';
 
 vi.mock('@/lib/auth/staff-revocation', () => ({
-  isStaffSessionRevoked: vi.fn().mockResolvedValue(false),
+  isSessionRevoked: vi.fn().mockResolvedValue(false),
 }));
 
 const SECRET = 'test-secret';
-const revokedMock = vi.mocked(isStaffSessionRevoked);
+const revokedMock = vi.mocked(isSessionRevoked);
 
 function staffRequest(path: string): NextRequest {
   const token = createSessionToken(

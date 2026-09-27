@@ -4,6 +4,7 @@ import type {
   PatientPage,
   PatientRepository,
 } from '@/domain/patient/patient-repository';
+import type { FieldCipher } from '@/lib/data-cipher';
 import { decodeCursor } from '@/lib/pagination';
 import { type AppDb, MAX_ROWS } from './db';
 import { patients } from './schema';
@@ -11,14 +12,14 @@ import { withTenant } from './tenant-scope';
 
 type PatientRow = typeof patients.$inferSelect;
 
-const toPatient = (row: PatientRow): Patient =>
+const toPatient = (row: PatientRow, cipher: FieldCipher): Patient =>
   Patient.restore({
     id: row.id,
     fullName: row.fullName,
     email: row.email,
     phone: row.phone,
     birthDate: row.birthDate,
-    notes: row.notes,
+    notes: cipher.decryptNullable(row.notes),
     referredByPartnerId: row.referredByPartnerId,
     active: row.active,
     createdAt: row.createdAt,
@@ -28,6 +29,7 @@ export class DrizzlePatientRepository implements PatientRepository {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   async save(patient: Patient): Promise<void> {
@@ -43,7 +45,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       email: patient.email,
       phone: patient.phone,
       birthDate: patient.birthDate,
-      notes: patient.notes,
+      notes: this.cipher.encryptNullable(patient.notes),
       referredByPartnerId: patient.referredByPartnerId,
       active: patient.isActive,
       createdAt: patient.createdAt,
@@ -60,7 +62,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       .from(patients)
       .where(withTenant(patients, this.clinicId, eq(patients.id, id)))
       .limit(1);
-    return rows[0] ? toPatient(rows[0]) : null;
+    return rows[0] ? toPatient(rows[0], this.cipher) : null;
   }
 
   async findByEmail(email: string): Promise<Patient | null> {
@@ -75,7 +77,7 @@ export class DrizzlePatientRepository implements PatientRepository {
         ),
       )
       .limit(1);
-    return rows[0] ? toPatient(rows[0]) : null;
+    return rows[0] ? toPatient(rows[0], this.cipher) : null;
   }
 
   async findByIds(ids: string[]): Promise<Patient[]> {
@@ -87,7 +89,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       .select()
       .from(patients)
       .where(withTenant(patients, this.clinicId, inArray(patients.id, unique)));
-    return rows.map(toPatient);
+    return rows.map((row) => toPatient(row, this.cipher));
   }
 
   async findClinicIdById(id: string): Promise<string | null> {
@@ -119,7 +121,7 @@ export class DrizzlePatientRepository implements PatientRepository {
         ),
       )
       .limit(MAX_ROWS);
-    return rows.map(toPatient);
+    return rows.map((row) => toPatient(row, this.cipher));
   }
 
   async findAll(search?: string, page: PatientPage = {}): Promise<Patient[]> {
@@ -135,7 +137,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       .where(withTenant(patients, this.clinicId, and(filter, cursorFilter)))
       .orderBy(asc(patients.fullName), asc(patients.id))
       .limit(limit);
-    return rows.map(toPatient);
+    return rows.map((row) => toPatient(row, this.cipher));
   }
 }
 

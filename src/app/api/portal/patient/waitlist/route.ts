@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { AddToWaitlist } from '@/application/scheduling/waitlist';
-import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -18,17 +18,6 @@ const joinSchema = z.object({
   notes: z.string().max(500).nullish(),
 });
 
-async function ownPatient(
-  patients: Awaited<ReturnType<typeof getRepositories>>['patients'],
-  email: string,
-) {
-  const patient = await patients.findByEmail(email);
-  if (!patient?.isActive) {
-    throw new NotFoundError('Paciente', email);
-  }
-  return patient;
-}
-
 /** Pedidos do próprio paciente ainda na fila. */
 export async function GET(request: NextRequest) {
   const guard = requirePortalSession(request, 'patient');
@@ -37,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   return handleRequest(async () => {
     const services = await getRepositories(sessionScope(session));
-    const patient = await ownPatient(services.patients, session.subject);
+    const patient = await resolvePortalPatient(services, session);
     const entries = (await services.waitlist.findByPatient(patient.id)).filter(
       (entry) => entry.status === 'waiting',
     );
@@ -54,7 +43,7 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = joinSchema.parse(await request.json());
     const services = await getRepositories(writeScope(session));
-    const patient = await ownPatient(services.patients, session.subject);
+    const patient = await resolvePortalPatient(services, session);
     const entry = await new AddToWaitlist(
       services.waitlist,
       services.patients,

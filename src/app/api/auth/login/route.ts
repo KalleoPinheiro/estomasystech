@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       identity.role,
       identity.clinicId,
       identity.professionalId,
+      identity.sessionVersion,
     ),
     sessionCookieOptions(),
   );
@@ -104,6 +105,7 @@ type AuthResult =
       role: UserRole;
       clinicId: string | null;
       professionalId: string | null;
+      sessionVersion: number;
     }
   | { error: string; status: number; auditDetail?: string };
 
@@ -138,6 +140,8 @@ async function authenticateAccount(
     role: account.role,
     clinicId: account.clinicId,
     professionalId: account.professionalId,
+    // Versão vigente (#194): logout/troca de senha posteriores revogam este token.
+    sessionVersion: account.sessionVersion,
   };
 }
 

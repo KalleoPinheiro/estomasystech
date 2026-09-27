@@ -16,6 +16,24 @@ export interface S3PhotoStorageConfig {
   accessKeyId: string;
   secretAccessKey: string;
   forcePathStyle: boolean;
+  /**
+   * Cifra no bucket (#195): cabeçalho `ServerSideEncryption` de cada upload.
+   * `null` = sem cabeçalho, só para provedor que já cifra em repouso e o
+   * rejeita (`S3_SSE=provider`).
+   */
+  serverSideEncryption: S3ServerSideEncryption | null;
+}
+
+export type S3ServerSideEncryption = 'AES256' | 'aws:kms';
+
+/** `S3_SSE`: vazio/`AES256` (padrão), `aws:kms` ou `provider`. */
+function serverSideEncryptionFromEnv(): S3ServerSideEncryption | null {
+  const value = process.env.S3_SSE?.trim() || 'AES256';
+  if (value === 'AES256' || value === 'aws:kms') return value;
+  if (value === 'provider') return null;
+  throw new Error(
+    `S3_SSE inválido (${value}) — use AES256, aws:kms ou provider`,
+  );
 }
 
 /** Subconjunto do `S3Client` usado aqui — permite injetar um falso nos testes. */
@@ -52,6 +70,7 @@ export function s3PhotoStorageConfigFromEnv(): S3PhotoStorageConfig | null {
     accessKeyId: process.env.S3_ACCESS_KEY_ID as string,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY as string,
     forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+    serverSideEncryption: serverSideEncryptionFromEnv(),
   };
 }
 
@@ -86,6 +105,7 @@ export class S3PhotoStorage implements PhotoStorage {
     private readonly client: S3Sender,
     private readonly bucket: string,
     clinicId: string,
+    private readonly serverSideEncryption: S3ServerSideEncryption | null = 'AES256',
   ) {
     if (!ID_PATTERN.test(clinicId)) {
       throw new Error('Identificador de clínica inválido');
@@ -106,6 +126,9 @@ export class S3PhotoStorage implements PhotoStorage {
         Bucket: this.bucket,
         Key: this.keyFor(id),
         Body: data,
+        ...(this.serverSideEncryption
+          ? { ServerSideEncryption: this.serverSideEncryption }
+          : {}),
       }),
     );
   }

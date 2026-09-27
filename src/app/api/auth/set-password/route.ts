@@ -9,6 +9,7 @@ import { fail, handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
+import { forgetSessionStatus } from '@/lib/auth/staff-revocation';
 import { systemScope } from '@/lib/auth/tenant-scope';
 import { logError } from '@/lib/log-error';
 
@@ -49,6 +50,9 @@ export async function POST(request: NextRequest) {
         expectedPurposes: ['invite', 'reset'],
       },
     );
+    // A troca já incrementou `session_version` (#194): sessões anteriores da
+    // conta caem — neste processo na hora, nos demais em ≤ 60 s.
+    forgetSessionStatus(result.email, result.clinicId);
     // Ator explícito pré-sessão: quem teve a senha alterada (AC-07). A senha já
     // foi trocada e o token já foi consumido (uso único) — uma falha aqui não
     // pode virar erro pro usuário: a ação já é irreversível e não há como pedir

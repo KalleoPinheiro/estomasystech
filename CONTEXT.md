@@ -292,3 +292,5 @@ See `src/` structure:
 - [ADR-002: Two-layer authorization](./docs/adr/002-autorizacao-em-duas-camadas.md) — proxy + handler guards, fail-closed.
 - [ADR-003: Modelo de papéis multi-empresa](./docs/adr/003-modelo-de-papeis-multi-empresa.md) — catálogo fechado de seis papéis, escopo por empresa e vínculo dinâmico do Profissional.
 - [ADR-004: Remoção do Google OAuth como autenticação](./docs/adr/004-remocao-google-oauth-autenticacao.md) — login 100% nativo, Calendar sync desacoplado.
+- [ADR-005: Revogação de sessão por versão](./docs/adr/005-revogacao-de-sessao-por-versao.md) — `session_version` na conta × `sv` no token; logout, senha e desativação revogam.
+- [ADR-006: Chave de dados clínicos](./docs/adr/006-chave-de-dados-clinicos.md) — `DATA_ENCRYPTION_KEY` versionada, separada do `AUTH_SECRET`; todo texto clínico cifrado.

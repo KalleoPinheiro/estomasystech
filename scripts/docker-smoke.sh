@@ -8,6 +8,7 @@ set -euo pipefail
 
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(openssl rand -hex 16)}"
 export AUTH_SECRET="${AUTH_SECRET:-$(openssl rand -hex 32)}"
+export DATA_ENCRYPTION_KEY="${DATA_ENCRYPTION_KEY:-$(openssl rand -hex 32)}"
 export RESEND_API_KEY="${RESEND_API_KEY:-re_smoke_invalid_key}"
 export EMAIL_FROM="${EMAIL_FROM:-VittaFlow Smoke <smoke@vitta.test>}"
 APP_URL_LOCAL="http://localhost:${APP_PORT:-3000}"

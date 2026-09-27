@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { clinicScope } from '@/lib/auth/tenant-scope';
+import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -223,6 +224,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
         }),
       );
 
+      await linkAllPortalAccounts();
       const response = await partnerPortalRoute.GET(
         jsonRequest(
           '/api/portal/partner',
@@ -285,6 +287,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       const form = new FormData();
       form.set('file', new File([png], 'foto.png', { type: 'image/png' }));
       form.set('conditionId', conditionBody.data.id);
+      await linkAllPortalAccounts();
       const response = await photosRoute.POST(
         new NextRequest('http://localhost/api/portal/patient/photos', {
           method: 'POST',
@@ -346,6 +349,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       const form = new FormData();
       form.set('file', new File([png], 'foto.png', { type: 'image/png' }));
       form.set('conditionId', conditionId);
+      await linkAllPortalAccounts();
       const response = await photosRoute.POST(
         new NextRequest('http://localhost/api/portal/patient/photos', {
           method: 'POST',
@@ -371,6 +375,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       const twoPatientId = (
         (await patientResponse.json()) as Envelope<{ id: string }>
       ).data.id;
+      await linkAllPortalAccounts();
       const token = sessionFor(patientEmail, 'patient');
       await consentRoute.POST(
         jsonRequest(
@@ -462,6 +467,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
         id: string;
       }>;
 
+      await linkAllPortalAccounts();
       const patientToken = sessionFor(patientEmail, 'patient');
 
       // Gate de consentimento (COMP3-01): envio remoto exige aceite vigente.
@@ -572,6 +578,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
         id: string;
       }>;
       conditionId = conditionBody.data.id;
+      await linkAllPortalAccounts();
       patientToken = sessionFor(patientEmail, 'patient');
     });
 
@@ -670,6 +677,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
         context(patientBody.data.id),
       );
 
+      await linkAllPortalAccounts();
       const response = await consentRoute.POST(
         jsonRequest(
           '/api/portal/patient/consent',
@@ -708,6 +716,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       const appointmentBody = (await appointmentResponse.json()) as Envelope<{
         id: string;
       }>;
+      await linkAllPortalAccounts();
       const token = sessionFor(patientEmail, 'patient');
 
       const first = await confirmRoute.POST(
@@ -761,6 +770,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
         id: string;
       }>;
 
+      await linkAllPortalAccounts();
       const response = await confirmRoute.POST(
         jsonRequest(
           `/api/portal/patient/appointments/${appointmentBody.data.id}/confirm`,
@@ -807,6 +817,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
         context(patientBody.data.id),
       );
 
+      await linkAllPortalAccounts();
       const response = await confirmRoute.POST(
         jsonRequest(
           `/api/portal/patient/appointments/${appointmentBody.data.id}/confirm`,

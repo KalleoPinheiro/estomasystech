@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { addCarePlanDiagnosis, createCarePlan, createCondition, createPatient, unique } from "./support/api";
+import { addCarePlanDiagnosis, createCarePlan, createCondition, createPatient, unique, linkPortalAccount} from "./support/api";
 import { sessionCookie } from "./support/session-token";
 
 async function openCarePlanTab(page: import("@playwright/test").Page, patientId: string) {
@@ -152,6 +152,7 @@ test.describe("plano de cuidados (SAE) — limite staff × portal", () => {
       relatedFactors: "Umidade excessiva",
       definingCharacteristics: "Ruptura da epiderme",
     });
+    await linkPortalAccount(request, "patient", patient);
     await context.addCookies([sessionCookie(patient.email, "patient")]);
 
     await page.goto("/portal");

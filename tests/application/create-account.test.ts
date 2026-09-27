@@ -68,6 +68,8 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
             clinicId: 'clinic-a',
             professionalId:
               targetRole === 'profissional' ? 'professional-1' : null,
+            patientId: targetRole === 'patient' ? 'patient-1' : null,
+            partnerId: targetRole === 'partner' ? 'partner-1' : null,
           },
         );
 
@@ -122,6 +124,7 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
             email: 'outra-empresa@x.com',
             passwordHash: HASH,
             role: 'patient',
+            patientId: 'patient-cadastro-1',
             clinicId: 'clinic-b',
           },
         ),
@@ -169,6 +172,7 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
             email: `paciente-${actorRole}@x.com`,
             passwordHash: HASH,
             role: 'patient',
+            patientId: 'patient-cadastro-2',
             clinicId: 'clinic-a',
           },
         );
@@ -212,6 +216,7 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
               email: `x-${actorRole}@x.com`,
               passwordHash: HASH,
               role: 'patient',
+              patientId: 'patient-cadastro-3',
               clinicId: 'clinic-a',
             },
           ),
@@ -231,6 +236,7 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
           email: 'duplicado@x.com',
           passwordHash: HASH,
           role: 'patient',
+          patientId: 'patient-cadastro-4',
           clinicId: 'clinic-a',
         },
       );
@@ -242,10 +248,57 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
             email: 'duplicado@x.com',
             passwordHash: HASH,
             role: 'partner',
+            partnerId: 'partner-cadastro-5',
             clinicId: 'clinic-a',
           },
         ),
       ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  describe('Cenário: conta de portal nasce vinculada ao cadastro (#196)', () => {
+    const actor = { role: 'company_admin' as const, clinicId: 'clinic-x' };
+    const input = (extra: Record<string, unknown>) => ({
+      email: `portal-${Math.random()}@x.com`,
+      passwordHash: HASH,
+      clinicId: 'clinic-x',
+      ...extra,
+    });
+
+    it('Dado papel patient sem patientId ou partner sem partnerId, Então ValidationError', async () => {
+      const useCase = new CreateAccount(new InMemoryUserAccountRepository());
+
+      await expect(
+        useCase.execute(actor, input({ role: 'patient' }) as never),
+      ).rejects.toThrow(/patientId é obrigatório/);
+      await expect(
+        useCase.execute(actor, input({ role: 'partner' }) as never),
+      ).rejects.toThrow(/partnerId é obrigatório/);
+    });
+
+    it('Dado cadastro que já tem acesso, Quando criar outro, Então ValidationError', async () => {
+      const useCase = new CreateAccount(new InMemoryUserAccountRepository());
+      await useCase.execute(
+        actor,
+        input({ role: 'patient', patientId: 'p1' }) as never,
+      );
+
+      await expect(
+        useCase.execute(
+          actor,
+          input({ role: 'patient', patientId: 'p1' }) as never,
+        ),
+      ).rejects.toThrow('Este paciente já tem acesso ao portal');
+    });
+
+    it('Dado papel de equipe com patientId, Então o vínculo é ignorado', async () => {
+      const useCase = new CreateAccount(new InMemoryUserAccountRepository());
+      const account = await useCase.execute(
+        actor,
+        input({ role: 'atendente', patientId: 'p9' }) as never,
+      );
+
+      expect(account.patientId).toBeNull();
     });
   });
 });

@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { appTimeZone, DEFAULT_APP_TIMEZONE } from '@/domain/shared/time-zone';
-import { assertProcessTimeZone, processTimeZone } from '@/lib/app-timezone';
+import {
+  alignProcessTimeZone,
+  assertProcessTimeZone,
+  processTimeZone,
+} from '@/lib/app-timezone';
 
 /** Issue #205: processo e aplicação precisam concordar no fuso. */
 describe('Feature: checagem de fuso na inicialização (#205)', () => {
@@ -45,15 +49,31 @@ describe('Feature: checagem de fuso na inicialização (#205)', () => {
     expect(appTimeZone()).toBe(DEFAULT_APP_TIMEZONE);
   });
 
-  it('instrumentation.register encerra o processo em produção com fuso divergente (só no runtime Node)', async () => {
-    const { register } = await import('@/instrumentation');
+  it('aligns process timezone: processo em UTC com APP_TIMEZONE=America/Sao_Paulo passa a rodar em São Paulo (#206, Vercel)', () => {
+    vi.stubEnv('TZ', 'UTC');
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(processTimeZone()).toBe('UTC');
+
+    expect(() => alignProcessTimeZone()).not.toThrow();
+
+    expect(processTimeZone()).toBe('America/Sao_Paulo');
+    // 2027-01-11T12:00Z = 09:00 em São Paulo (UTC−3): o Date local acompanha.
+    expect(new Date('2027-01-11T12:00:00Z').getHours()).toBe(9);
+  });
+
+  it('instrumentation.register alinha o fuso divergente e só encerra o processo se APP_TIMEZONE for inválido (só no runtime Node)', async () => {
+    const { register } = await import('@/instrumentation');
+    vi.stubEnv('TZ', 'UTC');
+    vi.stubEnv('NODE_ENV', 'production');
     const exit = vi
       .spyOn(process, 'exit')
       .mockImplementation((() => undefined) as never);
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
 
+    vi.stubEnv('APP_TIMEZONE', 'Fuso/Inexistente');
     vi.stubEnv('NEXT_RUNTIME', 'edge');
     await register();
     expect(exit).not.toHaveBeenCalled();
@@ -62,6 +82,13 @@ describe('Feature: checagem de fuso na inicialização (#205)', () => {
     await register();
     expect(exit).toHaveBeenCalledWith(1);
     expect(JSON.stringify(log.mock.calls)).toContain('APP_TIMEZONE');
+
+    exit.mockClear();
+    vi.stubEnv('TZ', 'UTC');
+    vi.stubEnv('APP_TIMEZONE', 'America/Sao_Paulo');
+    await register();
+    expect(exit).not.toHaveBeenCalled();
+    expect(processTimeZone()).toBe('America/Sao_Paulo');
   });
 
   it('instrumentation.register com fuso correto segue a subida', async () => {

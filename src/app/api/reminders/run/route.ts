@@ -6,12 +6,26 @@ import { passwordMatches } from '@/lib/auth/session';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 
 /**
- * Disparo do job de lembretes (cron externo):
+ * Disparo do job de lembretes (cron externo). Dois formatos, mesmo segredo:
  *   curl -X POST -H "x-cron-secret: $CRON_SECRET" $APP_URL/api/reminders/run
+ *   GET com `Authorization: Bearer $CRON_SECRET` — o que o Vercel Cron envia
+ *   (`vercel.json`, #206).
  * Sem CRON_SECRET configurado, a rota fica desativada (503). Lembretes saem
  * por e-mail (Resend), empresa a empresa; sem Resend fora de produção, dry-run.
  */
 export async function POST(request: NextRequest) {
+  return runReminders(request.headers.get('x-cron-secret') ?? '');
+}
+
+export async function GET(request: NextRequest) {
+  const authorization = request.headers.get('authorization') ?? '';
+  const bearer = authorization.startsWith('Bearer ')
+    ? authorization.slice('Bearer '.length)
+    : '';
+  return runReminders(bearer);
+}
+
+async function runReminders(provided: string) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return fail(
@@ -20,7 +34,7 @@ export async function POST(request: NextRequest) {
     );
   }
   // Comparação em tempo constante — mesmo tratamento das demais credenciais.
-  if (!passwordMatches(secret, request.headers.get('x-cron-secret') ?? '')) {
+  if (!passwordMatches(secret, provided)) {
     return fail('Não autorizado', 401);
   }
 

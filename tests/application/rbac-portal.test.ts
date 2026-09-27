@@ -20,6 +20,7 @@ import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memo
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { portalPartnerId, portalPatientId } from '../support/portal-identity';
 
 describe('Feature: RBAC — parceria, indicação e portais', () => {
   let patientRepo: InMemoryPatientRepository;
@@ -179,7 +180,9 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
         invoiceRepo,
         followUpRepo,
       );
-      const data = await portal.execute({ email: 'maria@x.com' });
+      const data = await portal.execute({
+        patientId: await portalPatientId(patientRepo, 'maria@x.com'),
+      });
 
       expect(data.patient.id).toBe(maria.id);
       expect(data.appointments).toHaveLength(1);
@@ -199,9 +202,11 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
         followUpRepo,
       );
 
-      await expect(portal.execute({ email: 'ghost@x.com' })).rejects.toThrow(
-        NotFoundError,
-      );
+      await expect(
+        portal.execute({
+          patientId: await portalPatientId(patientRepo, 'ghost@x.com'),
+        }),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -240,7 +245,9 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
         appointmentRepo,
         conditionRepo,
         assessmentRepo,
-      ).execute({ email: 'dr.carlos@x.com' });
+      ).execute({
+        partnerId: await portalPartnerId(partnerRepo, 'dr.carlos@x.com'),
+      });
 
       expect(data.partner.id).toBe(carlos.id);
       expect(data.referredPatients).toHaveLength(1);
@@ -259,7 +266,9 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
           appointmentRepo,
           conditionRepo,
           assessmentRepo,
-        ).execute({ email: 'ghost@x.com' }),
+        ).execute({
+          partnerId: await portalPartnerId(partnerRepo, 'ghost@x.com'),
+        }),
       ).rejects.toThrow(NotFoundError);
     });
   });

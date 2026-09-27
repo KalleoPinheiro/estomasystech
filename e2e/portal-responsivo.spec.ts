@@ -8,6 +8,7 @@ import {
   createPartner,
   createPatient,
   createProcedure,
+  linkPortalAccount,
   unique,
 } from "./support/api";
 import { businessDay, type SlotSeed, slotForAttempt, ymdToDateInput } from "./support/dates";
@@ -136,6 +137,8 @@ async function seedPatientPortal(
     amountCents: 9000,
   });
 
+  await linkPortalAccount(request, "patient", patient);
+
   await context.addCookies([sessionCookie(patient.email, "patient")]);
   // Pedido na lista de espera feito pelo próprio paciente (rota do portal).
   const fromDate = ymdToDateInput(businessDay(3));
@@ -236,6 +239,8 @@ for (const viewport of VIEWPORTS) {
       await addAssessment(request, condition.id, { lengthMm: 20, widthMm: 10, depthMm: 2 });
       await addAssessment(request, condition.id, { lengthMm: 16, widthMm: 8, depthMm: 1 });
 
+      await linkPortalAccount(request, "partner", partner);
+
       await context.addCookies([sessionCookie(partner.email, "partner")]);
       await page.goto("/portal");
       await expect(page.getByRole("heading", { name: partner.fullName })).toBeVisible();
@@ -265,6 +270,8 @@ test.describe("portal em viewport desktop", () => {
       procedure: `Consulta desktop E2E ${unique()}`,
       priceCents: 12000,
     });
+
+    await linkPortalAccount(request, "patient", patient);
 
     await context.addCookies([sessionCookie(patient.email, "patient")]);
     await page.goto("/portal");

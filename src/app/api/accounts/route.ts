@@ -27,6 +27,9 @@ const createSchema = z
     // Só super_admin (clinicId de sessão nulo) pode/precisa escolher a empresa-alvo.
     clinicId: z.string().max(100).nullish(),
     professionalId: z.string().max(100).nullish(),
+    // Conta de portal nasce vinculada ao cadastro (#196).
+    patientId: z.string().max(100).nullish(),
+    partnerId: z.string().max(100).nullish(),
   })
   .refine((data) => data.role !== 'profissional' || !!data.professionalId, {
     // Sem professionalId, a sessão do profissional nasce com vínculo nulo e o
@@ -66,12 +69,25 @@ export async function POST(request: NextRequest) {
         : writeClinicId(actor);
 
     const services = await getRepositories(clinicScope(targetClinicId));
-    const { userAccounts, professionals, auditEvents } = services;
+    const { userAccounts, professionals, patients, partners, auditEvents } =
+      services;
 
     if (body.professionalId) {
       const professional = await professionals.findById(body.professionalId);
       if (!professional) {
         throw new ValidationError('Profissional vinculado não encontrado');
+      }
+    }
+    // Repositórios escopados à empresa-alvo: cadastro de outra empresa não é
+    // encontrado — mesma resposta de um id inexistente.
+    if (body.role === 'patient' && body.patientId) {
+      if (!(await patients.findById(body.patientId))) {
+        throw new ValidationError('Paciente vinculado não encontrado');
+      }
+    }
+    if (body.role === 'partner' && body.partnerId) {
+      if (!(await partners.findById(body.partnerId))) {
+        throw new ValidationError('Parceiro vinculado não encontrado');
       }
     }
 
@@ -81,6 +97,8 @@ export async function POST(request: NextRequest) {
       role: body.role,
       clinicId: targetClinicId,
       professionalId: body.professionalId ?? null,
+      patientId: body.patientId ?? null,
+      partnerId: body.partnerId ?? null,
     });
     const { delivered } = await sendInvite(services, account);
     recordAudit(auditEvents, guard.session, {

@@ -25,6 +25,7 @@ import {
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
+import { portalPatientId } from '../support/portal-identity';
 
 // Consulta: segunda 2026-07-20 09:00 UTC (testes com TZ=UTC).
 const policy = { noticeHours: 24, lateFeeCents: 5000 };
@@ -175,7 +176,7 @@ describe('Feature: Cancelamento tardio e falta com taxa', () => {
     });
     await expect(
       new CancelOwnAppointment(patients, appointments, scheduleConfig).execute({
-        email: 'maria@example.com',
+        patientId: await portalPatientId(patients, 'maria@example.com'),
         appointmentId: appointment.id,
         now: new Date('2026-07-19T03:00:00Z'),
       }),

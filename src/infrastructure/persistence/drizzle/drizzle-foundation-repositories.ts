@@ -114,9 +114,14 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       passwordHash: account.passwordHash,
       role: account.role,
       professionalId: account.professionalId,
+      patientId: account.patientId,
+      partnerId: account.partnerId,
       active: account.isActive,
       createdAt: account.createdAt,
     };
+    // `session_version` fica fora de propósito (#194): só `revokeSessions` e
+    // `updatePasswordHash` o incrementam, atomicamente no banco. Gravá-lo aqui
+    // desfaria um incremento concorrente com o valor lido antes dele.
     await this.db
       .insert(userAccounts)
       .values(values)
@@ -173,10 +178,38 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
    * e a autorização vem do token de uso único.
    */
   async updatePasswordHash(id: string, passwordHash: string): Promise<void> {
+    // Senha nova derruba as sessões anteriores na mesma instrução (#194).
     await this.db
       .update(userAccounts)
-      .set({ passwordHash })
+      .set({
+        passwordHash,
+        sessionVersion: sql`${userAccounts.sessionVersion} + 1`,
+      })
       .where(withTenant(userAccounts, this.clinicId, eq(userAccounts.id, id)));
+  }
+
+  async revokeSessions(id: string): Promise<void> {
+    await this.db
+      .update(userAccounts)
+      .set({ sessionVersion: sql`${userAccounts.sessionVersion} + 1` })
+      .where(withTenant(userAccounts, this.clinicId, eq(userAccounts.id, id)));
+  }
+
+  async findByPortalLink(
+    link: { patientId: string } | { partnerId: string },
+  ): Promise<UserAccount | null> {
+    const condition =
+      'patientId' in link
+        ? eq(userAccounts.patientId, link.patientId)
+        : eq(userAccounts.partnerId, link.partnerId);
+    const rows = await this.db
+      .select()
+      .from(userAccounts)
+      .where(withTenant(userAccounts, this.clinicId, condition))
+      .limit(1);
+    return rows[0]
+      ? UserAccount.restore({ ...rows[0], role: toUserRole(rows[0].role) })
+      : null;
   }
 
   async hasAnyAccount(): Promise<boolean> {

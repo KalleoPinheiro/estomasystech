@@ -195,6 +195,11 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
       const stored = await googleAccounts.findByEmail('agenda@clinica.com');
       expect(stored).not.toBeNull();
       expect(stored?.encryptedRefreshToken).not.toContain('refresh-token-real');
+      // Chave de dados (#195), não o AUTH_SECRET: formato v1 com a chave atual.
+      const { currentDataCipher } = await import('@/infrastructure/container');
+      expect(
+        currentDataCipher().isCurrent(stored?.encryptedRefreshToken ?? ''),
+      ).toBe(true);
     });
 
     it('Dado a conexão concluída, Quando ler a resposta, Então nenhum cookie de sessão é emitido', async () => {

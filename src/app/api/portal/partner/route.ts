@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { GetPartnerPortalData } from '@/application/portal/get-partner-portal-data';
+import { resolvePortalPartner } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -30,7 +31,9 @@ export async function GET(request: NextRequest) {
       appointments,
       conditions,
       assessments,
-    ).execute({ email: session.subject });
+    ).execute({
+      partnerId: (await resolvePortalPartner(services, session)).id,
+    });
 
     recordAudit(services.auditEvents, session, {
       action: 'read',

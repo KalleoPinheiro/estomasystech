@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { CLINIC_B_ID, ensureTestClinics } from '../support/clinics';
+import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -115,6 +116,7 @@ describe('Feature: Agenda por profissional, almoço e feriados (rotas)', () => {
     });
 
     it('Dado feriado, Quando o paciente lista horários do dia no portal, Então lista vazia', async () => {
+      await linkAllPortalAccounts();
       const response = await slotsRoute.GET(
         jsonRequest(
           `/api/portal/patient/slots?procedureId=${procedureId}&date=2027-03-01`,
@@ -451,6 +453,7 @@ describe('Feature: Agenda por profissional, almoço e feriados (rotas)', () => {
         );
         expect(atLunch.status).toBe(400);
 
+        await linkAllPortalAccounts();
         const slots = await slotsRoute.GET(
           jsonRequest(
             `/api/portal/patient/slots?procedureId=${procedureId}&date=2027-05-04`,

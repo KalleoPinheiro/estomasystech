@@ -125,6 +125,7 @@ jobs:
           # O compose valida as variáveis obrigatórias até no build.
           POSTGRES_PASSWORD: build-only
           AUTH_SECRET: build-only
+          DATA_ENCRYPTION_KEY: build-only
           RESEND_API_KEY: build-only
           EMAIL_FROM: build-only
         run: docker compose build

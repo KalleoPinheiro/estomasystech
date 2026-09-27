@@ -7,6 +7,7 @@ import type { Appointment } from '@/domain/scheduling/appointment';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { portalPatientId } from '../support/portal-identity';
 
 // 2026-07-20 é segunda-feira; horários em UTC (testes rodam com TZ=UTC).
 describe('Feature: Confirmação de presença pelo próprio paciente (portal)', () => {
@@ -36,9 +37,9 @@ describe('Feature: Confirmação de presença pelo próprio paciente (portal)', 
     });
   });
 
-  const confirm = (email: string, appointmentId: string) =>
+  const confirm = async (email: string, appointmentId: string) =>
     new ConfirmOwnAppointment(patientRepo, appointmentRepo).execute({
-      email,
+      patientId: await portalPatientId(patientRepo, email),
       appointmentId,
       now,
     });
@@ -73,7 +74,7 @@ describe('Feature: Confirmação de presença pelo próprio paciente (portal)', 
   it('Dado consulta no passado, Quando confirmar, Então ValidationError', async () => {
     await expect(
       new ConfirmOwnAppointment(patientRepo, appointmentRepo).execute({
-        email: 'maria@example.com',
+        patientId: maria.id,
         appointmentId: appointment.id,
         now: new Date('2026-07-20T09:30:00Z'),
       }),

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createAppointment, createCondition, createPatient, unique } from "./support/api";
+import { createAppointment, createCondition, createPatient, unique, linkPortalAccount} from "./support/api";
 import { expectToast } from "./support/assertions";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
@@ -30,6 +30,8 @@ test.describe("portal do paciente", () => {
       kind: "wound",
       title: `Ferida portal E2E ${unique()}`,
     });
+
+    await linkPortalAccount(request, "patient", patient);
 
     await context.addCookies([sessionCookie(patient.email, "patient")]);
     await page.goto("/portal");
@@ -80,6 +82,8 @@ test.describe("portal do paciente", () => {
       priceCents: 12000,
     });
 
+    await linkPortalAccount(request, "patient", patient);
+
     await context.addCookies([sessionCookie(patient.email, "patient")]);
     await page.goto("/portal");
 
@@ -112,6 +116,8 @@ test.describe("portal do paciente", () => {
       procedure: `Consulta de A E2E ${unique()}`,
       priceCents: 10000,
     });
+
+    await linkPortalAccount(request, "patient", patientB);
 
     await context.addCookies([sessionCookie(patientB.email, "patient")]);
     await page.goto("/portal");

@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CancelOwnAppointment } from '@/application/portal/cancel-own-appointment';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       services.appointments,
       services.scheduleConfig,
     ).execute({
-      email: session.subject,
+      patientId: (await resolvePortalPatient(services, session)).id,
       appointmentId: id,
       reason: body.reason ?? null,
     });

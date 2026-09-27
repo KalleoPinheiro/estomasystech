@@ -16,7 +16,8 @@ export interface CancelOwnAppointmentResult {
 
 export interface CancelOwnAppointmentInput {
   /** Email da sessão — define o paciente, nunca vem do corpo da requisição. */
-  email: string;
+  /** Titular resolvido pelo vínculo da conta de portal (#196). */
+  patientId: string;
   appointmentId: string;
   reason?: string | null;
   now?: Date;
@@ -40,7 +41,7 @@ export class CancelOwnAppointment {
     const appointment = await findOwnAppointment(
       this.patients,
       this.appointments,
-      input.email,
+      input.patientId,
       input.appointmentId,
     );
     // Duplo clique ou nova aba: repetir o cancelamento não é erro.

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { createPatient, unique } from "./support/api";
+import { createPatient, unique, linkPortalAccount} from "./support/api";
 import { sessionCookie } from "./support/session-token";
 
 /**
@@ -65,6 +65,7 @@ test.describe("CSP estrita nas telas centrais (#203)", () => {
   test("portal do paciente sem violação de CSP", async ({ browser, request }) => {
     const patient = await createPatient(request, { fullName: `Paciente CSP Portal ${unique()}` });
     const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    await linkPortalAccount(request, "patient", patient);
     await context.addCookies([sessionCookie(patient.email, "patient")]);
     const page = await context.newPage();
     const violations = await collectCspViolations(page);

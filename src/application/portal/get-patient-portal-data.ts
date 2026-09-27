@@ -32,7 +32,10 @@ export interface PatientPortalData {
 
 const HISTORY_MONTHS = 24;
 
-/** Dados do portal do paciente — sempre escopados ao email autenticado. */
+/**
+ * Dados do portal do paciente — sempre escopados ao titular da conta da
+ * sessão (`resolvePortalPatient`, #196), nunca a um e-mail.
+ */
 export class GetPatientPortalData {
   constructor(
     private readonly patients: PatientRepository,
@@ -44,10 +47,10 @@ export class GetPatientPortalData {
     private readonly photos?: ConditionPhotoRepository,
   ) {}
 
-  async execute(input: { email: string }): Promise<PatientPortalData> {
-    const patient = await this.patients.findByEmail(input.email);
+  async execute(input: { patientId: string }): Promise<PatientPortalData> {
+    const patient = await this.patients.findById(input.patientId);
     if (!patient?.isActive) {
-      throw new NotFoundError('Paciente', input.email);
+      throw new NotFoundError('Paciente', input.patientId);
     }
 
     const cutoff = new Date();

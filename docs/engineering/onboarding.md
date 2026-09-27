@@ -102,24 +102,26 @@ npm run dev                   # http://localhost:3000
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | sim (compose) | senha do Postgres do compose, sem padrão | `openssl rand -hex 24`; entra no `DATABASE_URL` do app |
 | `DATABASE_URL` | sim (fora do compose) | Postgres | `postgres://vitta:<POSTGRES_PASSWORD>@localhost:5432/vitta` |
-| `AUTH_SECRET` | sim em produção | assina a sessão e cifra credenciais | `openssl rand -hex 32`; sem ele, 503 em toda rota |
+| `AUTH_SECRET` | sim em produção | assina a sessão (só isso: o dado clínico tem chave própria) | `openssl rand -hex 32`; sem ele, 503 em toda rota. Rotacionar derruba todas as sessões |
+| `DATA_ENCRYPTION_KEY` | sim em produção | cifra o texto clínico e o token do Google em repouso ([ADR-006](../adr/006-chave-de-dados-clinicos.md)) | `openssl rand -hex 32` (≥ 32 caracteres); fora de produção, sem ela, usa chave de desenvolvimento. Perdê-la é perder o prontuário: guarde no cofre |
+| `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |
 | `APP_URL` | sim em produção | links de convite/reset, redirect do OAuth, link do recall | — |
 | `VITTA_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | sim em produção | convite e reset de senha | [resend.md](integrations/resend.md) |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
-| `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; em produção o boot falha se divergir de `TZ` |
+| `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | sync de agenda via OAuth (nunca login) | [google-calendar.md](integrations/google-calendar.md) |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_CALENDAR_ID` | não | sync via service account (alternativa) | idem |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | não | lembretes por WhatsApp; sem elas, dry-run | [whatsapp-meta.md](integrations/whatsapp-meta.md) |
-| `CRON_SECRET` | não | header `x-cron-secret` de `POST /api/reminders/run`; sem ele, 503 | [cron.md](integrations/cron.md) |
-| `PHOTO_STORAGE` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` / `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE` | não (sim com várias réplicas) | fotos em bucket S3-compatível | [s3-storage.md](integrations/s3-storage.md) |
+| `CRON_SECRET` | não | header `x-cron-secret` de `POST /api/reminders/run` (ou `Authorization: Bearer` do Vercel Cron em `GET`); sem ele, 503 | [cron.md](integrations/cron.md) |
+| `PHOTO_STORAGE` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` / `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE` / `S3_SSE` | não (sim com várias réplicas e na Vercel) | fotos em bucket S3-compatível | [s3-storage.md](integrations/s3-storage.md) |
 | `UPLOADS_DIR` | não | diretório das fotos no disco local | padrão `./uploads`; no compose, `/app/uploads` (volume `uploads`) |
 | `TRUSTED_PROXY_HOPS` | não | quantos proxies reversos confiáveis ficam à frente do app (define o IP do cliente no `x-forwarded-for`) | padrão `1`; Nginx/Caddy = `1`, Cloudflare + Nginx = `2` |
 | `API_RATE_LIMIT_MAX` | não | req/min em `/api/*`, somado entre réplicas: **por conta** quando autenticado (empresa + e-mail), por IP quando anônimo | padrão `120` — cada tela faz de 2 a 8 chamadas ao abrir (Agenda 7, Configurações 8, Dashboard 5, Ficha 6), ou seja ~15 trocas de tela por minuto por pessoa |
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | não | tuning do pool Postgres | — |
 | `VITTA_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
 | `VITTA_ALLOW_OPEN_MODE` | só dev | roda sem login | ignorada com `NODE_ENV=production` |
-| `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
+| `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 
 ## 5. Testes
 

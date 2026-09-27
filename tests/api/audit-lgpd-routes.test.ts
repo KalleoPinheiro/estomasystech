@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { clinicScope } from '@/lib/auth/tenant-scope';
+import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader } from '../support/session';
 
@@ -113,6 +114,7 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
       id: string;
     }>;
     patientId = patientBody.data.id;
+    await linkAllPortalAccounts();
     patientCookieToken = (
       await import('@/lib/auth/session')
     ).createSessionToken(

@@ -16,6 +16,7 @@ import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/d
 import { DrizzleProfessionalRepository } from '@/infrastructure/persistence/drizzle/drizzle-professional-repository';
 import { DrizzleReminderLogRepository } from '@/infrastructure/persistence/drizzle/drizzle-reminder-log-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 describe('Feature: Persistência PostgreSQL — auditoria, pacotes, equipe e integrações', () => {
@@ -58,7 +59,11 @@ describe('Feature: Persistência PostgreSQL — auditoria, pacotes, equipe e int
       email: 'maria@example.com',
       phone: '11999990000',
     });
-    await new DrizzlePatientRepository(appDb, 'legacy-clinic').save(patient);
+    await new DrizzlePatientRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    ).save(patient);
 
     procedure = Procedure.create({
       name: 'Consulta de enfermagem',

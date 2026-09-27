@@ -2,6 +2,7 @@ import type {
   TransactionManager,
   TransactionScope,
 } from '@/application/ports/transaction-manager';
+import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { DrizzleAppointmentRepository } from './drizzle-appointment-repository';
 import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
@@ -17,12 +18,17 @@ export class DrizzleTransactionManager implements TransactionManager {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   run<T>(fn: (repos: TransactionScope) => Promise<T>): Promise<T> {
     return this.db.transaction(async (tx) =>
       fn({
-        appointments: new DrizzleAppointmentRepository(tx, this.clinicId),
+        appointments: new DrizzleAppointmentRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
         invoices: new DrizzleInvoiceRepository(tx, this.clinicId),
         followUps: new DrizzleFollowUpRepository(tx, this.clinicId),
         sessionPackages: new DrizzleSessionPackageRepository(tx, this.clinicId),

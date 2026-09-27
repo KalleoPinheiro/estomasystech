@@ -5,13 +5,14 @@ import {
   type WaitlistSource,
   type WaitlistStatus,
 } from '@/domain/scheduling/waitlist';
+import type { FieldCipher } from '@/lib/data-cipher';
 import { type AppDb, MAX_ROWS } from './db';
 import { waitlistEntries } from './schema';
 import { withTenant } from './tenant-scope';
 
 type Row = typeof waitlistEntries.$inferSelect;
 
-const toEntry = (row: Row): WaitlistEntry =>
+const toEntry = (row: Row, cipher: FieldCipher): WaitlistEntry =>
   WaitlistEntry.restore({
     id: row.id,
     patientId: row.patientId,
@@ -19,7 +20,7 @@ const toEntry = (row: Row): WaitlistEntry =>
     professionalId: row.professionalId,
     fromDate: row.fromDate,
     toDate: row.toDate,
-    notes: row.notes,
+    notes: cipher.decryptNullable(row.notes),
     source: row.source as WaitlistSource,
     status: row.status as WaitlistStatus,
     createdAt: row.createdAt,
@@ -30,6 +31,7 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   async save(entry: WaitlistEntry): Promise<void> {
@@ -46,7 +48,7 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
       professionalId: entry.professionalId,
       fromDate: entry.fromDate,
       toDate: entry.toDate,
-      notes: entry.notes,
+      notes: this.cipher.encryptNullable(entry.notes),
       source: entry.source,
       status: entry.status,
       createdAt: entry.createdAt,
@@ -69,7 +71,7 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
         withTenant(waitlistEntries, this.clinicId, eq(waitlistEntries.id, id)),
       )
       .limit(1);
-    return rows[0] ? toEntry(rows[0]) : null;
+    return rows[0] ? toEntry(rows[0], this.cipher) : null;
   }
 
   async listWaiting(): Promise<WaitlistEntry[]> {
@@ -85,7 +87,7 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
       )
       .orderBy(asc(waitlistEntries.createdAt))
       .limit(MAX_ROWS);
-    return rows.map(toEntry);
+    return rows.map((row) => toEntry(row, this.cipher));
   }
 
   async findByPatient(patientId: string): Promise<WaitlistEntry[]> {
@@ -101,6 +103,6 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
       )
       .orderBy(desc(waitlistEntries.createdAt))
       .limit(MAX_ROWS);
-    return rows.map(toEntry);
+    return rows.map((row) => toEntry(row, this.cipher));
   }
 }

@@ -1,4 +1,9 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto';
+import {
+  createCipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+} from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   decryptField,
@@ -44,6 +49,47 @@ function encryptSecretPreAuthTagLength(
 }
 
 describe('Feature: Sessão assinada (HMAC)', () => {
+  it('session version claim: token carrega `sv`; token sem `sv` é lido como 0 (#194)', () => {
+    const exp = Date.now() + 60_000;
+    const withVersion = createSessionToken(
+      SECRET,
+      exp,
+      'ana@x.com',
+      'atendente',
+      'c1',
+      null,
+      4,
+    );
+    expect(verifySessionToken(SECRET, withVersion)?.sessionVersion).toBe(4);
+
+    // Token emitido antes do #194: payload sem `sv`, assinado do mesmo jeito.
+    const payload = Buffer.from(
+      JSON.stringify({
+        exp,
+        sub: 'ana@x.com',
+        role: 'atendente',
+        clinicId: 'c1',
+      }),
+    ).toString('base64url');
+    const legacy = `${payload}.${createHmac('sha256', SECRET).update(payload).digest('hex')}`;
+    expect(verifySessionToken(SECRET, legacy)?.sessionVersion).toBe(0);
+
+    // `sv` inválido (negativo/fracionário/texto) invalida o token inteiro.
+    for (const sv of [-1, 1.5, '2']) {
+      const bad = Buffer.from(
+        JSON.stringify({
+          exp,
+          sub: 'a@x.com',
+          role: 'atendente',
+          clinicId: 'c1',
+          sv,
+        }),
+      ).toString('base64url');
+      const token = `${bad}.${createHmac('sha256', SECRET).update(bad).digest('hex')}`;
+      expect(verifySessionToken(SECRET, token)).toBeNull();
+    }
+  });
+
   it('Dado token emitido, Quando verificar com o mesmo segredo, Então válido com subject', () => {
     const token = createSessionToken(
       SECRET,

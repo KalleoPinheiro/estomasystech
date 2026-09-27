@@ -539,3 +539,7 @@ Quarto e último tópico do item 8, PR própria, sobre a `main` já com a lista 
 - **Decisões**: comissão não muda — libera só com a fatura quitada e continua sobre o valor da sessão (desconto é custo da clínica); convênio/TISS segue fora (backlog); recibo só para o Admin (o portal mostra pago/saldo, sem recibo).
 - **Testes**: domínio, aplicação, API (PGlite: parcial→quitação, resumo, desconto, 409 no cancelamento, auditoria, isolamento, número do recibo, backfill da migração) e telas (formulários, Faturamento, recibo, portal). Sensor: 9 mutantes, 1 sobreviveu (recebido acumulado no recibo) → teste com dois pagamentos, morto. E2E completo: 88 passaram, 1 intermitente conhecido.
 
+
+## Revisão pré-produção #183 — lote P0 + P1 (2026-09-26) — ENCERRADO (#229)
+
+P0 #187, #191; P1 #192, #193, #197–#203, #205 via `tlc-implement` ([checklist](../../.checks/pre-producao-p0-p1.md)). CI (#203): jobs `build-e2e-prod` (~2 min 40 s com build) e `docker` (~2 min 30 s) rodam em paralelo ao `ci` (~6–9 min) e ao `e2e` (~13 min). Achado: `node:crypto` em `shared/id.ts` violava a CSP de produção no cliente.

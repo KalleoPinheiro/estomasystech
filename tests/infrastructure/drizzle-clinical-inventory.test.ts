@@ -34,6 +34,7 @@ import {
   DrizzlePatientRepository as PatientRepo,
 } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const TEST_SECRET = 'vitest-auth-secret-0000000000000000';
@@ -69,11 +70,19 @@ describe('Feature: Persistência PostgreSQL — módulos clínico, estoque e ret
       email: 'maria@example.com',
       phone: '11999990000',
     });
-    await new DrizzlePatientRepository(appDb, 'legacy-clinic').save(patient);
+    await new DrizzlePatientRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    ).save(patient);
   });
 
   it('Dado anamnese salva, Quando upsert e buscar, Então dados preservados e atualizados', async () => {
-    const repo = new DrizzleAnamnesisRepository(appDb, 'legacy-clinic');
+    const repo = new DrizzleAnamnesisRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    );
     await repo.save(
       Anamnesis.create({ patientId: patient.id, comorbidities: 'DM2' }),
     );
@@ -91,7 +100,7 @@ describe('Feature: Persistência PostgreSQL — módulos clínico, estoque e ret
     const repo = new DrizzleEvolutionNoteRepository(
       appDb,
       'legacy-clinic',
-      TEST_SECRET,
+      TEST_CIPHER,
     );
     await repo.save(
       EvolutionNote.create({
@@ -121,12 +130,12 @@ describe('Feature: Persistência PostgreSQL — módulos clínico, estoque e ret
     const conditionRepo = new DrizzleClinicalConditionRepository(
       appDb,
       'legacy-clinic',
-      TEST_SECRET,
+      TEST_CIPHER,
     );
     const assessmentRepo = new DrizzleConditionAssessmentRepository(
       appDb,
       'legacy-clinic',
-      TEST_SECRET,
+      TEST_CIPHER,
     );
 
     const condition = ClinicalCondition.create({
@@ -219,7 +228,7 @@ describe('Feature: Persistência PostgreSQL — módulos clínico, estoque e ret
 
   it('Dado parceiro salvo e paciente indicado, Quando buscar, Então roundtrip e escopo por indicação', async () => {
     const partnerRepo = new DrizzlePartnerRepository(appDb, 'legacy-clinic');
-    const patientRepo = new PatientRepo(appDb, 'legacy-clinic');
+    const patientRepo = new PatientRepo(appDb, 'legacy-clinic', TEST_CIPHER);
     const partner = Partner.create({
       fullName: 'Dr. Carlos Andrade',
       email: 'carlos@x.com',
@@ -326,7 +335,7 @@ describe('Feature: Persistência PostgreSQL — módulos clínico, estoque e ret
     const conditionRepo = new DrizzleClinicalConditionRepository(
       appDb,
       'legacy-clinic',
-      TEST_SECRET,
+      TEST_CIPHER,
     );
     const condition = ClinicalCondition.create({
       patientId: patient.id,
@@ -359,11 +368,12 @@ describe('Feature: Persistência PostgreSQL — módulos clínico, estoque e ret
     const conditionRepo = new DrizzleClinicalConditionRepository(
       appDb,
       'legacy-clinic',
-      TEST_SECRET,
+      TEST_CIPHER,
     );
     const photoRepo = new DrizzleConditionPhotoRepository(
       appDb,
       'legacy-clinic',
+      TEST_CIPHER,
     );
     const condition = ClinicalCondition.create({
       patientId: patient.id,

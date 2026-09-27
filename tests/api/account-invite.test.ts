@@ -3,6 +3,7 @@ import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import { spyOnSentEmails } from '../support/email';
+import { seedPortalRecord } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -88,6 +89,7 @@ describe('Feature: Cadastro de conta dispara convite por e-mail', () => {
     const { response, json } = await createAccount({
       email: 'sem-senha@x.com',
       role: 'patient',
+      patientId: await seedPortalRecord('patient'),
     });
 
     expect(response.status).toBe(200);
@@ -135,6 +137,7 @@ describe('Feature: Cadastro de conta dispara convite por e-mail', () => {
     const { response, json } = await createAccount({
       email: 'envio-falhou@x.com',
       role: 'patient',
+      patientId: await seedPortalRecord('patient'),
     });
 
     expect(response.status).toBe(200);
@@ -152,8 +155,16 @@ describe('Feature: Cadastro de conta dispara convite por e-mail', () => {
     await ensureTestClinics();
     const emails = spyOnSentEmails();
 
-    await createAccount({ email: 'primeira@x.com', role: 'patient' });
-    await createAccount({ email: 'segunda@x.com', role: 'partner' });
+    await createAccount({
+      email: 'primeira@x.com',
+      role: 'patient',
+      patientId: await seedPortalRecord('patient'),
+    });
+    await createAccount({
+      email: 'segunda@x.com',
+      role: 'partner',
+      partnerId: await seedPortalRecord('partner'),
+    });
 
     expect(emails.bodies).toHaveLength(2);
     expect(emails.bodies[0]).toContain('primeira@x.com');

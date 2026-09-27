@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { ListAvailableSlots } from '@/application/portal/list-available-slots';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requirePortalSession } from '@/lib/auth/require-session';
@@ -26,13 +27,15 @@ export async function GET(request: NextRequest) {
   return handleRequest(async () => {
     // Grade, conflitos e catálogo são os da clínica do paciente — nunca de
     // outra empresa.
+    const services = await getRepositories(sessionScope(session));
     const {
       patients,
       appointments,
       procedures,
       scheduleConfig,
       scheduleAvailability,
-    } = await getRepositories(sessionScope(session));
+    } = services;
+    const { id: patientId } = await resolvePortalPatient(services, session);
     const slots = await new ListAvailableSlots(
       patients,
       appointments,
@@ -41,8 +44,8 @@ export async function GET(request: NextRequest) {
       scheduleAvailability,
     ).execute(
       appointmentId
-        ? { email: session.subject, appointmentId, date }
-        : { email: session.subject, procedureId: procedureId as string, date },
+        ? { patientId, appointmentId, date }
+        : { patientId, procedureId: procedureId as string, date },
     );
 
     return slots.map((slot) => ({

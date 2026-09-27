@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { ConfirmOwnAppointment } from '@/application/portal/confirm-own-appointment';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requirePortalSession } from '@/lib/auth/require-session';
@@ -15,14 +16,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { patients, appointments } = await getRepositories(
-      writeScope(session),
-    );
+    const services = await getRepositories(writeScope(session));
+    const { patients, appointments } = services;
     const confirmed = await new ConfirmOwnAppointment(
       patients,
       appointments,
     ).execute({
-      email: session.subject,
+      patientId: (await resolvePortalPatient(services, session)).id,
       appointmentId: id,
     });
     return toPortalAppointmentDto(confirmed);

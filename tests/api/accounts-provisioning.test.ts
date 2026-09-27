@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
+import { seedPortalRecord } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -94,6 +95,7 @@ describe('Feature: Hierarquia de provisionamento via POST /api/accounts (RBAC-11
       const { response } = await create('atendente', {
         email: 'paciente-por-atendente@x.com',
         role: 'patient',
+        patientId: await seedPortalRecord('patient'),
       });
 
       expect(response.status).toBe(200);
@@ -133,6 +135,59 @@ describe('Feature: Hierarquia de provisionamento via POST /api/accounts (RBAC-11
       const response = await route.POST(noCookieRequest);
 
       expect(response.status).toBe(401);
+    });
+  });
+
+  describe('Cenário: conta de portal nasce vinculada ao cadastro (#196)', () => {
+    it('portal account requires link: patient sem patientId e partner sem partnerId → 400', async () => {
+      await ensureTestClinics();
+      const patient = await create('company_admin', {
+        email: 'portal-sem-vinculo@x.com',
+        role: 'patient',
+      });
+      const partner = await create('company_admin', {
+        email: 'parceiro-sem-vinculo@x.com',
+        role: 'partner',
+      });
+
+      expect(patient.response.status).toBe(400);
+      expect(patient.json.error).toContain('patientId é obrigatório');
+      expect(partner.response.status).toBe(400);
+      expect(partner.json.error).toContain('partnerId é obrigatório');
+    });
+
+    it('portal link validated: cadastro de outra empresa, inexistente ou já vinculado → 400', async () => {
+      await ensureTestClinics();
+      const { CLINIC_B_ID } = await import('../support/clinics');
+      const otherClinic = await create('company_admin', {
+        email: 'vinculo-outra-empresa@x.com',
+        role: 'patient',
+        patientId: await seedPortalRecord('patient', CLINIC_B_ID),
+      });
+      const missing = await create('company_admin', {
+        email: 'vinculo-inexistente@x.com',
+        role: 'partner',
+        partnerId: 'parceiro-que-nao-existe',
+      });
+      const patientId = await seedPortalRecord('patient');
+      const first = await create('company_admin', {
+        email: 'vinculo-primeiro@x.com',
+        role: 'patient',
+        patientId,
+      });
+      const second = await create('company_admin', {
+        email: 'vinculo-segundo@x.com',
+        role: 'patient',
+        patientId,
+      });
+
+      expect(otherClinic.response.status).toBe(400);
+      expect(otherClinic.json.error).toBe('Paciente vinculado não encontrado');
+      expect(missing.response.status).toBe(400);
+      expect(missing.json.error).toBe('Parceiro vinculado não encontrado');
+      expect(first.response.status).toBe(200);
+      expect(second.response.status).toBe(400);
+      expect(second.json.error).toBe('Este paciente já tem acesso ao portal');
     });
   });
 });

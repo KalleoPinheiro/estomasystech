@@ -3,7 +3,7 @@ title: "Integração: cron de lembretes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-25
+last_reviewed: 2026-09-26
 ---
 
 # Cron de lembretes (`POST /api/reminders/run`)
@@ -33,6 +33,13 @@ POST /api/reminders/run
 x-cron-secret: $CRON_SECRET
 ```
 
+Ou, no formato do Vercel Cron (`vercel.json`, [runbook](../producao.md) § 7):
+
+```http
+GET /api/reminders/run
+Authorization: Bearer $CRON_SECRET
+```
+
 Resposta `200` no envelope `{ success, data }`:
 
 ```json
@@ -50,8 +57,8 @@ zerados, e as demais seguem. O que é enviado a cada execução, em cada clínic
 
 Rodar duas vezes no mesmo dia não duplica: a confirmação é única por (referência, dia) e o recall
 por tentativa. "Amanhã", o dia do registro e a data/hora do e-mail usam `APP_TIMEZONE` (padrão
-`America/Sao_Paulo`); defina também `TZ` com o mesmo valor — em produção o app recusa subir se os
-dois divergirem (#205).
+`America/Sao_Paulo`); o app alinha o fuso do processo a esse valor na subida (#205, #206 — na
+Vercel `TZ` é reservado e as funções rodam em UTC).
 
 ## Modos de falha
 

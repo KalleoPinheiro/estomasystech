@@ -1,6 +1,6 @@
-import type {
+import {
   UserAccount,
-  UserAccountRepository,
+  type UserAccountRepository,
 } from '@/domain/auth/user-account';
 import type { Procedure } from '@/domain/catalog/procedure';
 import {
@@ -50,11 +50,42 @@ export class InMemoryProcedureRepository implements ProcedureRepository {
   }
 }
 
+function snapshot(account: UserAccount) {
+  return {
+    id: account.id,
+    email: account.email,
+    passwordHash: account.passwordHash,
+    role: account.role,
+    clinicId: account.clinicId,
+    professionalId: account.professionalId,
+    patientId: account.patientId,
+    partnerId: account.partnerId,
+    active: account.isActive,
+    createdAt: account.createdAt,
+    sessionVersion: account.sessionVersion,
+  };
+}
+
+function bumpSessionVersion(account: UserAccount): UserAccount {
+  return UserAccount.restore({
+    ...snapshot(account),
+    sessionVersion: account.sessionVersion + 1,
+  });
+}
+
 export class InMemoryUserAccountRepository implements UserAccountRepository {
   private readonly items = new Map<string, UserAccount>();
 
   async save(account: UserAccount): Promise<void> {
-    this.items.set(account.id, account);
+    // Espelha o Drizzle (#194): `save` nunca altera a versão já gravada.
+    const stored = this.items.get(account.id);
+    this.items.set(
+      account.id,
+      UserAccount.restore({
+        ...snapshot(account),
+        sessionVersion: stored?.sessionVersion ?? account.sessionVersion,
+      }),
+    );
   }
 
   async findByEmail(email: string): Promise<UserAccount | null> {
@@ -74,8 +105,30 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
   async updatePasswordHash(id: string, passwordHash: string): Promise<void> {
     const existing = this.items.get(id);
     if (existing) {
-      this.items.set(id, existing.withPasswordHash(passwordHash));
+      this.items.set(
+        id,
+        bumpSessionVersion(existing.withPasswordHash(passwordHash)),
+      );
     }
+  }
+
+  async revokeSessions(id: string): Promise<void> {
+    const existing = this.items.get(id);
+    if (existing) {
+      this.items.set(id, bumpSessionVersion(existing));
+    }
+  }
+
+  async findByPortalLink(
+    link: { patientId: string } | { partnerId: string },
+  ): Promise<UserAccount | null> {
+    return (
+      [...this.items.values()].find((a) =>
+        'patientId' in link
+          ? a.patientId === link.patientId
+          : a.partnerId === link.partnerId,
+      ) ?? null
+    );
   }
 
   async hasAnyAccount(): Promise<boolean> {
