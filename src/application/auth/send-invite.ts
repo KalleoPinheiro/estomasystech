@@ -38,7 +38,7 @@ export const appUrlFromEnv = (): string => {
  * rodando na própria máquina (docker compose local) — ali o segredo não sai do
  * host, e exigir TLS tornaria o quick-start impossível.
  */
-const isSafeOrigin = (url: string): boolean => {
+export const isSafeOrigin = (url: string): boolean => {
   try {
     const { protocol, hostname } = new URL(url);
     if (protocol === 'https:') {

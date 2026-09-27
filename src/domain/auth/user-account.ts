@@ -31,15 +31,21 @@ export interface UserAccountState extends UserAccountProps {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** E-mail de login na forma gravada (trim + minúsculas); inválido lança. */
+export function normalizeAccountEmail(raw: string): string {
+  const email = raw.trim().toLowerCase();
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new ValidationError('Email inválido');
+  }
+  return email;
+}
+
 /** Conta individual de acesso da equipe — identidade real na auditoria. */
 export class UserAccount {
   private constructor(private readonly state: UserAccountState) {}
 
   static create(props: UserAccountProps): UserAccount {
-    const email = props.email.trim().toLowerCase();
-    if (!EMAIL_PATTERN.test(email)) {
-      throw new ValidationError('Email inválido');
-    }
+    const email = normalizeAccountEmail(props.email);
     if (!props.passwordHash.startsWith('scrypt$')) {
       throw new ValidationError('Hash de senha em formato inválido');
     }

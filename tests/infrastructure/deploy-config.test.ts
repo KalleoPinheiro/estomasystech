@@ -169,4 +169,14 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
       'tsx scripts/report-portal-orphans.ts',
     );
   });
+
+  it('admin:recover: package.json roda o script de recuperação do super_admin (B3)', () => {
+    const scripts = (
+      JSON.parse(read('package.json')) as { scripts: Record<string, string> }
+    ).scripts;
+    expect(scripts['admin:recover']).toBe('tsx scripts/recover-super-admin.ts');
+    expect(read('docs/engineering/producao.md')).toContain(
+      'npm run admin:recover',
+    );
+  });
 });
