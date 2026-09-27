@@ -31,6 +31,11 @@ services:
       TZ: ${TZ:-America/Sao_Paulo}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
       AUTH_SECRET: ${AUTH_SECRET:?defina AUTH_SECRET (ex. openssl rand -hex 32)}
+      # Chave do dado clínico em repouso (#195, ADR-006) — separada do AUTH_SECRET.
+      # Perdê-la é perder o prontuário cifrado: guarde-a fora do backup do banco.
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?defina DATA_ENCRYPTION_KEY (ex. openssl rand -hex 32)}
+      # Chaves anteriores (só leitura) durante a rotação — ver docs/engineering/producao.md.
+      DATA_ENCRYPTION_KEY_PREVIOUS: ${DATA_ENCRYPTION_KEY_PREVIOUS:-}
       APP_URL: ${APP_URL:-http://localhost:3000}
       # Convite e reset de senha (ADR-004). A imagem roda com NODE_ENV=production,
       # onde a ausência destas duas derruba a inicialização de propósito — sem
@@ -52,6 +57,8 @@ services:
       S3_REGION: ${S3_REGION:-}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-}
+      # Cifra das fotos no bucket: AES256 (padrão), aws:kms ou provider.
+      S3_SSE: ${S3_SSE:-}
       # Fotos em disco local: sempre dentro do volume `uploads` abaixo.
       UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
       # Job de lembretes (POST /api/reminders/run): sem ele a rota responde 503.

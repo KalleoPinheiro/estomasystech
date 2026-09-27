@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "drizzle-kit migrate",
     "db:portal-orphans": "tsx scripts/report-portal-orphans.ts",
+    "data:reencrypt": "tsx scripts/reencrypt-clinical-data.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:changed": "vitest run --changed",

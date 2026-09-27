@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { getRepositories } from '@/infrastructure/container';
-import { encryptSecret } from '@/lib/auth/crypto';
+import { currentDataCipher, getRepositories } from '@/infrastructure/container';
 import {
   CALENDAR_OAUTH_STATE_COOKIE,
   decodeCalendarOAuthState,
@@ -95,7 +94,6 @@ async function persistCalendarCredential(
   config: GoogleCalendarOAuthConfig,
   code: string,
   owner: CredentialOwner,
-  secret: string,
 ): Promise<'ok' | 'sem_credencial'> {
   const { tokens } = await createOAuthClient(config).getToken(code);
   if (!tokens.refresh_token) {
@@ -106,7 +104,8 @@ async function persistCalendarCredential(
   const { googleAccounts } = await getRepositories(sessionScope(owner));
   await googleAccounts.save({
     email: owner.subject,
-    encryptedRefreshToken: encryptSecret(tokens.refresh_token, secret),
+    // Chave de dados (#195, ADR-006), não o AUTH_SECRET da sessão.
+    encryptedRefreshToken: currentDataCipher().encrypt(tokens.refresh_token),
     connectedAt: new Date(),
   });
   return 'ok';
@@ -135,12 +134,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await persistCalendarCredential(
-      config,
-      code,
-      owner,
-      auth.secret,
-    );
+    const result = await persistCalendarCredential(config, code, owner);
     return clearState(
       result === 'ok'
         ? NextResponse.redirect(

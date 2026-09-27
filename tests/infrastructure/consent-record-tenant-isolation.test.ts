@@ -8,6 +8,7 @@ import { DrizzleClinicRepository } from '@/infrastructure/persistence/drizzle/dr
 import { DrizzleConsentRecordRepository } from '@/infrastructure/persistence/drizzle/drizzle-clinical-repositories';
 import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 describe('Feature: Isolamento de Consentimento por empresa (MT-27)', () => {
@@ -30,7 +31,11 @@ describe('Feature: Isolamento de Consentimento por empresa (MT-27)', () => {
       }),
     );
 
-    const patientRepo = new DrizzlePatientRepository(appDb, 'legacy-clinic');
+    const patientRepo = new DrizzlePatientRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    );
     const patient = Patient.create({
       fullName: 'Paciente Teste',
       email: 'consent-isolation@x.com',
@@ -99,7 +104,11 @@ describe('Feature: Versionamento e revogação de consentimento persistidos (#70
     db = drizzle(client, { schema });
     appDb = db as unknown as AppDb;
 
-    const patientRepo = new DrizzlePatientRepository(appDb, 'legacy-clinic');
+    const patientRepo = new DrizzlePatientRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    );
     const patient = Patient.create({
       fullName: 'Paciente Versionamento',
       email: 'consent-versioning@x.com',

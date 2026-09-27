@@ -33,6 +33,7 @@ requisitos, não detalhes.
 | PRO-RN-09 | Atestado, relatório e plano de cuidados bloqueiam sem CNPJ e responsável técnico da empresa; atestado exige consulta `completed` | `src/app/documentos/` |
 | PRO-RN-10 | Alergias aparecem em destaque no topo do prontuário | UI do prontuário |
 | PRO-RN-11 | Exportação LGPD do titular (JSON com o prontuário completo) só para Admins e Profissional com vínculo; o link "Exportar dados (LGPD)" some para quem não pode exportar | `src/app/api/patients/[id]/export/`, `.specs/STATE.md` AD-025 |
+| PRO-RN-12 | Todo texto clínico livre fica cifrado em repouso com `DATA_ENCRYPTION_KEY` (chave própria, separada do `AUTH_SECRET`): SOAP, anamnese, notas do paciente, da consulta, da lista de espera, da condição, da avaliação (inclusive pele periestomal e observação de complicações), da foto enviada pelo portal, do diagnóstico, da avaliação de resultado e do registro de intervenção. Fotos no bucket vão com `ServerSideEncryption` | [ADR-006](../../adr/006-chave-de-dados-clinicos.md), `src/lib/data-cipher.ts` |
 
 ## Funcionalidades
 
@@ -62,4 +63,5 @@ Specs de execução: `.specs/features/{fase-3-compliance-ux-clinico,fase-b-clini
 
 - `.specs/STATE.md` AD-002 — sanitização de imagem em TypeScript puro, sem `sharp`
 - [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — acesso clínico do Profissional por vínculo
+- [ADR-006](../../adr/006-chave-de-dados-clinicos.md) — chave dedicada e versionada para o dado clínico
 - Integração: [armazenamento de fotos](../../engineering/integrations/s3-storage.md)

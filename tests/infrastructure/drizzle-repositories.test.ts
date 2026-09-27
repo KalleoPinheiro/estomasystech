@@ -24,6 +24,7 @@ import { DrizzleProducedSessionRepository } from '@/infrastructure/persistence/d
 import { DrizzleProfessionalRepository } from '@/infrastructure/persistence/drizzle/drizzle-professional-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
 import { encodeCursor } from '@/lib/pagination';
+import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const slot = (startIso: string, endIso: string) =>
@@ -45,8 +46,16 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
     const client = await createPgliteFromTemplate();
     db = drizzle(client, { schema });
     appDb = db as unknown as AppDb;
-    patientRepo = new DrizzlePatientRepository(appDb, 'legacy-clinic');
-    appointmentRepo = new DrizzleAppointmentRepository(appDb, 'legacy-clinic');
+    patientRepo = new DrizzlePatientRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    );
+    appointmentRepo = new DrizzleAppointmentRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    );
     invoiceRepo = new DrizzleInvoiceRepository(appDb, 'legacy-clinic');
     professionalRepo = new DrizzleProfessionalRepository(
       appDb,
@@ -325,7 +334,11 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
       const { DrizzleTransactionManager } = await import(
         '@/infrastructure/persistence/drizzle/drizzle-transaction-manager'
       );
-      const manager = new DrizzleTransactionManager(appDb, 'legacy-clinic');
+      const manager = new DrizzleTransactionManager(
+        appDb,
+        'legacy-clinic',
+        TEST_CIPHER,
+      );
       const patient = await savedPatient();
       const failing = Appointment.create({
         patientId: patient.id,
@@ -370,7 +383,11 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
         '@/infrastructure/persistence/drizzle/drizzle-package-repository'
       );
       const { SessionPackage } = await import('@/domain/billing/package');
-      const manager = new DrizzleTransactionManager(appDb, 'legacy-clinic');
+      const manager = new DrizzleTransactionManager(
+        appDb,
+        'legacy-clinic',
+        TEST_CIPHER,
+      );
       const packageRepo = new DrizzleSessionPackageRepository(
         appDb,
         'legacy-clinic',

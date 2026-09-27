@@ -19,6 +19,7 @@ import type {
 } from '@/domain/clinical/clinical-repositories';
 import { InterventionRecord } from '@/domain/clinical/intervention-record';
 import { OutcomeEvaluation } from '@/domain/clinical/outcome-evaluation';
+import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import {
   carePlanDiagnoses,
@@ -110,6 +111,7 @@ export class DrizzleCarePlanDiagnosisRepository
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   private toEntity(
@@ -118,6 +120,10 @@ export class DrizzleCarePlanDiagnosisRepository
     return CarePlanDiagnosis.restore({
       ...row,
       type: row.type as CarePlanDiagnosisType,
+      relatedFactors: this.cipher.decryptNullable(row.relatedFactors),
+      definingCharacteristics: this.cipher.decryptNullable(
+        row.definingCharacteristics,
+      ),
     });
   }
 
@@ -131,8 +137,10 @@ export class DrizzleCarePlanDiagnosisRepository
       carePlanId: diagnosis.carePlanId,
       diagnosisCode: diagnosis.diagnosisCode,
       type: diagnosis.type,
-      relatedFactors: diagnosis.relatedFactors,
-      definingCharacteristics: diagnosis.definingCharacteristics,
+      relatedFactors: this.cipher.encryptNullable(diagnosis.relatedFactors),
+      definingCharacteristics: this.cipher.encryptNullable(
+        diagnosis.definingCharacteristics,
+      ),
       createdAt: diagnosis.createdAt,
     });
   }
@@ -346,12 +354,16 @@ export class DrizzleOutcomeEvaluationRepository
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   private toEntity(
     row: typeof outcomeEvaluations.$inferSelect,
   ): OutcomeEvaluation {
-    return OutcomeEvaluation.restore(row);
+    return OutcomeEvaluation.restore({
+      ...row,
+      notes: this.cipher.decryptNullable(row.notes),
+    });
   }
 
   async save(evaluation: OutcomeEvaluation): Promise<void> {
@@ -364,7 +376,7 @@ export class DrizzleOutcomeEvaluationRepository
       outcomeId: evaluation.outcomeId,
       score: evaluation.score,
       professionalId: evaluation.professionalId,
-      notes: evaluation.notes,
+      notes: this.cipher.encryptNullable(evaluation.notes),
       evaluatedAt: evaluation.evaluatedAt,
     });
   }
@@ -416,12 +428,16 @@ export class DrizzleInterventionRecordRepository
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   private toEntity(
     row: typeof interventionRecords.$inferSelect,
   ): InterventionRecord {
-    return InterventionRecord.restore(row);
+    return InterventionRecord.restore({
+      ...row,
+      notes: this.cipher.decryptNullable(row.notes),
+    });
   }
 
   async save(record: InterventionRecord): Promise<void> {
@@ -433,7 +449,7 @@ export class DrizzleInterventionRecordRepository
       clinicId: this.clinicId,
       interventionId: record.interventionId,
       professionalId: record.professionalId,
-      notes: record.notes,
+      notes: this.cipher.encryptNullable(record.notes),
       performedAt: record.performedAt,
     });
   }

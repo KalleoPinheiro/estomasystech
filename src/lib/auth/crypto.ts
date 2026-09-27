@@ -5,6 +5,12 @@ import {
   randomBytes,
 } from 'node:crypto';
 
+/**
+ * @deprecated Formato ANTERIOR ao #195 (`iv.tag.ct`, chave = sha256 do
+ * AUTH_SECRET). Nenhum código de produção grava mais neste formato: use
+ * `DataCipher` (`src/lib/data-cipher.ts`, ADR-006), que também lê este
+ * formato. Mantido como referência do legado e para gerar fixtures nos testes.
+ */
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 /**

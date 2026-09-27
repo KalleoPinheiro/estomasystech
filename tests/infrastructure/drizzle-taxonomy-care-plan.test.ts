@@ -32,6 +32,7 @@ import {
   DrizzleTaxonomyLinkageRepository,
 } from '@/infrastructure/persistence/drizzle/drizzle-taxonomy-repositories';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const scaleAnchors = [
@@ -76,7 +77,11 @@ describe('Feature: Persistência PostgreSQL — taxonomias de enfermagem e plano
       email: 'maria@example.com',
       phone: '11999990000',
     });
-    await new DrizzlePatientRepository(appDb, 'legacy-clinic').save(patient);
+    await new DrizzlePatientRepository(
+      appDb,
+      'legacy-clinic',
+      TEST_CIPHER,
+    ).save(patient);
 
     professional = Professional.create({
       fullName: 'Enf. Joana Reis',
@@ -94,7 +99,7 @@ describe('Feature: Persistência PostgreSQL — taxonomias de enfermagem e plano
     await new DrizzleClinicalConditionRepository(
       appDb,
       'legacy-clinic',
-      'vitest-auth-secret-0000000000000000',
+      TEST_CIPHER,
     ).save(condition);
   });
 
@@ -183,6 +188,7 @@ describe('Feature: Persistência PostgreSQL — taxonomias de enfermagem e plano
     const diagnosisRepo = new DrizzleCarePlanDiagnosisRepository(
       appDb,
       'legacy-clinic',
+      TEST_CIPHER,
     );
     const outcomeRepo = new DrizzleCarePlanOutcomeRepository(
       appDb,
@@ -195,10 +201,12 @@ describe('Feature: Persistência PostgreSQL — taxonomias de enfermagem e plano
     const evaluationRepo = new DrizzleOutcomeEvaluationRepository(
       appDb,
       'legacy-clinic',
+      TEST_CIPHER,
     );
     const recordRepo = new DrizzleInterventionRecordRepository(
       appDb,
       'legacy-clinic',
+      TEST_CIPHER,
     );
 
     const plan = CarePlan.create({
@@ -308,6 +316,7 @@ describe('Feature: Persistência PostgreSQL — taxonomias de enfermagem e plano
       await new DrizzleCarePlanDiagnosisRepository(
         appDb,
         'legacy-clinic',
+        TEST_CIPHER,
       ).findByCarePlanIds([]),
     ).toEqual([]);
     expect(
@@ -326,12 +335,14 @@ describe('Feature: Persistência PostgreSQL — taxonomias de enfermagem e plano
       await new DrizzleOutcomeEvaluationRepository(
         appDb,
         'legacy-clinic',
+        TEST_CIPHER,
       ).findByOutcomeIds([]),
     ).toEqual([]);
     expect(
       await new DrizzleInterventionRecordRepository(
         appDb,
         'legacy-clinic',
+        TEST_CIPHER,
       ).findByInterventionIds([]),
     ).toEqual([]);
     expect(

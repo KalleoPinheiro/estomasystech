@@ -13,6 +13,7 @@ import { DrizzleFollowUpRepository } from '@/infrastructure/persistence/drizzle/
 import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import { DrizzleReminderLogRepository } from '@/infrastructure/persistence/drizzle/drizzle-reminder-log-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const CLINIC_A = 'legacy-clinic';
@@ -201,7 +202,9 @@ describe('Feature: reminder_logs por canal e tentativa (PostgreSQL)', () => {
       email: 'maria@example.com',
       phone: '11999990000',
     });
-    await new DrizzlePatientRepository(appDb, CLINIC_A).save(patient);
+    await new DrizzlePatientRepository(appDb, CLINIC_A, TEST_CIPHER).save(
+      patient,
+    );
     const followUps = new DrizzleFollowUpRepository(appDb, CLINIC_A);
     const due = new Date('2026-07-01T12:00:00Z');
     const values = Array.from({ length: 501 }, () => {

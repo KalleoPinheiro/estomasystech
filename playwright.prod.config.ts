@@ -3,6 +3,7 @@ import base from "./playwright.config";
 import {
   E2E_AUTH_SECRET,
   E2E_BOOTSTRAP_TOKEN,
+  E2E_DATA_ENCRYPTION_KEY,
   MAIN_BASE_URL,
 } from "./e2e/support/constants";
 
@@ -40,6 +41,8 @@ export default defineConfig({
         TZ: "America/Sao_Paulo",
         APP_TIMEZONE: "America/Sao_Paulo",
         AUTH_SECRET: E2E_AUTH_SECRET,
+        // Produção exige a chave do dado clínico (#195, ADR-006).
+        DATA_ENCRYPTION_KEY: E2E_DATA_ENCRYPTION_KEY,
         VITTA_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
         APP_URL: MAIN_BASE_URL,
         API_RATE_LIMIT_MAX: "100000",

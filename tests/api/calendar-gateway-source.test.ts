@@ -61,6 +61,23 @@ describe('Feature: Origem da credencial do Google Agenda', () => {
     expect(resolved.constructor.name).toBe('GoogleCalendarGateway');
   });
 
+  it('data key: credencial cifrada com a chave de dados (#195) resolve o Google; a do formato legado acima também', async () => {
+    const { currentDataCipher, getRepositories } = await import(
+      '@/infrastructure/container'
+    );
+    const { googleAccounts } = await getRepositories(systemScope());
+    await googleAccounts.save({
+      email: 'equipe-agenda-v1@clinica.com',
+      encryptedRefreshToken: currentDataCipher().encrypt('refresh-token-v1'),
+      connectedAt: new Date(Date.now() + 1_000),
+    });
+
+    const { calendar } = await getRepositories(systemScope());
+    const resolved = await resolveCalendarGateway(calendar);
+
+    expect(resolved.constructor.name).toBe('GoogleCalendarGateway');
+  });
+
   it('Dada integração OAuth configurada, Quando montar os serviços, Então a credencial não é lida até o primeiro uso', async () => {
     const findMostRecent = vi.spyOn(
       DrizzleGoogleAccountRepository.prototype,

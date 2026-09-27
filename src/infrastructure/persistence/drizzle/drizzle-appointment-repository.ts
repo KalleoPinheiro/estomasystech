@@ -27,6 +27,7 @@ import type {
 import { SchedulingConflictError } from '@/domain/shared/errors';
 import { Money } from '@/domain/shared/money';
 import { TimeSlot } from '@/domain/shared/time-slot';
+import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { appointments } from './schema';
 import { withTenant } from './tenant-scope';
@@ -48,14 +49,14 @@ type AppointmentRow = typeof appointments.$inferSelect;
 
 const ACTIVE_STATUSES = ['scheduled', 'confirmed'];
 
-const toAppointment = (row: AppointmentRow): Appointment =>
+const toAppointment = (row: AppointmentRow, cipher: FieldCipher): Appointment =>
   Appointment.restore({
     id: row.id,
     patientId: row.patientId,
     slot: TimeSlot.create(row.startsAt, row.endsAt),
     procedure: row.procedure,
     price: Money.fromCents(row.priceCents),
-    notes: row.notes,
+    notes: cipher.decryptNullable(row.notes),
     status: row.status as AppointmentStatus,
     googleEventId: row.googleEventId,
     professionalId: row.professionalId,
@@ -81,6 +82,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   async save(appointment: Appointment): Promise<void> {
@@ -97,7 +99,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
       endsAt: appointment.slot.end,
       procedure: appointment.procedure,
       priceCents: appointment.price.cents,
-      notes: appointment.notes,
+      notes: this.cipher.encryptNullable(appointment.notes),
       status: appointment.status,
       googleEventId: appointment.googleEventId,
       professionalId: appointment.professionalId,
@@ -129,7 +131,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
       .from(appointments)
       .where(withTenant(appointments, this.clinicId, eq(appointments.id, id)))
       .limit(1);
-    return rows[0] ? toAppointment(rows[0]) : null;
+    return rows[0] ? toAppointment(rows[0], this.cipher) : null;
   }
 
   async findByIds(ids: string[]): Promise<Appointment[]> {
@@ -147,7 +149,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
           inArray(appointments.id, unique),
         ),
       );
-    return rows.map(toAppointment);
+    return rows.map((row) => toAppointment(row, this.cipher));
   }
 
   private patientConditions(
@@ -174,7 +176,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
         this.patientConditions(eq(appointments.patientId, patientId), options),
       )
       .orderBy(asc(appointments.startsAt));
-    return rows.map(toAppointment);
+    return rows.map((row) => toAppointment(row, this.cipher));
   }
 
   async findByPatientIds(
@@ -195,7 +197,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
         ),
       )
       .orderBy(asc(appointments.startsAt));
-    return rows.map(toAppointment);
+    return rows.map((row) => toAppointment(row, this.cipher));
   }
 
   async findInRange(
@@ -220,7 +222,7 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
         ),
       )
       .orderBy(asc(appointments.startsAt));
-    return rows.map(toAppointment);
+    return rows.map((row) => toAppointment(row, this.cipher));
   }
 
   async getStatsInRange(
@@ -300,6 +302,6 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
       .select()
       .from(appointments)
       .where(withTenant(appointments, this.clinicId, and(...conditions)));
-    return rows.map(toAppointment);
+    return rows.map((row) => toAppointment(row, this.cipher));
   }
 }

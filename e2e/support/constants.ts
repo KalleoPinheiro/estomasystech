@@ -57,6 +57,8 @@ const secretFromEnv = (name: string, bytes: number): string => {
 export const E2E_AUTH_SECRET = secretFromEnv("E2E_AUTH_SECRET", 32);
 /** Segredo de deploy que libera `POST /api/auth/bootstrap` na instalação limpa da suíte. */
 export const E2E_BOOTSTRAP_TOKEN = secretFromEnv("E2E_BOOTSTRAP_TOKEN", 18);
+/** Chave do dado clínico do servidor de produção da suíte (#195) — gerada por execução. */
+export const E2E_DATA_ENCRYPTION_KEY = secretFromEnv("E2E_DATA_ENCRYPTION_KEY", 32);
 
 /** Conta Super Admin criada pelo bootstrap e usada pelos specs de equipe. */
 export const E2E_ADMIN_EMAIL = "e2e-super-admin@vitta.test";

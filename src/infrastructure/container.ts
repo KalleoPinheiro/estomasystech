@@ -55,10 +55,9 @@ import type {
   NursingOutcomeRepository,
   TaxonomyLinkageRepository,
 } from '@/domain/taxonomy/taxonomy-repositories';
-import { decryptSecret } from '@/lib/auth/crypto';
 import { googleCalendarOAuthConfigFromEnv } from '@/lib/auth/google-calendar-oauth';
-import { getAuthConfig } from '@/lib/auth/session';
 import type { TenantScope } from '@/lib/auth/tenant-scope';
+import { type DataCipher, dataCipherFromEnv } from '@/lib/data-cipher';
 import { logError } from '@/lib/log-error';
 import {
   GoogleCalendarGateway,
@@ -130,6 +129,11 @@ import {
   type S3Sender,
   s3PhotoStorageConfigFromEnv,
 } from './storage/s3-photo-storage';
+import {
+  isVercelRuntime,
+  UnavailablePhotoStorage,
+  VERCEL_REQUIRES_S3_MESSAGE,
+} from './storage/unavailable-photo-storage';
 
 export interface Services {
   clinics: ClinicRepository;
@@ -184,15 +188,33 @@ const globalForServices = globalThis as unknown as {
   // chave reaproveitava a credencial OAuth de uma empresa em outra (issue #74).
   vittaCalendar?: Map<string, { key: string; gateway: CalendarGateway }>;
   vittaS3?: S3Sender;
+  vittaCipher?: { key: string; cipher: DataCipher };
 };
+
+/**
+ * Chaveiro do dado clínico (#195, ADR-006), um por processo. Refeito só se o
+ * ambiente mudar (testes trocam as variáveis entre casos).
+ */
+export function currentDataCipher(): DataCipher {
+  const env = process.env;
+  const key = [
+    env.NODE_ENV,
+    env.DATA_ENCRYPTION_KEY,
+    env.DATA_ENCRYPTION_KEY_PREVIOUS,
+    env.AUTH_SECRET,
+  ].join('\u0000');
+  if (globalForServices.vittaCipher?.key !== key) {
+    globalForServices.vittaCipher = { key, cipher: dataCipherFromEnv() };
+  }
+  return globalForServices.vittaCipher.cipher;
+}
 
 async function oauthCalendarGateway(
   db: AppDb,
   clinicId: string | null,
 ): Promise<{ key: string; gateway: CalendarGateway } | null> {
   const oauthConfig = googleCalendarOAuthConfigFromEnv();
-  const auth = getAuthConfig();
-  if (!oauthConfig || !auth) {
+  if (!oauthConfig) {
     return null;
   }
   const account = await new DrizzleGoogleAccountRepository(
@@ -203,9 +225,9 @@ async function oauthCalendarGateway(
     return null;
   }
   try {
-    const refreshToken = decryptSecret(
+    // Chave de dados (#195); token gravado antes dela é lido pelo legado.
+    const refreshToken = currentDataCipher().decrypt(
       account.encryptedRefreshToken,
-      auth.secret,
     );
     return {
       key: `oauth:${account.email}:${account.connectedAt.getTime()}`,
@@ -269,15 +291,24 @@ function calendarGatewayFor(
 
 /**
  * `PHOTO_STORAGE=s3` → bucket S3-compatível, compartilhado entre réplicas;
- * senão, disco local (volume Docker). Um `S3Client` por processo.
+ * senão, disco local (volume Docker). Um `S3Client` por processo. Na Vercel,
+ * sem bucket, nenhum disco serve: a foto sumiria com a instância (#206).
  */
-function buildPhotoStorage(clinicId: string): PhotoStorage {
+export function buildPhotoStorage(clinicId: string): PhotoStorage {
   const config = s3PhotoStorageConfigFromEnv();
+  if (!config && isVercelRuntime()) {
+    return new UnavailablePhotoStorage(VERCEL_REQUIRES_S3_MESSAGE);
+  }
   if (!config) {
     return new LocalPhotoStorage(undefined, clinicId);
   }
   globalForServices.vittaS3 ??= createS3Client(config);
-  return new S3PhotoStorage(globalForServices.vittaS3, config.bucket, clinicId);
+  return new S3PhotoStorage(
+    globalForServices.vittaS3,
+    config.bucket,
+    clinicId,
+    config.serverSideEncryption,
+  );
 }
 
 function buildMessagingGateway(): MessagingGateway {
@@ -291,15 +322,12 @@ function buildMessagingGateway(): MessagingGateway {
  */
 export async function getRepositories(tenant: TenantScope): Promise<Services> {
   const db = await getDb();
-  const auth = getAuthConfig();
-  if (!auth) {
-    throw new Error(
-      'AUTH_SECRET ausente — repositórios clínicos cifrados exigem o segredo de autenticação',
-    );
-  }
+  // Sem chave de dados (produção) ou sem AUTH_SECRET (dev), lança aqui:
+  // repositório clínico nunca grava em claro.
+  const cipher = currentDataCipher();
   return {
     clinics: new DrizzleClinicRepository(db),
-    patients: new DrizzlePatientRepository(db, tenant.clinicId),
+    patients: new DrizzlePatientRepository(db, tenant.clinicId, cipher),
     partners: new DrizzlePartnerRepository(db, tenant.clinicId),
     professionals: new DrizzleProfessionalRepository(db, tenant.clinicId),
     procedures: new DrizzleProcedureRepository(db, tenant.clinicId),
@@ -312,32 +340,32 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       db,
       tenant.clinicId,
     ),
-    waitlist: new DrizzleWaitlistRepository(db, tenant.clinicId),
+    waitlist: new DrizzleWaitlistRepository(db, tenant.clinicId, cipher),
     googleAccounts: new DrizzleGoogleAccountRepository(db, tenant.clinicId),
-    appointments: new DrizzleAppointmentRepository(db, tenant.clinicId),
+    appointments: new DrizzleAppointmentRepository(db, tenant.clinicId, cipher),
     invoices: new DrizzleInvoiceRepository(db, tenant.clinicId),
     producedSessions: new DrizzleProducedSessionRepository(db, tenant.clinicId),
     commissionPayouts: new DrizzleCommissionPayoutRepository(
       db,
       tenant.clinicId,
     ),
-    anamneses: new DrizzleAnamnesisRepository(db, tenant.clinicId),
-    evolutions: new DrizzleEvolutionNoteRepository(
-      db,
-      tenant.clinicId,
-      auth.secret,
-    ),
+    anamneses: new DrizzleAnamnesisRepository(db, tenant.clinicId, cipher),
+    evolutions: new DrizzleEvolutionNoteRepository(db, tenant.clinicId, cipher),
     conditions: new DrizzleClinicalConditionRepository(
       db,
       tenant.clinicId,
-      auth.secret,
+      cipher,
     ),
     assessments: new DrizzleConditionAssessmentRepository(
       db,
       tenant.clinicId,
-      auth.secret,
+      cipher,
     ),
-    conditionPhotos: new DrizzleConditionPhotoRepository(db, tenant.clinicId),
+    conditionPhotos: new DrizzleConditionPhotoRepository(
+      db,
+      tenant.clinicId,
+      cipher,
+    ),
     consentRecords: new DrizzleConsentRecordRepository(db, tenant.clinicId),
     nursingDiagnoses: new DrizzleNursingDiagnosisRepository(db),
     nursingOutcomes: new DrizzleNursingOutcomeRepository(db),
@@ -347,6 +375,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     carePlanDiagnoses: new DrizzleCarePlanDiagnosisRepository(
       db,
       tenant.clinicId,
+      cipher,
     ),
     carePlanOutcomes: new DrizzleCarePlanOutcomeRepository(db, tenant.clinicId),
     carePlanInterventions: new DrizzleCarePlanInterventionRepository(
@@ -356,10 +385,12 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     outcomeEvaluations: new DrizzleOutcomeEvaluationRepository(
       db,
       tenant.clinicId,
+      cipher,
     ),
     interventionRecords: new DrizzleInterventionRecordRepository(
       db,
       tenant.clinicId,
+      cipher,
     ),
     photoStorage: buildPhotoStorage(tenant.clinicId ?? LEGACY_CLINIC_ID),
     supplies: new DrizzleSupplyRepository(db, tenant.clinicId),
@@ -375,6 +406,6 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     calendar: calendarGatewayFor(db, tenant.clinicId),
     messaging: buildMessagingGateway(),
     email: buildEmailGateway(),
-    transactions: new DrizzleTransactionManager(db, tenant.clinicId),
+    transactions: new DrizzleTransactionManager(db, tenant.clinicId, cipher),
   };
 }

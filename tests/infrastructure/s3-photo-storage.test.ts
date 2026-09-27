@@ -125,6 +125,37 @@ describe('Feature: Fotos clínicas em bucket S3-compatível', () => {
   });
 
   describe('Configuração pelo ambiente', () => {
+    it('server side encryption: upload leva AES256 por padrão, aws:kms quando pedido e nada com provider (#195)', async () => {
+      const put = async (sse?: 'AES256' | 'aws:kms' | null) => {
+        const { client, sent } = fakeBucket();
+        const storage =
+          sse === undefined
+            ? new S3PhotoStorage(client, 'b', 'c')
+            : new S3PhotoStorage(client, 'b', 'c', sse);
+        await storage.write('foto', new Uint8Array([1]));
+        return sent[0].input;
+      };
+
+      expect((await put()).ServerSideEncryption).toBe('AES256');
+      expect((await put('aws:kms')).ServerSideEncryption).toBe('aws:kms');
+      expect(await put(null)).not.toHaveProperty('ServerSideEncryption');
+
+      Object.assign(process.env, S3_ENV);
+      for (const [value, expected] of [
+        [undefined, 'AES256'],
+        ['aws:kms', 'aws:kms'],
+        ['provider', null],
+      ] as const) {
+        if (value === undefined) delete process.env.S3_SSE;
+        else process.env.S3_SSE = value;
+        expect(s3PhotoStorageConfigFromEnv()?.serverSideEncryption).toBe(
+          expected,
+        );
+      }
+      process.env.S3_SSE = 'nenhum';
+      expect(() => s3PhotoStorageConfigFromEnv()).toThrow('S3_SSE inválido');
+    });
+
     it('Sem PHOTO_STORAGE=s3, Então não há configuração (disco local)', () => {
       delete process.env.PHOTO_STORAGE;
       expect(s3PhotoStorageConfigFromEnv()).toBeNull();
@@ -144,6 +175,7 @@ describe('Feature: Fotos clínicas em bucket S3-compatível', () => {
         accessKeyId: 'AKIA-TESTE',
         secretAccessKey: 'segredo-teste',
         forcePathStyle: true,
+        serverSideEncryption: 'AES256',
       });
     });
 
@@ -177,6 +209,7 @@ describe('Feature: Fotos clínicas em bucket S3-compatível', () => {
         accessKeyId: 'a',
         secretAccessKey: 's',
         forcePathStyle: false,
+        serverSideEncryption: 'AES256',
       });
 
       expect(await client.config.region()).toBe('auto');

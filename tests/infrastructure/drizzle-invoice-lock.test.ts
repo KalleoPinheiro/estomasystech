@@ -7,6 +7,7 @@ import type { AppDb } from '@/infrastructure/persistence/drizzle/db';
 import { DrizzleInvoiceRepository } from '@/infrastructure/persistence/drizzle/drizzle-invoice-repository';
 import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 /**
@@ -31,7 +32,9 @@ describe('Feature: leitura da fatura com lock de linha (#192)', () => {
       email: 'lock@x.com',
       phone: '11999990000',
     });
-    await new DrizzlePatientRepository(db, 'legacy-clinic').save(patient);
+    await new DrizzlePatientRepository(db, 'legacy-clinic', TEST_CIPHER).save(
+      patient,
+    );
     repo = new DrizzleInvoiceRepository(db, 'legacy-clinic');
     const invoice = Invoice.create({
       patientId: patient.id,
