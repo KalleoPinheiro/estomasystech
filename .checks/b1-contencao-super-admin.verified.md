@@ -1,5 +1,10 @@
 # B1 — Contenção do super_admin · Verification
 
+> **Situação depois do merge (#234):** a condição de fechamento do achado 1 foi cumprida. O dono
+> aceitou o comportamento do C24 em 2026-09-27 e o critério 21 foi reescrito em
+> `.tasks/b1-contencao-super-admin.md` (Unresolved 5). O veredito abaixo é o da rodada 2, mantido
+> como registro; ver o Adendo no fim.
+
 **Verdict**: FAIL, and it now rests on one owner decision. All 28 checks have green proofs with located assertions at b6bca41 (C28 is still author-reported). C24 still departs from criterion 21 of the binding task, and the owner has not accepted that change.
 **Profile**: light (no tlc-implement profile in AGENTS.md). Step 1, the Coverage join, the Test-policy verdicts and fault injection did not run.
 **Diff range**: 37d013e (origin/main)..b6bca41 (HEAD, `feat/b1-contencao-super-admin`)
@@ -61,3 +66,16 @@ Closed this round: round-1 findings 2 (C18), 4 (C4 identity), 5 (C11 messages) a
 ## Gate
 
 `npx vitest run` (12 files, all 34 proof patterns) - 389 passed, 0 failed, at b6bca41 · `npm run check:docs` - OK (carried from 6ac41d3; no docs in the fix diff) · targeted E2E - 17 passed (carried from 6ac41d3; no e2e/src in the fix diff) · full E2E dev/prod - author-reported (228 / 26 passed)
+
+## Adendo (2026-09-27, após o merge do #234)
+
+Registrado pelo autor, sem nova rodada do Verifier (nenhum código mudou):
+
+- **Achado 1 (C24 × critério 21): fechado.** O dono do produto aceitou o comportamento verificado
+  (sem sessão `401`, super_admin `403`, equipe da clínica `404`), e o critério 21 foi reescrito para
+  descrevê-lo. Os proofs do C24 na rodada 2 já cobrem cada cláusula da nova redação.
+- **Achado 2 (C28):** as duas suítes E2E passaram no CI do PR #234 (`E2E (Playwright)` na
+  re-execução, depois de uma falha no download de fontes antes de qualquer teste; `Build de
+  produção + E2E (next start)` na primeira execução).
+- **Achado 3:** notas de rastreabilidade, sem efeito na cobertura; seguem como estão.
+

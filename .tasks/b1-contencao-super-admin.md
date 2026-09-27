@@ -97,8 +97,10 @@ exclusivo do super_admin.
 20. Dada sessão `super_admin`, quando ela faz `POST /api/platform/taxonomy/import`, então a
     resposta é `200` com as mesmas contagens que a rota antiga devolve hoje. Uma segunda chamada
     não duplica termos (importação idempotente, como hoje).
-21. Quando alguém chama `POST /api/admin/taxonomy/import`, então recebe `404`: a rota não existe
-    mais.
+21. `POST /api/admin/taxonomy/import` não existe mais. Quem a chamava (a equipe da clínica)
+    recebe `404`. Sem sessão a resposta é `401`, e para o super_admin é `403`, como em qualquer
+    caminho de `/api` fora das famílias dele — o proxy não revela quais rotas existem. (Redação
+    ajustada pelo dono em 2026-09-27; ver Unresolved 5.)
 22. Dada sessão `company_admin`, quando ela chama `POST /api/platform/taxonomy/import`, então
     recebe `403` e o catálogo não muda.
 
@@ -210,7 +212,8 @@ This task is the record of decision. If a linked document diverges, ask before b
 ## Unresolved
 
 None. As 4 perguntas abertas foram confirmadas pelo dono do produto (@KalleoPinheiro) em
-2026-09-27, todas com a recomendação padrão:
+2026-09-27, todas com a recomendação padrão; a 5ª surgiu na verificação do build e foi decidida
+no mesmo dia:
 
 | # | Kind | Question | Decision (2026-09-27) |
 |---|---|---|---|
@@ -218,3 +221,4 @@ None. As 4 perguntas abertas foram confirmadas pelo dono do produto (@KalleoPinh
 | 2 | decided | A migração do critério 2 deve **falhar** diante de linhas inválidas ou **sanear**? | Falha sem alterar nada (critério 3) |
 | 3 | decided | `company_admin` que abre `/plataforma` deve ir para `/` ou ver uma tela "sem permissão"? | Redireciona para `/` — vale para `company_admin`, `atendente` e `profissional` (critério 10); o Journey 10 do design foi ajustado |
 | 4 | decided | O super_admin pode convidar o próprio e-mail como `company_admin` de uma clínica? | Sem bloqueio; o evento fica na auditoria da clínica (critério 19) |
+| 5 | decided | A rota removida `POST /api/admin/taxonomy/import` deve responder `404` a qualquer um, com exceção no proxy? | Não. Mantém a decisão por família no proxy: `404` para a equipe da clínica, `401` sem sessão, `403` para o super_admin — exceção só para uma rota que não existe contrariaria o fail-closed do ADR-002 e deixaria um anônimo distinguir rota existente de inexistente (critério 21, confirmado pelo dono em 2026-09-27, após o merge do #234) |
