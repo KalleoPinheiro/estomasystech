@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import {
   UserAccount,
   type UserAccountRepository,
@@ -137,6 +137,23 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
           userAccounts,
           this.clinicId,
           eq(userAccounts.email, email.trim().toLowerCase()),
+        ),
+      )
+      .limit(1);
+    return rows[0]
+      ? UserAccount.restore({ ...rows[0], role: toUserRole(rows[0].role) })
+      : null;
+  }
+
+  /** A conta de sistema (o super_admin), achada pelo papel — nunca pelo e-mail. */
+  async findSystemAccount(): Promise<UserAccount | null> {
+    const rows = await this.db
+      .select()
+      .from(userAccounts)
+      .where(
+        and(
+          eq(userAccounts.role, 'super_admin'),
+          isNull(userAccounts.clinicId),
         ),
       )
       .limit(1);
