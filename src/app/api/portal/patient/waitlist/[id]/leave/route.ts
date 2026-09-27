@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { ResolveWaitlistEntry } from '@/application/scheduling/waitlist';
-import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -19,10 +19,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const services = await getRepositories(writeScope(session));
-    const patient = await services.patients.findByEmail(session.subject);
-    if (!patient?.isActive) {
-      throw new NotFoundError('Paciente', session.subject);
-    }
+    const patient = await resolvePortalPatient(services, session);
     const entry = await new ResolveWaitlistEntry(services.waitlist).execute(
       id,
       'removed',

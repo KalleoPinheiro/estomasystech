@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { ConsentRecord } from '@/domain/consent/consent-record';
-import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -36,13 +36,9 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   return handleRequest(async () => {
-    const { patients, consentRecords } = await getRepositories(
-      sessionScope(auth.session),
-    );
-    const patient = await patients.findByEmail(auth.session.subject);
-    if (!patient) {
-      throw new NotFoundError('Paciente', auth.session.subject);
-    }
+    const services = await getRepositories(sessionScope(auth.session));
+    const { consentRecords } = services;
+    const patient = await resolvePortalPatient(services, auth.session);
     const records = await consentRecords.findByPatientId(patient.id);
     const status = ConsentRecord.resolveStatus(records, CONSENT_TEXT);
     return toConsentStatusDto(status);
@@ -55,13 +51,9 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   return handleRequest(async () => {
-    const { patients, consentRecords, auditEvents } = await getRepositories(
-      writeScope(auth.session),
-    );
-    const patient = await patients.findByEmail(auth.session.subject);
-    if (!patient?.isActive) {
-      throw new NotFoundError('Paciente', auth.session.subject);
-    }
+    const services = await getRepositories(writeScope(auth.session));
+    const { consentRecords, auditEvents } = services;
+    const patient = await resolvePortalPatient(services, auth.session);
 
     const existing = await consentRecords.findByPatientId(patient.id);
     const status = ConsentRecord.resolveStatus(existing, CONSENT_TEXT);

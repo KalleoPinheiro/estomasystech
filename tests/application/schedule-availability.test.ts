@@ -21,6 +21,7 @@ import {
 } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
+import { portalPatientId } from '../support/portal-identity';
 
 // 2026-07-20 = segunda. Testes rodam com TZ=UTC; grade padrão 8h–18h.
 describe('Feature: Agenda por profissional, almoço e feriados', () => {
@@ -165,7 +166,7 @@ describe('Feature: Agenda por profissional, almoço e feriados', () => {
       await procedures.save(curativo);
     });
 
-    const list = (date: string) =>
+    const list = async (date: string) =>
       new ListAvailableSlots(
         patients,
         appointments,
@@ -173,7 +174,7 @@ describe('Feature: Agenda por profissional, almoço e feriados', () => {
         scheduleConfig,
         availability,
       ).execute({
-        email: 'maria@example.com',
+        patientId: await portalPatientId(patients, 'maria@example.com'),
         procedureId: curativo.id,
         date,
         now,
@@ -227,7 +228,7 @@ describe('Feature: Agenda por profissional, almoço e feriados', () => {
         scheduleConfig,
         availability,
       ).execute({
-        email: 'maria@example.com',
+        patientId: await portalPatientId(patients, 'maria@example.com'),
         appointmentId: appointment.id,
         date: '2026-07-21',
         now,

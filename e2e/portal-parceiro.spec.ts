@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { addAssessment, createAppointment, createCondition, createPartner, createPatient, unique } from "./support/api";
+import { addAssessment, createAppointment, createCondition, createPartner, createPatient, unique, linkPortalAccount} from "./support/api";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
 import { sessionCookie } from "./support/session-token";
@@ -38,6 +38,8 @@ test.describe("portal do parceiro", () => {
     });
     await addAssessment(request, condition.id, { lengthMm: 20, widthMm: 10, depthMm: 2 });
 
+    await linkPortalAccount(request, "partner", partner);
+
     await context.addCookies([sessionCookie(partner.email, "partner")]);
     await page.goto("/portal");
 
@@ -53,6 +55,8 @@ test.describe("portal do parceiro", () => {
 
   test("parceiro sem pacientes indicados vê estado vazio", async ({ page, context, request }) => {
     const partner = await createPartner(request, { fullName: `Dr. Sem Indicação E2E ${unique()}` });
+
+    await linkPortalAccount(request, "partner", partner);
 
     await context.addCookies([sessionCookie(partner.email, "partner")]);
     await page.goto("/portal");

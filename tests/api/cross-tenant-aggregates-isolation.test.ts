@@ -7,6 +7,7 @@ import {
   CLINIC_B_ID,
   ensureTestClinics,
 } from '../support/clinics';
+import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
 
@@ -293,6 +294,7 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
       await createProcedure(CLINIC_B_ID, 'Procedimento portal B');
       const route = await import('@/app/api/portal/patient/procedures/route');
       const namesFor = async (clinicId: string) => {
+        await linkAllPortalAccounts();
         const response = await route.GET(
           jsonRequest(
             '/api/portal/patient/procedures',
@@ -320,6 +322,7 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
       await createPatient(CLINIC_B_ID, email, 'Paciente Da Clínica B');
       const route = await import('@/app/api/portal/patient/route');
       const nameFor = async (clinicId: string) => {
+        await linkAllPortalAccounts();
         const response = await route.GET(
           jsonRequest(
             '/api/portal/patient',
@@ -344,6 +347,7 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
       await createPatient(CLINIC_B_ID, email);
       const procedureB = await createProcedure(CLINIC_B_ID, 'Slots portal B');
       const route = await import('@/app/api/portal/patient/slots/route');
+      await linkAllPortalAccounts();
       const slotsFor = (clinicId: string) =>
         route.GET(
           jsonRequest(
@@ -375,6 +379,7 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
       expect(created.status).toBe(200);
 
       const route = await import('@/app/api/portal/partner/route');
+      await linkAllPortalAccounts();
       const openAs = (clinicId: string) =>
         route.GET(
           jsonRequest(

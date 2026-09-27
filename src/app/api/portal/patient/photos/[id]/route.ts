@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { fail } from '@/lib/api-response';
 import { requirePortalSession } from '@/lib/auth/require-session';
@@ -16,12 +17,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { session } = guard;
 
   const { id } = await context.params;
-  const { conditionPhotos, conditions, patients, photoStorage } =
-    await getRepositories(writeScope(session));
+  const services = await getRepositories(writeScope(session));
+  const { conditionPhotos, conditions, photoStorage } = services;
 
   const photo = await conditionPhotos.findById(id);
   const condition = photo ? await conditions.findById(photo.conditionId) : null;
-  const patient = await patients.findByEmail(session.subject);
+  const patient = await resolvePortalPatient(services, session).catch(
+    () => null,
+  );
   if (!photo || !condition || !patient || condition.patientId !== patient.id) {
     return fail('Foto não encontrada', 404);
   }

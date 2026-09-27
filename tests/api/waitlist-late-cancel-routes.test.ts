@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CLINIC_B_ID, ensureTestClinics } from '../support/clinics';
+import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -152,6 +153,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
         ).data.config.cancellationPolicy,
       ).toEqual({ noticeHours: 48, lateFeeCents: 3500 });
 
+      await linkAllPortalAccounts();
       const portal = await portalRoute.GET(
         jsonRequest('/api/portal/patient', 'GET', undefined, patientCookie()),
       );
@@ -262,6 +264,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
       await savePolicy({ noticeHours: 168, lateFeeCents: 4000 });
       const day = nextBusinessDay(2);
       const id = await createAppointment(at(day, 8), at(day, 9));
+      await linkAllPortalAccounts();
       const response = await cancelRoute.POST(
         jsonRequest(
           `/api/portal/patient/appointments/${id}/cancel`,
@@ -437,6 +440,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
     });
 
     it('Dado paciente no portal, Quando entrar na fila, listar e sair, Então só vê e mexe na própria entrada', async () => {
+      await linkAllPortalAccounts();
       const joined = await portalWaitlistRoute.POST(
         jsonRequest(
           '/api/portal/patient/waitlist',
@@ -450,6 +454,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
       ).data;
       expect(entry.source).toBe('patient');
 
+      await linkAllPortalAccounts();
       const mine = await portalWaitlistRoute.GET(
         jsonRequest(
           '/api/portal/patient/waitlist',
@@ -464,6 +469,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
         ),
       ).toEqual([entry.id]);
 
+      await linkAllPortalAccounts();
       const theirs = await portalLeaveRoute.POST(
         jsonRequest(
           `/api/portal/patient/waitlist/${entry.id}/leave`,
@@ -475,6 +481,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
       );
       expect(theirs.status).toBe(404);
 
+      await linkAllPortalAccounts();
       const left = await portalLeaveRoute.POST(
         jsonRequest(
           `/api/portal/patient/waitlist/${entry.id}/leave`,
@@ -487,6 +494,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
       expect(
         ((await left.json()) as Envelope<{ status: string }>).data.status,
       ).toBe('removed');
+      await linkAllPortalAccounts();
       const after = await portalWaitlistRoute.GET(
         jsonRequest(
           '/api/portal/patient/waitlist',
@@ -501,6 +509,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
     it('Dado paciente pedindo período começando ontem, Quando entrar pelo portal, Então 400', async () => {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
+      await linkAllPortalAccounts();
       const response = await portalWaitlistRoute.POST(
         jsonRequest(
           '/api/portal/patient/waitlist',
@@ -518,6 +527,7 @@ describe('Feature: Lista de espera e cancelamento tardio (rotas)', () => {
           cookie: '',
         }),
       );
+      await linkAllPortalAccounts();
       const partner = await portalWaitlistRoute.GET(
         jsonRequest(
           '/api/portal/patient/waitlist',

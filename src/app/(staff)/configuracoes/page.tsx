@@ -40,6 +40,7 @@ import { useSavableForm } from '@/lib/use-savable-form';
 import { CancellationPolicyFields } from './cancellation-policy-fields';
 import { ClosuresSection } from './closures-section';
 import { LunchBreakFields } from './lunch-break-fields';
+import { PortalLinkField } from './portal-link-field';
 
 // Papéis que uma conta Admin de Empresa pode cadastrar (PROVISIONING_MATRIX.company_admin,
 // src/domain/auth/role-hierarchy.ts) — super_admin fica fora desta tela por design.
@@ -671,6 +672,23 @@ function AccountRow({
   );
 }
 
+function missingLinkMessage(
+  role: AccountRole,
+  professionalId: string,
+  recordId: string,
+): string | null {
+  if (role === 'profissional' && !professionalId) {
+    return 'Selecione o profissional vinculado a esta conta';
+  }
+  if (role === 'patient' && !recordId) {
+    return 'Selecione o paciente dono desta conta de portal';
+  }
+  if (role === 'partner' && !recordId) {
+    return 'Selecione o parceiro dono desta conta de portal';
+  }
+  return null;
+}
+
 function AccountForm({
   professionals,
   onSaved,
@@ -682,15 +700,24 @@ function AccountForm({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AccountRole>('company_admin');
   const [professionalId, setProfessionalId] = useState('');
+  // Cadastro de paciente/parceiro dono da conta de portal (#196).
+  const [recordId, setRecordId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const requiresProfessional = role === 'profissional';
+  const portalRole = role === 'patient' || role === 'partner' ? role : null;
+
+  const changeRole = (next: AccountRole) => {
+    setRole(next);
+    setRecordId('');
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (requiresProfessional && !professionalId) {
-      setError('Selecione o profissional vinculado a esta conta');
+    const missing = missingLinkMessage(role, professionalId, recordId);
+    if (missing) {
+      setError(missing);
       return;
     }
     setSaving(true);
@@ -704,6 +731,9 @@ function AccountForm({
             email,
             role,
             professionalId: professionalId || null,
+            // Só nas contas de portal; ausentes (undefined) nas demais.
+            patientId: role === 'patient' ? recordId : undefined,
+            partnerId: role === 'partner' ? recordId : undefined,
           }),
         },
       );
@@ -739,7 +769,7 @@ function AccountForm({
         Papel *
         <NativeSelect
           value={role}
-          onChange={(e) => setRole(e.target.value as AccountRole)}
+          onChange={(e) => changeRole(e.target.value as AccountRole)}
           className="mt-1"
         >
           {ACCOUNT_ROLE_OPTIONS.map((option) => (
@@ -749,6 +779,21 @@ function AccountForm({
           ))}
         </NativeSelect>
       </label>
+      {portalRole && (
+        <>
+          <PortalLinkField
+            role={portalRole}
+            value={recordId}
+            onChange={setRecordId}
+            onSuggestEmail={(suggested) => setEmail(suggested)}
+          />
+          <p className="text-ink-3 text-sm">
+            O portal mostra os dados deste cadastro. O e-mail de login pode ser
+            outro (ex.: de quem cuida do paciente) e não muda se o e-mail do
+            cadastro for corrigido depois.
+          </p>
+        </>
+      )}
       <label className="font-medium text-sm">
         Profissional vinculado{requiresProfessional ? ' *' : ''}
         <NativeSelect

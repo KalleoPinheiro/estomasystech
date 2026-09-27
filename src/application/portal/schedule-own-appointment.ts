@@ -12,7 +12,8 @@ export interface ScheduleOwnAppointmentInput {
   /** Relógio da operação — injetável para teste. */
   now?: Date;
   /** Email da sessão — define o paciente, nunca vem do corpo da requisição. */
-  email: string;
+  /** Titular resolvido pelo vínculo da conta de portal (#196). */
+  patientId: string;
   procedureId: string;
   startsAt: Date;
   /** Retorno que originou o agendamento (recall de 1 clique do paciente). */
@@ -38,9 +39,9 @@ export class ScheduleOwnAppointment {
   ) {}
 
   async execute(input: ScheduleOwnAppointmentInput): Promise<Appointment> {
-    const patient = await this.patients.findByEmail(input.email);
+    const patient = await this.patients.findById(input.patientId);
     if (!patient?.isActive) {
-      throw new NotFoundError('Paciente', input.email);
+      throw new NotFoundError('Paciente', input.patientId);
     }
 
     const procedure = await this.procedures.findById(input.procedureId);

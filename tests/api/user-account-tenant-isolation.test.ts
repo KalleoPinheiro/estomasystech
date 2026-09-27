@@ -4,6 +4,7 @@ import {
   CLINIC_B_ID,
   ensureTestClinics,
 } from '../support/clinics';
+import { seedPortalRecord } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader } from '../support/session';
 
@@ -22,7 +23,12 @@ describe('Feature: Isolamento de Conta de Usuário e e-mail único por empresa (
       jsonRequest(
         '/api/accounts',
         'POST',
-        { email, password: 'senha-forte-123', role: 'patient' },
+        {
+          email,
+          password: 'senha-forte-123',
+          role: 'patient',
+          patientId: await seedPortalRecord('patient', clinicId),
+        },
         adminCookieHeader(clinicId),
       ),
     );

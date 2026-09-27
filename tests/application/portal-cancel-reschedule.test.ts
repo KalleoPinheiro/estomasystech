@@ -19,6 +19,7 @@ import {
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import { InMemoryProcedureRepository } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { portalPatientId } from '../support/portal-identity';
 
 // 2026-07-20 = segunda. Testes rodam com TZ=UTC; grade padrão 8h–18h.
 describe('Feature: Paciente cancela e remarca a própria consulta (portal)', () => {
@@ -58,21 +59,25 @@ describe('Feature: Paciente cancela e remarca a própria consulta (portal)', () 
     );
   });
 
-  const cancel = (now: Date, email = 'maria@example.com', reason?: string) =>
+  const cancel = async (
+    now: Date,
+    email = 'maria@example.com',
+    reason?: string,
+  ) =>
     new CancelOwnAppointment(patientRepo, appointmentRepo).execute({
-      email,
+      patientId: await portalPatientId(patientRepo, email),
       appointmentId: appointment.id,
       reason,
       now,
     });
 
-  const reschedule = (
+  const reschedule = async (
     startsAt: string,
     now = beforeDeadline,
     email = 'maria@example.com',
   ) =>
     new RescheduleOwnAppointment(patientRepo, appointmentRepo).execute({
-      email,
+      patientId: await portalPatientId(patientRepo, email),
       appointmentId: appointment.id,
       startsAt: new Date(startsAt),
       now,
@@ -213,13 +218,13 @@ describe('Feature: Paciente cancela e remarca a própria consulta (portal)', () 
   });
 
   describe('Horários para remarcar', () => {
-    const list = (date: string, email = 'maria@example.com') =>
+    const list = async (date: string, email = 'maria@example.com') =>
       new ListAvailableSlots(
         patientRepo,
         appointmentRepo,
         new InMemoryProcedureRepository(),
       ).execute({
-        email,
+        patientId: await portalPatientId(patientRepo, email),
         appointmentId: appointment.id,
         date,
         now: beforeDeadline,

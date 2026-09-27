@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -204,6 +205,23 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
       }),
       context(referredPatientId),
     );
+
+    // Contas de portal vinculadas aos cadastros (#196).
+    await linkPortalAccount({
+      role: 'patient',
+      email: patientEmail,
+      recordId: patientId,
+    });
+    await linkPortalAccount({
+      role: 'patient',
+      email: otherPatientEmail,
+      recordId: otherPatientId,
+    });
+    await linkPortalAccount({
+      role: 'partner',
+      email: partnerEmail,
+      recordId: partnerId,
+    });
 
     const expiresAtMs = Date.now() + 3_600_000;
     patientCookieToken = createSessionToken(

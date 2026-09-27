@@ -10,12 +10,12 @@ import { NotFoundError } from '@/domain/shared/errors';
 export async function findOwnAppointment(
   patients: PatientRepository,
   appointments: AppointmentRepository,
-  email: string,
+  patientId: string,
   appointmentId: string,
 ): Promise<Appointment> {
-  const patient = await patients.findByEmail(email);
+  const patient = await patients.findById(patientId);
   if (!patient?.isActive) {
-    throw new NotFoundError('Paciente', email);
+    throw new NotFoundError('Paciente', patientId);
   }
   const appointment = await appointments.findById(appointmentId);
   if (!appointment || appointment.patientId !== patient.id) {

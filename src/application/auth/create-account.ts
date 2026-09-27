@@ -23,6 +23,10 @@ export interface CreateAccountInput {
   /** Empresa-alvo da nova conta. Obrigatório mesmo para super_admin (ele escolhe a empresa). */
   clinicId: string;
   professionalId?: string | null;
+  /** Cadastro de paciente dono da conta — obrigatório no papel `patient` (#196). */
+  patientId?: string | null;
+  /** Cadastro de parceiro dono da conta — obrigatório no papel `partner` (#196). */
+  partnerId?: string | null;
 }
 
 /**
@@ -56,6 +60,8 @@ export class CreateAccount {
       );
     }
 
+    await this.assertPortalLink(input);
+
     const existing = await this.accounts.findByEmail(input.email);
     if (existing) {
       throw new ValidationError('Já existe conta com este email');
@@ -67,8 +73,43 @@ export class CreateAccount {
       role: input.role,
       clinicId: input.clinicId,
       professionalId: input.professionalId ?? null,
+      patientId: input.role === 'patient' ? (input.patientId ?? null) : null,
+      partnerId: input.role === 'partner' ? (input.partnerId ?? null) : null,
     });
     await this.accounts.save(account);
     return account;
+  }
+
+  /**
+   * Conta de portal nasce vinculada ao cadastro (#196): o portal resolve o
+   * titular por esse vínculo, nunca pelo e-mail. Um acesso por cadastro. A
+   * existência do cadastro na empresa é validada pela rota, que tem os
+   * repositórios de paciente e parceiro.
+   */
+  private async assertPortalLink(input: CreateAccountInput): Promise<void> {
+    if (input.role === 'patient') {
+      if (!input.patientId) {
+        throw new ValidationError(
+          'patientId é obrigatório para o papel paciente',
+        );
+      }
+      if (
+        await this.accounts.findByPortalLink({ patientId: input.patientId })
+      ) {
+        throw new ValidationError('Este paciente já tem acesso ao portal');
+      }
+    }
+    if (input.role === 'partner') {
+      if (!input.partnerId) {
+        throw new ValidationError(
+          'partnerId é obrigatório para o papel parceiro',
+        );
+      }
+      if (
+        await this.accounts.findByPortalLink({ partnerId: input.partnerId })
+      ) {
+        throw new ValidationError('Este parceiro já tem acesso ao portal');
+      }
+    }
   }
 }

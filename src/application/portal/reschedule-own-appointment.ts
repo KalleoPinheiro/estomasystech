@@ -13,7 +13,8 @@ import { findOwnAppointment } from './own-appointment';
 
 export interface RescheduleOwnAppointmentInput {
   /** Email da sessão — define o paciente, nunca vem do corpo da requisição. */
-  email: string;
+  /** Titular resolvido pelo vínculo da conta de portal (#196). */
+  patientId: string;
   appointmentId: string;
   startsAt: Date;
   now?: Date;
@@ -36,7 +37,7 @@ export class RescheduleOwnAppointment {
     const appointment = await findOwnAppointment(
       this.patients,
       this.appointments,
-      input.email,
+      input.patientId,
       input.appointmentId,
     );
     const now = input.now ?? new Date();

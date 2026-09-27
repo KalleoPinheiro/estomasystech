@@ -14,6 +14,7 @@ import {
 } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { portalPatientId } from '../support/portal-identity';
 
 // 2026-07-20 = segunda; 2026-07-25 = sábado. Testes rodam com TZ=UTC.
 describe('Feature: Horários disponíveis para o paciente agendar (PORT4-01..03)', () => {
@@ -42,14 +43,14 @@ describe('Feature: Horários disponíveis para o paciente agendar (PORT4-01..03)
     await procedureRepo.save(curativo);
   });
 
-  const listSlots = (
+  const listSlots = async (
     date: string,
     email = 'maria@example.com',
     procedureId = curativo.id,
   ) =>
     new ListAvailableSlots(patientRepo, appointmentRepo, procedureRepo).execute(
       {
-        email,
+        patientId: await portalPatientId(patientRepo, email),
         procedureId,
         date,
         now,
@@ -107,7 +108,7 @@ describe('Feature: Horários disponíveis para o paciente agendar (PORT4-01..03)
       procedureRepo,
       scheduleConfig,
     ).execute({
-      email: 'maria@example.com',
+      patientId: await portalPatientId(patientRepo, 'maria@example.com'),
       procedureId: curativo.id,
       date: '2026-07-25', // sábado
       now,
@@ -161,7 +162,7 @@ describe('Feature: Horários disponíveis para o paciente agendar (PORT4-01..03)
       appointmentRepo,
       procedureRepo,
     ).execute({
-      email: 'maria@example.com',
+      patientId: await portalPatientId(patientRepo, 'maria@example.com'),
       procedureId: curativo.id,
       date: '2026-07-20',
       now: new Date('2026-07-20T13:30:00Z'),
@@ -214,7 +215,7 @@ describe('Feature: Paciente agenda o próprio retorno (PORT4-04..07)', () => {
     await procedureRepo.save(curativo);
   });
 
-  const schedule = (
+  const schedule = async (
     input: {
       email?: string;
       procedureId?: string;
@@ -228,7 +229,10 @@ describe('Feature: Paciente agenda o próprio retorno (PORT4-04..07)', () => {
       procedureRepo,
       followUpRepo,
     ).execute({
-      email: input.email ?? 'maria@example.com',
+      patientId: await portalPatientId(
+        patientRepo,
+        input.email ?? 'maria@example.com',
+      ),
       procedureId: input.procedureId ?? curativo.id,
       startsAt: new Date(input.startsAt ?? '2026-07-20T09:00:00Z'),
       followUpId: input.followUpId ?? null,
@@ -265,7 +269,7 @@ describe('Feature: Paciente agenda o próprio retorno (PORT4-04..07)', () => {
         followUpRepo,
         scheduleConfig,
       ).execute({
-        email: 'maria@example.com',
+        patientId: await portalPatientId(patientRepo, 'maria@example.com'),
         procedureId: curativo.id,
         startsAt: new Date('2026-07-20T09:00:00Z'), // antes da abertura configurada
         now: new Date('2026-07-19T12:00:00Z'),
@@ -283,7 +287,7 @@ describe('Feature: Paciente agenda o próprio retorno (PORT4-04..07)', () => {
         procedureRepo,
         followUpRepo,
       ).execute({
-        email: 'maria@example.com',
+        patientId: await portalPatientId(patientRepo, 'maria@example.com'),
         procedureId: curativo.id,
         startsAt: new Date('2026-07-20T09:00:00Z'),
         now: new Date('2026-07-20T14:00:00Z'),

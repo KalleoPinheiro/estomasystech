@@ -11,6 +11,7 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "db:migrate": "drizzle-kit migrate",
+    "db:portal-orphans": "tsx scripts/report-portal-orphans.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:changed": "vitest run --changed",

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { linkAllPortalAccounts } from '../support/portal-account';
 import { cookieHeaderFor } from '../support/session';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -173,6 +174,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-01T11:00:00.000Z',
         '2027-02-01T12:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       const response = await cancel(
         id,
         cookieHeaderFor('partner', PARTNER_EMAIL),
@@ -185,6 +187,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-01T13:00:00.000Z',
         '2027-02-01T14:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       expect((await cancel(id, otherCookie())).status).toBe(404);
       expect((await staffGet(id)).status).toBe('scheduled');
     });
@@ -195,6 +198,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-02T10:00:00.000Z',
       );
 
+      await linkAllPortalAccounts();
       const response = await cancel(id, patientCookie(), {
         reason: '  Viagem a trabalho  ',
       });
@@ -219,6 +223,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-02T11:00:00.000Z',
         '2027-02-02T12:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       await cancel(id, patientCookie());
 
       // A auditoria é gravada fora da resposta: espera ela aparecer.
@@ -262,8 +267,10 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-02T13:00:00.000Z',
         '2027-02-02T14:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       await cancel(id, patientCookie(), { reason: 'Primeiro motivo' });
 
+      await linkAllPortalAccounts();
       const again = await cancel(id, patientCookie(), { reason: 'Outro' });
 
       expect(again.status).toBe(200);
@@ -285,6 +292,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         context(id),
       );
 
+      await linkAllPortalAccounts();
       const response = await cancel(id, patientCookie());
 
       expect(response.status).toBe(400);
@@ -299,6 +307,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-03T09:00:00.000Z',
         '2027-02-03T10:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       const response = await cancel(id, patientCookie(), {
         reason: 'x'.repeat(1001),
       });
@@ -327,6 +336,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-04T11:00:00.000Z',
         '2027-02-04T12:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       const response = await reschedule(id, otherCookie(), {
         startsAt: '2027-02-05T15:00:00.000Z',
       });
@@ -340,6 +350,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-08T09:45:00.000Z',
       );
 
+      await linkAllPortalAccounts();
       const response = await reschedule(id, patientCookie(), {
         startsAt: '2027-02-09T14:00:00.000Z',
       });
@@ -363,6 +374,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-10T10:00:00.000Z',
       );
 
+      await linkAllPortalAccounts();
       const response = await reschedule(id, patientCookie(), {
         startsAt: '2027-02-10T14:00:00.000Z',
       });
@@ -376,6 +388,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-11T09:00:00.000Z',
         '2027-02-11T10:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       const response = await reschedule(id, patientCookie(), {
         startsAt: '2027-02-13T10:00:00.000Z',
       });
@@ -387,6 +400,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-11T11:00:00.000Z',
         '2027-02-11T12:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       const response = await reschedule(id, patientCookie(), {
         startsAt: 'amanhã',
       });
@@ -411,6 +425,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-15T10:30:00.000Z',
       );
 
+      await linkAllPortalAccounts();
       const response = await slots(
         `appointmentId=${id}&date=2027-02-15`,
         patientCookie(),
@@ -431,6 +446,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         '2027-02-16T10:00:00.000Z',
         '2027-02-16T11:00:00.000Z',
       );
+      await linkAllPortalAccounts();
       const response = await slots(
         `appointmentId=${id}&date=2027-02-16`,
         otherCookie(),
@@ -439,6 +455,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
     });
 
     it('Dado procedureId e appointmentId juntos, Quando listar, Então 400', async () => {
+      await linkAllPortalAccounts();
       const response = await slots(
         'appointmentId=a&procedureId=b&date=2027-02-16',
         patientCookie(),

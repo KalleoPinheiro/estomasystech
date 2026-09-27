@@ -3,7 +3,7 @@ title: "Domínio: Portal do paciente e do parceiro"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-24
+last_reviewed: 2026-09-26
 domain: portal
 ---
 
@@ -28,6 +28,9 @@ indicou. O papel da sessão escolhe a visão.
 | POR-RN-05 | Auto-agendamento usa a mesma regra de disponibilidade da equipe; sem profissional, só fechamentos da empresa se aplicam | `assert-slot-available.ts` |
 | POR-RN-06 | Parceiro vê consultas e evolução dos indicados — sem financeiro e sem anamnese | `src/application/portal/get-partner-portal-data.ts` |
 | POR-RN-07 | Paciente nunca se autocadastra: a conta é criada pela equipe | [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) |
+| POR-RN-08 | O portal identifica o titular pelo **vínculo da conta** (`user_accounts.patient_id`/`partner_id`), nunca pelo e-mail do cadastro: conta ativa, do mesmo papel da sessão e vinculada a cadastro ativo; senão `404`. Corrigir ou reaproveitar o e-mail do cadastro não muda o que a conta vê | `src/application/portal/portal-identity.ts` ([#196](https://github.com/KalleoPinheiro/vitta-flow/issues/196)) |
+| POR-RN-09 | Conta `patient` exige `patientId` e conta `partner` exige `partnerId` do cadastro na mesma empresa (`400` sem vínculo, com cadastro de outra empresa ou inexistente); um acesso por cadastro. O e-mail de login é livre (ex.: de quem cuida do paciente) e não acompanha correções do cadastro | `src/application/auth/create-account.ts`, `src/app/api/accounts/route.ts` |
+| POR-RN-10 | Contas de portal existentes antes do vínculo foram ligadas pelo e-mail atual, na mesma empresa (migração `0040`); as que não casaram ficam sem acesso e aparecem em `npm run db:portal-orphans` | `drizzle/0040_portal-account-link.sql`, `scripts/report-portal-orphans.ts` |
 
 ## Funcionalidades
 
@@ -50,7 +53,7 @@ Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-port
 | API | `src/app/api/portal/{me,patient,partner}/` |
 | UI | `src/app/portal/` |
 | layout mobile | regras de toque e de grid da `@still-void/ui@3.4.0`; só o alvo de toque de link segue local (`.portal-shell` em `src/app/globals.css`, lacuna `touch-target-size` em [`still-void-gaps.md`](../../still-void-gaps.md)) |
-| testes | `tests/application/`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo,layout-mobile-first}.spec.ts` |
+| testes | `tests/application/`, `tests/api/portal-identity.test.ts`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo,layout-mobile-first}.spec.ts` |
 
 ## Decisões
 

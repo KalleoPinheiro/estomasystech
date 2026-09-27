@@ -427,3 +427,21 @@ export async function createFollowUp(
     appointmentId: null,
   });
 }
+
+/**
+ * Conta de portal vinculada ao cadastro (#196), criada pela API da tela de
+ * Contas com a sessão de admin. O portal resolve o titular pela conta — um
+ * cookie forjado para o e-mail do cadastro, sem ela, recebe 404. Sem convite
+ * consumido: a suíte forja a sessão (`sessionCookie`), não faz login.
+ */
+export async function linkPortalAccount(
+  request: APIRequestContext,
+  role: "patient" | "partner",
+  record: { id: string; email: string },
+): Promise<void> {
+  await apiPost(request, "/api/accounts", {
+    email: record.email,
+    role,
+    ...(role === "patient" ? { patientId: record.id } : { partnerId: record.id }),
+  });
+}

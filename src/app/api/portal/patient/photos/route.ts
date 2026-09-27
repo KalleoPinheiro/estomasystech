@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { AddConditionPhoto } from '@/application/clinical/add-condition-photo';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { MAX_PHOTO_BYTES } from '@/domain/clinical/condition-photo';
 import { ConsentRecord } from '@/domain/consent/consent-record';
 import {
@@ -40,16 +41,19 @@ export async function POST(request: NextRequest) {
   const note = form?.get('note');
 
   return handleRequest(async () => {
+    const services = await getRepositories(writeScope(session));
     const {
-      patients,
       conditions,
       conditionPhotos,
       consentRecords,
       photoStorage,
       auditEvents,
-    } = await getRepositories(writeScope(session));
+    } = services;
 
-    const patient = await patients.findByEmail(session.subject);
+    // Sem titular vinculado, a resposta é a mesma de condição alheia (404).
+    const patient = await resolvePortalPatient(services, session).catch(
+      () => null,
+    );
     const condition = await conditions.findById(conditionId);
     // Escopo da sessão: só condição do próprio paciente, e ativa.
     if (!patient || !condition || condition.patientId !== patient.id) {

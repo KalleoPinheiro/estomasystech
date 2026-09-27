@@ -5,7 +5,8 @@ import { ValidationError } from '@/domain/shared/errors';
 import { findOwnAppointment } from './own-appointment';
 
 export interface ConfirmOwnAppointmentInput {
-  email: string;
+  /** Titular resolvido pelo vínculo da conta de portal (#196). */
+  patientId: string;
   appointmentId: string;
   now?: Date;
 }
@@ -25,7 +26,7 @@ export class ConfirmOwnAppointment {
     const appointment = await findOwnAppointment(
       this.patients,
       this.appointments,
-      input.email,
+      input.patientId,
       input.appointmentId,
     );
 

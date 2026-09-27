@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createCondition, createPatient, unique } from "./support/api";
+import { createCondition, createPatient, unique, linkPortalAccount} from "./support/api";
 import { sessionCookie } from "./support/session-token";
 import { rx } from "./support/regexp";
 
@@ -37,6 +37,7 @@ async function uploadPatientPhoto(
 test.describe("triagem de fotos", () => {
   test("mantém o plano: foto sai da fila sem gerar retorno", async ({ page, request }) => {
     const patient = await createPatient(request, { fullName: `Paciente Triagem OK ${unique()}` });
+    await linkPortalAccount(request, "patient", patient);
     const condition = await createCondition(request, patient.id, {
       kind: "wound",
       title: `Ferida triagem OK ${unique()}`,
@@ -67,6 +68,7 @@ test.describe("triagem de fotos", () => {
     request,
   }) => {
     const patient = await createPatient(request, { fullName: `Paciente Triagem Escalada ${unique()}` });
+    await linkPortalAccount(request, "patient", patient);
     const condition = await createCondition(request, patient.id, {
       kind: "wound",
       title: `Ferida triagem escalada ${unique()}`,

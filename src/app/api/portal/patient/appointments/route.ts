@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { ScheduleOwnAppointment } from '@/application/portal/schedule-own-appointment';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       services.scheduleConfig,
       services.scheduleAvailability,
     ).execute({
-      email: session.subject,
+      patientId: (await resolvePortalPatient(services, session)).id,
       procedureId: body.procedureId,
       startsAt: new Date(body.startsAt),
       followUpId: body.followUpId ?? null,

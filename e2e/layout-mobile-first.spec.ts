@@ -22,6 +22,7 @@ import {
   createProcedure,
   createProfessional,
   createSupply,
+  linkPortalAccount,
   unique,
 } from "./support/api";
 import { type SlotSeed, slotForAttempt } from "./support/dates";
@@ -63,6 +64,8 @@ async function seedWorld(request: APIRequestContext): Promise<World> {
     fullName: `Maria Aparecida Layout ${unique()}`,
     referredByPartnerId: partner.id,
   });
+  await linkPortalAccount(request, "partner", partner);
+  await linkPortalAccount(request, "patient", patient);
   const condition = await createCondition(request, patient.id, {
     kind: "wound",
     title: `Lesão por pressão sacral ${unique()}`,

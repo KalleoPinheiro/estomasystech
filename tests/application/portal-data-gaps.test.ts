@@ -19,6 +19,7 @@ import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memo
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { portalPartnerId, portalPatientId } from '../support/portal-identity';
 
 const JPEG_BYTES = new Uint8Array([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
@@ -70,7 +71,9 @@ describe('Feature: Lacunas de cobertura — dados dos portais (paciente e parcei
       });
 
       await expect(
-        patientPortal().execute({ email: 'maria@example.com' }),
+        patientPortal().execute({
+          patientId: await portalPatientId(patientRepo, 'maria@example.com'),
+        }),
       ).rejects.toThrow(NotFoundError);
     });
   });
@@ -92,7 +95,7 @@ describe('Feature: Lacunas de cobertura — dados dos portais (paciente e parcei
       }).execute({ conditionId: condition.id, data: JPEG_BYTES });
 
       const data = await patientPortal(photoRepo).execute({
-        email: 'maria@example.com',
+        patientId: maria.id,
       });
 
       expect(data.conditions).toHaveLength(1);
@@ -107,7 +110,7 @@ describe('Feature: Lacunas de cobertura — dados dos portais (paciente e parcei
       });
 
       const data = await patientPortal().execute({
-        email: 'maria@example.com',
+        patientId: maria.id,
       });
 
       expect(data.conditions).toHaveLength(1);
@@ -134,7 +137,9 @@ describe('Feature: Lacunas de cobertura — dados dos portais (paciente e parcei
           appointmentRepo,
           conditionRepo,
           assessmentRepo,
-        ).execute({ email: 'dr.carlos@x.com' }),
+        ).execute({
+          partnerId: await portalPartnerId(partnerRepo, 'dr.carlos@x.com'),
+        }),
       ).rejects.toThrow(NotFoundError);
     });
   });
@@ -159,7 +164,9 @@ describe('Feature: Lacunas de cobertura — dados dos portais (paciente e parcei
         appointmentRepo,
         conditionRepo,
         assessmentRepo,
-      ).execute({ email: 'dr.carlos@x.com' });
+      ).execute({
+        partnerId: await portalPartnerId(partnerRepo, 'dr.carlos@x.com'),
+      });
 
       expect(data.referredPatients).toHaveLength(1);
       expect(data.referredPatients[0].appointments).toEqual([]);

@@ -17,7 +17,8 @@ import { findOwnAppointment } from './own-appointment';
 
 export type ListAvailableSlotsInput = {
   /** Email da sessão do paciente — escopo obrigatório. */
-  email: string;
+  /** Titular resolvido pelo vínculo da conta de portal (#196). */
+  patientId: string;
   /** Dia local no formato AAAA-MM-DD. */
   date: string;
   now?: Date;
@@ -100,7 +101,7 @@ export class ListAvailableSlots {
       const appointment = await findOwnAppointment(
         this.patients,
         this.appointments,
-        input.email,
+        input.patientId,
         input.appointmentId,
       );
       return {
@@ -112,17 +113,17 @@ export class ListAvailableSlots {
         excludeId: appointment.id,
       };
     }
-    await this.assertActivePatient(input.email);
+    await this.assertActivePatient(input.patientId);
     const procedure = await this.assertOfferableProcedure(input.procedureId);
     // Sem profissional: regra global de conflito (default seguro).
     return { durationMinutes: procedure.durationMinutes, professionalId: null };
   }
 
   /** Escopo da sessão: só paciente cadastrado e ativo consulta horários. */
-  private async assertActivePatient(email: string): Promise<void> {
-    const patient = await this.patients.findByEmail(email);
+  private async assertActivePatient(patientId: string): Promise<void> {
+    const patient = await this.patients.findById(patientId);
     if (!patient?.isActive) {
-      throw new NotFoundError('Paciente', email);
+      throw new NotFoundError('Paciente', patientId);
     }
   }
 

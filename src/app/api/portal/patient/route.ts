@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { GetPatientPortalData } from '@/application/portal/get-patient-portal-data';
+import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { cancellationPolicyOf } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -42,7 +43,9 @@ export async function GET(request: NextRequest) {
       invoices,
       followUps,
       conditionPhotos,
-    ).execute({ email: session.subject });
+    ).execute({
+      patientId: (await resolvePortalPatient(services, session)).id,
+    });
 
     recordAudit(services.auditEvents, session, {
       action: 'read',

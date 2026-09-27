@@ -49,10 +49,10 @@ export class GetPartnerPortalData {
     private readonly assessments: ConditionAssessmentRepository,
   ) {}
 
-  async execute(input: { email: string }): Promise<PartnerPortalData> {
-    const partner = await this.partners.findByEmail(input.email);
+  async execute(input: { partnerId: string }): Promise<PartnerPortalData> {
+    const partner = await this.partners.findById(input.partnerId);
     if (!partner?.isActive) {
-      throw new NotFoundError('Parceiro', input.email);
+      throw new NotFoundError('Parceiro', input.partnerId);
     }
 
     const referred = await this.patients.findByReferrer(partner.id);
