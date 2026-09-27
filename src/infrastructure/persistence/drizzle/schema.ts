@@ -12,22 +12,36 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
-export const clinics = pgTable('clinics', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at', {
-    withTimezone: true,
-    mode: 'date',
-  }).notNull(),
-  createdBy: text('created_by').notNull(),
-  // Dados cadastrais (issue #61) — usados no cabeçalho/rodapé de documentos
-  // clínicos emitidos (issue #62). Nullable: nem toda instalação os preencheu ainda.
-  cnpj: text('cnpj'),
-  address: text('address'),
-  city: text('city'),
-  professionalName: text('professional_name'),
-  professionalRegistry: text('professional_registry'),
-});
+export const clinics = pgTable(
+  'clinics',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+    createdBy: text('created_by').notNull(),
+    // Dados cadastrais (issue #61) — usados no cabeçalho/rodapé de documentos
+    // clínicos emitidos (issue #62). Nullable: nem toda instalação os preencheu ainda.
+    cnpj: text('cnpj'),
+    address: text('address'),
+    city: text('city'),
+    professionalName: text('professional_name'),
+    professionalRegistry: text('professional_registry'),
+    // Contato da clínica com a plataforma (B4, #214). Nullable: a `legacy-clinic`
+    // nasceu sem ele e aparece como "cadastro incompleto".
+    contactPhone: text('contact_phone'),
+    contactEmail: text('contact_email'),
+  },
+  (table) => [
+    // CNPJ repetido entre clínicas é recusado (design, Open 1); filiais têm CNPJ
+    // próprio. Gravado na forma canônica (`normalizeCnpj`).
+    uniqueIndex('uq_clinics_cnpj')
+      .on(table.cnpj)
+      .where(sql`${table.cnpj} IS NOT NULL`),
+  ],
+);
 
 export const partners = pgTable(
   'partners',

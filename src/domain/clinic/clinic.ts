@@ -1,22 +1,39 @@
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
+import { normalizeCnpj } from './cnpj';
 
-export interface ClinicProps {
-  name: string;
-  createdBy: string;
-}
-
-/** Dados cadastrais (issue #61) — usados em documentos clínicos emitidos (issue #62). */
+/**
+ * Dados cadastrais (issue #61) — usados em documentos clínicos emitidos (issue
+ * #62). O contato (B4, #214) é por onde a plataforma fala com a clínica.
+ */
 export interface ClinicInfoFields {
   cnpj?: string | null;
   address?: string | null;
   city?: string | null;
   professionalName?: string | null;
   professionalRegistry?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
 }
 
-export interface ClinicState extends ClinicProps, ClinicInfoFields {
+/**
+ * Cadastro de uma clínica nova pela plataforma (B4): nome, CNPJ, telefone e
+ * e-mail de contato obrigatórios; responsável técnico opcional.
+ */
+export interface ClinicProps {
+  name: string;
+  cnpj: string;
+  contactPhone: string;
+  contactEmail: string;
+  professionalName?: string | null;
+  professionalRegistry?: string | null;
+  createdBy: string;
+}
+
+export interface ClinicState extends ClinicInfoFields {
   id: string;
+  name: string;
+  createdBy: string;
   createdAt: Date;
 }
 
@@ -37,9 +54,27 @@ export function isClinicInfoComplete(
   );
 }
 
-const normalizeField = (value: string | null | undefined): string | null => {
+const CONTACT_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const trimToNull = (value: string | null | undefined): string | null => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+};
+
+const normalizeContactEmail = (value: string): string => {
+  const email = value.toLowerCase();
+  if (!CONTACT_EMAIL_PATTERN.test(email)) {
+    throw new ValidationError('E-mail de contato inválido');
+  }
+  return email;
+};
+
+/** Forma canônica por campo; vazio vira `null` em todos. */
+const FIELD_NORMALIZERS: Partial<
+  Record<keyof ClinicInfoFields, (value: string) => string>
+> = {
+  cnpj: normalizeCnpj,
+  contactEmail: normalizeContactEmail,
 };
 
 const INFO_KEYS = [
@@ -48,7 +83,18 @@ const INFO_KEYS = [
   'city',
   'professionalName',
   'professionalRegistry',
+  'contactPhone',
+  'contactEmail',
 ] as const;
+
+function normalizeField(
+  key: keyof ClinicInfoFields,
+  value: string | null | undefined,
+): string | null {
+  const trimmed = trimToNull(value);
+  const normalize = FIELD_NORMALIZERS[key];
+  return trimmed && normalize ? normalize(trimmed) : trimmed;
+}
 
 /** Aplica só os campos presentes em `fields` (chave `in` do objeto) — os demais preservam o valor atual. */
 function resolveInfoFields(
@@ -58,44 +104,52 @@ function resolveInfoFields(
   const resolved = {} as Required<ClinicInfoFields>;
   for (const key of INFO_KEYS) {
     resolved[key] =
-      key in fields ? normalizeField(fields[key]) : (state[key] ?? null);
+      key in fields ? normalizeField(key, fields[key]) : (state[key] ?? null);
   }
   return resolved;
 }
+
+const REQUIRED_ON_CREATE: readonly [keyof ClinicProps, string][] = [
+  ['name', 'Nome da clínica é obrigatório'],
+  ['cnpj', 'CNPJ é obrigatório'],
+  ['contactPhone', 'Telefone de contato é obrigatório'],
+  ['contactEmail', 'E-mail de contato é obrigatório'],
+  ['createdBy', 'Criador da clínica é obrigatório'],
+];
+
+const EMPTY_INFO: Required<ClinicInfoFields> = {
+  cnpj: null,
+  address: null,
+  city: null,
+  professionalName: null,
+  professionalRegistry: null,
+  contactPhone: null,
+  contactEmail: null,
+};
 
 /** Empresa/clínica — unidade de isolamento de dados (multi-tenancy). */
 export class Clinic {
   private constructor(private readonly state: ClinicState) {}
 
+  /** Clínica nova pela plataforma (B4): nasce com o cadastro completo. */
   static create(props: ClinicProps): Clinic {
-    if (!props.name.trim()) {
-      throw new ValidationError('Nome da clínica é obrigatório');
+    for (const [key, message] of REQUIRED_ON_CREATE) {
+      if (!trimToNull(props[key])) {
+        throw new ValidationError(message);
+      }
     }
-    if (!props.createdBy.trim()) {
-      throw new ValidationError('Criador da clínica é obrigatório');
-    }
+    const { name, createdBy, ...info } = props;
     return new Clinic({
-      name: props.name.trim(),
-      createdBy: props.createdBy,
       id: newId(),
+      name: name.trim(),
+      createdBy,
       createdAt: new Date(),
-      cnpj: null,
-      address: null,
-      city: null,
-      professionalName: null,
-      professionalRegistry: null,
+      ...resolveInfoFields(EMPTY_INFO, info),
     });
   }
 
   static restore(state: ClinicState): Clinic {
-    return new Clinic({
-      ...state,
-      cnpj: state.cnpj ?? null,
-      address: state.address ?? null,
-      city: state.city ?? null,
-      professionalName: state.professionalName ?? null,
-      professionalRegistry: state.professionalRegistry ?? null,
-    });
+    return new Clinic({ ...EMPTY_INFO, ...state });
   }
 
   get id(): string {
@@ -134,6 +188,14 @@ export class Clinic {
     return this.state.professionalRegistry ?? null;
   }
 
+  get contactPhone(): string | null {
+    return this.state.contactPhone ?? null;
+  }
+
+  get contactEmail(): string | null {
+    return this.state.contactEmail ?? null;
+  }
+
   /** Retorna uma nova instância com os campos cadastrais atualizados (imutável). */
   updateInfo(fields: ClinicInfoFields & { name?: string }): Clinic {
     if ('name' in fields && !fields.name?.trim()) {
@@ -148,5 +210,19 @@ export class Clinic {
 
   isCompleteForDocumentEmission(): boolean {
     return isClinicInfoComplete(this.state);
+  }
+
+  /**
+   * Cadastro que a plataforma exige (B4): nome, CNPJ, telefone e e-mail de
+   * contato. Sem ele, o primeiro admin não é convidado — é o caso da
+   * `legacy-clinic`, que nasceu só com nome.
+   */
+  isRegistrationComplete(): boolean {
+    return Boolean(
+      this.state.name.trim() &&
+        this.state.cnpj &&
+        this.state.contactPhone &&
+        this.state.contactEmail,
+    );
   }
 }

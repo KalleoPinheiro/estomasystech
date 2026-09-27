@@ -302,6 +302,13 @@
       "when": 1790516704679,
       "tag": "0042_mfa-super-admin",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790528790709,
+      "tag": "0043_clinic-contact-cnpj-unique",
+      "breakpoints": true
     }
   ]
 }
