@@ -16,6 +16,9 @@ import { systemScope } from '@/lib/auth/tenant-scope';
  * Bootstrap do catálogo de taxonomias com o subset curado de estomaterapia —
  * idempotente (ver importTaxonomyCatalog). Uma implantação real importa o
  * catálogo licenciado do cliente via `scripts/import-taxonomy.ts <arquivo>`.
+ *
+ * O catálogo é global (todas as clínicas o leem), então gravá-lo é ato de
+ * plataforma: só o super_admin chega aqui (família `platform`, ADR-007).
  */
 export async function POST(request: NextRequest) {
   const guard = requireStaffSession(request);

@@ -319,6 +319,142 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
     );
   });
 
+  describe('Cenário: super_admin é operador da plataforma (B1, ADR-007)', () => {
+    const requestAs = (
+      method: string,
+      path: string,
+      cookie?: string,
+    ): NextRequest =>
+      new NextRequest(`http://localhost${path}`, {
+        method,
+        headers: {
+          'x-forwarded-for': '10.0.0.7',
+          ...(cookie ? { cookie } : {}),
+        },
+      });
+    const ROLE_DENIED = 'Seu papel não tem acesso a este recurso';
+
+    it('Dado super_admin, Quando chama rotas da clínica, Então super_admin recebe 403 nas rotas da clínica', async () => {
+      const cookie = sessionCookie('super_admin', 'dono@vitta.app');
+      const attempts: Array<[string, string]> = [
+        ['GET', '/api/patients'],
+        ['GET', '/api/audit'],
+        ['PUT', '/api/settings/clinic-info'],
+        ['GET', '/api/auth/identity'],
+        ['POST', '/api/accounts'],
+        ['GET', '/api/patients/p-1/evolutions'],
+        ['GET', '/api/my-payouts'],
+      ];
+
+      for (const [method, path] of attempts) {
+        const proxy = await loadProxy();
+        const response = await proxy(requestAs(method, path, cookie));
+        expect(response.status, `${method} ${path}`).toBe(403);
+        expect((await body(response)).error, `${method} ${path}`).toBe(
+          ROLE_DENIED,
+        );
+      }
+    });
+
+    it.each([
+      '/',
+      '/agenda',
+      '/pacientes/p-1',
+      '/configuracoes',
+      '/documentos/atestado/p-1',
+    ])(
+      'Dado super_admin, Quando abre %s, Então super_admin é levado a /plataforma',
+      async (path) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestAs(
+            'GET',
+            path,
+            sessionCookie('super_admin', 'dono@vitta.app'),
+          ),
+        );
+
+        expect(response.status).toBe(307);
+        expect(response.headers.get('location')).toBe(
+          'http://localhost/plataforma',
+        );
+      },
+    );
+
+    it.each(['/plataforma', '/api/platform/clinics/c-1/admins', '/portal'])(
+      'Dado super_admin, Quando abre %s, Então passa',
+      async (path) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestAs(
+            'GET',
+            path,
+            sessionCookie('super_admin', 'dono@vitta.app'),
+          ),
+        );
+
+        expect(isNext(response)).toBe(true);
+      },
+    );
+
+    it.each([
+      ['company_admin', ROLE_DENIED],
+      ['atendente', ROLE_DENIED],
+      ['profissional', ROLE_DENIED],
+      ['patient', 'Acesso restrito à equipe da clínica'],
+      ['partner', 'Acesso restrito à equipe da clínica'],
+    ] as const)(
+      'Dado %s, Quando chama /api/platform/**, Então família platform nega a API aos demais papéis',
+      async (role, message) => {
+        for (const path of [
+          '/api/platform/clinics/c-1/admins',
+          '/api/platform/taxonomy/import',
+        ]) {
+          const proxy = await loadProxy();
+          const response = await proxy(
+            requestAs('POST', path, sessionCookie(role)),
+          );
+          expect(response.status, path).toBe(403);
+          expect((await body(response)).error, path).toBe(message);
+        }
+      },
+    );
+
+    it.each([
+      ['company_admin', 'http://localhost/'],
+      ['atendente', 'http://localhost/'],
+      ['profissional', 'http://localhost/'],
+      ['patient', 'http://localhost/portal'],
+      ['partner', 'http://localhost/portal'],
+    ] as const)(
+      'Dado %s, Quando abre /plataforma, Então página /plataforma redireciona os demais papéis para %s',
+      async (role, location) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestAs('GET', '/plataforma', sessionCookie(role)),
+        );
+
+        expect(response.status).toBe(307);
+        expect(response.headers.get('location')).toBe(location);
+      },
+    );
+
+    it('Dado sem sessão, Quando abre a plataforma, Então sem sessão, /plataforma vai a /login e a API responde 401', async () => {
+      const page = await (await loadProxy())(requestAs('GET', '/plataforma'));
+      expect(page.status).toBe(307);
+      expect(page.headers.get('location')).toBe('http://localhost/login');
+
+      const api = await (await loadProxy())(
+        requestAs('POST', '/api/platform/clinics/c-1/admins'),
+      );
+      expect(api.status).toBe(401);
+      expect((await body(api)).error).toBe('Não autenticado');
+    });
+  });
+
   describe('Cenário: listas auxiliares e taxonomia por papel (#188, #189)', () => {
     const requestWith = (
       method: string,
@@ -417,7 +553,7 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       const response = await proxy(
         requestWith(
           'POST',
-          '/api/admin/taxonomy/import',
+          '/api/platform/taxonomy/import',
           sessionCookie('profissional'),
         ),
       );

@@ -16,9 +16,13 @@ const infoSchema = z.object({
   professionalRegistry: z.string().max(60).nullish(),
 });
 
-/** Só quem administra a empresa edita os dados cadastrais da clínica (#61). */
+/**
+ * Só quem administra a empresa edita os dados cadastrais da clínica (#61). O
+ * super_admin não entra aqui (ADR-007): a matriz de famílias já o barra, e esta
+ * checagem repete a regra como defesa em profundidade.
+ */
 const canEditClinicInfo = (role: string | undefined): boolean =>
-  role === 'company_admin' || role === 'super_admin';
+  role === 'company_admin';
 
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);

@@ -5,7 +5,7 @@ import { USER_ROLES, type UserRole } from '@/domain/auth/user-role';
 /** Matriz completa esperada (RBAC-07..RBAC-10, ADR-003) — 36 pares ator×alvo. */
 const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
   super_admin: {
-    super_admin: true,
+    super_admin: false,
     company_admin: true,
     atendente: true,
     profissional: true,
@@ -63,6 +63,14 @@ describe('Feature: Hierarquia de provisionamento de contas (RBAC-07..RBAC-10)', 
       });
     }
   }
+
+  describe('Cenário: só existe um super_admin (ADR-007)', () => {
+    it('Dado qualquer ator, Quando checar alvo super_admin, Então nenhum papel provisiona super_admin', () => {
+      for (const actor of USER_ROLES) {
+        expect(canProvision(actor, 'super_admin')).toBe(false);
+      }
+    });
+  });
 
   describe('Cenário: patient e partner nunca cadastram ninguém (RBAC-10)', () => {
     it('Dado ator patient, Quando checar qualquer alvo, Então sempre false', () => {

@@ -104,7 +104,7 @@ Proof: `tests/api/platform-clinic-admins.test.ts -t "sem link de convite"`
 **C17** - Clínica inexistente → 404 `Clínica não encontrada`, nenhuma conta criada
 Proof: `tests/api/platform-clinic-admins.test.ts -t "clínica inexistente"`
 
-**C18** - `email` ausente, não texto, 2 ou 201 caracteres → 400; 3 e 200 aceitos
+**C18** - `email` ausente, não texto, 2 ou 201 caracteres → 400; e-mail válido com 200 caracteres aceito (3 caracteres cai no formato do domínio, `a@b` → 400)
 Proof: `tests/api/platform-clinic-admins.test.ts -t "valida o e-mail"`
 
 **C19** - E-mail já existente na clínica → 400 `Já existe conta com este email`
@@ -167,7 +167,7 @@ Proof: `npm run build && npx playwright test -c playwright.prod.config.ts`
 | famílias negadas ao super_admin (4) | `clinical`, `operational`, `administrative`, `professional_self` - C4 varre toda rota por família | - |
 | papéis × família (6 × 6) | table-driven em C9 | - |
 | destino de página negada (3) | super_admin C6 · equipe C12 · portal C12 | - |
-| limites de `email` (4) | 2, 3, 200, 201 em C18 | - |
+| limites de `email` (4) | 2, 3 (formato), 200, 201 em C18 | - |
 | suítes E2E (2 configs) | dev e prod em C28 | - |
 
 - Claims naming a status code, route or response shape: C4, C5, C6, C8, C10–C13, C15–C25 - cada uma tem proof que chama o handler ou o proxy

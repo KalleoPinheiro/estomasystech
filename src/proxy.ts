@@ -77,7 +77,21 @@ function forbidden(request: NextRequest, session: Session): NextResponse {
       403,
     );
   }
-  return NextResponse.redirect(new URL('/portal', request.url));
+  return NextResponse.redirect(
+    new URL(deniedPageDestination(session), request.url),
+  );
+}
+
+/**
+ * Página negada leva cada papel à própria área: super_admin à plataforma
+ * (ADR-007), o resto da equipe ao dashboard da clínica e paciente/parceiro ao
+ * portal.
+ */
+function deniedPageDestination(session: Session): string {
+  if (session.role === 'super_admin') {
+    return '/plataforma';
+  }
+  return isStaffRole(session.role) ? '/' : '/portal';
 }
 
 function authNotConfiguredResponse(): NextResponse {

@@ -27,23 +27,39 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
       expect(account.role).toBe('company_admin');
       expect(account.clinicId).toBe('clinic-x');
     });
+  });
 
-    it('Dado super_admin, Quando cadastrar outro super_admin, Então aceita', async () => {
-      const repo = new InMemoryUserAccountRepository();
-      const useCase = new CreateAccount(repo);
+  describe('Cenário: nenhum ator cadastra super_admin (ADR-007)', () => {
+    const ACTORS = [
+      { role: 'super_admin', clinicId: null },
+      { role: 'company_admin', clinicId: 'clinic-x' },
+      { role: 'atendente', clinicId: 'clinic-x' },
+      { role: 'profissional', clinicId: 'clinic-x' },
+      { role: 'patient', clinicId: 'clinic-x' },
+      { role: 'partner', clinicId: 'clinic-x' },
+    ] as const;
 
-      const account = await useCase.execute(
-        { role: 'super_admin', clinicId: null },
-        {
-          email: 'outro-sa@x.com',
-          passwordHash: HASH,
-          role: 'super_admin',
-          clinicId: 'clinic-x',
-        },
-      );
+    it.each(
+      ACTORS.flatMap((actor) =>
+        ['clinic-x', 'clinic-y'].map((clinicId) => [actor, clinicId] as const),
+      ),
+    )(
+      'Dado ator %o e clínica-alvo %s, Quando cadastrar super_admin, Então nenhum ator cadastra super_admin e nada é gravado',
+      async (actor, clinicId) => {
+        const repo = new InMemoryUserAccountRepository();
+        const useCase = new CreateAccount(repo);
 
-      expect(account.role).toBe('super_admin');
-    });
+        await expect(
+          useCase.execute(actor, {
+            email: 'outro-sa@x.com',
+            passwordHash: HASH,
+            role: 'super_admin',
+            clinicId,
+          }),
+        ).rejects.toThrow(ProvisioningDeniedError);
+        expect(await repo.findAll()).toHaveLength(0);
+      },
+    );
   });
 
   describe('Cenário: company_admin cadastra dentro da própria empresa', () => {

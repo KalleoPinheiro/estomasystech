@@ -105,10 +105,9 @@ describe('Feature: Hierarquia de provisionamento via POST /api/accounts (RBAC-11
   describe('Cenário: mais de um company_admin por empresa', () => {
     it('Dado um company_admin já existente, Quando outro company_admin cadastra mais um, Então 200 (sem limite)', async () => {
       await ensureTestClinics();
-      const first = await create('super_admin', {
+      const first = await create('company_admin', {
         email: 'admin1-provisioning@x.com',
         role: 'company_admin',
-        clinicId: CLINIC_A_ID,
       });
       expect(first.response.status).toBe(200);
 

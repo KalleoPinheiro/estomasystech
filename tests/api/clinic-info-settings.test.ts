@@ -192,6 +192,28 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     expect(response.status).toBe(403);
   });
 
+  it('Dado super_admin sem o proxy, Quando tentar salvar, Então super_admin recebe 403 e a clínica não muda', async () => {
+    await ensureTestClinics();
+    const route = await import('@/app/api/settings/clinic-info/route');
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { clinics } = await getRepositories(clinicScope(CLINIC_A_ID));
+    const before = await clinics.findById(CLINIC_A_ID);
+
+    const response = await route.PUT(
+      jsonRequest(
+        '/api/settings/clinic-info',
+        'PUT',
+        { name: 'Invadida pelo operador', cnpj: '99.999.999/0001-99' },
+        cookieHeaderFor('super_admin', 'dono@vitta.app', null),
+      ),
+    );
+    const body = (await response.json()) as Envelope<never>;
+
+    expect(response.status).toBe(403);
+    expect(body.error).toBe('Seu papel não tem acesso a este recurso');
+    expect(await clinics.findById(CLINIC_A_ID)).toEqual(before);
+  });
+
   it('Dado sem sessão, Quando buscar, Então retorna 401', async () => {
     const response = await (
       await import('@/app/api/settings/clinic-info/route')

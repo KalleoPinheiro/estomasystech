@@ -166,6 +166,12 @@ export const userAccounts = pgTable(
     uniqueIndex('uq_user_accounts_single_system_account')
       .on(table.role)
       .where(sql`${table.clinicId} IS NULL`),
+    // Só o super_admin fica sem clínica, e ele nunca tem clínica (ADR-007).
+    // Junto com o índice acima: existe no máximo um super_admin.
+    check(
+      'ck_user_accounts_system_role_has_no_clinic',
+      sql`(${table.role} = 'super_admin') = (${table.clinicId} IS NULL)`,
+    ),
     index('idx_user_accounts_clinic').on(table.clinicId),
   ],
 );

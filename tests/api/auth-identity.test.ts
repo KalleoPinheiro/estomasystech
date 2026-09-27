@@ -57,7 +57,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     });
   });
 
-  it('Dado super_admin (clinicId null), Quando GET, Então clinicLabel é "Conta de sistema" e a conta aparece', async () => {
+  it('Dado super_admin (clinicId null), Quando GET, Então 403: a identidade da equipe é rota da clínica (ADR-007)', async () => {
     const route = await import('@/app/api/auth/identity/route');
 
     const response = await route.GET(
@@ -70,12 +70,8 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     );
     const body = (await response.json()) as Envelope<SidebarIdentityDto>;
 
-    expect(body.data?.clinicLabel).toBe('Conta de sistema');
-    expect(body.data?.account).toEqual({
-      email: 'root@vitta.com',
-      role: 'super_admin',
-      roleLabel: 'Super Admin',
-    });
+    expect(response.status).toBe(403);
+    expect(body.error).toBe('Seu papel não tem acesso a este recurso');
   });
 
   it('Dado clinicId sem clínica correspondente no banco, Quando GET, Então clinicLabel é "Clínica não encontrada"', async () => {

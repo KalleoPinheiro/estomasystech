@@ -5,10 +5,13 @@ import type { UserRole } from './user-role';
  * I/O, testável isoladamente. O escopo de empresa (o alvo precisa estar na
  * mesma empresa do ator, exceto para super_admin) é responsabilidade do
  * use-case que consome esta regra, não dela.
+ *
+ * Ninguém cadastra `super_admin` (ADR-007): existe um só, criado pelo
+ * bootstrap. O banco garante o mesmo (`ck_user_accounts_system_role_has_no_clinic`
+ * + `uq_user_accounts_single_system_account`).
  */
 export const PROVISIONING_MATRIX: Record<UserRole, readonly UserRole[]> = {
   super_admin: [
-    'super_admin',
     'company_admin',
     'atendente',
     'profissional',

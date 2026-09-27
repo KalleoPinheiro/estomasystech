@@ -56,63 +56,97 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
     );
   });
 
-  it('taxonomia é clínica e a importação continua administrativa', () => {
+  it('taxonomia é clínica e a importação é de plataforma', () => {
     expect(classifyRoute('/api/taxonomy/diagnoses')).toBe('clinical');
     expect(classifyRoute('/api/taxonomy/outcomes')).toBe('clinical');
     expect(classifyRoute('/api/taxonomy/interventions')).toBe('clinical');
     expect(classifyRoute('/api/taxonomy/diagnoses/00046/linked-terms')).toBe(
       'clinical',
     );
-    expect(classifyRoute('/api/admin/taxonomy/import')).toBe('administrative');
+    expect(classifyRoute('/api/platform/taxonomy/import')).toBe('platform');
+  });
+
+  describe('Cenário: família platform (ADR-007)', () => {
+    it.each([
+      ['/plataforma', 'platform'],
+      ['/plataforma/clinicas', 'platform'],
+      ['/api/platform', 'platform'],
+      ['/api/platform/clinics/x/admins', 'platform'],
+      ['/plataformas', 'operational'],
+      ['/api/platformx', 'operational'],
+    ] as const)(
+      'Dado o pathname %s, Quando classificar, Então família %s',
+      (pathname, family) => {
+        expect(classifyRoute(pathname)).toBe(family);
+      },
+    );
   });
 
   describe('Cenário: matriz papel × família', () => {
-    const expected: Record<UserRole, Record<string, boolean>> = {
+    const FAMILIES = [
+      'shared',
+      'operational',
+      'clinical',
+      'administrative',
+      'professional_self',
+      'platform',
+    ] as const;
+    type Family = (typeof FAMILIES)[number];
+    // Os 5 papéis de empresa mantêm as famílias anteriores ao B1; o super_admin
+    // só tem `shared` (logout/portal) e `platform` (ADR-007).
+    const expected: Record<UserRole, Record<Family, boolean>> = {
       super_admin: {
         shared: true,
-        operational: true,
-        clinical: true,
-        administrative: true,
+        operational: false,
+        clinical: false,
+        administrative: false,
+        professional_self: false,
+        platform: true,
       },
       company_admin: {
         shared: true,
         operational: true,
         clinical: true,
         administrative: true,
+        professional_self: true,
+        platform: false,
       },
       atendente: {
         shared: true,
         operational: true,
         clinical: false,
         administrative: false,
+        professional_self: false,
+        platform: false,
       },
       profissional: {
         shared: true,
         operational: true,
         clinical: true,
         administrative: false,
+        professional_self: true,
+        platform: false,
       },
       patient: {
         shared: true,
         operational: false,
         clinical: false,
         administrative: false,
+        professional_self: false,
+        platform: false,
       },
       partner: {
         shared: true,
         operational: false,
         clinical: false,
         administrative: false,
+        professional_self: false,
+        platform: false,
       },
     };
 
     for (const role of USER_ROLES) {
-      for (const family of [
-        'shared',
-        'operational',
-        'clinical',
-        'administrative',
-      ] as const) {
+      for (const family of FAMILIES) {
         it(`Dado papel ${role} e família ${family}, Quando checar, Então ${expected[role][family]}`, () => {
           expect(isFamilyAllowedForRole(family, role)).toBe(
             expected[role][family],
