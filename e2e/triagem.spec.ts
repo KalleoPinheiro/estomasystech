@@ -8,7 +8,7 @@ const TINY_PNG = Buffer.from(
   "base64",
 );
 
-const ADMIN_COOKIE = sessionCookie("local", "super_admin");
+const ADMIN_COOKIE = sessionCookie("local", "company_admin");
 
 async function uploadPatientPhoto(
   page: import("@playwright/test").Page,

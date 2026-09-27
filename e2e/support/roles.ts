@@ -9,7 +9,7 @@ import { ADMIN_STORAGE_STATE_PATH, type E2EStaffRole, MAIN_BASE_URL, ROLE_ACCOUN
 export const roleStorageState = (role: E2EStaffRole): string => ROLE_ACCOUNTS[role].storageState;
 
 /**
- * Contexto de API do Super Admin para preparar estado que o papel testado não
+ * Contexto de API do Admin de Empresa (sessão padrão) para preparar estado que o papel testado não
  * pode criar (ex.: condição clínica, quando o spec é do Atendente). Quem chama
  * descarta com `dispose()`.
  */

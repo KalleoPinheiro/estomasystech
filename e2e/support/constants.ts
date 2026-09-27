@@ -60,10 +60,22 @@ export const E2E_BOOTSTRAP_TOKEN = secretFromEnv("E2E_BOOTSTRAP_TOKEN", 18);
 /** Chave do dado clínico do servidor de produção da suíte (#195) — gerada por execução. */
 export const E2E_DATA_ENCRYPTION_KEY = secretFromEnv("E2E_DATA_ENCRYPTION_KEY", 32);
 
-/** Conta Super Admin criada pelo bootstrap e usada pelos specs de equipe. */
-export const E2E_ADMIN_EMAIL = "e2e-super-admin@vitta.test";
+/**
+ * Conta Super Admin criada pelo bootstrap. É o operador da plataforma (ADR-007):
+ * importa o catálogo de taxonomias e convida o Admin de Empresa da suíte, mas não
+ * abre nenhuma tela da clínica.
+ */
+export const E2E_SUPER_ADMIN_EMAIL = "e2e-super-admin@vitta.test";
 /** Senha definida pelo próprio fluxo de convite — não é senha mestre de ninguém. */
-export const E2E_ADMIN_PASSWORD = secretFromEnv("E2E_ADMIN_PASSWORD", 18);
+export const E2E_SUPER_ADMIN_PASSWORD = secretFromEnv("E2E_ADMIN_PASSWORD", 18);
+
+/**
+ * Admin de Empresa da `legacy-clinic`, dono da sessão padrão dos specs de equipe
+ * (`ADMIN_STORAGE_STATE_PATH`). Convidado pelo Super Admin por
+ * `POST /api/platform/clinics/legacy-clinic/admins`.
+ */
+export const E2E_CLINIC_ADMIN_EMAIL = "e2e-admin@vitta.test";
+export const E2E_CLINIC_ADMIN_PASSWORD = secretFromEnv("E2E_CLINIC_ADMIN_PASSWORD", 18);
 
 export const ADMIN_STORAGE_STATE_PATH = "e2e/.auth/admin-storage.json";
 
@@ -77,7 +89,7 @@ export const MAIN_SERVER_LOG_PATH = "e2e/.auth/main-server.log";
 /** Senha que cada conta por papel define no próprio convite (gerada por execução). */
 export const E2E_ROLE_PASSWORD = secretFromEnv("E2E_ROLE_PASSWORD", 18);
 
-/** Papéis de equipe com conta própria na suíte (#204); o Super Admin segue acima. */
+/** Papéis de equipe com conta própria na suíte (#204); o Admin da sessão padrão segue acima. */
 export const E2E_STAFF_ROLES = ["company_admin", "atendente", "profissional"] as const;
 export type E2EStaffRole = (typeof E2E_STAFF_ROLES)[number];
 

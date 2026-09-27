@@ -2,9 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   ADMIN_STORAGE_STATE_PATH,
-  E2E_ADMIN_EMAIL,
-  E2E_ADMIN_PASSWORD,
   E2E_BOOTSTRAP_TOKEN,
+  E2E_CLINIC_ADMIN_EMAIL,
+  E2E_CLINIC_ADMIN_PASSWORD,
   E2E_CLINIC_ID,
   E2E_ROLE_PASSWORD,
   E2E_STAFF_ROLES,
@@ -12,9 +12,12 @@ import {
   MAIN_SERVER_LOG_PATH,
   ROLE_ACCOUNTS,
   SEED_DATA_PATH,
+  E2E_SUPER_ADMIN_EMAIL,
+  E2E_SUPER_ADMIN_PASSWORD,
   SESSION_COOKIE_NAME,
 } from "./support/constants";
 import { findInviteUrl } from "./support/invite-log";
+import { mintSessionToken } from "./support/session-token";
 import { slotFromSeed } from "./support/slots";
 
 /**
@@ -24,11 +27,15 @@ import { slotFromSeed } from "./support/slots";
  * 1. Faz o bootstrap do primeiro Super Admin (`POST /api/auth/bootstrap`, guardado
  *    por `VITTA_BOOTSTRAP_TOKEN`), consome o convite para definir a senha e loga —
  *    o mesmo caminho que uma instalação nova percorre, agora que não existe mais
- *    senha mestre (issue #21 / ADR-004). O cookie vira `storageState`, reaproveitado
- *    por padrão em todos os specs (ver `use.storageState` em `playwright.config.ts`).
- * 2. Semeia dados base via REST (profissional, procedimentos com kit, insumos
+ *    senha mestre (issue #21 / ADR-004). O Super Admin é o operador da plataforma
+ *    (ADR-007): importa o catálogo de taxonomias e convida o Admin de Empresa da
+ *    `legacy-clinic` (`POST /api/platform/clinics/legacy-clinic/admins`).
+ * 2. O Admin de Empresa define a senha pelo convite e loga. O cookie dele vira o
+ *    `storageState` reaproveitado por padrão em todos os specs (ver
+ *    `use.storageState` em `playwright.config.ts`).
+ * 3. Semeia dados base via REST (profissional, procedimentos com kit, insumos
  *    com lote) e grava os IDs em `e2e/support/seed-data.json` para os specs.
- * 3. Cria uma conta por papel de equipe (`company_admin`, `atendente`,
+ * 4. Cria uma conta por papel de equipe (`company_admin`, `atendente`,
  *    `profissional`) pelo mesmo caminho da tela de Contas (`POST /api/accounts`),
  *    define a senha pelo link do convite e loga — um `storageState` por papel
  *    (#204). O Profissional fica vinculado (R4) a um paciente semeado por uma
@@ -79,7 +86,7 @@ async function bootstrapSuperAdmin(): Promise<string> {
   const response = await fetch(`${MAIN_BASE_URL}/api/auth/bootstrap`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-bootstrap-token": E2E_BOOTSTRAP_TOKEN },
-    body: JSON.stringify({ email: E2E_ADMIN_EMAIL }),
+    body: JSON.stringify({ email: E2E_SUPER_ADMIN_EMAIL }),
   });
   const body = (await response.json()) as Envelope<{ inviteUrl: string | null }>;
   if (!response.ok || !body.success || !body.data?.inviteUrl) {
@@ -116,6 +123,7 @@ async function consumeInvite(inviteUrl: string, password: string, who: string): 
  * Next só preenche o cabeçalho quando ausente), sem consumir aquele balde.
  */
 const ROLE_LOGIN_IP = "198.51.100.204";
+const CLINIC_ADMIN_LOGIN_IP = "198.51.100.205";
 
 async function login(email: string, password: string, who: string, clientIp?: string): Promise<string> {
   const response = await fetch(`${MAIN_BASE_URL}/api/auth/login`, {
@@ -216,7 +224,6 @@ async function provisionRoleAccount(
   await post(adminCookie, "/api/accounts", {
     email,
     role,
-    clinicId: E2E_CLINIC_ID,
     professionalId: role === "profissional" ? professionalId : null,
   });
   await consumeInvite(await waitForInviteUrl(email, logStart), E2E_ROLE_PASSWORD, role);
@@ -324,26 +331,53 @@ async function seedClinicInfo(cookie: string): Promise<void> {
   });
 }
 
+/**
+ * Admin de Empresa da sessão padrão: o Super Admin convida pela rota da
+ * plataforma e o link sai no log do `NullEmailGateway`, como o de qualquer
+ * convite. A resposta da rota nunca traz o link (critério 14 do B1).
+ */
+async function provisionClinicAdmin(superAdminCookie: string): Promise<string> {
+  const logStart = (await readServerLog()).length;
+  await post(superAdminCookie, `/api/platform/clinics/${E2E_CLINIC_ID}/admins`, {
+    email: E2E_CLINIC_ADMIN_EMAIL,
+  });
+  const inviteUrl = await waitForInviteUrl(E2E_CLINIC_ADMIN_EMAIL, logStart);
+  await consumeInvite(inviteUrl, E2E_CLINIC_ADMIN_PASSWORD, "Admin de Empresa");
+  return login(E2E_CLINIC_ADMIN_EMAIL, E2E_CLINIC_ADMIN_PASSWORD, "Admin de Empresa", CLINIC_ADMIN_LOGIN_IP);
+}
+
+/**
+ * Sem o link do convite (suíte contra o build de produção, que sobe com canal
+ * de e-mail), a sessão padrão é um cookie assinado de Admin de Empresa. O sujeito
+ * não tem conta, e sessão sem conta não é revogada (ADR-005).
+ */
+const mintedClinicAdminCookie = (): string =>
+  `${SESSION_COOKIE_NAME}=${mintSessionToken(E2E_CLINIC_ADMIN_EMAIL, "company_admin")}`;
+
 export interface GlobalSetupOptions {
   /**
-   * Contas reais por papel (#204). O convite delas só aparece no log do
-   * `NullEmailGateway`; a suíte contra o build de produção (#203) sobe com canal
-   * de e-mail e não usa essas contas, então desliga o passo.
+   * Contas reais por papel (#204) e Admin de Empresa convidado. O convite delas
+   * só aparece no log do `NullEmailGateway`; a suíte contra o build de produção
+   * (#203) sobe com canal de e-mail, então usa cookie assinado para o Admin e
+   * desliga as contas por papel.
    */
   roleAccounts: boolean;
 }
 
 export async function runGlobalSetup({ roleAccounts }: GlobalSetupOptions): Promise<void> {
-  await consumeInvite(await bootstrapSuperAdmin(), E2E_ADMIN_PASSWORD, "Super Admin");
-  const cookie = await login(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD, "Super Admin");
+  await consumeInvite(await bootstrapSuperAdmin(), E2E_SUPER_ADMIN_PASSWORD, "Super Admin");
+  const superAdminCookie = await login(E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, "Super Admin");
+  // Catálogo de taxonomias (NANDA-I/NOC/NIC), subset curado de estomaterapia.
+  // O catálogo é global: importar é ato de plataforma (ADR-007).
+  await post(superAdminCookie, "/api/platform/taxonomy/import", {});
+
+  const cookie = roleAccounts ? await provisionClinicAdmin(superAdminCookie) : mintedClinicAdminCookie();
   await writeStorageState(ADMIN_STORAGE_STATE_PATH, cookie);
   await seedClinicInfo(cookie);
   const seed = await seedBaseData(cookie);
   const roleSeed = await seedLinkedPatient(cookie, seed.professionalId);
   await mkdir(path.dirname(SEED_DATA_PATH), { recursive: true });
   await writeFile(SEED_DATA_PATH, JSON.stringify({ ...seed, ...roleSeed }, null, 2));
-  // Catálogo de taxonomias (NANDA-I/NOC/NIC) — subset curado de estomaterapia.
-  await post(cookie, "/api/admin/taxonomy/import", {});
   if (!roleAccounts) return;
   for (const role of E2E_STAFF_ROLES) {
     await provisionRoleAccount(cookie, role, seed.professionalId);

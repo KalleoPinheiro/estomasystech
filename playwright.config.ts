@@ -15,8 +15,9 @@ import {
  * portal do paciente/parceiro (`getRequestSession()` não depende só do proxy, ver
  * `src/lib/auth/request-session.ts`). Por isso o servidor principal (porta 3000)
  * roda sempre com autenticação ligada: specs de equipe reaproveitam uma sessão
- * do Super Admin já logada via `storageState` (criada em `global-setup.ts` pelo
- * fluxo real de bootstrap + convite + login); specs de papel (`papeis-*.spec.ts`)
+ * do Admin de Empresa da `legacy-clinic` já logada via `storageState` (criada em
+ * `global-setup.ts`: bootstrap do Super Admin, convite do Admin pela plataforma,
+ * senha e login reais); specs de papel (`papeis-*.spec.ts`)
  * trocam para o `storageState` de `company_admin`, `atendente` ou `profissional`,
  * também criados pelo convite + login real (#204); specs de portal assinam um cookie de
  * sessão paciente/parceiro na hora (mesmo segredo); `auth.spec.ts` testa o fluxo de
@@ -73,7 +74,7 @@ export default defineConfig({
         TZ: "America/Sao_Paulo",
         AUTH_SECRET: E2E_AUTH_SECRET,
         // Libera POST /api/auth/bootstrap, o caminho que o global-setup usa
-        // para criar o primeiro Super Admin da instalação limpa da suíte.
+        // para criar o Super Admin da instalação limpa da suíte.
         VITTA_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
         APP_URL: MAIN_BASE_URL,
         // A suíte inteira roda no mesmo IP (loopback) contra um processo só —

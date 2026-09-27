@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD, OPEN_MODE_BASE_URL } from "./support/constants";
+import { E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, OPEN_MODE_BASE_URL } from "./support/constants";
 import { sessionCookie } from "./support/session-token";
 
 // Sobrescreve o storageState admin padrão (playwright.config.ts) — estes specs
@@ -30,20 +30,23 @@ test.describe("login por e-mail e senha", () => {
 
   test("mostra erro com senha incorreta", async ({ page }) => {
     await page.goto("/login");
-    await signIn(page, E2E_ADMIN_EMAIL, "senha-totalmente-errada");
+    await signIn(page, E2E_SUPER_ADMIN_EMAIL, "senha-totalmente-errada");
     await expect(page.getByText("Email ou senha incorretos")).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("loga com a conta do Super Admin e navega para o dashboard", async ({ page }) => {
+  // Super Admin é o operador da plataforma (ADR-007): o login manda para `/`, e
+  // o proxy leva o papel à própria área.
+  test("Super Admin entra e termina em /plataforma", async ({ page }) => {
     await page.goto("/login");
-    await signIn(page, E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD);
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    await expect(page).toHaveURL("/");
+    await signIn(page, E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD);
+    await expect(page.getByRole("heading", { level: 1, name: "Plataforma" })).toBeVisible();
+    await expect(page).toHaveURL("/plataforma");
+    await expect(page.getByRole("navigation")).toHaveCount(0);
   });
 
   test("sai da sessão e volta para o login", async ({ page, context }) => {
-    // Sessão própria, nunca a do Super Admin: logout revoga TODAS as sessões
+    // Sessão própria, nunca a da suíte: logout revoga TODAS as sessões
     // da conta (#194), inclusive o storageState que os demais specs usam em
     // paralelo. A revogação em si é provada em tests/api/session-revocation.
     await context.addCookies([sessionCookie("logout-e2e@vitta.test", "company_admin")]);
