@@ -157,9 +157,10 @@ async function applyRecovery(
   });
   await new DrizzleAuthTokenRepository(tx).save(token);
   const auditEventsFor =
-    options.auditEventsFor ?? ((db) => new DrizzleAuditEventRepository(db));
-  // Caminho do login (decisão do dono, 2026-09-27): sem empresa, cai hoje na
-  // legacy-clinic e vira evento de plataforma quando o B6 mudar `resolveActor`.
+    options.auditEventsFor ??
+    ((db) => new DrizzleAuditEventRepository(db, null));
+  // Caminho do login (decisão do dono, 2026-09-27): sem empresa, é evento de
+  // plataforma (`clinic_id` nulo, B6) — repositório de escopo de sistema.
   await recordAuditNow(auditEventsFor(tx), null, {
     action: 'update',
     resourceType: 'account-recovery',

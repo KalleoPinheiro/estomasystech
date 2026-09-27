@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { Session } from '@/lib/auth/session';
@@ -157,7 +159,7 @@ describe('Feature: Ator explícito pré-sessão (actorOverride, #71)', () => {
     expect(saved.clinicId).toBe('clinic-override');
   });
 
-  it('Dado actorOverride com clinicId nulo e sem sessão, Quando recordAuditNow, Então grava LEGACY_CLINIC_ID', async () => {
+  it('Dado actorOverride com clinicId nulo e sem sessão, Quando recordAuditNow, Então grava evento sem empresa (plataforma, B6)', async () => {
     const auditEvents = createRepositoryStub();
 
     await recordAuditNow(auditEvents, null, {
@@ -174,7 +176,7 @@ describe('Feature: Ator explícito pré-sessão (actorOverride, #71)', () => {
     const saved = auditEvents.save.mock.calls[0][0];
     expect(saved.actorRole).toBe('anonymous');
     expect(saved.actorId).toBe('sem-conta@clinica.com');
-    expect(saved.clinicId).toBe('legacy-clinic');
+    expect(saved.clinicId).toBeNull();
   });
 
   it('Dado actorOverride ausente, Quando recordAudit com sessão, Então comportamento atual é preservado (regressão zero)', async () => {
@@ -245,5 +247,54 @@ describe('Feature: Auditoria write-ahead em ações críticas (SEC1-20..21)', ()
         resourceId: 'photo-1',
       }),
     ).rejects.toThrow('banco indisponível');
+  });
+});
+
+describe('Feature: Evento sem empresa vira evento de plataforma (B6, #210)', () => {
+  const superAdmin: Session = {
+    expiresAtMs: Date.now() + 60_000,
+    subject: 'dono@vitta.app',
+    role: 'super_admin',
+    clinicId: null,
+    professionalId: null,
+  };
+
+  const savedClinicIdFor = async (
+    session: Session | null,
+    input: Partial<Parameters<typeof recordAuditNow>[2]> = {},
+  ) => {
+    const auditEvents = createRepositoryStub();
+    await recordAuditNow(auditEvents, session, {
+      action: 'create',
+      resourceType: 'taxonomy_catalog',
+      resourceId: 'r-1',
+      ...input,
+    });
+    return auditEvents.save.mock.calls[0][0].clinicId;
+  };
+
+  it('Dada sessão sem empresa, override sem empresa ou nenhuma sessão, Quando recordAuditNow, Então grava sem empresa (clinicId null), nunca legacy-clinic', async () => {
+    expect(await savedClinicIdFor(superAdmin)).toBeNull();
+    expect(await savedClinicIdFor(null)).toBeNull();
+    expect(
+      await savedClinicIdFor(null, {
+        actorOverride: { role: 'super_admin', id: 'script', clinicId: null },
+      }),
+    ).toBeNull();
+  });
+
+  it('Dada sessão sem empresa com clinicId explícito, Quando recordAuditNow, Então o clinicId explícito prevalece (clínica-alvo)', async () => {
+    expect(
+      await savedClinicIdFor(superAdmin, { clinicId: 'clinica-alvo' }),
+    ).toBe('clinica-alvo');
+  });
+
+  it('Dado o código de src/lib/audit.ts, Quando resolve a empresa, Então não usa a clínica legada (sem clínica legada)', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/lib/audit.ts'),
+      'utf8',
+    );
+    expect(source).not.toContain('LEGACY_CLINIC_ID');
+    expect(source).not.toContain('legacy-clinic');
   });
 });

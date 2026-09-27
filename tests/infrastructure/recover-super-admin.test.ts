@@ -139,6 +139,7 @@ async function snapshot() {
 const failingAudit: AuditEventRepository = {
   save: () => Promise.reject(new Error('auditoria fora do ar')),
   findAll: () => Promise.resolve([]),
+  findPlatformTrail: () => Promise.resolve([]),
 };
 
 beforeEach(async () => {
@@ -217,7 +218,7 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
       );
     });
 
-    it('Dado a recuperação, Quando auditar, Então audita pelo caminho do login (legacy-clinic até o B6), sem o e-mail', async () => {
+    it('Dado a recuperação, Quando auditar, Então audita pelo caminho do login como evento de plataforma (clinic_id nulo, B6), sem o e-mail', async () => {
       await seed();
       await recover();
       await recover({ newEmail: 'novo@vitta.test' });
@@ -225,7 +226,7 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
       expect(events).toHaveLength(2);
       for (const event of events) {
         expect(event).toMatchObject({
-          clinicId: LEGACY_CLINIC_ID,
+          clinicId: null,
           actorRole: 'super_admin',
           actorId: 'script:recover-super-admin',
           action: 'update',

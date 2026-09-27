@@ -98,7 +98,6 @@ const list = async (headers: Record<string, string>) => {
 const accountAudit = async (id: string, clinicId = CLINIC_A_ID) => {
   const { auditEvents } = await getRepositories(clinicScope(clinicId));
   return auditEvents.findAll({
-    clinicId,
     resourceType: 'account',
     resourceId: id,
   });

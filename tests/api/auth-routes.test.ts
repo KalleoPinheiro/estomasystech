@@ -287,9 +287,10 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
 
       const { getRepositories } = await import('@/infrastructure/container');
       const { hashPassword } = await import('@/lib/auth/password');
-      const { userAccounts, auditEvents } = await getRepositories(
+      const { userAccounts } = await getRepositories(
         clinicScope('legacy-clinic'),
       );
+      const { auditEvents } = await getRepositories(systemScope());
       await userAccounts.save(
         buildUserAccount({
           email: 'auditoria-falha-senha@clinica.com',
@@ -319,6 +320,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       expect(failEvent).toBeDefined();
       expect(failEvent?.detail).toBe('invalid_credentials');
       expect(failEvent?.actorRole).toBe('anonymous');
+      expect(failEvent?.clinicId).toBeNull();
     });
 
     it('Dado conta inexistente, Quando POST login, Então registra evento de falha sem revelar se a conta existe além da resposta HTTP (#71)', async () => {
@@ -326,9 +328,8 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       process.env.AUTH_SECRET = 'test-secret-audit-inexistente';
 
       const { getRepositories } = await import('@/infrastructure/container');
-      const { auditEvents } = await getRepositories(
-        clinicScope('legacy-clinic'),
-      );
+      // Login falho é evento de plataforma (B6): só o escopo de sistema o vê.
+      const { auditEvents } = await getRepositories(systemScope());
 
       const response = await loginRoute.POST(
         jsonRequest(
@@ -352,6 +353,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       expect(failEvent).toBeDefined();
       expect(failEvent?.detail).toBe('invalid_credentials');
       expect(failEvent?.actorRole).toBe('anonymous');
+      expect(failEvent?.clinicId).toBeNull();
     });
 
     it('Dado bloqueio por rate limit (429), Quando POST login, Então não registra evento de auditoria adicional (edge case)', async () => {
@@ -359,9 +361,8 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       process.env.AUTH_SECRET = 'test-secret-audit-rate-limit';
       const ip = '10.0.0.101';
       const { getRepositories } = await import('@/infrastructure/container');
-      const { auditEvents } = await getRepositories(
-        clinicScope('legacy-clinic'),
-      );
+      // Login falho é evento de plataforma (B6): só o escopo de sistema o vê.
+      const { auditEvents } = await getRepositories(systemScope());
 
       const responses: number[] = [];
       for (let attempt = 0; attempt < 6; attempt += 1) {

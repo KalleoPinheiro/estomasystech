@@ -40,6 +40,12 @@ describe('Feature: Evento de auditoria de prontuário', () => {
       expect(event.detail).toBeNull();
     });
 
+    it('Dado clinicId nulo, Quando criar, Então é evento de plataforma (clinicId null, B6)', () => {
+      const event = AuditEvent.create({ ...validProps, clinicId: null });
+
+      expect(event.clinicId).toBeNull();
+    });
+
     it('Dado cada ação suportada, Quando criar, Então action é preservada', () => {
       for (const action of AUDIT_ACTIONS) {
         const event = AuditEvent.create({ ...validProps, action });
@@ -49,9 +55,9 @@ describe('Feature: Evento de auditoria de prontuário', () => {
   });
 
   describe('Cenário: rejeitar dados inválidos', () => {
-    it('Dado clinicId vazio, Quando criar, Então lança ValidationError', () => {
+    it('Dado clinicId vazio, Quando criar, Então lança ValidationError (Empresa da auditoria é obrigatória)', () => {
       expect(() => AuditEvent.create({ ...validProps, clinicId: ' ' })).toThrow(
-        ValidationError,
+        new ValidationError('Empresa da auditoria é obrigatória'),
       );
     });
 

@@ -771,6 +771,58 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
     });
   });
 
+  describe('Cenário: auditoria escopada por empresa (B6)', () => {
+    const event = (clinicId: string | null, actorRole = 'company_admin') =>
+      AuditEvent.create({
+        clinicId,
+        actorRole,
+        actorId: 'x',
+        action: 'update',
+        resourceType: 'clinic-info',
+        resourceId: 'r',
+      });
+
+    it('Dado repositórios por escopo sobre o mesmo store, Quando save/findAll/findPlatformTrail (auditoria escopada), Então seguem as regras do Drizzle', async () => {
+      const store: AuditEvent[] = [];
+      const system = new InMemoryAuditEventRepository(null, store);
+      const clinicA = new InMemoryAuditEventRepository('clinic-a', store);
+      const clinicB = new InMemoryAuditEventRepository('clinic-b', store);
+
+      await system.save(event(null, 'anonymous'));
+      await clinicA.save(event(null, 'super_admin'));
+      await clinicA.save(event('clinic-a'));
+      await clinicB.save(event('clinic-b'));
+      await expect(clinicA.save(event('clinic-b'))).rejects.toThrow(
+        'Evento de auditoria de outra empresa',
+      );
+
+      expect((await clinicA.findAll()).map((e) => e.clinicId)).toEqual([
+        'clinic-a',
+        'clinic-a',
+      ]);
+      expect(await system.findAll()).toHaveLength(4);
+      expect(
+        (await system.findPlatformTrail()).map((e) => [
+          e.clinicId,
+          e.actorRole,
+        ]),
+      ).toEqual(
+        expect.arrayContaining([
+          [null, 'anonymous'],
+          ['clinic-a', 'super_admin'],
+        ]),
+      );
+      expect(await system.findPlatformTrail()).toHaveLength(2);
+      expect(
+        await system.findPlatformTrail({ from: new Date(Date.now() + 60_000) }),
+      ).toHaveLength(0);
+      expect(await system.findPlatformTrail({}, { limit: 1 })).toHaveLength(1);
+      await expect(clinicA.findPlatformTrail()).rejects.toThrow(
+        'Trilha de plataforma exige escopo de sistema',
+      );
+    });
+  });
+
   describe('Cenário: InMemorySupplyRepository', () => {
     it('Dado insumo salvo, Quando buscar por id, Então retorna; id inexistente retorna null', async () => {
       const repo = new InMemorySupplyRepository();

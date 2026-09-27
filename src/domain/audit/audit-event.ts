@@ -5,8 +5,12 @@ export const AUDIT_ACTIONS = ['read', 'create', 'update', 'delete'] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 export interface AuditEventProps {
-  /** Empresa a que o evento pertence, ou empresa acessada em acesso cross-empresa. */
-  clinicId: string;
+  /**
+   * Empresa a que o evento pertence (a clínica-alvo, quando o super_admin age
+   * sobre uma clínica). `null` = evento de plataforma: sem empresa, visível só
+   * ao super_admin (B6, #210).
+   */
+  clinicId: string | null;
   /** Papel do ator (admin, patient, partner). */
   actorRole: string;
   /** Identificador do ator na sessão (ex.: email no portal, "staff" no admin). */
@@ -31,7 +35,7 @@ export class AuditEvent {
   private constructor(private readonly state: AuditEventState) {}
 
   static create(props: AuditEventProps): AuditEvent {
-    if (!props.clinicId.trim()) {
+    if (props.clinicId !== null && !props.clinicId.trim()) {
       throw new ValidationError('Empresa da auditoria é obrigatória');
     }
     if (!props.actorRole.trim() || !props.actorId.trim()) {
@@ -62,7 +66,7 @@ export class AuditEvent {
     return this.state.id;
   }
 
-  get clinicId(): string {
+  get clinicId(): string | null {
     return this.state.clinicId;
   }
 

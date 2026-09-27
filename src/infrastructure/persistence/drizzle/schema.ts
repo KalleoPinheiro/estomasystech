@@ -826,11 +826,9 @@ export const auditEvents = pgTable(
   'audit_events',
   {
     id: text('id').primaryKey(),
-    // Empresa a que o evento pertence, ou empresa acessada em acesso cross-empresa
-    // do papel de sistema — sempre concreto, resolvido em src/lib/audit.ts (MT-13, MT-29).
-    clinicId: text('clinic_id')
-      .notNull()
-      .references(() => clinics.id),
+    // Empresa a que o evento pertence (a clínica-alvo quando o super_admin age
+    // sobre ela). Nulo = evento de plataforma, visível só ao super_admin (B6, #210).
+    clinicId: text('clinic_id').references(() => clinics.id),
     actorRole: text('actor_role').notNull(),
     actorId: text('actor_id').notNull(),
     action: text('action').notNull(),

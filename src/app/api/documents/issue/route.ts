@@ -4,7 +4,7 @@ import { AuditEvent } from '@/domain/audit/audit-event';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
+import { writeClinicId, writeScope } from '@/lib/auth/tenant-scope';
 
 const DOCUMENT_TYPES = [
   'atestado',
@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = issueSchema.parse(await request.json());
-    const clinicId = writeClinicId(guard.session);
-    const { auditEvents } = await getRepositories(clinicScope(clinicId));
+    // Repositório escopado (B6, #210 item 4): a reemissão só acha o registro
+    // da própria empresa.
+    const { auditEvents } = await getRepositories(writeScope(guard.session));
 
     const existing = await auditEvents.findAll({
       resourceType: body.documentType,
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
       existing[0] ??
       (await (async () => {
         const created = AuditEvent.create({
-          clinicId,
+          clinicId: writeClinicId(guard.session),
           actorRole: guard.session?.role ?? 'anonymous',
           actorId: guard.session?.subject ?? 'anonymous',
           action: 'create',
