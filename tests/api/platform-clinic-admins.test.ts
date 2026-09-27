@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicScope } from '@/lib/auth/tenant-scope';
-import { CLINIC_B_ID, ensureTestClinics } from '../support/clinics';
+import {
+  CLINIC_B_ID,
+  completeClinicRegistration,
+  ensureTestClinics,
+} from '../support/clinics';
 import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -27,6 +31,12 @@ interface AdminDto {
 }
 
 const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+
+/** Clínica B com o cadastro que o convite exige (B4). */
+const ensureRegisteredClinicB = async () => {
+  await ensureTestClinics();
+  await completeClinicRegistration(CLINIC_B_ID);
+};
 
 const invite = async (clinicId: string, body: unknown) => {
   const route = await import('@/app/api/platform/clinics/[id]/admins/route');
@@ -55,7 +65,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   });
 
   it('Dado super_admin e clínica existente, Quando convidar, Então cria o company_admin na clínica sem senha e emite o convite', async () => {
-    await ensureTestClinics();
+    await ensureRegisteredClinicB();
     const emails = spyOnSentEmails();
 
     const { response, json } = await invite(CLINIC_B_ID, {
@@ -86,7 +96,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   });
 
   it('Dado o convite emitido ou falhado, Quando responder, Então vem sem link de convite', async () => {
-    await ensureTestClinics();
+    await ensureRegisteredClinicB();
     spyOnSentEmails();
     const delivered = await invite(CLINIC_B_ID, { email: 'sem-link@b.com' });
 
@@ -148,7 +158,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   ])(
     'Dado %s, Quando convidar, Então valida o e-mail (%s → %i)',
     async (_label, body, status) => {
-      await ensureTestClinics();
+      await ensureRegisteredClinicB();
       spyOnSentEmails();
 
       const { response } = await invite(CLINIC_B_ID, body);
@@ -158,7 +168,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   );
 
   it('Dado e-mail repetido na clínica, Quando convidar de novo, Então 400 e continua uma conta só', async () => {
-    await ensureTestClinics();
+    await ensureRegisteredClinicB();
     spyOnSentEmails();
     await invite(CLINIC_B_ID, { email: 'repetido@b.com' });
 
@@ -174,7 +184,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   });
 
   it('Dadas duas requisições concorrentes com o mesmo e-mail, Quando convidar, Então uma 200, outra 400 e uma conta só', async () => {
-    await ensureTestClinics();
+    await ensureRegisteredClinicB();
     spyOnSentEmails();
 
     const results = await Promise.all([
@@ -192,7 +202,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   });
 
   it('Dada a checagem prévia vencida pela corrida, Quando o índice recusa, Então a violação 23505 vira 400', async () => {
-    await ensureTestClinics();
+    await ensureRegisteredClinicB();
     spyOnSentEmails();
     await invite(CLINIC_B_ID, { email: 'indice@b.com' });
     const { DrizzleUserAccountRepository } = await import(
@@ -217,7 +227,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   });
 
   it('Dada falha no envio do e-mail, Quando convidar, Então a conta fica criada, delivered é false e o convite pode ser reenviado', async () => {
-    await ensureTestClinics();
+    await ensureRegisteredClinicB();
     const { NullEmailGateway } = await import(
       '@/application/ports/email-gateway'
     );
@@ -253,7 +263,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
   });
 
   it('Dado o convite criado, Quando registrar auditoria, Então o evento fica na clínica com o super_admin como ator', async () => {
-    await ensureTestClinics();
+    await ensureRegisteredClinicB();
     spyOnSentEmails();
 
     const { json } = await invite(CLINIC_B_ID, { email: 'auditado@b.com' });
@@ -274,5 +284,102 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
         clinicId: CLINIC_B_ID,
       });
     });
+  });
+});
+
+const listAdmins = async (clinicId: string) => {
+  const route = await import('@/app/api/platform/clinics/[id]/admins/route');
+  const response = await route.GET(
+    jsonRequest(
+      `/api/platform/clinics/${clinicId}/admins`,
+      'GET',
+      undefined,
+      SUPER_ADMIN,
+    ),
+    { params: Promise.resolve({ id: clinicId }) },
+  );
+  const json = (await response.json()) as Envelope<
+    { id: string; email: string; active: boolean; passwordSet: boolean }[]
+  >;
+  return { response, json };
+};
+
+const seedAccount = async (clinicId: string, email: string, role: string) => {
+  const { getRepositories } = await import('@/infrastructure/container');
+  const { UserAccount } = await import('@/domain/auth/user-account');
+  const { userAccounts } = await getRepositories(clinicScope(clinicId));
+  const account = UserAccount.create({
+    email,
+    passwordHash: 'scrypt$1$abc$def',
+    role: role as 'company_admin',
+    clinicId,
+    professionalId: null,
+  });
+  await userAccounts.save(account);
+  return account;
+};
+
+describe('Feature: Admins da clínica na plataforma (B4)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('Dada clínica com admins, equipe e portal, Quando listar, Então lista só os admins da clínica', async () => {
+    await ensureRegisteredClinicB();
+    const admin = await seedAccount(
+      CLINIC_B_ID,
+      'lista-admin@b.com',
+      'company_admin',
+    );
+    await seedAccount(CLINIC_B_ID, 'lista-atendente@b.com', 'atendente');
+    await seedAccount('legacy-clinic', 'lista-admin-a@a.com', 'company_admin');
+
+    const { response, json } = await listAdmins(CLINIC_B_ID);
+
+    expect(response.status).toBe(200);
+    const emails = json.data.map((row) => row.email);
+    expect(emails).toContain('lista-admin@b.com');
+    expect(emails).not.toContain('lista-atendente@b.com');
+    expect(emails).not.toContain('lista-admin-a@a.com');
+    expect(json.data.find((row) => row.id === admin.id)).toEqual({
+      id: admin.id,
+      email: 'lista-admin@b.com',
+      active: true,
+      passwordSet: true,
+    });
+
+    const missing = await listAdmins('clinica-que-nao-existe');
+    expect(missing.response.status).toBe(404);
+    expect(missing.json.error).toBe('Clínica não encontrada');
+  });
+
+  it('Dada clínica com cadastro incompleto, Quando convidar, Então o cadastro incompleto bloqueia o convite até ser completado', async () => {
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { Clinic } = await import('@/domain/clinic/clinic');
+    const { clinics } = await getRepositories(clinicScope('gate-clinic'));
+    await clinics.create(
+      Clinic.restore({
+        id: 'gate-clinic',
+        name: 'Clínica do go-live',
+        createdBy: 'test',
+        createdAt: new Date(),
+      }),
+    );
+    spyOnSentEmails();
+
+    const blocked = await invite('gate-clinic', { email: 'gate@x.com' });
+
+    expect(blocked.response.status).toBe(400);
+    expect(blocked.json.error).toBe(
+      'Complete o cadastro da clínica (nome, CNPJ, telefone e e-mail de contato) antes de convidar o admin',
+    );
+    expect(await accountsWithEmail('gate-clinic', 'gate@x.com')).toEqual([]);
+
+    await completeClinicRegistration('gate-clinic');
+    const allowed = await invite('gate-clinic', { email: 'gate@x.com' });
+    expect(allowed.response.status).toBe(200);
+    expect(await accountsWithEmail('gate-clinic', 'gate@x.com')).toHaveLength(
+      1,
+    );
   });
 });

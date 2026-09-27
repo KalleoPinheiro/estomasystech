@@ -1,0 +1,51 @@
+import type { NextRequest } from 'next/server';
+import { UpdateClinicInfo } from '@/application/platform/update-clinic-info';
+import { getRepositories } from '@/infrastructure/container';
+import { fail, handleRequest } from '@/lib/api-response';
+import { recordAudit } from '@/lib/audit';
+import { requireStaffSession } from '@/lib/auth/require-session';
+import { clinicScope } from '@/lib/auth/tenant-scope';
+import { clinicInfoChangesSchema } from '@/lib/clinic-info-schema';
+import { toPlatformClinicDto } from '@/lib/dto';
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+const CLINIC_NOT_FOUND = 'Clínica não encontrada';
+
+/** Cadastro de uma clínica visto pela plataforma (B4, #214). */
+export async function GET(request: NextRequest, context: RouteContext) {
+  const guard = requireStaffSession(request);
+  if (!guard.ok) return guard.response;
+
+  const { id } = await context.params;
+  const { clinics } = await getRepositories(clinicScope(id));
+  const clinic = await clinics.findById(id);
+  if (!clinic) return fail(CLINIC_NOT_FOUND, 404);
+  return handleRequest(async () => toPlatformClinicDto(clinic));
+}
+
+/**
+ * Edição do cadastro pelo super_admin (Journey 6): parcial, mesma regra da tela
+ * de Configurações. O evento vai para a auditoria da clínica-alvo.
+ */
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const guard = requireStaffSession(request);
+  if (!guard.ok) return guard.response;
+
+  const { id } = await context.params;
+  const { clinics, auditEvents } = await getRepositories(clinicScope(id));
+  if (!(await clinics.findById(id))) return fail(CLINIC_NOT_FOUND, 404);
+
+  return handleRequest(async () => {
+    const changes = clinicInfoChangesSchema.parse(await request.json());
+    const updated = await new UpdateClinicInfo(clinics).execute(id, changes);
+    if (!updated) throw new Error(CLINIC_NOT_FOUND);
+    recordAudit(auditEvents, guard.session, {
+      action: 'update',
+      resourceType: 'clinic-info',
+      resourceId: id,
+      clinicId: id,
+    });
+    return toPlatformClinicDto(updated);
+  });
+}

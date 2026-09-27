@@ -2,6 +2,7 @@ import {
   UserAccount,
   type UserAccountRepository,
 } from '@/domain/auth/user-account';
+import type { UserRole } from '@/domain/auth/user-role';
 import type { Procedure } from '@/domain/catalog/procedure';
 import {
   type ProcedureKitItem,
@@ -133,6 +134,10 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
 
   async hasAnyAccount(): Promise<boolean> {
     return this.items.size > 0;
+  }
+
+  async findByRole(role: UserRole): Promise<UserAccount[]> {
+    return (await this.findAll()).filter((a) => a.role === role);
   }
 
   async findAll(): Promise<UserAccount[]> {

@@ -3,6 +3,7 @@ import {
   LazyCalendarGateway,
   NullCalendarGateway,
 } from '@/application/ports/calendar-gateway';
+import type { ClinicProvisioning } from '@/application/ports/clinic-provisioning';
 import type { EmailGateway } from '@/application/ports/email-gateway';
 import {
   type MessagingGateway,
@@ -82,6 +83,7 @@ import {
   DrizzleInterventionRecordRepository,
   DrizzleOutcomeEvaluationRepository,
 } from './persistence/drizzle/drizzle-care-plan-repositories';
+import { DrizzleClinicProvisioning } from './persistence/drizzle/drizzle-clinic-provisioning';
 import { DrizzleClinicRepository } from './persistence/drizzle/drizzle-clinic-repository';
 import {
   DrizzleAnamnesisRepository,
@@ -184,6 +186,8 @@ export interface Services {
   messaging: MessagingGateway;
   email: EmailGateway;
   transactions: TransactionManager;
+  /** Criação de clínica + primeiro admin numa transação (B4). */
+  clinicProvisioning: ClinicProvisioning;
 }
 
 const globalForServices = globalThis as unknown as {
@@ -411,5 +415,6 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     messaging: buildMessagingGateway(),
     email: buildEmailGateway(),
     transactions: new DrizzleTransactionManager(db, tenant.clinicId, cipher),
+    clinicProvisioning: new DrizzleClinicProvisioning(db),
   };
 }
