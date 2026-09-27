@@ -69,6 +69,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/005-revogacao-de-sessao-por-versao.md`](adr/005-revogacao-de-sessao-por-versao.md) | `session_version` revoga sessões (logout, senha, desativação) |
 | [`adr/006-chave-de-dados-clinicos.md`](adr/006-chave-de-dados-clinicos.md) | `DATA_ENCRYPTION_KEY` versionada cifra o texto clínico |
 | [`adr/007-super-admin-operador-da-plataforma.md`](adr/007-super-admin-operador-da-plataforma.md) | Super Admin único, só na família `platform`, sem dado de clínica |
+| [`adr/008-segundo-fator-do-super-admin.md`](adr/008-segundo-fator-do-super-admin.md) | Super Admin entra com senha + TOTP; códigos de recuperação levam ao recadastro |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 

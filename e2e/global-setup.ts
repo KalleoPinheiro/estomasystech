@@ -19,6 +19,7 @@ import {
 import { findInviteUrl } from "./support/invite-log";
 import { mintSessionToken } from "./support/session-token";
 import { slotFromSeed } from "./support/slots";
+import { saveTotpState, SUPER_ADMIN_TOTP_PATH, totpCode, totpStep } from "./support/totp";
 
 /**
  * Roda uma vez antes de toda a suíte (depois que o(s) `webServer` já respondem —
@@ -27,7 +28,8 @@ import { slotFromSeed } from "./support/slots";
  * 1. Faz o bootstrap do primeiro Super Admin (`POST /api/auth/bootstrap`, guardado
  *    por `VITTA_BOOTSTRAP_TOKEN`), consome o convite para definir a senha e loga —
  *    o mesmo caminho que uma instalação nova percorre, agora que não existe mais
- *    senha mestre (issue #21 / ADR-004). O Super Admin é o operador da plataforma
+ *    senha mestre (issue #21 / ADR-004), cadastrando o segundo fator no primeiro
+ *    login (ADR-008). O Super Admin é o operador da plataforma
  *    (ADR-007): importa o catálogo de taxonomias e convida o Admin de Empresa da
  *    `legacy-clinic` (`POST /api/platform/clinics/legacy-clinic/admins`).
  * 2. O Admin de Empresa define a senha pelo convite e loga. O cookie dele vira o
@@ -126,15 +128,25 @@ const ROLE_LOGIN_IP = "198.51.100.204";
 const CLINIC_ADMIN_LOGIN_IP = "198.51.100.205";
 
 async function login(email: string, password: string, who: string, clientIp?: string): Promise<string> {
-  const response = await fetch(`${MAIN_BASE_URL}/api/auth/login`, {
+  return sessionCookieFrom("/api/auth/login", { email, password }, who, clientIp);
+}
+
+/** POST que termina numa sessão: devolve o par `vitta_session=…` do Set-Cookie. */
+async function sessionCookieFrom(
+  url: string,
+  data: unknown,
+  who: string,
+  clientIp?: string,
+): Promise<string> {
+  const response = await fetch(`${MAIN_BASE_URL}${url}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(clientIp ? { "x-forwarded-for": clientIp } : {}),
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(data),
   });
-  const body = (await response.json()) as Envelope<{ ok: boolean }>;
+  const body = (await response.json()) as Envelope<unknown>;
   if (!response.ok || !body.success) {
     throw new Error(
       `Login de ${who} falhou no global-setup (${response.status}): ${body.error ?? "?"}`,
@@ -150,6 +162,35 @@ async function login(email: string, password: string, who: string, clientIp?: st
     throw new Error(`Cookie de sessão inesperado: ${pair}`);
   }
   return pair;
+}
+
+/**
+ * Primeiro login do Super Admin (ADR-008): a senha rende só um token pendente,
+ * o cadastro do autenticador devolve a chave e o código TOTP dela, calculado
+ * aqui, emite a sessão. A chave fica em `SUPER_ADMIN_TOTP_PATH` para o
+ * `auth.spec.ts` entrar pela tela com o código.
+ */
+async function loginSuperAdmin(): Promise<string> {
+  const started = await post<{ mfaEnrollmentRequired?: boolean; pendingToken: string }>(
+    null,
+    "/api/auth/login",
+    { email: E2E_SUPER_ADMIN_EMAIL, password: E2E_SUPER_ADMIN_PASSWORD },
+  );
+  if (!started.mfaEnrollmentRequired) {
+    throw new Error("Login do Super Admin numa instalação nova deveria exigir o cadastro do segundo fator");
+  }
+  const enrolled = await post<{ secret: string; pendingToken: string }>(null, "/api/auth/mfa/enroll", {
+    pendingToken: started.pendingToken,
+  });
+  const step = totpStep();
+  const cookie = await sessionCookieFrom(
+    "/api/auth/mfa/verify",
+    { pendingToken: enrolled.pendingToken, code: totpCode(enrolled.secret, step) },
+    "Super Admin (segundo fator)",
+  );
+  await mkdir(path.dirname(SUPER_ADMIN_TOTP_PATH), { recursive: true });
+  await saveTotpState({ secret: enrolled.secret, lastUsedStep: step });
+  return cookie;
 }
 
 async function writeStorageState(file: string, cookiePair: string): Promise<void> {
@@ -366,7 +407,7 @@ export interface GlobalSetupOptions {
 
 export async function runGlobalSetup({ roleAccounts }: GlobalSetupOptions): Promise<void> {
   await consumeInvite(await bootstrapSuperAdmin(), E2E_SUPER_ADMIN_PASSWORD, "Super Admin");
-  const superAdminCookie = await login(E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, "Super Admin");
+  const superAdminCookie = await loginSuperAdmin();
   // Catálogo de taxonomias (NANDA-I/NOC/NIC), subset curado de estomaterapia.
   // O catálogo é global: importar é ato de plataforma (ADR-007).
   await post(superAdminCookie, "/api/platform/taxonomy/import", {});

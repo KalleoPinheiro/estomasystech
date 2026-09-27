@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, OPEN_MODE_BASE_URL } from "./support/constants";
 import { sessionCookie } from "./support/session-token";
+import { nextTotpCode } from "./support/totp";
 
 // Sobrescreve o storageState admin padrão (playwright.config.ts) — estes specs
 // precisam começar deslogados para exercitar o próprio fluxo de login.
@@ -35,11 +36,13 @@ test.describe("login por e-mail e senha", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  // Super Admin é o operador da plataforma (ADR-007): o login manda para `/`, e
-  // o proxy leva o papel à própria área.
+  // Super Admin é o operador da plataforma (ADR-007) e entra com senha + código
+  // do autenticador cadastrado no global-setup (ADR-008).
   test("Super Admin entra e termina em /plataforma", async ({ page }) => {
     await page.goto("/login");
     await signIn(page, E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD);
+    await page.getByLabel("Código do autenticador", { exact: true }).fill(await nextTotpCode());
+    await page.getByRole("button", { name: "Verificar" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Plataforma" })).toBeVisible();
     await expect(page).toHaveURL("/plataforma");
     await expect(page.getByRole("navigation")).toHaveCount(0);

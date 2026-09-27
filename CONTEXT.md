@@ -119,13 +119,19 @@
 **Session** (sessão)
 
 - User authenticated with their own password (scrypt hash), set via an emailed invite or self-service reset. Google OAuth is not an authentication method — it is unrelated to login.
+- Super Admin only: the password yields a **pending login** (5-minute signed token, never a session); the session is issued after the **second factor** — a TOTP code from an authenticator app, enrolled on first login.
+
+**Second factor** (segundo fator)
+
+- TOTP (RFC 6238) from any authenticator app; mandatory for Super Admin, not offered to other roles ([ADR-008](./docs/adr/008-segundo-fator-do-super-admin.md)).
+- **Recovery code** (código de recuperação): ten single-use codes shown once at enrollment. Using one does not open a session — it forces re-enrolling the authenticator, which replaces all ten.
 - Session claims: user email, role, clinic (Super Admin has no clinic — it operates the platform, outside every clinic), assigned professional (if Profissional).
 
 **Role** (papel)
 
 Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or permissions.
 
-- **Super Admin** (sistema, operador da plataforma): the one platform operator ([ADR-007](./docs/adr/007-super-admin-operador-da-plataforma.md)). Reaches only the `platform` route family (`/plataforma`, `/api/platform/**`) plus logout; no access to any Clinic's data — no patient record, schedule, billing or settings. Invites the first Admin de Empresa of a Clinic and imports the global taxonomy catalog. There is exactly one: it comes from bootstrap, no one creates another, and the database refuses a second one.
+- **Super Admin** (sistema, operador da plataforma): the one platform operator ([ADR-007](./docs/adr/007-super-admin-operador-da-plataforma.md)). Reaches only the `platform` route family (`/plataforma`, `/api/platform/**`) plus logout; no access to any Clinic's data — no patient record, schedule, billing or settings. Invites the first Admin de Empresa of a Clinic and imports the global taxonomy catalog. There is exactly one: it comes from bootstrap, no one creates another, and the database refuses a second one. Signs in with password **and** a second factor ([ADR-008](./docs/adr/008-segundo-fator-do-super-admin.md)).
 - **Admin de Empresa** (equipe, admin da clínica): full access within its own Clinic only — operational data, clinical data, clinic settings, account management. A Clinic may have more than one. Creates Profissional, Atendente, Patient, Partner, and other Admin de Empresa accounts, all within its own Clinic.
 - **Atendente** (equipe, recepção): operational access only — scheduling and patient/partner registration. No access to clinical data (evolution notes, condition assessments, photos). Creates Patient and Partner accounts.
 - **Profissional** (equipe): clinical access, but scoped dynamically — sees only patients it has at least one appointment or evolution note with. Not a fixed "ownership": a patient can accumulate access for several professionals over time (coverage, transfer, return). Creates Patient and Partner accounts.
@@ -296,3 +302,4 @@ See `src/` structure:
 - [ADR-005: Revogação de sessão por versão](./docs/adr/005-revogacao-de-sessao-por-versao.md) — `session_version` na conta × `sv` no token; logout, senha e desativação revogam.
 - [ADR-006: Chave de dados clínicos](./docs/adr/006-chave-de-dados-clinicos.md) — `DATA_ENCRYPTION_KEY` versionada, separada do `AUTH_SECRET`; todo texto clínico cifrado.
 - [ADR-007: Super Admin é o operador da plataforma](./docs/adr/007-super-admin-operador-da-plataforma.md) — um único super_admin, família `platform`, sem acesso a dado de clínica; emenda o ADR-003.
+- [ADR-008: Segundo fator do Super Admin](./docs/adr/008-segundo-fator-do-super-admin.md) — TOTP obrigatório, login em duas etapas, códigos de recuperação que levam ao recadastro.

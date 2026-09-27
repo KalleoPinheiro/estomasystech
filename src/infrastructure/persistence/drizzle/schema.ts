@@ -427,6 +427,44 @@ export const authTokens = pgTable(
   ],
 );
 
+/**
+ * Segundo fator do super_admin (ADR-007, bloco B2). A linha só existe depois
+ * de confirmada: o cadastro em andamento viaja no token pendente. Sem
+ * `clinic_id` pelo mesmo motivo de `auth_tokens`: usada antes de existir
+ * sessão, sempre pela conta, e só o super_admin (sem clínica) tem fator.
+ */
+export const userMfa = pgTable('user_mfa', {
+  accountId: text('account_id')
+    .primaryKey()
+    .references(() => userAccounts.id),
+  // Chave base32 cifrada com a chave de dados (ADR-006).
+  totpSecret: text('totp_secret').notNull(),
+  enrolledAt: timestamp('enrolled_at', {
+    withTimezone: true,
+    mode: 'date',
+  }).notNull(),
+  // Último passo de 30 s aceito: o mesmo código não entra duas vezes.
+  lastUsedStep: integer('last_used_step').notNull(),
+});
+
+/** Códigos de recuperação de uso único (hash scrypt, nunca o código). */
+export const mfaRecoveryCodes = pgTable(
+  'mfa_recovery_codes',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => userAccounts.id),
+    codeHash: text('code_hash').notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true, mode: 'date' }),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [index('idx_mfa_recovery_codes_account').on(table.accountId)],
+);
+
 export const googleAccounts = pgTable(
   'google_accounts',
   {
