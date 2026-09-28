@@ -3,7 +3,7 @@ title: "Plano de Evolução Faseado e Roadmap"
 status: living
 audience: [po, stakeholder, dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-28
 ---
 
 # Plano de Evolução Faseado — VittaFlow
@@ -75,6 +75,7 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 | RM-11 | Auditoria UX — Fase B, clínico-legal crítico | documentos clínicos válidos e autoria confiável | entregue | [#61](https://github.com/KalleoPinheiro/vitta-flow/issues/61) | [`fase-b-clinico-legal-critico/`](../.specs/features/fase-b-clinico-legal-critico/) |
 | RM-12 | Auditoria UX — Fase C, LGPD e segurança do dado | conformidade LGPD | entregue | [#69](https://github.com/KalleoPinheiro/vitta-flow/issues/69) | [`fase-c-lgpd-seguranca-dado/`](../.specs/features/fase-c-lgpd-seguranca-dado/) |
 | RM-13 | Documentação em progressive disclosure | onboarding de dev e de agente sem ler o repositório inteiro | entregue | [#173](https://github.com/KalleoPinheiro/vitta-flow/pull/173) | [`docs-progressive-disclosure/`](../.specs/features/docs-progressive-disclosure/) |
+| RM-20 | Portal do Super Admin: `/plataforma` para cadastrar, editar, suspender e reativar clínicas e gerir o `company_admin`; super_admin único, sem acesso clínico, com segundo fator, recuperação de emergência e trilha de auditoria de plataforma | entrar no ar com 1 clínica e abrir a segunda sem `INSERT` manual | entregue | [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) | [`portal-super-admin/`](../.specs/features/portal-super-admin/) |
 
 As seções por fase abaixo são o detalhe (L2) — escopo, decisões pendentes e critérios de cada uma.
 
@@ -181,6 +182,15 @@ Exige escolhas do negócio antes de executar:
   Super Admin. Executa [ADR-004](./adr/004-remocao-google-oauth-autenticacao.md); spec em
   [`.specs/features/autenticacao-nativa/`](../.specs/features/autenticacao-nativa/spec.md).
   Issue [#21](https://github.com/KalleoPinheiro/vitta-flow/issues/21) e tickets #32–#35.
+- **Portal do Super Admin:** **entregue** (RM-20) — área `/plataforma` exclusiva do super_admin
+  (único, criado só pelo bootstrap, sem acesso a dado clínico), com cadastro de clínicas e do
+  primeiro `company_admin`, suspensão e reativação, segundo fator (TOTP + códigos de recuperação),
+  recuperação de emergência por script e trilha de auditoria de plataforma. Decisões em
+  [ADR-007](./adr/007-super-admin-operador-da-plataforma.md) a
+  [ADR-010](./adr/010-trilha-de-auditoria-de-plataforma.md); discovery em
+  [`.design/portal-super-admin.md`](../.design/portal-super-admin.md); verificação de cada bloco
+  (B1–B7) em `.checks/b*-*.verified.md`. Issue [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214)
+  (PRs #234, #236–#241). Pendências posteriores: #243–#253 e a retenção da trilha na #210.
 - **TISS/convênios:** operadora no paciente, guia por atendimento, relatório por operadora com
   série de scores como evidência. Ainda backlog, sem spec.
 - **Paginação por cursor** nas listagens: ~~ainda backlog, sem spec~~ **entregue** para pacientes
