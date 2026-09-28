@@ -817,6 +817,12 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
         await system.findPlatformTrail({ from: new Date(Date.now() + 60_000) }),
       ).toHaveLength(0);
       expect(await system.findPlatformTrail({}, { limit: 1 })).toHaveLength(1);
+      const trail = await system.findPlatformTrail();
+      const times = trail.map((e) => e.occurredAt.getTime());
+      expect(times).toEqual([...times].sort((a, b) => b - a));
+      expect(
+        (await system.findPlatformTrail({}, { offset: 1 })).map((e) => e.id),
+      ).toEqual([trail[1].id]);
       await expect(clinicA.findPlatformTrail()).rejects.toThrow(
         'Trilha de plataforma exige escopo de sistema',
       );

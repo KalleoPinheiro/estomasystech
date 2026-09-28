@@ -120,6 +120,7 @@ Proof: `npm run check:docs`
 
 **C21** - Nenhum arquivo novo usa `systemScope()` e `src/app` não referencia `LEGACY_CLINIC_ID`; `src/lib/audit.ts` também não
 Proof: `tests/lib/tenant-scope.test.ts -t "allowlist justificada"`
+Proof: `tests/lib/tenant-scope.test.ts -t "fallback legado"`
 Proof: `tests/lib/audit.test.ts -t "sem clínica legada"`
 
 **C22** - Gates: typecheck, lint, check:sv, cobertura ≥ 90%; E2E nas duas configs
@@ -158,5 +159,6 @@ Registro do build (lote único, sem passagem de bastão):
 
 - **Fronteira:** C1–C21 fechadas no próprio lote (`7dbba49..HEAD`); C22 pelos gates locais e pelo CI do PR.
 - **Ajustado durante o build (testes que fixavam o comportamento antigo, previsto pela fonte):** `tests/infrastructure/recover-super-admin.test.ts` esperava `legacy-clinic` "até o B6" e passou a esperar `clinicId: null`; `tests/lib/audit.test.ts` idem para `actorOverride` sem empresa; `tests/api/auth-routes.test.ts` lê os eventos de login falho no escopo de sistema e confere `clinicId` nulo; `accounts-hierarchy` e `patient-export-access` deixaram de passar `clinicId` no filtro (removido do contrato). Nenhuma checagem baixou.
+- **Verifier, rodada 1 (PASS 21/22; C22 rodada pelo orquestrador: cobertura 96,46%, E2E dev 232 e prod 35 verdes):** C21 ganhou a prova que cobre a metade `src/app` (`fallback legado`); C6 passou a conferir também ordem e `offset` da trilha em memória. Mantidos: rótulos novos e cabeçalhos da tela sem teste próprio (sem design vinculante); C11 só na trilha da `legacy-clinic` (o `clinicId: null` já exclui as demais).
 - **Descartado:** nada.
 - **Ambiente local:** E2E com config temporário (não commitado) que só troca o `executablePath` do Chromium para `/opt/pw-browsers/chromium-1194`, e `NODE_USE_ENV_PROXY=1` (mesmo arranjo do B5).
