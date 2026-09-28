@@ -143,6 +143,15 @@ export interface UserAccountRepository {
   /** Contas de um papel, na ordem do e-mail — sem o teto de `findAll` (B4). */
   findByRole(role: UserRole): Promise<UserAccount[]>;
   /**
+   * Como `findByRole`, mas tranca as linhas (`SELECT ... FOR UPDATE`) dentro
+   * da transação corrente (#244): duas desativações concorrentes de
+   * `company_admin` da mesma empresa leem o mesmo estado sem o lock — a
+   * segunda só reavalia a regra do último admin depois que a primeira
+   * confirma. Fora de uma transação real (in-memory), delega para
+   * `findByRole` sem lock.
+   */
+  findByRoleForUpdate(role: UserRole): Promise<UserAccount[]>;
+  /**
    * Troca só o hash de senha, identificando a conta pelo id. Existe separado de
    * `save` porque o fluxo de convite/reset roda ANTES de haver sessão: não há
    * empresa de contexto para escopar o repositório, e a autorização vem do

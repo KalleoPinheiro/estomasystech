@@ -146,6 +146,11 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
     return (await this.findAll()).filter((a) => a.role === role);
   }
 
+  /** Sem transação real (in-memory, CONS2-03): delega sem lock. */
+  findByRoleForUpdate(role: UserRole): Promise<UserAccount[]> {
+    return this.findByRole(role);
+  }
+
   async findAll(): Promise<UserAccount[]> {
     return [...this.items.values()].sort((a, b) =>
       a.email.localeCompare(b.email),
