@@ -1,7 +1,6 @@
 import { after } from 'next/server';
 import { type AuditAction, AuditEvent } from '@/domain/audit/audit-event';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
-import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import type { Session } from '@/lib/auth/session';
 import { logError } from '@/lib/log-error';
 
@@ -18,9 +17,10 @@ export interface AuditInput {
   patientId?: string | null;
   detail?: string | null;
   /**
-   * Empresa do evento. Só precisa ser passado explicitamente em acesso
-   * cross-empresa do papel de sistema (`session.clinicId === null`) — nos
-   * demais casos resolve sozinho a partir de `session.clinicId`.
+   * Empresa do evento, quando o super_admin age sobre uma clínica (B4/B5): a
+   * clínica-alvo. Nos demais casos resolve sozinho a partir do ator; sem
+   * empresa, o evento é de plataforma (`null`, B6). O repositório escopado
+   * recusa empresa diferente da sua.
    */
   clinicId?: string | null;
   /**
@@ -86,17 +86,13 @@ async function persistAuditEvent(
 function resolveActor(
   actorOverride: AuditActorOverride | undefined,
   session: Session | null,
-): { role: string; id: string; clinicId: string } {
-  if (actorOverride) {
-    return {
-      role: actorOverride.role,
-      id: actorOverride.id,
-      clinicId: actorOverride.clinicId ?? LEGACY_CLINIC_ID,
-    };
-  }
+): { role: string; id: string; clinicId: string | null } {
+  // Sem empresa não há fallback para a clínica legada (#210): o evento é de
+  // plataforma, ou ganha a clínica do repositório escopado que o grava.
+  if (actorOverride) return actorOverride;
   return {
     role: session?.role ?? 'anonymous',
     id: session?.subject ?? 'anonymous',
-    clinicId: session?.clinicId ?? LEGACY_CLINIC_ID,
+    clinicId: session?.clinicId ?? null,
   };
 }

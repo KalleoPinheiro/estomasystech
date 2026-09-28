@@ -79,6 +79,27 @@ test.describe("área da plataforma", () => {
       await expect(page.getByRole("row").filter({ hasText: name }).getByText("Ativa", { exact: true })).toBeVisible();
     });
 
+    test("trilha da plataforma mostra a criação da clínica", async ({ page }) => {
+      // B6: ação do super_admin numa clínica entra na trilha de plataforma.
+      const digits = String(Date.now()).slice(-12).padStart(12, "0");
+      const name = `Clínica Trilha ${digits}`;
+      await apiPost(page.request, "/api/platform/clinics", {
+        name,
+        cnpj: `${digits}02`,
+        contactPhone: "11 3333-4444",
+        contactEmail: "contato@trilha-e2e.test",
+        adminEmail: `admin-${digits}@trilha-e2e.test`,
+      });
+
+      await page.goto("/plataforma");
+      await page.getByRole("link", { name: "Trilha da plataforma" }).click();
+
+      await expect(page.getByRole("heading", { level: 1, name: "Trilha da plataforma" })).toBeVisible();
+      const row = page.getByRole("row").filter({ hasText: name }).filter({ hasText: "Criação" });
+      await expect(row.filter({ has: page.getByRole("cell", { name: "Clínica", exact: true }) })).toHaveCount(1);
+      await expect(row.first().getByText("super_admin")).toBeVisible();
+    });
+
     test("tela da clínica leva o super_admin a /plataforma", async ({ page }) => {
       await page.goto("/agenda");
 

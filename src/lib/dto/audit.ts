@@ -29,3 +29,36 @@ export const toAuditEventDto = (
   detail: event.detail,
   occurredAt: event.occurredAt.toISOString(),
 });
+
+/**
+ * Linha da trilha de plataforma (B6): sem paciente — o super_admin não vê dado
+ * de paciente (ADR-007). `clinicId`/`clinicName` nulos = evento de plataforma.
+ */
+export interface PlatformAuditEventDto {
+  id: string;
+  clinicId: string | null;
+  clinicName: string | null;
+  actorRole: string;
+  actorId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  detail: string | null;
+  occurredAt: string;
+}
+
+export const toPlatformAuditEventDto = (
+  event: AuditEvent,
+  clinicName: string | null,
+): PlatformAuditEventDto => ({
+  id: event.id,
+  clinicId: event.clinicId,
+  clinicName,
+  actorRole: event.actorRole,
+  actorId: event.actorId,
+  action: event.action,
+  resourceType: event.resourceType,
+  resourceId: event.resourceId,
+  detail: event.detail,
+  occurredAt: event.occurredAt.toISOString(),
+});

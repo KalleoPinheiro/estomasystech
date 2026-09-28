@@ -117,7 +117,6 @@ describe('Feature: Acesso por papel ao export LGPD do paciente (#185)', () => {
 
     const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
     const exports = await auditEvents.findAll({
-      clinicId: CLINIC_A_ID,
       resourceType: 'export',
       patientId,
     });

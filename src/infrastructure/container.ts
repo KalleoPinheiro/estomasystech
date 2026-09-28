@@ -409,7 +409,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       db,
       tenant.clinicId,
     ),
-    auditEvents: new DrizzleAuditEventRepository(db),
+    auditEvents: new DrizzleAuditEventRepository(db, tenant.clinicId),
     reminderLog: new DrizzleReminderLogRepository(db, tenant.clinicId),
     calendar: calendarGatewayFor(db, tenant.clinicId),
     messaging: buildMessagingGateway(),

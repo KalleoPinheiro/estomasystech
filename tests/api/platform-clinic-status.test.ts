@@ -92,7 +92,7 @@ const change = async (
   };
 };
 
-/** A trilha ainda não é escopada por empresa (B6): filtra pela clínica-alvo. */
+/** Eventos de estado da clínica-alvo (a trilha já é escopada por ela, B6). */
 const statusEvents = async (clinicId: string) =>
   (await (await repositories(clinicId)).auditEvents.findAll()).filter(
     (event) =>
