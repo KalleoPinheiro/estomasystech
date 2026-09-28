@@ -3,7 +3,7 @@ title: "ADR 007 — Super Admin é o operador da plataforma, sem acesso a dado d
 status: frozen
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-27
+last_reviewed: 2026-09-28
 ---
 
 # ADR 007 — Super Admin é o operador da plataforma, sem acesso a dado de clínica
@@ -54,7 +54,8 @@ super_admin, sem acesso clínico por padrão, com alcance limitado a cadastro de
   `ck_user_accounts_system_role_has_no_clinic`:
   `CHECK (("role" = 'super_admin') = ("clinic_id" IS NULL))`, somada ao índice
   `uq_user_accounts_single_system_account`. A migração `0041` falha diante de linha inválida, sem
-  alterar nada.
+  alterar nada. O `super_admin` também só cadastra `company_admin`: `PROVISIONING_MATRIX.super_admin`
+  tem só essa linha, coerente com o alcance da opção B (#253).
 - **Primeiro admin pela plataforma.** `POST /api/platform/clinics/[id]/admins` com `{ email }`
   cria o `company_admin` sem senha usável e envia o convite. A resposta não traz o link: com ele, o
   operador definiria a senha do admin e entraria na clínica.
