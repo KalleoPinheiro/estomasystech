@@ -34,6 +34,8 @@ const DUPLICATE_EMAIL_MESSAGE = 'Já existe conta com este email';
 export interface ManageClinicAdminsServices extends InviteServices {
   /** Escopado à clínica-alvo (`clinicScope`). */
   userAccounts: UserAccountRepository;
+  /** Escopado à clínica-alvo — usado pelo `audit` de `apply` fora de transação. */
+  auditEvents: AuditEventRepository;
   /**
    * Unidade de trabalho escopada à clínica-alvo (#243): o convite grava a
    * conta nova e o evento de auditoria na mesma transação — falha na
@@ -50,6 +52,17 @@ export interface ManageClinicAdminsServices extends InviteServices {
 export type RecordAdminInviteAudit = (
   auditEvents: AuditEventRepository,
   account: UserAccount,
+) => Promise<void>;
+
+/**
+ * Grava o evento de auditoria de `apply` (reenvio, desativar, reativar)
+ * contra o repositório correto: fora de transação, o da clínica; em
+ * `deactivate` (#244), o escopado ao `tx` — chamar o repositório de fora da
+ * transação enquanto ela está aberta trava o PGlite (conexão única, fila
+ * exclusiva por operação).
+ */
+export type RecordAdminActionAudit = (
+  auditEvents: AuditEventRepository,
 ) => Promise<void>;
 
 export interface AdminActionResult {
@@ -133,39 +146,60 @@ export class ManageClinicAdmins {
     clinic: Clinic,
     account: UserAccount,
     action: AdminAction,
-    audit: () => Promise<void>,
+    audit: RecordAdminActionAudit,
   ): Promise<AdminActionResult> {
     if (action === 'resend-invite') {
       assertNotSuspended(clinic);
       return this.resendInvite(account, audit);
     }
     if (action === 'deactivate') {
-      assertCanDeactivate(
-        PLATFORM_ACCOUNT_MANAGER,
-        account,
-        await this.services.userAccounts.findByRole('company_admin'),
-      );
+      return this.deactivate(account, audit);
     }
-    await audit();
-    const updated =
-      action === 'deactivate' ? account.deactivate() : account.reactivate();
+    await audit(this.services.auditEvents);
+    const updated = account.reactivate();
     await this.services.userAccounts.save(updated);
-    if (action === 'deactivate') {
-      // Conta desativada derruba as sessões existentes (#194).
-      await this.services.userAccounts.revokeSessions(updated.id);
-    }
     return { account: updated, delivered: null };
+  }
+
+  /**
+   * Desativar é a única ação sujeita à regra do último admin ativo, e a
+   * checagem lê outras contas antes de gravar (#244): duas desativações
+   * concorrentes de admins diferentes da mesma clínica liam o mesmo estado e
+   * as duas passavam. `findByRoleForUpdate` tranca (`SELECT ... FOR UPDATE`)
+   * as linhas `company_admin` dentro da transação, então a segunda
+   * desativação espera a primeira confirmar e reavalia a regra já com o
+   * estado atualizado — nunca as duas passam.
+   */
+  private async deactivate(
+    account: UserAccount,
+    audit: RecordAdminActionAudit,
+  ): Promise<AdminActionResult> {
+    return this.services.transactions.run(
+      async ({ userAccounts, auditEvents }) => {
+        const clinicAdmins =
+          await userAccounts.findByRoleForUpdate('company_admin');
+        assertCanDeactivate(PLATFORM_ACCOUNT_MANAGER, account, clinicAdmins);
+        // Auditoria escopada ao `tx` (#244): usar o repositório de fora da
+        // transação aqui trava o PGlite (mutex exclusivo, conexão única).
+        await audit(auditEvents);
+        const updated = account.deactivate();
+        await userAccounts.save(updated);
+        // Conta desativada derruba as sessões existentes (#194).
+        await userAccounts.revokeSessions(updated.id);
+        return { account: updated, delivered: null };
+      },
+    );
   }
 
   /** Mesma regra de `POST /api/accounts/[id]/resend-invite` (#52). */
   private async resendInvite(
     account: UserAccount,
-    audit: () => Promise<void>,
+    audit: RecordAdminActionAudit,
   ): Promise<AdminActionResult> {
     if (!account.isActive) {
       throw new ValidationError('Conta desativada não pode receber convite');
     }
-    await audit();
+    await audit(this.services.auditEvents);
     const { delivered } = await new IssueAuthToken(
       this.services.authTokens,
       this.services.email,
