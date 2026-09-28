@@ -190,4 +190,4 @@ tem `DATABASE_URL` já tem o banco ([ADR-009](../adr/009-recuperacao-de-emergenc
 | --- | --- |
 | `0` | aplicado, ou simulado sem `--confirmar` |
 | `2` | comando ou pré-condição: flag desconhecida, `APP_URL` ausente ou sem `https://`, e-mail inválido, e-mail já usado por outra conta, nenhum Super Admin (use o § 8). Nada foi gravado |
-| `1` | falha inesperada (banco fora, erro no meio). A transação foi desfeita: nada foi alterado; corrija e rode de novo |
+| `1` | falha inesperada. Banco não abriu (ex.: `DATABASE_URL` errada, banco fora do ar): `Falha ao conectar ao banco (confira DATABASE_URL): nada foi alterado.` — nenhuma transação chegou a existir. Erro no meio depois de o banco abrir: a transação foi desfeita, nada foi alterado. Em ambos os casos, corrija e rode de novo |

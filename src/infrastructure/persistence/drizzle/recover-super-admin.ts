@@ -23,6 +23,14 @@ export const NO_SUPER_ADMIN_MESSAGE =
   'Nenhum super_admin nesta instalação. Use o bootstrap (docs/engineering/producao.md § 8).';
 export const ROLLED_BACK_MESSAGE =
   'Falha: nada foi alterado (transação desfeita).';
+/**
+ * hazard: `openDb()` roda antes de qualquer transação existir — se a conexão
+ * falhar (DATABASE_URL errada, banco fora do ar), o operador não pode ler
+ * ROLLED_BACK_MESSAGE, ou conclui erroneamente que o banco abriu e uma
+ * transação chegou a rodar.
+ */
+export const DB_CONNECTION_FAILED_MESSAGE =
+  'Falha ao conectar ao banco (confira DATABASE_URL): nada foi alterado.';
 export const DRY_RUN_MESSAGE =
   'Simulação: nada foi alterado. Rode de novo com --confirmar para aplicar.';
 export const AUDIT_ACTOR_ID = 'script:recover-super-admin';
@@ -261,7 +269,8 @@ function reportResult(
 
 /**
  * Linha de comando: `0` aplicado ou simulado, `2` uso ou pré-condição
- * (nada gravado), `1` falha inesperada (transação desfeita).
+ * (nada gravado), `1` falha inesperada — banco não abriu (nenhuma transação
+ * chegou a existir) ou transação desfeita depois de abrir.
  */
 export async function runRecoverSuperAdminCli(
   argv: string[],
@@ -279,8 +288,16 @@ export async function runRecoverSuperAdminCli(
     );
     return 2;
   }
+  let db: AppDb;
   try {
-    const result = await recoverSuperAdmin(await deps.openDb(), {
+    db = await deps.openDb();
+  } catch (error) {
+    deps.err(DB_CONNECTION_FAILED_MESSAGE);
+    deps.err(String(error instanceof Error ? error.stack : error));
+    return 1;
+  }
+  try {
+    const result = await recoverSuperAdmin(db, {
       appUrl,
       newEmail: args.newEmail,
       confirm: args.confirm,
