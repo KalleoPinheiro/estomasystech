@@ -165,3 +165,28 @@ describe('Feature: Documentação da suspensão de clínica (B5)', () => {
     expect(context).toContain('**Clínica suspensa**');
   });
 });
+
+describe('Feature: Documentação da trilha de plataforma (B6)', () => {
+  it('Dados acesso, ADR-010 e CONTEXT, Quando ler, Então registram a trilha de plataforma e o repositório escopado', () => {
+    const acesso = read('docs/domains/acesso/README.md');
+    const adr = read('docs/adr/010-trilha-de-auditoria-de-plataforma.md');
+    const context = read('CONTEXT.md');
+
+    expect(acesso).toMatch(/\| ACE-RN-10 \|[^\n]*\/plataforma\/auditoria/);
+    expect(acesso).toMatch(
+      /\| ACE-RN-31 \| Evento de auditoria sem empresa é \*\*evento de plataforma\*\* \(`clinic_id` nulo\): login com falha/,
+    );
+    expect(acesso).toContain('GET /api/platform/audit');
+    expect(acesso).toContain('aparece nas duas trilhas');
+    expect(acesso).toMatch(
+      /\| ACE-RN-32 \| O repositório de auditoria é escopado/,
+    );
+    expect(acesso).not.toContain('trilha de plataforma (B6) pendente');
+
+    expect(adr).toMatch(/^---\n[\s\S]*?status: frozen\n/);
+    expect(adr).toMatch(/\*\*Status:\*\* aceito/);
+    expect(adr).toContain('0045_audit-platform-events.sql');
+    expect(adr).toContain("clinic_id is null or actor_role = 'super_admin'");
+    expect(context).toContain('**platform event**');
+  });
+});

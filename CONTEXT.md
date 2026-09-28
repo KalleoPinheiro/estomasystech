@@ -115,6 +115,7 @@
 - System activity log: create, read, update, delete of sensitive entities.
 - Captures actor, action, entity type, and timestamp.
 - Required for compliance and forensics.
+- Belongs to one Clinic, or to none: a **platform event** (no Clinic — failed login, Super Admin second factor and recovery, taxonomy import). Platform events are seen only by the Super Admin, in the platform trail, which also lists the Super Admin's actions inside a Clinic (those also appear in that Clinic's trail).
 
 ### Access Control
 

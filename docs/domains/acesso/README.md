@@ -3,7 +3,7 @@ title: "Domínio: Acesso, empresas e auditoria"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-27
+last_reviewed: 2026-09-28
 domain: acesso
 ---
 
@@ -32,7 +32,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-07 | Leitura e escrita escopadas pela empresa da sessão via `TenantScope`; `{ clinicId }` literal não compila | `src/lib/auth/tenant-scope.ts` |
 | ACE-RN-08 | Conta desativada, logout, reset ou troca de senha revogam todas as sessões da conta em até 60 s, mesmo com cookie válido, para todos os papéis (inclusive portal) — `session_version` no token × na conta. Sessão sem empresa é conferida contra a conta de sistema pelo papel: e-mail do cookie diferente do da conta revoga (ADR-009) | [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md), `src/lib/auth/staff-revocation.ts` |
 | ACE-RN-09 | Mesmo e-mail pode existir em empresas diferentes; login testa a senha contra cada conta e nega se houver ambiguidade | `.specs/features/fix-login-email-ambiguo/` |
-| ACE-RN-10 | Super Admin só acessa a família `platform` (`/plataforma`, `/api/platform/**`) e as rotas compartilhadas (logout, portal). Toda rota da clínica responde `403` "Seu papel não tem acesso a este recurso" no proxy e no handler; toda página da clínica redireciona para `/plataforma`. Equipe da clínica que abre `/plataforma` vai a `/`; paciente e parceiro, a `/portal` | [ADR-007](../../adr/007-super-admin-operador-da-plataforma.md), `src/lib/auth/route-family.ts`, `src/proxy.ts` |
+| ACE-RN-10 | Super Admin só acessa a família `platform` (`/plataforma`, `/api/platform/**`, inclusive a trilha de plataforma `/plataforma/auditoria`, ACE-RN-31) e as rotas compartilhadas (logout, portal). Toda rota da clínica responde `403` "Seu papel não tem acesso a este recurso" no proxy e no handler; toda página da clínica redireciona para `/plataforma`. Equipe da clínica que abre `/plataforma` vai a `/`; paciente e parceiro, a `/portal` | [ADR-007](../../adr/007-super-admin-operador-da-plataforma.md), `src/lib/auth/route-family.ts`, `src/proxy.ts` |
 | ACE-RN-11 | Editar conta existente (senha, ativar/desativar, reenviar convite) segue a matriz do ACE-RN-05: papel fora da matriz → `403`, conta de outra empresa → `404`. Atendente/Profissional só listam e alteram contas `patient`/`partner`. Ninguém desativa a própria conta nem o último `company_admin` ativo (`400`). Senha, ativação e reenvio gravam auditoria antes da alteração; se a auditoria falha, nada muda | `src/domain/auth/account-management.ts`, `src/app/api/accounts/` (#184) |
 | ACE-RN-12 | Toda sub-rota de `/api/patients/:id/*` é família `clinical` por padrão (Atendente 403); exceção só por allowlist explícita, hoje vazia. Inclui a exportação LGPD, que também exige vínculo R4 do Profissional (404 sem vínculo) | `src/lib/auth/route-family.ts`, `.specs/STATE.md` AD-025 |
 | ACE-RN-13 | A interface esconde o que o papel não pode usar, pela mesma matriz de famílias de rota (sem regra duplicada): menu, blocos do dashboard, abas da ficha; tela proibida mostra "sem permissão" sem chamar a API. Esconder é UX — a API continua barrando (#199) | `src/lib/staff-access.tsx`, `src/lib/auth/route-family.ts` |
@@ -53,12 +53,14 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-28 | Clínica suspensa: login de toda conta dela (equipe, `patient`, `partner`) com a senha certa → `403` "O acesso desta clínica está suspenso. Fale com o responsável pela clínica."; no portal a mensagem termina com o contato da clínica (": telefone …, e-mail …."). Senha errada continua `401` "Email ou senha incorretos" — a suspensão só aparece para quem provou a senha. O mesmo e-mail numa clínica ativa entra nela | `src/app/api/auth/login/route.ts`, `src/application/auth/suspended-clinic-message.ts` (#214) |
 | ACE-RN-29 | Suspender incrementa a `session_version` de toda conta da clínica na mesma transação e a revogação por consulta trata a clínica suspensa como conta inativa: as sessões caem na hora no processo que suspendeu e em ≤ 60 s nos demais (ADR-005). Reativar não devolve as sessões antigas — as contas entram de novo com novo login | `src/lib/auth/staff-revocation.ts` (#214) |
 | ACE-RN-30 | Clínica suspensa não recebe convite nem reenvio de convite de admin (`400` "Clínica suspensa: reative a clínica antes de convidar o admin"); desativar/reativar admin e editar o cadastro seguem. Links de convite/reset já emitidos continuam valendo para definir a senha — o login seguinte é que é negado | `src/application/platform/manage-clinic-admins.ts` (#214) |
+| ACE-RN-31 | Evento de auditoria sem empresa é **evento de plataforma** (`clinic_id` nulo): login com falha — mesmo com e-mail de conta de alguma clínica —, segundo fator e recuperação do Super Admin, importação do catálogo de taxonomia. Nenhum Admin de Empresa o vê. A trilha de plataforma (`clinic_id` nulo ou ator `super_admin`) é só do Super Admin: `GET /api/platform/audit` (`from`, `to`, `limit` 1..500, `offset`; linhas com `clinicId`/`clinicName`, sem paciente) e a tela `/plataforma/auditoria`. Ação do Super Admin numa clínica grava a clínica-alvo e aparece nas duas trilhas. O login barrado por clínica suspensa segue na trilha da clínica | [ADR-010](../../adr/010-trilha-de-auditoria-de-plataforma.md), `src/lib/audit.ts`, `drizzle/0045_*` (#210, #214) |
+| ACE-RN-32 | O repositório de auditoria é escopado pela empresa como os demais (AD-017): `/api/audit` e a emissão de documento (`POST /api/documents/issue`) só leem a própria empresa; gravar evento de outra empresa num repositório de clínica é erro | `src/infrastructure/persistence/drizzle/drizzle-audit-event-repository.ts` (#210) |
 
 ### Papéis
 
 | Papel | O que acessa |
 | --- | --- |
-| `super_admin` | só a plataforma (`/plataforma`, `/api/platform/**`): cadastra e edita clínicas, suspende e reativa clínicas, convida, reenvia convite, desativa e reativa o `company_admin` de cada uma e importa o catálogo de taxonomias. Nenhum dado de clínica — nem prontuário, nem agenda, nem configurações. Existe um só, e entra com segundo fator (ACE-RN-18) |
+| `super_admin` | só a plataforma (`/plataforma`, `/api/platform/**`): cadastra e edita clínicas, suspende e reativa clínicas, convida, reenvia convite, desativa e reativa o `company_admin` de cada uma e importa o catálogo de taxonomias; lê a trilha de plataforma (ACE-RN-31). Nenhum dado de clínica — nem prontuário, nem agenda, nem configurações. Existe um só, e entra com segundo fator (ACE-RN-18) |
 | `company_admin` | tudo dentro da própria empresa: operacional, clínico, configurações, contas |
 | `atendente` | só operacional: agenda e cadastro de paciente/parceiro; lê profissionais e procedimentos só pela lista reduzida `/api/options/*`, sem comissão nem kit (#188) |
 | `profissional` | clínico, só dos pacientes com quem tem consulta ou evolução; busca NANDA-I/NOC/NIC da SAE (`/api/taxonomy/**`, família `clinical`) e nomes de profissionais por `/api/options/professionals`; a aba Pacotes do prontuário fica oculta até a decisão de produto (#189) |
@@ -73,8 +75,8 @@ cada tela faz com o dado é dos outros domínios.
 | Segundo fator do Super Admin (código do autenticador, cadastro, códigos de recuperação) | entregue, com recuperação de emergência no servidor (`npm run admin:recover`) | `/login` (etapas depois da senha), `/api/auth/mfa/**` |
 | Contas e papéis (criar, desativar, reenviar convite) | entregue | Configurações → Contas |
 | Dados cadastrais da empresa (CNPJ, contato, responsável técnico) | entregue | Configurações → Dados da clínica; plataforma → detalhe da clínica |
-| Trilha de auditoria | entregue | `/auditoria` |
-| Área da plataforma (Super Admin): lista de clínicas (situação ativa/suspensa, cadastro completo/incompleto, admin sem admin/aguardando primeiro acesso/ativo), nova clínica, detalhe com situação (suspender/reativar), cadastro e admins | entregue; trilha de plataforma (B6) pendente | `/plataforma`, `/plataforma/clinicas/**`, `/api/platform/**` |
+| Trilha de auditoria (da clínica; inclui as ações do Super Admin nela) | entregue | `/auditoria` |
+| Área da plataforma (Super Admin): lista de clínicas (situação ativa/suspensa, cadastro completo/incompleto, admin sem admin/aguardando primeiro acesso/ativo), nova clínica, detalhe com situação (suspender/reativar), cadastro e admins | entregue, com a trilha de plataforma (B6) | `/plataforma`, `/plataforma/clinicas/**`, `/plataforma/auditoria`, `/api/platform/**` |
 | Consentimento LGPD e exportação de dados do paciente | entregue (exportação só para Admins e Profissional com vínculo; Atendente sem acesso, pergunta aberta em AD-025) | portal, `patients/[id]/export` |
 
 Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,fundacao-multi-tenancy,fase-c-lgpd-seguranca-dado}/`.
@@ -88,7 +90,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 | borda e política | `src/proxy.ts`, `src/lib/auth/` |
 | API | `src/app/api/{auth,accounts,audit,settings,clinic-info,platform}/` |
 | UI | `src/app/{login,definir-senha,esqueci-senha,plataforma}/`, `src/app/(staff)/{auditoria,configuracoes}/` |
-| testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `tests/api/mfa-login.test.ts`, `tests/{api,infrastructure}/recover-super-admin.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma,plataforma-suspensao}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
+| testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `tests/api/audit-platform-trail.test.ts`, `tests/api/mfa-login.test.ts`, `tests/{api,infrastructure}/recover-super-admin.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma,plataforma-suspensao}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
 
 ## Decisões
 
