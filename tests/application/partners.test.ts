@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CreatePartner } from '@/application/partners/create-partner';
 import { ListPartners } from '@/application/partners/list-partners';
-import { DUPLICATE_PARTNER_EMAIL_MESSAGE } from '@/application/partners/partner-email';
 import { UpdatePartner } from '@/application/partners/update-partner';
 import type { Partner } from '@/domain/partner/partner';
 import { ConflictError, NotFoundError } from '@/domain/shared/errors';
 import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
+
+/** Duplicado na empresa: `ConflictError` (409 na API) com a mensagem literal (#211). */
+async function expectDuplicateEmailConflict(promise: Promise<unknown>) {
+  const error = await promise.then(
+    () => null,
+    (caught: unknown) => caught,
+  );
+  expect(error).toBeInstanceOf(ConflictError);
+  expect((error as Error).message).toBe('Já existe parceiro com este e-mail');
+}
 
 describe('Feature: Gestão de parceiros (médicos indicadores)', () => {
   let repo: InMemoryPartnerRepository;
@@ -35,13 +44,13 @@ describe('Feature: Gestão de parceiros (médicos indicadores)', () => {
     it('Dado email já cadastrado, Quando cadastrar, Então lança ConflictError com a mensagem da empresa', async () => {
       await createCarlos();
 
-      await expect(
+      await expectDuplicateEmailConflict(
         new CreatePartner(repo).execute({
           fullName: 'Dr. Outro',
           email: 'DR.CARLOS@x.com',
           phone: '11944440000',
         }),
-      ).rejects.toThrow(new ConflictError(DUPLICATE_PARTNER_EMAIL_MESSAGE));
+      );
     });
   });
 
@@ -72,9 +81,9 @@ describe('Feature: Gestão de parceiros (médicos indicadores)', () => {
         phone: '11933330000',
       });
 
-      await expect(
+      await expectDuplicateEmailConflict(
         new UpdatePartner(repo).execute({ id: carlos.id, email: 'ana@x.com' }),
-      ).rejects.toThrow(new ConflictError(DUPLICATE_PARTNER_EMAIL_MESSAGE));
+      );
     });
 
     it('Dado email alterado para o mesmo já usado pelo próprio parceiro, Quando atualizar, Então aceita', async () => {
@@ -156,13 +165,13 @@ describe('Feature: Gestão de parceiros (médicos indicadores)', () => {
       const racing = new RacingRepo(indexViolation());
       racing.armed = true;
 
-      await expect(
+      await expectDuplicateEmailConflict(
         new CreatePartner(racing).execute({
           fullName: 'Dr. Concorrente',
           email: 'corrida@x.com',
           phone: '11900000000',
         }),
-      ).rejects.toThrow(new ConflictError(DUPLICATE_PARTNER_EMAIL_MESSAGE));
+      );
     });
 
     it('Dada corrida na edição, Quando o índice recusa, Então lança ConflictError com a mensagem da empresa', async () => {
@@ -174,12 +183,12 @@ describe('Feature: Gestão de parceiros (médicos indicadores)', () => {
       });
       racing.armed = true;
 
-      await expect(
+      await expectDuplicateEmailConflict(
         new UpdatePartner(racing).execute({
           id: partner.id,
           email: 'corrida@x.com',
         }),
-      ).rejects.toThrow(new ConflictError(DUPLICATE_PARTNER_EMAIL_MESSAGE));
+      );
     });
 
     it.each([
