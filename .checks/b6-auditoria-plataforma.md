@@ -153,3 +153,10 @@ Proof: `npm run build && npx playwright test -c playwright.prod.config.ts`
 ## Handoff
 
 Lote único: S1–S5 somam ~52k de leitura estimada, abaixo de 150k.
+
+Registro do build (lote único, sem passagem de bastão):
+
+- **Fronteira:** C1–C21 fechadas no próprio lote (`7dbba49..HEAD`); C22 pelos gates locais e pelo CI do PR.
+- **Ajustado durante o build (testes que fixavam o comportamento antigo, previsto pela fonte):** `tests/infrastructure/recover-super-admin.test.ts` esperava `legacy-clinic` "até o B6" e passou a esperar `clinicId: null`; `tests/lib/audit.test.ts` idem para `actorOverride` sem empresa; `tests/api/auth-routes.test.ts` lê os eventos de login falho no escopo de sistema e confere `clinicId` nulo; `accounts-hierarchy` e `patient-export-access` deixaram de passar `clinicId` no filtro (removido do contrato). Nenhuma checagem baixou.
+- **Descartado:** nada.
+- **Ambiente local:** E2E com config temporário (não commitado) que só troca o `executablePath` do Chromium para `/opt/pw-browsers/chromium-1194`, e `NODE_USE_ENV_PROXY=1` (mesmo arranjo do B5).
