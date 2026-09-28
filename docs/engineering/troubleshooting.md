@@ -3,7 +3,7 @@ title: "Troubleshooting"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-09-28
 ---
 
 
@@ -27,6 +27,7 @@ algo que não está aqui? Adicione a linha no mesmo PR.
 | --- | --- | --- |
 | porta `5432`/`3000` ocupada | outro serviço na porta | `POSTGRES_PORT=`/`APP_PORT=` no compose, ou ajuste `DATABASE_URL` na Via B |
 | build morre com `Ineffective mark-compacts near heap limit` | heap padrão do V8 | já mitigado por `--max-old-space-size=4096`; se persistir, suba o valor em `package.json` — nunca remova |
+| `npm run build` falha no type check apontando erro de sintaxe/tipo em `.next/dev/types/validator.ts` (arquivo que ninguém editou) | rodar `next dev` (ex.: E2E local) e encerrá-lo no meio (Playwright mata o processo) pode truncar `.next/dev/types/validator.ts`, que o Next regrava continuamente durante o dev; `.next/dev` é o `distDir` usado em modo dev (`server/config.js`: `distDir = path.join(distDir, 'dev')`) e o tsconfig gerado inclui tanto `.next/types/**/*.ts` quanto `.next/dev/types/**/*.ts` para não precisar reescrever o `include` ao alternar dev/build (`lib/typescript/type-paths.js`) | contorno: `rm -rf .next/dev` antes de repetir o `build`. `next@16.3.6` já filtra `.next/dev/types` do type check quando builda (`lib/typescript/runTypeCheck.js`, `NODE_ENV !== 'development'`), então o sintoma não deveria mais aparecer nesta versão; se aparecer mesmo assim (versão mais antiga do Next, ou o filtro regredir), o `prebuild` do `package.json` já limpa `.next/dev/types` antes de cada `next build` |
 
 ## Regras de negócio que parecem bug
 

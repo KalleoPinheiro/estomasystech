@@ -5,6 +5,7 @@
   "scripts": {
     "prepare": "husky",
     "dev": "next dev",
+    "prebuild": "rm -rf .next/dev/types",
     "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "biome check",
