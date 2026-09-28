@@ -40,8 +40,8 @@ especificar → implementar → documentar → PR → merge → fechar issue.
    (`typecheck`, `lint`, `check:sv`, `test:coverage` ≥ 90%, `test:e2e`) verde
    antes de cada commit. O `tlc-spec-driven` já roda um Verifier independente
    (author ≠ verifier) ao final de `/implement` quando o escopo virou
-   `tasks.md` formal — não duplique essa verificação; registre o PASS dele em
-   `.specs/STATE.md` no passo 10.
+   `tasks.md` formal — não duplique essa verificação; registre o PASS dele no
+   handoff do passo 10.
 5. **Um commit semântico por issue** (`fix: <resumo> (#N)`) — ou um commit
    atômico por task se o `tlc-spec-driven` gerou `tasks.md` formal (o
    contrato dele exige isso). Em ambos os casos: cada issue fecha via
@@ -58,7 +58,7 @@ especificar → implementar → documentar → PR → merge → fechar issue.
    - **Não** edite `docs/audits/*.md` (frozen) nem a tabela geral de fases em
      `docs/plano-correcao-achados-auditoria-2026-09.md` — precedente das
      Fases A–C é deixar essa tabela como está; o rastro de "feito" vive nas
-     issues fechadas + `.specs/STATE.md`.
+     issues fechadas + `.specs/archive/handoff-2026.md`.
 7. **Push + PR**: `git push -u origin <branch>`, `gh pr create` com
    descrição assertiva (o que mudou, por quê, o que ficou fora e por quê,
    plano de teste). PR a partir da `main` já atualizada no passo 3.
@@ -71,10 +71,13 @@ especificar → implementar → documentar → PR → merge → fechar issue.
    ao mergear. Confirme depois (`gh issue view <n>`) que fechou; se alguma
    issue não tinha `Closes` no squash, feche manualmente com
    `gh issue close <n> --comment "..."` linkando o commit/PR.
-10. **Registrar em `.specs/STATE.md` → Handoff**: uma entrada no formato já
-    usado pelas Fases A/B/C (feature, o que mudou, gate final, branch/PR,
-    next step) — é o rastreador vivo de "o que já foi feito", não a tabela
-    do plano de correção.
+10. **Registrar o handoff em `.specs/archive/handoff-2026.md`**: uma entrada
+    no fim do arquivo (feature, o que mudou, gate final, branch/PR, next
+    step), com título terminando em `— ENCERRADO (#<PR>)`. É o rastreador
+    de "o que já foi feito", não a tabela do plano de correção. O
+    `.specs/STATE.md` guarda só o que está em aberto: não acrescente seção
+    `CONCLUÍDA` nele nem no arquivo — `tests/docs/structure.test.ts` recusa
+    as duas coisas. Rode `npx vitest run tests/docs` antes do push.
 
 ## O que NÃO fazer
 
@@ -83,5 +86,5 @@ especificar → implementar → documentar → PR → merge → fechar issue.
 - Não crie paginação/feature nova sem consumidor real só porque um audit doc
   menciona a superfície em geral — restrinja e documente por quê.
 - Não edite `docs/audits/*.md` (histórico congelado) nem tente "atualizar a
-  auditoria" — o rastro de conclusão vive nas issues, no `STATE.md` e no
+  auditoria" — o rastro de conclusão vive nas issues, no handoff arquivado e no
   spec da feature.
