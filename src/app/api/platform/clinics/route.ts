@@ -5,7 +5,7 @@ import { adminStatusOf } from '@/application/platform/clinic-overview';
 import { CreateClinic } from '@/application/platform/create-clinic';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
-import { recordAudit } from '@/lib/audit';
+import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import {
@@ -47,8 +47,10 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Cria a clínica e o primeiro `company_admin` (numa transação) e convida o
- * admin. A resposta nunca traz o link do convite (B1, critério 14).
+ * Cria a clínica, o primeiro `company_admin` e os eventos de auditoria da
+ * criação numa única transação (#243) — falha na auditoria desfaz clínica e
+ * admin junto — e só então convida o admin. A resposta nunca traz o link do
+ * convite (B1, critério 14).
  */
 export async function POST(request: NextRequest) {
   const guard = requireStaffSession(request);
@@ -62,22 +64,26 @@ export async function POST(request: NextRequest) {
     const { clinic, admin } = await new CreateClinic(
       clinics,
       clinicProvisioning,
-    ).execute({ ...body, createdBy: guard.session?.subject ?? 'anonymous' });
+    ).execute(
+      { ...body, createdBy: guard.session?.subject ?? 'anonymous' },
+      async (auditEvents, createdClinic, createdAdmin) => {
+        await recordAuditNow(auditEvents, guard.session, {
+          action: 'create',
+          resourceType: 'clinic',
+          resourceId: createdClinic.id,
+          clinicId: createdClinic.id,
+        });
+        await recordAuditNow(auditEvents, guard.session, {
+          action: 'create',
+          resourceType: 'account',
+          resourceId: createdAdmin.id,
+          clinicId: createdClinic.id,
+        });
+      },
+    );
 
     const services = await getRepositories(clinicScope(clinic.id));
     const { delivered } = await sendInvite(services, admin);
-    recordAudit(services.auditEvents, guard.session, {
-      action: 'create',
-      resourceType: 'clinic',
-      resourceId: clinic.id,
-      clinicId: clinic.id,
-    });
-    recordAudit(services.auditEvents, guard.session, {
-      action: 'create',
-      resourceType: 'account',
-      resourceId: admin.id,
-      clinicId: clinic.id,
-    });
     return {
       clinic: toPlatformClinicDto(clinic),
       admin: {

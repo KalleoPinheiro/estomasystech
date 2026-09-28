@@ -3,6 +3,7 @@ import type {
   ClinicProvisioningScope,
 } from '@/application/ports/clinic-provisioning';
 import type { AppDb } from './db';
+import { DrizzleAuditEventRepository } from './drizzle-audit-event-repository';
 import { DrizzleClinicRepository } from './drizzle-clinic-repository';
 import { DrizzleUserAccountRepository } from './drizzle-foundation-repositories';
 
@@ -18,6 +19,7 @@ export class DrizzleClinicProvisioning implements ClinicProvisioning {
       fn({
         clinics: new DrizzleClinicRepository(tx),
         userAccounts: new DrizzleUserAccountRepository(tx, clinicId),
+        auditEvents: new DrizzleAuditEventRepository(tx, clinicId),
       }),
     );
   }

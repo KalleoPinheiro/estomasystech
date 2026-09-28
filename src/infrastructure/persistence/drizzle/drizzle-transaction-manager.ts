@@ -5,6 +5,8 @@ import type {
 import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { DrizzleAppointmentRepository } from './drizzle-appointment-repository';
+import { DrizzleAuditEventRepository } from './drizzle-audit-event-repository';
+import { DrizzleUserAccountRepository } from './drizzle-foundation-repositories';
 import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
@@ -32,6 +34,8 @@ export class DrizzleTransactionManager implements TransactionManager {
         invoices: new DrizzleInvoiceRepository(tx, this.clinicId),
         followUps: new DrizzleFollowUpRepository(tx, this.clinicId),
         sessionPackages: new DrizzleSessionPackageRepository(tx, this.clinicId),
+        userAccounts: new DrizzleUserAccountRepository(tx, this.clinicId),
+        auditEvents: new DrizzleAuditEventRepository(tx, this.clinicId),
       }),
     );
   }

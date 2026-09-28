@@ -1,3 +1,5 @@
+import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
+import type { UserAccountRepository } from '@/domain/auth/user-account';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
@@ -6,12 +8,16 @@ import type { AppointmentRepository } from '@/domain/scheduling/appointment-repo
 /**
  * Repositórios disponíveis dentro de uma transação — escopo enxuto, apenas o
  * que a conclusão de consulta usa (YAGNI); cresce quando outro fluxo precisar.
+ * `userAccounts`/`auditEvents` entraram pelo convite de admin da plataforma
+ * (#243): a conta nova e o evento de auditoria gravam juntos ou nada grava.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
   invoices: InvoiceRepository;
   followUps: FollowUpRepository;
   sessionPackages: SessionPackageRepository;
+  userAccounts: UserAccountRepository;
+  auditEvents: AuditEventRepository;
 }
 
 /**
