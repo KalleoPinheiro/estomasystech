@@ -3,7 +3,7 @@ title: "Domínio: Equipe e parceiros"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-09-28
 domain: equipe-parceiros
 ---
 
@@ -25,6 +25,7 @@ profissional ou parceiro pode ter, opcionalmente, uma conta com o papel correspo
 | EQP-RN-02 | Horário semanal do profissional: janelas por dia sem sobreposição; com janelas, a consulta dele precisa caber numa delas | `professional_availability` |
 | EQP-RN-03 | Ausência do profissional bloqueia só as consultas dele | `schedule_closures` |
 | EQP-RN-04 | Parceiro: nome, e-mail, CRM, especialidade; o paciente guarda "Indicado por" | `src/domain/partner/partner.ts`, `src/application/patients/assert-valid-referrer.ts` |
+| EQP-RN-05 | E-mail do parceiro é único **dentro da empresa**, não no banco inteiro: o mesmo médico pode ser parceiro de duas clínicas. Gravado em minúsculas, sem espaços. Duplicado na mesma empresa (cadastro ou edição, inclusive em corrida) responde 409 `Já existe parceiro com este e-mail`, sem citar outra empresa (#211) | índice `uq_partners_clinic_email` (migração `0046`), `src/application/partners/partner-email.ts` |
 
 ## Funcionalidades
 

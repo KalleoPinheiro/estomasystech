@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createPartner, createProfessional, unique } from "./support/api";
-import { literal, rx } from "./support/regexp";
+import { literal } from "./support/regexp";
 
 test.describe("equipe — profissionais", () => {
   test("cria e edita um profissional pela UI", async ({ page }) => {
@@ -91,7 +91,7 @@ test.describe("equipe — parceiros", () => {
     await page.getByLabel("Telefone *").fill("11955554444");
     await page.getByRole("button", { name: "Salvar" }).click();
 
-    await expect(page.getByText(rx`Já existe parceiro com o email ${partner.email}`)).toBeVisible();
+    await expect(page.getByText("Já existe parceiro com este e-mail")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Novo parceiro" })).toBeVisible();
   });
 });

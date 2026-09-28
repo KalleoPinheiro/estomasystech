@@ -1,19 +1,14 @@
 import { Partner, type PartnerProps } from '@/domain/partner/partner';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
-import { ValidationError } from '@/domain/shared/errors';
+import { assertPartnerEmailAvailable, savePartner } from './partner-email';
 
 export class CreatePartner {
   constructor(private readonly partners: PartnerRepository) {}
 
   async execute(input: PartnerProps): Promise<Partner> {
-    const existing = await this.partners.findByEmail(input.email);
-    if (existing) {
-      throw new ValidationError(
-        `Já existe parceiro com o email ${input.email}`,
-      );
-    }
+    await assertPartnerEmailAvailable(this.partners, input.email);
     const partner = Partner.create(input);
-    await this.partners.save(partner);
+    await savePartner(this.partners, partner);
     return partner;
   }
 }

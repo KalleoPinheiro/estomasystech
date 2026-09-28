@@ -1,6 +1,7 @@
 import type { Partner, PartnerProps } from '@/domain/partner/partner';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
-import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import { NotFoundError } from '@/domain/shared/errors';
+import { assertPartnerEmailAvailable, savePartner } from './partner-email';
 
 export interface UpdatePartnerInput extends Partial<PartnerProps> {
   id: string;
@@ -16,18 +17,13 @@ export class UpdatePartner {
       throw new NotFoundError('Parceiro', input.id);
     }
     if (input.email) {
-      const byEmail = await this.partners.findByEmail(input.email);
-      if (byEmail && byEmail.id !== partner.id) {
-        throw new ValidationError(
-          `Já existe parceiro com o email ${input.email}`,
-        );
-      }
+      await assertPartnerEmailAvailable(this.partners, input.email, partner.id);
     }
     let updated = partner.update(input);
     if (input.active !== undefined) {
       updated = input.active ? updated.reactivate() : updated.deactivate();
     }
-    await this.partners.save(updated);
+    await savePartner(this.partners, updated);
     return updated;
   }
 }
