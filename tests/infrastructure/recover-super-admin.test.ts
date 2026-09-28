@@ -6,6 +6,7 @@ import { hashAuthTokenSecret, RESET_TTL_MS } from '@/domain/auth/auth-token';
 import type { AppDb } from '@/infrastructure/persistence/drizzle/db';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import {
+  DB_CONNECTION_FAILED_MESSAGE,
   DRY_RUN_MESSAGE,
   NO_SUPER_ADMIN_MESSAGE,
   ROLLED_BACK_MESSAGE,
@@ -417,7 +418,8 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
         openDb: () => Promise.reject(new Error('conexão recusada')),
       });
       expect(offline.code).toBe(1);
-      expect(offline.err).toContain(ROLLED_BACK_MESSAGE);
+      expect(offline.err).toContain(DB_CONNECTION_FAILED_MESSAGE);
+      expect(offline.err).not.toContain('transação desfeita');
     });
   });
 });
