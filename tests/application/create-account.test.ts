@@ -9,7 +9,7 @@ import { InMemoryUserAccountRepository } from '@/infrastructure/persistence/in-m
 const HASH = 'scrypt$16384$salt$hash';
 
 describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', () => {
-  describe('Cenário: super_admin cadastra qualquer papel em qualquer empresa', () => {
+  describe('Cenário: super_admin cadastra company_admin em qualquer empresa, pela plataforma (ADR-007, #253)', () => {
     it('Dado super_admin, Quando cadastrar company_admin em empresa X, Então aceita', async () => {
       const repo = new InMemoryUserAccountRepository();
       const useCase = new CreateAccount(repo);
@@ -27,6 +27,27 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
       expect(account.role).toBe('company_admin');
       expect(account.clinicId).toBe('clinic-x');
     });
+
+    it.each(['atendente', 'profissional', 'patient', 'partner'] as const)(
+      'Dado super_admin, Quando cadastrar %s, Então rejeita (ProvisioningDeniedError) — ele não opera dentro da clínica (#253)',
+      async (targetRole) => {
+        const repo = new InMemoryUserAccountRepository();
+        const useCase = new CreateAccount(repo);
+
+        await expect(
+          useCase.execute(
+            { role: 'super_admin', clinicId: null },
+            {
+              email: `sa-nao-cadastra-${targetRole}@x.com`,
+              passwordHash: HASH,
+              role: targetRole,
+              clinicId: 'clinic-x',
+            },
+          ),
+        ).rejects.toThrow(ProvisioningDeniedError);
+        expect(await repo.findAll()).toHaveLength(0);
+      },
+    );
   });
 
   describe('Cenário: nenhum ator cadastra super_admin (ADR-007)', () => {
@@ -247,7 +268,7 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
       const useCase = new CreateAccount(repo);
 
       await useCase.execute(
-        { role: 'super_admin', clinicId: null },
+        { role: 'company_admin', clinicId: 'clinic-a' },
         {
           email: 'duplicado@x.com',
           passwordHash: HASH,
@@ -259,7 +280,7 @@ describe('Feature: Cadastro de conta respeitando a hierarquia (RBAC-11..14)', ()
 
       await expect(
         useCase.execute(
-          { role: 'super_admin', clinicId: null },
+          { role: 'company_admin', clinicId: 'clinic-a' },
           {
             email: 'duplicado@x.com',
             passwordHash: HASH,
