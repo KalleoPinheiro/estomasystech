@@ -2306,12 +2306,9 @@ describe('Feature: PartnersPage', () => {
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: 'Dra. Carla' },
       });
-      fireEvent.change(
-        screen.getByLabelText(/Email \(usado no login com Google\)/),
-        {
-          target: { value: 'carla@parceiro.com' },
-        },
-      );
+      fireEvent.change(screen.getByLabelText(/Email \*/), {
+        target: { value: 'carla@parceiro.com' },
+      });
       fireEvent.change(screen.getByLabelText(/Telefone/), {
         target: { value: '11988887777' },
       });
@@ -2349,12 +2346,9 @@ describe('Feature: PartnersPage', () => {
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: 'Dra. Carla' },
       });
-      fireEvent.change(
-        screen.getByLabelText(/Email \(usado no login com Google\)/),
-        {
-          target: { value: 'carla-sem-arroba' },
-        },
-      );
+      fireEvent.change(screen.getByLabelText(/Email \*/), {
+        target: { value: 'carla-sem-arroba' },
+      });
       fireEvent.change(screen.getByLabelText(/Telefone/), {
         target: { value: '11988887777' },
       });
@@ -2521,12 +2515,9 @@ describe('Feature: PartnersPage', () => {
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: 'Dra. Carla' },
       });
-      fireEvent.change(
-        screen.getByLabelText(/Email \(usado no login com Google\)/),
-        {
-          target: { value: 'carla@parceiro.com' },
-        },
-      );
+      fireEvent.change(screen.getByLabelText(/Email \*/), {
+        target: { value: 'carla@parceiro.com' },
+      });
       fireEvent.change(screen.getByLabelText(/Telefone/), {
         target: { value: '11988887777' },
       });
@@ -2553,12 +2544,9 @@ describe('Feature: PartnersPage', () => {
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: 'Dra. Carla' },
       });
-      fireEvent.change(
-        screen.getByLabelText(/Email \(usado no login com Google\)/),
-        {
-          target: { value: 'carla@parceiro.com' },
-        },
-      );
+      fireEvent.change(screen.getByLabelText(/Email \*/), {
+        target: { value: 'carla@parceiro.com' },
+      });
       fireEvent.change(screen.getByLabelText(/Telefone/), {
         target: { value: '11988887777' },
       });
