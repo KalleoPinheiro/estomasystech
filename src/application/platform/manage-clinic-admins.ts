@@ -5,6 +5,8 @@ import {
   type InviteServices,
   sendInvite,
 } from '@/application/auth/send-invite';
+import type { TransactionManager } from '@/application/ports/transaction-manager';
+import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import { assertCanDeactivate } from '@/domain/auth/account-management';
 import type {
   UserAccount,
@@ -32,7 +34,23 @@ const DUPLICATE_EMAIL_MESSAGE = 'Já existe conta com este email';
 export interface ManageClinicAdminsServices extends InviteServices {
   /** Escopado à clínica-alvo (`clinicScope`). */
   userAccounts: UserAccountRepository;
+  /**
+   * Unidade de trabalho escopada à clínica-alvo (#243): o convite grava a
+   * conta nova e o evento de auditoria na mesma transação — falha na
+   * auditoria desfaz a conta.
+   */
+  transactions: TransactionManager;
 }
+
+/**
+ * Grava o evento de auditoria do convite (#243): roda dentro da mesma
+ * transação que cria a conta, contra o repositório escopado ao `tx`. Falha
+ * aqui desfaz a conta junto (rollback).
+ */
+export type RecordAdminInviteAudit = (
+  auditEvents: AuditEventRepository,
+  account: UserAccount,
+) => Promise<void>;
 
 export interface AdminActionResult {
   account: UserAccount;
@@ -70,30 +88,39 @@ export class ManageClinicAdmins {
 
   /**
    * Convite de um admin (primeiro ou substituto). Clínica sem cadastro
-   * completo não recebe admin (design, "Clínica do go-live").
+   * completo não recebe admin (design, "Clínica do go-live"). A conta e o
+   * evento de auditoria gravam na mesma transação (#243): falha na
+   * auditoria desfaz a conta.
    */
   async invite(
     clinic: Clinic,
     email: string,
+    recordAudit: RecordAdminInviteAudit,
   ): Promise<{ account: UserAccount; delivered: boolean }> {
     assertNotSuspended(clinic);
     if (!clinic.isRegistrationComplete()) {
       throw new ValidationError(INCOMPLETE_REGISTRATION_MESSAGE);
     }
-    const account = await new CreateAccount(this.services.userAccounts)
-      .execute(PLATFORM_ACTOR, {
-        email,
-        passwordHash: UNSET_PASSWORD_HASH,
-        role: 'company_admin',
-        clinicId: clinic.id,
-      })
-      .catch((error: unknown) => {
-        // Corrida: dois convites do mesmo e-mail passam pela checagem prévia;
-        // `uq_user_accounts_clinic_email` deixa só um gravar.
-        throw isUniqueViolation(error)
-          ? new ValidationError(DUPLICATE_EMAIL_MESSAGE)
-          : error;
-      });
+    const account = await this.services.transactions.run(
+      async ({ userAccounts, auditEvents }) => {
+        const created = await new CreateAccount(userAccounts)
+          .execute(PLATFORM_ACTOR, {
+            email,
+            passwordHash: UNSET_PASSWORD_HASH,
+            role: 'company_admin',
+            clinicId: clinic.id,
+          })
+          .catch((error: unknown) => {
+            // Corrida: dois convites do mesmo e-mail passam pela checagem
+            // prévia; `uq_user_accounts_clinic_email` deixa só um gravar.
+            throw isUniqueViolation(error)
+              ? new ValidationError(DUPLICATE_EMAIL_MESSAGE)
+              : error;
+          });
+        await recordAudit(auditEvents, created);
+        return created;
+      },
+    );
     const { delivered } = await sendInvite(this.services, account);
     return { account, delivered };
   }

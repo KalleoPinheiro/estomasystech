@@ -190,7 +190,12 @@ Exige escolhas do negócio antes de executar:
   [ADR-010](./adr/010-trilha-de-auditoria-de-plataforma.md); discovery em
   [`.design/portal-super-admin.md`](../.design/portal-super-admin.md); verificação de cada bloco
   (B1–B7) em `.checks/b*-*.verified.md`. Issue [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214)
-  (PRs #234, #236–#241). Pendências posteriores: #243–#253 e a retenção da trilha na #210.
+  (PRs #234, #236–#241). Issue [#243](https://github.com/KalleoPinheiro/vitta-flow/issues/243)
+  **entregue** — criação de clínica e convite de admin gravam a auditoria na mesma transação da
+  mutação (rollback se a auditoria falhar), substituindo o `recordAudit` fire-and-forget que essas
+  duas rotas ainda usavam; spec em
+  [`.specs/features/fix-243-audit-write-ahead-clinics/spec.md`](../.specs/features/fix-243-audit-write-ahead-clinics/spec.md).
+  Pendências posteriores: #244–#253 e a retenção da trilha na #210.
 - **TISS/convênios:** operadora no paciente, guia por atendimento, relatório por operadora com
   série de scores como evidência. Ainda backlog, sem spec.
 - **Paginação por cursor** nas listagens: ~~ainda backlog, sem spec~~ **entregue** para pacientes

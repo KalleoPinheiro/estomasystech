@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ManageClinicAdmins } from '@/application/platform/manage-clinic-admins';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
-import { recordAudit } from '@/lib/audit';
+import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import { toClinicAdminDto, toUserAccountDto } from '@/lib/dto';
@@ -50,13 +50,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const body = bodySchema.parse(await request.json());
     const { account, delivered } = await new ManageClinicAdmins(
       services,
-    ).invite(clinic, body.email);
-    recordAudit(services.auditEvents, guard.session, {
-      action: 'create',
-      resourceType: 'account',
-      resourceId: account.id,
-      clinicId,
-    });
+    ).invite(clinic, body.email, (auditEvents, createdAccount) =>
+      recordAuditNow(auditEvents, guard.session, {
+        action: 'create',
+        resourceType: 'account',
+        resourceId: createdAccount.id,
+        clinicId,
+      }),
+    );
     return {
       ...toUserAccountDto(account),
       role: account.role,

@@ -281,6 +281,30 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     expect(await clinics.findByCnpj(cnpj)).toBeNull();
   });
 
+  it('Dada falha ao gravar a auditoria, Quando criar, Então a falha desfaz clínica e conta juntas (#243)', async () => {
+    const emails = spyOnSentEmails();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { DrizzleAuditEventRepository } = await import(
+      '@/infrastructure/persistence/drizzle/drizzle-audit-event-repository'
+    );
+    vi.spyOn(DrizzleAuditEventRepository.prototype, 'save').mockRejectedValue(
+      new Error('trilha fora do ar'),
+    );
+    const cnpj = nextCnpj();
+    const before = await clinicCount();
+
+    const { response } = await create(
+      validBody({ cnpj, adminEmail: 'sem-trilha@x.com' }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await clinicCount()).toBe(before);
+    const { clinics } = await repositories('legacy-clinic');
+    expect(await clinics.findByCnpj(cnpj)).toBeNull();
+    expect(await accountsAnywhere('sem-trilha@x.com')).toEqual([]);
+    expect(emails.bodies).toHaveLength(0);
+  });
+
   it('Dada falha no envio do convite, Quando criar, Então 200 com delivered false e clínica e conta criadas', async () => {
     const { NullEmailGateway } = await import(
       '@/application/ports/email-gateway'
@@ -310,28 +334,26 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
 
     const clinicId = json.data.clinic.id;
     const { auditEvents } = await repositories(clinicId);
-    await vi.waitFor(async () => {
-      const events = await auditEvents.findAll();
-      expect(events).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            action: 'create',
-            resourceType: 'clinic',
-            resourceId: clinicId,
-            actorRole: 'super_admin',
-            actorId: 'dono@vitta.app',
-            clinicId,
-          }),
-          expect.objectContaining({
-            action: 'create',
-            resourceType: 'account',
-            resourceId: json.data.admin.id,
-            actorRole: 'super_admin',
-            clinicId,
-          }),
-        ]),
-      );
-    });
+    const events = await auditEvents.findAll();
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: 'create',
+          resourceType: 'clinic',
+          resourceId: clinicId,
+          actorRole: 'super_admin',
+          actorId: 'dono@vitta.app',
+          clinicId,
+        }),
+        expect.objectContaining({
+          action: 'create',
+          resourceType: 'account',
+          resourceId: json.data.admin.id,
+          actorRole: 'super_admin',
+          clinicId,
+        }),
+      ]),
+    );
   });
 
   it('Dadas clínicas com e sem admin, Quando listar, Então lista as clínicas por nome com cadastro e estado do admin', async () => {

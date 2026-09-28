@@ -10,7 +10,11 @@ import { Procedure } from '@/domain/catalog/procedure';
 import type { Patient } from '@/domain/patient/patient';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
-import { InMemoryProcedureRepository } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
+import { InMemoryAuditEventRepository } from '@/infrastructure/persistence/in-memory/in-memory-audit-event-repository';
+import {
+  InMemoryProcedureRepository,
+  InMemoryUserAccountRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
@@ -31,6 +35,8 @@ describe('Feature: Venda de pacote de sessões (SellSessionPackage)', () => {
       invoices: new InMemoryInvoiceRepository(),
       followUps: new InMemoryFollowUpRepository(),
       sessionPackages: new InMemorySessionPackageRepository(),
+      userAccounts: new InMemoryUserAccountRepository(),
+      auditEvents: new InMemoryAuditEventRepository(),
     };
     maria = await new CreatePatient(patients).execute({
       fullName: 'Maria da Silva',

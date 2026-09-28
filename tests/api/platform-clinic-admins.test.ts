@@ -270,20 +270,40 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
 
     const { getRepositories } = await import('@/infrastructure/container');
     const { auditEvents } = await getRepositories(clinicScope(CLINIC_B_ID));
-    await vi.waitFor(async () => {
-      const events = await auditEvents.findAll();
-      const event = events.find(
-        (e) => e.resourceType === 'account' && e.resourceId === json.data.id,
-      );
-      expect(event).toMatchObject({
-        action: 'create',
-        resourceType: 'account',
-        resourceId: json.data.id,
-        actorRole: 'super_admin',
-        actorId: 'dono@vitta.app',
-        clinicId: CLINIC_B_ID,
-      });
+    const events = await auditEvents.findAll();
+    const event = events.find(
+      (e) => e.resourceType === 'account' && e.resourceId === json.data.id,
+    );
+    expect(event).toMatchObject({
+      action: 'create',
+      resourceType: 'account',
+      resourceId: json.data.id,
+      actorRole: 'super_admin',
+      actorId: 'dono@vitta.app',
+      clinicId: CLINIC_B_ID,
     });
+  });
+
+  it('Dada a auditoria falhou, Quando convidar, Então nada é gravado — nem a conta, nem o convite sai (#243)', async () => {
+    await ensureRegisteredClinicB();
+    const emails = spyOnSentEmails();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { DrizzleAuditEventRepository } = await import(
+      '@/infrastructure/persistence/drizzle/drizzle-audit-event-repository'
+    );
+    vi.spyOn(DrizzleAuditEventRepository.prototype, 'save').mockRejectedValue(
+      new Error('trilha fora do ar'),
+    );
+
+    const { response } = await invite(CLINIC_B_ID, {
+      email: 'sem-trilha@b.com',
+    });
+
+    expect(response.status).toBe(500);
+    expect(await accountsWithEmail(CLINIC_B_ID, 'sem-trilha@b.com')).toEqual(
+      [],
+    );
+    expect(emails.bodies).toHaveLength(0);
   });
 });
 

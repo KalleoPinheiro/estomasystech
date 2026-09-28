@@ -1,3 +1,4 @@
+import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 
@@ -6,6 +7,11 @@ export interface ClinicProvisioningScope {
   clinics: ClinicRepository;
   /** Escopado à clínica nova (`clinicId` de `run`). */
   userAccounts: UserAccountRepository;
+  /**
+   * Escopado à clínica nova — grava o evento de auditoria da criação na
+   * mesma transação (#243): falha ao gravar desfaz clínica e admin junto.
+   */
+  auditEvents: AuditEventRepository;
 }
 
 /**
