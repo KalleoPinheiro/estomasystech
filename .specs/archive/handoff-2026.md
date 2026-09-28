@@ -543,3 +543,13 @@ Quarto e último tópico do item 8, PR própria, sobre a `main` já com a lista 
 ## Revisão pré-produção #183 — lote P0 + P1 (2026-09-26) — ENCERRADO (#229)
 
 P0 #187, #191; P1 #192, #193, #197–#203, #205 via `tlc-implement` ([checklist](../../.checks/pre-producao-p0-p1.md)). CI (#203): jobs `build-e2e-prod` (~2 min 40 s com build) e `docker` (~2 min 30 s) rodam em paralelo ao `ci` (~6–9 min) e ao `e2e` (~13 min). Achado: `node:crypto` em `shared/id.ts` violava a CSP de produção no cliente.
+
+## Issue #247 — mensagem de falha de conexão no recover-super-admin (2026-09-28) — ENCERRADO (#255)
+
+Gap 4 do `.checks/b3-recuperacao-super-admin.verified.md` (B3, #214, PR #237): `runRecoverSuperAdminCli` abria o banco (`deps.openDb()`) dentro do mesmo `try` da recuperação, então uma falha de conexão (`DATABASE_URL` errada, banco fora do ar) imprimia `ROLLED_BACK_MESSAGE` ("transação desfeita") mesmo sem nenhuma transação ter existido.
+
+**Detalhes**: `openDb()` passou a rodar num `try` próprio, antes da recuperação; se rejeitar, a CLI imprime `DB_CONNECTION_FAILED_MESSAGE` (cita conexão/`DATABASE_URL`, sem falar em transação) e sai `1`. Falha depois de o banco abrir continua reportando `ROLLED_BACK_MESSAGE`, sem mudança de comportamento. `docs/engineering/producao.md` § 10 (tabela de saídas) atualizada. Especificado com `tlc-spec-driven` (spec pequena, sem Design/Tasks formais) em `.specs/features/recover-super-admin-opendb-message/spec.md`. Gate local: typecheck, lint (Biome), check:sv, test:coverage (1293 suites / 4136 testes, thresholds 90% mantidos) e check:docs verdes; CI (4 jobs) verde; CodeRabbit só resumo, sem achados.
+
+- **Next step**: nenhum pendente desta issue.
+- **Blockers**: nenhum.
+- **Branch**: `fix/247-recover-super-admin-opendb-message` (a deletar após squash-merge). PR #255, squash-merged em `main` (`3581d8d`). Issue #247 fechada via `Closes #247`.
