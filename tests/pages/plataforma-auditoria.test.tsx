@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PlatformAuditPage from '@/app/plataforma/auditoria/page';
 
@@ -80,5 +87,30 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
     expect(
       await screen.findByText('Nenhum evento de plataforma registrado.'),
     ).toBeInTheDocument();
+  });
+
+  it('Dado período e clínica sem nome, Quando filtrar a trilha da plataforma, Então envia from/to e mostra o id da clínica', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        envelope([row({ id: 'e3', clinicId: 'clinica-sumida', detail: null })]),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<PlatformAuditPage />);
+    expect(await screen.findByText('clinica-sumida')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('De'), {
+      target: { value: '2026-09-01' },
+    });
+    fireEvent.change(screen.getByLabelText('Até'), {
+      target: { value: '2026-09-02' },
+    });
+
+    await waitFor(() => {
+      const url = String(fetchMock.mock.calls.at(-1)?.[0]);
+      expect(url).toContain('from=');
+      expect(url).toContain('to=');
+    });
   });
 });
