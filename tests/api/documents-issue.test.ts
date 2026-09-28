@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
+import {
+  CLINIC_A_ID,
+  CLINIC_B_ID,
+  ensureTestClinics,
+} from '../support/clinics';
 import { jsonRequest } from '../support/request';
+import { adminCookieHeader } from '../support/session';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
@@ -16,10 +22,19 @@ interface IssuanceResponse {
 }
 
 describe('Feature: emissão persistida de documentos (#94, DOC-01) — POST /api/documents/issue', () => {
-  const issue = async (documentType: string, resourceId: string) => {
+  const issue = async (
+    documentType: string,
+    resourceId: string,
+    headers?: Record<string, string>,
+  ) => {
     const route = await import('@/app/api/documents/issue/route');
     const response = await route.POST(
-      jsonRequest('/api/documents/issue', 'POST', { documentType, resourceId }),
+      jsonRequest(
+        '/api/documents/issue',
+        'POST',
+        { documentType, resourceId },
+        headers,
+      ),
     );
     const json = (await response.json()) as Envelope<IssuanceResponse>;
     return { response, json };
@@ -52,6 +67,37 @@ describe('Feature: emissão persistida de documentos (#94, DOC-01) — POST /api
       );
       expect(attestation.data.documentNumber.startsWith('ATST-')).toBe(true);
       expect(consent.data.documentNumber.startsWith('TCLE-')).toBe(true);
+    });
+  });
+
+  describe('Cenário: registro por empresa (B6, #210 item 4)', () => {
+    it('Dado o mesmo documento emitido na clínica A e na B, Quando emitir, Então cada empresa tem o seu registro (por empresa)', async () => {
+      await ensureTestClinics();
+      const resourceId = `por-empresa-${Date.now()}`;
+      const inA = await issue(
+        'atestado',
+        resourceId,
+        adminCookieHeader(CLINIC_A_ID),
+      );
+      const inB = await issue(
+        'atestado',
+        resourceId,
+        adminCookieHeader(CLINIC_B_ID),
+      );
+      const againInA = await issue(
+        'atestado',
+        resourceId,
+        adminCookieHeader(CLINIC_A_ID),
+      );
+
+      expect(inA.response.status).toBe(200);
+      expect(inB.response.status).toBe(200);
+      expect(inB.json.data.documentNumber).not.toBe(
+        inA.json.data.documentNumber,
+      );
+      expect(againInA.json.data.documentNumber).toBe(
+        inA.json.data.documentNumber,
+      );
     });
   });
 
