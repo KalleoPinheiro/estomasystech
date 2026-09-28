@@ -48,7 +48,7 @@ Proof: `npx vitest run tests/infrastructure/partners-email-migration.test.ts -t 
 **C3** - `POST /api/partners` com o mesmo e-mail na clínica A e na clínica B: as duas respostas 200
 Proof: `npx vitest run tests/api/partner-tenant-isolation.test.ts -t "duas empresas"`
 
-**C4** - `POST /api/partners` duplicado na mesma clínica (inclusive com maiúsculas/espaços) responde 409 com `error` exatamente `Já existe parceiro com este e-mail`
+**C4** - `POST /api/partners` duplicado na mesma clínica (inclusive com maiúsculas) responde 409 com `error` exatamente `Já existe parceiro com este e-mail`
 Proof: `npx vitest run tests/api/partner-tenant-isolation.test.ts -t "duplicado na mesma empresa"`
 
 **C5** - `PUT /api/partners/:id` trocando o e-mail para o de outro parceiro da mesma clínica responde 409 com `Já existe parceiro com este e-mail`
@@ -74,7 +74,7 @@ Proof: `npm run check:docs` + `grep -n "EQP-RN-05" docs/domains/equipe-parceiros
 
 ## Swept
 
-- validation: e-mail inválido segue `validatePersonContact` (400), inalterado; C4 cobre maiúsculas/espaços
+- validation: e-mail inválido segue `validatePersonContact` (400), inalterado; C4 cobre maiúsculas. Espaços nas bordas: o `z.string().email()` da rota já responde 400 `Email inválido` antes do caso de uso (comportamento existente) — o C4 escrito antes do build dizia "maiúsculas/espaços"; corrigido durante o build, porque espaços não chegam à checagem de duplicado pela API
 - failure modes: C7, C8, C9
 - idempotency: n/a - `POST` repetido é justamente o duplicado de C4
 - authorization: `requireStaffSession` + `writeScope`/`sessionScope` já nas rotas; nada muda

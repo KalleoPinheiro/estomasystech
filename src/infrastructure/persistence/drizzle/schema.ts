@@ -63,7 +63,7 @@ export const partners = pgTable(
       .notNull()
       .references(() => clinics.id),
     fullName: text('full_name').notNull(),
-    email: text('email').notNull().unique(),
+    email: text('email').notNull(),
     phone: text('phone').notNull(),
     crm: text('crm'),
     specialty: text('specialty'),
@@ -73,7 +73,11 @@ export const partners = pgTable(
       mode: 'date',
     }).notNull(),
   },
-  (table) => [index('idx_partners_clinic').on(table.clinicId)],
+  (table) => [
+    index('idx_partners_clinic').on(table.clinicId),
+    // E-mail único por empresa, não globalmente (#211, como MT-06).
+    uniqueIndex('uq_partners_clinic_email').on(table.clinicId, table.email),
+  ],
 );
 
 export const professionals = pgTable(
