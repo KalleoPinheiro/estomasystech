@@ -9,15 +9,13 @@ import type { UserRole } from './user-role';
  * Ninguém cadastra `super_admin` (ADR-007): existe um só, criado pelo
  * bootstrap. O banco garante o mesmo (`ck_user_accounts_system_role_has_no_clinic`
  * + `uq_user_accounts_single_system_account`).
+ *
+ * super_admin só cadastra `company_admin` (ADR-007): ele é o operador da
+ * plataforma, não da clínica — não cria atendente, profissional, paciente
+ * nem parceiro (#253).
  */
 export const PROVISIONING_MATRIX: Record<UserRole, readonly UserRole[]> = {
-  super_admin: [
-    'company_admin',
-    'atendente',
-    'profissional',
-    'patient',
-    'partner',
-  ],
+  super_admin: ['company_admin'],
   company_admin: [
     'company_admin',
     'atendente',

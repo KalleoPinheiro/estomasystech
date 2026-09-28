@@ -7,10 +7,10 @@ const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
   super_admin: {
     super_admin: false,
     company_admin: true,
-    atendente: true,
-    profissional: true,
-    patient: true,
-    partner: true,
+    atendente: false,
+    profissional: false,
+    patient: false,
+    partner: false,
   },
   company_admin: {
     super_admin: false,
