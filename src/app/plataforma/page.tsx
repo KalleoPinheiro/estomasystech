@@ -39,12 +39,20 @@ export default function PlatformPage() {
         title="Plataforma"
         description="Clínicas cadastradas e o Admin de Empresa de cada uma."
         actions={
-          <Link
-            href="/plataforma/clinicas/nova"
-            className="font-medium text-accent-ink text-sm hover:underline"
-          >
-            Nova clínica
-          </Link>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              href="/plataforma/auditoria"
+              className="font-medium text-accent-ink text-sm hover:underline"
+            >
+              Trilha da plataforma
+            </Link>
+            <Link
+              href="/plataforma/clinicas/nova"
+              className="font-medium text-accent-ink text-sm hover:underline"
+            >
+              Nova clínica
+            </Link>
+          </div>
         }
       />
       <ClinicsContent data={data} error={error} onRetry={refresh} />

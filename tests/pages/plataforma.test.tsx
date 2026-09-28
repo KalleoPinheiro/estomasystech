@@ -41,6 +41,14 @@ describe('Feature: Área da plataforma (B1, ADR-007)', () => {
     expect(screen.queryByText('Agenda')).not.toBeInTheDocument();
   });
 
+  it('Dado o super_admin em /plataforma, Quando renderizar, Então há o link da trilha para /plataforma/auditoria', () => {
+    render(<PlatformPage />);
+
+    expect(
+      screen.getByRole('link', { name: 'Trilha da plataforma' }),
+    ).toHaveAttribute('href', '/plataforma/auditoria');
+  });
+
   it('Dado o botão Sair, Quando clicar, Então encerra a sessão e leva a /login', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
