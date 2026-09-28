@@ -282,7 +282,7 @@ function PartnerForm({
         />
       </label>
       <label className="font-medium text-sm">
-        Email (usado no login com Google) *
+        Email *
         <Input
           required
           type="email"

@@ -51,7 +51,7 @@ test.describe("equipe — parceiros", () => {
     await page.goto("/parceiros");
     await page.getByRole("button", { name: "+ Novo parceiro" }).click();
     await page.getByLabel("Nome completo *").fill(name);
-    await page.getByLabel("Email (usado no login com Google) *").fill(`${unique()}@e2e.vittaflow.test`);
+    await page.getByLabel("Email *").fill(`${unique()}@e2e.vittaflow.test`);
     await page.getByLabel("Telefone *").fill("11966665555");
     await page.getByLabel("CRM").fill("CRM-SP 987654");
     await page.getByLabel("Especialidade").fill("Angiologia");
@@ -87,7 +87,7 @@ test.describe("equipe — parceiros", () => {
     await page.goto("/parceiros");
     await page.getByRole("button", { name: "+ Novo parceiro" }).click();
     await page.getByLabel("Nome completo *").fill(`Dr. Outro Nome ${unique()}`);
-    await page.getByLabel("Email (usado no login com Google) *").fill(partner.email);
+    await page.getByLabel("Email *").fill(partner.email);
     await page.getByLabel("Telefone *").fill("11955554444");
     await page.getByRole("button", { name: "Salvar" }).click();
 
