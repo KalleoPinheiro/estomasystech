@@ -261,6 +261,20 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
     );
   }
 
+  async findByRoleForUpdate(role: UserRole): Promise<UserAccount[]> {
+    const rows = await this.db
+      .select()
+      .from(userAccounts)
+      .where(
+        withTenant(userAccounts, this.clinicId, eq(userAccounts.role, role)),
+      )
+      .orderBy(asc(userAccounts.email))
+      .for('update');
+    return rows.map((row) =>
+      UserAccount.restore({ ...row, role: toUserRole(row.role) }),
+    );
+  }
+
   async findAll(): Promise<UserAccount[]> {
     const rows = await this.db
       .select()

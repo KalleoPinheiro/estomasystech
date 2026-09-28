@@ -39,8 +39,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       clinic,
       account,
       action,
-      () =>
-        recordAuditNow(services.auditEvents, guard.session, {
+      (auditEvents) =>
+        recordAuditNow(auditEvents, guard.session, {
           action: 'update',
           resourceType: 'account',
           resourceId: account.id,
