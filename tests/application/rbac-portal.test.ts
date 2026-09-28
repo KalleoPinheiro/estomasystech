@@ -10,7 +10,11 @@ import { CreatePatient } from '@/application/patients/create-patient';
 import { UpdatePatient } from '@/application/patients/update-patient';
 import { GetPartnerPortalData } from '@/application/portal/get-partner-portal-data';
 import { GetPatientPortalData } from '@/application/portal/get-patient-portal-data';
-import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '@/domain/shared/errors';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import {
   InMemoryClinicalConditionRepository,
@@ -110,10 +114,10 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
   });
 
   describe('Cenário: CRUD de parceiro', () => {
-    it('Dado email duplicado, Quando criar parceiro, Então lança ValidationError', async () => {
+    it('Dado email duplicado, Quando criar parceiro, Então lança ConflictError (#211)', async () => {
       await createPartner();
 
-      await expect(createPartner()).rejects.toThrow(ValidationError);
+      await expect(createPartner()).rejects.toThrow(ConflictError);
     });
 
     it('Dado parceiro, Quando atualizar e desativar, Então persiste; listar retorna todos', async () => {
