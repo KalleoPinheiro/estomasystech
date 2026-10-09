@@ -12,10 +12,14 @@ concurrency:
 permissions:
   contents: read
 
+# Runner fixado em ubuntu-24.04: o rótulo ubuntu-latest passa a ser Ubuntu 26 a partir de
+# 2026-10-19 (actions/runner-images#14748). Trocar de imagem vira uma mudança explícita,
+# validada num PR próprio, e não uma surpresa no meio do go-live.
+
 jobs:
   ci:
     name: Typecheck, lint, sv-gate, test:coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
     steps:
@@ -48,7 +52,7 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -81,7 +85,7 @@ jobs:
   # com a CSP estrita de produção e falha em qualquer violação de CSP.
   build-e2e-prod:
     name: Build de produção + E2E (next start)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -114,7 +118,7 @@ jobs:
 
   docker:
     name: Imagem Docker + smoke do container
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

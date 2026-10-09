@@ -1,24 +1,30 @@
 import type { Metadata } from 'next';
-import { JetBrains_Mono, Manrope, Sora } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Providers } from './providers';
 import './globals.css';
 
-const sora = Sora({
+// Fontes servidas do próprio repositório (variáveis, subset latin, OFL — ver
+// src/app/fonts/LICENSE-*.txt). `next/font/google` baixava as fontes no build e
+// a resposta do Google quebrava o build no CI de forma intermitente.
+const sora = localFont({
+  src: './fonts/sora-latin-wght-normal.woff2',
   variable: '--font-sora',
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
+  weight: '100 800',
+  display: 'swap',
 });
 
-const manrope = Manrope({
+const manrope = localFont({
+  src: './fonts/manrope-latin-wght-normal.woff2',
   variable: '--font-manrope',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: '200 800',
+  display: 'swap',
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: './fonts/jetbrains-mono-latin-wght-normal.woff2',
   variable: '--font-jetbrains-mono',
-  subsets: ['latin'],
-  weight: ['400', '500'],
+  weight: '100 800',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
