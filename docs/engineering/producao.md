@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-27
+last_reviewed: 2026-10-09
 ---
 
 # Runbook de produção
@@ -143,6 +143,19 @@ usar `provider`).
 - **VPS:** `0 8 * * * curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" https://clinica.exemplo.com.br/api/reminders/run`.
 - Sem `CRON_SECRET` a rota responde 503 (job desligado). Falha do job: ver logs da função
   (Vercel) ou do container; alerta depende da decisão do § 1.
+- **Antes do primeiro disparo real:**
+  - Nome da empresa em */configuracoes*: a empresa criada pela migração se chama "Clínica
+    legada" e o nome vai no texto do e-mail e do `wa.me`.
+  - Retornos `pending` antigos: na primeira execução, cada retorno vencido há 30 dias ou mais
+    recebe de uma vez a 3ª tentativa (só a mais alta cabível — COM-RN-06). Conclua ou cancele
+    os que não devem gerar e-mail. Contagem:
+    `SELECT clinic_id, count(*) FROM follow_ups WHERE status = 'pending' AND due_date < now() GROUP BY 1;`
+  - Teto do Resend Free: 100 e-mails/dia. Acima disso o envio conta `failed` no resumo, sem
+    alarme, e é tentado de novo no dia seguinte.
+- **Teste de fumaça:** paciente de teste com o seu e-mail e consulta `scheduled` amanhã; dispare
+  o job manualmente e espere `channelEnabled: true`, `sent: 1` e nenhuma entrada com `error`.
+  Disparar de novo no mesmo dia deve devolver `sent: 0`. Na agenda, **Enviar WhatsApp** abre o
+  `wa.me` e passa a mostrar "enviado hoje às HH:MM".
 
 ## 8. Primeiro acesso
 
