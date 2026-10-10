@@ -76,6 +76,7 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 | RM-12 | Auditoria UX — Fase C, LGPD e segurança do dado | conformidade LGPD | entregue | [#69](https://github.com/KalleoPinheiro/vitta-flow/issues/69) | [`fase-c-lgpd-seguranca-dado/`](../.specs/features/fase-c-lgpd-seguranca-dado/) |
 | RM-13 | Documentação em progressive disclosure | onboarding de dev e de agente sem ler o repositório inteiro | entregue | [#173](https://github.com/KalleoPinheiro/vitta-flow/pull/173) | [`docs-progressive-disclosure/`](../.specs/features/docs-progressive-disclosure/) |
 | RM-20 | Portal do Super Admin: `/plataforma` para cadastrar, editar, suspender e reativar clínicas e gerir o `company_admin`; super_admin único, sem acesso clínico, com segundo fator, recuperação de emergência e trilha de auditoria de plataforma | entrar no ar com 1 clínica e abrir a segunda sem `INSERT` manual | entregue | [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) | [`portal-super-admin/`](../.specs/features/portal-super-admin/) |
+| RM-21 | Canal de e-mail por clínica: cada clínica cadastra a própria chave (Resend) em `/configuracoes`; convite, redefinição e lembretes saem pelo canal dela, sem fallback para a conta da plataforma; link manual quando o e-mail não sai; `/plataforma` organizado (navegação, status do canal por clínica, importação de taxonomia) | plataforma agnóstica: a clínica responde pelo próprio custo e remetente | entregue | [#264](https://github.com/KalleoPinheiro/vitta-flow/issues/264)–[#267](https://github.com/KalleoPinheiro/vitta-flow/issues/267) | [`canal-por-clinica/`](../.specs/features/canal-por-clinica/) |
 
 As seções por fase abaixo são o detalhe (L2) — escopo, decisões pendentes e critérios de cada uma.
 
@@ -196,6 +197,15 @@ Exige escolhas do negócio antes de executar:
   duas rotas ainda usavam; spec em
   [`.specs/features/fix-243-audit-write-ahead-clinics/spec.md`](../.specs/features/fix-243-audit-write-ahead-clinics/spec.md).
   Pendências posteriores: #244–#253 e a retenção da trilha na #210.
+- **Canal de e-mail por clínica:** **entregue** (RM-21) — a plataforma deixa de enviar e-mail em
+  nome das clínicas: cada uma cadastra a própria chave em `/configuracoes` (tabela
+  `clinic_channels`, chave cifrada pela chave de dados) e, sem canal, não envia — convite e
+  redefinição voltam como link manual para quem os gerou. `RESEND_API_KEY` passa a ser opcional e
+  só da plataforma. `/plataforma` ganha navegação, status do canal por clínica e a tela de
+  importação de taxonomia. Decisão em [ADR-011](./adr/011-canal-de-comunicacao-por-clinica.md);
+  discovery em [`.design/canal-por-clinica.md`](../.design/canal-por-clinica.md); tasks C1–C4 em
+  `.tasks/c*.md` com verificação em `.checks/c*.verified.md`. Issues #264–#267 (PRs #268–#274);
+  decisões posteriores do dono em AD-029 e AD-030 (`.specs/archive/decisions-2026.md`).
 - **TISS/convênios:** operadora no paciente, guia por atendimento, relatório por operadora com
   série de scores como evidência. Ainda backlog, sem spec.
 - **Paginação por cursor** nas listagens: ~~ainda backlog, sem spec~~ **entregue** para pacientes
