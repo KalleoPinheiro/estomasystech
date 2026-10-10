@@ -107,5 +107,5 @@ This task is the record of decision. If a linked document diverges, ask before b
 
 | # | Kind | Question | Until answered |
 |---|---|---|---|
-| 1 | open | Limite de taxa do teste | `SharedRateLimiter('email-channel-test', 5, 60_000)` por clínica |
-| 2 | open | Dois admins salvam ao mesmo tempo | Vence a última escrita (upsert); sem controle de versão |
+| 1 | open | Limite de taxa do teste | `SharedRateLimiter('email-channel-test', 5, 60_000)` por clínica — confirmado por @KalleoPinheiro em 2026-10-10 |
+| 2 | open | Dois admins salvam ao mesmo tempo | Vence a última escrita (upsert); sem controle de versão — confirmado por @KalleoPinheiro em 2026-10-10 |
