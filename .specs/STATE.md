@@ -198,6 +198,12 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: em dev o link-credencial ainda vai para o log local (aceito pelo produto). Em produção o e-mail nulo nem é montado (`buildEmailGateway` lança), então o corte por `NODE_ENV` é defesa em profundidade. Os testes deixaram de ler o log e espiam `NullEmailGateway.prototype.send` (`tests/support/email.ts`); o E2E acha o convite no trecho do log escrito após o cadastro, porque as máscaras das contas por papel colidem.
 - **Scope / Date / Status**: `src/application/ports/{email,messaging}-gateway.ts`, `src/lib/redact.ts`, `e2e/support/invite-log.ts` · 2026-09-26 · active
 
+### AD-029
+- **Decision**: Canal de e-mail em `/configuracoes` (C3, #266) com os defaults da task para os pontos em aberto: limite do e-mail de teste `SharedRateLimiter('email-channel-test', 5, 60_000)` por clínica; dois admins salvando ao mesmo tempo, vence a última escrita (upsert, sem versão). Decididos durante a execução: `DELETE` apaga por `(clinic_id, channel)` sem decifrar a chave (`ClinicChannelRepository.remove`, `RETURNING id`); `last_error` troca o e-mail do destinatário e a chave por `<destinatário>`/`<chave>` antes de truncar a 300; salvar sem chave nova mantém o último teste; o teste sai por `services.email` (o mesmo gateway dos envios reais); em modo aberto (dev, sem conta) o teste responde `409`.
+- **Reason**: com a chave de dados trocada sem a anterior, `find` lança `ChannelSecretUnreadableError` — remover por `find` deixaria o admin sem saída para recadastrar. O erro do Resend pode citar o destinatário; o design pede `last_error` sem PII.
+- **Trade-off**: GET/PUT/teste ainda respondem `500` enquanto a chave não decifra; a saída é remover e cadastrar de novo. Perguntas abertas ao produto: limite do teste e concorrência entre admins (Unresolved 1 e 2 de `.tasks/c3-tela-canal-configuracoes.md`).
+- **Scope / Date / Status**: `src/application/clinic/manage-email-channel.ts`, `src/app/api/settings/email-channel/`, `.checks/c3-canal-email-configuracoes.md` · 2026-10-10 · open — Unresolved 1 e 2 aguardam @KalleoPinheiro
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).

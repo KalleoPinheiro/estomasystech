@@ -3,7 +3,7 @@ title: "Integração: Resend (e-mail transacional)"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-10
 ---
 
 # Resend (e-mail transacional)
@@ -34,11 +34,14 @@ Sem e-mail ninguém faz o primeiro acesso — por isso é a única integração 
 
 Qual chave sai: o e-mail de uma clínica sai **só** pela chave dela (`clinic_channels`, lida no primeiro
 envio do request); sem canal, não sai. O escopo de sistema usa `RESEND_API_KEY`/`EMAIL_FROM`.
-Transição até a C2 ([#265](https://github.com/KalleoPinheiro/vitta-flow/issues/265)): o job de lembretes
-e o "esqueci a senha" ainda montam o gateway no escopo de sistema e saem pela chave da plataforma.
+Desde a C2 ([#265](https://github.com/KalleoPinheiro/vitta-flow/issues/265)), o job de lembretes e o
+"esqueci a senha" também saem pelo canal da clínica de cada envio.
 
-Rotação: a da plataforma, troque a variável e reinicie o app. A da clínica, recadastre-a (tela na C3,
-[#266](https://github.com/KalleoPinheiro/vitta-flow/issues/266)).
+Cadastro e rotação: a da plataforma, troque a variável e reinicie o app. A da clínica, o
+`company_admin` informa remetente e chave em `/configuracoes` → **Canal de e-mail** (C3,
+[#266](https://github.com/KalleoPinheiro/vitta-flow/issues/266)), usa **Enviar e-mail de teste** para
+conferir chave e domínio (vai para o e-mail dele; o erro do provedor aparece na tela) e salva uma chave
+nova por cima para rotacionar. A chave não é lida de volta — a tela mostra só os 4 últimos caracteres.
 
 ## Contrato
 
