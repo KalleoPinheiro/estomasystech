@@ -308,7 +308,10 @@ describe('Feature: textos clínicos cifrados em repouso (#195)', () => {
       for (const [index, value] of stored.entries()) {
         const where = `${c.table}.${c.columns[index]}`;
         expect(value, where).toMatch(V1);
-        expect(value, where).not.toContain('HIV');
+        // Com espaço: o base64url do texto cifrado nunca tem espaço, então
+        // isto só bate se o texto em claro foi gravado. `'HIV'` sozinho
+        // aparecia por acaso no ciphertext aleatório e derrubava o CI.
+        expect(value, where).not.toContain('HIV positivo');
       }
       expect(await c.readBack(), c.table).toEqual(
         c.columns.map(() => SECRET_TEXT),
