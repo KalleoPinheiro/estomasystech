@@ -45,14 +45,19 @@ class InMemoryAuthTokenRepository implements AuthTokenRepository {
 }
 
 class ThrowingEmailGateway implements EmailGateway {
-  readonly enabled = true;
+  async isEnabled(): Promise<boolean> {
+    return true;
+  }
   async send(_message: EmailMessage): Promise<void> {
     throw new Error('provedor fora do ar');
   }
 }
 
 class WorkingEmailGateway implements EmailGateway {
-  constructor(readonly enabled: boolean) {}
+  constructor(private readonly enabled: boolean) {}
+  async isEnabled(): Promise<boolean> {
+    return this.enabled;
+  }
   async send(_message: EmailMessage): Promise<void> {}
 }
 

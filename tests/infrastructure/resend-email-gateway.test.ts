@@ -1,15 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NullEmailGateway } from '@/application/ports/email-gateway';
 import {
-  buildEmailGateway,
+  EMAIL_PROVIDER_GATEWAYS,
+  platformEmailGateway,
   ResendEmailGateway,
   resendConfigFromEnv,
 } from '@/infrastructure/email/resend-email-gateway';
 
 /**
- * AUTH-02: em produção, a ausência de RESEND_API_KEY/EMAIL_FROM falha na
- * construção do gateway nomeando as duas variáveis — nunca cai em dry-run
- * silencioso. Fora de produção, o gateway nulo é o caminho de dev/teste.
+ * Gateway do Resend. Desde o ADR-011, RESEND_API_KEY/EMAIL_FROM são o canal
+ * opcional da plataforma (só contas sem clínica): sem eles o gateway é o nulo,
+ * inclusive em produção — o AUTH-02 (falha no boot) foi substituído.
  */
 describe('Feature: Gateway de e-mail transacional (Resend)', () => {
   const originalEnv = { ...process.env };
@@ -34,7 +35,7 @@ describe('Feature: Gateway de e-mail transacional (Resend)', () => {
         text: 'link aqui',
       });
 
-      expect(gateway.enabled).toBe(true);
+      expect(await gateway.isEnabled()).toBe(true);
       const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
       expect(url).toBe('https://api.resend.com/emails');
       expect(options.method).toBe('POST');
@@ -115,31 +116,54 @@ describe('Feature: Gateway de e-mail transacional (Resend)', () => {
     });
   });
 
-  describe('Cenário: construir o gateway conforme o ambiente', () => {
-    it('Dado credenciais presentes, Quando construir, Então devolve o gateway real habilitado', () => {
+  describe('Cenário: canal da plataforma conforme o ambiente (ADR-011)', () => {
+    it('Dado credenciais presentes, Quando montar o canal da plataforma, Então devolve o gateway real habilitado', async () => {
       process.env.RESEND_API_KEY = 're_abc';
       process.env.EMAIL_FROM = 'clinica@v.com';
 
-      const gateway = buildEmailGateway();
+      const gateway = platformEmailGateway();
 
       expect(gateway).toBeInstanceOf(ResendEmailGateway);
-      expect(gateway.enabled).toBe(true);
+      expect(await gateway.isEnabled()).toBe(true);
     });
 
-    it('Dado produção sem credenciais, Quando construir, Então lança erro nomeando RESEND_API_KEY e EMAIL_FROM', () => {
+    it('Dado produção sem credenciais, Quando montar o canal da plataforma, Então não lança e devolve canal desativado', async () => {
       vi.stubEnv('NODE_ENV', 'production');
       delete process.env.RESEND_API_KEY;
       delete process.env.EMAIL_FROM;
 
-      expect(() => buildEmailGateway()).toThrow(/RESEND_API_KEY/);
-      expect(() => buildEmailGateway()).toThrow(/EMAIL_FROM/);
+      const gateway = platformEmailGateway();
+
+      expect(gateway).toBeInstanceOf(NullEmailGateway);
+      expect(await gateway.isEnabled()).toBe(false);
     });
 
-    it('Dado ambiente fora de produção sem credenciais, Quando construir, Então devolve o gateway nulo (dry-run)', () => {
+    it('Dado ambiente fora de produção sem credenciais, Quando montar o canal da plataforma, Então devolve o gateway nulo (dry-run)', () => {
       delete process.env.RESEND_API_KEY;
       delete process.env.EMAIL_FROM;
 
-      expect(buildEmailGateway()).toBeInstanceOf(NullEmailGateway);
+      expect(platformEmailGateway()).toBeInstanceOf(NullEmailGateway);
+    });
+  });
+
+  describe('Cenário: gateway por provedor', () => {
+    it('Dado o provedor resend, Quando montar pela fábrica, Então devolve o gateway do Resend com a credencial dada', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const gateway = EMAIL_PROVIDER_GATEWAYS.resend({
+        apiKey: 're_clinica',
+        from: 'Clínica <c@c.test>',
+      });
+      await gateway.send({ to: 'p@c.com', subject: 's', text: 't' });
+
+      const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(options.headers).toMatchObject({
+        Authorization: 'Bearer re_clinica',
+      });
+      expect(JSON.parse(options.body as string).from).toBe(
+        'Clínica <c@c.test>',
+      );
     });
   });
 });

@@ -84,7 +84,9 @@ class InMemoryAuthTokenRepository implements AuthTokenRepository {
 }
 
 class SpyEmailGateway implements EmailGateway {
-  readonly enabled = true;
+  async isEnabled(): Promise<boolean> {
+    return true;
+  }
   readonly sent: EmailMessage[] = [];
 
   async send(message: EmailMessage): Promise<void> {

@@ -4,7 +4,11 @@ import {
   NullCalendarGateway,
 } from '@/application/ports/calendar-gateway';
 import type { ClinicProvisioning } from '@/application/ports/clinic-provisioning';
-import type { EmailGateway } from '@/application/ports/email-gateway';
+import {
+  type EmailGateway,
+  LazyEmailGateway,
+  NullEmailGateway,
+} from '@/application/ports/email-gateway';
 import {
   type MessagingGateway,
   NullMessagingGateway,
@@ -21,6 +25,10 @@ import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
 import type { ProcedureKitRepository } from '@/domain/catalog/procedure-kit';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
+import {
+  ChannelSecretUnreadableError,
+  type ClinicChannelRepository,
+} from '@/domain/clinic/clinic-channel';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import type {
   AnamnesisRepository,
@@ -65,7 +73,10 @@ import {
   GoogleCalendarGateway,
   googleCalendarConfigFromEnv,
 } from './calendar/google-calendar-gateway';
-import { buildEmailGateway } from './email/resend-email-gateway';
+import {
+  EMAIL_PROVIDER_GATEWAYS,
+  platformEmailGateway,
+} from './email/resend-email-gateway';
 import {
   MetaWhatsAppGateway,
   metaWhatsAppConfigFromEnv,
@@ -83,6 +94,7 @@ import {
   DrizzleInterventionRecordRepository,
   DrizzleOutcomeEvaluationRepository,
 } from './persistence/drizzle/drizzle-care-plan-repositories';
+import { DrizzleClinicChannelRepository } from './persistence/drizzle/drizzle-clinic-channel-repository';
 import { DrizzleClinicProvisioning } from './persistence/drizzle/drizzle-clinic-provisioning';
 import { DrizzleClinicRepository } from './persistence/drizzle/drizzle-clinic-repository';
 import {
@@ -184,6 +196,9 @@ export interface Services {
   reminderLog: ReminderLogRepository;
   calendar: CalendarGateway;
   messaging: MessagingGateway;
+  /** Canal da clínica do escopo (ADR-011); lança no escopo de sistema. */
+  clinicChannels: ClinicChannelRepository;
+  /** E-mail do escopo: canal da clínica, ou o da plataforma sem clínica. */
   email: EmailGateway;
   transactions: TransactionManager;
   /** Criação de clínica + primeiro admin numa transação (B4). */
@@ -297,6 +312,46 @@ function calendarGatewayFor(
 }
 
 /**
+ * Canal de e-mail da clínica, lido do banco no primeiro uso (ADR-011). Sem
+ * canal — ou com a chave que não decifra — a clínica não envia: o gateway é o
+ * nulo, nunca o da plataforma. Sem cache entre requests: cada escopo resolve a
+ * própria credencial (a reincidência da issue #74 fica impossível).
+ */
+async function clinicEmailGateway(
+  channels: ClinicChannelRepository,
+  clinicId: string,
+): Promise<EmailGateway> {
+  let channel: Awaited<ReturnType<ClinicChannelRepository['find']>>;
+  try {
+    channel = await channels.find('email');
+  } catch (error) {
+    if (!(error instanceof ChannelSecretUnreadableError)) {
+      throw error;
+    }
+    // A mensagem do erro só leva a clínica: nem a chave nem o texto cifrado.
+    logError(`E-mail da clínica ${clinicId}: canal desativado`, error);
+    return new NullEmailGateway();
+  }
+  if (!channel) {
+    return new NullEmailGateway();
+  }
+  return EMAIL_PROVIDER_GATEWAYS[channel.provider]({
+    apiKey: channel.apiKey,
+    from: channel.sender,
+  });
+}
+
+function emailGatewayFor(
+  channels: ClinicChannelRepository,
+  clinicId: string | null,
+): EmailGateway {
+  if (clinicId === null) {
+    return platformEmailGateway();
+  }
+  return new LazyEmailGateway(() => clinicEmailGateway(channels, clinicId));
+}
+
+/**
  * `PHOTO_STORAGE=s3` → bucket S3-compatível, compartilhado entre réplicas;
  * senão, disco local (volume Docker). Um `S3Client` por processo. Na Vercel,
  * sem bucket, nenhum disco serve: a foto sumiria com a instância (#206).
@@ -332,6 +387,11 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
   // Sem chave de dados (produção) ou sem AUTH_SECRET (dev), lança aqui:
   // repositório clínico nunca grava em claro.
   const cipher = currentDataCipher();
+  const clinicChannels = new DrizzleClinicChannelRepository(
+    db,
+    tenant.clinicId,
+    cipher,
+  );
   return {
     clinics: new DrizzleClinicRepository(db),
     patients: new DrizzlePatientRepository(db, tenant.clinicId, cipher),
@@ -413,7 +473,8 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     reminderLog: new DrizzleReminderLogRepository(db, tenant.clinicId),
     calendar: calendarGatewayFor(db, tenant.clinicId),
     messaging: buildMessagingGateway(),
-    email: buildEmailGateway(),
+    clinicChannels,
+    email: emailGatewayFor(clinicChannels, tenant.clinicId),
     transactions: new DrizzleTransactionManager(db, tenant.clinicId, cipher),
     clinicProvisioning: new DrizzleClinicProvisioning(db),
   };

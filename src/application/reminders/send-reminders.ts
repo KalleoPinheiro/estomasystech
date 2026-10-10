@@ -79,7 +79,7 @@ export class SendReminders {
       sent: 0,
       skipped: 0,
       failed: 0,
-      channelEnabled: this.email.enabled,
+      channelEnabled: await this.email.isEnabled(),
       clinics: [],
     };
     // Clínica suspensa (B5) fica fora do lote: nem o escopo dela é aberto, e
@@ -163,7 +163,7 @@ class ClinicReminders {
     now: Date,
   ): Promise<'sent' | 'skipped' | 'failed'> {
     const message = { to, subject: content.subject, text: content.text };
-    if (!this.email.enabled) {
+    if (!(await this.email.isEnabled())) {
       // Dry-run: loga o que enviaria e não marca como enviado.
       await this.email.send(message);
       return 'skipped';

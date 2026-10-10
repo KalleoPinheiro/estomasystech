@@ -60,11 +60,6 @@ export class IssueAuthToken {
     private readonly email: EmailGateway,
   ) {}
 
-  /** `false` quando o canal está desativado (dry-run) — o link não chega a ninguém. */
-  get emailEnabled(): boolean {
-    return this.email.enabled;
-  }
-
   /**
    * Emite o token e tenta enviar, sem deixar a falha de envio perder o link:
    * devolve sempre o link gerado mais um sinal de se ele saiu por e-mail. Usado
@@ -76,7 +71,7 @@ export class IssueAuthToken {
     const inviteUrl = await this.persist(input);
     try {
       await this.deliver(input, inviteUrl);
-      return { inviteUrl, delivered: this.email.enabled };
+      return { inviteUrl, delivered: await this.email.isEnabled() };
     } catch (error) {
       // Só o id: o endereço é dado pessoal e log não é lugar para ele (CWE-532).
       logError(
