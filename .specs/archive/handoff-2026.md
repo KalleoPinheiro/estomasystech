@@ -563,3 +563,19 @@ P2 da revisão pré-produção #183. `GET /api/photos/[id]` (equipe) e `GET /api
 - **Next step**: resposta do dono sobre o item 3 (ADR-007 vs. ADR novo, opção C).
 - **Blockers**: nenhum.
 - **Branch**: `fix/209-foto-clinica`. PR #276, squash-merged em `main` (`29cb72f`). Issue #209 fechada via `Closes #209`.
+
+## Issue #208 — login endurecido (2026-10-10) — ENCERRADO (#279)
+
+P2 da revisão pré-produção #183. O `POST /api/auth/login` fecha três brechas:
+
+- **Oráculo de tempo:** e-mail sem conta, convite pendente ou hash antigo rodam um scrypt fictício no custo atual.
+- **Limite por conta:** além do limite por IP, 5 tentativas por minuto por e-mail normalizado no `SharedRateLimiter`, com a chave em SHA-256 do e-mail.
+- **Custo do scrypt:** senha nova usa `N=2^17`. O hash `2^14` continua valendo e é refeito no login bem-sucedido por compare-and-set, sem derrubar sessões.
+
+Regra nova: ACE-RN-38. Spec em `.specs/features/endurecer-login/spec.md`. Memória do login (~128 MiB por scrypt) documentada em `docs/engineering/producao.md`.
+
+**Detalhes**: o item 4 da issue (política de senha) ficou fora porque é decisão de produto. Estão em aberto em AD-031 para @KalleoPinheiro duas perguntas: o travamento por terceiros (6 erros travam a conta por 1 min) e a política de senha do staff (tamanho mínimo, senhas vazadas, 2FA). CI com os 4 jobs verdes e Verifier independente com PASS (132/132 nos testes-alvo, hash legado conferido byte a byte).
+
+- **Next step**: respostas do dono em AD-031.
+- **Blockers**: nenhum.
+- **Branch**: `fix/208-endurecer-login`. PR #279, squash-merged em `main` (`9a7b1c0`). Issue #208 fechada via `Closes #208`.
