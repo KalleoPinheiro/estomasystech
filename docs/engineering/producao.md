@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-09
+last_reviewed: 2026-10-10
 ---
 
 # Runbook de produção
@@ -42,6 +42,10 @@ Nada abaixo foi decidido; o runbook indica onde cada resposta entra.
 Variáveis específicas: `VITTA_MIGRATE_ON_BOOT=false` (migração é passo de deploy, § 4),
 `PG_POOL_MAX=5` (cada instância abre poucas conexões; o pooler multiplexa), `TRUSTED_PROXY_HOPS=1`
 (a borda da Vercel é o único proxy e preenche `x-forwarded-for`).
+
+Login custa memória: cada verificação de senha é um scrypt `N=2^17` (#208) de ~128 MiB e algumas
+centenas de ms de CPU, e até 4 rodam em paralelo por processo (threadpool do libuv). Dimensione a
+função/contêiner com folga para isso (≥ 1 GB).
 
 A verificar no primeiro deploy: o pooler de transação do Supabase aceitar o parâmetro de sessão
 `statement_timeout` que o pool envia (`PG_STATEMENT_TIMEOUT_MS`). Se recusar, configure o timeout

@@ -159,6 +159,16 @@ export interface UserAccountRepository {
    */
   updatePasswordHash(id: string, passwordHash: string): Promise<void>;
   /**
+   * Re-hash da MESMA senha com custo maior, no login (#208): grava só se o
+   * hash ainda for `currentHash` — uma troca de senha concorrente vence — e
+   * NÃO incrementa `session_version`, porque a senha não mudou.
+   */
+  upgradePasswordHash(
+    id: string,
+    currentHash: string,
+    upgradedHash: string,
+  ): Promise<void>;
+  /**
    * Invalida todas as sessões emitidas para a conta (#194, ADR-005):
    * incrementa `session_version` numa única instrução — `save` nunca grava
    * esse campo, então dois incrementos concorrentes nunca se anulam.
