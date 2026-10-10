@@ -94,4 +94,25 @@ describe('Feature: Canal de comunicação da clínica (Drizzle)', () => {
       fromA.save(emailChannel('ch-b', 're_da_clinica_b')),
     ).rejects.toThrow('Canal de outra clínica fora do escopo');
   });
+
+  it('remove: apaga só o canal da clínica do escopo, devolve o id e não precisa decifrar a chave', async () => {
+    const channelA = emailChannel('ch-a', 're_da_clinica_a');
+    await new DrizzleClinicChannelRepository(appDb, 'ch-a', cipher).save(
+      channelA,
+    );
+    await new DrizzleClinicChannelRepository(appDb, 'ch-b', cipher).save(
+      emailChannel('ch-b', 're_da_clinica_b'),
+    );
+    // Chave de dados trocada sem a anterior: a chave de A não decifra mais.
+    const rotated = new DataCipher({ current: 'z'.repeat(64) });
+    const fromA = new DrizzleClinicChannelRepository(appDb, 'ch-a', rotated);
+
+    expect(await fromA.remove('email')).toBe(channelA.id);
+    expect(await fromA.remove('email')).toBeNull();
+    const rows = await db.select().from(schema.clinicChannels);
+    expect(rows.map((row) => row.clinicId)).toEqual(['ch-b']);
+    await expect(
+      new DrizzleClinicChannelRepository(appDb, null, cipher).remove('email'),
+    ).rejects.toThrow('Canal de comunicação exige escopo de clínica');
+  });
 });
