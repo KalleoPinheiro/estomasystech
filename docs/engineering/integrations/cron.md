@@ -43,12 +43,17 @@ Authorization: Bearer $CRON_SECRET
 Resposta `200` no envelope `{ success, data }`:
 
 ```json
-{ "sent": 3, "skipped": 0, "failed": 0, "channelEnabled": true,
-  "clinics": [{ "clinicId": "…", "sent": 3, "skipped": 0, "failed": 0 }] }
+{ "sent": 3, "skipped": 2, "failed": 0,
+  "clinics": [
+    { "clinicId": "…", "channel": "configured", "sent": 3, "skipped": 0, "failed": 0 },
+    { "clinicId": "…", "channel": "none", "sent": 0, "skipped": 2, "failed": 0 }
+  ] }
 ```
 
-Uma entrada por empresa ativa; clínica suspensa (COM-RN-09) fica de fora, sem entrada. A que falhou
-ao ser lida aparece com `error: "<mensagem>"` e contadores zerados, e as demais seguem. O que é enviado a cada execução, em cada clínica (`clinicScope`):
+Uma entrada por empresa ativa; clínica suspensa (COM-RN-09) fica de fora, sem entrada. Cada clínica
+envia pelo próprio canal de e-mail (ADR-011): `channel: "configured"` quando tem, `"none"` quando não
+tem — aí os lembretes dela contam `skipped`. A que falhou ao ser lida aparece com
+`error: "<mensagem>"`, contadores zerados e sem `channel`, e as demais seguem. O que é enviado a cada execução, em cada clínica (`clinicScope`):
 
 | Tipo | Quem recebe |
 | --- | --- |
@@ -66,7 +71,7 @@ Vercel `TZ` é reservado e as funções rodam em UTC).
 | --- | --- |
 | `CRON_SECRET` não configurado | `503` — job desativado |
 | header ausente ou diferente | `401` |
-| Resend sem credenciais (fora de produção) | `200` com `channelEnabled: false` (dry-run) |
+| clínica sem canal de e-mail | `200`; a entrada da clínica traz `channel: "none"` e os lembretes contam `skipped` (dry-run) |
 | falha ao ler uma empresa | `200`; a entrada da empresa traz `error` |
 
 ## Teste local
