@@ -12,7 +12,14 @@ import {
   encryptSecret,
   isEncryptedPayload,
 } from '@/lib/auth/crypto';
-import { hashPassword, verifyPassword } from '@/lib/auth/password';
+import {
+  hashPassword,
+  needsRehash,
+  PASSWORD_COST,
+  simulatePasswordCheck,
+  UNSET_PASSWORD_HASH,
+  verifyPassword,
+} from '@/lib/auth/password';
 import { RateLimiter } from '@/lib/auth/rate-limit';
 import {
   createSessionToken,
@@ -386,5 +393,33 @@ describe('Feature: Hash e verificação de senha (scrypt)', () => {
     expect(await verifyPassword('qualquer', 'scrypt$1030$salt$abcd')).toBe(
       false,
     );
+  });
+
+  it('Dado senha nova, Quando hashPassword, Então usa o custo N=2^17 do OWASP (#208)', async () => {
+    const hash = await hashPassword('s3nh@forte');
+
+    expect(PASSWORD_COST).toBe(2 ** 17);
+    expect(hash.split('$')[1]).toBe(String(2 ** 17));
+    expect(needsRehash(hash)).toBe(false);
+  });
+
+  it('Dado hash gravado com o custo antigo 2^14, Quando verifyPassword, Então a senha continua validando e o hash pede re-hash (#208)', async () => {
+    // Gerado pela versão anterior de hashPassword (N=16384, r=8, p=1): é o
+    // formato de toda senha já gravada em produção.
+    const legacy =
+      'scrypt$16384$00112233445566778899aabbccddeeff$10196a0669fa5ac2c8524c245d297fb0eacd1015bfe04f0de8dccaa3ad9716c7ddaa35969aea21542b9b23b972b28b3430e725f3e4d7955843cea1d412bb351e';
+
+    expect(await verifyPassword('senha-antiga-123', legacy)).toBe(true);
+    expect(await verifyPassword('senha-errada', legacy)).toBe(false);
+    expect(needsRehash(legacy)).toBe(true);
+  });
+
+  it('Dado hash sem senha usável ou malformado, Quando needsRehash, Então nunca pede re-hash', () => {
+    expect(needsRehash(UNSET_PASSWORD_HASH)).toBe(false);
+    expect(needsRehash('formato-invalido')).toBe(false);
+  });
+
+  it('Dado qualquer senha, Quando simulatePasswordCheck, Então responde false', async () => {
+    expect(await simulatePasswordCheck('qualquer')).toBe(false);
   });
 });

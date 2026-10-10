@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { startMfaLogin } from '@/application/auth/mfa-login';
@@ -9,7 +10,12 @@ import { currentDataCipher, getRepositories } from '@/infrastructure/container';
 import { fail, ok } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
-import { verifyPassword } from '@/lib/auth/password';
+import {
+  hashPassword,
+  needsRehash,
+  simulatePasswordCheck,
+  verifyPassword,
+} from '@/lib/auth/password';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import {
   createSessionToken,
@@ -19,8 +25,29 @@ import {
   sessionCookieOptions,
 } from '@/lib/auth/session';
 import { systemScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 
 const LOGIN_RATE_LIMIT = new SharedRateLimiter('login', 5, 60_000);
+/**
+ * Mesmo teto por e-mail normalizado (#208): sem ele, uma conta aguenta
+ * tentativas ilimitadas vindas de IPs diferentes (credential stuffing). Conta
+ * todo e-mail, exista ou não — o 429 não revela se a conta existe.
+ */
+const LOGIN_ACCOUNT_RATE_LIMIT = new SharedRateLimiter(
+  'login-account',
+  5,
+  60_000,
+);
+const TOO_MANY_ATTEMPTS = 'Muitas tentativas de login, aguarde um minuto';
+
+/**
+ * Chave do limite por conta: SHA-256 do e-mail normalizado como no
+ * repositório. A tabela de rate limit nunca guarda o e-mail em claro —
+ * nem o de quem não tem conta (LGPD).
+ */
+function accountKey(email: string): string {
+  return createHash('sha256').update(email.trim().toLowerCase()).digest('hex');
+}
 
 /**
  * Único caminho de login desde a ADR-004: e-mail + senha da própria conta.
@@ -34,7 +61,7 @@ const loginSchema = z.object({
 export async function POST(request: NextRequest) {
   const ip = clientIp(request);
   if (!(await LOGIN_RATE_LIMIT.allow(ip))) {
-    return fail('Muitas tentativas de login, aguarde um minuto', 429);
+    return fail(TOO_MANY_ATTEMPTS, 429);
   }
 
   const auth = getAuthConfig();
@@ -45,6 +72,9 @@ export async function POST(request: NextRequest) {
   const parsed = loginSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return fail('Credenciais inválidas', 401);
+  }
+  if (!(await LOGIN_ACCOUNT_RATE_LIMIT.allow(accountKey(parsed.data.email)))) {
+    return fail(TOO_MANY_ATTEMPTS, 429);
   }
 
   const { auditEvents } = await getRepositories(systemScope());
@@ -161,7 +191,33 @@ async function authenticateAccount(
       deniedAccount: denied.account,
     };
   }
-  return singleAccountResult(usable);
+  const result = singleAccountResult(usable);
+  if ('account' in result) {
+    await upgradeHashIfNeeded(result.account, password);
+  }
+  return result;
+}
+
+/**
+ * Re-hash transparente (#208): a senha acabou de ser provada contra um hash
+ * de custo antigo; grava o mesmo segredo no custo atual. Falhar aqui não
+ * barra o login — o hash antigo segue válido e o próximo login tenta de novo.
+ */
+async function upgradeHashIfNeeded(account: UserAccount, password: string) {
+  if (!needsRehash(account.passwordHash)) return;
+  try {
+    const { userAccounts } = await getRepositories(systemScope());
+    await userAccounts.upgradePasswordHash(
+      account.id,
+      account.passwordHash,
+      await hashPassword(password),
+    );
+  } catch (error) {
+    logError(
+      'Login: falha ao refazer o hash de senha com o custo atual',
+      error,
+    );
+  }
 }
 
 function singleAccountResult(matches: UserAccount[]): AuthResult {
@@ -208,14 +264,26 @@ async function splitBySuspendedClinic(accounts: UserAccount[]): Promise<{
 // candidates.length além do threadpool do libuv (default 4) — vaza pra quem
 // mede timing quantas clínicas compartilham um e-mail. Aceito: caso raro
 // (colisão de e-mail entre clínicas já é exceção), mitigado pelo rate limit
-// de 5/min por IP. Não bloqueia auth, só metadado de contagem de tenants.
+// de 5/min por IP e por e-mail. Não bloqueia auth, só metadado de contagem
+// de tenants. Sem candidata com hash do custo atual (nenhuma, ou só hashes
+// antigos ainda não refeitos), um scrypt fictício do custo atual roda junto
+// (#208): nem e-mail inexistente nem conta parada desde a troca de custo
+// respondem em tempo diferente de uma conta com hash atual.
 async function filterByValidPassword(
   candidates: UserAccount[],
   password: string,
 ): Promise<UserAccount[]> {
-  const checks = await Promise.all(
-    candidates.map((account) => verifyPassword(password, account.passwordHash)),
+  const padTiming = candidates.every((account) =>
+    needsRehash(account.passwordHash),
   );
+  const [checks] = await Promise.all([
+    Promise.all(
+      candidates.map((account) =>
+        verifyPassword(password, account.passwordHash),
+      ),
+    ),
+    padTiming ? simulatePasswordCheck(password) : false,
+  ]);
   return candidates.filter((_, index) => checks[index]);
 }
 

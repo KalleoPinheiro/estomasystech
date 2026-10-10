@@ -205,6 +205,26 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .where(withTenant(userAccounts, this.clinicId, eq(userAccounts.id, id)));
   }
 
+  async upgradePasswordHash(
+    id: string,
+    currentHash: string,
+    upgradedHash: string,
+  ): Promise<void> {
+    await this.db
+      .update(userAccounts)
+      .set({ passwordHash: upgradedHash })
+      .where(
+        withTenant(
+          userAccounts,
+          this.clinicId,
+          and(
+            eq(userAccounts.id, id),
+            eq(userAccounts.passwordHash, currentHash),
+          ),
+        ),
+      );
+  }
+
   async revokeSessions(id: string): Promise<void> {
     await this.db
       .update(userAccounts)

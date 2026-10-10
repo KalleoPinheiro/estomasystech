@@ -113,6 +113,17 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
     }
   }
 
+  async upgradePasswordHash(
+    id: string,
+    currentHash: string,
+    upgradedHash: string,
+  ): Promise<void> {
+    const existing = this.items.get(id);
+    if (existing?.passwordHash === currentHash) {
+      this.items.set(id, existing.withPasswordHash(upgradedHash));
+    }
+  }
+
   async revokeSessions(id: string): Promise<void> {
     const existing = this.items.get(id);
     if (existing) {
