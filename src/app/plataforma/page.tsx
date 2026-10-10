@@ -21,12 +21,13 @@ import { useApiQuery } from '@/lib/use-api-query';
 import {
   ADMIN_STATUS_LABEL,
   CLINIC_STATUS_LABEL,
+  emailChannelLabel,
   registrationLabel,
 } from './clinic-labels';
 
 /**
- * Clínicas da plataforma (B4, #214): situação (B5), cadastro e estado do admin
- * de cada uma.
+ * Clínicas da plataforma (B4, #214): situação (B5), cadastro, estado do admin
+ * e status do canal de e-mail (C4, #267) de cada uma.
  */
 export default function PlatformPage() {
   const { data, error, refresh } = useApiQuery<PlatformClinicSummaryDto[]>(
@@ -39,20 +40,12 @@ export default function PlatformPage() {
         title="Plataforma"
         description="Clínicas cadastradas e o Admin de Empresa de cada uma."
         actions={
-          <div className="flex flex-wrap items-center gap-4">
-            <Link
-              href="/plataforma/auditoria"
-              className="font-medium text-accent-ink text-sm hover:underline"
-            >
-              Trilha da plataforma
-            </Link>
-            <Link
-              href="/plataforma/clinicas/nova"
-              className="font-medium text-accent-ink text-sm hover:underline"
-            >
-              Nova clínica
-            </Link>
-          </div>
+          <Link
+            href="/plataforma/clinicas/nova"
+            className="font-medium text-accent-ink text-sm hover:underline"
+          >
+            Nova clínica
+          </Link>
         }
       />
       <ClinicsContent data={data} error={error} onRetry={refresh} />
@@ -83,7 +76,8 @@ function ClinicsContent({
             <TableHead className="py-2 pr-3">CNPJ</TableHead>
             <TableHead className="py-2 pr-3">Situação</TableHead>
             <TableHead className="py-2 pr-3">Cadastro</TableHead>
-            <TableHead className="py-2">Admin</TableHead>
+            <TableHead className="py-2 pr-3">Admin</TableHead>
+            <TableHead className="py-2">E-mail</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -100,6 +94,7 @@ function ClinicRow({ clinic }: { clinic: PlatformClinicSummaryDto }) {
   const registration = registrationLabel(clinic.registrationComplete);
   const admin = ADMIN_STATUS_LABEL[clinic.adminStatus];
   const situation = CLINIC_STATUS_LABEL[clinic.status];
+  const email = emailChannelLabel(clinic.emailChannel);
   return (
     <TableRow>
       <TableCell label="Nome" className="py-2 pr-3 font-medium">
@@ -119,8 +114,11 @@ function ClinicRow({ clinic }: { clinic: PlatformClinicSummaryDto }) {
       <TableCell label="Cadastro" className="py-2 pr-3">
         <StatusBadge status={registration.status} label={registration.label} />
       </TableCell>
-      <TableCell label="Admin" className="py-2">
+      <TableCell label="Admin" className="py-2 pr-3">
         <StatusBadge status={admin.status} label={admin.label} />
+      </TableCell>
+      <TableCell label="E-mail" className="py-2">
+        <StatusBadge status={email.status} label={email.label} />
       </TableCell>
     </TableRow>
   );

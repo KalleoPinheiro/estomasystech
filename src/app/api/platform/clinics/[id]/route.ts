@@ -6,22 +6,27 @@ import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import { clinicInfoChangesSchema } from '@/lib/clinic-info-schema';
-import { toPlatformClinicDto } from '@/lib/dto';
+import { toPlatformClinicDetailDto, toPlatformClinicDto } from '@/lib/dto';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 const CLINIC_NOT_FOUND = 'Clínica não encontrada';
 
-/** Cadastro de uma clínica visto pela plataforma (B4, #214). */
+/**
+ * Cadastro de uma clínica visto pela plataforma (B4, #214), com o status do
+ * canal de e-mail (C4, #267) — nunca o remetente, o erro nem a chave.
+ */
 export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
   const { id } = await context.params;
-  const { clinics } = await getRepositories(clinicScope(id));
+  const { clinics, clinicChannels } = await getRepositories(clinicScope(id));
   const clinic = await clinics.findById(id);
   if (!clinic) return fail(CLINIC_NOT_FOUND, 404);
-  return handleRequest(async () => toPlatformClinicDto(clinic));
+  return handleRequest(async () =>
+    toPlatformClinicDetailDto(clinic, await clinicChannels.findStatus('email')),
+  );
 }
 
 /**

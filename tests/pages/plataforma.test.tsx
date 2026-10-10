@@ -36,17 +36,18 @@ describe('Feature: Área da plataforma (B1, ADR-007)', () => {
       screen.getByRole('heading', { level: 1, name: 'Plataforma' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    // A única navegação é a da plataforma (C4) — nada da sidebar da equipe.
+    expect(screen.getAllByRole('navigation')).toHaveLength(1);
     expect(screen.queryByText('Pacientes')).not.toBeInTheDocument();
     expect(screen.queryByText('Agenda')).not.toBeInTheDocument();
   });
 
-  it('Dado o super_admin em /plataforma, Quando renderizar, Então há o link da trilha para /plataforma/auditoria', () => {
+  it('Dado o super_admin em /plataforma, Quando renderizar, Então fica sem o link da trilha na lista (a navegação leva à Auditoria)', () => {
     render(<PlatformPage />);
 
     expect(
-      screen.getByRole('link', { name: 'Trilha da plataforma' }),
-    ).toHaveAttribute('href', '/plataforma/auditoria');
+      screen.queryByRole('link', { name: 'Trilha da plataforma' }),
+    ).not.toBeInTheDocument();
   });
 
   it('Dado o botão Sair, Quando clicar, Então encerra a sessão e leva a /login', async () => {
@@ -80,6 +81,12 @@ const summary = (overrides: Record<string, unknown>) => ({
   registrationComplete: true,
   status: 'active',
   adminStatus: 'active',
+  emailChannel: {
+    configured: false,
+    provider: null,
+    lastStatus: null,
+    lastStatusAt: null,
+  },
   createdAt: '2026-09-27T00:00:00.000Z',
   ...overrides,
 });
@@ -192,5 +199,53 @@ describe('Feature: Situação das clínicas na lista (B5)', () => {
     ).toBeInTheDocument();
     expect(within(activeRow).getByText('Ativa')).toBeInTheDocument();
     expect(within(suspendedRow).getByText('Suspensa')).toBeInTheDocument();
+  });
+});
+
+const channel = (lastStatus: 'ok' | 'failed' | null) => ({
+  configured: true,
+  provider: 'resend',
+  lastStatus,
+  lastStatusAt: lastStatus ? '2026-10-09T14:30:00.000Z' : null,
+});
+
+describe('Feature: status do canal de e-mail na lista (C4, #267)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Dadas clínicas em cada estado do canal, Quando listar, Então cada linha mostra o status do canal', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        envelope([
+          summary({ id: 'a', name: 'A Ok', emailChannel: channel('ok') }),
+          summary({
+            id: 'b',
+            name: 'B Falha',
+            emailChannel: channel('failed'),
+          }),
+          summary({ id: 'c', name: 'C Novo', emailChannel: channel(null) }),
+          summary({ id: 'd', name: 'D Sem' }),
+        ]),
+      ),
+    );
+    render(<PlatformPage />);
+    await screen.findByText('A Ok');
+
+    expect(
+      screen.getByRole('columnheader', { name: 'E-mail' }),
+    ).toBeInTheDocument();
+    const expected: [string, string][] = [
+      ['A Ok', 'E-mail: configurado'],
+      ['B Falha', 'E-mail: falhando'],
+      ['C Novo', 'E-mail: não testado'],
+      ['D Sem', 'E-mail: sem canal'],
+    ];
+    for (const [name, label] of expected) {
+      const row = screen.getByText(name).closest('tr') as HTMLElement;
+      expect(within(row).getByText(label)).toBeInTheDocument();
+    }
   });
 });

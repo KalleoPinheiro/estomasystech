@@ -209,11 +209,26 @@ export class ChannelSecretUnreadableError extends Error {
 }
 
 /**
+ * Metadado do canal visível à plataforma (C4, #267): nada de remetente, erro
+ * ou chave — e lido sem decifrar a chave.
+ */
+export interface ClinicChannelStatus {
+  provider: EmailProvider;
+  lastStatus: ChannelTestStatus | null;
+  lastStatusAt: Date | null;
+}
+
+/**
  * Leitura e gravação do canal **da clínica do escopo**. O escopo de sistema não
  * tem canal: a implementação recusa, em vez de ler o de uma clínica qualquer.
  */
 export interface ClinicChannelRepository {
   find(channel: ChannelKind): Promise<ClinicChannel | null>;
+  /**
+   * Status do canal sem decifrar a chave: a lista da plataforma não pode cair
+   * porque a chave de uma clínica deixou de decifrar.
+   */
+  findStatus(channel: ChannelKind): Promise<ClinicChannelStatus | null>;
   /** Upsert por `(clinic, channel)`. */
   save(channel: ClinicChannel): Promise<void>;
   /**

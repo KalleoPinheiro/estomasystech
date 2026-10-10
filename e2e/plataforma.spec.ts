@@ -17,7 +17,35 @@ test.describe("área da plataforma", () => {
 
       await expect(page.getByRole("heading", { level: 1, name: "Plataforma" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Sair" })).toBeVisible();
-      await expect(page.getByRole("navigation")).toHaveCount(0);
+      await expect(page.getByRole("navigation")).toHaveCount(1);
+      await expect(page.getByRole("link", { name: "Pacientes" })).toHaveCount(0);
+    });
+
+    test("navegação da plataforma leva às três seções", async ({ page }) => {
+      // C4 (#267): Clínicas · Auditoria · Taxonomia, com a seção atual marcada.
+      await page.goto("/plataforma");
+      const nav = page.getByRole("navigation");
+      await expect(nav.getByRole("link")).toHaveText(["Clínicas", "Auditoria", "Taxonomia"]);
+      await expect(nav.getByRole("link", { name: "Clínicas" })).toHaveAttribute("aria-current", "page");
+
+      await nav.getByRole("link", { name: "Taxonomia" }).click();
+      await expect(page).toHaveURL("/plataforma/taxonomia");
+      await expect(page.getByRole("heading", { level: 1, name: "Taxonomia" })).toBeVisible();
+      await expect(page.getByRole("navigation").getByRole("link", { name: "Taxonomia" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    });
+
+    test("importa o catálogo de estomaterapia pela tela", async ({ page }) => {
+      // C4 (#267): idempotente — numa base já importada, as contagens são 0.
+      await page.goto("/plataforma/taxonomia");
+      await page.getByRole("button", { name: "Importar catálogo de estomaterapia" }).click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Importar" }).click();
+
+      for (const label of ["Diagnósticos", "Resultados", "Intervenções", "Ligações"]) {
+        await expect(page.getByText(new RegExp(`^${label}: \\d+$`))).toBeVisible();
+      }
     });
 
     test("cria clínica pela tela e vê o admin aguardando primeiro acesso", async ({ page }) => {
@@ -45,10 +73,12 @@ test.describe("área da plataforma", () => {
       const adminRow = page.getByRole("row").filter({ hasText: `admin-${digits}@nova-e2e.test` });
       await expect(adminRow.getByText("Aguardando primeiro acesso")).toBeVisible();
 
-      await page.getByRole("link", { name: "Clínicas" }).click();
+      await page.getByRole("navigation").getByRole("link", { name: "Clínicas" }).click();
       const row = page.getByRole("row").filter({ hasText: name });
       await expect(row.getByText("Aguardando primeiro acesso")).toBeVisible();
       await expect(row.getByText("Cadastro completo")).toBeVisible();
+      // C4 (#267): clínica nova não tem canal de e-mail.
+      await expect(row.getByText("E-mail: sem canal")).toBeVisible();
     });
 
     test("suspende e reativa pela tela", async ({ page }) => {
@@ -70,7 +100,7 @@ test.describe("área da plataforma", () => {
       await expect(page.getByText(/^Suspensa em .+ por /)).toBeVisible();
       await expect(page.getByRole("button", { name: "Convidar admin" })).toBeDisabled();
 
-      await page.getByRole("link", { name: "Clínicas" }).click();
+      await page.getByRole("navigation").getByRole("link", { name: "Clínicas" }).click();
       const row = page.getByRole("row").filter({ hasText: name });
       await expect(row.getByText("Suspensa")).toBeVisible();
 
@@ -78,7 +108,7 @@ test.describe("área da plataforma", () => {
       await page.getByRole("button", { name: "Reativar clínica" }).click();
       await expect(page.getByText("Clínica ativa.")).toBeVisible();
 
-      await page.getByRole("link", { name: "Clínicas" }).click();
+      await page.getByRole("navigation").getByRole("link", { name: "Clínicas" }).click();
       await expect(page.getByRole("row").filter({ hasText: name }).getByText("Ativa", { exact: true })).toBeVisible();
     });
 
@@ -95,7 +125,7 @@ test.describe("área da plataforma", () => {
       });
 
       await page.goto("/plataforma");
-      await page.getByRole("link", { name: "Trilha da plataforma" }).click();
+      await page.getByRole("navigation").getByRole("link", { name: "Auditoria" }).click();
 
       await expect(page.getByRole("heading", { level: 1, name: "Trilha da plataforma" })).toBeVisible();
       const row = page.getByRole("row").filter({ hasText: name }).filter({ hasText: "Criação" });

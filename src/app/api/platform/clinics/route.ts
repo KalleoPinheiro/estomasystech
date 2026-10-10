@@ -27,7 +27,8 @@ const createSchema = z.object({
 
 /**
  * Clínicas da plataforma (B4, #214). O catálogo de clínicas não tem empresa
- * (`systemScope`); o estado do admin de cada uma é lido no escopo dela.
+ * (`systemScope`); o estado do admin e o status do canal de e-mail (C4, #267)
+ * de cada uma são lidos no escopo dela.
  */
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
@@ -38,9 +39,18 @@ export async function GET(request: NextRequest) {
     const all = await clinics.findAll();
     const rows = await Promise.all(
       all.map(async (clinic) => {
-        const { userAccounts } = await getRepositories(clinicScope(clinic.id));
-        const admins = await userAccounts.findByRole('company_admin');
-        return toPlatformClinicSummaryDto(clinic, adminStatusOf(admins));
+        const { userAccounts, clinicChannels } = await getRepositories(
+          clinicScope(clinic.id),
+        );
+        const [admins, emailStatus] = await Promise.all([
+          userAccounts.findByRole('company_admin'),
+          clinicChannels.findStatus('email'),
+        ]);
+        return toPlatformClinicSummaryDto(
+          clinic,
+          adminStatusOf(admins),
+          emailStatus,
+        );
       }),
     );
     return rows.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));

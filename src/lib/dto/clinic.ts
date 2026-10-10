@@ -4,6 +4,7 @@ import type { Clinic, ClinicStatus } from '@/domain/clinic/clinic';
 import type {
   ChannelTestStatus,
   ClinicChannel,
+  ClinicChannelStatus,
   EmailProvider,
 } from '@/domain/clinic/clinic-channel';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
@@ -44,6 +45,26 @@ export const toClinicRegistrationDto = (
   contactEmail: clinic.contactEmail,
 });
 
+/**
+ * Status do canal de e-mail visto pela plataforma (C4, #267): sem remetente,
+ * sem último erro e sem chave — só se há canal e como foi o último teste.
+ */
+export interface PlatformEmailChannelDto {
+  configured: boolean;
+  provider: EmailProvider | null;
+  lastStatus: ChannelTestStatus | null;
+  lastStatusAt: string | null;
+}
+
+export const toPlatformEmailChannelDto = (
+  status: ClinicChannelStatus | null,
+): PlatformEmailChannelDto => ({
+  configured: status !== null,
+  provider: status?.provider ?? null,
+  lastStatus: status?.lastStatus ?? null,
+  lastStatusAt: status?.lastStatusAt?.toISOString() ?? null,
+});
+
 /** Clínica vista pela plataforma (B4): cadastro, se ele está completo e o estado (B5). */
 export interface PlatformClinicDto extends ClinicRegistrationDto {
   id: string;
@@ -64,6 +85,19 @@ export const toPlatformClinicDto = (clinic: Clinic): PlatformClinicDto => ({
   createdAt: clinic.createdAt.toISOString(),
 });
 
+/** Detalhe da clínica na plataforma, com o status do canal de e-mail (C4). */
+export interface PlatformClinicDetailDto extends PlatformClinicDto {
+  emailChannel: PlatformEmailChannelDto;
+}
+
+export const toPlatformClinicDetailDto = (
+  clinic: Clinic,
+  emailStatus: ClinicChannelStatus | null,
+): PlatformClinicDetailDto => ({
+  ...toPlatformClinicDto(clinic),
+  emailChannel: toPlatformEmailChannelDto(emailStatus),
+});
+
 /** Linha da lista de clínicas da plataforma. */
 export interface PlatformClinicSummaryDto {
   id: string;
@@ -72,12 +106,14 @@ export interface PlatformClinicSummaryDto {
   registrationComplete: boolean;
   status: ClinicStatus;
   adminStatus: AdminStatus;
+  emailChannel: PlatformEmailChannelDto;
   createdAt: string;
 }
 
 export const toPlatformClinicSummaryDto = (
   clinic: Clinic,
   adminStatus: AdminStatus,
+  emailStatus: ClinicChannelStatus | null,
 ): PlatformClinicSummaryDto => ({
   id: clinic.id,
   name: clinic.name,
@@ -85,6 +121,7 @@ export const toPlatformClinicSummaryDto = (
   registrationComplete: clinic.isRegistrationComplete(),
   status: clinic.status,
   adminStatus,
+  emailChannel: toPlatformEmailChannelDto(emailStatus),
   createdAt: clinic.createdAt.toISOString(),
 });
 

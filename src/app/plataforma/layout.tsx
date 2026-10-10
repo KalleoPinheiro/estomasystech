@@ -1,7 +1,6 @@
-import { Header, Layout } from '@still-void/ui/react';
+import { Layout } from '@still-void/ui/react';
 import type { Metadata } from 'next';
-import { BrandLogo } from '@/components/brand-logo';
-import { LogoutButton } from '@/components/logout-button';
+import { PlatformHeader } from './platform-header';
 
 export const metadata: Metadata = {
   title: 'Plataforma — VittaFlow',
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
 /**
  * Área do operador da plataforma (ADR-007): fora do grupo `(staff)`, então sem
  * a sidebar nem a identidade da equipe da clínica. O proxy só deixa o
- * super_admin chegar aqui.
+ * super_admin chegar aqui. O topo leva a navegação da plataforma (C4, #267).
  */
 export default function PlatformLayout({
   children,
@@ -19,7 +18,7 @@ export default function PlatformLayout({
 }) {
   return (
     <div>
-      <Header logo={<BrandLogo />} actions={<LogoutButton />} />
+      <PlatformHeader />
       <Layout>
         <main className="flex flex-col gap-4">{children}</main>
       </Layout>

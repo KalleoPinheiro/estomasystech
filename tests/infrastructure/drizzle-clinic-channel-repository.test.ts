@@ -115,4 +115,42 @@ describe('Feature: Canal de comunicação da clínica (Drizzle)', () => {
       new DrizzleClinicChannelRepository(appDb, null, cipher).remove('email'),
     ).rejects.toThrow('Canal de comunicação exige escopo de clínica');
   });
+
+  it('findStatus: devolve provedor e último teste da clínica do escopo, sem decifrar a chave', async () => {
+    const testedAt = new Date('2026-10-10T12:00:00.000Z');
+    await new DrizzleClinicChannelRepository(appDb, 'ch-a', cipher).save(
+      emailChannel('ch-a', 're_da_clinica_a').recordTest(
+        { ok: false, error: 'domínio não verificado' },
+        testedAt,
+      ),
+    );
+    // Chave de dados trocada sem a anterior: a chave de A não decifra mais.
+    const rotated = new DataCipher({ current: 'z'.repeat(64) });
+    const fromA = new DrizzleClinicChannelRepository(appDb, 'ch-a', rotated);
+
+    expect(await fromA.findStatus('email')).toEqual({
+      provider: 'resend',
+      lastStatus: 'failed',
+      lastStatusAt: testedAt,
+    });
+  });
+
+  it('findStatus: o canal de B não aparece no escopo de A e o escopo de sistema recusa', async () => {
+    await new DrizzleClinicChannelRepository(appDb, 'ch-b', cipher).save(
+      emailChannel('ch-b', 're_da_clinica_b'),
+    );
+
+    expect(
+      await new DrizzleClinicChannelRepository(
+        appDb,
+        'ch-a',
+        cipher,
+      ).findStatus('email'),
+    ).toBeNull();
+    await expect(
+      new DrizzleClinicChannelRepository(appDb, null, cipher).findStatus(
+        'email',
+      ),
+    ).rejects.toThrow('Canal de comunicação exige escopo de clínica');
+  });
 });

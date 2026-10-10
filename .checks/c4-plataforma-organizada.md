@@ -24,7 +24,7 @@ rotas `GET /api/platform/clinics[/id]` e o repositório de canal (`findStatus`).
 
 | One-way door | Literal shape | Alternative rejected |
 | --- | --- | --- |
-| Contrato (Decided na task) | `emailChannel: { configured: boolean; provider: 'resend' \| null; lastStatus: 'ok' \| 'failed' \| null; lastStatusAt: string \| null }` em `PlatformClinicSummaryDto` e `PlatformClinicDto` | incluir `sender`/`lastError` — dado operacional da clínica (ADR-007) |
+| Contrato (Decided na task) | `emailChannel: { configured: boolean; provider: 'resend' \| null; lastStatus: 'ok' \| 'failed' \| null; lastStatusAt: string \| null }` em `PlatformClinicSummaryDto` (lista) e `PlatformClinicDetailDto` (`GET [id]`; o `PlatformClinicDto` devolvido por PATCH, suspender e criar fica como está) | incluir `sender`/`lastError` — dado operacional da clínica (ADR-007) |
 | Status lido sem decifrar a chave | `ClinicChannelRepository.findStatus(channel): Promise<ClinicChannelStatus \| null>`, `ClinicChannelStatus = { provider, lastStatus, lastStatusAt }`, `SELECT` só das colunas de metadado | `find()` — decifra a chave: com a chave de dados trocada (`ChannelSecretUnreadableError`) a lista inteira da plataforma responderia 500, e a chave em claro passaria pela memória da rota da plataforma sem necessidade |
 
 - Nada mais nesta mudança é difícil de reverter.
@@ -94,7 +94,7 @@ Proof: `npx vitest run tests/pages/plataforma-taxonomia.test.tsx -t "contagens"`
 **C17** — falha da API → `ErrorAlert` com a mensagem devolvida e o botão habilitado de novo
 Proof: `npx vitest run tests/pages/plataforma-taxonomia.test.tsx -t "falha"`
 
-**C18** — com a chamada pendente, o botão está desabilitado e há `LoadingIndicator` (`role="status"`)
+**C18** — com a chamada pendente, o botão está desabilitado e há o `LoadingIndicator` (texto "Carregando…")
 Proof: `npx vitest run tests/pages/plataforma-taxonomia.test.tsx -t "enquanto"`
 
 **C19** — `company_admin`, `atendente`, `profissional` → `307` para `/`; `patient`, `partner` → `307` para `/portal`; sem sessão → `/login` ao abrir `/plataforma/taxonomia` (table-driven)
