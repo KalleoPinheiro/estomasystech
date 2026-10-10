@@ -4,12 +4,18 @@ import { hashPassword, verifyPassword } from './password';
 
 /**
  * Códigos de recuperação do segundo fator (ADR-007, bloco B2): 10 de uso
- * único, exibidos uma vez, guardados só como hash scrypt (o mesmo da senha).
+ * único, exibidos uma vez, guardados só como hash scrypt (o formato da senha).
  * Sem letras e dígitos que se confundem (i, l, o, 0, 1): ~49 bits por código.
  */
 export const RECOVERY_CODE_COUNT = 10;
 const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
 const GROUP = 5;
+/**
+ * Custo do scrypt dos códigos (#208): fica em `2^14`, abaixo do da senha. O
+ * custo alto protege segredo de baixa entropia; aqui são ~49 bits aleatórios,
+ * e a verificação roda os 10 hashes em paralelo — com `2^17` seriam 1,28 GB.
+ */
+const RECOVERY_CODE_COST = 16_384;
 
 function randomGroup(): string {
   let group = '';
@@ -36,7 +42,7 @@ export function normalizeRecoveryCode(input: string): string {
 }
 
 export function hashRecoveryCode(code: string): Promise<string> {
-  return hashPassword(normalizeRecoveryCode(code));
+  return hashPassword(normalizeRecoveryCode(code), RECOVERY_CODE_COST);
 }
 
 /** Registro que casa com o código digitado, ou `null`. */

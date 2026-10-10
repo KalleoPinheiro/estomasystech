@@ -159,6 +159,28 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       expect(await repo.findByEmail('nao@existe.com')).toBeNull();
     });
 
+    it('Dado hash vigente, Quando upgradePasswordHash, Então troca o hash sem mexer na session_version; hash já trocado, Então não sobrescreve (#208)', async () => {
+      const repo = new InMemoryUserAccountRepository();
+      const account = makeAccount('upgrade@example.com');
+      await repo.save(account);
+
+      await repo.upgradePasswordHash(account.id, 'scrypt$1$outro$hash', 'x');
+      expect((await repo.findById(account.id))?.passwordHash).toBe(
+        'scrypt$1$salt$hash',
+      );
+
+      await repo.upgradePasswordHash(
+        account.id,
+        'scrypt$1$salt$hash',
+        'scrypt$2$novo$hash',
+      );
+      const upgraded = await repo.findById(account.id);
+      expect(upgraded?.passwordHash).toBe('scrypt$2$novo$hash');
+      expect(upgraded?.sessionVersion).toBe(account.sessionVersion);
+
+      await repo.upgradePasswordHash('inexistente', 'a', 'b');
+    });
+
     it('Dado várias contas, Quando findAll, Então retorna ordenado por email', async () => {
       const repo = new InMemoryUserAccountRepository();
       await repo.save(makeAccount('zeca@example.com'));
