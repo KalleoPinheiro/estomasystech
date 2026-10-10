@@ -146,7 +146,7 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 **Account provisioning** (cadastro de contas)
 
 - No self-registration for any role: every account is created by someone else in the hierarchy above (see Role).
-- A Clinic's Admin de Empresa is invited by Super Admin through the platform (created with the Clinic, or later via `POST /api/platform/clinics/[id]/admins`); the response never carries the invite link. Super Admin can also resend the invite, deactivate and reactivate an Admin de Empresa — never any other account. While no Admin de Empresa has set a password, the Clinic shows as **aguardando primeiro acesso**. No self-service onboarding yet.
+- A Clinic's Admin de Empresa is invited by Super Admin through the platform (created with the Clinic, or later via `POST /api/platform/clinics/[id]/admins`); when the invite e-mail does not go out (the Clinic has no channel, ADR-011), the response carries the invite link for Super Admin to pass on, otherwise it does not. Super Admin can also resend the invite, deactivate and reactivate an Admin de Empresa — never any other account. While no Admin de Empresa has set a password, the Clinic shows as **aguardando primeiro acesso**. No self-service onboarding yet.
 - No one creates a Super Admin (`ck_user_accounts_system_role_has_no_clinic` + `uq_user_accounts_single_system_account`).
 
 **Authorization** (autorização)
