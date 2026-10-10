@@ -579,3 +579,20 @@ Regra nova: ACE-RN-38. Spec em `.specs/features/endurecer-login/spec.md`. Memór
 - **Next step**: respostas do dono em AD-031.
 - **Blockers**: nenhum.
 - **Branch**: `fix/208-endurecer-login`. PR #279, squash-merged em `main` (`9a7b1c0`). Issue #208 fechada via `Closes #208`.
+
+## Issue #207 — sessão expirada vai ao login e preserva o rascunho (2026-10-10) — ENCERRADO (#277)
+
+P2 da revisão pré-produção #183. Um `401` de API numa tela autenticada passa a levar a `/login?error=session_expired&next=<rota>` em vez de mostrar "Não autenticado" em cada tela.
+
+- **Retorno à tela:** o login volta ao `next`, validado só em `safeNextPath` (`src/lib/login-redirect.ts`). Ele aceita apenas caminho interno, e as telas de login são recusadas.
+- **Proxy:** só marca `session_expired` quando havia cookie de sessão.
+- **Corpo não-JSON:** respostas como 502/504 em HTML viram "Serviço indisponível, tente novamente".
+- **Rascunho:** o SOAP e a anamnese que falham por `401` vão para o `sessionStorage` da aba, junto com o e-mail da conta, e reabrem só para a mesma conta e o mesmo paciente (`use-session-draft.ts`).
+
+Regras novas: ACE-RN-39, renumerada depois que a #208 ocupou a ACE-RN-38, e PRO-RN-14. Spec em `.specs/features/fix-207-sessao-expirada/spec.md`.
+
+**Detalhes**: o E2E `sidebar-responsive.spec.ts` falhava às vezes porque o seletor `button[aria-expanded]` também casava com os botões "Cancelar" dos retornos. O seletor foi corrigido nesta PR. Risco residual: um `401` de outra chamada *antes* do clique em salvar navega sem guardar o SOAP. CI com os 4 jobs verdes e Verifier independente com PASS (fuzz de `safeNextPath` com 300 mil entradas).
+
+- **Next step**: o dono responder às perguntas abertas: `sessionStorage` vs. `localStorage`, texto próprio para sessão revogada e texto do aviso de rascunho.
+- **Blockers**: nenhum.
+- **Branch**: `fix/207-sessao-expirada`. PR #277, squash-merged em `main` (`9b89df2`). Issue #207 fechada via `Closes #207`.
