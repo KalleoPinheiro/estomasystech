@@ -9,6 +9,12 @@ import {
   ensureTestClinics,
 } from '../support/clinics';
 import { spyOnSentEmails } from '../support/email';
+import {
+  clearEmailChannels,
+  providerCalls,
+  saveEmailChannel,
+  stubProviderFetch,
+} from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -27,6 +33,7 @@ interface ActionDto {
   active: boolean;
   passwordSet: boolean;
   delivered: boolean | null;
+  inviteUrl: string | null;
 }
 
 const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
@@ -96,7 +103,7 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
     vi.restoreAllMocks();
   });
 
-  it('Dado admin pendente, Quando o super_admin reenvia o convite, Então novo e-mail sem link na resposta; desativado recebe 400', async () => {
+  it('Dado admin pendente, Quando o super_admin reenvia o convite, Então tenta o e-mail e, sem canal, devolve o link; desativado recebe 400', async () => {
     const clinicId = await freshClinic();
     const pending = await seedAccount(clinicId, { password: false });
     const inactive = await seedAccount(clinicId, { active: false });
@@ -112,9 +119,10 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
       email: pending.email,
       active: true,
       passwordSet: false,
-      delivered: expect.any(Boolean),
+      // Clínica sem canal: o e-mail não sai e o link volta (C2, #265).
+      delivered: false,
+      inviteUrl: expect.stringMatching(/\/definir-senha\?token=/),
     });
-    expect(JSON.stringify(json)).not.toMatch(/token|definir-senha|https?:/);
     expect(emails.bodies).toHaveLength(1);
     expect(emails.bodies[0]).toContain(pending.email);
     expect(emails.bodies[0]).toMatch(/definir-senha\?token=/);
@@ -286,5 +294,130 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
     expect(after?.isActive).toBe(true);
     expect(after?.sessionVersion).toBe(leaving.sessionVersion);
     expect(emails.bodies).toHaveLength(0);
+  });
+
+  describe('C2/#265 link do reenvio e reset-link', () => {
+    const LINK = /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/;
+
+    afterEach(async () => {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+      await clearEmailChannels();
+    });
+
+    const tokenOf = (url: string | null) =>
+      new URL(url ?? 'https://x.test').searchParams.get('token') ?? '';
+
+    it('link do reenvio: sem canal devolve o link; canal que entrega sai pela chave da clínica-alvo sem link; canal que falha devolve o link', async () => {
+      const clinicId = await freshClinic();
+      const pending = await seedAccount(clinicId, { password: false });
+      vi.spyOn(console, 'info').mockImplementation(() => undefined);
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const fetchMock = stubProviderFetch(200);
+      const none = await act(clinicId, pending.id, { action: 'resend-invite' });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(none.json.data).toMatchObject({ delivered: false });
+      expect(none.json.data.inviteUrl).toMatch(LINK);
+
+      await saveEmailChannel(clinicId, 're_chave_alvo');
+      const sent = await act(clinicId, pending.id, { action: 'resend-invite' });
+      expect(sent.json.data).toMatchObject({
+        delivered: true,
+        inviteUrl: null,
+      });
+      expect(providerCalls(fetchMock)).toEqual([
+        expect.objectContaining({
+          auth: 'Bearer re_chave_alvo',
+          to: pending.email,
+        }),
+      ]);
+
+      stubProviderFetch(422);
+      const failed = await act(clinicId, pending.id, {
+        action: 'resend-invite',
+      });
+      expect(failed.response.status).toBe(200);
+      expect(failed.json.data.delivered).toBe(false);
+      expect(failed.json.data.inviteUrl).toMatch(LINK);
+    });
+
+    it('reset-link: emite token reset de 1 h e, sem canal, devolve o link; conta desativada recebe 409', async () => {
+      const clinicId = await freshClinic();
+      const admin = await seedAccount(clinicId);
+      const inactive = await seedAccount(clinicId, { active: false });
+      spyOnSentEmails();
+      const before = Date.now();
+
+      const { response, json } = await act(clinicId, admin.id, {
+        action: 'reset-link',
+      });
+
+      expect(response.status).toBe(200);
+      expect(json.data).toMatchObject({
+        id: admin.id,
+        delivered: false,
+      });
+      expect(json.data.inviteUrl).toMatch(LINK);
+      const { hashAuthTokenSecret, RESET_TTL_MS } = await import(
+        '@/domain/auth/auth-token'
+      );
+      const { authTokens } = await repositories(clinicId);
+      const hash = hashAuthTokenSecret(tokenOf(json.data.inviteUrl));
+      expect(
+        await authTokens.claimBySecretHash(hash, Date.now() + RESET_TTL_MS + 1),
+      ).toBeNull();
+      const token = await authTokens.claimBySecretHash(
+        hash,
+        before + RESET_TTL_MS - 60_000,
+      );
+      expect(token?.purpose).toBe('reset');
+      expect(token?.accountId).toBe(admin.id);
+
+      const refused = await act(clinicId, inactive.id, {
+        action: 'reset-link',
+      });
+      expect(refused.response.status).toBe(409);
+      expect(refused.json.error).toBe('Conta desativada');
+    });
+
+    it('reset-link auditado: trilha da clínica com detail reset-link e, em produção, nem link nem segredo na trilha ou no log', async () => {
+      const clinicId = await freshClinic();
+      const admin = await seedAccount(clinicId);
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('DATA_ENCRYPTION_KEY', 'a'.repeat(64));
+      const logged: string[] = [];
+      for (const level of ['info', 'warn', 'error', 'log'] as const) {
+        vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {
+          logged.push(args.map(String).join(' '));
+        });
+      }
+
+      const { response, json } = await act(clinicId, admin.id, {
+        action: 'reset-link',
+      });
+
+      expect(response.status).toBe(200);
+      const secret = tokenOf(json.data.inviteUrl);
+      expect(secret).not.toBe('');
+      const { auditEvents } = await repositories(clinicId);
+      const events = await auditEvents.findAll();
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: 'update',
+            resourceType: 'account',
+            resourceId: admin.id,
+            detail: 'reset-link',
+            clinicId,
+          }),
+        ]),
+      );
+      const trail = JSON.stringify(events);
+      expect(trail).not.toContain(secret);
+      expect(trail).not.toContain('definir-senha');
+      expect(logged.join('\n')).not.toContain(secret);
+      expect(logged.join('\n')).not.toContain('definir-senha');
+    });
   });
 });

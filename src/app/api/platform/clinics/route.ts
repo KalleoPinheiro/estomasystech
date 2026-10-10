@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { sendInvite } from '@/application/auth/send-invite';
+import { IssueAuthToken } from '@/application/auth/auth-token-flow';
+import { appUrlFromEnv } from '@/application/auth/send-invite';
 import { adminStatusOf } from '@/application/platform/clinic-overview';
 import { CreateClinic } from '@/application/platform/create-clinic';
 import { getRepositories } from '@/infrastructure/container';
@@ -49,8 +50,9 @@ export async function GET(request: NextRequest) {
 /**
  * Cria a clínica, o primeiro `company_admin` e os eventos de auditoria da
  * criação numa única transação (#243) — falha na auditoria desfaz clínica e
- * admin junto — e só então convida o admin. A resposta nunca traz o link do
- * convite (B1, critério 14).
+ * admin junto — e só então emite o convite do admin. A clínica nova ainda não
+ * tem canal de e-mail (ADR-011), então o convite nunca é enviado: o link volta
+ * na resposta para o super admin repassar à mão (C2, #265).
  */
 export async function POST(request: NextRequest) {
   const guard = requireStaffSession(request);
@@ -82,15 +84,20 @@ export async function POST(request: NextRequest) {
       },
     );
 
-    const services = await getRepositories(clinicScope(clinic.id));
-    const { delivered } = await sendInvite(services, admin);
+    const { authTokens, email } = await getRepositories(clinicScope(clinic.id));
+    const inviteUrl = await new IssueAuthToken(authTokens, email).issue({
+      account: admin,
+      purpose: 'invite',
+      appUrl: appUrlFromEnv(),
+    });
     return {
       clinic: toPlatformClinicDto(clinic),
       admin: {
         ...toUserAccountDto(admin),
         role: admin.role,
         clinicId: admin.clinicId,
-        delivered,
+        delivered: false,
+        inviteUrl,
       },
     };
   });

@@ -92,6 +92,13 @@ const ADMINISTRATIVE_PREFIXES = [
  */
 const PROFESSIONAL_SELF_PREFIXES = ['/api/my-payouts'];
 
+/**
+ * Gerar link de redefinição de senha de outra conta é ato do Admin de Empresa
+ * (C2, #265) — diferente do resto de `/api/accounts`, aberto ao Atendente e
+ * ao Profissional para o cadastro de portal.
+ */
+const ACCOUNT_RESET_LINK = /^\/api\/accounts\/[^/]+\/reset-link$/;
+
 function startsWithAny(pathname: string, prefixes: readonly string[]): boolean {
   return prefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -122,7 +129,10 @@ export function classifyRoute(pathname: string): RouteFamily {
   ) {
     return 'clinical';
   }
-  if (startsWithAny(pathname, ADMINISTRATIVE_PREFIXES)) {
+  if (
+    startsWithAny(pathname, ADMINISTRATIVE_PREFIXES) ||
+    ACCOUNT_RESET_LINK.test(pathname)
+  ) {
     return 'administrative';
   }
   if (startsWithAny(pathname, PROFESSIONAL_SELF_PREFIXES)) {

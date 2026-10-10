@@ -82,6 +82,15 @@ export class IssueAuthToken {
     }
   }
 
+  /**
+   * Só emite, sem tentar enviar: o link volta para quem o gerou repassar à mão.
+   * Usado no convite do primeiro admin de uma clínica nova (C2, #265), que
+   * ainda não tem canal de e-mail.
+   */
+  issue(input: IssueAuthTokenInput): Promise<string> {
+    return this.persist(input);
+  }
+
   /** Devolve o link gerado — o chamador decide se ele pode ser exposto. */
   async execute(input: IssueAuthTokenInput): Promise<string> {
     const inviteUrl = await this.persist(input);

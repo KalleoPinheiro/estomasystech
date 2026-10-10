@@ -55,6 +55,9 @@ export function assertCanDeactivate(
   }
 }
 
+/** Recusa de link de redefinição para conta desativada (C2, #265). */
+export const DEACTIVATED_ACCOUNT_MESSAGE = 'Conta desativada';
+
 /** Contas que o papel enxerga na listagem: só as que ele pode gerir. */
 export function visibleAccounts(
   role: UserRole,

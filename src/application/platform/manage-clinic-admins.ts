@@ -1,19 +1,22 @@
-import { IssueAuthToken } from '@/application/auth/auth-token-flow';
 import { CreateAccount } from '@/application/auth/create-account';
 import {
-  appUrlFromEnv,
+  type AccessLinkResult,
   type InviteServices,
+  issueAccessLink,
   sendInvite,
 } from '@/application/auth/send-invite';
 import type { TransactionManager } from '@/application/ports/transaction-manager';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
-import { assertCanDeactivate } from '@/domain/auth/account-management';
+import {
+  assertCanDeactivate,
+  DEACTIVATED_ACCOUNT_MESSAGE,
+} from '@/domain/auth/account-management';
 import type {
   UserAccount,
   UserAccountRepository,
 } from '@/domain/auth/user-account';
 import type { Clinic } from '@/domain/clinic/clinic';
-import { ValidationError } from '@/domain/shared/errors';
+import { ConflictError, ValidationError } from '@/domain/shared/errors';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { isUniqueViolation } from '@/lib/db-errors';
 import { PLATFORM_ACCOUNT_MANAGER, PLATFORM_ACTOR } from './platform-actor';
@@ -22,6 +25,7 @@ export const ADMIN_ACTIONS = [
   'resend-invite',
   'deactivate',
   'reactivate',
+  'reset-link',
 ] as const;
 export type AdminAction = (typeof ADMIN_ACTIONS)[number];
 
@@ -67,8 +71,10 @@ export type RecordAdminActionAudit = (
 
 export interface AdminActionResult {
   account: UserAccount;
-  /** Só no reenvio; `null` nas ações sem e-mail. */
+  /** Só no reenvio e na redefinição; `null` nas ações sem e-mail. */
   delivered: boolean | null;
+  /** O link, só quando ele não saiu por e-mail (C2, #265). */
+  inviteUrl: string | null;
 }
 
 /**
@@ -109,7 +115,7 @@ export class ManageClinicAdmins {
     clinic: Clinic,
     email: string,
     recordAudit: RecordAdminInviteAudit,
-  ): Promise<{ account: UserAccount; delivered: boolean }> {
+  ): Promise<{ account: UserAccount } & AccessLinkResult> {
     assertNotSuspended(clinic);
     if (!clinic.isRegistrationComplete()) {
       throw new ValidationError(INCOMPLETE_REGISTRATION_MESSAGE);
@@ -134,8 +140,7 @@ export class ManageClinicAdmins {
         return created;
       },
     );
-    const { delivered } = await sendInvite(this.services, account);
-    return { account, delivered };
+    return { account, ...(await sendInvite(this.services, account)) };
   }
 
   /**
@@ -152,13 +157,17 @@ export class ManageClinicAdmins {
       assertNotSuspended(clinic);
       return this.resendInvite(account, audit);
     }
+    if (action === 'reset-link') {
+      assertNotSuspended(clinic);
+      return this.resetLink(account, audit);
+    }
     if (action === 'deactivate') {
       return this.deactivate(account, audit);
     }
     await audit(this.services.auditEvents);
     const updated = account.reactivate();
     await this.services.userAccounts.save(updated);
-    return { account: updated, delivered: null };
+    return { account: updated, delivered: null, inviteUrl: null };
   }
 
   /**
@@ -186,7 +195,7 @@ export class ManageClinicAdmins {
         await userAccounts.save(updated);
         // Conta desativada derruba as sessões existentes (#194).
         await userAccounts.revokeSessions(updated.id);
-        return { account: updated, delivered: null };
+        return { account: updated, delivered: null, inviteUrl: null };
       },
     );
   }
@@ -200,15 +209,29 @@ export class ManageClinicAdmins {
       throw new ValidationError('Conta desativada não pode receber convite');
     }
     await audit(this.services.auditEvents);
-    const { delivered } = await new IssueAuthToken(
-      this.services.authTokens,
-      this.services.email,
-    ).issueAndTryDeliver({
+    const purpose =
+      account.passwordHash === UNSET_PASSWORD_HASH ? 'invite' : 'reset';
+    return {
       account,
-      purpose:
-        account.passwordHash === UNSET_PASSWORD_HASH ? 'invite' : 'reset',
-      appUrl: appUrlFromEnv(),
-    });
-    return { account, delivered };
+      ...(await issueAccessLink(this.services, account, purpose)),
+    };
+  }
+
+  /**
+   * Mesma regra de `POST /api/accounts/[id]/reset-link` (C2, #265): token
+   * `reset` de 1 h, que invalida os anteriores não usados.
+   */
+  private async resetLink(
+    account: UserAccount,
+    audit: RecordAdminActionAudit,
+  ): Promise<AdminActionResult> {
+    if (!account.isActive) {
+      throw new ConflictError(DEACTIVATED_ACCOUNT_MESSAGE);
+    }
+    await audit(this.services.auditEvents);
+    return {
+      account,
+      ...(await issueAccessLink(this.services, account, 'reset')),
+    };
   }
 }
