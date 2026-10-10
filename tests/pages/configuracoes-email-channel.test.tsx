@@ -188,6 +188,7 @@ describe('Feature: seção "Canal de e-mail" em /configuracoes (C3, #266)', () =
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Resend API 403: domain is not verified');
+    expect(alert).toHaveClass('sv-alert--danger');
   });
 
   it('teste sem canal no servidor (409) mostra a mensagem da API', async () => {
@@ -257,22 +258,25 @@ describe('Feature: seção "Canal de e-mail" em /configuracoes (C3, #266)', () =
     ).toBeInTheDocument();
   });
 
-  it('não aparece para papel sem acesso (atendente) e nem chama a API', async () => {
-    const calls = mockFetch(
-      { [`GET ${ENDPOINT}`]: () => okEnvelope({ channel: CHANNEL }) },
-      'atendente',
-    );
+  it.each(['atendente', 'profissional', 'patient', 'partner', 'super_admin'])(
+    'não aparece para papel sem acesso (%s) e nem chama a API',
+    async (role) => {
+      const calls = mockFetch(
+        { [`GET ${ENDPOINT}`]: () => okEnvelope({ channel: CHANNEL }) },
+        role,
+      );
 
-    renderSection();
+      renderSection();
 
-    await waitFor(() =>
-      expect(calls.some((c) => c.url === '/api/auth/identity')).toBe(true),
-    );
-    // Dá tempo à identidade chegar antes de afirmar a ausência.
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(screen.queryByText('Canal de e-mail')).toBeNull();
-    expect(calls.some((c) => c.url === ENDPOINT)).toBe(false);
-  });
+      await waitFor(() =>
+        expect(calls.some((c) => c.url === '/api/auth/identity')).toBe(true),
+      );
+      // Dá tempo à identidade chegar antes de afirmar a ausência.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(screen.queryByText('Canal de e-mail')).toBeNull();
+      expect(calls.some((c) => c.url === ENDPOINT)).toBe(false);
+    },
+  );
 
   it('carregando mostra LoadingIndicator; falha mostra ErrorAlert com a mensagem da API', async () => {
     let release: (value: unknown) => void = () => undefined;

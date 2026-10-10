@@ -91,8 +91,11 @@ describe('Feature: POST /api/settings/email-channel/test', () => {
     const { response, json } = await sendTest(adminOf(clinicId));
 
     expect(response.status).toBe(200);
-    expect(json.data.lastStatus).toBe('ok');
-    expect(json.data.lastError).toBeNull();
+    expect(json.data).toEqual({
+      lastStatus: 'ok',
+      lastStatusAt: expect.any(String),
+      lastError: null,
+    });
     const at = Date.parse(json.data.lastStatusAt ?? '');
     expect(at).toBeGreaterThanOrEqual(before);
     expect(at).toBeLessThanOrEqual(Date.now());

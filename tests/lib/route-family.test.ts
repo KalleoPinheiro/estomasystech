@@ -79,7 +79,7 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
     );
   });
 
-  it('canal de e-mail da clínica é administrativo, inclusive o teste (C3, #266)', () => {
+  it('email-channel: canal de e-mail da clínica é administrativo, inclusive o teste (C3, #266)', () => {
     expect(classifyRoute('/api/settings/email-channel')).toBe('administrative');
     expect(classifyRoute('/api/settings/email-channel/test')).toBe(
       'administrative',

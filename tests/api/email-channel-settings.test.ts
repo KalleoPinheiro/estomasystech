@@ -183,7 +183,9 @@ describe('Feature: /api/settings/email-channel', () => {
       });
 
       expect(response.status).toBe(400);
-      expect(json.error).toMatch(/^Remetente inválido/);
+      expect(json.error).toBe(
+        'Remetente inválido — use "Nome <contato@dominio.com>" ou "contato@dominio.com"',
+      );
       expect((await get(admin)).json.data).toEqual({ channel: null });
     },
   );
