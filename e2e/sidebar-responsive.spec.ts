@@ -86,7 +86,10 @@ test.describe("sidebar responsivo", () => {
     await expect(sidebarAside).toBeVisible();
 
     // SidebarTrigger não deve estar visível em desktop (lg:hidden = escondido acima de 1024px)
-    const sidebarTrigger = page.locator("button[aria-expanded]");
+    // Pelo rótulo: `button[aria-expanded]` também pega os "Cancelar" (gatilhos
+    // de diálogo) dos retornos do dashboard — quando carregavam antes da
+    // asserção, o modo estrito falhava com 4 elementos.
+    const sidebarTrigger = page.getByRole("button", { name: "Toggle sidebar" });
     await expect(sidebarTrigger).not.toBeVisible();
 
     // Os links de navegação devem estar visíveis no sidebar
