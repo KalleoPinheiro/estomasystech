@@ -100,7 +100,8 @@ test.describe("área da plataforma", () => {
       await expect(page.getByText(/^Suspensa em .+ por /)).toBeVisible();
       await expect(page.getByRole("button", { name: "Convidar admin" })).toBeDisabled();
 
-      await page.getByRole("navigation").getByRole("link", { name: "Clínicas" }).click();
+      // O voltar "Clínicas" do cabeçalho do detalhe (fora da navegação) continua levando à lista.
+      await page.getByRole("main").getByRole("link", { name: "Clínicas" }).click();
       const row = page.getByRole("row").filter({ hasText: name });
       await expect(row.getByText("Suspensa")).toBeVisible();
 

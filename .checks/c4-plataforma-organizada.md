@@ -16,7 +16,7 @@ Profile: `light` (AGENTS.md não declara outro).
 
 ## Landing
 
-Toca `src/app/plataforma/` (layout ganha `platform-nav.tsx`; lista e detalhe ganham o status; página
+Toca `src/app/plataforma/` (layout ganha `platform-header.tsx`; lista e detalhe ganham o status; página
 nova `taxonomia/page.tsx`), `src/lib/dto/clinic.ts` (`emailChannel` nos dois DTOs da plataforma), as
 rotas `GET /api/platform/clinics[/id]` e o repositório de canal (`findStatus`). Reaproveita
 `StatusBadge`, `ConfirmAction`, `ErrorAlert`/`LoadingIndicator`, `apiFetch`, `formatDateTime`,
@@ -119,7 +119,7 @@ Proof: `npx playwright test e2e/plataforma.spec.ts -g "importa o catálogo"`
 
 | Set (size) | Member -> proof | Unproven |
 | --- | --- | --- |
-| estados do canal (4) | sem canal C5/C10/C12 · não testado C5/C10/C12 · ok C5/C10/C11 · failed C5/C6/C10 | - |
+| estados do canal (4) | sem canal C5/C10/C12 · não testado C5/C10/C12 · ok C5/C10 (o detalhe usa o mesmo `emailChannelLabel`) · failed C5/C6/C10/C11 | - |
 | links da navegação (3) | Clínicas · Auditoria · Taxonomia — C1, C2 | - |
 | caminhos para `aria-current` (5) | `/plataforma` · `/clinicas/c1` · `/clinicas/nova` · `/auditoria` · `/taxonomia` — C2 table-driven | - |
 | contagens (4) | diagnoses · outcomes · interventions · linkages — C16 | - |

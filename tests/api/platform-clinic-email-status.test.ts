@@ -173,7 +173,11 @@ describe('Feature: status do canal de e-mail na plataforma', () => {
     const schema = await import('@/infrastructure/persistence/drizzle/schema');
     await (await getDb())
       .update(schema.clinicChannels)
-      .set({ encryptedSecret: 'v1:adulterado' })
+      // Formato cifrado válido com um id de chave desconhecido: `decrypt` lança.
+      .set({
+        encryptedSecret:
+          'v1.deadbeef.AAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAA.AAAA',
+      })
       .where(eq(schema.clinicChannels.clinicId, broken));
 
     const listed = await list();
