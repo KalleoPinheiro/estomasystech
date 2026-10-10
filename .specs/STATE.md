@@ -204,12 +204,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: GET/PUT/teste ainda respondem `500` enquanto a chave não decifra; a saída é remover e cadastrar de novo. Perguntas abertas ao produto: limite do teste e concorrência entre admins (Unresolved 1 e 2 de `.tasks/c3-tela-canal-configuracoes.md`).
 - **Scope / Date / Status**: `src/application/clinic/manage-email-channel.ts`, `src/app/api/settings/email-channel/`, `.checks/c3-canal-email-configuracoes.md` · 2026-10-10 · open — Unresolved 1 e 2 aguardam @KalleoPinheiro
 
-### AD-030
-- **Decision**: `/plataforma` organizado (C4, #267). O status do canal na plataforma é lido por `ClinicChannelRepository.findStatus('email')`, que seleciona só provedor, `last_status` e `last_status_at` — sem decifrar a chave. `GET /api/platform/clinics` devolve `emailChannel` em cada linha e `GET /api/platform/clinics/[id]` em `PlatformClinicDetailDto`; PATCH, suspender, reativar e criar seguem com `PlatformClinicDto`. Dois cliques em importar a taxonomia: default da task — botão desabilitado durante a chamada (o servidor já é idempotente). O link "Trilha da plataforma" da lista saiu (a navegação leva à Auditoria); o voltar "Clínicas" das subpáginas ficou.
-- **Reason**: com `find`, uma chave de dados trocada sem a anterior (`ChannelSecretUnreadableError`) derrubaria a lista inteira da plataforma com `500`, e a chave em claro passaria pela rota da plataforma sem necessidade.
-- **Trade-off**: o detalhe devolvido por PATCH e suspender não traz `emailChannel`; a tela relê o `GET` depois de salvar. Pergunta aberta ao produto: concorrência entre dois cliques (Unresolved 1 de `.tasks/c4-plataforma-organizada.md`).
-- **Scope / Date / Status**: `src/app/plataforma/`, `src/app/api/platform/clinics/`, `src/lib/dto/clinic.ts`, `.checks/c4-plataforma-organizada.md` · 2026-10-10 · open — Unresolved 1 aguarda @KalleoPinheiro
-
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
