@@ -42,7 +42,8 @@ interface ClinicFixture extends ClinicReminderServices {
   reminderLog: InMemoryReminderLogRepository;
 }
 
-const newClinic = (): ClinicFixture => ({
+const newClinic = (email: EmailGateway): ClinicFixture => ({
+  email,
   appointments: new InMemoryAppointmentRepository(),
   followUps: new InMemoryFollowUpRepository(),
   patients: new InMemoryPatientRepository(),
@@ -62,8 +63,8 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
   let maria: Patient;
 
   beforeEach(async () => {
-    clinic = newClinic();
     email = new FakeEmailGateway();
+    clinic = newClinic(email);
     vi.stubEnv('APP_URL', 'https://vitta.example.com');
     maria = await new CreatePatient(clinic.patients).execute({
       fullName: 'Maria da Silva',
@@ -78,7 +79,10 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
   });
 
   const run = (now: Date = NOW, gateway: EmailGateway = email) =>
-    new SendReminders([CLINIC], async () => clinic, gateway).execute(now);
+    new SendReminders([CLINIC], async () => ({
+      ...clinic,
+      email: gateway,
+    })).execute(now);
 
   const scheduleAt = async (
     startsAt: Date,
@@ -275,7 +279,7 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
 
       const summary = await run(NOW, new NullEmailGateway());
 
-      expect(summary.channelEnabled).toBe(false);
+      expect(summary.clinics[0].channel).toBe('none');
       expect(summary.sent).toBe(0);
       expect(summary.skipped).toBe(1);
       expect(clinic.reminderLog.items).toHaveLength(0);
@@ -305,7 +309,6 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
           }
           return clinic;
         },
-        email,
       ).execute(NOW);
 
       expect(summary.clinics).toEqual([
@@ -316,13 +319,19 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
           failed: 0,
           error: 'banco indisponível',
         },
-        { clinicId: 'clinic-a', sent: 1, skipped: 0, failed: 0 },
+        {
+          clinicId: 'clinic-a',
+          channel: 'configured',
+          sent: 1,
+          skipped: 0,
+          failed: 0,
+        },
       ]);
       expect(summary.sent).toBe(1);
     });
 
     it('Dado duas empresas, Quando rodar, Então cada e-mail leva o nome da própria clínica', async () => {
-      const other = newClinic();
+      const other = newClinic(email);
       const ana = await new CreatePatient(other.patients).execute({
         fullName: 'Ana Lima',
         email: 'ana@example.com',
@@ -338,7 +347,6 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
       const summary = await new SendReminders(
         [CLINIC, { id: 'clinic-b', name: 'Clínica Beta' }],
         async (clinicId) => (clinicId === 'clinic-b' ? other : clinic),
-        email,
       ).execute(NOW);
 
       const toAna = email.sent.find((m) => m.to === 'ana@example.com');
@@ -351,7 +359,7 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
     });
 
     it('Dada uma empresa ativa e uma suspensa (B5), Quando rodar, Então ignora clínica suspensa: não abre o escopo, não envia e ela fica fora do resumo', async () => {
-      const other = newClinic();
+      const other = newClinic(email);
       const ana = await new CreatePatient(other.patients).execute({
         fullName: 'Ana Lima',
         email: 'ana@example.com',
@@ -373,7 +381,6 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
           { id: 'clinic-b', name: 'Clínica Beta', status: 'suspended' },
         ],
         servicesFor,
-        email,
       ).execute(NOW);
 
       expect(servicesFor).toHaveBeenCalledTimes(1);
@@ -381,6 +388,47 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
       expect(email.sent.map((m) => m.to)).toEqual(['maria@example.com']);
       expect(summary.clinics.map((c) => c.clinicId)).toEqual(['clinic-a']);
       expect(summary.sent).toBe(1);
+    });
+
+    it('C2/#265 falha de envio não tenta outro canal: conta failed, o lote segue e o canal de outra clínica não é usado', async () => {
+      const emailB = new FakeEmailGateway();
+      const other = newClinic(emailB);
+      const joao = await new CreatePatient(clinic.patients).execute({
+        fullName: 'João Souza',
+        email: 'joao@example.com',
+        phone: '11988880000',
+      });
+      const ana = await new CreatePatient(other.patients).execute({
+        fullName: 'Ana Lima',
+        email: 'ana@example.com',
+        phone: '11977770000',
+      });
+      await scheduleTomorrow();
+      await scheduleAt(new Date('2026-07-17T11:00:00Z'), joao.id);
+      await scheduleAt(
+        new Date('2026-07-17T10:00:00Z'),
+        ana.id,
+        other.appointments,
+      );
+      email.failFor = 'maria@example.com';
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const summary = await new SendReminders(
+        [CLINIC, { id: 'clinic-b', name: 'Clínica Beta' }],
+        async (clinicId) => (clinicId === 'clinic-b' ? other : clinic),
+      ).execute(NOW);
+
+      expect(summary.clinics[0]).toMatchObject({
+        clinicId: 'clinic-a',
+        sent: 1,
+        failed: 1,
+      });
+      expect(email.sent.map((m) => m.to)).toEqual(['joao@example.com']);
+      expect(emailB.sent.map((m) => m.to)).toEqual(['ana@example.com']);
+      expect(summary.clinics[1]).toMatchObject({
+        clinicId: 'clinic-b',
+        sent: 1,
+      });
     });
 
     it('C11 501 retornos geram 501 e-mails', async () => {

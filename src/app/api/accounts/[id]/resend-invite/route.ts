@@ -1,6 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { IssueAuthToken } from '@/application/auth/auth-token-flow';
-import { appUrlFromEnv } from '@/application/auth/send-invite';
+import { issueAccessLink } from '@/application/auth/send-invite';
 import { assertCanManageAccount } from '@/domain/auth/account-management';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
@@ -25,8 +24,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { userAccounts, authTokens, email, auditEvents } =
-      await getRepositories(writeScope(guard.session));
+    const services = await getRepositories(writeScope(guard.session));
+    const { userAccounts, auditEvents } = services;
 
     const all = await userAccounts.findAll();
     const account = all.find((existing) => existing.id === id);
@@ -47,15 +46,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       resourceId: id,
       detail: 'resend-invite',
     });
-    const { delivered } = await new IssueAuthToken(
-      authTokens,
-      email,
-    ).issueAndTryDeliver({
-      account,
-      purpose,
-      appUrl: appUrlFromEnv(),
-    });
-
-    return { delivered };
+    // Sem canal ou com o canal falhando, o link volta para o admin (C2, #265).
+    return issueAccessLink(services, account, purpose);
   });
 }

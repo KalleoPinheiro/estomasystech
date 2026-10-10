@@ -99,4 +99,18 @@ describe('Feature: Tela de esqueci minha senha', () => {
       screen.getByRole('link', { name: 'Voltar para o login' }),
     ).toHaveAttribute('href', '/login');
   });
+
+  it('C2/#265 Dado a tela aberta, Quando renderizar, Então orienta pedir o link ao administrador da sua clínica, abaixo do formulário', () => {
+    render(<ForgotPasswordPage />);
+
+    const help = screen.getByText(
+      'Não recebeu? Peça ao administrador da sua clínica um link de redefinição.',
+    );
+    const form = screen
+      .getByRole('button', { name: 'Enviar link' })
+      .closest('form') as HTMLElement;
+    expect(
+      form.compareDocumentPosition(help) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });

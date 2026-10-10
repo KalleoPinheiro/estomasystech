@@ -11,7 +11,8 @@ import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
  *   GET com `Authorization: Bearer $CRON_SECRET` — o que o Vercel Cron envia
  *   (`vercel.json`, #206).
  * Sem CRON_SECRET configurado, a rota fica desativada (503). Lembretes saem
- * por e-mail (Resend), empresa a empresa; sem Resend fora de produção, dry-run.
+ * por e-mail, empresa a empresa, pelo canal de cada clínica (ADR-011); clínica
+ * sem canal conta `skipped` e aparece com `channel: 'none'` no resumo.
  */
 export async function POST(request: NextRequest) {
   return runReminders(request.headers.get('x-cron-secret') ?? '');
@@ -41,7 +42,7 @@ async function runReminders(provided: string) {
   return handleRequest(async () => {
     // Listar as empresas é a única leitura cross-empresa; todo o resto do job
     // roda no escopo de cada uma (N3).
-    const { clinics, email } = await getRepositories(systemScope());
+    const { clinics } = await getRepositories(systemScope());
     const all = await clinics.findAll();
     return new SendReminders(
       all.map((clinic) => ({
@@ -50,7 +51,6 @@ async function runReminders(provided: string) {
         status: clinic.status,
       })),
       (clinicId) => getRepositories(clinicScope(clinicId)),
-      email,
     ).execute();
   });
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { pickPatient } from '@/../tests/support/patient-picker';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
@@ -32,12 +32,35 @@ const PARTNER = {
   active: true,
 };
 
+interface SettingsFetchOptions {
+  /** Contas listadas em `GET /api/accounts`. */
+  accounts?: unknown[];
+  /** Resposta do `POST /api/accounts`. */
+  created?: unknown;
+  /** Resposta de `resend-invite` e `reset-link`. */
+  linkResult?: unknown;
+}
+
 /** Responde a tudo que a tela de configurações carrega e captura o POST de conta. */
-function mockSettingsFetch(posted: unknown[]) {
+function mockSettingsFetch(
+  posted: unknown[],
+  options: SettingsFetchOptions = {},
+) {
   const fn = vi.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/accounts' && init?.method === 'POST') {
       posted.push(JSON.parse(String(init.body)));
-      return ok({ id: 'acc-1', email: 'x', delivered: true });
+      return ok(
+        options.created ?? {
+          id: 'acc-1',
+          email: 'x',
+          delivered: true,
+          inviteUrl: null,
+        },
+      );
+    }
+    if (/^\/api\/accounts\/[^/]+\/(resend-invite|reset-link)$/.test(url)) {
+      posted.push(url);
+      return ok(options.linkResult ?? { delivered: true, inviteUrl: null });
     }
     if (url.startsWith('/api/settings/schedule/closures')) return ok([]);
     if (url.startsWith('/api/settings/schedule'))
@@ -61,11 +84,12 @@ function mockSettingsFetch(posted: unknown[]) {
     if (url.startsWith('/api/patients/pac-1')) return ok(MARIA);
     if (url.startsWith('/api/patients')) return ok([MARIA]);
     if (url.startsWith('/api/partners')) return ok([PARTNER]);
-    if (url.startsWith('/api/accounts')) return ok([]);
+    if (url.startsWith('/api/accounts')) return ok(options.accounts ?? []);
     if (url.startsWith('/api/professionals')) return ok([]);
     return ok(null);
   });
   vi.stubGlobal('fetch', fn);
+  return fn;
 }
 
 async function openNewAccount(role: string) {
@@ -135,5 +159,120 @@ describe('Feature: conta de portal vinculada ao cadastro (#196)', () => {
       partnerId: 'par-1',
     });
     expect(posted[0]).not.toHaveProperty('patientId');
+  });
+});
+
+describe('Feature: link manual quando o e-mail não sai (C2, #265)', () => {
+  const LINK_URL = 'https://app.vitta.test/definir-senha?token=segredo-7';
+  const NOTICE = 'E-mail desativado nesta clínica — envie o link manualmente.';
+  const ACTIVE = {
+    id: 'acc-9',
+    email: 'ativa@x.com',
+    role: 'atendente',
+    active: true,
+    passwordSet: true,
+    professionalId: null,
+  };
+  const PENDING = {
+    ...ACTIVE,
+    id: 'acc-8',
+    email: 'pendente@x.com',
+    passwordSet: false,
+  };
+
+  const stubClipboard = () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    return writeText;
+  };
+
+  it('link manual na criação: delivered false mostra o link, Copiar link e o aviso de e-mail desativado', async () => {
+    const posted: unknown[] = [];
+    mockSettingsFetch(posted, {
+      created: {
+        id: 'acc-1',
+        email: 'nova@x.com',
+        delivered: false,
+        inviteUrl: LINK_URL,
+      },
+    });
+    const writeText = stubClipboard();
+    await openNewAccount('atendente');
+    fireEvent.change(screen.getByLabelText(/Email/), {
+      target: { value: 'nova@x.com' },
+    });
+    fireEvent.click(screen.getByText('Criar conta'));
+
+    expect(await screen.findByText(NOTICE)).toBeInTheDocument();
+    expect(screen.getByLabelText('Link para nova@x.com')).toHaveValue(LINK_URL);
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar link' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(LINK_URL));
+  });
+
+  it('link manual no reenvio: delivered false mostra o link e o aviso', async () => {
+    const posted: unknown[] = [];
+    mockSettingsFetch(posted, {
+      accounts: [PENDING],
+      linkResult: { delivered: false, inviteUrl: LINK_URL },
+    });
+    const writeText = stubClipboard();
+    renderWithToast(<SettingsPage />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Reenviar convite' }),
+    );
+
+    expect(await screen.findByText(NOTICE)).toBeInTheDocument();
+    expect(screen.getByLabelText('Link para pendente@x.com')).toHaveValue(
+      LINK_URL,
+    );
+    expect(posted).toEqual(['/api/accounts/acc-8/resend-invite']);
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar link' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(LINK_URL));
+  });
+
+  it('redefinição: Gerar link de redefinição pede confirmação, só então chama reset-link e mostra o link', async () => {
+    const posted: unknown[] = [];
+    mockSettingsFetch(posted, {
+      accounts: [ACTIVE, PENDING],
+      linkResult: { delivered: false, inviteUrl: LINK_URL },
+    });
+    renderWithToast(<SettingsPage />);
+
+    const pendingRow = (await screen.findByText('pendente@x.com')).closest(
+      'tr',
+    ) as HTMLElement;
+    expect(
+      within(pendingRow).queryByRole('button', {
+        name: 'Gerar link de redefinição',
+      }),
+    ).toBeNull();
+    const activeRow = screen
+      .getByText('ativa@x.com')
+      .closest('tr') as HTMLElement;
+    fireEvent.click(
+      within(activeRow).getByRole('button', {
+        name: 'Gerar link de redefinição',
+      }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    expect(
+      within(dialog).getByText(
+        'Gerar um link de redefinição de senha para ativa@x.com? Links anteriores deixam de valer.',
+      ),
+    ).toBeInTheDocument();
+    expect(posted).toHaveLength(0);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Gerar link' }));
+
+    await waitFor(() =>
+      expect(posted).toEqual(['/api/accounts/acc-9/reset-link']),
+    );
+    expect(await screen.findByLabelText('Link para ativa@x.com')).toHaveValue(
+      LINK_URL,
+    );
   });
 });

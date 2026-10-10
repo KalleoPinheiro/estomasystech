@@ -37,6 +37,9 @@ test.describe("área da plataforma", () => {
       await page.getByLabel("E-mail do primeiro admin").fill(`admin-${digits}@nova-e2e.test`);
       await page.getByRole("button", { name: "Criar clínica e convidar admin" }).click();
 
+      // C2 (#265): a clínica nova não tem canal; o convite volta como link para repassar.
+      await expect(page.getByLabel("Link de convite do primeiro admin")).toHaveValue(/\/definir-senha\?token=/);
+      await page.getByRole("link", { name: "Abrir a clínica" }).click();
       await expect(page).toHaveURL(/\/plataforma\/clinicas\/[^/]+$/);
       await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
       const adminRow = page.getByRole("row").filter({ hasText: `admin-${digits}@nova-e2e.test` });

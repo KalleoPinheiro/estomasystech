@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clinicScope } from '@/lib/auth/tenant-scope';
+import { UserAccount } from '@/domain/auth/user-account';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { buildUserAccount } from '../support/builders';
 import {
   CLINIC_A_ID,
@@ -11,6 +12,12 @@ import {
   tokenFromLastEmail,
   waitForEmails,
 } from '../support/email';
+import {
+  clearEmailChannels,
+  providerCalls,
+  saveEmailChannel,
+  stubProviderFetch,
+} from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -219,5 +226,87 @@ describe('Feature: POST /api/auth/forgot-password', () => {
 
     expect(statuses.slice(0, 5).every((status) => status === 200)).toBe(true);
     expect(statuses[5]).toBe(429);
+  });
+
+  describe('C2/#265 pelo canal da conta', () => {
+    afterEach(async () => {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+      await clearEmailChannels();
+    });
+
+    /** Dá um ciclo real ao envio disparado sem await antes de afirmar o total. */
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
+
+    it('canal da conta: conta da clínica com canal recebe pela chave dela; a da clínica sem canal não recebe nada', async () => {
+      await ensureTestClinics();
+      const { getRepositories } = await import('@/infrastructure/container');
+      const email = 'canal-da-conta@x.com';
+      await (await getRepositories(clinicScope(CLINIC_A_ID))).userAccounts.save(
+        buildUserAccount({ email, clinicId: CLINIC_A_ID }),
+      );
+      await (await getRepositories(clinicScope(CLINIC_B_ID))).userAccounts.save(
+        buildUserAccount({ email, clinicId: CLINIC_B_ID }),
+      );
+      await saveEmailChannel(CLINIC_A_ID, 're_chave_da_A');
+      const fetchMock = stubProviderFetch(200);
+      vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+      const response = await forgot(email);
+      const json = (await response.json()) as Envelope<{ message: string }>;
+
+      expect(response.status).toBe(200);
+      expect(json.data).toEqual({
+        message:
+          'Se houver uma conta com este e-mail, enviamos um link para redefinir a senha.',
+      });
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+      await settle();
+      expect(providerCalls(fetchMock)).toEqual([
+        expect.objectContaining({ auth: 'Bearer re_chave_da_A', to: email }),
+      ]);
+    });
+
+    const superAdminEmail = async (): Promise<string> => {
+      const { getRepositories } = await import('@/infrastructure/container');
+      const { userAccounts } = await getRepositories(systemScope());
+      const [existing] = await userAccounts.findByRole('super_admin');
+      if (existing) return existing.email;
+      const created = UserAccount.create({
+        email: 'dono-reset@vitta.app',
+        passwordHash: 'scrypt$1$abc$def',
+        role: 'super_admin',
+        clinicId: null,
+      });
+      await userAccounts.save(created);
+      return created.email;
+    };
+
+    it('super admin: sai pela chave da plataforma quando existe; sem ela, nada sai', async () => {
+      const email = await superAdminEmail();
+      vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+      vi.stubEnv('RESEND_API_KEY', 're_chave_plataforma');
+      vi.stubEnv('EMAIL_FROM', 'Vitta <nao-responda@vitta.app>');
+      const withPlatform = stubProviderFetch(200);
+      const first = await forgot(email);
+      await vi.waitFor(() => expect(withPlatform).toHaveBeenCalled());
+      await settle();
+      expect(providerCalls(withPlatform)).toEqual([
+        expect.objectContaining({
+          auth: 'Bearer re_chave_plataforma',
+          to: email,
+        }),
+      ]);
+
+      vi.unstubAllEnvs();
+      const withoutPlatform = stubProviderFetch(200);
+      const second = await forgot(email);
+      await settle();
+      expect(withoutPlatform).not.toHaveBeenCalled();
+
+      expect(second.status).toBe(first.status);
+      expect(await second.json()).toEqual(await first.json());
+    });
   });
 });

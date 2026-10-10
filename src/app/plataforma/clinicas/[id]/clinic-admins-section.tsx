@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  Alert,
+  AlertDescription,
   Button,
   Card,
   Input,
@@ -13,6 +15,7 @@ import {
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
+import { AccessLinkField } from '@/components/access-link';
 import { ConfirmAction } from '@/components/confirm-action';
 import {
   EmptyState,
@@ -24,13 +27,20 @@ import { apiFetch } from '@/lib/client';
 import type { ClinicAdminDto, PlatformClinicDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 
-type AdminAction = 'resend-invite' | 'deactivate' | 'reactivate';
+type AdminAction = 'resend-invite' | 'deactivate' | 'reactivate' | 'reset-link';
 
 const ACTION_DONE: Record<AdminAction, string> = {
   'resend-invite': 'Convite reenviado',
   deactivate: 'Admin desativado',
   reactivate: 'Admin reativado',
+  'reset-link': 'Link de redefinição enviado por e-mail',
 };
+
+/** Link que não saiu por e-mail, para o super admin repassar (C2, #265). */
+interface ManualLink {
+  email: string;
+  url: string;
+}
 
 const adminSituation = (admin: ClinicAdminDto) => {
   if (!admin.active) return { status: 'cancelled', label: 'Desativado' };
@@ -48,20 +58,25 @@ export function ClinicAdminsSection({ clinic }: { clinic: PlatformClinicDto }) {
   const url = `/api/platform/clinics/${clinic.id}/admins`;
   const { data, error, refresh } = useApiQuery<ClinicAdminDto[]>(url);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [manualLink, setManualLink] = useState<ManualLink | null>(null);
 
   const act = async (admin: ClinicAdminDto, action: AdminAction) => {
     setActionError(null);
     try {
-      const result = await apiFetch<{ delivered: boolean | null }>(
-        `${url}/${admin.id}`,
-        { method: 'PATCH', body: JSON.stringify({ action }) },
-      );
-      const undelivered = result.delivered === false;
+      const result = await apiFetch<{
+        delivered: boolean | null;
+        inviteUrl?: string | null;
+      }>(`${url}/${admin.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action }),
+      });
+      const link = result.inviteUrl ?? null;
+      setManualLink(link ? { email: admin.email, url: link } : null);
       toast({
-        description: undelivered
-          ? `O convite para ${admin.email} não foi entregue. Tente de novo mais tarde.`
+        description: link
+          ? `O e-mail para ${admin.email} não saiu. Copie o link e envie manualmente.`
           : ACTION_DONE[action],
-        variant: undelivered ? 'warning' : 'success',
+        variant: link ? 'warning' : 'success',
       });
       refresh();
     } catch (err) {
@@ -76,6 +91,16 @@ export function ClinicAdminsSection({ clinic }: { clinic: PlatformClinicDto }) {
         Para trocar o admin, convide o novo antes de desativar o antigo.
       </p>
       {actionError && <ErrorAlert message={actionError} />}
+      {manualLink && (
+        <Alert variant="warning" className="mb-4">
+          <AlertDescription>
+            <p className="mb-2">
+              O e-mail não saiu — envie este link a {manualLink.email}.
+            </p>
+            <AccessLinkField url={manualLink.url} />
+          </AlertDescription>
+        </Alert>
+      )}
       <AdminsTable
         admins={data}
         error={error}
@@ -97,7 +122,7 @@ function AdminsTable({
 }: {
   admins: ClinicAdminDto[] | null;
   error: string | null;
-  /** Clínica suspensa (B5) não reenvia convite. */
+  /** Clínica suspensa (B5) não reenvia convite nem gera redefinição. */
   suspended: boolean;
   onRetry: () => void;
   onAction: (admin: ClinicAdminDto, action: AdminAction) => void;
@@ -189,6 +214,23 @@ function AdminActions({
         >
           Reenviar convite
         </Button>
+      )}
+      {canResend && admin.passwordSet && (
+        <ConfirmAction
+          trigger={
+            <Button
+              type="button"
+              variant="link"
+              className="mr-3 h-auto p-0 text-ink-3"
+            >
+              Gerar link de redefinição
+            </Button>
+          }
+          title="Gerar link de redefinição?"
+          description={`Gerar um link de redefinição de senha para ${admin.email}? Links anteriores deixam de valer.`}
+          confirmLabel="Gerar link"
+          onConfirm={() => onAction('reset-link')}
+        />
       )}
       <ConfirmAction
         trigger={

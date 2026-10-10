@@ -17,8 +17,8 @@ type RouteContext = { params: Promise<{ id: string; accountId: string }> };
 const bodySchema = z.object({ action: z.enum(ADMIN_ACTIONS) });
 
 /**
- * Reenviar convite, desativar e reativar um Admin de Empresa pela plataforma
- * (B4, Journey 4 e 5). Só conta `company_admin` da clínica é alvo; o resto é
+ * Reenviar convite, gerar link de redefinição (C2, #265), desativar e reativar
+ * um Admin de Empresa pela plataforma (B4, Journey 4 e 5). Só conta `company_admin` da clínica é alvo; o resto é
  * `404`. Cada ação grava auditoria na clínica-alvo antes de mudar a conta.
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -35,22 +35,22 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { action } = bodySchema.parse(await request.json());
-    const { account: updated, delivered } = await admins.apply(
-      clinic,
-      account,
-      action,
-      (auditEvents) =>
-        recordAuditNow(auditEvents, guard.session, {
-          action: 'update',
-          resourceType: 'account',
-          resourceId: account.id,
-          detail: action,
-          clinicId,
-        }),
+    const {
+      account: updated,
+      delivered,
+      inviteUrl,
+    } = await admins.apply(clinic, account, action, (auditEvents) =>
+      recordAuditNow(auditEvents, guard.session, {
+        action: 'update',
+        resourceType: 'account',
+        resourceId: account.id,
+        detail: action,
+        clinicId,
+      }),
     );
     if (action === 'deactivate') {
       forgetSessionStatus(updated.email, updated.clinicId);
     }
-    return { ...toClinicAdminDto(updated), delivered };
+    return { ...toClinicAdminDto(updated), delivered, inviteUrl };
   });
 }

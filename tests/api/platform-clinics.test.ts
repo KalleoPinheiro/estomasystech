@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { hashAuthTokenSecret, INVITE_TTL_MS } from '@/domain/auth/auth-token';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
-import { clinicScope } from '@/lib/auth/tenant-scope';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -39,6 +40,7 @@ interface CreatedDto {
     passwordSet: boolean;
     professionalId: string | null;
     delivered: boolean;
+    inviteUrl: string | null;
   };
 }
 
@@ -141,8 +143,11 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       active: true,
       passwordSet: false,
       professionalId: null,
-      // O gateway nulo da suíte não entrega de verdade: o valor segue o gateway.
-      delivered: expect.any(Boolean),
+      // A clínica nova não tem canal: o convite nunca sai por e-mail (C2, #265).
+      delivered: false,
+      inviteUrl: expect.stringMatching(
+        /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+      ),
     });
     const { clinics, userAccounts } = await repositories(clinicId);
     expect((await clinics.findById(clinicId))?.cnpj).toBe('12.345.678/0001-95');
@@ -150,31 +155,43 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     expect(admin?.clinicId).toBe(clinicId);
     expect(admin?.role).toBe('company_admin');
     expect(admin?.passwordHash).toBe(UNSET_PASSWORD_HASH);
-    expect(emails.bodies).toHaveLength(1);
-    expect(emails.bodies[0]).toContain('admin@nova.com');
-    expect(emails.bodies[0]).toMatch(/definir-senha\?token=/);
+    expect(emails.bodies).toHaveLength(0);
   });
 
-  it('Dado o convite entregue ou falhado, Quando responder, Então a criação sem link de convite', async () => {
-    spyOnSentEmails();
-    const delivered = await create(validBody({ adminEmail: 'ok@link.com' }));
+  it('C2/#265 link manual: nenhum envio, e o link devolvido é um convite de 24 h', async () => {
+    const emails = spyOnSentEmails();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    const before = Date.now();
 
-    const { NullEmailGateway } = await import(
-      '@/application/ports/email-gateway'
+    const { response, json } = await create(
+      validBody({ adminEmail: 'link-manual@nova.com' }),
     );
-    vi.restoreAllMocks();
-    vi.spyOn(NullEmailGateway.prototype, 'send').mockRejectedValue(
-      new Error('provedor fora do ar'),
-    );
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const failed = await create(validBody({ adminEmail: 'falha@link.com' }));
 
-    expect(failed.json.error).toBeNull();
-    expect(failed.json.data.admin.delivered).toBe(false);
-    for (const { response, json } of [delivered, failed]) {
-      expect(response.status).toBe(200);
-      expect(JSON.stringify(json)).not.toMatch(/token|definir-senha|https?:/);
-    }
+    vi.unstubAllGlobals();
+    expect(response.status).toBe(200);
+    expect(emails.bodies).toHaveLength(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(json.data.admin.delivered).toBe(false);
+    expect(json.data.admin.inviteUrl).toMatch(
+      /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+    );
+    const secret = new URL(json.data.admin.inviteUrl ?? '').searchParams.get(
+      'token',
+    );
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { authTokens } = await getRepositories(systemScope());
+    const hash = hashAuthTokenSecret(secret ?? '');
+    // Depois de 24 h já não vale; um minuto antes, ainda é um convite válido.
+    expect(
+      await authTokens.claimBySecretHash(hash, Date.now() + INVITE_TTL_MS + 1),
+    ).toBeNull();
+    const token = await authTokens.claimBySecretHash(
+      hash,
+      before + INVITE_TTL_MS - 60_000,
+    );
+    expect(token?.purpose).toBe('invite');
+    expect(token?.accountId).toBe(json.data.admin.id);
   });
 
   it.each([

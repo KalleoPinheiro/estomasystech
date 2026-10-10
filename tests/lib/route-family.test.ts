@@ -66,6 +66,19 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
     expect(classifyRoute('/api/platform/taxonomy/import')).toBe('platform');
   });
 
+  it('reset-link de conta é administrativo; o resto de /api/accounts segue operacional (C2, #265)', () => {
+    expect(classifyRoute('/api/accounts/acc-1/reset-link')).toBe(
+      'administrative',
+    );
+    expect(classifyRoute('/api/accounts/acc-1/resend-invite')).toBe(
+      'operational',
+    );
+    expect(classifyRoute('/api/accounts/acc-1')).toBe('operational');
+    expect(classifyRoute('/api/accounts/acc-1/reset-link/x')).toBe(
+      'operational',
+    );
+  });
+
   describe('Cenário: família platform (ADR-007)', () => {
     it.each([
       ['/plataforma', 'platform'],

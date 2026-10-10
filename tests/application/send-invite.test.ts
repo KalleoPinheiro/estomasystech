@@ -83,7 +83,7 @@ describe('Feature: sendInvite devolve o resultado da entrega (issue #52)', () =>
       account(),
     );
 
-    expect(result).toEqual({ delivered: true });
+    expect(result).toEqual({ delivered: true, inviteUrl: null });
   });
 
   it('Dado o gateway em dry-run (enabled false), Quando sendInvite, Então delivered é false mesmo sem lançar', async () => {
@@ -95,7 +95,10 @@ describe('Feature: sendInvite devolve o resultado da entrega (issue #52)', () =>
       account(),
     );
 
-    expect(result).toEqual({ delivered: false });
+    expect(result).toEqual({
+      delivered: false,
+      inviteUrl: expect.stringMatching(/\/definir-senha\?token=[\w-]+$/),
+    });
   });
 
   it('Dado o envio falhando, Quando sendInvite, Então NÃO lança e delivered é false', async () => {
@@ -111,7 +114,10 @@ describe('Feature: sendInvite devolve o resultado da entrega (issue #52)', () =>
       account(),
     );
 
-    expect(result).toEqual({ delivered: false });
+    expect(result).toEqual({
+      delivered: false,
+      inviteUrl: expect.stringMatching(/\/definir-senha\?token=[\w-]+$/),
+    });
     expect(errors).toHaveBeenCalled();
     errors.mockRestore();
   });

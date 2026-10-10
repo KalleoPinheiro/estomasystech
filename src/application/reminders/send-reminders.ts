@@ -19,8 +19,13 @@ import { startOfZonedDay, zonedParts } from '@/domain/shared/time-zone';
 import { logError } from '@/lib/log-error';
 import { portalUrlFromEnv } from './portal-url';
 
+/** Canal de e-mail da clínica no disparo (C2, #265). */
+export type ReminderChannelState = 'configured' | 'none';
+
 export interface ClinicReminderSummary {
   clinicId: string;
+  /** Ausente só quando a empresa não pôde ser processada (`error`). */
+  channel?: ReminderChannelState;
   sent: number;
   skipped: number;
   failed: number;
@@ -32,12 +37,15 @@ export interface ReminderRunSummary {
   sent: number;
   skipped: number;
   failed: number;
-  channelEnabled: boolean;
   clinics: ClinicReminderSummary[];
 }
 
-/** Repositórios de UMA empresa (`clinicScope(id)`). */
+/**
+ * Repositórios de UMA empresa (`clinicScope(id)`). `email` é o canal da
+ * própria clínica (ADR-011): sem canal, os lembretes dela não saem.
+ */
 export interface ClinicReminderServices {
+  email: EmailGateway;
   appointments: AppointmentRepository;
   followUps: FollowUpRepository;
   patients: PatientRepository;
@@ -60,9 +68,9 @@ interface PendingReminder {
 }
 
 /**
- * Job de lembretes por e-mail, empresa a empresa: confirmação D-1 (consultas
- * de amanhã ainda "scheduled") e recall de retornos vencidos na cadência
- * D+1/D+7/D+30. Falha de envio individual não aborta o lote; falha ao ler uma
+ * Job de lembretes por e-mail, empresa a empresa, cada uma pelo próprio canal:
+ * confirmação D-1 (consultas de amanhã ainda "scheduled") e recall de retornos
+ * vencidos na cadência D+1/D+7/D+30. Falha de envio individual não aborta o lote; falha ao ler uma
  * empresa não impede as demais. Clínica suspensa é ignorada.
  */
 export class SendReminders {
@@ -71,7 +79,6 @@ export class SendReminders {
     private readonly servicesFor: (
       clinicId: string,
     ) => Promise<ClinicReminderServices>,
-    private readonly email: EmailGateway,
   ) {}
 
   async execute(now: Date = new Date()): Promise<ReminderRunSummary> {
@@ -79,7 +86,6 @@ export class SendReminders {
       sent: 0,
       skipped: 0,
       failed: 0,
-      channelEnabled: await this.email.isEnabled(),
       clinics: [],
     };
     // Clínica suspensa (B5) fica fora do lote: nem o escopo dela é aberto, e
@@ -103,7 +109,7 @@ export class SendReminders {
   ): Promise<ClinicReminderSummary> {
     try {
       const services = await this.servicesFor(clinic.id);
-      return await new ClinicReminders(clinic, services, this.email).run(now);
+      return await new ClinicReminders(clinic, services).run(now);
     } catch (error) {
       logError(`Lembretes da empresa ${clinic.id}: falha`, error);
       return {
@@ -123,10 +129,11 @@ class ClinicReminders {
   constructor(
     private readonly clinic: ReminderClinic,
     private readonly services: ClinicReminderServices,
-    private readonly email: EmailGateway,
   ) {}
 
   async run(now: Date): Promise<ClinicReminderSummary> {
+    const channel: ReminderChannelState =
+      (await this.services.email.isEnabled()) ? 'configured' : 'none';
     const pending = [
       ...(await this.confirmationReminders(now)),
       ...(await this.recallReminders(now)),
@@ -139,6 +146,7 @@ class ClinicReminders {
 
     const summary: ClinicReminderSummary = {
       clinicId: this.clinic.id,
+      channel,
       sent: 0,
       skipped: 0,
       failed: 0,
@@ -150,7 +158,13 @@ class ClinicReminders {
         continue;
       }
       const content = reminder.content(firstNameOf(patient.fullName));
-      const outcome = await this.deliver(reminder, patient.email, content, now);
+      const outcome = await this.deliver(
+        reminder,
+        patient.email,
+        content,
+        now,
+        channel,
+      );
       summary[outcome] += 1;
     }
     return summary;
@@ -161,15 +175,17 @@ class ClinicReminders {
     to: string,
     content: ReminderContent,
     now: Date,
+    channel: ReminderChannelState,
   ): Promise<'sent' | 'skipped' | 'failed'> {
     const message = { to, subject: content.subject, text: content.text };
-    if (!(await this.email.isEnabled())) {
-      // Dry-run: loga o que enviaria e não marca como enviado.
-      await this.email.send(message);
+    if (channel === 'none') {
+      // Clínica sem canal: loga o que enviaria (dry-run) e não marca como
+      // enviado. Nunca cai na conta da plataforma (ADR-011).
+      await this.services.email.send(message);
       return 'skipped';
     }
     try {
-      await this.email.send(message);
+      await this.services.email.send(message);
     } catch (error) {
       logError(
         `Lembrete ${reminder.kind}/${reminder.referenceId}: falha no envio`,

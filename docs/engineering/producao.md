@@ -153,7 +153,7 @@ usar `provider`).
   - Teto do Resend Free: 100 e-mails/dia. Acima disso o envio conta `failed` no resumo, sem
     alarme, e é tentado de novo no dia seguinte.
 - **Teste de fumaça:** paciente de teste com o seu e-mail e consulta `scheduled` amanhã; dispare
-  o job manualmente e espere `channelEnabled: true`, `sent: 1` e nenhuma entrada com `error`.
+  o job manualmente e espere `channel: "configured"` e `sent: 1` na entrada da clínica, e nenhuma entrada com `error`.
   Disparar de novo no mesmo dia deve devolver `sent: 0`. Na agenda, **Enviar WhatsApp** abre o
   `wa.me` e passa a mostrar "enviado hoje às HH:MM".
 

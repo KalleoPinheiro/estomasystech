@@ -1,5 +1,8 @@
 import type { EmailGateway } from '@/application/ports/email-gateway';
-import type { AuthTokenRepository } from '@/domain/auth/auth-token';
+import type {
+  AuthTokenPurpose,
+  AuthTokenRepository,
+} from '@/domain/auth/auth-token';
 import type { UserAccount } from '@/domain/auth/user-account';
 import { IssueAuthToken } from './auth-token-flow';
 
@@ -54,23 +57,41 @@ export const isSafeOrigin = (url: string): boolean => {
 };
 
 /**
- * Dispara o convite de primeiro acesso sem deixar a indisponibilidade do
- * provedor de e-mail derrubar o cadastro: a conta permanece criada e o convite
- * pode ser reemitido (`POST /api/accounts/[id]/resend-invite`). `delivered`
- * volta pro chamador para que a falha não fique invisível — antes só ia pro
- * log do servidor, sem chegar em quem cadastrou a conta.
+ * Resultado de uma emissão feita por alguém logado (C2, #265): o link só volta
+ * quando o e-mail não saiu — clínica sem canal ou canal que falhou. Com o
+ * e-mail entregue, devolvê-lo exporia uma credencial sem necessidade.
  */
-export async function sendInvite(
+export interface AccessLinkResult {
+  delivered: boolean;
+  inviteUrl: string | null;
+}
+
+/**
+ * Emite o link de convite ou redefinição e tenta enviá-lo pelo canal do escopo
+ * dos serviços, sem deixar a falha de envio perder o link nem desfazer o que
+ * o chamador já gravou.
+ */
+export async function issueAccessLink(
   services: InviteServices,
   account: UserAccount,
-): Promise<{ delivered: boolean }> {
-  const { delivered } = await new IssueAuthToken(
+  purpose: AuthTokenPurpose,
+): Promise<AccessLinkResult> {
+  const { inviteUrl, delivered } = await new IssueAuthToken(
     services.authTokens,
     services.email,
-  ).issueAndTryDeliver({
-    account,
-    purpose: 'invite',
-    appUrl: appUrlFromEnv(),
-  });
-  return { delivered };
+  ).issueAndTryDeliver({ account, purpose, appUrl: appUrlFromEnv() });
+  return { delivered, inviteUrl: delivered ? null : inviteUrl };
+}
+
+/**
+ * Dispara o convite de primeiro acesso sem deixar a indisponibilidade do
+ * provedor de e-mail derrubar o cadastro: a conta permanece criada e o convite
+ * pode ser reemitido (`POST /api/accounts/[id]/resend-invite`). Quando o
+ * e-mail não sai, o link volta para quem cadastrou (C2, #265).
+ */
+export function sendInvite(
+  services: InviteServices,
+  account: UserAccount,
+): Promise<AccessLinkResult> {
+  return issueAccessLink(services, account, 'invite');
 }

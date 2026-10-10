@@ -70,6 +70,11 @@ export default function ForgotPasswordPage() {
           </Button>
         </form>
       )}
+      {/* Clínica sem canal de e-mail não envia o link (C2, #265): o caminho é o admin. */}
+      <p className="mt-4 text-ink-3 text-sm">
+        Não recebeu? Peça ao administrador da sua clínica um link de
+        redefinição.
+      </p>
       <p className="mt-4 text-center text-sm">
         <Link href="/login" className="text-accent-ink hover:underline">
           Voltar para o login

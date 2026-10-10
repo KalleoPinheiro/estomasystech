@@ -97,12 +97,12 @@ export async function POST(request: NextRequest) {
       patientId: body.patientId ?? null,
       partnerId: body.partnerId ?? null,
     });
-    const { delivered } = await sendInvite(services, account);
+    const { delivered, inviteUrl } = await sendInvite(services, account);
     recordAudit(auditEvents, guard.session, {
       action: 'create',
       resourceType: 'account',
       resourceId: account.id,
     });
-    return { ...toUserAccountDto(account), delivered };
+    return { ...toUserAccountDto(account), delivered, inviteUrl };
   });
 }
