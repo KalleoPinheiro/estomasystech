@@ -28,6 +28,22 @@ export async function ensureTestClinics(): Promise<void> {
   );
 }
 
+/** Clínica avulsa (idempotente) — para testes que precisam de estado próprio por clínica. */
+export async function ensureClinic(id: string): Promise<string> {
+  const { clinics } = await getRepositories(systemScope());
+  if (!(await clinics.findById(id))) {
+    await clinics.create(
+      Clinic.restore({
+        id,
+        name: `Clínica ${id}`,
+        createdBy: 'test-fixture',
+        createdAt: new Date(),
+      }),
+    );
+  }
+  return id;
+}
+
 /** CNPJ de exemplo por clínica de teste — `uq_clinics_cnpj` não aceita repetido. */
 const TEST_CNPJ: Record<string, string> = {
   [CLINIC_A_ID]: '11.111.111/0001-11',
