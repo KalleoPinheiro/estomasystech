@@ -39,14 +39,19 @@ const errorResponse = (message: string) => ({
 const mockFetch = (
   router: (call: FetchCall) => { ok: boolean; json: () => Promise<unknown> },
 ): ReturnType<typeof vi.fn> => {
-  // A tela de configurações também lista feriados/ausências: sem bloqueios
-  // por padrão, para os cenários que não tratam deles.
-  const fn = vi.fn(async (url: string, init?: RequestInit) =>
-    url.startsWith('/api/settings/schedule/closures') &&
-    (init?.method ?? 'GET') === 'GET'
-      ? jsonResponse([])
-      : router({ url, init }),
-  );
+  // A tela de configurações também lista feriados/ausências e lê o canal de
+  // e-mail: sem bloqueios e sem canal por padrão, para os cenários que não
+  // tratam deles (`configuracoes-email-channel.test.tsx` cobre o canal).
+  const defaults: Record<string, unknown> = {
+    '/api/settings/schedule/closures': [],
+    '/api/settings/email-channel': { channel: null },
+  };
+  const fn = vi.fn(async (url: string, init?: RequestInit) => {
+    const prefix = Object.keys(defaults).find((key) => url.startsWith(key));
+    return prefix && (init?.method ?? 'GET') === 'GET'
+      ? jsonResponse(defaults[prefix])
+      : router({ url, init });
+  });
   vi.stubGlobal('fetch', fn);
   return fn;
 };

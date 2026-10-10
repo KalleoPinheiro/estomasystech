@@ -44,6 +44,7 @@ import { useApiQuery } from '@/lib/use-api-query';
 import { useSavableForm } from '@/lib/use-savable-form';
 import { CancellationPolicyFields } from './cancellation-policy-fields';
 import { ClosuresSection } from './closures-section';
+import { EmailChannelSection } from './email-channel-section';
 import { LunchBreakFields } from './lunch-break-fields';
 import { PortalLinkField } from './portal-link-field';
 
@@ -91,6 +92,7 @@ export default function SettingsPage() {
       <ScheduleSection />
       <ClosuresSection />
       <CalendarIntegrationSection />
+      <EmailChannelSection />
       <AccountsSection />
     </div>
   );

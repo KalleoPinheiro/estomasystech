@@ -1,6 +1,11 @@
 import type { AdminStatus } from '@/application/platform/clinic-overview';
 import type { UserAccount } from '@/domain/auth/user-account';
 import type { Clinic, ClinicStatus } from '@/domain/clinic/clinic';
+import type {
+  ChannelTestStatus,
+  ClinicChannel,
+  EmailProvider,
+} from '@/domain/clinic/clinic-channel';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 
 /** Dados cadastrais da clínica — cabeçalho/rodapé de documentos emitidos (#61/#62). */
@@ -96,4 +101,26 @@ export const toClinicAdminDto = (account: UserAccount): ClinicAdminDto => ({
   email: account.email,
   active: account.isActive,
   passwordSet: account.passwordHash !== UNSET_PASSWORD_HASH,
+});
+
+/**
+ * Canal de e-mail da clínica na tela de Configurações (C3, #266). A chave
+ * nunca sai: só os 4 últimos caracteres, para o admin reconhecer qual gravou.
+ */
+export interface EmailChannelDto {
+  provider: EmailProvider;
+  sender: string;
+  secretLast4: string;
+  lastStatus: ChannelTestStatus | null;
+  lastStatusAt: string | null;
+  lastError: string | null;
+}
+
+export const toEmailChannelDto = (channel: ClinicChannel): EmailChannelDto => ({
+  provider: channel.provider,
+  sender: channel.sender,
+  secretLast4: channel.secretLast4,
+  lastStatus: channel.lastStatus,
+  lastStatusAt: channel.lastStatusAt?.toISOString() ?? null,
+  lastError: channel.lastError,
 });

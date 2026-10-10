@@ -31,6 +31,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   care_plans: 'Planos de cuidado',
   clinic: 'Clínica',
   'clinic-info': 'Dados da clínica',
+  clinic_channel: 'Canal de e-mail',
   'clinic-status': 'Situação da clínica',
   'account-recovery': 'Recuperação de conta',
   'clinic-schedule': 'Grade de horários',

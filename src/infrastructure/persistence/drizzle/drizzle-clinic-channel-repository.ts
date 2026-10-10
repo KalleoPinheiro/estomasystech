@@ -84,6 +84,20 @@ export class DrizzleClinicChannelRepository implements ClinicChannelRepository {
       });
   }
 
+  async remove(channel: ChannelKind): Promise<string | null> {
+    const clinicId = this.requireClinic();
+    const rows = await this.db
+      .delete(clinicChannels)
+      .where(
+        and(
+          eq(clinicChannels.clinicId, clinicId),
+          eq(clinicChannels.channel, channel),
+        ),
+      )
+      .returning({ id: clinicChannels.id });
+    return rows[0]?.id ?? null;
+  }
+
   private decryptSecret(clinicId: string, encrypted: string): string {
     try {
       return this.cipher.decrypt(encrypted);

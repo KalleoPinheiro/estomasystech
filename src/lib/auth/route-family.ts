@@ -78,6 +78,10 @@ const ADMINISTRATIVE_PREFIXES = [
   // qualquer papel de equipe pode precisar imprimir um documento — não só
   // admin (CodeRabbit, review do PR #81).
   '/api/settings/clinic-info',
+  // Canal de e-mail da clínica (C3, #266): só o Admin de Empresa, que paga a
+  // conta do provedor, cadastra a chave, testa e remove. O handler repete a
+  // checagem (ADR-002).
+  '/api/settings/email-channel',
   // Conectar a agenda do Google é ato administrativo da empresa, não operação
   // de atendimento — mesma família de /api/settings/clinic-info.
   '/api/integrations',
