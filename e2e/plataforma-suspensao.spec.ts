@@ -1,13 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { apiPost } from "./support/api";
 import { MAIN_BASE_URL, SUPER_ADMIN_STORAGE_STATE_PATH } from "./support/constants";
-import { readServerLog, waitForInviteUrl } from "./support/server-log";
 
 /**
  * B5 (#214, Journey 7 e 8): conta de clínica suspensa não entra, e volta a
- * entrar depois da reativação. Só na config dev: o convite do admin da clínica
- * do teste é lido do log do `NullEmailGateway` (a config de produção sobe com
- * canal de e-mail).
+ * entrar depois da reativação. O convite do admin da clínica do teste vem na
+ * resposta da criação (`admin.inviteUrl`, C2 #265).
  */
 const STAFF_MESSAGE = "O acesso desta clínica está suspenso. Fale com o responsável pela clínica.";
 const PASSWORD = "senha-da-clinica-suspensa-123";
@@ -21,15 +19,19 @@ test.describe("clínica suspensa", () => {
   test("login de clínica suspensa mostra a mensagem e volta após reativar", async ({ page, browser }) => {
     const digits = String(Date.now()).slice(-12).padStart(12, "0");
     const adminEmail = `admin-${digits}@suspensa-e2e.test`;
-    const logStart = (await readServerLog()).length;
-    const { clinic } = await apiPost<{ clinic: { id: string } }>(page.request, "/api/platform/clinics", {
-      name: `Clínica Suspensa ${digits}`,
-      cnpj: `${digits}02`,
-      contactPhone: "11 3333-4444",
-      contactEmail: "contato@suspensa-e2e.test",
-      adminEmail,
-    });
-    const token = new URL(await waitForInviteUrl(adminEmail, logStart)).searchParams.get("token");
+    // C2 (#265): o convite do 1º admin nunca sai por e-mail; o link volta na resposta.
+    const { clinic, admin } = await apiPost<{ clinic: { id: string }; admin: { inviteUrl: string } }>(
+      page.request,
+      "/api/platform/clinics",
+      {
+        name: `Clínica Suspensa ${digits}`,
+        cnpj: `${digits}02`,
+        contactPhone: "11 3333-4444",
+        contactEmail: "contato@suspensa-e2e.test",
+        adminEmail,
+      },
+    );
+    const token = new URL(admin.inviteUrl).searchParams.get("token");
     const setPassword = await page.request.post("/api/auth/set-password", {
       data: { token, password: PASSWORD },
       headers: { "x-forwarded-for": LOGIN_IP },

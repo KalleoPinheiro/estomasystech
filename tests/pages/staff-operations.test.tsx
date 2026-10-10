@@ -1807,7 +1807,7 @@ describe('Feature: SettingsPage', () => {
       expect(toastText?.closest('.sv-toast--success')).not.toBeNull();
     });
 
-    it('Dado clique em reenviar convite, Quando o e-mail não é entregue, Então exibe toast de erro', async () => {
+    it('Dado clique em reenviar convite, Quando o e-mail não é entregue, Então exibe toast de aviso e o link para envio manual (C2, #265)', async () => {
       mockFetch(({ url, init }) => {
         if (url.startsWith('/api/settings/schedule')) {
           return jsonResponse({
@@ -1824,7 +1824,10 @@ describe('Feature: SettingsPage', () => {
           url.startsWith('/api/accounts/a1/resend-invite') &&
           init?.method === 'POST'
         ) {
-          return jsonResponse({ delivered: false });
+          return jsonResponse({
+            delivered: false,
+            inviteUrl: 'https://app.vitta.test/definir-senha?token=t1',
+          });
         }
         if (url.startsWith('/api/accounts')) {
           return jsonResponse([
@@ -1854,14 +1857,12 @@ describe('Feature: SettingsPage', () => {
       fireEvent.click(screen.getByText('Reenviar convite'));
 
       const message =
-        'Não foi possível enviar o e-mail para ana@clinica.com — tente novamente mais tarde.';
-      await waitFor(() => {
-        expect(screen.getAllByText(message)).toHaveLength(2);
-      });
-      const toastText = screen
-        .getAllByText(message)
-        .find((el) => el.className === 'sv-toast__description');
-      expect(toastText?.closest('.sv-toast--danger')).not.toBeNull();
+        'O e-mail para ana@clinica.com não saiu — copie o link e envie manualmente.';
+      const toastText = await screen.findByText(message);
+      expect(toastText.closest('.sv-toast--warning')).not.toBeNull();
+      expect(screen.getByLabelText('Link para ana@clinica.com')).toHaveValue(
+        'https://app.vitta.test/definir-senha?token=t1',
+      );
     });
 
     it('Dado clique em reenviar convite, Quando a chamada falha, Então exibe toast de erro', async () => {

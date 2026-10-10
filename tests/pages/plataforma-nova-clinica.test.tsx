@@ -39,14 +39,20 @@ describe('Feature: Nova clínica pela plataforma (B4, Journey 3)', () => {
     push.mockReset();
   });
 
-  it('Dado o formulário preenchido, Quando criar, Então cria e abre o detalhe da clínica', async () => {
+  it('C2/#265 link de convite: após criar, mostra o link somente leitura, o botão Copiar link e o aviso de validade', async () => {
+    const inviteUrl = 'https://app.vitta.test/definir-senha?token=segredo-1';
     const fetchMock = vi.fn().mockResolvedValue(
       envelope({
-        clinic: { id: 'nova-1' },
-        admin: { email: 'admin@nova.com', delivered: true },
+        clinic: { id: 'nova-1', name: 'Clínica Nova' },
+        admin: { email: 'admin@nova.com', delivered: false, inviteUrl },
       }),
     );
     vi.stubGlobal('fetch', fetchMock);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
     renderWithToast(<NewClinicPage />);
 
     fillForm();
@@ -54,9 +60,21 @@ describe('Feature: Nova clínica pela plataforma (B4, Journey 3)', () => {
       screen.getByRole('button', { name: 'Criar clínica e convidar admin' }),
     );
 
-    await waitFor(() =>
-      expect(push).toHaveBeenCalledWith('/plataforma/clinicas/nova-1'),
+    const field = await screen.findByLabelText(
+      'Link de convite do primeiro admin',
     );
+    expect(field).toHaveValue(inviteUrl);
+    expect(field).toHaveAttribute('readonly');
+    expect(
+      screen.getByText(
+        'Envie este link ao administrador da clínica. Ele vale por 24 horas e só pode ser usado uma vez.',
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar link' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(inviteUrl));
+    expect(
+      screen.getByRole('link', { name: 'Abrir a clínica' }),
+    ).toHaveAttribute('href', '/plataforma/clinicas/nova-1');
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/platform/clinics');
     expect(init.method).toBe('POST');
@@ -90,6 +108,6 @@ describe('Feature: Nova clínica pela plataforma (B4, Journey 3)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Já existe clínica com este CNPJ',
     );
-    expect(push).not.toHaveBeenCalled();
+    expect(screen.queryByText('Copiar link')).not.toBeInTheDocument();
   });
 });

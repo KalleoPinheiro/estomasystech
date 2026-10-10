@@ -60,7 +60,10 @@ const envelope = (
 
 type Call = [string, RequestInit | undefined];
 
-const mockApi = (clinicResponse = envelope(CLINIC)) => {
+const mockApi = (
+  clinicResponse = envelope(CLINIC),
+  patchResponse: unknown = { delivered: null },
+) => {
   const fn = vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     if (url === '/api/platform/clinics/c1' && method === 'GET') {
@@ -73,7 +76,7 @@ const mockApi = (clinicResponse = envelope(CLINIC)) => {
       method === 'PATCH' &&
       url.startsWith('/api/platform/clinics/c1/admins/')
     ) {
-      return envelope({ delivered: null });
+      return envelope(patchResponse);
     }
     if (method === 'POST') {
       return envelope({ email: 'novo@um.com', delivered: true });
@@ -279,5 +282,86 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
     );
     expect(await screen.findByText('Clínica reativada')).toBeInTheDocument();
     expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  describe('C2/#265 link manual', () => {
+    const LINK_URL = 'https://app.vitta.test/definir-senha?token=segredo-9';
+
+    it('link manual: reenvio que volta delivered false mostra o link com Copiar link', async () => {
+      mockApi(envelope(CLINIC), { delivered: false, inviteUrl: LINK_URL });
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+      renderWithToast(<PlatformClinicPage />);
+
+      const pendingRow = (await screen.findByText('pendente@um.com')).closest(
+        'tr',
+      ) as HTMLElement;
+      fireEvent.click(
+        within(pendingRow).getByRole('button', { name: 'Reenviar convite' }),
+      );
+
+      expect(await screen.findByLabelText('Link de acesso')).toHaveValue(
+        LINK_URL,
+      );
+      expect(
+        screen.getByText(
+          'O e-mail não saiu — envie este link a pendente@um.com.',
+        ),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Copiar link' }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(LINK_URL));
+    });
+
+    it('redefinição: Gerar link de redefinição pede confirmação, só então chama reset-link e mostra o link', async () => {
+      const fetchMock = mockApi(envelope(CLINIC), {
+        delivered: false,
+        inviteUrl: LINK_URL,
+      });
+      renderWithToast(<PlatformClinicPage />);
+
+      const activeRow = (await screen.findByText('ativo@um.com')).closest(
+        'tr',
+      ) as HTMLElement;
+      const pendingRow = screen
+        .getByText('pendente@um.com')
+        .closest('tr') as HTMLElement;
+      expect(
+        within(pendingRow).queryByRole('button', {
+          name: 'Gerar link de redefinição',
+        }),
+      ).toBeNull();
+      fireEvent.click(
+        within(activeRow).getByRole('button', {
+          name: 'Gerar link de redefinição',
+        }),
+      );
+      const dialog = await screen.findByRole('alertdialog');
+      expect(
+        within(dialog).getByText(
+          'Gerar um link de redefinição de senha para ativo@um.com? Links anteriores deixam de valer.',
+        ),
+      ).toBeInTheDocument();
+      expect(callsWith(fetchMock, 'PATCH')).toHaveLength(0);
+
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Gerar link' }),
+      );
+
+      await waitFor(() =>
+        expect(callsWith(fetchMock, 'PATCH')).toHaveLength(1),
+      );
+      expect(callsWith(fetchMock, 'PATCH')[0][0]).toBe(
+        '/api/platform/clinics/c1/admins/a1',
+      );
+      expect(
+        JSON.parse(callsWith(fetchMock, 'PATCH')[0][1]?.body as string),
+      ).toEqual({ action: 'reset-link' });
+      expect(await screen.findByLabelText('Link de acesso')).toHaveValue(
+        LINK_URL,
+      );
+    });
   });
 });

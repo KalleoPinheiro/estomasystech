@@ -17,6 +17,7 @@ import {
 import { useToast } from '@still-void/ui/react/client';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { AccessLinkField } from '@/components/access-link';
 import {
   ALL_CLINIC_FIELDS,
   ClinicFieldsGrid,
@@ -387,6 +388,18 @@ export function CalendarIntegrationSection() {
   );
 }
 
+/** Link que não saiu por e-mail, para o admin repassar à mão (C2, #265). */
+interface ManualLink {
+  email: string;
+  url: string;
+}
+
+/** Resposta das rotas que emitem link de acesso (C2, #265). */
+interface AccessLinkResult {
+  delivered: boolean;
+  inviteUrl: string | null;
+}
+
 function AccountsSection() {
   const { toast } = useToast();
   const {
@@ -399,7 +412,7 @@ function AccountsSection() {
   const [creating, setCreating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [undelivered, setUndelivered] = useState<string | null>(null);
+  const [manualLink, setManualLink] = useState<ManualLink | null>(null);
 
   const professionalName = (id: string | null) =>
     (professionals ?? []).find((p) => p.id === id)?.fullName ?? '—';
@@ -424,27 +437,36 @@ function AccountsSection() {
     }
   };
 
-  const resendInvite = async (account: UserAccountDto) => {
+  /** Reenvio do convite e link de redefinição: mesma resposta, mesmo tratamento. */
+  const issueLink = async (
+    account: UserAccountDto,
+    path: 'resend-invite' | 'reset-link',
+  ) => {
     try {
-      const result = await apiFetch<{ delivered: boolean }>(
-        `/api/accounts/${account.id}/resend-invite`,
+      const result = await apiFetch<AccessLinkResult>(
+        `/api/accounts/${account.id}/${path}`,
         { method: 'POST' },
       );
       setActionError(null);
-      if (result.delivered && account.email === undelivered) {
-        setUndelivered(null);
-      }
-      const notice = result.delivered
-        ? `Convite reenviado para ${account.email}.`
-        : `Não foi possível enviar o e-mail para ${account.email} — tente novamente mais tarde.`;
-      setActionNotice(notice);
+      setManualLink(
+        result.inviteUrl
+          ? { email: account.email, url: result.inviteUrl }
+          : null,
+      );
+      const sentNotice =
+        path === 'resend-invite'
+          ? `Convite reenviado para ${account.email}.`
+          : `Link de redefinição enviado para ${account.email}.`;
+      setActionNotice(result.delivered ? sentNotice : null);
       toast({
-        description: notice,
-        variant: result.delivered ? 'success' : 'danger',
+        description: result.delivered
+          ? sentNotice
+          : `O e-mail para ${account.email} não saiu — copie o link e envie manualmente.`,
+        variant: result.delivered ? 'success' : 'warning',
       });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Erro ao reenviar convite';
+        err instanceof Error ? err.message : 'Erro ao gerar o link';
       setActionNotice(null);
       setActionError(message);
       toast({ description: message, variant: 'danger' });
@@ -471,23 +493,24 @@ function AccountsSection() {
         error={error}
         actionError={actionError}
         actionNotice={actionNotice}
-        undelivered={undelivered}
+        manualLink={manualLink}
       />
 
       <AccountsTable
         accounts={accounts}
         professionalName={professionalName}
         onToggleActive={(account) => void toggleActive(account)}
-        onResendInvite={(account) => void resendInvite(account)}
+        onResendInvite={(account) => void issueLink(account, 'resend-invite')}
+        onResetLink={(account) => void issueLink(account, 'reset-link')}
       />
 
       {creating && (
         <Modal title="Nova conta de acesso" onClose={() => setCreating(false)}>
           <AccountForm
             professionals={(professionals ?? []).filter((p) => p.active)}
-            onSaved={({ email, delivered }) => {
+            onSaved={({ email, inviteUrl }) => {
               setCreating(false);
-              setUndelivered(delivered ? null : email);
+              setManualLink(inviteUrl ? { email, url: inviteUrl } : null);
               setActionNotice(null);
               toast({ description: 'Conta criada', variant: 'success' });
               refresh();
@@ -503,12 +526,12 @@ function AccountAlerts({
   error,
   actionError,
   actionNotice,
-  undelivered,
+  manualLink,
 }: {
   error: string | null;
   actionError: string | null;
   actionNotice: string | null;
-  undelivered: string | null;
+  manualLink: ManualLink | null;
 }) {
   const errorMessage = actionError ?? error;
   return (
@@ -519,11 +542,16 @@ function AccountAlerts({
           <AlertDescription>{actionNotice}</AlertDescription>
         </Alert>
       )}
-      {undelivered && (
+      {manualLink && (
         <Alert variant="warning" className="mb-4">
           <AlertDescription>
-            Conta criada, mas o convite não foi enviado para {undelivered} —
-            reenvie pela tabela abaixo.
+            <p className="mb-2">
+              E-mail desativado nesta clínica — envie o link manualmente.
+            </p>
+            <AccessLinkField
+              url={manualLink.url}
+              label={`Link para ${manualLink.email}`}
+            />
           </AlertDescription>
         </Alert>
       )}
@@ -536,11 +564,13 @@ function AccountsTable({
   professionalName,
   onToggleActive,
   onResendInvite,
+  onResetLink,
 }: {
   accounts: UserAccountDto[] | null;
   professionalName: (id: string | null) => string;
   onToggleActive: (account: UserAccountDto) => void;
   onResendInvite: (account: UserAccountDto) => void;
+  onResetLink: (account: UserAccountDto) => void;
 }) {
   if (!accounts) return <LoadingIndicator />;
   if (accounts.length === 0)
@@ -565,6 +595,7 @@ function AccountsTable({
               professionalName={professionalName(account.professionalId)}
               onToggleActive={() => onToggleActive(account)}
               onResendInvite={() => onResendInvite(account)}
+              onResetLink={() => onResetLink(account)}
             />
           ))}
         </TableBody>
@@ -578,11 +609,13 @@ function AccountRow({
   professionalName,
   onToggleActive,
   onResendInvite,
+  onResetLink,
 }: {
   account: UserAccountDto;
   professionalName: string;
   onToggleActive: () => void;
   onResendInvite: () => void;
+  onResetLink: () => void;
 }) {
   return (
     <TableRow className={account.active ? '' : 'bg-surface-2/60'}>
@@ -611,6 +644,23 @@ function AccountRow({
           >
             Reenviar convite
           </Button>
+        )}
+        {account.active && account.passwordSet && (
+          <ConfirmAction
+            trigger={
+              <Button
+                type="button"
+                variant="link"
+                className="mr-3 h-auto p-0 text-ink-3"
+              >
+                Gerar link de redefinição
+              </Button>
+            }
+            title="Gerar link de redefinição?"
+            description={`Gerar um link de redefinição de senha para ${account.email}? Links anteriores deixam de valer.`}
+            confirmLabel="Gerar link"
+            onConfirm={onResetLink}
+          />
         )}
         {account.active ? (
           <ConfirmAction
@@ -666,7 +716,7 @@ function AccountForm({
   onSaved,
 }: {
   professionals: ProfessionalDto[];
-  onSaved: (created: { email: string; delivered: boolean }) => void;
+  onSaved: (created: { email: string } & AccessLinkResult) => void;
 }) {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -695,7 +745,7 @@ function AccountForm({
     setSaving(true);
     setError(null);
     try {
-      const created = await apiFetch<UserAccountDto & { delivered: boolean }>(
+      const created = await apiFetch<UserAccountDto & AccessLinkResult>(
         '/api/accounts',
         {
           method: 'POST',
@@ -709,7 +759,11 @@ function AccountForm({
           }),
         },
       );
-      onSaved({ email: created.email, delivered: created.delivered });
+      onSaved({
+        email: created.email,
+        delivered: created.delivered,
+        inviteUrl: created.inviteUrl,
+      });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Erro ao criar conta';
