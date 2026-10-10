@@ -6,23 +6,23 @@ import { useParams } from 'next/navigation';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
-import type { PlatformClinicDto } from '@/lib/dto';
+import type { PlatformClinicDetailDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 import { registrationLabel } from '../../clinic-labels';
 import { ClinicAdminsSection } from './clinic-admins-section';
+import { ClinicEmailChannelSection } from './clinic-email-channel-section';
 import { ClinicRegistrationForm } from './clinic-registration-form';
 import { ClinicStatusSection } from './clinic-status-section';
 
 /**
  * Detalhe de uma clínica na plataforma (B4, Journey 4–6): situação (suspender
- * e reativar, B5), cadastro editável e Admins de Empresa (convidar, reenviar
+ * e reativar, B5), status do canal de e-mail (C4), cadastro editável e Admins de Empresa (convidar, reenviar
  * convite, desativar, reativar).
  */
 export default function PlatformClinicPage() {
   const { id } = useParams<{ id: string }>();
-  const { data, error, errorStatus, refresh } = useApiQuery<PlatformClinicDto>(
-    `/api/platform/clinics/${id}`,
-  );
+  const { data, error, errorStatus, refresh } =
+    useApiQuery<PlatformClinicDetailDto>(`/api/platform/clinics/${id}`);
 
   return (
     <>
@@ -48,7 +48,7 @@ export default function PlatformClinicPage() {
   );
 }
 
-function ClinicBadges({ clinic }: { clinic: PlatformClinicDto }) {
+function ClinicBadges({ clinic }: { clinic: PlatformClinicDetailDto }) {
   const { status, label } = registrationLabel(clinic.registrationComplete);
   return (
     <>
@@ -66,7 +66,7 @@ function ClinicContent({
   onRetry,
   onSaved,
 }: {
-  clinic: PlatformClinicDto | null;
+  clinic: PlatformClinicDetailDto | null;
   error: string | null;
   onRetry?: () => void;
   onSaved: () => void;
@@ -76,6 +76,7 @@ function ClinicContent({
   return (
     <div className="flex flex-col gap-8">
       <ClinicStatusSection clinic={clinic} onChanged={onSaved} />
+      <ClinicEmailChannelSection channel={clinic.emailChannel} />
       <ClinicRegistrationForm
         key={clinic.id}
         clinic={clinic}

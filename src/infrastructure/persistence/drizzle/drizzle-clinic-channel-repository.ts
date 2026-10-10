@@ -5,6 +5,7 @@ import {
   type ChannelTestStatus,
   ClinicChannel,
   type ClinicChannelRepository,
+  type ClinicChannelStatus,
   type EmailProvider,
 } from '@/domain/clinic/clinic-channel';
 import type { FieldCipher } from '@/lib/data-cipher';
@@ -52,6 +53,33 @@ export class DrizzleClinicChannelRepository implements ClinicChannelRepository {
       updatedAt: row.updatedAt,
       updatedBy: row.updatedBy,
     });
+  }
+
+  async findStatus(channel: ChannelKind): Promise<ClinicChannelStatus | null> {
+    const clinicId = this.requireClinic();
+    const rows = await this.db
+      .select({
+        provider: clinicChannels.provider,
+        lastStatus: clinicChannels.lastStatus,
+        lastStatusAt: clinicChannels.lastStatusAt,
+      })
+      .from(clinicChannels)
+      .where(
+        and(
+          eq(clinicChannels.clinicId, clinicId),
+          eq(clinicChannels.channel, channel),
+        ),
+      )
+      .limit(1);
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    return {
+      provider: row.provider as EmailProvider,
+      lastStatus: row.lastStatus as ChannelTestStatus | null,
+      lastStatusAt: row.lastStatusAt,
+    };
   }
 
   async save(channel: ClinicChannel): Promise<void> {

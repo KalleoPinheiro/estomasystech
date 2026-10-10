@@ -465,6 +465,35 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       },
     );
 
+    it.each([
+      ['company_admin', 'http://localhost/'],
+      ['atendente', 'http://localhost/'],
+      ['profissional', 'http://localhost/'],
+      ['patient', 'http://localhost/portal'],
+      ['partner', 'http://localhost/portal'],
+    ] as const)(
+      'Dado %s, Quando abre /plataforma/taxonomia, Então o proxy nega e leva a %s (C4, #267)',
+      async (role, location) => {
+        const proxy = await loadProxy();
+
+        const response = await proxy(
+          requestAs('GET', '/plataforma/taxonomia', sessionCookie(role)),
+        );
+
+        expect(response.status).toBe(307);
+        expect(response.headers.get('location')).toBe(location);
+      },
+    );
+
+    it('Dado sem sessão, Quando abre /plataforma/taxonomia, Então vai a /login (C4, #267)', async () => {
+      const page = await (await loadProxy())(
+        requestAs('GET', '/plataforma/taxonomia'),
+      );
+
+      expect(page.status).toBe(307);
+      expect(page.headers.get('location')).toBe('http://localhost/login');
+    });
+
     it('Dada a rota antiga de importação, Quando chamar, Então o proxy decide pela família antes do roteamento', async () => {
       const path = '/api/admin/taxonomy/import';
       const anonymous = await (await loadProxy())(requestAs('POST', path));

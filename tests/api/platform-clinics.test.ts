@@ -403,6 +403,12 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       registrationComplete: true,
       status: 'active',
       adminStatus: 'active',
+      emailChannel: {
+        configured: false,
+        provider: null,
+        lastStatus: null,
+        lastStatusAt: null,
+      },
       createdAt: expect.any(String),
     });
     expect(

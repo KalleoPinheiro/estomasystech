@@ -91,6 +91,12 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
       statusChangedAt: null,
       statusChangedBy: null,
       createdAt: clinic.createdAt.toISOString(),
+      emailChannel: {
+        configured: false,
+        provider: null,
+        lastStatus: null,
+        lastStatusAt: null,
+      },
     });
 
     const legacy = await detail('legacy-clinic');

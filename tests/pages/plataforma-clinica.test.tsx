@@ -9,6 +9,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PlatformClinicPage from '@/app/plataforma/clinicas/[id]/page';
+import { formatDateTime } from '@/lib/format';
 import { renderWithToast } from '../support/render-with-toast';
 
 vi.mock('next/navigation', () => ({
@@ -32,6 +33,12 @@ const CLINIC = {
   statusChangedAt: null,
   statusChangedBy: null,
   createdAt: '2026-09-27T00:00:00.000Z',
+  emailChannel: {
+    configured: false,
+    provider: null,
+    lastStatus: null,
+    lastStatusAt: null,
+  },
 };
 
 const SUSPENDED_CLINIC = {
@@ -363,5 +370,71 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
         LINK_URL,
       );
     });
+  });
+});
+
+describe('Feature: status do canal de e-mail no detalhe (C4, #267)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const sectionOf = async () =>
+    within(
+      (await screen.findByRole('heading', { name: 'Canal de e-mail' })).closest(
+        'section',
+      ) as HTMLElement,
+    );
+
+  it('Dado canal testado com falha, Quando abrir o detalhe, Então mostra o status, o provedor e a data do último teste', async () => {
+    mockApi(
+      envelope({
+        ...CLINIC,
+        emailChannel: {
+          configured: true,
+          provider: 'resend',
+          lastStatus: 'failed',
+          lastStatusAt: '2026-10-09T14:30:00.000Z',
+        },
+      }),
+    );
+    renderWithToast(<PlatformClinicPage />);
+
+    const section = await sectionOf();
+    expect(section.getByText('E-mail: falhando')).toBeInTheDocument();
+    expect(section.getByText('Provedor: Resend')).toBeInTheDocument();
+    expect(
+      section.getByText(
+        `Último teste: ${formatDateTime('2026-10-09T14:30:00.000Z')}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('Dado canal nunca testado e clínica sem canal, Quando abrir o detalhe, Então mostra Nunca testado', async () => {
+    mockApi(
+      envelope({
+        ...CLINIC,
+        emailChannel: {
+          configured: true,
+          provider: 'resend',
+          lastStatus: null,
+          lastStatusAt: null,
+        },
+      }),
+    );
+    renderWithToast(<PlatformClinicPage />);
+    let section = await sectionOf();
+    expect(section.getByText('E-mail: não testado')).toBeInTheDocument();
+    expect(section.getByText('Provedor: Resend')).toBeInTheDocument();
+    expect(section.getByText('Nunca testado')).toBeInTheDocument();
+    cleanup();
+    vi.unstubAllGlobals();
+
+    mockApi();
+    renderWithToast(<PlatformClinicPage />);
+    section = await sectionOf();
+    expect(section.getByText('E-mail: sem canal')).toBeInTheDocument();
+    expect(section.getByText('Provedor: —')).toBeInTheDocument();
+    expect(section.getByText('Nunca testado')).toBeInTheDocument();
   });
 });
