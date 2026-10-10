@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { getRepositories } from '@/infrastructure/container';
+import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
+import { clinicScope } from '@/lib/auth/tenant-scope';
 import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
 
@@ -840,6 +843,45 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get('content-type')).toBe('image/png');
+    });
+
+    it('Dado foto do próprio paciente, Quando GET photos/:id, Então responde no-store e audita a leitura (#209)', async () => {
+      // Conta de paciente sempre tem empresa (ADR-007): a sessão real carrega
+      // `clinicId`, e é nessa empresa que a leitura fica registrada.
+      const { createSessionToken } = await import('@/lib/auth/session');
+      const clinicPatientToken = createSessionToken(
+        process.env.AUTH_SECRET as string,
+        Date.now() + 3_600_000,
+        patientEmail,
+        'patient',
+        LEGACY_CLINIC_ID,
+      );
+      const response = await photoByIdRoute.GET(
+        jsonRequest(
+          `/api/portal/patient/photos/${uploadedPhotoId}`,
+          'GET',
+          undefined,
+          cookieHeader(clinicPatientToken),
+        ),
+        context(uploadedPhotoId),
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+
+      // `after()` roda fire-and-forget (mock global): espera o microtask.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const { auditEvents } = await getRepositories(
+        clinicScope(LEGACY_CLINIC_ID),
+      );
+      const reads = (
+        await auditEvents.findAll({
+          resourceType: 'photo',
+          resourceId: uploadedPhotoId,
+        })
+      ).filter((event) => event.action === 'read');
+      expect(reads.length).toBeGreaterThan(0);
+      expect(reads[0]?.actorRole).toBe('patient');
+      expect(reads[0]?.patientId).toBe(patientId);
     });
 
     it('Dado foto de outro paciente, Quando GET photos/:id, Então retorna 404', async () => {
