@@ -8,17 +8,21 @@ import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit, recordAuditNow } from '@/lib/audit';
 import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { writeScope } from '@/lib/auth/tenant-scope';
+import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-/** Serve o binário da foto — rota exclusiva do staff (proxy barra portais). */
+/**
+ * Serve o binário da foto — rota exclusiva do staff (proxy barra portais).
+ * Leitura no escopo da sessão (#209); cada download entra na trilha e a
+ * imagem não fica no cache do navegador depois do logout (`no-store`).
+ */
 export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
   const { id } = await context.params;
-  const repos = await getRepositories(writeScope(guard.session));
+  const repos = await getRepositories(sessionScope(guard.session));
   const accessible = await assertClinicalResourceAccessible(
     guard.session,
     'photo',
@@ -35,18 +39,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return fail('Foto não encontrada', 404);
   }
 
-  const { conditionPhotos, photoStorage } = repos;
+  const { conditionPhotos, conditions, photoStorage, auditEvents } = repos;
   const photo = await conditionPhotos.findById(id);
   const data = photo ? await photoStorage.read(photo.id) : null;
   if (!photo || !data) {
     return fail('Foto não encontrada', 404);
   }
+  const condition = await conditions.findById(photo.conditionId);
+  recordAudit(auditEvents, guard.session, {
+    action: 'read',
+    resourceType: 'photo',
+    resourceId: id,
+    patientId: condition?.patientId ?? null,
+  });
 
   return new Response(new Uint8Array(data), {
     headers: {
       'Content-Type': photo.contentType,
       'Content-Length': String(data.byteLength),
-      'Cache-Control': 'private, max-age=3600',
+      'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
     },
   });

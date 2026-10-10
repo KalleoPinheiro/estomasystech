@@ -2,14 +2,16 @@ import type { NextRequest } from 'next/server';
 import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { fail } from '@/lib/api-response';
+import { recordAudit } from '@/lib/audit';
 import { requirePortalSession } from '@/lib/auth/require-session';
-import { writeScope } from '@/lib/auth/tenant-scope';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * Foto vista pelo próprio paciente: sessão patient + condição da foto precisa
  * pertencer ao paciente autenticado. Parceiro nunca acessa fotos (minimização).
+ * Como na rota do staff (#209): leitura auditada e sem cache no navegador.
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requirePortalSession(request, 'patient');
@@ -17,8 +19,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { session } = guard;
 
   const { id } = await context.params;
-  const services = await getRepositories(writeScope(session));
-  const { conditionPhotos, conditions, photoStorage } = services;
+  const services = await getRepositories(sessionScope(session));
+  const { conditionPhotos, conditions, photoStorage, auditEvents } = services;
 
   const photo = await conditionPhotos.findById(id);
   const condition = photo ? await conditions.findById(photo.conditionId) : null;
@@ -33,12 +35,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (!data) {
     return fail('Foto não encontrada', 404);
   }
+  recordAudit(auditEvents, session, {
+    action: 'read',
+    resourceType: 'photo',
+    resourceId: photo.id,
+    patientId: patient.id,
+  });
 
   return new Response(new Uint8Array(data), {
     headers: {
       'Content-Type': photo.contentType,
       'Content-Length': String(data.byteLength),
-      'Cache-Control': 'private, max-age=3600',
+      'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
     },
   });
