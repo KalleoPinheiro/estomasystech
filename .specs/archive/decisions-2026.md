@@ -32,3 +32,15 @@ Movidas de `.specs/STATE.md` § Decisions sem edição de conteúdo, para manter
 - **Scope**: nenhum código alterado; decisão de escopo apenas.
 - **Date**: 2026-09-05
 - **Status**: resolved — issue #43 (fechada sem PR, "não fazer")
+
+### AD-029
+- **Decision**: Canal de e-mail em `/configuracoes` (C3, #266) com os defaults da task para os pontos em aberto: limite do e-mail de teste `SharedRateLimiter('email-channel-test', 5, 60_000)` por clínica; dois admins salvando ao mesmo tempo, vence a última escrita (upsert, sem versão). Decididos durante a execução: `DELETE` apaga por `(clinic_id, channel)` sem decifrar a chave (`ClinicChannelRepository.remove`, `RETURNING id`); `last_error` troca o e-mail do destinatário e a chave por `<destinatário>`/`<chave>` antes de truncar a 300; salvar sem chave nova mantém o último teste; o teste sai por `services.email` (o mesmo gateway dos envios reais); em modo aberto (dev, sem conta) o teste responde `409`.
+- **Reason**: com a chave de dados trocada sem a anterior, `find` lança `ChannelSecretUnreadableError` — remover por `find` deixaria o admin sem saída para recadastrar. O erro do Resend pode citar o destinatário; o design pede `last_error` sem PII.
+- **Trade-off**: GET/PUT/teste ainda respondem `500` enquanto a chave não decifra; a saída é remover e cadastrar de novo. Limite do teste e concorrência entre admins (Unresolved 1 e 2 de `.tasks/c3-tela-canal-configuracoes.md`) confirmados por @KalleoPinheiro em 2026-10-10: mantêm-se os defaults.
+- **Scope / Date / Status**: `src/application/clinic/manage-email-channel.ts`, `src/app/api/settings/email-channel/`, `.checks/c3-canal-email-configuracoes.md` · 2026-10-10 · active — Unresolved 1 e 2 confirmados por @KalleoPinheiro em 2026-10-10
+
+### AD-030
+- **Decision**: Duas perguntas abertas da C2 (#265), respondidas por @KalleoPinheiro em 2026-10-10. (1) "Nem o link nem o segredo aparecem no log" vale **para produção**: com `NODE_ENV=production` o `NullEmailGateway` não loga o link; fora de produção (dev, E2E) ele loga o link de propósito — comportamento mantido. (2) `POST /api/platform/clinics/[id]/admins` (convite de admin substituto) passa a responder `{ delivered, inviteUrl }` como as demais rotas do ACE-RN-33: o link volta só quando o e-mail não saiu, e `/plataforma/clinicas/[id]` o mostra com "Copiar link".
+- **Reason**: (1) o link no log é o caminho de dev e da suíte E2E (`e2e/support/invite-log.ts`) para definir senha sem e-mail real; em produção é credencial (CWE-532). (2) Sem canal na clínica, o convite do substituto não tinha como chegar — o contorno era o reenvio.
+- **Trade-off**: (2) o operador da plataforma passa a ver o link de convite do `company_admin` substituto quando o e-mail não sai — o mesmo que já via no 1º admin (ACE-RN-22) e no reenvio; o evento fica na auditoria da clínica.
+- **Scope / Date / Status**: `src/application/ports/email-gateway.ts`, `src/app/api/platform/clinics/[id]/admins/route.ts`, `src/app/plataforma/clinicas/[id]/clinic-admins-section.tsx` · 2026-10-10 · active

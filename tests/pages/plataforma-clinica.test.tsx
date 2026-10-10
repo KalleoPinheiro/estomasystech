@@ -70,6 +70,7 @@ type Call = [string, RequestInit | undefined];
 const mockApi = (
   clinicResponse = envelope(CLINIC),
   patchResponse: unknown = { delivered: null },
+  postResponse: unknown = { email: 'novo@um.com', delivered: true },
 ) => {
   const fn = vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
@@ -86,7 +87,7 @@ const mockApi = (
       return envelope(patchResponse);
     }
     if (method === 'POST') {
-      return envelope({ email: 'novo@um.com', delivered: true });
+      return envelope(postResponse);
     }
     return envelope(CLINIC);
   });
@@ -320,6 +321,50 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Copiar link' }));
       await waitFor(() => expect(writeText).toHaveBeenCalledWith(LINK_URL));
+    });
+
+    it('convite: admin convidado sem e-mail entregue mostra o link com Copiar link', async () => {
+      mockApi(envelope(CLINIC), undefined, {
+        email: 'novo@um.com',
+        delivered: false,
+        inviteUrl: LINK_URL,
+      });
+      renderWithToast(<PlatformClinicPage />);
+      await screen.findByText('pendente@um.com');
+
+      fireEvent.change(
+        screen.getByLabelText('E-mail do admin', { exact: false }),
+        { target: { value: 'novo@um.com' } },
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Convidar admin' }));
+
+      expect(await screen.findByLabelText('Link de acesso')).toHaveValue(
+        LINK_URL,
+      );
+      expect(
+        screen.getByText('O e-mail não saiu — envie este link a novo@um.com.'),
+      ).toBeInTheDocument();
+    });
+
+    it('convite: admin convidado com e-mail entregue não mostra link', async () => {
+      mockApi(envelope(CLINIC), undefined, {
+        email: 'novo@um.com',
+        delivered: true,
+        inviteUrl: null,
+      });
+      renderWithToast(<PlatformClinicPage />);
+      await screen.findByText('pendente@um.com');
+
+      fireEvent.change(
+        screen.getByLabelText('E-mail do admin', { exact: false }),
+        { target: { value: 'novo@um.com' } },
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Convidar admin' }));
+
+      expect(
+        await screen.findByText('Convite enviado para novo@um.com'),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText('Link de acesso')).toBeNull();
     });
 
     it('redefinição: Gerar link de redefinição pede confirmação, só então chama reset-link e mostra o link', async () => {

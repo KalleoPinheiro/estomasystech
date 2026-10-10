@@ -32,8 +32,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 /**
  * Convite de um Admin de Empresa da clínica (B1, ADR-007; B4 exige o cadastro
  * completo antes). A conta nasce sem senha usável e a pessoa define a própria
- * senha pelo convite. A resposta nunca traz o link: com ele, o operador da
- * plataforma entraria na clínica com acesso clínico.
+ * senha pelo convite. Quando o e-mail não sai (clínica sem canal, ADR-011), o
+ * link volta para o operador repassar — decisão do dono, 2026-10-10; com o
+ * e-mail entregue, `inviteUrl` é `null`.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const body = bodySchema.parse(await request.json());
-    const { account, delivered } = await new ManageClinicAdmins(
+    const { account, delivered, inviteUrl } = await new ManageClinicAdmins(
       services,
     ).invite(clinic, body.email, (auditEvents, createdAccount) =>
       recordAuditNow(auditEvents, guard.session, {
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       role: account.role,
       clinicId: account.clinicId,
       delivered,
+      inviteUrl,
     };
   });
 }

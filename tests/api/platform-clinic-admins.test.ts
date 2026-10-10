@@ -28,6 +28,7 @@ interface AdminDto {
   passwordSet: boolean;
   professionalId: string | null;
   delivered: boolean;
+  inviteUrl: string | null;
 }
 
 const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
@@ -81,7 +82,11 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
       active: true,
       passwordSet: false,
       professionalId: null,
-      delivered: expect.any(Boolean),
+      // Sem canal de e-mail na clínica (ADR-011): o link volta ao operador.
+      delivered: false,
+      inviteUrl: expect.stringMatching(
+        /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+      ),
     });
     const [stored] = await accountsWithEmail(
       CLINIC_B_ID,
@@ -95,36 +100,56 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
     expect(emails.bodies[0]).toMatch(/definir-senha\?token=/);
   });
 
-  it('Dado o convite emitido ou falhado, Quando responder, Então vem sem link de convite', async () => {
+  it('Dado o e-mail entregue pelo canal da clínica, Quando convidar, Então inviteUrl é null e nada na resposta traz o link', async () => {
     await ensureRegisteredClinicB();
-    spyOnSentEmails();
-    const delivered = await invite(CLINIC_B_ID, { email: 'sem-link@b.com' });
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { ClinicChannel } = await import('@/domain/clinic/clinic-channel');
+    const { clinicChannels } = await getRepositories(clinicScope(CLINIC_B_ID));
+    await clinicChannels.save(
+      ClinicChannel.configure({
+        clinicId: CLINIC_B_ID,
+        channel: 'email',
+        provider: 'resend',
+        sender: 'Clínica B <contato@b.test>',
+        apiKey: 're_chave_da_b',
+        by: 'admin@b.test',
+      }),
+    );
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    try {
+      const { response, json } = await invite(CLINIC_B_ID, {
+        email: 'com-canal@b.com',
+      });
 
+      expect(response.status).toBe(200);
+      expect(json.data.delivered).toBe(true);
+      expect(json.data.inviteUrl).toBeNull();
+      expect(JSON.stringify(json)).not.toMatch(/token|definir-senha/);
+    } finally {
+      vi.unstubAllGlobals();
+      await clinicChannels.remove('email');
+    }
+  });
+
+  it('Dada falha do provedor, Quando convidar, Então delivered é false e inviteUrl traz o link de 24 h', async () => {
+    await ensureRegisteredClinicB();
     const { NullEmailGateway } = await import(
       '@/application/ports/email-gateway'
     );
-    vi.restoreAllMocks();
     vi.spyOn(NullEmailGateway.prototype, 'send').mockRejectedValue(
       new Error('provedor fora do ar'),
     );
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const failed = await invite(CLINIC_B_ID, { email: 'sem-link-2@b.com' });
 
-    expect(failed.json.data.delivered).toBe(false);
-    for (const { response, json } of [delivered, failed]) {
-      expect(response.status).toBe(200);
-      expect(Object.keys(json.data).sort()).toEqual([
-        'active',
-        'clinicId',
-        'delivered',
-        'email',
-        'id',
-        'passwordSet',
-        'professionalId',
-        'role',
-      ]);
-      expect(JSON.stringify(json)).not.toMatch(/token|definir-senha|https?:/);
-    }
+    const { response, json } = await invite(CLINIC_B_ID, {
+      email: 'sem-entrega@b.com',
+    });
+
+    expect(response.status).toBe(200);
+    expect(json.data.delivered).toBe(false);
+    expect(json.data.inviteUrl).toMatch(
+      /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+    );
   });
 
   it('Dada clínica inexistente, Quando convidar, Então clínica inexistente responde 404 e nenhuma conta é criada', async () => {

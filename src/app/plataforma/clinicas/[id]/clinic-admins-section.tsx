@@ -108,7 +108,14 @@ export function ClinicAdminsSection({ clinic }: { clinic: PlatformClinicDto }) {
         onRetry={refresh}
         onAction={(admin, action) => void act(admin, action)}
       />
-      <InviteAdminForm clinic={clinic} url={url} onInvited={refresh} />
+      <InviteAdminForm
+        clinic={clinic}
+        url={url}
+        onInvited={(link) => {
+          setManualLink(link);
+          refresh();
+        }}
+      />
     </Card>
   );
 }
@@ -259,7 +266,7 @@ function InviteAdminForm({
 }: {
   clinic: PlatformClinicDto;
   url: string;
-  onInvited: () => void;
+  onInvited: (manualLink: ManualLink | null) => void;
 }) {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -272,21 +279,23 @@ function InviteAdminForm({
     setSaving(true);
     setError(null);
     try {
-      const created = await apiFetch<{ email: string; delivered: boolean }>(
-        url,
-        {
-          method: 'POST',
-          body: JSON.stringify({ email }),
-        },
-      );
+      const created = await apiFetch<{
+        email: string;
+        delivered: boolean;
+        inviteUrl?: string | null;
+      }>(url, {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      const link = created.inviteUrl ?? null;
       toast({
-        description: created.delivered
-          ? `Convite enviado para ${created.email}`
-          : `Admin criado, mas o convite para ${created.email} não foi entregue. Reenvie mais tarde.`,
-        variant: created.delivered ? 'success' : 'warning',
+        description: link
+          ? `Admin criado. O e-mail para ${created.email} não saiu: copie o link e envie manualmente.`
+          : `Convite enviado para ${created.email}`,
+        variant: link ? 'warning' : 'success',
       });
       setEmail('');
-      onInvited();
+      onInvited(link ? { email: created.email, url: link } : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao convidar admin');
     } finally {
