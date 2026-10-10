@@ -553,3 +553,13 @@ Gap 4 do `.checks/b3-recuperacao-super-admin.verified.md` (B3, #214, PR #237): `
 - **Next step**: nenhum pendente desta issue.
 - **Blockers**: nenhum.
 - **Branch**: `fix/247-recover-super-admin-opendb-message` (a deletar após squash-merge). PR #255, squash-merged em `main` (`3581d8d`). Issue #247 fechada via `Closes #247`.
+
+## Issue #209 — foto clínica sem cache e com leitura auditada (2026-10-10) — ENCERRADO (#276)
+
+P2 da revisão pré-produção #183. `GET /api/photos/[id]` (equipe) e `GET /api/portal/patient/photos/[id]` (paciente) passaram a responder `Cache-Control: no-store`, e cada download grava `recordAudit` (`read`, `photo`) nas duas rotas. `404` e `403` não gravam evento. A leitura passou a usar `sessionScope`, e a escrita continua em `writeScope`. Regra nova: PRO-RN-13. Spec em `.specs/features/foto-clinica-leitura/spec.md`.
+
+**Detalhes**: o item 3 da issue (super_admin vendo fotos de outra empresa) não foi implementado porque contradiz o ADR-007. Ficou como pergunta aberta para @KalleoPinheiro. Efeito registrado pelo Verifier: com `no-store`, cada montagem do `<img>` baixa a foto de novo e grava outro evento `read`. Isso é consequência direta da issue. Gate local: e2e 235/235 e `test:coverage` 4314/4314 (linhas em 96,92%, branches em 91,69%). CI com os 4 jobs verdes e Verifier independente com PASS.
+
+- **Next step**: resposta do dono sobre o item 3 (ADR-007 vs. ADR novo, opção C).
+- **Blockers**: nenhum.
+- **Branch**: `fix/209-foto-clinica`. PR #276, squash-merged em `main` (`29cb72f`). Issue #209 fechada via `Closes #209`.
