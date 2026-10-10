@@ -580,11 +580,10 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
         sent: number;
         skipped: number;
         failed: number;
-        channelEnabled: boolean;
       }>;
 
       expect(response.status).toBe(200);
-      expect(body.data.channelEnabled).toBe(false);
+      expect(body.data).not.toHaveProperty('channelEnabled');
       expect(body.data.failed).toBe(0);
 
       if (originalCronSecret === undefined) {

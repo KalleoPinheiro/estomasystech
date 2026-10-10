@@ -22,6 +22,7 @@ import {
   CLINIC_B_ID,
   ensureTestClinics,
 } from '../support/clinics';
+import { clearEmailChannels, saveEmailChannel } from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
 
@@ -37,9 +38,9 @@ interface RunSummary {
   sent: number;
   skipped: number;
   failed: number;
-  channelEnabled: boolean;
   clinics: Array<{
     clinicId: string;
+    channel?: 'configured' | 'none';
     sent: number;
     skipped: number;
     failed: number;
@@ -146,14 +147,15 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
     vi.stubEnv('APP_URL', 'https://vitta.example.com');
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    await clearEmailChannels();
   });
 
   describe('POST /api/reminders/run', () => {
-    it('C7 run sem Resend responde 200 com channelEnabled false', async () => {
+    it('C7 run sem canal da clínica responde 200 com channel none', async () => {
       const patient = await seedPatient(
         CLINIC_A_ID,
         'Paula Dry',
@@ -168,7 +170,10 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
       const body = (await response.json()) as Envelope<RunSummary>;
 
       expect(response.status).toBe(200);
-      expect(body.data.channelEnabled).toBe(false);
+      expect(body.data).not.toHaveProperty('channelEnabled');
+      expect(
+        body.data.clinics.find((c) => c.clinicId === CLINIC_A_ID)?.channel,
+      ).toBe('none');
       expect(body.data.sent).toBe(0);
       expect(body.data.skipped).toBeGreaterThanOrEqual(1);
       expect(fetchSpy).not.toHaveBeenCalled();
@@ -182,8 +187,9 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
     });
 
     it('C8 run separa por empresa', async () => {
-      vi.stubEnv('RESEND_API_KEY', 're_test');
-      vi.stubEnv('EMAIL_FROM', 'Vitta <lembretes@vitta.example.com>');
+      // Cada clínica envia pelo próprio canal (C2, #265).
+      await saveEmailChannel(CLINIC_A_ID, 're_test_a');
+      await saveEmailChannel(CLINIC_B_ID, 're_test_b');
       const bodies: Array<{ to: string[]; subject: string; text: string }> = [];
       vi.stubGlobal(
         'fetch',
@@ -214,17 +220,18 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
       const body = (await response.json()) as Envelope<RunSummary>;
 
       expect(response.status).toBe(200);
-      expect(body.data.channelEnabled).toBe(true);
       const entryA = body.data.clinics.find((c) => c.clinicId === CLINIC_A_ID);
       const entryB = body.data.clinics.find((c) => c.clinicId === CLINIC_B_ID);
       expect(entryA).toEqual({
         clinicId: CLINIC_A_ID,
+        channel: 'configured',
         sent: 1,
         skipped: 0,
         failed: 0,
       });
       expect(entryB).toEqual({
         clinicId: CLINIC_B_ID,
+        channel: 'configured',
         sent: 2,
         skipped: 0,
         failed: 0,
