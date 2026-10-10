@@ -3,9 +3,14 @@
 import { Button, Textarea } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useEffect, useState } from 'react';
-import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
-import { apiFetch } from '@/lib/client';
+import {
+  DraftRecoveredAlert,
+  ErrorAlert,
+  LoadingIndicator,
+} from '@/components/feedback';
+import { apiFetch, isSessionExpiredError } from '@/lib/client';
 import type { AnamnesisDto } from '@/lib/dto';
+import { useSessionDraft } from '@/lib/use-session-draft';
 
 interface AnamnesisSectionProps {
   patientId: string;
@@ -70,6 +75,13 @@ export function AnamnesisSection({
   );
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Anamnese não se perde se a sessão expirar no salvamento (#207). Só
+  // restaura com a anamnese carregada: a seção remonta quando ela chega.
+  const draft = useSessionDraft<Record<FieldKey, string>>(
+    `anamnesis:${patientId}`,
+    setValues,
+    !isLoading && !error,
+  );
 
   const baseline = toFormValues(anamnesis);
   const isDirty = FIELDS.some(
@@ -89,8 +101,10 @@ export function AnamnesisSection({
         body: JSON.stringify(values),
       });
       toast({ description: 'Anamnese salva', variant: 'success' });
+      draft.dismiss();
       onSaved();
     } catch (err) {
+      if (isSessionExpiredError(err)) draft.stash(values);
       setFormError(
         err instanceof Error ? err.message : 'Erro ao salvar anamnese',
       );
@@ -104,6 +118,7 @@ export function AnamnesisSection({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {draft.recovered && <DraftRecoveredAlert action="salve" />}
       {formError && <ErrorAlert message={formError} />}
       {FIELDS.map((field) => (
         <label key={field.key} className="font-medium text-sm">

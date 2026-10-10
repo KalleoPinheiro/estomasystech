@@ -63,14 +63,16 @@ describe('Feature: Proxy barra sessão staff revogada (SEC1-01)', () => {
     });
   });
 
-  it('Dado sessão revogada em página, Quando requisitar, Então redireciona para /login', async () => {
+  it('Dado sessão revogada em página, Quando requisitar, Então redireciona para /login com session_expired e next (#207)', async () => {
     revokedMock.mockResolvedValueOnce(true);
 
     const response = await proxy(staffRequest('/pacientes'));
 
     expect(response.status).toBeGreaterThanOrEqual(300);
     expect(response.status).toBeLessThan(400);
-    expect(response.headers.get('location')).toBe('http://localhost/login');
+    expect(response.headers.get('location')).toBe(
+      'http://localhost/login?error=session_expired&next=%2Fpacientes',
+    );
   });
 
   it('Dado sessão não revogada, Quando requisitar, Então a requisição segue', async () => {

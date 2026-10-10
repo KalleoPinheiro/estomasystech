@@ -4,14 +4,16 @@ import { Button, Card, Textarea } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useEffect, useState } from 'react';
 import {
+  DraftRecoveredAlert,
   EmptyState,
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
-import { apiFetch } from '@/lib/client';
+import { apiFetch, isSessionExpiredError } from '@/lib/client';
 import type { EvolutionNoteDto, ProfessionalOptionDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import { useSessionDraft } from '@/lib/use-session-draft';
 
 interface EvolutionsSectionProps {
   patientId: string;
@@ -76,6 +78,14 @@ export function EvolutionsSection({
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  // SOAP longo não se perde se a sessão expirar no salvamento (#207).
+  const draft = useSessionDraft<Record<SoapKey, string>>(
+    `soap:${patientId}`,
+    (restored) => {
+      setValues(restored);
+      setShowForm(true);
+    },
+  );
   // Lista reduzida (#189): o Profissional também lê o nome do autor.
   const { data: professionals } = useApiQuery<ProfessionalOptionDto[]>(
     '/api/options/professionals',
@@ -104,10 +114,12 @@ export function EvolutionsSection({
         },
       );
       toast({ description: 'Evolução registrada', variant: 'success' });
+      draft.dismiss();
       setValues(EMPTY);
       setShowForm(false);
       onSaved();
     } catch (err) {
+      if (isSessionExpiredError(err)) draft.stash(values);
       setFormError(
         err instanceof Error ? err.message : 'Erro ao registrar evolução',
       );
@@ -136,6 +148,7 @@ export function EvolutionsSection({
           onSubmit={handleSubmit}
           className="flex flex-col gap-3 rounded-lg border border-accent bg-accent-soft/40 p-4"
         >
+          {draft.recovered && <DraftRecoveredAlert action="registre" />}
           {formError && <ErrorAlert message={formError} />}
           {SOAP_FIELDS.map((field) => (
             <label key={field.key} className="font-medium text-sm">

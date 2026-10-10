@@ -3,7 +3,7 @@ title: "Domínio: Pacientes e prontuário"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-10
 domain: pacientes-prontuario
 ---
 
@@ -34,6 +34,7 @@ requisitos, não detalhes.
 | PRO-RN-10 | Alergias aparecem em destaque no topo do prontuário | UI do prontuário |
 | PRO-RN-11 | Exportação LGPD do titular (JSON com o prontuário completo) só para Admins e Profissional com vínculo; o link "Exportar dados (LGPD)" some para quem não pode exportar | `src/app/api/patients/[id]/export/`, `.specs/STATE.md` AD-025 |
 | PRO-RN-12 | Todo texto clínico livre fica cifrado em repouso com `DATA_ENCRYPTION_KEY` (chave própria, separada do `AUTH_SECRET`): SOAP, anamnese, notas do paciente, da consulta, da lista de espera, da condição, da avaliação (inclusive pele periestomal e observação de complicações), da foto enviada pelo portal, do diagnóstico, da avaliação de resultado e do registro de intervenção. Fotos no bucket vão com `ServerSideEncryption` | [ADR-006](../../adr/006-chave-de-dados-clinicos.md), `src/lib/data-cipher.ts` |
+| PRO-RN-13 | SOAP ou anamnese cujo salvamento falha por sessão expirada (`401`) voltam ao formulário depois do novo login, com o aviso "Recuperamos o texto que não foi salvo…". O texto fica só no `sessionStorage` da aba, com o e-mail da conta: outra conta não o vê, e ele é apagado na primeira leitura (#207) | `src/lib/use-session-draft.ts` |
 
 ## Funcionalidades
 
