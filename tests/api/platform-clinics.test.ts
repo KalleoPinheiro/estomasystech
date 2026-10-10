@@ -173,6 +173,9 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     expect(emails.bodies).toHaveLength(0);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(json.data.admin.delivered).toBe(false);
+    expect(json.data.admin.inviteUrl).toMatch(
+      /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+    );
     const secret = new URL(json.data.admin.inviteUrl ?? '').searchParams.get(
       'token',
     );

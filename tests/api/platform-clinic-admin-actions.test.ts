@@ -381,6 +381,41 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
       expect(refused.json.error).toBe('Conta desativada');
     });
 
+    it('reset-link com canal: sai pela chave da clínica-alvo sem link, invalida o link anterior e, com não-2xx, devolve o link', async () => {
+      const clinicId = await freshClinic();
+      const admin = await seedAccount(clinicId);
+      vi.spyOn(console, 'info').mockImplementation(() => undefined);
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const first = await act(clinicId, admin.id, { action: 'reset-link' });
+
+      await saveEmailChannel(clinicId, 're_chave_alvo');
+      const fetchMock = stubProviderFetch(200);
+      const sent = await act(clinicId, admin.id, { action: 'reset-link' });
+      expect(sent.json.data).toMatchObject({
+        delivered: true,
+        inviteUrl: null,
+      });
+      expect(providerCalls(fetchMock)).toEqual([
+        expect.objectContaining({
+          auth: 'Bearer re_chave_alvo',
+          to: admin.email,
+        }),
+      ]);
+      const { hashAuthTokenSecret } = await import('@/domain/auth/auth-token');
+      const { authTokens } = await repositories(clinicId);
+      expect(
+        await authTokens.claimBySecretHash(
+          hashAuthTokenSecret(tokenOf(first.json.data.inviteUrl)),
+        ),
+      ).toBeNull();
+
+      stubProviderFetch(500);
+      const failed = await act(clinicId, admin.id, { action: 'reset-link' });
+      expect(failed.response.status).toBe(200);
+      expect(failed.json.data.delivered).toBe(false);
+      expect(failed.json.data.inviteUrl).toMatch(LINK);
+    });
+
     it('reset-link auditado: trilha da clínica com detail reset-link e, em produção, nem link nem segredo na trilha ou no log', async () => {
       const clinicId = await freshClinic();
       const admin = await seedAccount(clinicId);

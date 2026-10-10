@@ -218,6 +218,7 @@ describe('Feature: link manual quando o e-mail não sai (C2, #265)', () => {
       accounts: [PENDING],
       linkResult: { delivered: false, inviteUrl: LINK_URL },
     });
+    const writeText = stubClipboard();
     renderWithToast(<SettingsPage />);
 
     fireEvent.click(
@@ -229,6 +230,8 @@ describe('Feature: link manual quando o e-mail não sai (C2, #265)', () => {
       LINK_URL,
     );
     expect(posted).toEqual(['/api/accounts/acc-8/resend-invite']);
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar link' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(LINK_URL));
   });
 
   it('redefinição: Gerar link de redefinição pede confirmação, só então chama reset-link e mostra o link', async () => {

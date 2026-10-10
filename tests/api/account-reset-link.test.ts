@@ -6,6 +6,12 @@ import {
   CLINIC_B_ID,
   ensureTestClinics,
 } from '../support/clinics';
+import {
+  clearEmailChannels,
+  providerCalls,
+  saveEmailChannel,
+  stubProviderFetch,
+} from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -109,6 +115,35 @@ describe('Feature: POST /api/accounts/[id]/reset-link', () => {
     );
     expect(token?.purpose).toBe('reset');
     expect(token?.accountId).toBe(target.id);
+  });
+
+  it('emite reset pelo canal da clínica: canal que entrega sai pela chave dela sem link; não-2xx devolve o link', async () => {
+    const target = await seedAccount(CLINIC_A_ID);
+    const admin = nextAdmin();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await saveEmailChannel(CLINIC_A_ID, 're_chave_da_A');
+    try {
+      const fetchMock = stubProviderFetch(200);
+      const sent = await resetLink(target.id, admin);
+      expect(sent.response.status).toBe(200);
+      expect(sent.json.data).toEqual({ delivered: true, inviteUrl: null });
+      expect(providerCalls(fetchMock)).toEqual([
+        expect.objectContaining({
+          auth: 'Bearer re_chave_da_A',
+          to: target.email,
+          text: expect.stringMatching(/definir-senha\?token=/),
+        }),
+      ]);
+
+      stubProviderFetch(500);
+      const failed = await resetLink(target.id, admin);
+      expect(failed.response.status).toBe(200);
+      expect(failed.json.data.delivered).toBe(false);
+      expect(failed.json.data.inviteUrl).toMatch(LINK);
+    } finally {
+      vi.unstubAllGlobals();
+      await clearEmailChannels();
+    }
   });
 
   it('404 para conta de outra clínica e para id inexistente', async () => {
