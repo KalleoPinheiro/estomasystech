@@ -78,6 +78,7 @@ describe('Feature: Gateway de e-mail resolvido pelo escopo', () => {
     expect(await email.isEnabled()).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.resend.com/emails');
+    expect((fetchMock.mock.calls[0][1] as RequestInit).method).toBe('POST');
     expect(sentWith(fetchMock)).toEqual([
       {
         auth: 'Bearer re_chave_da_A',
@@ -128,15 +129,20 @@ describe('Feature: Gateway de e-mail resolvido pelo escopo', () => {
     const a2 = (await getRepositories(clinicScope(CLINIC_A_ID))).email;
 
     await Promise.all([a1.send(message), b1.send(message)]);
+    const concurrent = sentWith(fetchMock).map((call) => call.auth);
     await b1.send(message);
     await a2.send(message);
 
-    expect(sentWith(fetchMock).map((call) => call.auth)).toEqual([
+    // O par concorrente chega em qualquer ordem; cada um com a própria chave.
+    expect([...concurrent].sort()).toEqual([
       'Bearer re_chave_da_A',
       'Bearer re_chave_da_B',
-      'Bearer re_chave_da_B',
-      'Bearer re_chave_da_A',
     ]);
+    expect(
+      sentWith(fetchMock)
+        .slice(2)
+        .map((call) => call.auth),
+    ).toEqual(['Bearer re_chave_da_B', 'Bearer re_chave_da_A']);
   });
 
   it('não decifra: canal ilegível desativa o e-mail da clínica e loga só o id', async () => {
