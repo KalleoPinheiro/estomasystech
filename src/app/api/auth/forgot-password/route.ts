@@ -2,11 +2,12 @@ import { after, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { IssueAuthToken } from '@/application/auth/auth-token-flow';
 import { appUrlFromEnv } from '@/application/auth/send-invite';
+import type { UserAccount } from '@/domain/auth/user-account';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, ok } from '@/lib/api-response';
 import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
-import { systemScope } from '@/lib/auth/tenant-scope';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { logError } from '@/lib/log-error';
 
 /** Mesmo limite do login: a rota é um oráculo em potencial se puder ser martelada. */
@@ -52,25 +53,33 @@ export async function POST(request: NextRequest) {
 
 async function issueResetLink(email: string): Promise<void> {
   try {
-    // clinicId nulo: quem pede o reset não tem sessão, logo não há empresa de contexto.
-    const services = await getRepositories(systemScope());
+    // clinicId nulo: quem pede o reset não tem sessão, logo não há empresa
+    // de contexto — a busca da conta é cross-empresa.
+    const { userAccounts } = await getRepositories(systemScope());
     // MT-06/ADR-003 permite o mesmo e-mail em clínicas diferentes. Sem senha
     // pra desambiguar (diferente do login, issue #125), emite um link por
     // conta ativa correspondente: cada e-mail resolve a sua própria conta.
-    const accounts = (await services.userAccounts.findAllByEmail(email)).filter(
+    const accounts = (await userAccounts.findAllByEmail(email)).filter(
       (account) => account.isActive,
     );
-    const issueToken = new IssueAuthToken(services.authTokens, services.email);
-    await Promise.all(
-      accounts.map((account) =>
-        issueToken.execute({
-          account,
-          purpose: 'reset',
-          appUrl: appUrlFromEnv(),
-        }),
-      ),
-    );
+    await Promise.all(accounts.map(issueThroughAccountChannel));
   } catch (error) {
     logError('Reset de senha: falha ao emitir o link', error);
   }
+}
+
+/**
+ * Cada conta sai pelo canal da própria clínica; o super admin, pelo da
+ * plataforma (C2, #265). Clínica sem canal não envia nada, e a resposta
+ * neutra não muda.
+ */
+async function issueThroughAccountChannel(account: UserAccount): Promise<void> {
+  const { authTokens, email } = await getRepositories(
+    account.clinicId === null ? systemScope() : clinicScope(account.clinicId),
+  );
+  await new IssueAuthToken(authTokens, email).execute({
+    account,
+    purpose: 'reset',
+    appUrl: appUrlFromEnv(),
+  });
 }
