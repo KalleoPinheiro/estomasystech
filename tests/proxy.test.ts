@@ -259,12 +259,47 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       );
     });
 
-    it('Dada uma página sem cookie, Então redireciona para /login', async () => {
+    it('Dada uma página sem cookie, Então redireciona para /login com a rota em next, sem aviso de expiração (#207)', async () => {
       const proxy = await loadProxy();
 
       const response = await proxy(request('/agenda'));
 
       expect(response.status).toBe(307);
+      expect(response.headers.get('location')).toBe(
+        'http://localhost/login?next=%2Fagenda',
+      );
+    });
+
+    it('Dada uma página com cookie expirado, Então redireciona para /login com session_expired e a rota com query em next (#207)', async () => {
+      const proxy = await loadProxy();
+      const expirado = `vitta_session=${createSessionToken(SECRET, Date.now() - 1_000)}`;
+
+      const response = await proxy(
+        request('/pacientes/p-1?aba=evolucoes', expirado),
+      );
+
+      expect(response.status).toBe(307);
+      const location = new URL(response.headers.get('location') ?? '');
+      expect(location.pathname).toBe('/login');
+      expect(location.searchParams.get('error')).toBe('session_expired');
+      expect(location.searchParams.get('next')).toBe(
+        '/pacientes/p-1?aba=evolucoes',
+      );
+    });
+
+    it('Dada a raiz sem cookie, Então vai a /login sem next (destino padrão já é /)', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(request('/'));
+
+      expect(response.headers.get('location')).toBe('http://localhost/login');
+    });
+
+    it('Dada uma página com caminho que normaliza para outro host, Então o next é descartado (open redirect, #207)', async () => {
+      const proxy = await loadProxy();
+
+      const response = await proxy(request('/.//evil.example'));
+
       expect(response.headers.get('location')).toBe('http://localhost/login');
     });
   });
@@ -491,7 +526,9 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       );
 
       expect(page.status).toBe(307);
-      expect(page.headers.get('location')).toBe('http://localhost/login');
+      expect(page.headers.get('location')).toBe(
+        'http://localhost/login?next=%2Fplataforma%2Ftaxonomia',
+      );
     });
 
     it('Dada a rota antiga de importação, Quando chamar, Então o proxy decide pela família antes do roteamento', async () => {
@@ -514,7 +551,9 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
     it('Dado sem sessão, Quando abre a plataforma, Então sem sessão, /plataforma vai a /login e a API responde 401', async () => {
       const page = await (await loadProxy())(requestAs('GET', '/plataforma'));
       expect(page.status).toBe(307);
-      expect(page.headers.get('location')).toBe('http://localhost/login');
+      expect(page.headers.get('location')).toBe(
+        'http://localhost/login?next=%2Fplataforma',
+      );
 
       const api = await (await loadProxy())(
         requestAs('POST', '/api/platform/clinics/c-1/admins'),

@@ -212,6 +212,74 @@ describe('Feature: Página de login', () => {
     });
   });
 
+  describe('Cenário: volta ao lugar com ?next= (#207)', () => {
+    async function submitLogin() {
+      fireEvent.change(await screen.findByLabelText('Email'), {
+        target: { value: 'ana@clinica.com' },
+      });
+      fireEvent.change(screen.getByLabelText('Senha'), {
+        target: { value: 'senhaIndividual123' },
+      });
+      fireEvent.click(screen.getByText('Entrar'));
+    }
+
+    it('Dado next interno e sessão expirada, Quando entrar, Então mostra o aviso e volta à ficha', async () => {
+      searchParamsRef.current = new URLSearchParams(
+        'error=session_expired&next=%2Fpacientes%2Fp-1%3Faba%3Devolucoes',
+      );
+      mockLogin(jsonResponse(true, { ok: true }));
+
+      render(<LoginPage />);
+      expect(
+        await screen.findByText('Sua sessão expirou. Entre novamente.'),
+      ).toBeInTheDocument();
+      await submitLogin();
+
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledWith(
+          '/pacientes/p-1?aba=evolucoes',
+        );
+      });
+    });
+
+    it.each(['https://evil.example', '//evil.example', '/\\evil.example'])(
+      'Dado next externo %s, Quando entrar, Então ignora e vai a /',
+      async (next) => {
+        searchParamsRef.current = new URLSearchParams({ next });
+        mockLogin(jsonResponse(true, { ok: true }));
+
+        render(<LoginPage />);
+        await submitLogin();
+
+        await waitFor(() => {
+          expect(routerMock.push).toHaveBeenCalledWith('/');
+        });
+      },
+    );
+
+    it('Dado 401 de senha errada na própria tela de login, Então mostra o erro do servidor e não sai da tela', async () => {
+      window.history.pushState({}, '', '/login');
+      const fetchMock = mockLogin({
+        ...jsonResponse(false, null, 'Email ou senha incorretos'),
+        status: 401,
+      } as ReturnType<typeof jsonResponse>);
+
+      render(<LoginPage />);
+      await submitLogin();
+
+      expect(
+        await screen.findByText('Email ou senha incorretos'),
+      ).toBeInTheDocument();
+      // Se tivesse tratado como sessão expirada, a mensagem seria a de expiração.
+      expect(
+        screen.queryByText('Sua sessão expirou. Entre novamente.'),
+      ).not.toBeInTheDocument();
+      expect(routerMock.push).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalled();
+      window.history.pushState({}, '', '/');
+    });
+  });
+
   describe('Cenário: adoção do catálogo do design system', () => {
     it('Dado o formulário de senha, Então campos e submit vêm do Still Void', async () => {
       mockProviders({ password: true });
@@ -294,6 +362,27 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
       body: { pendingToken: 'mfa.p.s', code: '123456' },
     });
     expect(window.location.search).not.toContain('mfa.');
+  });
+
+  it('Dado next interno, Quando o código confere, Então volta ao next em vez de /plataforma (#207)', async () => {
+    searchParamsRef.current = new URLSearchParams(
+      'next=%2Fplataforma%2Ftaxonomia',
+    );
+    mockMfa({
+      '/api/auth/login': () =>
+        jsonResponse(true, { mfaRequired: true, pendingToken: 'mfa.p.s' }),
+      '/api/auth/mfa/verify': () => jsonResponse(true, { ok: true }),
+    });
+    await signIn();
+
+    fireEvent.change(await screen.findByLabelText('Código do autenticador'), {
+      target: { value: '123456' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verificar' }));
+
+    await waitFor(() =>
+      expect(routerMock.push).toHaveBeenCalledWith('/plataforma/taxonomia'),
+    );
   });
 
   it('Dado código errado, Quando verificar, Então mostra o erro e volta ao login pelo link', async () => {

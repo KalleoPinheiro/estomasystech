@@ -86,3 +86,18 @@ export function EmptyState({ message, icon, action }: EmptyStateProps) {
     </div>
   );
 }
+
+/**
+ * Texto que não foi salvo porque a sessão expirou, devolvido ao formulário
+ * depois do login (issue #207).
+ */
+export function DraftRecoveredAlert({ action }: { action: string }) {
+  return (
+    <Alert variant="info" className="mb-4" data-draft-recovered>
+      <AlertDescription>
+        Recuperamos o texto que não foi salvo quando sua sessão expirou. Revise
+        e {action} de novo.
+      </AlertDescription>
+    </Alert>
+  );
+}

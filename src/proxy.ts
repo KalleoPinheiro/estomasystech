@@ -12,9 +12,10 @@ import {
 import { clientIp } from '@/lib/auth/client-ip';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { getRequestSession } from '@/lib/auth/request-session';
-import type { Session } from '@/lib/auth/session';
+import { SESSION_COOKIE, type Session } from '@/lib/auth/session';
 import { isSessionRevoked } from '@/lib/auth/staff-revocation';
 import { isStaffRole } from '@/lib/auth/staff-roles';
+import { loginPath, SESSION_EXPIRED_ERROR } from '@/lib/login-redirect';
 
 /**
  * Camada 1 de autorização (borda). No Next.js 16 este arquivo se chama `proxy.ts`
@@ -59,11 +60,23 @@ function apiRateLimitKey(request: NextRequest): string {
   return `ip:${clientIp(request)}`;
 }
 
+/**
+ * Página sem sessão vai ao login com a rota em `next` (#207). Havia cookie de
+ * sessão (vencido, inválido ou revogado) → `error=session_expired`, para a
+ * tela dizer por que pediu a senha de novo; sem cookie é primeiro acesso.
+ */
 function unauthorized(request: NextRequest): NextResponse {
-  if (isApiPath(request.nextUrl.pathname)) {
+  const { pathname, search } = request.nextUrl;
+  if (isApiPath(pathname)) {
     return fail(UNAUTHENTICATED_MESSAGE, 401);
   }
-  return NextResponse.redirect(new URL('/login', request.url));
+  const destination = loginPath({
+    error: request.cookies.has(SESSION_COOKIE)
+      ? SESSION_EXPIRED_ERROR
+      : undefined,
+    next: `${pathname}${search}`,
+  });
+  return NextResponse.redirect(new URL(destination, request.url));
 }
 
 function forbidden(request: NextRequest, session: Session): NextResponse {

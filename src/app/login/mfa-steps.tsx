@@ -1,10 +1,11 @@
 'use client';
 
 import { Button, Input } from '@still-void/ui/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
+import { safeNextPath } from '@/lib/login-redirect';
 
 /**
  * Segunda etapa do login do super_admin (ADR-007, bloco B2). O token pendente
@@ -44,10 +45,13 @@ const verify = <T,>(body: Record<string, string>) =>
 const errorMessage = (err: unknown, fallback: string) =>
   err instanceof Error ? err.message : fallback;
 
+/** Volta ao `?next=` validado (#207); sem ele, à plataforma. */
 function useGoToPlatform() {
   const router = useRouter();
+  const destination =
+    safeNextPath(useSearchParams().get('next')) ?? PLATFORM_HOME;
   return () => {
-    router.push(PLATFORM_HOME);
+    router.push(destination);
     router.refresh();
   };
 }

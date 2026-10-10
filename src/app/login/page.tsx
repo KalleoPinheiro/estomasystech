@@ -7,6 +7,11 @@ import { Suspense, useState } from 'react';
 import { AuthCard } from '@/components/auth-card';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
+import {
+  SESSION_EXPIRED_ERROR,
+  SESSION_EXPIRED_MESSAGE,
+  safeNextPath,
+} from '@/lib/login-redirect';
 import { useApiQuery } from '@/lib/use-api-query';
 import {
   type LoginStep,
@@ -25,7 +30,7 @@ interface Providers {
 // `?error=` — texto arbitrário da URL dentro da marca é vetor de phishing por
 // texto refletido, mesmo sem XSS (React já escapa).
 const LOGIN_ERROR_MESSAGES: Record<string, string> = {
-  session_expired: 'Sua sessão expirou. Entre novamente.',
+  [SESSION_EXPIRED_ERROR]: SESSION_EXPIRED_MESSAGE,
 };
 const GENERIC_LOGIN_ERROR =
   'Não foi possível concluir a operação. Tente novamente.';
@@ -65,7 +70,10 @@ function LoginCard() {
       {redirectErrorMessage && <ErrorAlert message={redirectErrorMessage} />}
       {providers ? (
         providers.password ? (
-          <PasswordForm onStep={setStep} />
+          <PasswordForm
+            onStep={setStep}
+            destination={safeNextPath(searchParams.get('next')) ?? '/'}
+          />
         ) : (
           <ErrorAlert message="Autenticação não configurada no servidor." />
         )
@@ -100,7 +108,14 @@ function SecondFactor({
   return <RecoveryCodesStep codes={step.codes} />;
 }
 
-function PasswordForm({ onStep }: { onStep: (step: LoginStep) => void }) {
+function PasswordForm({
+  onStep,
+  destination,
+}: {
+  onStep: (step: LoginStep) => void;
+  /** `?next=` validado (só caminho interno, #207) ou `/`. */
+  destination: string;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -122,7 +137,7 @@ function PasswordForm({ onStep }: { onStep: (step: LoginStep) => void }) {
         onStep(step);
         return;
       }
-      router.push('/');
+      router.push(destination);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao entrar');
