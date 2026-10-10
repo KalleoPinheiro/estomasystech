@@ -28,10 +28,17 @@ Sem e-mail ninguém faz o primeiro acesso — por isso é a única integração 
 
 | Credencial | Obrigatória | Onde obter | Formato |
 | --- | --- | --- | --- |
-| `RESEND_API_KEY` | produção | painel Resend → API Keys | `re_…` |
-| `EMAIL_FROM` | produção | domínio verificado no Resend | `"VittaFlow <nao-responda@suaclinica.com>"` |
+| chave da clínica | por clínica, opcional | a clínica cria a conta no Resend e verifica o domínio dela | `re_…`, gravada cifrada em `clinic_channels` ([ADR-011](../../adr/011-canal-de-comunicacao-por-clinica.md)) |
+| `RESEND_API_KEY` | opcional | painel Resend da plataforma → API Keys | `re_…` — só contas sem clínica (Super Admin) |
+| `EMAIL_FROM` | com `RESEND_API_KEY` | domínio verificado no Resend | `"VittaFlow <nao-responda@suaclinica.com>"` |
 
-Rotação: troque a variável e reinicie o app — a chave é lida na construção do gateway.
+Qual chave sai: o e-mail de uma clínica sai **só** pela chave dela (`clinic_channels`, lida no primeiro
+envio do request); sem canal, não sai. O escopo de sistema usa `RESEND_API_KEY`/`EMAIL_FROM`.
+Transição até a C2 ([#265](https://github.com/KalleoPinheiro/vitta-flow/issues/265)): o job de lembretes
+e o "esqueci a senha" ainda montam o gateway no escopo de sistema e saem pela chave da plataforma.
+
+Rotação: a da plataforma, troque a variável e reinicie o app. A da clínica, recadastre-a (tela na C3,
+[#266](https://github.com/KalleoPinheiro/vitta-flow/issues/266)).
 
 ## Contrato
 
@@ -49,7 +56,9 @@ Timeout de 10 s. Qualquer status fora de `2xx` vira erro com os primeiros 300 ca
 
 | Situação | Comportamento | Visível para |
 | --- | --- | --- |
-| sem credenciais em produção | a construção do gateway lança erro explícito — o app não sobe | log de boot |
+| clínica sem canal | gateway nulo: nada sai, nem pela chave da plataforma | quem chamou (`delivered: false`) |
+| chave da clínica não decifra (chave de dados trocada sem `_PREVIOUS`) | gateway nulo e `logError` com o id da clínica, sem a chave | log do servidor |
+| sem `RESEND_API_KEY` em produção | canal da plataforma desativado; o app sobe | — |
 | sem credenciais fora de produção | `NullEmailGateway`: loga destinatário mascarado (`fu***@x.com`) e assunto; do corpo, só o link `/definir-senha` — nunca o texto (CWE-532). Com `NODE_ENV=production` nem o link sai | log do servidor |
 | API fora do ar / timeout / 4xx-5xx | a chamada lança; o bootstrap devolve `delivered: false` e `inviteUrl` | quem chamou a rota |
 | falha num lembrete (inclui e-mail recusado) | conta em `failed` no resumo da empresa, sem `reminder_log`; o lote segue e a próxima rodada tenta de novo | resposta do cron |

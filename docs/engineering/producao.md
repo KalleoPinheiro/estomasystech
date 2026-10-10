@@ -35,7 +35,7 @@ Nada abaixo foi decidido; o runbook indica onde cada resposta entra.
 | App | projeto Next.js na Vercel; região das funções próxima do banco |
 | Banco | Supabase Postgres 16. App usa o **pooler em modo transação** (porta `6543`) — funções serverless abrem muitas conexões curtas. Migrações usam a conexão **direta/sessão** (porta `5432`): o advisory lock das migrações não funciona pelo pooler de transação |
 | Fotos | **obrigatoriamente** bucket S3-compatível (`PHOTO_STORAGE=s3`): o disco das funções é efêmero, e a aplicação se recusa a montar o armazenamento local quando `VERCEL` está definido |
-| E-mail | Resend (obrigatório em produção) |
+| E-mail | Resend: chave de cada clínica (`clinic_channels`) e, opcional, a da plataforma (`RESEND_API_KEY`) — [ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md) |
 | Cron | Vercel Cron (`vercel.json`) chamando `GET /api/reminders/run` com `Authorization: Bearer $CRON_SECRET` |
 | Fuso | `TZ` é reservado na Vercel e as funções rodam em UTC: o app alinha o fuso do processo a `APP_TIMEZONE` na subida (`src/instrumentation.ts`) |
 

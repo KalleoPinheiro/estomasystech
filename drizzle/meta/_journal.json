@@ -330,6 +330,13 @@
       "when": 1790584329971,
       "tag": "0046_partners-email-per-clinic",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791595710100,
+      "tag": "0047_clinic-channels",
+      "breakpoints": true
     }
   ]
 }

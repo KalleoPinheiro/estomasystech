@@ -84,7 +84,9 @@ convite/reset (ver opções de canal abaixo).
 
 **Negativas / custos aceitos**
 
-- Precisa de um provedor de e-mail transacional novo (ex.: Resend) — hoje o
+- Precisa de um provedor de e-mail transacional novo (ex.: Resend) — desde o
+  [ADR-011](./011-canal-de-comunicacao-por-clinica.md) ele é da clínica, não
+  obrigatório da plataforma; texto original: hoje o
   projeto não tem nenhum (o único canal de notificação existente é WhatsApp,
   usado só pelos lembretes de paciente, e foi deliberadamente descartado como
   canal de convite/reset).

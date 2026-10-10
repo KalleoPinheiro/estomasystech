@@ -3,6 +3,7 @@ import {
   type EmailMessage,
   NullEmailGateway,
 } from '@/application/ports/email-gateway';
+import type { EmailProvider } from '@/domain/clinic/clinic-channel';
 
 export interface ResendConfig {
   apiKey: string;
@@ -18,9 +19,11 @@ const REQUEST_TIMEOUT_MS = 10_000;
  * Sem SDK: a chamada é um POST JSON, mesmo molde do `MetaWhatsAppGateway`.
  */
 export class ResendEmailGateway implements EmailGateway {
-  readonly enabled = true;
-
   constructor(private readonly config: ResendConfig) {}
+
+  async isEnabled(): Promise<boolean> {
+    return true;
+  }
 
   async send(message: EmailMessage): Promise<void> {
     const response = await fetch(RESEND_API_URL, {
@@ -54,21 +57,23 @@ export function resendConfigFromEnv(): ResendConfig | null {
 }
 
 /**
- * Fail-closed em produção: sem credenciais, convite e reset ficariam mudos e
- * ninguém conseguiria o primeiro acesso — então a falha é explícita na
- * construção, não um dry-run silencioso. Fora de produção o gateway nulo é o
- * caminho normal de dev/teste (mesma convenção do canal de WhatsApp).
+ * Gateway de cada provedor de e-mail, a partir da credencial da clínica
+ * (ADR-011). Um provedor novo entra aqui e em `EMAIL_PROVIDERS`, sem mexer no
+ * container.
  */
-export function buildEmailGateway(): EmailGateway {
+export const EMAIL_PROVIDER_GATEWAYS: Record<
+  EmailProvider,
+  (config: ResendConfig) => EmailGateway
+> = {
+  resend: (config) => new ResendEmailGateway(config),
+};
+
+/**
+ * Canal da **plataforma** (ADR-011): só as contas sem clínica (super admin)
+ * usam, e é opcional — sem `RESEND_API_KEY`/`EMAIL_FROM` o gateway é o nulo,
+ * também em produção. Nenhum e-mail de clínica sai por aqui.
+ */
+export function platformEmailGateway(): EmailGateway {
   const config = resendConfigFromEnv();
-  if (config) {
-    return new ResendEmailGateway(config);
-  }
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'E-mail transacional não configurado: defina RESEND_API_KEY e EMAIL_FROM ' +
-        '(convite e reset de senha dependem deles)',
-    );
-  }
-  return new NullEmailGateway();
+  return config ? new ResendEmailGateway(config) : new NullEmailGateway();
 }

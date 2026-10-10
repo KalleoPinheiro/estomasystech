@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NullEmailGateway } from '@/application/ports/email-gateway';
+import {
+  LazyEmailGateway,
+  NullEmailGateway,
+} from '@/application/ports/email-gateway';
 
 /**
  * AUTH-01: existe uma porta de e-mail transacional com implementação nula/dry-run,
@@ -11,8 +14,8 @@ describe('Feature: Porta de e-mail transacional (gateway nulo)', () => {
     vi.unstubAllEnvs();
   });
 
-  it('Dado gateway nulo, Quando ler enabled, Então é false (canal desativado)', () => {
-    expect(new NullEmailGateway().enabled).toBe(false);
+  it('Dado gateway nulo, Quando perguntar se está habilitado, Então é false (canal desativado)', async () => {
+    expect(await new NullEmailGateway().isEnabled()).toBe(false);
   });
 
   it('Dado gateway nulo, Quando send, Então resolve sem lançar', async () => {
@@ -82,5 +85,22 @@ describe('Feature: Porta de e-mail transacional (gateway nulo)', () => {
     expect(logged).toBe(
       '[e-mail desativado] Para pe***@clinica.com — Defina sua senha',
     );
+  });
+
+  describe('Cenário: gateway preguiçoso (ADR-011)', () => {
+    it('Dado que a resolução falha uma vez, Quando chamar de novo, Então tenta carregar outra vez e usa o gateway resolvido', async () => {
+      const resolved = new NullEmailGateway();
+      const load = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('banco indisponível'))
+        .mockResolvedValue(resolved);
+      const lazy = new LazyEmailGateway(load);
+
+      await expect(lazy.isEnabled()).rejects.toThrow('banco indisponível');
+      expect(await lazy.isEnabled()).toBe(false);
+      expect(await lazy.isEnabled()).toBe(false);
+
+      expect(load).toHaveBeenCalledTimes(2);
+    });
   });
 });

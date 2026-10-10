@@ -9,8 +9,12 @@ export interface EmailMessage {
 }
 
 export interface EmailGateway {
-  /** false = canal desativado (sem credenciais) — chamador trata como "pulado". */
-  readonly enabled: boolean;
+  /**
+   * false = canal desativado (sem credenciais) — chamador trata como "pulado".
+   * Assíncrono porque o canal da clínica só é lido no banco no primeiro uso
+   * (ADR-011, `LazyEmailGateway`).
+   */
+  isEnabled(): Promise<boolean>;
   /** Envia a mensagem. Lança em falha de API. */
   send(message: EmailMessage): Promise<void>;
 }
@@ -26,7 +30,9 @@ const AUTH_LINK = /https?:\/\/\S+\/definir-senha\?token=[\w-]+/;
  * E2E (`e2e/support/invite-log.ts`) conseguirem definir senha sem Resend.
  */
 export class NullEmailGateway implements EmailGateway {
-  readonly enabled = false;
+  async isEnabled(): Promise<boolean> {
+    return false;
+  }
 
   async send(message: EmailMessage): Promise<void> {
     const header = `[e-mail desativado] Para ${maskEmail(message.to)} — ${message.subject}`;
@@ -37,5 +43,33 @@ export class NullEmailGateway implements EmailGateway {
     console.info(
       link ? `${header}\nLink (só fora de produção): ${link}` : header,
     );
+  }
+}
+
+/**
+ * Gateway montado só no primeiro uso: o da clínica exige ler o canal dela no
+ * banco, e a maioria dos requests nunca envia e-mail (mesmo molde do
+ * `LazyCalendarGateway`). A resolução é memorizada; se falhar, a próxima
+ * chamada tenta de novo.
+ */
+export class LazyEmailGateway implements EmailGateway {
+  private pending: Promise<EmailGateway> | null = null;
+
+  constructor(private readonly load: () => Promise<EmailGateway>) {}
+
+  resolve(): Promise<EmailGateway> {
+    this.pending ??= this.load().catch((error: unknown) => {
+      this.pending = null;
+      throw error;
+    });
+    return this.pending;
+  }
+
+  async isEnabled(): Promise<boolean> {
+    return (await this.resolve()).isEnabled();
+  }
+
+  async send(message: EmailMessage): Promise<void> {
+    return (await this.resolve()).send(message);
   }
 }

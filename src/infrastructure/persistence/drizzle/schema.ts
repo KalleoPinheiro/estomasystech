@@ -1367,3 +1367,51 @@ export const rateLimitWindows = pgTable(
   },
   (table) => [index('idx_rate_limit_windows_reset_at').on(table.resetAt)],
 );
+
+/**
+ * Canal de comunicação de uma clínica (C1, ADR-011): a credencial com que os
+ * e-mails dela saem. Sem linha, a clínica não envia — nunca cai na conta da
+ * plataforma. A chave fica cifrada com a chave de dados (ADR-006) e nunca
+ * volta por API; `secret_last4` é o que a tela mostra.
+ */
+export const clinicChannels = pgTable(
+  'clinic_channels',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    channel: text('channel').notNull(),
+    provider: text('provider').notNull(),
+    sender: text('sender').notNull(),
+    encryptedSecret: text('encrypted_secret').notNull(),
+    secretLast4: text('secret_last4').notNull(),
+    lastStatus: text('last_status'),
+    lastStatusAt: timestamp('last_status_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    lastError: text('last_error'),
+    updatedAt: timestamp('updated_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+    updatedBy: text('updated_by').notNull(),
+  },
+  (table) => [
+    // Um canal de cada tipo por clínica; o upsert do repositório usa este alvo.
+    uniqueIndex('uq_clinic_channels_clinic_channel').on(
+      table.clinicId,
+      table.channel,
+    ),
+    check('clinic_channels_channel_check', sql`${table.channel} IN ('email')`),
+    check(
+      'clinic_channels_provider_check',
+      sql`${table.provider} IN ('resend')`,
+    ),
+    check(
+      'clinic_channels_last_status_check',
+      sql`${table.lastStatus} IS NULL OR ${table.lastStatus} IN ('ok', 'failed')`,
+    ),
+  ],
+);

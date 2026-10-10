@@ -13,6 +13,7 @@
 - Created only by Super Admin, through the platform (`/plataforma`, `POST /api/platform/clinics`) — no self-service onboarding yet (Phase 3 of ADR-001).
 - **Registration** (cadastro): name, CNPJ (unique across Clinics, stored as `AA.AAA.AAA/AAAA-DD`), **contact phone/WhatsApp** and **contact e-mail** — how the platform reaches the Clinic — are required at creation; technical lead (name + registry), address and city are optional. A Clinic missing any of the four required fields is shown as **cadastro incompleto** and cannot get an Admin de Empresa invited (the go-live `legacy-clinic` starts that way).
 - **Clínica suspensa** (status `suspended`, the opposite of `active`): set and lifted only by Super Admin. While suspended, no account of the Clinic (staff, patient, partner) can log in, existing sessions are revoked within 60 s, and reminders stop; no data is deleted. Reactivating lets accounts log in again (with a new login) and reminders resume on the next run.
+- **Canal de comunicação** (`ClinicChannel`, table `clinic_channels`): the credential a Clinic's e-mails are sent with — today one per Clinic, `channel = 'email'`, provider Resend. The Clinic owns the provider account and its cost; the key is stored encrypted and never shown back (only its last 4 characters). A Clinic without a channel sends no e-mail: nothing falls back to the platform's own key, which serves only accounts without a Clinic ([ADR-011](./docs/adr/011-canal-de-comunicacao-por-clinica.md)).
 
 **Patient** (paciente)
 
@@ -308,3 +309,4 @@ See `src/` structure:
 - [ADR-007: Super Admin é o operador da plataforma](./docs/adr/007-super-admin-operador-da-plataforma.md) — um único super_admin, família `platform`, sem acesso a dado de clínica; emenda o ADR-003.
 - [ADR-008: Segundo fator do Super Admin](./docs/adr/008-segundo-fator-do-super-admin.md) — TOTP obrigatório, login em duas etapas, códigos de recuperação que levam ao recadastro.
 - [ADR-009: Recuperação de emergência do Super Admin](./docs/adr/009-recuperacao-de-emergencia-do-super-admin.md) — script no servidor em vez de SQL à mão; sessão de sistema conferida pelo papel; emenda o ADR-004 e o ADR-005.
+- [ADR-011: Canal de comunicação por clínica](./docs/adr/011-canal-de-comunicacao-por-clinica.md) — e-mail de cada clínica pela chave dela, sem fallback; chave da plataforma opcional; emenda o ADR-004.

@@ -107,7 +107,7 @@ npm run dev                   # http://localhost:3000
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |
 | `APP_URL` | sim em produção | links de convite/reset, redirect do OAuth, link do recall | — |
 | `VITTA_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
-| `RESEND_API_KEY` / `EMAIL_FROM` | sim em produção | convite e reset de senha | [resend.md](integrations/resend.md) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | não | e-mail **da plataforma** (contas sem clínica: bootstrap e reset do Super Admin); cada clínica usa a chave que cadastra ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | [resend.md](integrations/resend.md) |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | sync de agenda via OAuth (nunca login) | [google-calendar.md](integrations/google-calendar.md) |

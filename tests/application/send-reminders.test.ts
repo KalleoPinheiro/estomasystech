@@ -21,7 +21,9 @@ import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memor
 import { InMemoryReminderLogRepository } from '@/infrastructure/persistence/in-memory/in-memory-reminder-log-repository';
 
 class FakeEmailGateway implements EmailGateway {
-  readonly enabled = true;
+  async isEnabled(): Promise<boolean> {
+    return true;
+  }
   readonly sent: EmailMessage[] = [];
   failFor: string | null = null;
 
