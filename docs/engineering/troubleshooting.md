@@ -3,7 +3,7 @@ title: "Troubleshooting"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-28
+last_reviewed: 2026-10-11
 ---
 
 
@@ -19,7 +19,7 @@ algo que não está aqui? Adicione a linha no mesmo PR.
 | `503` em toda rota | sem `AUTH_SECRET` nem `VITTA_ALLOW_OPEN_MODE` | defina `AUTH_SECRET`, ou `VITTA_ALLOW_OPEN_MODE=true` fora de produção |
 | bootstrap responde `403` | já existe conta, ou `x-bootstrap-token` ≠ `VITTA_BOOTSTRAP_TOKEN` | instalação com contas: use "esqueci minha senha" |
 | convite/reset não chega | fora de produção sem `RESEND_API_KEY`/`EMAIL_FROM` o gateway é dry-run | o link está no log: `[e-mail desativado] Para fu***@x.com — …` (destinatário mascarado; o link só sai fora de produção) |
-| app não sobe em produção citando `RESEND_API_KEY` | falha proposital na construção do gateway | defina `RESEND_API_KEY` e `EMAIL_FROM` |
+| convite do bootstrap não chega em produção | sem `RESEND_API_KEY`/`EMAIL_FROM` o canal da plataforma fica desativado ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | use o `inviteUrl` da resposta do `POST /api/auth/bootstrap`, ou defina as duas e reinicie |
 
 ## Ambiente e build
 

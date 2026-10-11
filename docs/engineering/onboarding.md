@@ -3,7 +3,7 @@ title: "Onboarding técnico e setup"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-09
+last_reviewed: 2026-10-11
 related:
   - .env.example
   - docs/engineering/integrations/README.md
@@ -12,9 +12,11 @@ related:
 
 # Onboarding técnico e setup
 
-> **TL;DR (5 min):** `cp .env.example .env` → preencha `AUTH_SECRET`, `VITTA_BOOTSTRAP_TOKEN`,
-> `RESEND_API_KEY`, `EMAIL_FROM` → `docker compose up -d --build` → `POST /api/auth/bootstrap`
-> → abra o link de convite. Travou? [Troubleshooting](troubleshooting.md).
+> **TL;DR (5 min):** `cp .env.example .env` → preencha `POSTGRES_PASSWORD`, `AUTH_SECRET`,
+> `DATA_ENCRYPTION_KEY`, `VITTA_BOOTSTRAP_TOKEN` → `docker compose up -d --build` → `POST /api/auth/bootstrap` → abra o
+> link de convite (vem no `inviteUrl` da resposta; por e-mail só com `RESEND_API_KEY`/`EMAIL_FROM`,
+> opcionais — [ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)). Travou?
+> [Troubleshooting](troubleshooting.md).
 
 | Preciso de… | Vá para |
 | --- | --- |
@@ -96,7 +98,9 @@ npm run dev                   # http://localhost:3000
 ## 4. Variáveis de ambiente
 
 > **Única tabela do repositório.** `README.md` e `AGENTS.md` linkam aqui; `.env.example` traz os
-> mesmos nomes com comentários. Mudou uma variável? Atualize os dois no mesmo PR.
+> mesmos nomes com comentários. Mudou uma variável? Atualize os dois no mesmo PR —
+> `tests/docs/env-docs.test.ts` compara as variáveis que `src/` lê com esta tabela e com o
+> `.env.example`.
 
 | Variável | Obrigatória | Para | Detalhe |
 | --- | --- | --- | --- |
@@ -112,7 +116,7 @@ npm run dev                   # http://localhost:3000
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | sync de agenda via OAuth (nunca login) | [google-calendar.md](integrations/google-calendar.md) |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_CALENDAR_ID` | não | sync via service account (alternativa) | idem |
-| `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | não | lembretes por WhatsApp; sem elas, dry-run | [whatsapp-meta.md](integrations/whatsapp-meta.md) |
+| `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | não | opt-in futuro da Meta Cloud API (RM-14); os lembretes saem por e-mail e o WhatsApp de hoje é o botão `wa.me`, sem credencial | [whatsapp-meta.md](integrations/whatsapp-meta.md) |
 | `CRON_SECRET` | sim para os lembretes | header `x-cron-secret` de `POST /api/reminders/run` (ou `Authorization: Bearer` do Vercel Cron em `GET`); sem ele, 503 | [cron.md](integrations/cron.md) |
 | `PHOTO_STORAGE` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` / `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE` / `S3_SSE` | não (sim com várias réplicas e na Vercel) | fotos em bucket S3-compatível | [s3-storage.md](integrations/s3-storage.md) |
 | `UPLOADS_DIR` | não | diretório das fotos no disco local | padrão `./uploads`; no compose, `/app/uploads` (volume `uploads`) |
@@ -121,7 +125,10 @@ npm run dev                   # http://localhost:3000
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | não | tuning do pool Postgres | — |
 | `VITTA_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
 | `VITTA_ALLOW_OPEN_MODE` | só dev | roda sem login | ignorada com `NODE_ENV=production` |
+| `POSTGRES_PORT` / `APP_PORT` | não | portas publicadas pelo compose no host | padrão `5432` (só loopback) e `3000` |
 | `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
+| `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |
+| `NEXT_DIST_DIR` / `VITTA_DB_DRIVER` / `VITTA_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: diretório de build do servidor E2E em modo aberto, banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
 
 ## 5. Testes
 

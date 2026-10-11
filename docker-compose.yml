@@ -37,11 +37,10 @@ services:
       # Chaves anteriores (só leitura) durante a rotação — ver docs/engineering/producao.md.
       DATA_ENCRYPTION_KEY_PREVIOUS: ${DATA_ENCRYPTION_KEY_PREVIOUS:-}
       APP_URL: ${APP_URL:-http://localhost:3000}
-      # Convite e reset de senha (ADR-004). A imagem roda com NODE_ENV=production,
-      # onde a ausência destas duas derruba a inicialização de propósito — sem
-      # canal de e-mail ninguém consegue o primeiro acesso.
-      RESEND_API_KEY: ${RESEND_API_KEY:?defina RESEND_API_KEY (convite e reset de senha dependem dele)}
-      EMAIL_FROM: ${EMAIL_FROM:?defina EMAIL_FROM (remetente verificado no provedor)}
+      # E-mail da plataforma (opcional, ADR-011): só contas sem clínica. Sem elas o
+      # canal da plataforma fica desativado e o bootstrap devolve o link em inviteUrl.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
       # Libera POST /api/auth/bootstrap enquanto a instalação não tem nenhuma conta.
       VITTA_BOOTSTRAP_TOKEN: ${VITTA_BOOTSTRAP_TOKEN:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

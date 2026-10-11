@@ -165,7 +165,9 @@ usar `provider`).
 
 1. Configure todas as variáveis obrigatórias (`.env.example`), incluindo `VITTA_BOOTSTRAP_TOKEN`.
 2. `curl -sX POST "$APP_URL/api/auth/bootstrap" -H "Content-Type: application/json" -H "x-bootstrap-token: $VITTA_BOOTSTRAP_TOKEN" -d '{"email":"responsavel@clinica.com.br"}'` — cria o Super Admin e envia o convite.
-3. Defina a senha pelo link do e-mail e entre.
+3. Defina a senha pelo link do convite e entre. Com `RESEND_API_KEY`/`EMAIL_FROM` (opcionais,
+   [ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) ele chega por e-mail; sem elas, ou se o
+   envio falhar, vem no campo `inviteUrl` da resposta do passo 2.
 4. Remova `VITTA_BOOTSTRAP_TOKEN` do ambiente e refaça o deploy.
 5. Em */configuracoes*: dados da clínica (CNPJ, responsável técnico), grade de horários, profissionais, contas da equipe.
 6. Contas de portal: crie a partir do paciente/parceiro já cadastrado (o vínculo é obrigatório).
