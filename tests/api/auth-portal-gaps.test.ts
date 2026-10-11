@@ -223,6 +223,25 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
           priceCents: 10000,
         }),
       );
+      // Consentimento do paciente para o parceiro (#292): sem ele, só o status.
+      const { getRepositories } = await import('@/infrastructure/container');
+      const { PartnerShareConsent } = await import(
+        '@/domain/consent/partner-share-consent'
+      );
+      const { PARTNER_SHARE_CONSENT } = await import(
+        '@/lib/partner-share-consent-text'
+      );
+      const { partnerShareConsents } = await getRepositories(
+        clinicScope('legacy-clinic'),
+      );
+      await partnerShareConsents.save(
+        PartnerShareConsent.accept({
+          patientId: referredPatientId,
+          partnerId,
+          consentText: PARTNER_SHARE_CONSENT.text,
+          textVersion: PARTNER_SHARE_CONSENT.version,
+        }),
+      );
 
       await linkAllPortalAccounts();
       const response = await partnerPortalRoute.GET(

@@ -1,7 +1,13 @@
+import type { ClinicalCondition } from '@/domain/clinical/clinical-condition';
 import type {
   ClinicalConditionRepository,
   ConditionAssessmentRepository,
 } from '@/domain/clinical/clinical-repositories';
+import type { ConditionAssessment } from '@/domain/clinical/condition-assessment';
+import {
+  PartnerShareConsent,
+  type PartnerShareConsentRepository,
+} from '@/domain/consent/partner-share-consent';
 import type { Partner } from '@/domain/partner/partner';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { Patient } from '@/domain/patient/patient';
@@ -25,9 +31,18 @@ function groupBy<T>(items: T[], keyOf: (item: T) => string): Map<string, T[]> {
   return groups;
 }
 
+/** Mesmo limite de histórico do portal do paciente (#292). */
+export const PARTNER_HISTORY_MONTHS = 24;
+
 export interface ReferredPatientData {
   patient: Patient;
+  /** Consentimento ativo do paciente para este parceiro (#292). */
+  sharing: boolean;
+  /** Teve consulta realizada na janela — o que o parceiro vê sem consentimento. */
+  attended: boolean;
+  /** Vazio sem consentimento. */
   appointments: Appointment[];
+  /** Vazio sem consentimento. */
   conditions: ConditionWithAssessments[];
 }
 
@@ -36,9 +51,47 @@ export interface PartnerPortalData {
   referredPatients: ReferredPatientData[];
 }
 
+export interface PartnerShareConsentPolicy {
+  repository: PartnerShareConsentRepository;
+  /** Texto vigente: aceite de outra versão não vale. */
+  consentText: string;
+}
+
+function historyCutoff(now: Date): Date {
+  const cutoff = new Date(now);
+  cutoff.setMonth(cutoff.getMonth() - PARTNER_HISTORY_MONTHS);
+  return cutoff;
+}
+
+/**
+ * Condição entra se foi aberta na janela ou tem avaliação na janela; a
+ * avaliação, só se registrada na janela.
+ */
+function conditionsInWindow(
+  conditions: ClinicalCondition[],
+  assessmentsByCondition: Map<string, ConditionAssessment[]>,
+  cutoff: Date,
+): ConditionWithAssessments[] {
+  const since = cutoff.getTime();
+  return conditions
+    .map((condition) => ({
+      condition,
+      assessments: (assessmentsByCondition.get(condition.id) ?? []).filter(
+        (assessment) => assessment.createdAt.getTime() >= since,
+      ),
+    }))
+    .filter(
+      ({ condition, assessments }) =>
+        condition.createdAt.getTime() >= since || assessments.length > 0,
+    );
+}
+
 /**
  * Dados do portal do médico parceiro — apenas pacientes indicados por ele.
- * Sem dados financeiros e sem anamnese: o parceiro acompanha a evolução clínica da indicação.
+ * Sem dados financeiros e sem anamnese. Consultas, condições e avaliações só
+ * com consentimento ativo do paciente para este parceiro e só dos últimos 24
+ * meses; sem consentimento, o parceiro vê apenas se o paciente foi atendido
+ * (#292, decisão de @KalleoPinheiro na #216).
  */
 export class GetPartnerPortalData {
   constructor(
@@ -47,6 +100,8 @@ export class GetPartnerPortalData {
     private readonly appointments: AppointmentRepository,
     private readonly conditions: ClinicalConditionRepository,
     private readonly assessments: ConditionAssessmentRepository,
+    private readonly consents: PartnerShareConsentPolicy,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(input: { partnerId: string }): Promise<PartnerPortalData> {
@@ -56,12 +111,19 @@ export class GetPartnerPortalData {
     }
 
     const referred = await this.patients.findByReferrer(partner.id);
-    const patientIds = referred.map((p) => p.id);
+    const cutoff = historyCutoff(this.now());
+    const sharingIds = await this.sharingPatientIds(
+      partner.id,
+      referred.map((p) => p.id),
+    );
 
-    // Três queries em lote no total, independentemente do nº de pacientes (sem N+1).
+    // Janela aplicada no banco; condições e avaliações só de quem consentiu.
     const [allAppointments, allConditions] = await Promise.all([
-      this.appointments.findByPatientIds(patientIds),
-      this.conditions.findByPatientIds(patientIds),
+      this.appointments.findByPatientIds(
+        referred.map((p) => p.id),
+        { endsAfter: cutoff },
+      ),
+      this.conditions.findByPatientIds([...sharingIds]),
     ]);
     const allAssessments = await this.assessments.findByConditionIds(
       allConditions.map((c) => c.id),
@@ -74,17 +136,45 @@ export class GetPartnerPortalData {
       (a) => a.conditionId,
     );
 
-    const referredPatients = referred.map((patient) => ({
-      patient,
-      appointments: appointmentsByPatient.get(patient.id) ?? [],
-      conditions: (conditionsByPatient.get(patient.id) ?? []).map(
-        (condition) => ({
-          condition,
-          assessments: assessmentsByCondition.get(condition.id) ?? [],
-        }),
-      ),
-    }));
+    const referredPatients = referred.map((patient) => {
+      const appointments = appointmentsByPatient.get(patient.id) ?? [];
+      const sharing = sharingIds.has(patient.id);
+      return {
+        patient,
+        sharing,
+        attended: appointments.some((a) => a.status === 'completed'),
+        appointments: sharing ? appointments : [],
+        conditions: sharing
+          ? conditionsInWindow(
+              conditionsByPatient.get(patient.id) ?? [],
+              assessmentsByCondition,
+              cutoff,
+            )
+          : [],
+      };
+    });
 
     return { partner, referredPatients };
+  }
+
+  private async sharingPatientIds(
+    partnerId: string,
+    patientIds: string[],
+  ): Promise<Set<string>> {
+    const records = await this.consents.repository.findByPartnerAndPatientIds(
+      partnerId,
+      patientIds,
+    );
+    const byPatient = groupBy(records, (r) => r.patientId);
+    return new Set(
+      patientIds.filter(
+        (id) =>
+          PartnerShareConsent.resolveStatus(
+            byPatient.get(id) ?? [],
+            partnerId,
+            this.consents.consentText,
+          ).active,
+      ),
+    );
   }
 }

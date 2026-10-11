@@ -14,6 +14,7 @@ import {
   InMemoryClinicalConditionRepository,
   InMemoryConditionAssessmentRepository,
   InMemoryConditionPhotoRepository,
+  InMemoryPartnerShareConsentRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
@@ -137,6 +138,10 @@ describe('Feature: Lacunas de cobertura — dados dos portais (paciente e parcei
           appointmentRepo,
           conditionRepo,
           assessmentRepo,
+          {
+            repository: new InMemoryPartnerShareConsentRepository(),
+            consentText: 'texto',
+          },
         ).execute({
           partnerId: await portalPartnerId(partnerRepo, 'dr.carlos@x.com'),
         }),
@@ -164,6 +169,10 @@ describe('Feature: Lacunas de cobertura — dados dos portais (paciente e parcei
         appointmentRepo,
         conditionRepo,
         assessmentRepo,
+        {
+          repository: new InMemoryPartnerShareConsentRepository(),
+          consentText: 'texto',
+        },
       ).execute({
         partnerId: await portalPartnerId(partnerRepo, 'dr.carlos@x.com'),
       });

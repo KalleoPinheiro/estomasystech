@@ -10,6 +10,7 @@ import { CreatePatient } from '@/application/patients/create-patient';
 import { UpdatePatient } from '@/application/patients/update-patient';
 import { GetPartnerPortalData } from '@/application/portal/get-partner-portal-data';
 import { GetPatientPortalData } from '@/application/portal/get-patient-portal-data';
+import { PartnerShareConsent } from '@/domain/consent/partner-share-consent';
 import {
   ConflictError,
   NotFoundError,
@@ -19,6 +20,7 @@ import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-m
 import {
   InMemoryClinicalConditionRepository,
   InMemoryConditionAssessmentRepository,
+  InMemoryPartnerShareConsentRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
@@ -34,8 +36,11 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
   let conditionRepo: InMemoryClinicalConditionRepository;
   let assessmentRepo: InMemoryConditionAssessmentRepository;
   let followUpRepo: InMemoryFollowUpRepository;
+  let consentRepo: InMemoryPartnerShareConsentRepository;
+  const SHARE_TEXT = 'texto de compartilhamento';
 
   beforeEach(() => {
+    consentRepo = new InMemoryPartnerShareConsentRepository();
     patientRepo = new InMemoryPatientRepository();
     partnerRepo = new InMemoryPartnerRepository();
     appointmentRepo = new InMemoryAppointmentRepository();
@@ -242,6 +247,14 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
         conditionId: condition.id,
         skinCondition: 'Íntegra',
       });
+      await consentRepo.save(
+        PartnerShareConsent.accept({
+          patientId: indicada.id,
+          partnerId: carlos.id,
+          consentText: SHARE_TEXT,
+          textVersion: 'v-test',
+        }),
+      );
 
       const data = await new GetPartnerPortalData(
         partnerRepo,
@@ -249,6 +262,7 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
         appointmentRepo,
         conditionRepo,
         assessmentRepo,
+        { repository: consentRepo, consentText: SHARE_TEXT },
       ).execute({
         partnerId: await portalPartnerId(partnerRepo, 'dr.carlos@x.com'),
       });
@@ -270,6 +284,7 @@ describe('Feature: RBAC — parceria, indicação e portais', () => {
           appointmentRepo,
           conditionRepo,
           assessmentRepo,
+          { repository: consentRepo, consentText: SHARE_TEXT },
         ).execute({
           partnerId: await portalPartnerId(partnerRepo, 'ghost@x.com'),
         }),
