@@ -150,6 +150,7 @@ CI roda:
 ```bash
 npm run build && npx playwright test -c playwright.prod.config.ts   # E2E contra `next start`
 docker compose build && bash scripts/docker-smoke.sh                # imagem + smoke do container
+bash scripts/backup-smoke.sh                                         # backup cifrado + restore (precisa de `age`)
 ```
 
 O E2E de produção cobre login, agenda, prontuário e portal com a CSP estrita (sem
@@ -157,7 +158,8 @@ O E2E de produção cobre login, agenda, prontuário e portal com a CSP estrita 
 (`e2e/csp-producao.spec.ts`). Módulo que chega ao bundle do cliente não pode importar `node:*`:
 o polyfill do Node usa `Function(...)` e a CSP de produção bloqueia. O smoke sobe o
 `docker-compose.yml`, espera o healthcheck, confere `/api/auth/providers` e que o usuário
-`nextjs` grava no volume `uploads` e o arquivo sobrevive à recriação do container.
+`nextjs` grava no volume `uploads` e o arquivo sobrevive à recriação do container. O smoke de
+backup faz o ciclo backup → apagar tudo → restore do [runbook](producao.md) § 5.
 
 **Build:** `npm run build` fixa o heap em 4 GB (`--max-old-space-size=4096`) porque o pico é
 ~2,5 GB; em máquina de ~8 GB o heap padrão do V8 morre com `Ineffective mark-compacts`. Não remova.
