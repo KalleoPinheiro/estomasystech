@@ -270,6 +270,55 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     expect(clearedBody.data?.info.contactPhone).toBe('11 95555-6666');
   });
 
+  it('Dado cadastro completo, Quando o Admin de Empresa limpar o e-mail de contato com texto vazio, Então o e-mail fica nulo e a plataforma vê o cadastro incompleto', async () => {
+    await ensureTestClinics();
+    const route = await import('@/app/api/settings/clinic-info/route');
+    const detail = await import('@/app/api/platform/clinics/[id]/route');
+    const put = (body: unknown) =>
+      route.PUT(
+        jsonRequest(
+          '/api/settings/clinic-info',
+          'PUT',
+          body,
+          adminCookieHeader(CLINIC_B_ID),
+        ),
+      );
+    const registrationComplete = async () => {
+      const response = await detail.GET(
+        jsonRequest(
+          `/api/platform/clinics/${CLINIC_B_ID}`,
+          'GET',
+          undefined,
+          cookieHeaderFor('super_admin', 'dono@vitta.app', null),
+        ),
+        { params: Promise.resolve({ id: CLINIC_B_ID }) },
+      );
+      const body = (await response.json()) as Envelope<{
+        registrationComplete: boolean;
+      }>;
+      expect(response.status).toBe(200);
+      return body.data?.registrationComplete;
+    };
+
+    const filled = await put({
+      cnpj: '33.444.555/0001-66',
+      contactPhone: '11 94444-5555',
+      contactEmail: 'contato@clinicab.com',
+    });
+    expect(filled.status).toBe(200);
+    expect(await registrationComplete()).toBe(true);
+
+    const cleared = await put({ contactEmail: '' });
+    const clearedBody = (await cleared.json()) as Envelope<{
+      info: ClinicRegistrationDto;
+    }>;
+
+    expect(cleared.status).toBe(200);
+    expect(clearedBody.data?.info.contactEmail).toBeNull();
+    expect(clearedBody.data?.info.contactPhone).toBe('11 94444-5555');
+    expect(await registrationComplete()).toBe(false);
+  });
+
   it('Dado CNPJ de outra clínica, Quando o Admin de Empresa salvar, Então 400 e o CNPJ não muda', async () => {
     await ensureTestClinics();
     const route = await import('@/app/api/settings/clinic-info/route');

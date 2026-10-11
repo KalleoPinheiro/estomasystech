@@ -129,6 +129,7 @@ Proof: `tests/api/mfa-login.test.ts -t "confirmação com código errado"`
 
 **C23** - Confirmar revoga sessões e tokens pendentes anteriores da conta (`session_version + 1`)
 Proof: `tests/api/mfa-login.test.ts -t "confirmar revoga o que havia antes"`
+Proof: `tests/api/mfa-login.test.ts -t "emitido antes do recadastro"` (cookie anterior → `401` no proxy, #246)
 
 ### S5 - Código de recuperação · 2 arquivos · 25 KB · ~6k
 

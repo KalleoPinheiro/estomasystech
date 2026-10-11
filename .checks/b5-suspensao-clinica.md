@@ -115,7 +115,7 @@ Proof: `tests/api/login-clinic-suspended.test.ts -t "auditoria do login negado"`
 Proof: `tests/api/login-clinic-suspended.test.ts -t "reativada entra de novo"`
 
 **C18** - Proxy: cookie de equipe e de paciente emitido antes da suspensão → `401` logo após `POST .../suspend` neste processo; continua `401` depois da reativação; login novo após reativar → `200`
-Proof: `tests/api/session-revocation.test.ts -t "suspensão da clínica revoga"`
+Proof: `tests/api/session-revocation.test.ts -t "suspensão da clínica revoga"` (inclui cookie de `partner`, #246)
 
 **C19** - `lookupAccountStatus` por si: clínica `suspended` (só o estado, sem incremento de versão) → sessão revogada; clínica ativa → válida
 Proof: `tests/api/session-revocation.test.ts -t "estado da clínica na consulta"`
