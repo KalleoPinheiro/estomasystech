@@ -1622,6 +1622,12 @@ describe('Feature: Detalhe de consulta', () => {
 });
 
 describe('Feature: Grade do calendário', () => {
+  // Restaura o relógio mesmo quando um teste falha antes do fim: fake timers
+  // vazados travam os `waitFor` dos testes seguintes do arquivo (#224).
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe('Cenário: renderização de dias e consultas', () => {
     it('Dado consultas no mês, Quando renderizar, Então exibe cada consulta no dia correspondente', () => {
       const monthDate = new Date(2026, 6, 1);
@@ -1656,7 +1662,6 @@ describe('Feature: Grade do calendário', () => {
 
       const dayCells = container.querySelectorAll('.cursor-pointer');
       fireEvent.click(dayCells[0]);
-      vi.useRealTimers();
 
       expect(onDayClick).toHaveBeenCalledTimes(1);
     });
@@ -1678,7 +1683,6 @@ describe('Feature: Grade do calendário', () => {
       const invalidCells = container.querySelectorAll('[aria-disabled="true"]');
       expect(invalidCells.length).toBeGreaterThan(0);
       fireEvent.click(invalidCells[0]);
-      vi.useRealTimers();
 
       expect(onDayClick).not.toHaveBeenCalled();
     });
