@@ -1,4 +1,4 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull } from 'drizzle-orm';
 import {
   WaitlistEntry,
   type WaitlistRepository,
@@ -11,8 +11,14 @@ import { waitlistEntries } from './schema';
 import { withTenant } from './tenant-scope';
 
 type Row = typeof waitlistEntries.$inferSelect;
+/** Entrada com paciente: as leituras filtram as anonimizadas (#294). */
+type LiveRow = Row & { patientId: string };
 
-const toEntry = (row: Row, cipher: FieldCipher): WaitlistEntry =>
+/** Entrada anonimizada pela retenção (#294) não tem paciente nem volta à fila. */
+const notAnonymized = isNotNull(waitlistEntries.patientId);
+const hasPatient = (row: Row): row is LiveRow => row.patientId !== null;
+
+const toEntry = (row: LiveRow, cipher: FieldCipher): WaitlistEntry =>
   WaitlistEntry.restore({
     id: row.id,
     patientId: row.patientId,
@@ -68,10 +74,15 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
       .select()
       .from(waitlistEntries)
       .where(
-        withTenant(waitlistEntries, this.clinicId, eq(waitlistEntries.id, id)),
+        withTenant(
+          waitlistEntries,
+          this.clinicId,
+          and(eq(waitlistEntries.id, id), notAnonymized),
+        ),
       )
       .limit(1);
-    return rows[0] ? toEntry(rows[0], this.cipher) : null;
+    const row = rows.find(hasPatient);
+    return row ? toEntry(row, this.cipher) : null;
   }
 
   async listWaiting(): Promise<WaitlistEntry[]> {
@@ -82,12 +93,12 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
         withTenant(
           waitlistEntries,
           this.clinicId,
-          eq(waitlistEntries.status, 'waiting'),
+          and(eq(waitlistEntries.status, 'waiting'), notAnonymized),
         ),
       )
       .orderBy(asc(waitlistEntries.createdAt))
       .limit(MAX_ROWS);
-    return rows.map((row) => toEntry(row, this.cipher));
+    return rows.filter(hasPatient).map((row) => toEntry(row, this.cipher));
   }
 
   async findByPatient(patientId: string): Promise<WaitlistEntry[]> {
@@ -103,6 +114,7 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
       )
       .orderBy(desc(waitlistEntries.createdAt))
       .limit(MAX_ROWS);
-    return rows.map((row) => toEntry(row, this.cipher));
+    // `eq` com o id do paciente já exclui as anonimizadas (paciente nulo).
+    return rows.filter(hasPatient).map((row) => toEntry(row, this.cipher));
   }
 }

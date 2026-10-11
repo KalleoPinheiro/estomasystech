@@ -164,14 +164,16 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
   });
 
   describe('Cenário: caminhos públicos', () => {
-    it.each(['/login', '/api/auth/login', '/api/reminders/run'])(
-      'Dado %s sem sessão, Então passa direto',
-      async (path) => {
-        const proxy = await loadProxy();
+    it.each([
+      '/login',
+      '/api/auth/login',
+      '/api/reminders/run',
+      '/api/retention/run',
+    ])('Dado %s sem sessão, Então passa direto', async (path) => {
+      const proxy = await loadProxy();
 
-        expect(isNext(await proxy(request(path)))).toBe(true);
-      },
-    );
+      expect(isNext(await proxy(request(path)))).toBe(true);
+    });
   });
 
   describe('Cenário: segundo fator do super_admin (B2)', () => {

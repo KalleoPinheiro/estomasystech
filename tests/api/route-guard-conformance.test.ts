@@ -29,7 +29,11 @@ type HttpMethod = (typeof HTTP_METHODS)[number];
  * ainda não tem sessão (login/OAuth) ou autenticam por outro fator. Espelha a
  * `PUBLIC_PATHS` do access-policy; a divergência entre as duas é testada abaixo.
  */
-const UNGUARDED_PREFIXES = ['api/auth/', 'api/reminders/run'] as const;
+const UNGUARDED_PREFIXES = [
+  'api/auth/',
+  'api/reminders/run',
+  'api/retention/run',
+] as const;
 
 interface RouteFile {
   /** Caminho relativo a `src/app`, ex.: `api/patients/[id]/route.ts`. */
@@ -143,10 +147,11 @@ describe('Feature: Conformidade das guardas de rota', () => {
       }
     });
 
-    it('Dado a allowlist deste teste, Quando conferir, Então só cobre auth e o cron de lembretes', () => {
+    it('Dado a allowlist deste teste, Quando conferir, Então só cobre auth e os crons de lembretes e de retenção', () => {
       expect([...UNGUARDED_PREFIXES]).toEqual([
         'api/auth/',
         'api/reminders/run',
+        'api/retention/run',
       ]);
     });
   });

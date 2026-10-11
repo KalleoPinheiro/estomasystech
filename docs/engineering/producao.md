@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-10
+last_reviewed: 2026-10-11
 ---
 
 # Runbook de produção
@@ -24,6 +24,7 @@ Nada abaixo foi decidido; o runbook indica onde cada resposta entra.
 | Provedor do bucket de fotos (Supabase Storage via S3, AWS S3, Cloudflare R2) | § 2, § 6 (`S3_SSE`) |
 | Quem opera o cron de lembretes e quem recebe alerta de falha | § 7 |
 | Horário do envio diário dos lembretes (o `vercel.json` usa 08:00 de São Paulo como ponto de partida) | § 7 |
+| Por quanto tempo guardar os backups: dump antigo ainda tem o dado que a retenção já anonimizou (#294) | § 5, § 7.1 |
 | Quem monitora e com qual ferramenta (ver [#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)) | § 9 |
 
 ## 2. Topologia
@@ -36,7 +37,7 @@ Nada abaixo foi decidido; o runbook indica onde cada resposta entra.
 | Banco | Supabase Postgres 16. App usa o **pooler em modo transação** (porta `6543`) — funções serverless abrem muitas conexões curtas. Migrações usam a conexão **direta/sessão** (porta `5432`): o advisory lock das migrações não funciona pelo pooler de transação |
 | Fotos | **obrigatoriamente** bucket S3-compatível (`PHOTO_STORAGE=s3`): o disco das funções é efêmero, e a aplicação se recusa a montar o armazenamento local quando `VERCEL` está definido |
 | E-mail | Resend: chave de cada clínica (`clinic_channels`) e, opcional, a da plataforma (`RESEND_API_KEY`) — [ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md) |
-| Cron | Vercel Cron (`vercel.json`) chamando `GET /api/reminders/run` com `Authorization: Bearer $CRON_SECRET` |
+| Cron | Vercel Cron (`vercel.json`) chamando `GET /api/reminders/run` e `GET /api/retention/run` com `Authorization: Bearer $CRON_SECRET` |
 | Fuso | `TZ` é reservado na Vercel e as funções rodam em UTC: o app alinha o fuso do processo a `APP_TIMEZONE` na subida (`src/instrumentation.ts`) |
 
 Variáveis específicas: `VITTA_MIGRATE_ON_BOOT=false` (migração é passo de deploy, § 4),
@@ -58,7 +59,7 @@ no papel do banco (`ALTER ROLE ... SET statement_timeout = '15s'`) e remova a va
 | App + banco | `docker compose up -d --build` na VPS; `docker-compose.yml` publica o Postgres só no loopback |
 | TLS | proxy reverso na frente (Caddy ou Nginx) terminando HTTPS; o app escuta em `127.0.0.1:${APP_PORT}` |
 | Fotos | volume `uploads` (uma réplica) ou bucket (`PHOTO_STORAGE=s3`, obrigatório com mais de uma réplica). O disco da VPS precisa de cifra em repouso (LUKS ou volume cifrado do provedor) |
-| Cron | `crontab` do host ou systemd timer chamando `POST /api/reminders/run` com `x-cron-secret` |
+| Cron | `crontab` do host ou systemd timer chamando `POST /api/reminders/run` e `POST /api/retention/run` com `x-cron-secret` |
 | Fuso | a imagem já define `TZ=America/Sao_Paulo` |
 
 Caddy mínimo (`/etc/caddy/Caddyfile`):
@@ -160,6 +161,27 @@ usar `provider`).
   o job manualmente e espere `channel: "configured"` e `sent: 1` na entrada da clínica, e nenhuma entrada com `error`.
   Disparar de novo no mesmo dia deve devolver `sent: 0`. Na agenda, **Enviar WhatsApp** abre o
   `wa.me` e passa a mostrar "enviado hoje às HH:MM".
+
+### 7.1 Cron de retenção e anonimização (#294)
+
+Anonimiza o que passou do prazo (prontuário e fotos 20 anos após a última atividade, trilha de
+auditoria 5 anos, lista de espera e contas inativas 2 anos). Nada é excluído do banco; o arquivo
+da foto é apagado do volume `uploads` (ou do bucket). Contrato e regras:
+[`integrations/retencao.md`](integrations/retencao.md), [ADR-013](../adr/013-retencao-por-anonimizacao.md).
+
+- **VPS (Hetzner + compose):** uma vez por dia, fora do horário da clínica:
+  `0 3 * * * curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" https://clinica.exemplo.com.br/api/retention/run`.
+- **Vercel:** `vercel.json` agenda `GET /api/retention/run` às 06:00 UTC (03:00 em São Paulo).
+- Mesmo `CRON_SECRET` dos lembretes; sem ele, `503`.
+- **Backup:** o dado anonimizado continua identificável nos backups antigos até eles expirarem
+  (prazo de guarda dos dumps: pergunta aberta no § 1).
+- **Primeira execução:** a trilha de auditoria pode ter muitos eventos com mais de 5 anos e a
+  atualização é uma só por empresa; rode fora do horário de uso. Contagem prévia:
+  `SELECT clinic_id, count(*) FROM audit_events WHERE occurred_at < now() - interval '5 years' AND actor_id <> 'anonimizado' GROUP BY 1;`
+- **Verificação:** a resposta traz só contagens por tipo e por empresa; a segunda execução no
+  mesmo dia devolve tudo `0`. Entrada com `error` indica empresa que falhou (as outras seguem);
+  veja os logs do container.
+- Contas inativas antes da migração `0049` contam os 2 anos a partir dela.
 
 ## 8. Primeiro acesso
 

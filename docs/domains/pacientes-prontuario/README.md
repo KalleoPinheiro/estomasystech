@@ -3,7 +3,7 @@ title: "Domínio: Pacientes e prontuário"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-10
+last_reviewed: 2026-10-11
 domain: pacientes-prontuario
 ---
 
@@ -36,6 +36,7 @@ requisitos, não detalhes.
 | PRO-RN-12 | Todo texto clínico livre fica cifrado em repouso com `DATA_ENCRYPTION_KEY` (chave própria, separada do `AUTH_SECRET`): SOAP, anamnese, notas do paciente, da consulta, da lista de espera, da condição, da avaliação (inclusive pele periestomal e observação de complicações), da foto enviada pelo portal, do diagnóstico, da avaliação de resultado e do registro de intervenção. Fotos no bucket vão com `ServerSideEncryption` | [ADR-006](../../adr/006-chave-de-dados-clinicos.md), `src/lib/data-cipher.ts` |
 | PRO-RN-13 | O binário da foto (`GET /api/photos/[id]` da equipe e `GET /api/portal/patient/photos/[id]` do paciente) sai com `Cache-Control: no-store` — a imagem não fica no cache do navegador depois do logout — e cada download grava `read`/`photo` na auditoria, com o paciente. Leitura no escopo da sessão (`sessionScope`); exclusão e triagem seguem em `writeScope`. O Super Admin continua sem acesso (`403`, ACE-RN-10) (#209) | `src/app/api/photos/[id]/route.ts`, `src/app/api/portal/patient/photos/[id]/route.ts`, `tests/api/photo-binary-read.test.ts` |
 | PRO-RN-14 | SOAP ou anamnese cujo salvamento falha por sessão expirada (`401`) voltam ao formulário depois do novo login, com o aviso "Recuperamos o texto que não foi salvo…". O texto fica só no `sessionStorage` da aba, com o e-mail da conta: outra conta não o vê, e ele é apagado na primeira leitura (#207) | `src/lib/use-session-draft.ts` |
+| PRO-RN-15 | Retenção do prontuário (#294): 20 anos depois da **última atividade clínica** do paciente (a mais recente entre cadastro, fim de consulta de qualquer status, anamnese, evolução, condição, avaliação, foto e plano de cuidados), o job de retenção anonimiza o paciente e o prontuário numa transação: nome vira "Paciente anonimizado", e-mail e telefone saem, nascimento vira 1º de janeiro do ano; todo texto livre (anamnese, SOAP, título e notas da condição, notas da avaliação e da foto, plano de cuidados, observação da consulta, motivo do retorno, IP dos consentimentos) é apagado; medidas, códigos, escalas, status, datas e valores ficam. A conta de portal do paciente é anonimizada junto. Depois, o **arquivo** de cada foto é apagado do armazenamento e só então a foto é marcada; o registro fica. Nada é excluído; faturas não são tocadas | [spec](../../../.specs/features/retencao-anonimizacao/spec.md), [ADR-013](../../adr/013-retencao-por-anonimizacao.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
 
 ## Funcionalidades
 
