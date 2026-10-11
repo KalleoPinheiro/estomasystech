@@ -63,4 +63,4 @@ descobrisse a senha de um Admin levava os dados de saúde de uma clínica inteir
 
 - [ADR-005: Revogação de sessão por versão](./005-revogacao-de-sessao-por-versao.md).
 - [ADR-008: Segundo fator TOTP do Super Admin](./008-segundo-fator-do-super-admin.md).
-- `.specs/STATE.md` AD-031; issues [#208](https://github.com/KalleoPinheiro/vitta-flow/issues/208), [#291](https://github.com/KalleoPinheiro/vitta-flow/issues/291), [#250](https://github.com/KalleoPinheiro/vitta-flow/issues/250) (QR), [#295](https://github.com/KalleoPinheiro/vitta-flow/issues/295) (Minha conta).
+- AD-031 em [`.specs/archive/decisions-2026.md`](../../.specs/archive/decisions-2026.md); issues [#208](https://github.com/KalleoPinheiro/vitta-flow/issues/208), [#291](https://github.com/KalleoPinheiro/vitta-flow/issues/291), [#250](https://github.com/KalleoPinheiro/vitta-flow/issues/250) (QR), [#295](https://github.com/KalleoPinheiro/vitta-flow/issues/295) (Minha conta).

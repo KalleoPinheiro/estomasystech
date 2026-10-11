@@ -27,7 +27,8 @@ import { toUserAccountDto } from '@/lib/dto';
 
 const updateSchema = z.object({
   active: z.boolean().optional(),
-  password: z.string().min(8).max(200).optional(),
+  // Tamanho e senhas comuns: `assertPasswordPolicy`, pelo papel da conta (#291).
+  password: z.string().min(1).max(200).optional(),
 });
 type UpdateBody = z.infer<typeof updateSchema>;
 
