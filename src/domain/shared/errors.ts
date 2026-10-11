@@ -56,6 +56,11 @@ export class InsufficientStockError extends DomainError {
   readonly code = 'INSUFFICIENT_STOCK';
 }
 
+/** O papel da sessão não pode fazer esta ação neste recurso — mapeado para 403. */
+export class ForbiddenError extends DomainError {
+  readonly code = 'FORBIDDEN';
+}
+
 /** Ator tentou cadastrar um papel/empresa fora do que a hierarquia permite (RBAC-11..14). */
 export class ProvisioningDeniedError extends DomainError {
   readonly code = 'PROVISIONING_DENIED';

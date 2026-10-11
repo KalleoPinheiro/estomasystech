@@ -603,6 +603,29 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       expect(isNext(response)).toBe(true);
     });
 
+    it.each(['atendente', 'profissional'] as const)(
+      'Dado %s, Quando altera a grade, Então 403 na borda; feriados/ausências e a leitura da grade passam (#215)',
+      async (role) => {
+        const cookie = sessionCookie(role);
+        const proxy = await loadProxy();
+
+        const denied = await proxy(
+          requestWith('PUT', '/api/settings/schedule', cookie),
+        );
+        expect(denied.status).toBe(403);
+
+        for (const [method, path] of [
+          ['GET', '/api/schedule-config'],
+          ['GET', '/api/settings/schedule/closures'],
+          ['POST', '/api/settings/schedule/closures'],
+          ['DELETE', '/api/settings/schedule/closures/c-1'],
+        ]) {
+          const response = await proxy(requestWith(method, path, cookie));
+          expect(isNext(response), `${method} ${path}`).toBe(true);
+        }
+      },
+    );
+
     it('Dado atendente, Quando escreve no cadastro de profissionais e procedimentos, Então responde 403', async () => {
       const cookie = sessionCookie('atendente');
       const attempts: Array<[string, string]> = [

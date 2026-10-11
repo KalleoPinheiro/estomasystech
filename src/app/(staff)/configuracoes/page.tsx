@@ -40,6 +40,7 @@ import type {
   UserAccountDto,
 } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
+import { useStaffAccess } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useSavableForm } from '@/lib/use-savable-form';
 import { CancellationPolicyFields } from './cancellation-policy-fields';
@@ -84,16 +85,25 @@ interface ScheduleConfigDto {
   cancellationPolicy?: CancellationPolicy;
 }
 
+/**
+ * Cada papel vê só as seções cujas rotas pode usar (#215): Atendente e
+ * Profissional ficam com Feriados e ausências. A matriz é a mesma da
+ * autorização (`useStaffAccess`); esconder é UX, a API continua barrando.
+ */
 export default function SettingsPage() {
+  const can = useStaffAccess();
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="Configurações" />
-      <ClinicInfoSection />
-      <ScheduleSection />
+      {can('/api/settings/clinic-info') && <ClinicInfoSection />}
+      {can('/api/settings/schedule') && <ScheduleSection />}
       <ClosuresSection />
-      <CalendarIntegrationSection />
+      {can('/api/integrations/google-calendar') && (
+        <CalendarIntegrationSection />
+      )}
       <EmailChannelSection />
-      <AccountsSection />
+      {/* A seção lê o cadastro completo de profissionais (administrativo). */}
+      {can('/api/professionals') && <AccountsSection />}
     </div>
   );
 }

@@ -51,9 +51,9 @@ envelope `{ success, data }`, só com contagens:
 | --- | --- | --- |
 | `clinicalRecords` | 20 anos após a última atividade clínica do paciente | paciente, prontuário e conta de portal anonimizados (PRO-RN-15) |
 | `photos` | junto com o paciente | arquivo apagado do volume (ou bucket); o registro fica |
-| `auditEvents` | 5 anos | ator, recurso, paciente e detalhe saem (ACE-RN-43) |
-| `waitlistEntries` | 2 anos após a resolução | paciente e observação saem (AGE-RN-13) |
-| `accounts` | 2 anos após a desativação | e-mail, senha, sessões, tokens e segundo fator saem (ACE-RN-44) |
+| `auditEvents` | 5 anos | ator, recurso, paciente e detalhe saem (ACE-RN-44) |
+| `waitlistEntries` | 2 anos após a resolução | paciente e observação saem (AGE-RN-14) |
+| `accounts` | 2 anos após a desativação | e-mail, senha, sessões, tokens e segundo fator saem (ACE-RN-45) |
 
 Uma entrada por empresa, inclusive suspensa (o prazo é legal). A trilha de plataforma (eventos sem
 empresa) vem em `platform`. Até 200 pacientes e 500 fotos por empresa a cada execução; o resto
