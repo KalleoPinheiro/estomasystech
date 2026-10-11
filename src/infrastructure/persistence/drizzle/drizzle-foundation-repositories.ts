@@ -122,10 +122,19 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
     // `session_version` fica fora de propósito (#194): só `revokeSessions` e
     // `updatePasswordHash` o incrementam, atomicamente no banco. Gravá-lo aqui
     // desfaria um incremento concorrente com o valor lido antes dele.
+    // `deactivated_at` (#294) marca a passagem para inativa e some ao reativar;
+    // salvar de novo uma conta já inativa preserva a data original.
     await this.db
       .insert(userAccounts)
-      .values(values)
-      .onConflictDoUpdate({ target: userAccounts.id, set: values });
+      .values({ ...values, deactivatedAt: values.active ? null : new Date() })
+      .onConflictDoUpdate({
+        target: userAccounts.id,
+        set: {
+          ...values,
+          deactivatedAt: sql`case when excluded.active then null
+            else coalesce(${userAccounts.deactivatedAt}, now()) end`,
+        },
+      });
   }
 
   async findByEmail(email: string): Promise<UserAccount | null> {
