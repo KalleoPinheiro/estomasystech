@@ -8,6 +8,7 @@ import {
   createPartner,
   createPatient,
   createProcedure,
+  grantPartnerConsent,
   linkPortalAccount,
   unique,
 } from "./support/api";
@@ -240,6 +241,9 @@ for (const viewport of VIEWPORTS) {
       await addAssessment(request, condition.id, { lengthMm: 16, widthMm: 8, depthMm: 1 });
 
       await linkPortalAccount(request, "partner", partner);
+      await linkPortalAccount(request, "patient", referred);
+      // Sem o consentimento do paciente o parceiro não vê a evolução (#292).
+      await grantPartnerConsent(referred);
 
       await context.addCookies([sessionCookie(partner.email, "partner")]);
       await page.goto("/portal");

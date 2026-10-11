@@ -341,7 +341,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
 
   const codes = Array.from({ length: 10 }, (_, i) => `abcde-fgh${i + 2}k`);
 
-  it('Dado login que pede o código, Quando enviar o código, Então a etapa do código chama verify e leva a /plataforma', async () => {
+  it('Dado login que pede o código, Quando enviar o código, Então a etapa do código chama verify e leva ao início, que o proxy resolve por papel (#291)', async () => {
     const calls = mockMfa({
       '/api/auth/login': () =>
         jsonResponse(true, { mfaRequired: true, pendingToken: 'mfa.p.s' }),
@@ -354,9 +354,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
     fireEvent.change(field, { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verificar' }));
 
-    await waitFor(() =>
-      expect(routerMock.push).toHaveBeenCalledWith('/plataforma'),
-    );
+    await waitFor(() => expect(routerMock.push).toHaveBeenCalledWith('/'));
     expect(calls.at(-1)).toEqual({
       url: '/api/auth/mfa/verify',
       body: { pendingToken: 'mfa.p.s', code: '123456' },
@@ -364,7 +362,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
     expect(window.location.search).not.toContain('mfa.');
   });
 
-  it('Dado next interno, Quando o código confere, Então volta ao next em vez de /plataforma (#207)', async () => {
+  it('Dado next interno, Quando o código confere, Então volta ao next em vez do início (#207)', async () => {
     searchParamsRef.current = new URLSearchParams(
       'next=%2Fplataforma%2Ftaxonomia',
     );
@@ -452,7 +450,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
     expect(calls[2].body).toEqual({ pendingToken: 'mfa.c.s', code: '654321' });
     expect(routerMock.push).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
-    expect(routerMock.push).toHaveBeenCalledWith('/plataforma');
+    expect(routerMock.push).toHaveBeenCalledWith('/');
   });
 
   it('Dado a etapa do código, Quando usar um código de recuperação válido, Então o código de recuperação abre o cadastro', async () => {

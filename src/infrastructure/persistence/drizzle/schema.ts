@@ -684,6 +684,46 @@ export const consentRecords = pgTable(
   ],
 );
 
+// Consentimento do paciente para o parceiro que o indicou ver condições e
+// avaliações no portal (#292). Append-only, como `consent_records`.
+export const partnerShareConsents = pgTable(
+  'partner_share_consents',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    patientId: text('patient_id')
+      .notNull()
+      .references(() => patients.id),
+    partnerId: text('partner_id')
+      .notNull()
+      .references(() => partners.id),
+    kind: text('kind').notNull(),
+    textHash: text('text_hash').notNull(),
+    textVersion: text('text_version'),
+    actor: text('actor').notNull(),
+    ipAddress: text('ip_address'),
+    recordedAt: timestamp('recorded_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [
+    index('idx_partner_share_consents_patient').on(table.patientId),
+    index('idx_partner_share_consents_partner').on(table.partnerId),
+    index('idx_partner_share_consents_clinic').on(table.clinicId),
+    check(
+      'partner_share_consents_kind_check',
+      sql`${table.kind} IN ('accept', 'revoke')`,
+    ),
+    check(
+      'partner_share_consents_actor_check',
+      sql`${table.actor} IN ('patient', 'staff')`,
+    ),
+  ],
+);
+
 export const supplies = pgTable(
   'supplies',
   {

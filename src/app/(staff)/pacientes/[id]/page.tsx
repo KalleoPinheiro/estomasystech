@@ -38,6 +38,7 @@ import { CarePlansSection } from './care-plans-section';
 import { ConditionsSection } from './conditions-section';
 import { EvolutionsSection } from './evolutions-section';
 import { PackagesSection } from './packages-section';
+import { PartnerConsentPanel } from './partner-consent-panel';
 
 /**
  * `api`: rota de que a aba depende — a aba só aparece para o papel que pode
@@ -335,6 +336,9 @@ export default function PatientRecordPage({
     <div>
       <PatientHeader patient={patient} />
       <AllergyBanner allergies={anamnesis?.allergies} />
+      {can('/api/patients/_/partner-consent') && (
+        <PartnerConsentPanel patientId={id} />
+      )}
 
       {activeTab === undefined ? (
         <NoRecordSections loading={identity?.loading ?? false} />

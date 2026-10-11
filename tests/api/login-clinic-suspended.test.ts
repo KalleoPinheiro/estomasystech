@@ -202,7 +202,7 @@ describe('Feature: Login negado em clínica suspensa (B5, Journey 7)', () => {
 
   it('Dada clínica reativada, Quando entrar, Então reativada entra de novo', async () => {
     const clinic = await newClinic(true);
-    const account = await seedAccount(clinic.id, 'company_admin');
+    const account = await seedAccount(clinic.id, 'atendente');
     await setSuspended(clinic.id, true);
     expect((await login(account.email)).status).toBe(403);
 

@@ -90,6 +90,26 @@ describe('Feature: Persistência de tokens de ativação (Drizzle)', () => {
     expect([first, second].filter((claim) => claim !== null)).toHaveLength(1);
   });
 
+  it('Dado um token válido, Quando ler sem reivindicar, Então devolve o token sem queimá-lo e deixa de devolver depois do uso ou da validade (#291)', async () => {
+    const { token, secret } = AuthToken.issue({
+      accountId,
+      purpose: 'reset',
+      nowMs: NOW,
+    });
+    await tokens.save(token);
+    const hash = hashAuthTokenSecret(secret);
+
+    const peeked = await tokens.findUsableBySecretHash(hash, NOW + 1000);
+    expect(peeked?.id).toBe(token.id);
+    expect(peeked?.usedAt).toBeNull();
+    expect(
+      await tokens.findUsableBySecretHash(hash, token.expiresAt.getTime() + 1),
+    ).toBeNull();
+
+    expect(await tokens.claimBySecretHash(hash, NOW + 2000)).not.toBeNull();
+    expect(await tokens.findUsableBySecretHash(hash, NOW + 3000)).toBeNull();
+  });
+
   it('Dado um hash que não existe, Quando buscar, Então devolve null', async () => {
     expect(
       await tokens.claimBySecretHash(hashAuthTokenSecret('nao-existe'), NOW),

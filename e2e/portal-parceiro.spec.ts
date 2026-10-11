@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Browser } from "@playwright/test";
 import { addAssessment, createAppointment, createCondition, createPartner, createPatient, unique, linkPortalAccount} from "./support/api";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
@@ -6,9 +6,16 @@ import { sessionCookie } from "./support/session-token";
 import { literal } from "./support/regexp";
 
 test.describe("portal do parceiro", () => {
-  test("parceiro vê apenas os pacientes que indicou, com consultas e evolução clínica", async ({
+  /** Contexto limpo (sem a sessão de equipe do storageState) com o cookie do portal. */
+  async function portalPage(browser: Browser, email: string, role: "patient" | "partner") {
+    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    await context.addCookies([sessionCookie(email, role)]);
+    return { context, page: await context.newPage() };
+  }
+
+  test("parceiro vê a evolução só com o consentimento do paciente, que a equipe pode revogar (#292)", async ({
     page,
-    context,
+    browser,
     request,
   }) => {
     const partner = await createPartner(request, { fullName: `Dr. Portal E2E ${unique()}` });
@@ -39,18 +46,49 @@ test.describe("portal do parceiro", () => {
     await addAssessment(request, condition.id, { lengthMm: 20, widthMm: 10, depthMm: 2 });
 
     await linkPortalAccount(request, "partner", partner);
+    await linkPortalAccount(request, "patient", referred);
 
-    await context.addCookies([sessionCookie(partner.email, "partner")]);
-    await page.goto("/portal");
+    // 1. Sem consentimento: o parceiro vê só o status do encaminhamento.
+    const partnerPortal = await portalPage(browser, partner.email, "partner");
+    await partnerPortal.page.goto("/portal");
+    await expect(partnerPortal.page.getByRole("heading", { name: partner.fullName })).toBeVisible();
+    await expect(partnerPortal.page.getByText(referred.fullName)).toBeVisible();
+    await expect(partnerPortal.page.getByText(notReferred.fullName)).not.toBeVisible();
+    await expect(partnerPortal.page.getByText(/não autorizou o compartilhamento/)).toBeVisible();
+    await expect(partnerPortal.page.getByText("Sem atendimento realizado")).toBeVisible();
+    await expect(partnerPortal.page.getByRole("button", { name: literal(referred.fullName) })).toHaveCount(0);
 
-    await expect(page.getByRole("heading", { name: partner.fullName })).toBeVisible();
-    await expect(page.getByText(referred.fullName)).toBeVisible();
-    await expect(page.getByText(notReferred.fullName)).not.toBeVisible();
+    // 2. O paciente autoriza pelo portal.
+    const patientPortal = await portalPage(browser, referred.email, "patient");
+    await patientPortal.page.goto("/portal");
+    await expect(
+      patientPortal.page.getByRole("heading", { name: `Compartilhar com ${partner.fullName}` }),
+    ).toBeVisible();
+    await expect(patientPortal.page.getByText(/Texto provisório/)).toBeVisible();
+    await patientPortal.page.getByRole("button", { name: "Li e autorizo" }).click();
+    await expect(patientPortal.page.getByText(/Autorizado em/)).toBeVisible();
 
-    await page.getByRole("button", { name: literal(referred.fullName) }).click();
+    // 3. Com consentimento: consultas e evolução clínica.
+    await partnerPortal.page.reload();
+    await partnerPortal.page.getByRole("button", { name: literal(referred.fullName) }).click();
+    await expect(partnerPortal.page.getByText(procedure)).toBeVisible();
+    await expect(partnerPortal.page.getByText(condition.title)).toBeVisible();
 
-    await expect(page.getByText(procedure)).toBeVisible();
-    await expect(page.getByText(condition.title)).toBeVisible();
+    // 4. A equipe revoga pela ficha (sessão de Admin do storageState).
+    await page.goto(`/pacientes/${referred.id}`);
+    const panel = page.locator("[data-partner-consent-panel]");
+    await expect(panel.getByText(/Autorizado pelo paciente em/)).toBeVisible();
+    await panel.getByRole("button", { name: "Revogar a pedido do paciente" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Revogar" }).click();
+    await expect(panel.getByText(/Revogado pela equipe em/)).toBeVisible();
+
+    // 5. Revogado: o parceiro volta a ver só o status.
+    await partnerPortal.page.reload();
+    await expect(partnerPortal.page.getByText(/não autorizou o compartilhamento/)).toBeVisible();
+    await expect(partnerPortal.page.getByText(procedure)).not.toBeVisible();
+
+    await partnerPortal.context.close();
+    await patientPortal.context.close();
   });
 
   test("parceiro sem pacientes indicados vê estado vazio", async ({ page, context, request }) => {

@@ -1115,6 +1115,8 @@ describe('Feature: Visão do parceiro no portal', () => {
               referredPatients: [
                 {
                   patient: referredPatient,
+                  sharing: true,
+                  attended: true,
                   appointments: [appointment],
                   conditions: [conditionEntry],
                 },
@@ -1153,7 +1155,13 @@ describe('Feature: Visão do parceiro no portal', () => {
             jsonResponse(true, {
               partner: partnerFixture,
               referredPatients: [
-                { patient: referredPatient, appointments: [], conditions: [] },
+                {
+                  patient: referredPatient,
+                  sharing: true,
+                  attended: false,
+                  appointments: [],
+                  conditions: [],
+                },
               ],
             }),
         },
@@ -1169,6 +1177,46 @@ describe('Feature: Visão do parceiro no portal', () => {
       ).toBeInTheDocument();
     });
   });
+});
+
+describe('Feature: Visão do parceiro sem consentimento do paciente (#292)', () => {
+  it.each([
+    [true, 'Atendido(a)'],
+    [false, 'Sem atendimento realizado'],
+  ])(
+    'Dado paciente sem consentimento e attended=%s, Quando renderizar, Então mostra só o status "%s", sem evolução',
+    async (attended, label) => {
+      mockFetch([
+        {
+          path: '/api/portal/partner',
+          respond: () =>
+            jsonResponse(true, {
+              partner: partnerFixture,
+              referredPatients: [
+                {
+                  patient: { id: 'ref-sem', fullName: 'Ana Sem Consentimento' },
+                  sharing: false,
+                  attended,
+                  appointments: [],
+                  conditions: [],
+                },
+              ],
+            }),
+        },
+      ]);
+
+      render(<PartnerPortalView />);
+
+      expect(
+        await screen.findByText('Ana Sem Consentimento'),
+      ).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(
+        screen.getByText(/não autorizou o compartilhamento/),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Ver evolução')).not.toBeInTheDocument();
+    },
+  );
 });
 
 describe('Feature: Cartão de consentimento', () => {

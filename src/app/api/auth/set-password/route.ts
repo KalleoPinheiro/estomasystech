@@ -1,9 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import {
-  ConsumeAuthToken,
-  MIN_PASSWORD_LENGTH,
-} from '@/application/auth/auth-token-flow';
+import { ConsumeAuthToken } from '@/application/auth/auth-token-flow';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
@@ -22,7 +19,9 @@ const SET_PASSWORD_RATE_LIMIT = new SharedRateLimiter(
 
 const schema = z.object({
   token: z.string().min(1).max(400),
-  password: z.string().min(MIN_PASSWORD_LENGTH).max(200),
+  // Tamanho mínimo e senhas comuns dependem do papel da conta (#291): quem
+  // confere é o `ConsumeAuthToken`, com a mensagem da política.
+  password: z.string().min(1).max(200),
 });
 
 /**

@@ -4,6 +4,7 @@ import { expectToast } from "./support/assertions";
 import { E2E_ROLE_PASSWORD, ROLE_ACCOUNTS, SESSION_COOKIE_NAME } from "./support/constants";
 import { adminApi } from "./support/roles";
 import { mintSessionToken } from "./support/session-token";
+import { nextTotpCode, totpStatePath } from "./support/totp";
 
 /**
  * Sessão expirada (#207): o 401 de uma chamada de API leva ao login com o
@@ -19,10 +20,13 @@ test.use({
 
 const ACCOUNT = ROLE_ACCOUNTS.company_admin.email;
 
+/** Senha e, como todo Admin de Empresa (#291), o código do autenticador. */
 const signIn = async (page: Page): Promise<void> => {
   await page.getByLabel("Email", { exact: true }).fill(ACCOUNT);
   await page.getByLabel("Senha", { exact: true }).fill(E2E_ROLE_PASSWORD);
   await page.getByRole("button", { name: "Entrar" }).click();
+  await page.getByLabel("Código do autenticador", { exact: true }).fill(await nextTotpCode(totpStatePath(ACCOUNT)));
+  await page.getByRole("button", { name: "Verificar" }).click();
 };
 
 /** Troca o cookie por um da mesma conta já vencido — o que o navegador teria às 12h01. */
