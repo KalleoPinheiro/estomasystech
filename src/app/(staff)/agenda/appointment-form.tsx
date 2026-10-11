@@ -89,7 +89,7 @@ export function AppointmentForm({
   >('/api/options/procedures');
   const activeCatalog = (catalog ?? []).filter((p) => p.active);
   const { data: scheduleData } = useApiQuery<{ config: ScheduleConfig }>(
-    '/api/settings/schedule',
+    '/api/schedule-config',
   );
   const scheduleConfig = resolveScheduleConfig(scheduleData);
 

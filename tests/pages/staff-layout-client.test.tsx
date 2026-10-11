@@ -43,6 +43,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
         email: 'ana@clinica.com',
         role: 'company_admin',
         roleLabel: 'Admin de Empresa',
+        professionalId: null,
       },
     });
 
@@ -67,6 +68,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
         email: 'root@vitta.com',
         role: 'company_admin',
         roleLabel: 'Super Admin',
+        professionalId: null,
       },
     });
 
@@ -95,6 +97,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
         email: 'x@y.com',
         role: 'company_admin',
         roleLabel: 'Atendente',
+        professionalId: null,
       },
     });
 
@@ -115,6 +118,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
         email: 'recepcao.turno.manha@clinica-estomaterapia.com.br',
         role: 'atendente',
         roleLabel: 'Atendente',
+        professionalId: null,
       },
     });
 

@@ -4,9 +4,17 @@ import type { SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider } from '@/lib/staff-access';
 
 /** Identidade da sessão como `/api/auth/identity` devolve, para o papel dado. */
-export const identityFor = (role: UserRole): SidebarIdentityDto => ({
+export const identityFor = (
+  role: UserRole,
+  professionalId: string | null = null,
+): SidebarIdentityDto => ({
   clinicLabel: 'Clínica Teste',
-  account: { email: `${role}@clinica.com`, role, roleLabel: role },
+  account: {
+    email: `${role}@clinica.com`,
+    role,
+    roleLabel: role,
+    professionalId,
+  },
 });
 
 /** Envolve a tela no provider do layout da equipe (#199). */

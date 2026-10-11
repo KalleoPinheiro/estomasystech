@@ -121,11 +121,14 @@ describe('Feature: Profissional da consulta existe na empresa e está ativo (iss
           availability,
           professionals,
           appointments,
-        ).execute({
-          professionalId: inativa.id,
-          startsOn: '2026-07-21',
-          reason: 'Férias',
-        }),
+        ).execute(
+          {
+            professionalId: inativa.id,
+            startsOn: '2026-07-21',
+            reason: 'Férias',
+          },
+          null,
+        ),
       ).rejects.toThrow(ValidationError);
       expect(
         await availability.listClosures({
