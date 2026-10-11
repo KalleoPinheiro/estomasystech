@@ -1,8 +1,13 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { PartnerShareConsent } from '@/domain/consent/partner-share-consent';
 import { getRepositories } from '@/infrastructure/container';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { clinicScope } from '@/lib/auth/tenant-scope';
+import {
+  PARTNER_SHARE_CONSENT_TEXT,
+  PARTNER_SHARE_CONSENT_TEXT_VERSION,
+} from '@/lib/partner-share-consent-text';
 import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
 
@@ -207,6 +212,18 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
         notes: INTERNAL_NOTE,
       }),
       context(referredPatientId),
+    );
+    // Com consentimento ativo (#292): sem ele o parceiro nem recebe condições.
+    const { partnerShareConsents } = await getRepositories(
+      clinicScope(LEGACY_CLINIC_ID),
+    );
+    await partnerShareConsents.save(
+      PartnerShareConsent.accept({
+        patientId: referredPatientId,
+        partnerId,
+        consentText: PARTNER_SHARE_CONSENT_TEXT,
+        textVersion: PARTNER_SHARE_CONSENT_TEXT_VERSION,
+      }),
     );
 
     // Contas de portal vinculadas aos cadastros (#196).
