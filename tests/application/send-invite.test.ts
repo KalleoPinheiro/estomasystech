@@ -19,6 +19,9 @@ class InMemoryAuthTokenRepository implements AuthTokenRepository {
   async claimBySecretHash(): Promise<AuthToken | null> {
     return null;
   }
+  async findUsableBySecretHash(): Promise<AuthToken | null> {
+    return null;
+  }
   async markAllUnusedAsUsed(
     accountId: string,
     purpose: AuthTokenPurpose,

@@ -119,6 +119,16 @@ export interface AuthTokenRepository {
     secretHash: string,
     nowMs?: number,
   ): Promise<AuthToken | null>;
+  /**
+   * Leitura sem efeito: o token ainda não usado e dentro da validade, ou
+   * `null`. Serve só para conferir a senha nova contra a política do papel da
+   * conta antes de queimar o link (#291) — o uso único continua sendo do
+   * `claimBySecretHash`.
+   */
+  findUsableBySecretHash(
+    secretHash: string,
+    nowMs?: number,
+  ): Promise<AuthToken | null>;
   /** Invalida os tokens não usados de um propósito — emitir um novo mata os anteriores. */
   markAllUnusedAsUsed(
     accountId: string,

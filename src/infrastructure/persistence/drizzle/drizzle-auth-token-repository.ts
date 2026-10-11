@@ -8,6 +8,19 @@ import { isUniqueViolation } from '@/lib/db-errors';
 import type { AppDb } from './db';
 import { authTokens } from './schema';
 
+type AuthTokenRow = typeof authTokens.$inferSelect;
+
+const toAuthToken = (row: AuthTokenRow): AuthToken =>
+  AuthToken.restore({
+    id: row.id,
+    accountId: row.accountId,
+    purpose: row.purpose as AuthTokenPurpose,
+    secretHash: row.secretHash,
+    expiresAt: row.expiresAt,
+    usedAt: row.usedAt,
+    createdAt: row.createdAt,
+  });
+
 export class DrizzleAuthTokenRepository implements AuthTokenRepository {
   constructor(private readonly db: AppDb) {}
 
@@ -50,19 +63,25 @@ export class DrizzleAuthTokenRepository implements AuthTokenRepository {
         ),
       )
       .returning();
-    const row = rows[0];
-    if (!row) {
-      return null;
-    }
-    return AuthToken.restore({
-      id: row.id,
-      accountId: row.accountId,
-      purpose: row.purpose as AuthTokenPurpose,
-      secretHash: row.secretHash,
-      expiresAt: row.expiresAt,
-      usedAt: row.usedAt,
-      createdAt: row.createdAt,
-    });
+    return rows[0] ? toAuthToken(rows[0]) : null;
+  }
+
+  async findUsableBySecretHash(
+    secretHash: string,
+    nowMs: number = Date.now(),
+  ): Promise<AuthToken | null> {
+    const [row] = await this.db
+      .select()
+      .from(authTokens)
+      .where(
+        and(
+          eq(authTokens.secretHash, secretHash),
+          isNull(authTokens.usedAt),
+          gt(authTokens.expiresAt, new Date(nowMs)),
+        ),
+      )
+      .limit(1);
+    return row ? toAuthToken(row) : null;
   }
 
   async markAllUnusedAsUsed(

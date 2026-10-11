@@ -8,6 +8,7 @@ import {
   assertCanDeactivate,
   assertCanManageAccount,
 } from '@/domain/auth/account-management';
+import { assertPasswordPolicy } from '@/domain/auth/password-policy';
 import type {
   UserAccount,
   UserAccountRepository,
@@ -49,6 +50,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
     const actor = accountManager(guard.session);
     assertCanManageAccount(actor, existing);
+    // Política do papel da conta-alvo (#291), antes da auditoria e da escrita.
+    if (body.password) assertPasswordPolicy(existing.role, body.password);
 
     const updated =
       body.active === false
