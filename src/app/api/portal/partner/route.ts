@@ -13,6 +13,7 @@ import {
   toPortalConditionDto,
   toReferredPatientSummaryDto,
 } from '@/lib/dto';
+import { PARTNER_SHARE_CONSENT_TEXT } from '@/lib/partner-share-consent-text';
 
 export async function GET(request: NextRequest) {
   const guard = requirePortalSession(request, 'partner');
@@ -31,6 +32,10 @@ export async function GET(request: NextRequest) {
       appointments,
       conditions,
       assessments,
+      {
+        repository: services.partnerShareConsents,
+        consentText: PARTNER_SHARE_CONSENT_TEXT,
+      },
     ).execute({
       partnerId: (await resolvePortalPartner(services, session)).id,
     });
@@ -39,12 +44,14 @@ export async function GET(request: NextRequest) {
       action: 'read',
       resourceType: 'portal-partner',
       resourceId: data.partner.id,
-      detail: `pacientes indicados: ${data.referredPatients.length}`,
+      detail: `pacientes indicados: ${data.referredPatients.length}; com consentimento: ${data.referredPatients.filter((entry) => entry.sharing).length}`,
     });
     return {
       partner: toPartnerDto(data.partner),
       referredPatients: data.referredPatients.map((entry) => ({
         patient: toReferredPatientSummaryDto(entry.patient),
+        sharing: entry.sharing,
+        attended: entry.attended,
         appointments: entry.appointments.map(toPortalAppointmentDto),
         conditions: entry.conditions.map(
           ({ condition, assessments: list }) => ({

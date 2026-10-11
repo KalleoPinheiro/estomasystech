@@ -45,6 +45,7 @@ import type {
 } from '@/domain/clinical/clinical-repositories';
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
 import type { ConsentRecordRepository } from '@/domain/consent/consent-record';
+import type { PartnerShareConsentRepository } from '@/domain/consent/partner-share-consent';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
 import type {
   StockMovementRepository,
@@ -123,6 +124,7 @@ import { DrizzleInvoiceRepository } from './persistence/drizzle/drizzle-invoice-
 import { DrizzleMfaRepository } from './persistence/drizzle/drizzle-mfa-repository';
 import { DrizzleSessionPackageRepository } from './persistence/drizzle/drizzle-package-repository';
 import { DrizzlePartnerRepository } from './persistence/drizzle/drizzle-partner-repository';
+import { DrizzlePartnerShareConsentRepository } from './persistence/drizzle/drizzle-partner-share-consent-repository';
 import { DrizzlePatientRepository } from './persistence/drizzle/drizzle-patient-repository';
 import { DrizzleProducedSessionRepository } from './persistence/drizzle/drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './persistence/drizzle/drizzle-professional-repository';
@@ -176,6 +178,7 @@ export interface Services {
   assessments: ConditionAssessmentRepository;
   conditionPhotos: ConditionPhotoRepository;
   consentRecords: ConsentRecordRepository;
+  partnerShareConsents: PartnerShareConsentRepository;
   nursingDiagnoses: NursingDiagnosisRepository;
   nursingOutcomes: NursingOutcomeRepository;
   nursingInterventions: NursingInterventionRepository;
@@ -435,6 +438,10 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       cipher,
     ),
     consentRecords: new DrizzleConsentRecordRepository(db, tenant.clinicId),
+    partnerShareConsents: new DrizzlePartnerShareConsentRepository(
+      db,
+      tenant.clinicId,
+    ),
     nursingDiagnoses: new DrizzleNursingDiagnosisRepository(db),
     nursingOutcomes: new DrizzleNursingOutcomeRepository(db),
     nursingInterventions: new DrizzleNursingInterventionRepository(db),

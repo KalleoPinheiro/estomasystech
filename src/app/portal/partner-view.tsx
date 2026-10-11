@@ -22,6 +22,9 @@ import {
 
 interface ReferredPatientDto {
   patient: ReferredPatientSummaryDto;
+  /** Consentimento ativo do paciente para este parceiro (#292). */
+  sharing: boolean;
+  attended: boolean;
   appointments: PortalAppointmentDto[];
   conditions: ConditionWithAssessmentsDto[];
 }
@@ -29,6 +32,36 @@ interface ReferredPatientDto {
 interface PartnerPortalDto {
   partner: PartnerDto;
   referredPatients: ReferredPatientDto[];
+}
+
+/**
+ * Sem consentimento do paciente (#292): o parceiro vê só se ele foi atendido,
+ * sem consultas, condições ou avaliações.
+ */
+function NotSharedPatientCard({
+  fullName,
+  attended,
+}: {
+  fullName: string;
+  attended: boolean;
+}) {
+  return (
+    <Card data-sharing="off">
+      <CardContent className="flex flex-col gap-1 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-medium">{fullName}</p>
+          <StatusBadge
+            status={attended ? 'completed' : 'pending'}
+            label={attended ? 'Atendido(a)' : 'Sem atendimento realizado'}
+          />
+        </div>
+        <p className="text-ink-3 text-xs">
+          O paciente não autorizou o compartilhamento da evolução clínica com
+          você.
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function PartnerPortalView() {
@@ -46,7 +79,7 @@ export function PartnerPortalView() {
         title={data.partner.fullName}
         description={`${data.partner.crm ?? ''} ${
           data.partner.specialty ? `· ${data.partner.specialty}` : ''
-        } — acompanhamento dos pacientes que você indicou.`}
+        } — acompanhamento dos pacientes que você indicou. A evolução clínica aparece só com a autorização do paciente e cobre os últimos 24 meses.`}
       />
 
       {data.referredPatients.length === 0 ? (
@@ -57,7 +90,16 @@ export function PartnerPortalView() {
       ) : (
         <div className="flex flex-col gap-3">
           {data.referredPatients.map(
-            ({ patient, appointments, conditions }) => {
+            ({ patient, sharing, attended, appointments, conditions }) => {
+              if (!sharing) {
+                return (
+                  <NotSharedPatientCard
+                    key={patient.id}
+                    fullName={patient.fullName}
+                    attended={attended}
+                  />
+                );
+              }
               const isOpen = expanded === patient.id;
               return (
                 <Card key={patient.id}>

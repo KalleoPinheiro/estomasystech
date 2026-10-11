@@ -14,6 +14,10 @@ import type {
   ConsentRecord,
   ConsentRecordRepository,
 } from '@/domain/consent/consent-record';
+import type {
+  PartnerShareConsent,
+  PartnerShareConsentRepository,
+} from '@/domain/consent/partner-share-consent';
 
 export class InMemoryAnamnesisRepository implements AnamnesisRepository {
   private readonly items = new Map<string, Anamnesis>();
@@ -168,5 +172,31 @@ export class InMemoryConsentRecordRepository
   ): Promise<ConsentRecord | null> {
     const records = await this.findByPatientId(patientId);
     return records[0] ?? null;
+  }
+}
+
+export class InMemoryPartnerShareConsentRepository
+  implements PartnerShareConsentRepository
+{
+  private readonly items: PartnerShareConsent[] = [];
+
+  async save(record: PartnerShareConsent): Promise<void> {
+    this.items.push(record);
+  }
+
+  async findByPatientId(patientId: string): Promise<PartnerShareConsent[]> {
+    return this.items
+      .filter((r) => r.patientId === patientId)
+      .sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime());
+  }
+
+  async findByPartnerAndPatientIds(
+    partnerId: string,
+    patientIds: string[],
+  ): Promise<PartnerShareConsent[]> {
+    const wanted = new Set(patientIds);
+    return this.items
+      .filter((r) => r.partnerId === partnerId && wanted.has(r.patientId))
+      .sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime());
   }
 }

@@ -36,6 +36,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   'account-recovery': 'Recuperação de conta',
   'clinic-schedule': 'Grade de horários',
   consent: 'Consentimento',
+  'partner-consent': 'Consentimento para o parceiro',
   export: 'Exportação',
   intervention_record: 'Registro de intervenção',
   outcome_evaluation: 'Avaliação de desfecho',
