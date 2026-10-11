@@ -658,3 +658,20 @@ P3 da revisão pré-produção #183, só de testes. Dois testes de `CalendarGrid
 - **Next step**: nenhum.
 - **Blockers**: nenhum.
 - **Branch**: `fix/224-calendar-grid-timers`. PR #286, squash-merged em `main` (`0d85711`). Issue #224 fechada via `Closes #224`.
+
+## Issue #221 — documentação de ambiente bate com o código (2026-10-11) — ENCERRADO (#288)
+
+P3 da revisão pré-produção #183. `.env.example`, `docs/engineering/onboarding.md` § 4 e o README passaram a bater com as variáveis que o código lê:
+
+- **Variáveis mortas:** saem as `CLINIC_*`.
+- **Variáveis sem documentação:** entram as do compose e do E2E, e as internas das suítes, marcadas como "não defina".
+- **WhatsApp:** a linha passa a dizer que é opt-in futuro (RM-14).
+- **`RESEND_API_KEY`/`EMAIL_FROM`:** ficam opcionais em todo lugar, conforme o ADR-011. Isso inclui `docker-compose.yml` (`:?` → `:-`), `integrations/resend.md`, `producao.md` § 8 e `troubleshooting.md`.
+
+O teste novo `tests/docs/env-docs.test.ts` trava a divergência nos dois sentidos: variável lida pelo código sem documentação e variável documentada que ninguém lê.
+
+**Detalhes**: o item 4 da issue (marcadores do `next dev` no `AGENTS.md`) já estava resolvido na `main`. `scripts/docker-smoke.sh` ainda passa uma chave Resend falsa, que é desnecessária mas não causa problema. O Verifier independente deu FAIL na primeira rodada (3 achados, corrigidos) e PASS na segunda. CI com os 4 jobs verdes.
+
+- **Next step**: nenhum.
+- **Blockers**: nenhum.
+- **Branch**: `fix/221-docs-ambiente`. PR #288, squash-merged em `main` (`90d2bf0`). Issue #221 fechada via `Closes #221`.
