@@ -8,6 +8,7 @@ import {
   assertCanDeactivate,
   assertCanManageAccount,
 } from '@/domain/auth/account-management';
+import { assertPasswordPolicy } from '@/domain/auth/password-policy';
 import type {
   UserAccount,
   UserAccountRepository,
@@ -26,7 +27,8 @@ import { toUserAccountDto } from '@/lib/dto';
 
 const updateSchema = z.object({
   active: z.boolean().optional(),
-  password: z.string().min(8).max(200).optional(),
+  // Tamanho e senhas comuns: `assertPasswordPolicy`, pelo papel da conta (#291).
+  password: z.string().min(1).max(200).optional(),
 });
 type UpdateBody = z.infer<typeof updateSchema>;
 
@@ -49,6 +51,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
     const actor = accountManager(guard.session);
     assertCanManageAccount(actor, existing);
+    // Política do papel da conta-alvo (#291), antes da auditoria e da escrita.
+    if (body.password) assertPasswordPolicy(existing.role, body.password);
 
     const updated =
       body.active === false

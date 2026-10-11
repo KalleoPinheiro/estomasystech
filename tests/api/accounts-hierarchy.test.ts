@@ -296,4 +296,37 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
     expect(allowed.response.status).toBe(200);
     expect(allowed.json.data.active).toBe(false);
   });
+
+  it('C-291 senha de conta da equipe segue a política: 9 caracteres ou comum → 400, sem auditoria nem troca', async () => {
+    await ensureTestClinics();
+    const atendente = await seed('atendente', 'c291-atendente@x.com');
+    const admin = as('company_admin', 'c291-admin@x.com');
+
+    const short = await patch(atendente.id, { password: 'xk7#pq2vz' }, admin);
+    const common = await patch(atendente.id, { password: 'Senha12345' }, admin);
+
+    expect(short.response.status).toBe(400);
+    expect(short.json.error).toBe('A senha precisa ter ao menos 10 caracteres');
+    expect(common.response.status).toBe(400);
+    expect(common.json.error).toBe(
+      'Essa senha é muito comum e fácil de adivinhar. Escolha outra.',
+    );
+    expect(await accountAudit(atendente.id)).toEqual([]);
+    expect((await findAccount(atendente.id))?.passwordHash).toBe(
+      UNSET_PASSWORD_HASH,
+    );
+  });
+
+  it('C-291 senha de paciente segue o mínimo do portal (8)', async () => {
+    await ensureTestClinics();
+    const patient = await seed('patient', 'c291-paciente@x.com');
+
+    const { response } = await patch(
+      patient.id,
+      { password: '12345678' },
+      as('atendente', 'c291-recepcao@x.com'),
+    );
+
+    expect(response.status).toBe(200);
+  });
 });

@@ -15,6 +15,7 @@ import {
   type AuthTokenPurpose,
   hashAuthTokenSecret,
 } from '@/domain/auth/auth-token';
+import { COMMON_PASSWORD_MESSAGE } from '@/domain/auth/password-policy';
 import { UserAccount } from '@/domain/auth/user-account';
 import { InMemoryUserAccountRepository } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { verifyPassword } from '@/lib/auth/password';
@@ -45,7 +46,7 @@ class InMemoryAuthTokenRepository implements AuthTokenRepository {
     return claimed;
   }
 
-  /** Só para asserção nos testes — não faz parte da porta. */
+  /** Leitura sem queimar: espelha o repositório real. */
   async findUsableBySecretHash(
     secretHash: string,
     nowMs: number = Date.now(),
@@ -422,6 +423,76 @@ describe('Feature: Emissão e consumo de token de convite/reset', () => {
           NOW + 2000,
         ),
       ).not.toBeNull();
+    });
+
+    const stillUsable = async (secret: string) =>
+      tokens.findUsableBySecretHash(hashAuthTokenSecret(secret), NOW + 2000);
+
+    it('Dado conta da equipe e senha de 9 caracteres, Quando consumir, Então recusa pelo mínimo de 10 e o token continua usável (#291)', async () => {
+      const secret = await issueInvite();
+
+      await expect(
+        new ConsumeAuthToken(tokens, accounts).execute({
+          secret,
+          newPassword: 'xk7#pq2vz',
+          expectedPurposes: ['invite', 'reset'],
+          nowMs: NOW + 1000,
+        }),
+      ).rejects.toThrow('A senha precisa ter ao menos 10 caracteres');
+      expect(await stillUsable(secret)).not.toBeNull();
+    });
+
+    it('Dado conta da equipe e senha comum, Quando consumir, Então recusa como comum e o token continua usável (#291)', async () => {
+      const secret = await issueInvite();
+
+      await expect(
+        new ConsumeAuthToken(tokens, accounts).execute({
+          secret,
+          newPassword: 'Senha12345',
+          expectedPurposes: ['invite', 'reset'],
+          nowMs: NOW + 1000,
+        }),
+      ).rejects.toThrow(COMMON_PASSWORD_MESSAGE);
+      expect(await stillUsable(secret)).not.toBeNull();
+    });
+
+    it('Dado conta da equipe e senha incomum de 10 caracteres, Quando consumir, Então grava a senha (#291)', async () => {
+      const secret = await issueInvite();
+
+      await new ConsumeAuthToken(tokens, accounts).execute({
+        secret,
+        newPassword: 'xk7#pq2vzm',
+        expectedPurposes: ['invite', 'reset'],
+        nowMs: NOW + 1000,
+      });
+
+      const updated = await accounts.findById(account.id);
+      expect(
+        await verifyPassword('xk7#pq2vzm', updated?.passwordHash ?? ''),
+      ).toBe(true);
+    });
+
+    it('Dado conta de paciente e senha de 8 caracteres, Quando consumir, Então segue valendo o mínimo do portal (#291)', async () => {
+      account = UserAccount.create({
+        email: 'paciente@clinica.com',
+        passwordHash: 'scrypt$0$sem-senha$sem-senha',
+        role: 'patient',
+        clinicId: 'clinic-a',
+      });
+      await accounts.save(account);
+      const secret = await issueInvite();
+
+      await new ConsumeAuthToken(tokens, accounts).execute({
+        secret,
+        newPassword: '12345678',
+        expectedPurposes: ['invite', 'reset'],
+        nowMs: NOW + 1000,
+      });
+
+      const updated = await accounts.findById(account.id);
+      expect(
+        await verifyPassword('12345678', updated?.passwordHash ?? ''),
+      ).toBe(true);
     });
 
     it("Dado token de propósito 'invite', Quando consumir esperando só 'reset', Então recusa com a mensagem única e não troca a senha (issue #46)", async () => {

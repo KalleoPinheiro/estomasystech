@@ -38,7 +38,8 @@ async function seedAccount(passwordHash: string): Promise<UserAccount> {
   const account = UserAccount.create({
     email: `hardening-${seq}@login.test`,
     passwordHash,
-    role: 'company_admin',
+    // Papel sem 2FA obrigatório: a senha certa já rende a sessão (#291).
+    role: 'atendente',
     clinicId: CLINIC_A_ID,
   });
   await (await getRepositories(systemScope())).userAccounts.save(account);

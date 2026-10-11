@@ -59,7 +59,7 @@ async function respond(
 }
 
 /**
- * Segunda etapa do login do super_admin (ADR-007, bloco B2): código do
+ * Segunda etapa do login com segundo fator (ADR-008, ADR-012): código do
  * autenticador (entra, ou confirma o cadastro e recebe os 10 códigos de
  * recuperação uma única vez) ou código de recuperação (leva ao recadastro).
  */

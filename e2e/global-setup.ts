@@ -19,7 +19,7 @@ import {
 import { readServerLog, waitForInviteUrl } from "./support/server-log";
 import { mintSessionToken } from "./support/session-token";
 import { slotFromSeed } from "./support/slots";
-import { saveTotpState, SUPER_ADMIN_TOTP_PATH, totpCode, totpStep } from "./support/totp";
+import { saveTotpState, SUPER_ADMIN_TOTP_PATH, totpCode, totpStatePath, totpStep } from "./support/totp";
 
 /**
  * Roda uma vez antes de toda a suíte (depois que o(s) `webServer` já respondem —
@@ -32,7 +32,8 @@ import { saveTotpState, SUPER_ADMIN_TOTP_PATH, totpCode, totpStep } from "./supp
  *    login (ADR-008). O Super Admin é o operador da plataforma
  *    (ADR-007): importa o catálogo de taxonomias e convida o Admin de Empresa da
  *    `legacy-clinic` (`POST /api/platform/clinics/legacy-clinic/admins`).
- * 2. O Admin de Empresa define a senha pelo convite e loga. O cookie dele vira o
+ * 2. O Admin de Empresa define a senha pelo convite e loga cadastrando o segundo
+ *    fator, obrigatório para o papel (#291). O cookie dele vira o
  *    `storageState` reaproveitado por padrão em todos os specs (ver
  *    `use.storageState` em `playwright.config.ts`).
  * 3. Semeia dados base via REST (profissional, procedimentos com kit, insumos
@@ -164,34 +165,64 @@ async function sessionCookieFrom(
   return pair;
 }
 
+/** POST sem sessão, de um IP próprio quando dado (balde do limite de login). */
+async function postFrom<T>(url: string, data: unknown, clientIp?: string): Promise<T> {
+  const response = await fetch(`${MAIN_BASE_URL}${url}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(clientIp ? { "x-forwarded-for": clientIp } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+  const body = (await response.json()) as Envelope<T>;
+  if (!response.ok || !body.success || body.data === null) {
+    throw new Error(`POST ${url} falhou no global-setup (${response.status}): ${body.error ?? "?"}`);
+  }
+  return body.data;
+}
+
 /**
- * Primeiro login do Super Admin (ADR-008): a senha rende só um token pendente,
- * o cadastro do autenticador devolve a chave e o código TOTP dela, calculado
- * aqui, emite a sessão. A chave fica em `SUPER_ADMIN_TOTP_PATH` para o
- * `auth.spec.ts` entrar pela tela com o código.
+ * Primeiro login de quem precisa do segundo fator — Super Admin (ADR-008) e
+ * Admin de Empresa (#291, ADR-012): a senha rende só um token pendente, o
+ * cadastro do autenticador devolve a chave e o código TOTP dela, calculado
+ * aqui, emite a sessão. A chave fica em `totpFile` para os specs entrarem pela
+ * tela com o código.
  */
-async function loginSuperAdmin(): Promise<string> {
-  const started = await post<{ mfaEnrollmentRequired?: boolean; pendingToken: string }>(
-    null,
+async function loginEnrollingFactor(
+  email: string,
+  password: string,
+  who: string,
+  totpFile: string,
+  clientIp?: string,
+): Promise<string> {
+  const started = await postFrom<{ mfaEnrollmentRequired?: boolean; pendingToken: string }>(
     "/api/auth/login",
-    { email: E2E_SUPER_ADMIN_EMAIL, password: E2E_SUPER_ADMIN_PASSWORD },
+    { email, password },
+    clientIp,
   );
   if (!started.mfaEnrollmentRequired) {
-    throw new Error("Login do Super Admin numa instalação nova deveria exigir o cadastro do segundo fator");
+    throw new Error(`Primeiro login de ${who} deveria exigir o cadastro do segundo fator`);
   }
-  const enrolled = await post<{ secret: string; pendingToken: string }>(null, "/api/auth/mfa/enroll", {
-    pendingToken: started.pendingToken,
-  });
+  const enrolled = await postFrom<{ secret: string; pendingToken: string }>(
+    "/api/auth/mfa/enroll",
+    { pendingToken: started.pendingToken },
+    clientIp,
+  );
   const step = totpStep();
   const cookie = await sessionCookieFrom(
     "/api/auth/mfa/verify",
     { pendingToken: enrolled.pendingToken, code: totpCode(enrolled.secret, step) },
-    "Super Admin (segundo fator)",
+    `${who} (segundo fator)`,
+    clientIp,
   );
-  await mkdir(path.dirname(SUPER_ADMIN_TOTP_PATH), { recursive: true });
-  await saveTotpState({ secret: enrolled.secret, lastUsedStep: step });
+  await mkdir(path.dirname(totpFile), { recursive: true });
+  await saveTotpState({ secret: enrolled.secret, lastUsedStep: step }, totpFile);
   return cookie;
 }
+
+const loginSuperAdmin = (): Promise<string> =>
+  loginEnrollingFactor(E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, "Super Admin", SUPER_ADMIN_TOTP_PATH);
 
 async function writeStorageState(file: string, cookiePair: string): Promise<void> {
   const value = cookiePair.slice(`${SESSION_COOKIE_NAME}=`.length);
@@ -242,7 +273,12 @@ async function provisionRoleAccount(
     professionalId: role === "profissional" ? professionalId : null,
   });
   await consumeInvite(await waitForInviteUrl(email, logStart), E2E_ROLE_PASSWORD, role);
-  await writeStorageState(storageState, await login(email, E2E_ROLE_PASSWORD, role, ROLE_LOGIN_IP));
+  // Admin de Empresa cadastra o segundo fator no primeiro login (#291).
+  const cookie =
+    role === "company_admin"
+      ? await loginEnrollingFactor(email, E2E_ROLE_PASSWORD, role, totpStatePath(email), ROLE_LOGIN_IP)
+      : await login(email, E2E_ROLE_PASSWORD, role, ROLE_LOGIN_IP);
+  await writeStorageState(storageState, cookie);
 }
 
 /**
@@ -379,7 +415,13 @@ async function provisionClinicAdmin(superAdminCookie: string): Promise<string> {
   });
   const inviteUrl = await waitForInviteUrl(E2E_CLINIC_ADMIN_EMAIL, logStart);
   await consumeInvite(inviteUrl, E2E_CLINIC_ADMIN_PASSWORD, "Admin de Empresa");
-  return login(E2E_CLINIC_ADMIN_EMAIL, E2E_CLINIC_ADMIN_PASSWORD, "Admin de Empresa", CLINIC_ADMIN_LOGIN_IP);
+  return loginEnrollingFactor(
+    E2E_CLINIC_ADMIN_EMAIL,
+    E2E_CLINIC_ADMIN_PASSWORD,
+    "Admin de Empresa",
+    totpStatePath(E2E_CLINIC_ADMIN_EMAIL),
+    CLINIC_ADMIN_LOGIN_IP,
+  );
 }
 
 /**

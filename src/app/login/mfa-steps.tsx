@@ -8,8 +8,9 @@ import { apiFetch } from '@/lib/client';
 import { safeNextPath } from '@/lib/login-redirect';
 
 /**
- * Segunda etapa do login do super_admin (ADR-007, bloco B2). O token pendente
- * vive só no estado do componente: nunca vai para a URL nem para o storage.
+ * Segunda etapa do login (ADR-008, ADR-012): super_admin, company_admin e quem
+ * cadastrou o fator opcional. O token pendente vive só no estado do
+ * componente: nunca vai para a URL nem para o storage.
  */
 export type LoginStep =
   | { kind: 'password' }
@@ -34,7 +35,8 @@ export function nextStep(data: PendingLoginData | null): LoginStep | null {
   return null;
 }
 
-const PLATFORM_HOME = '/plataforma';
+/** Início de cada papel: o proxy leva o super_admin de `/` à plataforma. */
+const HOME = '/';
 
 const verify = <T,>(body: Record<string, string>) =>
   apiFetch<T>('/api/auth/mfa/verify', {
@@ -45,11 +47,10 @@ const verify = <T,>(body: Record<string, string>) =>
 const errorMessage = (err: unknown, fallback: string) =>
   err instanceof Error ? err.message : fallback;
 
-/** Volta ao `?next=` validado (#207); sem ele, à plataforma. */
-function useGoToPlatform() {
+/** Volta ao `?next=` validado (#207); sem ele, ao início do papel. */
+function useGoHome() {
   const router = useRouter();
-  const destination =
-    safeNextPath(useSearchParams().get('next')) ?? PLATFORM_HOME;
+  const destination = safeNextPath(useSearchParams().get('next')) ?? HOME;
   return () => {
     router.push(destination);
     router.refresh();
@@ -73,7 +74,7 @@ interface CodeStepProps {
 
 /** Código do autenticador, ou código de recuperação (leva ao recadastro). */
 export function MfaCodeStep({ pendingToken, onStep }: CodeStepProps) {
-  const goToPlatform = useGoToPlatform();
+  const goHome = useGoHome();
   const [useRecovery, setUseRecovery] = useState(false);
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export function MfaCodeStep({ pendingToken, onStep }: CodeStepProps) {
       );
       const step = nextStep(data);
       if (step) onStep(step);
-      else goToPlatform();
+      else goHome();
     } catch (err) {
       setError(errorMessage(err, 'Erro ao verificar o código'));
       setSubmitting(false);
@@ -198,9 +199,9 @@ export function MfaEnrollStep({ pendingToken, onStep }: CodeStepProps) {
     <form onSubmit={handleSubmit}>
       <h2 className="font-semibold text-base">Cadastre o app autenticador</h2>
       <p className="mt-1 mb-4 text-ink-3 text-sm">
-        O acesso à plataforma exige um segundo fator. No app autenticador
-        (Google Authenticator, Authy, 1Password…), adicione a chave abaixo ou
-        abra o link neste aparelho.
+        Sua conta exige um segundo fator. No app autenticador (Google
+        Authenticator, Authy, 1Password…), adicione a chave abaixo ou abra o
+        link neste aparelho.
       </p>
       {error && <ErrorAlert message={error} />}
       {enrollment && (
@@ -248,7 +249,7 @@ export function MfaEnrollStep({ pendingToken, onStep }: CodeStepProps) {
 
 /** Os 10 códigos, exibidos uma única vez. A sessão já foi emitida. */
 export function RecoveryCodesStep({ codes }: { codes: string[] }) {
-  const goToPlatform = useGoToPlatform();
+  const goHome = useGoHome();
   return (
     <div>
       <h2 className="font-semibold text-base">
@@ -270,7 +271,7 @@ export function RecoveryCodesStep({ codes }: { codes: string[] }) {
         type="button"
         variant="accent"
         className="mt-6 w-full"
-        onClick={goToPlatform}
+        onClick={goHome}
       >
         Continuar
       </Button>

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { apiPost } from "./support/api";
 import { MAIN_BASE_URL, SUPER_ADMIN_STORAGE_STATE_PATH } from "./support/constants";
+import { totpCode, totpStep } from "./support/totp";
 
 /**
  * B5 (#214, Journey 7 e 8): conta de clínica suspensa não entra, e volta a
@@ -58,6 +59,13 @@ test.describe("clínica suspensa", () => {
 
     await apiPost(page.request, `/api/platform/clinics/${clinic.id}/reactivate`, {});
     await login();
+    // Admin de Empresa sem segundo fator é levado ao cadastro do autenticador (#291).
+    await expect(memberPage.getByRole("heading", { name: "Cadastre o app autenticador" })).toBeVisible();
+    const secret = (await memberPage.getByTestId("mfa-secret").textContent())?.trim() ?? "";
+    await memberPage.getByLabel("Código do autenticador", { exact: true }).fill(totpCode(secret, totpStep()));
+    await memberPage.getByRole("button", { name: "Confirmar" }).click();
+    await expect(memberPage.getByRole("list", { name: "Códigos de recuperação" }).getByRole("listitem")).toHaveCount(10);
+    await memberPage.getByRole("button", { name: "Continuar" }).click();
     await expect(memberPage.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await member.close();
   });

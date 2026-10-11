@@ -646,11 +646,11 @@ describe('Feature: Login do super_admin em duas etapas (B2, ADR-007)', () => {
     });
   });
 
-  it('Dado conta de outro papel, Quando entrar com a senha, Então recebe a sessão direto, sem segundo fator', async () => {
+  it('Dado conta de papel com 2FA opcional e sem fator, Quando entrar com a senha, Então recebe a sessão direto', async () => {
     const staff = UserAccount.create({
       email: 'equipe-mfa@clinica.com',
       passwordHash: await hashPassword(PASSWORD),
-      role: 'company_admin',
+      role: 'atendente',
       clinicId: CLINIC_A_ID,
     });
     await (await getRepositories(clinicScope(CLINIC_A_ID))).userAccounts.save(
@@ -666,6 +666,6 @@ describe('Feature: Login do super_admin em duas etapas (B2, ADR-007)', () => {
     );
 
     expect(result.body.data).toEqual({ ok: true });
-    expect(sessionOf(result.cookie)?.role).toBe('company_admin');
+    expect(sessionOf(result.cookie)?.role).toBe('atendente');
   });
 });

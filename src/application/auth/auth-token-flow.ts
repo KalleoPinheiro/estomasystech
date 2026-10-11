@@ -5,6 +5,11 @@ import {
   type AuthTokenPurpose,
   hashAuthTokenSecret,
 } from '@/domain/auth/auth-token';
+import {
+  assertPasswordPolicy,
+  PORTAL_MIN_PASSWORD_LENGTH,
+  PORTAL_PASSWORD_TOO_SHORT_MESSAGE,
+} from '@/domain/auth/password-policy';
 import type {
   UserAccount,
   UserAccountRepository,
@@ -21,8 +26,6 @@ import { logError } from '@/lib/log-error';
  */
 export const INVALID_TOKEN_MESSAGE =
   'Link inválido ou expirado — solicite um novo';
-
-export const MIN_PASSWORD_LENGTH = 8;
 
 const SUBJECT_BY_PURPOSE: Record<AuthTokenPurpose, string> = {
   invite: 'VittaFlow — defina sua senha de acesso',
@@ -156,12 +159,8 @@ export class ConsumeAuthToken {
   ) {}
 
   async execute(input: ConsumeAuthTokenInput): Promise<ConsumeAuthTokenResult> {
-    if (input.newPassword.length < MIN_PASSWORD_LENGTH) {
-      throw new ValidationError(
-        `A senha precisa ter ao menos ${MIN_PASSWORD_LENGTH} caracteres`,
-      );
-    }
     const nowMs = input.nowMs ?? Date.now();
+    await this.assertPolicyBeforeClaim(input, nowMs);
     // Reivindica ANTES de qualquer outra coisa: o token é queimado no mesmo
     // comando que o valida, então duas requisições simultâneas com o mesmo link
     // não conseguem as duas trocar a senha (TOCTOU).
@@ -204,5 +203,28 @@ export class ConsumeAuthToken {
       clinicId: account.clinicId,
       purpose: token.purpose,
     };
+  }
+
+  /**
+   * A política depende do papel da conta (#291), que só o token revela. Lê o
+   * token sem queimá-lo: uma senha recusada não pode inutilizar o link. Token
+   * inválido aqui cai na mesma mensagem genérica da reivindicação.
+   */
+  private async assertPolicyBeforeClaim(
+    input: ConsumeAuthTokenInput,
+    nowMs: number,
+  ): Promise<void> {
+    if (input.newPassword.length < PORTAL_MIN_PASSWORD_LENGTH) {
+      throw new ValidationError(PORTAL_PASSWORD_TOO_SHORT_MESSAGE);
+    }
+    const token = await this.tokens.findUsableBySecretHash(
+      hashAuthTokenSecret(input.secret),
+      nowMs,
+    );
+    const account = token && (await this.accounts.findById(token.accountId));
+    if (!account) {
+      throw new ValidationError(INVALID_TOKEN_MESSAGE);
+    }
+    assertPasswordPolicy(account.role, input.newPassword);
   }
 }

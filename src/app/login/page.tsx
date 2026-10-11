@@ -84,7 +84,7 @@ function LoginCard() {
   );
 }
 
-/** Segundo fator do super_admin (ADR-007, bloco B2). */
+/** Segundo fator (ADR-008, ADR-012). */
 function SecondFactor({
   step,
   onStep,
@@ -131,7 +131,7 @@ function PasswordForm({
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      // Super_admin: a senha só abre o segundo fator (ADR-007).
+      // Super_admin e company_admin: a senha só abre o segundo fator (ADR-012).
       const step = nextStep(data);
       if (step) {
         onStep(step);

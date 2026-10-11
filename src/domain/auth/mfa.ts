@@ -1,7 +1,31 @@
+import type { UserRole } from './user-role';
+
 /**
- * Segundo fator do super_admin (ADR-007, bloco B2). A linha do fator só existe
- * depois de confirmada; o cadastro em andamento vive no token pendente.
+ * Segundo fator TOTP (ADR-008, ADR-012). A linha do fator só existe depois de
+ * confirmada; o cadastro em andamento vive no token pendente.
  */
+
+/**
+ * Quem precisa do segundo fator (#291): obrigatório para o super_admin e o
+ * company_admin — sem ele o login leva ao cadastro; opcional para atendente e
+ * profissional — pedido no login só se a conta cadastrou; inexistente para
+ * os portais.
+ */
+export type MfaPolicy = 'required' | 'optional' | 'none';
+
+const MFA_POLICY: Record<UserRole, MfaPolicy> = {
+  super_admin: 'required',
+  company_admin: 'required',
+  atendente: 'optional',
+  profissional: 'optional',
+  patient: 'none',
+  partner: 'none',
+};
+
+export function mfaPolicy(role: UserRole): MfaPolicy {
+  return MFA_POLICY[role];
+}
+
 export interface MfaFactor {
   accountId: string;
   /** Chave base32 em claro — o repositório cifra e decifra (ADR-006). */

@@ -152,6 +152,8 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
         buildUserAccount({
           email: 'equipe@clinica.com',
           passwordHash: await hashPassword('s3nh@individual'),
+          // 2FA opcional e não cadastrado: a senha basta (#291).
+          role: 'atendente',
         }),
       );
 
@@ -405,6 +407,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           email,
           clinicId: CLINIC_A_ID,
           passwordHash: await hashPassword('senha-da-clinica-a'),
+          role: 'atendente',
         }),
       );
       const clinicBRepos = await getRepositories(clinicScope(CLINIC_B_ID));
@@ -413,6 +416,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           email,
           clinicId: CLINIC_B_ID,
           passwordHash: await hashPassword('senha-da-clinica-b'),
+          role: 'atendente',
         }),
       );
 
@@ -547,6 +551,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
         buildUserAccount({
           email: 'logout-audit@clinica.com',
           passwordHash: await hashPassword('s3nh@logout'),
+          role: 'atendente',
         }),
       );
       const loginResponse = await loginRoute.POST(
@@ -575,7 +580,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           event.action === 'delete',
       );
       expect(logoutEvent).toBeDefined();
-      expect(logoutEvent?.actorRole).toBe('company_admin');
+      expect(logoutEvent?.actorRole).toBe('atendente');
     });
 
     it('Dado sem sessão (cookie ausente), Quando POST logout, Então não lança erro e apenas não audita (#71)', async () => {

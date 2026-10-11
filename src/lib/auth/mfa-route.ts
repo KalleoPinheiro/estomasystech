@@ -12,9 +12,10 @@ import {
 import { systemScope } from '@/lib/auth/tenant-scope';
 
 /**
- * Montagem comum das rotas do segundo fator (ADR-007, bloco B2). Escopo de
+ * Montagem comum das rotas do segundo fator (ADR-008, ADR-012). Escopo de
  * sistema: tudo acontece antes de existir sessão, e o token pendente é que
- * identifica a conta — o super_admin, que não tem clínica.
+ * identifica a conta — o super_admin não tem clínica, e o company_admin ainda
+ * não tem sessão que diga qual é a dele. O evento vai para a clínica da conta.
  */
 export async function mfaContext(authSecret: string) {
   const services = await getRepositories(systemScope());

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
- * Token de login pendente do super_admin (ADR-007, bloco B2): prova que a
+ * Token de login pendente do segundo fator (ADR-008, ADR-012): prova que a
  * senha foi aceita há menos de 5 min e diz qual etapa do segundo fator falta.
  * Nunca é sessão — a chave do HMAC é derivada do `AUTH_SECRET` com um rótulo
  * próprio, então um token não passa pelo outro.
