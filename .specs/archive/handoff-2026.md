@@ -691,3 +691,18 @@ ADR-012, ACE-RN-41/42, RM-22. Spec em `.specs/features/senha-2fa-equipe/`. AD-03
 - **Next step**: respostas às 3 perguntas. A tela "Minha conta" (#295) e o QR code (#250).
 - **Blockers**: nenhum.
 - **Branch**: `feat/291-senha-2fa-admin`. PR #298, squash-merged em `main` (`b7b8c3d`). Issue #291 fechada via `Closes #291`.
+
+## Issue #292 — parceiro só vê dado clínico com consentimento (2026-10-11) — ENCERRADO (#300)
+
+Decisão de @KalleoPinheiro sobre a #216 (item 2).
+
+- **Consentimento:** o portal do parceiro só mostra condições, avaliações e consultas de um paciente indicado quando o paciente deu **consentimento específico e revogável** para aquele parceiro. Ele é registrado por paciente × parceiro, com data e versão do texto (placeholder até o texto jurídico do #216).
+- **Sem consentimento:** o parceiro vê só "Atendido(a)" ou "Sem atendimento realizado".
+- **Janela:** o histórico visível tem limite de **24 meses**.
+- **Revogação:** o paciente revoga pelo portal e a equipe pela ficha.
+
+**Detalhes**: CI com os 4 jobs verdes e Verifier independente com PASS (PSC-01..08). Perguntas abertas para @KalleoPinheiro: (1) consultas sem consentimento ficam ocultas, ou mostrar datas e status sem o procedimento?; (2) "atendido" significa consulta concluída nos últimos 24 meses, ou qualquer consulta já feita?; (3) o aceite é só pelo portal, ou a equipe também registra um aceite assinado em papel?
+
+- **Next step**: texto jurídico do consentimento (#216) e respostas às 3 perguntas.
+- **Blockers**: nenhum.
+- **Branch**: `feat/292-consentimento-parceiro`. PR #300, squash-merged em `main` (`e8c8001`). Issue #292 fechada via `Closes #292`.
