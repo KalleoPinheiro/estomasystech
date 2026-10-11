@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 // Content-Security-Policy saiu daqui (issue #76): precisa de um nonce por
 // request, gerado em `src/proxy.ts` — headers() estáticos do next.config não
 // têm acesso à requisição.
-const SECURITY_HEADERS = [
+export const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -15,10 +15,16 @@ const SECURITY_HEADERS = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains",
   },
+  // Issue #219: o app não depende de janela de outra origem (o único
+  // window.open é `noopener`) e as fotos só são consumidas pelo próprio app.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
 ];
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Issue #219: não anuncia `X-Powered-By: Next.js` em toda resposta.
+  poweredByHeader: false,
   output: "standalone",
   // O indicador de dev tools (<nextjs-portal>) fica fixo no canto da tela e
   // intercepta cliques em elementos reais ali embaixo (ex.: botão "Sair" da

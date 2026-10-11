@@ -221,7 +221,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
       {
         method: 'DELETE',
         path: '/api/settings/schedule/closures/c-1',
-        respond: () => failure('Bloqueio de agenda não encontrado(a): c-1'),
+        respond: () => failure('Bloqueio de agenda não encontrado(a)'),
       },
       { path: '/api/settings/schedule/closures', respond: () => ok([natal]) },
       { path: '/api/professionals', respond: () => ok([]) },
@@ -233,7 +233,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Remover' }));
 
     expect(
-      await screen.findByText('Bloqueio de agenda não encontrado(a): c-1'),
+      await screen.findByText('Bloqueio de agenda não encontrado(a)'),
     ).toBeInTheDocument();
   });
 

@@ -173,14 +173,12 @@ describe('Feature: Botão Enviar WhatsApp no detalhe da consulta', () => {
   });
 
   it('C31 falha do POST mostra toast danger e não abre o link', async () => {
-    mockFetch({ postError: 'Consulta não encontrado(a): appt-1' });
+    mockFetch({ postError: 'Consulta não encontrado(a)' });
     renderDetail('scheduled');
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar WhatsApp' }));
 
-    const message = await screen.findByText(
-      'Consulta não encontrado(a): appt-1',
-    );
+    const message = await screen.findByText('Consulta não encontrado(a)');
     expect(
       message.closest('[data-variant]')?.getAttribute('data-variant'),
     ).toBe('danger');

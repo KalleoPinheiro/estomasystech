@@ -606,8 +606,7 @@ describe('Feature: PatientRecordPage', () => {
     it('Dado 404 do paciente, Então a mensagem não expõe o id', async () => {
       mockFetch(
         buildRouter({
-          patientError:
-            'Paciente não encontrado(a): 0b7a5c1e-1111-4222-8333-944445555666',
+          patientError: 'Paciente não encontrado(a)',
           patientStatus: 404,
         }),
       );

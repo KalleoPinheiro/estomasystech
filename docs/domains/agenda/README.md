@@ -3,7 +3,7 @@ title: "Domínio: Agenda"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-11
 domain: agenda
 ---
 
@@ -33,6 +33,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | AGE-RN-09 | Falha do Google Calendar nunca impede a operação | `src/application/appointments/sync-appointment-calendar.ts` |
 | AGE-RN-10 | Profissional vê em `GET /api/follow-ups` e `GET /api/waitlist` só os pacientes vinculados (R4, #186); os demais papéis veem a fila inteira da empresa | `src/lib/auth/clinical-resource-scope.ts` (`linkedPatientFilter`) |
 | AGE-RN-11 | Agenda e lista de espera leem profissionais (`{ id, fullName, active }`) e procedimentos (`{ id, name, priceCents, durationMinutes, active }`) por `GET /api/options/*`, liberado a toda a equipe e sem comissão nem kit; o cadastro (`/api/professionals`, `/api/procedures`) continua só do Admin. Lista auxiliar que falha vira alerta no formulário, nunca campo escondido (#188) | `src/app/api/options/`, `src/app/(staff)/agenda/appointment-form.tsx` |
+| AGE-RN-12 | Profissional informado ao marcar consulta (avulsa ou série) e ao registrar ausência precisa existir **na empresa** e estar **ativo**: de outra empresa ou inexistente dá `404`, inativo dá `400`. Na série, profissional inválido rejeita a série inteira (não vira ocorrência pulada) e nenhum vínculo R4 é criado. A remarcação não recebe profissional e mantém o da consulta (#219) | `src/application/scheduling/assert-active-professional.ts`, `schedule-appointment.ts`, `schedule-recurring-appointments.ts`, `CreateScheduleClosure` |
 
 ## Funcionalidades
 

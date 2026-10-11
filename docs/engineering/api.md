@@ -3,7 +3,7 @@ title: "API REST"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-10-11
 ---
 
 # API REST
@@ -11,7 +11,8 @@ last_reviewed: 2026-09-23
 > **Recorte:** as rotas centrais do núcleo clínico/operacional. A lista completa é a árvore
 > `src/app/api/**/route.ts`; cada domínio em [`docs/domains/`](../domains/) aponta as suas.
 > Toda rota exige sessão (exceto login, bootstrap, forgot/set password e o cron) e responde no
-> envelope `{ success, data, error, meta? }`.
+> envelope `{ success, data, error, meta? }`. O `error` de um `404` nomeia o recurso sem o id
+> (`"Paciente não encontrado(a)"`); o id fica só no log do servidor (#219).
 
 | Método | Rota | Descrição |
 |--------|------|-----------|

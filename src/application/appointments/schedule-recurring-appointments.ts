@@ -47,6 +47,8 @@ export class ScheduleRecurringAppointments {
     input: RecurringScheduleInput,
   ): Promise<RecurringScheduleResult> {
     const interval = validateRecurrence(input);
+    // Profissional inválido invalida a série toda — não vira N ocorrências puladas.
+    await this.schedule.assertProfessional(input.professionalId);
     const result: RecurringScheduleResult = { created: [], skipped: [] };
     for (let occurrence = 0; occurrence < input.occurrences; occurrence += 1) {
       const offset = occurrence * interval * MS_PER_WEEK;

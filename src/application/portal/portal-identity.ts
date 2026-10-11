@@ -40,7 +40,8 @@ export async function resolvePortalPatient(
     ? await repos.patients.findById(account.patientId)
     : null;
   if (!patient?.isActive) {
-    throw new NotFoundError('Paciente', session.subject);
+    // `subject` é o e-mail de login: não vai para o log (#219).
+    throw new NotFoundError('Paciente', account?.id ?? 'sem-conta');
   }
   return patient;
 }
@@ -54,7 +55,7 @@ export async function resolvePortalPartner(
     ? await repos.partners.findById(account.partnerId)
     : null;
   if (!partner?.isActive) {
-    throw new NotFoundError('Parceiro', session.subject);
+    throw new NotFoundError('Parceiro', account?.id ?? 'sem-conta');
   }
   return partner;
 }

@@ -64,6 +64,10 @@ export async function handleRequest<T>(
         .join('; ');
       return fail(`Dados inválidos: ${detail}`, 400);
     }
+    if (error instanceof NotFoundError) {
+      // O id saiu da mensagem (issue #219); fica só aqui, para diagnóstico.
+      console.info('[api] 404:', error.entity, error.entityId);
+    }
     if (error instanceof DomainError) {
       return fail(error.message, statusForDomainError(error));
     }

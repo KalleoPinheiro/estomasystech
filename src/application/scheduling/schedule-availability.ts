@@ -10,6 +10,7 @@ import {
   type WeeklyWindow,
 } from '@/domain/scheduling/schedule-availability';
 import { NotFoundError } from '@/domain/shared/errors';
+import { assertActiveProfessional } from './assert-active-professional';
 
 export interface CreatedClosure {
   closure: ScheduleClosure;
@@ -48,7 +49,10 @@ export class CreateScheduleClosure {
   async execute(input: NewScheduleClosure): Promise<CreatedClosure> {
     const closure = createScheduleClosure(input);
     if (closure.professionalId) {
-      await assertProfessional(this.professionals, closure.professionalId);
+      await assertActiveProfessional(
+        this.professionals,
+        closure.professionalId,
+      );
     }
     await this.availability.saveClosure(closure);
 

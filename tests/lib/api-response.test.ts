@@ -68,14 +68,19 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
     expect(body.error).toContain('email');
   });
 
-  it('Dado NotFoundError, Quando handleRequest, Então 404', async () => {
+  it('Dado NotFoundError, Quando handleRequest, Então 404 sem o id na mensagem; o id vai só para o log (#219)', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const id = '4f3c105f-1111-4222-8333-944445555666';
     const response = await handleRequest(async () => {
-      throw new NotFoundError('Paciente', '123');
+      throw new NotFoundError('Paciente', id);
     });
 
     expect(response.status).toBe(404);
     const body = await response.json();
-    expect(body.error).toBe('Paciente não encontrado(a): 123');
+    expect(body.error).toBe('Paciente não encontrado(a)');
+    expect(body.error).not.toContain(id);
+    expect(info).toHaveBeenCalledWith('[api] 404:', 'Paciente', id);
+    info.mockRestore();
   });
 
   it('Dado SchedulingConflictError, Quando handleRequest, Então 409', async () => {
