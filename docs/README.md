@@ -73,6 +73,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/009-recuperacao-de-emergencia-do-super-admin.md`](adr/009-recuperacao-de-emergencia-do-super-admin.md) | Super Admin que perdeu tudo volta por `npm run admin:recover` no servidor |
 | [`adr/010-trilha-de-auditoria-de-plataforma.md`](adr/010-trilha-de-auditoria-de-plataforma.md) | evento sem empresa é de plataforma (`clinic_id` nulo), visto só pelo Super Admin; auditoria escopada por empresa |
 | [`adr/011-canal-de-comunicacao-por-clinica.md`](adr/011-canal-de-comunicacao-por-clinica.md) | e-mail de cada clínica sai pela chave dela (`clinic_channels`, cifrada); sem canal, não sai; chave da plataforma opcional e só para contas sem clínica |
+| [`adr/012-segundo-fator-e-senha-da-equipe.md`](adr/012-segundo-fator-e-senha-da-equipe.md) | 2FA obrigatório também para o Admin de Empresa, opcional para Atendente/Profissional; senha da equipe com 10+ caracteres e fora da lista de senhas comuns |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 

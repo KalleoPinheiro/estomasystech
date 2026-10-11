@@ -2,7 +2,7 @@
 
 ## Decisions
 
-Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-029, AD-030.
+Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-029, AD-030, AD-031.
 
 ### AD-001
 - **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
@@ -197,12 +197,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Reason**: mesma classe de vazamento da #202 (CWE-532, LGPD art. 46) — o corpo leva nome do paciente e data da consulta, e o link de convite/reset é credencial.
 - **Trade-off**: em dev o link-credencial ainda vai para o log local (aceito pelo produto). Em produção o e-mail nulo nem é montado (`buildEmailGateway` lança), então o corte por `NODE_ENV` é defesa em profundidade. Os testes deixaram de ler o log e espiam `NullEmailGateway.prototype.send` (`tests/support/email.ts`); o E2E acha o convite no trecho do log escrito após o cadastro, porque as máscaras das contas por papel colidem.
 - **Scope / Date / Status**: `src/application/ports/{email,messaging}-gateway.ts`, `src/lib/redact.ts`, `e2e/support/invite-log.ts` · 2026-09-26 · active
-
-### AD-031
-- **Decision**: Login endurecido (#208): limite por e-mail normalizado com o mesmo teto/janela do IP (5/60 s) e a mesma mensagem neutra do 429; scrypt `2^17` com re-hash no login; scrypt fictício quando não há candidata com hash atual. Padrão conservador já usado nos endpoints de auth.
-- **Reason**: a issue define teto e janela ("mesma do IP") e pede mensagem neutra; nada além disso foi decidido.
-- **Trade-off**: um terceiro pode travar o login de uma conta por até 1 min errando 6 vezes. **Perguntas abertas** para @KalleoPinheiro: (1) aceitar esse travamento ou trocar o desenho (ex.: contar só senha errada, CAPTCHA)? (2) política de senha do staff — tamanho mínimo, senhas vazadas, 2FA (item 4 da issue).
-- **Scope / Date / Status**: `src/app/api/auth/login/route.ts`, `src/lib/auth/password.ts`, `.specs/features/endurecer-login/` · 2026-10-10 · open — issue #208
 
 ### Baseline de segurança medido em `fcd6110`
 
