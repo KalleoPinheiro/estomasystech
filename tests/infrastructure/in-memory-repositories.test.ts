@@ -839,15 +839,59 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
         await system.findPlatformTrail({ from: new Date(Date.now() + 60_000) }),
       ).toHaveLength(0);
       expect(await system.findPlatformTrail({}, { limit: 1 })).toHaveLength(1);
-      const trail = await system.findPlatformTrail();
-      const times = trail.map((e) => e.occurredAt.getTime());
-      expect(times).toEqual([...times].sort((a, b) => b - a));
-      expect(
-        (await system.findPlatformTrail({}, { offset: 1 })).map((e) => e.id),
-      ).toEqual([trail[1].id]);
       await expect(clinicA.findPlatformTrail()).rejects.toThrow(
         'Trilha de plataforma exige escopo de sistema',
       );
+    });
+
+    it('Dados eventos em instantes distintos, Quando consultar a trilha de plataforma (auditoria escopada), Então mais recente primeiro, com período e offset como no Drizzle (C9)', async () => {
+      const t = (min: number) => new Date(Date.UTC(2026, 8, 27, 12, min));
+      const at = (
+        id: string,
+        clinicId: string | null,
+        actorRole: string,
+        occurredAt: Date,
+      ) =>
+        AuditEvent.restore({
+          id,
+          clinicId,
+          actorRole,
+          actorId: `${actorRole}@x.test`,
+          action: 'update',
+          resourceType: 'clinic-info',
+          resourceId: `r-${id}`,
+          patientId: null,
+          detail: null,
+          occurredAt,
+        });
+      const system = new InMemoryAuditEventRepository(null);
+      // Gravados do mais antigo ao mais novo: a ordem de inserção é a inversa
+      // da esperada, então só uma ordenação real passa.
+      for (const e of [
+        at('anonymous', null, 'anonymous', t(1)),
+        at('super-in-a', 'clinic-a', 'super_admin', t(2)),
+        at('admin-in-a', 'clinic-a', 'company_admin', t(3)),
+        at('super-no-clinic', null, 'super_admin', t(4)),
+      ]) {
+        await system.save(e);
+      }
+      const ids = (events: AuditEvent[]) => events.map((e) => e.id);
+
+      expect(ids(await system.findPlatformTrail())).toEqual([
+        'super-no-clinic',
+        'super-in-a',
+        'anonymous',
+      ]);
+      expect(
+        ids(await system.findPlatformTrail({ from: t(2), to: t(4) })),
+      ).toEqual(['super-in-a']);
+      expect(ids(await system.findPlatformTrail({}, { offset: 1 }))).toEqual([
+        'super-in-a',
+        'anonymous',
+      ]);
+      expect(
+        ids(await system.findPlatformTrail({}, { limit: 1, offset: 1 })),
+      ).toEqual(['super-in-a']);
     });
   });
 

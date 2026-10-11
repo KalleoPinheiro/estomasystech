@@ -22,7 +22,12 @@ import {
 import { createMfaPendingToken } from '@/lib/auth/mfa-pending-token';
 import { hashPassword } from '@/lib/auth/password';
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/session';
+import {
+  clearSessionRevocationCache,
+  REVOCATION_CACHE_TTL_MS,
+} from '@/lib/auth/staff-revocation';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
+import { proxy } from '@/proxy';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -123,6 +128,21 @@ const sessionOf = (cookie: string | null) =>
     AUTH_SECRET,
     cookie?.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`))?.[1],
   );
+
+/** Status que o proxy (camada 1) dá a uma rota da plataforma com este cookie. */
+const proxyStatus = async (cookie: string | null) => {
+  ip += 1;
+  const token = cookie?.match(new RegExp(`${SESSION_COOKIE}=([^;]+)`))?.[1];
+  const response = await proxy(
+    new NextRequest('http://localhost/api/platform/clinics', {
+      headers: {
+        cookie: `${SESSION_COOKIE}=${token}`,
+        'x-forwarded-for': `10.78.${Math.floor(ip / 250)}.${ip % 250}`,
+      },
+    }),
+  );
+  return response.status;
+};
 
 const versionOf = async () =>
   (
@@ -489,6 +509,34 @@ describe('Feature: Login do super_admin em duas etapas (B2, ADR-007)', () => {
       expect(await versionOf()).toBe(before + 1);
       const result = await enroll(oldVerifyToken);
       expect(result.status).toBe(401);
+    });
+
+    it('Dado cookie de sessão emitido antes do recadastro, Quando confirmar o recadastro, Então o proxy recusa o cookie antigo com 401', async () => {
+      clearSessionRevocationCache();
+      const { secret, recoveryCodes } = await enrollFactor();
+      const signedIn = await verify({
+        pendingToken: (await login()).body.data.pendingToken,
+        code: codeNow(secret),
+      });
+      const oldCookie = signedIn.cookie;
+      expect(await proxyStatus(oldCookie)).toBe(200);
+
+      clock += 2 * 60_000;
+      const recovered = await verify<PendingData>({
+        pendingToken: (await login()).body.data.pendingToken,
+        recoveryCode: recoveryCodes[0],
+      });
+      const reenrolled = await enroll(recovered.body.data.pendingToken);
+      const confirmed = await verify({
+        pendingToken: reenrolled.body.data.pendingToken,
+        code: codeNow(reenrolled.body.data.secret),
+      });
+      expect(confirmed.status).toBe(200);
+      // O proxy relê a conta quando o cache de revogação expira (ADR-005).
+      clock += REVOCATION_CACHE_TTL_MS + 1;
+
+      expect(await proxyStatus(oldCookie)).toBe(401);
+      expect(await proxyStatus(confirmed.cookie)).toBe(200);
     });
   });
 

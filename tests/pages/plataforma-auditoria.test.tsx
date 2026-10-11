@@ -113,4 +113,75 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
       expect(url).toContain('to=');
     });
   });
+
+  it('Dada a trilha da plataforma, Quando abrir, Então mostra o link de volta para Clínicas e os cabeçalhos das colunas', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(envelope([row({})])));
+
+    render(<PlatformAuditPage />);
+
+    expect(screen.getByRole('link', { name: /Clínicas/ })).toHaveAttribute(
+      'href',
+      '/plataforma',
+    );
+    await screen.findByText('invalid_credentials');
+    expect(
+      screen.getAllByRole('columnheader').map((th) => th.textContent),
+    ).toEqual(['Quando', 'Clínica', 'Ator', 'Ação', 'Recurso', 'Detalhe']);
+  });
+
+  it('Dados eventos de suspensão e de recuperação, Quando abrir a trilha da plataforma, Então mostra os rótulos Situação da clínica e Recuperação de conta', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        envelope([
+          row({ id: 'e4', resourceType: 'clinic-status', detail: 'suspend' }),
+          row({
+            id: 'e5',
+            resourceType: 'account-recovery',
+            detail: 'recovered',
+          }),
+        ]),
+      ),
+    );
+
+    render(<PlatformAuditPage />);
+
+    const suspended = (await screen.findByText('suspend')).closest(
+      'tr',
+    ) as HTMLElement;
+    expect(
+      within(suspended).getByText('Situação da clínica'),
+    ).toBeInTheDocument();
+    const recovered = screen
+      .getByText('recovered')
+      .closest('tr') as HTMLElement;
+    expect(
+      within(recovered).getByText('Recuperação de conta'),
+    ).toBeInTheDocument();
+  });
+
+  it('Dada uma página cheia, Quando clicar em Carregar mais, Então busca a página seguinte pelo offset e some quando a página vem incompleta', async () => {
+    const fullPage = Array.from({ length: 100 }, (_, i) =>
+      row({ id: `p1-${i}`, detail: `primeira-${i}` }),
+    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(envelope(fullPage))
+      .mockResolvedValueOnce(
+        envelope([row({ id: 'p2-0', detail: 'segunda-0' })]),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<PlatformAuditPage />);
+    await screen.findByText('primeira-99');
+
+    fireEvent.click(screen.getByText('Carregar mais'));
+
+    expect(await screen.findByText('segunda-0')).toBeInTheDocument();
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      '/api/platform/audit?limit=100&offset=100',
+    );
+    expect(screen.getByText('primeira-0')).toBeInTheDocument();
+    expect(screen.queryByText('Carregar mais')).not.toBeInTheDocument();
+  });
 });

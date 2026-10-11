@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { CreatePartner } from '@/application/partners/create-partner';
 import { CreatePatient } from '@/application/patients/create-patient';
 import { UserAccount } from '@/domain/auth/user-account';
 import { Clinic } from '@/domain/clinic/clinic';
@@ -216,7 +217,7 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
   describe('Cenário: clínica suspensa (B5, #214)', () => {
     let clinicSeq = 0;
 
-    /** Clínica nova com um membro da equipe e um paciente com senha. */
+    /** Clínica nova com equipe, paciente e parceiro, todos com senha. */
     async function seedSuspendableClinic() {
       clinicSeq += 1;
       const clinicId = `revoga-clinica-${clinicSeq}`;
@@ -249,9 +250,22 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
         clinicId,
         patientId: patient.id,
       });
+      const partner = await new CreatePartner(services.partners).execute({
+        fullName: 'Parceiro Revoga',
+        email: `parceiro-${clinicId}@clinica.com`,
+        phone: '11999990001',
+      });
+      const partnerAccount = UserAccount.create({
+        email: `parceiro-${clinicId}@clinica.com`,
+        passwordHash: hash,
+        role: 'partner',
+        clinicId,
+        partnerId: partner.id,
+      });
       await services.userAccounts.save(staff);
       await services.userAccounts.save(portal);
-      return { clinicId, staff, portal };
+      await services.userAccounts.save(partnerAccount);
+      return { clinicId, staff, portal, partnerAccount };
     }
 
     const platformAction = async (
@@ -274,26 +288,33 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
       expect(response.status).toBe(200);
     };
 
-    it('suspensão da clínica revoga: cookies de equipe e de paciente caem na hora, continuam fora após reativar, e login novo volta', async () => {
-      const { clinicId, staff, portal } = await seedSuspendableClinic();
+    it('suspensão da clínica revoga: cookies de equipe, paciente e parceiro caem na hora, continuam fora após reativar, e login novo volta', async () => {
+      const { clinicId, staff, portal, partnerAccount } =
+        await seedSuspendableClinic();
+      const ME = '/api/portal/me';
       const staffCookie = await loginCookie(staff.email);
       const portalCookie = await loginCookie(portal.email);
+      const partnerCookie = await loginCookie(partnerAccount.email);
       expect(await proxyStatus(staffCookie)).toBe(200);
-      expect(await proxyStatus(portalCookie, '/api/portal/me')).toBe(200);
+      expect(await proxyStatus(portalCookie, ME)).toBe(200);
+      expect(await proxyStatus(partnerCookie, ME)).toBe(200);
 
       await platformAction('suspend', clinicId);
 
       expect(await proxyStatus(staffCookie)).toBe(401);
-      expect(await proxyStatus(portalCookie, '/api/portal/me')).toBe(401);
+      expect(await proxyStatus(portalCookie, ME)).toBe(401);
+      expect(await proxyStatus(partnerCookie, ME)).toBe(401);
 
       await platformAction('reactivate', clinicId);
       clearSessionRevocationCache();
 
       expect(await proxyStatus(staffCookie)).toBe(401);
-      expect(await proxyStatus(portalCookie, '/api/portal/me')).toBe(401);
+      expect(await proxyStatus(portalCookie, ME)).toBe(401);
+      expect(await proxyStatus(partnerCookie, ME)).toBe(401);
       expect(await proxyStatus(await loginCookie(staff.email))).toBe(200);
+      expect(await proxyStatus(await loginCookie(portal.email), ME)).toBe(200);
       expect(
-        await proxyStatus(await loginCookie(portal.email), '/api/portal/me'),
+        await proxyStatus(await loginCookie(partnerAccount.email), ME),
       ).toBe(200);
     });
 

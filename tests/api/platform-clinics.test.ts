@@ -101,6 +101,13 @@ const accountsAnywhere = async (email: string) => {
   return userAccounts.findAllByEmail(email);
 };
 
+/** Admins de clínica em todas as clínicas — o papel que o cadastro cria. */
+const adminCount = async () => {
+  const { getRepositories } = await import('@/infrastructure/container');
+  const { userAccounts } = await getRepositories(systemScope());
+  return (await userAccounts.findByRole('company_admin')).length;
+};
+
 const clinicCount = async () => {
   const { clinics } = await repositories('legacy-clinic');
   return (await clinics.findAll()).length;
@@ -210,16 +217,22 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     async (_label, overrides) => {
       spyOnSentEmails();
       const before = await clinicCount();
-      const adminEmail = `invalido-${cnpjSeq}@x.com`;
+      const adminsBefore = await adminCount();
+      const body = validBody({
+        adminEmail: `invalido-${cnpjSeq}@x.com`,
+        ...overrides,
+      });
 
-      const { response, json } = await create(
-        validBody({ adminEmail, ...overrides }),
-      );
+      const { response, json } = await create(body);
 
       expect(response.status).toBe(400);
       expect(json.success).toBe(false);
       expect(await clinicCount()).toBe(before);
-      expect(await accountsAnywhere(adminEmail)).toEqual([]);
+      expect(await adminCount()).toBe(adminsBefore);
+      // Procura pelo e-mail efetivamente enviado, não pelo gerado.
+      if (typeof body.adminEmail === 'string') {
+        expect(await accountsAnywhere(body.adminEmail)).toEqual([]);
+      }
     },
   );
 
