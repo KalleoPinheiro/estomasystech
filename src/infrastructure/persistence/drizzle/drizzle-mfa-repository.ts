@@ -11,7 +11,7 @@ import type { AppDb } from './db';
 import { mfaRecoveryCodes, userAccounts, userMfa } from './schema';
 
 /**
- * Segundo fator do super_admin (ADR-007). Sem escopo de clínica, como
+ * Segundo fator TOTP (ADR-008, ADR-012). Sem escopo de clínica, como
  * `auth_tokens`: o acesso é sempre pela conta, antes de existir sessão.
  */
 export class DrizzleMfaRepository implements MfaRepository {

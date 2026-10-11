@@ -4,10 +4,15 @@ import { readFile, writeFile } from "node:fs/promises";
 /**
  * Réplica do TOTP de `src/domain/auth/totp.ts` (RFC 6238: SHA-1, 6 dígitos,
  * passo de 30 s). Mesmo motivo de `session-token.ts`: o E2E não importa código
- * da app. O `global-setup` cadastra o segundo fator do Super Admin e grava a
- * chave aqui; o `auth.spec.ts` lê para digitar o código na tela.
+ * da app. O `global-setup` cadastra o segundo fator do Super Admin e dos Admins
+ * de Empresa (#291) e grava a chave de cada um num arquivo; os specs leem para
+ * digitar o código na tela.
  */
 export const SUPER_ADMIN_TOTP_PATH = "e2e/.auth/super-admin-totp.json";
+
+/** Arquivo da chave TOTP de uma conta, pelo e-mail. */
+export const totpStatePath = (email: string): string =>
+  `e2e/.auth/totp-${email.replace(/[^a-z0-9]+/gi, "-")}.json`;
 
 const STEP_MS = 30_000;
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -42,21 +47,21 @@ interface TotpState {
   lastUsedStep: number;
 }
 
-export const saveTotpState = (state: TotpState): Promise<void> =>
-  writeFile(SUPER_ADMIN_TOTP_PATH, JSON.stringify(state));
+export const saveTotpState = (state: TotpState, file: string = SUPER_ADMIN_TOTP_PATH): Promise<void> =>
+  writeFile(file, JSON.stringify(state));
 
 /**
  * Próximo código aceito pelo servidor: o mesmo passo não entra duas vezes
  * (`last_used_step`), então usa o passo atual ou o seguinte (janela ±1) e,
  * se os dois já foram usados, espera o passo virar.
  */
-export async function nextTotpCode(): Promise<string> {
-  const state = JSON.parse(await readFile(SUPER_ADMIN_TOTP_PATH, "utf-8")) as TotpState;
+export async function nextTotpCode(file: string = SUPER_ADMIN_TOTP_PATH): Promise<string> {
+  const state = JSON.parse(await readFile(file, "utf-8")) as TotpState;
   let step = Math.max(totpStep(), state.lastUsedStep + 1);
   while (step > totpStep() + 1) {
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     step = Math.max(totpStep(), state.lastUsedStep + 1);
   }
-  await saveTotpState({ ...state, lastUsedStep: step });
+  await saveTotpState({ ...state, lastUsedStep: step }, file);
   return totpCode(state.secret, step);
 }

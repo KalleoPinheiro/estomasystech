@@ -1,4 +1,4 @@
-import type { MfaRepository } from '@/domain/auth/mfa';
+import { type MfaRepository, mfaPolicy } from '@/domain/auth/mfa';
 import { generateTotpSecret, otpauthUri, verifyTotp } from '@/domain/auth/totp';
 import type {
   UserAccount,
@@ -18,10 +18,11 @@ import {
 import type { FieldCipher } from '@/lib/data-cipher';
 
 /**
- * Login do super_admin em duas etapas (ADR-007, bloco B2). A senha só rende um
- * token pendente; a sessão nasce depois do código do autenticador, ou depois
- * de cadastrar um autenticador quando a conta ainda não tem (primeiro acesso,
- * ou recadastro após usar um código de recuperação).
+ * Login em duas etapas (ADR-008, ADR-012). Para quem precisa do segundo fator
+ * a senha só rende um token pendente; a sessão nasce depois do código do
+ * autenticador, ou depois de cadastrar um autenticador quando a conta ainda não
+ * tem e o papel o exige (primeiro acesso, ou recadastro após usar um código de
+ * recuperação).
  */
 export const MFA_EXPIRED_MESSAGE =
   'Verificação expirada. Entre novamente com e-mail e senha.';
@@ -82,26 +83,38 @@ const pendingToken = (
     deps.nowMs,
   );
 
-/** Resposta do login por senha para o super_admin: nunca uma sessão. */
+export type PendingLoginResponse =
+  | { mfaRequired: true; pendingToken: string }
+  | { mfaEnrollmentRequired: true; pendingToken: string };
+
+/**
+ * Resposta do login por senha quando falta o segundo fator; `null` quando a
+ * senha basta (papel sem 2FA, ou 2FA opcional ainda não cadastrado).
+ */
 export async function startMfaLogin(
   deps: MfaDeps,
   account: UserAccount,
-): Promise<
-  | { mfaRequired: true; pendingToken: string }
-  | { mfaEnrollmentRequired: true; pendingToken: string }
-> {
+): Promise<PendingLoginResponse | null> {
+  const policy = mfaPolicy(account.role);
+  if (policy === 'none') return null;
   const factor = await deps.mfa.findFactor(account.id);
-  return factor
-    ? { mfaRequired: true, pendingToken: pendingToken(deps, account, 'verify') }
-    : {
+  if (factor) {
+    return {
+      mfaRequired: true,
+      pendingToken: pendingToken(deps, account, 'verify'),
+    };
+  }
+  return policy === 'required'
+    ? {
         mfaEnrollmentRequired: true,
         pendingToken: pendingToken(deps, account, 'enroll'),
-      };
+      }
+    : null;
 }
 
 /**
- * Token válido, da etapa esperada, de conta ativa `super_admin` cuja
- * `session_version` ainda é a do token — senão `null` (401 único).
+ * Token válido, da etapa esperada, de conta ativa com papel de segundo fator
+ * cuja `session_version` ainda é a do token — senão `null` (401 único).
  */
 export async function resolvePendingLogin(
   deps: MfaDeps,
@@ -113,7 +126,7 @@ export async function resolvePendingLogin(
   const account = await deps.userAccounts.findById(token.accountId);
   const usable =
     account?.isActive === true &&
-    account.role === 'super_admin' &&
+    mfaPolicy(account.role) !== 'none' &&
     account.sessionVersion === token.sessionVersion;
   return usable ? { token, account } : null;
 }

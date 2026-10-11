@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { startMfaLogin } from '@/application/auth/mfa-login';
 import { suspendedClinicMessage } from '@/application/auth/suspended-clinic-message';
+import { mfaPolicy } from '@/domain/auth/mfa';
 import type { UserAccount } from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
 import type { Clinic } from '@/domain/clinic/clinic';
@@ -96,13 +97,13 @@ export async function POST(request: NextRequest) {
     return fail(identity.error, identity.status);
   }
 
-  const mfaRequired = identity.role === 'super_admin';
+  const pending = await pendingSecondFactor(auth.secret, identity.account);
   await recordAuditNow(auditEvents, null, {
     action: 'read',
     resourceType: 'session',
     resourceId: identity.subject,
-    // Senha aceita não é sessão para o super_admin: falta o segundo fator.
-    detail: mfaRequired ? 'mfa_required' : null,
+    // Senha aceita não é sessão para quem precisa do segundo fator (ADR-012).
+    detail: pending ? 'mfa_required' : null,
     actorOverride: {
       role: identity.role,
       id: identity.subject,
@@ -110,8 +111,8 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  if (mfaRequired) {
-    return ok(await superAdminPendingLogin(auth.secret, identity.account));
+  if (pending) {
+    return ok(pending);
   }
 
   const expiresAtMs = Date.now() + SESSION_TTL_MS;
@@ -288,14 +289,15 @@ async function filterByValidPassword(
 }
 
 /**
- * Super_admin (ADR-007, bloco B2): a senha rende só um token pendente de 5
- * min — `mfaRequired` com fator cadastrado, `mfaEnrollmentRequired` sem ele.
- * Nunca existe sessão de super_admin sem segundo fator.
+ * Segundo fator (ADR-008, ADR-012): para super_admin e company_admin — e para
+ * atendente/profissional que cadastraram um — a senha rende só um token
+ * pendente de 5 min: `mfaRequired` com fator cadastrado, `mfaEnrollmentRequired`
+ * sem ele. `null` quando a senha basta. Nunca existe sessão de quem precisa do
+ * segundo fator sem ele.
  */
-async function superAdminPendingLogin(
-  authSecret: string,
-  account: UserAccount,
-) {
+async function pendingSecondFactor(authSecret: string, account: UserAccount) {
+  // Portal nem monta o cifrador: login de paciente não depende da chave de dados.
+  if (mfaPolicy(account.role) === 'none') return null;
   const { userAccounts, mfa } = await getRepositories(systemScope());
   return startMfaLogin(
     {

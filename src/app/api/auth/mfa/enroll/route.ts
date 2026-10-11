@@ -12,7 +12,7 @@ import { getAuthConfig } from '@/lib/auth/session';
 const schema = z.object({ pendingToken: z.string().min(1).max(8192) });
 
 /**
- * Cadastro do autenticador do super_admin (ADR-007, bloco B2): devolve a chave
+ * Cadastro do autenticador (ADR-008, ADR-012): devolve a chave
  * em texto e o link `otpauth://` (sem QR, Open 3). Nada é gravado aqui — a
  * chave viaja cifrada no token de confirmação até `POST /api/auth/mfa/verify`.
  */
