@@ -27,7 +27,7 @@ guarda legal de 20 anos.
 | DT-07 | Aceitar ou recusar **deve** exigir justificativa, valer uma vez (`409` depois) e gravar `update`/`data_request`. | idem, domínio |
 | DT-08 | **Quando** a clínica decide, o paciente **deve** ser avisado por e-mail no endereço do cadastro, sem conteúdo do pedido nem da justificativa; falha de envio não desfaz a decisão. | `tests/application/data-subject-requests.test.ts`, API |
 | DT-09 | Descrição e justificativa **devem** ficar cifradas em repouso (PRO-RN-12) e entrar na recifragem. | `tests/infrastructure/clinical-field-encryption.test.ts`, `tests/infrastructure/reencrypt-clinical-data.test.ts` |
-| DT-10 | Abrir e decidir **devem** ser write-ahead: a auditoria é gravada antes do pedido/decisão; sem trilha, nada é gravado nem enviado. | `tests/api/data-subject-rights.test.ts` |
+| DT-10 | Abrir e decidir **devem** ser write-ahead: a auditoria é gravada antes do pedido/decisão; sem trilha, nada é gravado nem enviado. Se a gravação falhar depois (corrida), fica na trilha a tentativa. | `tests/api/data-subject-rights.test.ts` (falha na auditoria) |
 | DT-11 | Duas aberturas ou duas decisões simultâneas **não devem** passar juntas: índice único parcial (um pendente por titular e tipo) e update só de pedido pendente. | `tests/infrastructure/data-subject-request-repository.test.ts` |
 
 ## Decisões de escopo

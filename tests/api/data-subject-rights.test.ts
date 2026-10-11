@@ -1,5 +1,6 @@
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { getRepositories } from '@/infrastructure/container';
+import { DrizzleAuditEventRepository } from '@/infrastructure/persistence/drizzle/drizzle-audit-event-repository';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import {
   CLINIC_A_ID,
@@ -362,6 +363,44 @@ describe('Feature: Direitos do titular no portal (#293)', () => {
             event.detail === 'correction: accepted',
         ),
       ).toBe(true);
+    });
+
+    it('Dada falha na auditoria, Quando o paciente abre ou o Admin decide, Então nada é gravado nem enviado (write-ahead)', async () => {
+      const titular = await seedTitular(CLINIC_A_ID, 'audit');
+      const opened = (
+        (await (
+          await open(titular, { kind: 'erasure' })
+        ).json()) as Envelope<RequestDto>
+      ).data;
+      spy = spyOnSentEmails();
+      const auditSave = vi
+        .spyOn(DrizzleAuditEventRepository.prototype, 'save')
+        .mockRejectedValue(new Error('auditoria fora'));
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        const correction = await open(titular, {
+          kind: 'correction',
+          details: 'Sem trilha',
+        });
+        const decision = await resolve(opened.id, {
+          decision: 'accept',
+          justification: 'Sem trilha',
+        });
+
+        expect(correction.status).toBe(500);
+        expect(decision.status).toBe(500);
+      } finally {
+        auditSave.mockRestore();
+      }
+      const { dataSubjectRequests } = await getRepositories(
+        clinicScope(CLINIC_A_ID),
+      );
+      const stored = await dataSubjectRequests.findByPatient(titular.patientId);
+
+      expect(stored.map((item) => [item.kind, item.status])).toEqual([
+        ['erasure', 'pending'],
+      ]);
+      expect(spy.bodies).toHaveLength(0);
     });
 
     it('Quando o Admin recusa, Então o pedido sai da fila como recusado', async () => {
