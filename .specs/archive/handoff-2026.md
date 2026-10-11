@@ -596,3 +596,19 @@ Regras novas: ACE-RN-39, renumerada depois que a #208 ocupou a ACE-RN-38, e PRO-
 - **Next step**: o dono responder às perguntas abertas: `sessionStorage` vs. `localStorage`, texto próprio para sessão revogada e texto do aviso de rascunho.
 - **Blockers**: nenhum.
 - **Branch**: `fix/207-sessao-expirada`. PR #277, squash-merged em `main` (`9b89df2`). Issue #207 fechada via `Closes #207`.
+
+## Issue #245 — rotas da plataforma leem o banco dentro do envelope (2026-10-11) — ENCERRADO (#282)
+
+P3 da revisão pré-produção #183. As rotas `/api/platform/clinics/[id]/**` liam a clínica antes do `handleRequest`. Com o banco fora, o Next respondia um 500 fora do envelope `{ success, data, error }` e sem o log padronizado.
+
+- **Leitura dentro do envelope:** o helper `loadPlatformClinic(id)` (`src/app/api/platform/clinics/[id]/platform-clinic.ts`) lê com `clinicScope(id)` e é chamado dentro do `handleRequest` nas 7 rotas.
+- **404 inalterado:** o caso de não encontrado continua 404 com a mesma mensagem, via `PlatformNotFoundError`.
+- **Autenticação antes do banco:** `requireStaffSession` continua rodando antes de qualquer acesso ao banco.
+
+Regra nova: ACE-RN-40. Teste `tests/api/platform-clinic-envelope.test.ts`, parametrizado sobre as 7 rotas.
+
+**Detalhes**: fica fora do escopo um caso que já existia: no PATCH `[id]`, a clínica que some entre a leitura e a escrita ainda responde 500. Nota do Verifier: `PlatformNotFoundError` chama `super('', '')` e depois sobrescreve a `message`, o que funciona mas é frágil. CI com os 4 jobs verdes e Verifier independente com PASS.
+
+- **Next step**: nenhum.
+- **Blockers**: nenhum.
+- **Branch**: `fix/245-plataforma-envelope`. PR #282, squash-merged em `main` (`7689b3b`). Issue #245 fechada via `Closes #245`.
