@@ -723,3 +723,32 @@ Regras novas: AGE-RN-13 e **ACE-RN-43**. A regra nasceu como ACE-RN-41; o orques
 - **Next step**: resposta à pergunta aberta.
 - **Blockers**: nenhum.
 - **Branch**: `fix/215-permissao-grade`. PR #299, squash-merged em `main` (`bf42f1d`). Issue #215 fechada via `Closes #215`.
+
+## Issue #294 — retenção e anonimização automática (2026-10-11) — ENCERRADO (#302)
+
+Decisão de @KalleoPinheiro (#216, item 4). O job de cron `POST /api/retention/run` usa o mesmo `CRON_SECRET` dos lembretes e anonimiza, empresa a empresa, o que passou do prazo. **Nada é excluído do banco**; a exceção é o arquivo de foto, que é apagado do volume.
+
+| Tipo | Prazo | Regra |
+| --- | --- | --- |
+| Prontuário e fotos | 20 anos após a última atividade clínica | PRO-RN-15 |
+| Trilha de auditoria | 5 anos | ACE-RN-44 |
+| Lista de espera | 2 anos após a resolução | AGE-RN-14 |
+| Contas inativas | 2 anos após `deactivated_at` | ACE-RN-45 |
+
+- **Execução:** idempotente (marcadores por tipo), auditada só com contagens, em lotes de 200 pacientes e 500 fotos. Cada empresa roda isolada das outras.
+- **Escopo:** usa `clinicScope` em tudo, menos na listagem de empresas e na trilha da plataforma.
+- **Referências:** ADR-013, RM-23, migração `0049`, runbook § 7.1 (crontab da VPS) e `vercel.json` às 06:00.
+
+**Detalhes**: CI com os 4 jobs verdes e Verifier independente com PASS (RET-01..07). Ficam **sem processar até decisão de @KalleoPinheiro**:
+
+1. entradas da lista de espera ainda `waiting` com o período vencido;
+2. contas de parceiro inativas;
+3. o cadastro do profissional;
+4. textos de fatura e pagamento;
+5. eventos já criados no Google Agenda;
+6. o prazo de guarda dos backups, que ainda trazem o dado de antes da anonimização;
+7. a reativação de uma conta anonimizada, que não é bloqueada.
+
+- **Next step**: decisão do dono sobre os 7 pontos.
+- **Blockers**: nenhum.
+- **Branch**: `feat/294-retencao-anonimizacao`. PR #302, squash-merged em `main` (`a514f9e`). Issue #294 fechada via `Closes #294`.
