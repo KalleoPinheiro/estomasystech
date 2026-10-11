@@ -612,3 +612,20 @@ Regra nova: ACE-RN-40. Teste `tests/api/platform-clinic-envelope.test.ts`, param
 - **Next step**: nenhum.
 - **Blockers**: nenhum.
 - **Branch**: `fix/245-plataforma-envelope`. PR #282, squash-merged em `main` (`7689b3b`). Issue #245 fechada via `Closes #245`.
+
+## Issue #219 — endurecimento pré-produção (2026-10-11) — ENCERRADO (#283)
+
+P3 da revisão pré-produção #183. São quatro itens de higiene:
+
+1. **`X-Powered-By`:** o cabeçalho foi removido (`poweredByHeader: false`).
+2. **Profissional da consulta:** a consulta avulsa, a série recorrente e a ausência agora passam por `assertActiveProfessional`. Profissional de outra empresa ou inexistente dá 404; inativo dá 400. A série valida uma vez, antes do laço.
+3. **404 sem UUID:** a mensagem do `NotFoundError` não leva mais o id. O id vai só para o log. No portal, o `entityId` passou a ser o id da conta em vez do e-mail de login, por LGPD.
+4. **COOP/CORP:** `Cross-Origin-Opener-Policy` e `Cross-Origin-Resource-Policy` passam a ser `same-origin` em toda rota.
+
+Regra nova: AGE-RN-12. Spec em `.specs/features/endurecimento-219/spec.md` (H-01..H-07).
+
+**Detalhes**: fora do escopo ficaram `RescheduleAppointment` (mantém o profissional já validado), `SetProfessionalHours` (só checa existência) e `POST /api/waitlist` (sugerido como follow-up). Antes do merge, a `main` com a #282 foi trazida para a PR e o CI rodou de novo. CI com os 4 jobs verdes e Verifier independente com PASS, incluindo discriminação: cada mudança desfeita derruba algum teste.
+
+- **Next step**: respostas do dono a duas perguntas. Remarcar consulta de profissional inativado depois de marcar: hoje continua permitido. Registrar ausência de profissional inativo: agora dá 400.
+- **Blockers**: nenhum.
+- **Branch**: `fix/219-endurecimento`. PR #283, squash-merged em `main` (`13c78cc`). Issue #219 fechada via `Closes #219`.
