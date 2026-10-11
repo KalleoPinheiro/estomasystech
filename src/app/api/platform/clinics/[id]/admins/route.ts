@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ManageClinicAdmins } from '@/application/platform/manage-clinic-admins';
-import { getRepositories } from '@/infrastructure/container';
-import { fail, handleRequest } from '@/lib/api-response';
+import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { clinicScope } from '@/lib/auth/tenant-scope';
 import { toClinicAdminDto, toUserAccountDto } from '@/lib/dto';
+import { loadPlatformClinic } from '../platform-clinic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -20,13 +19,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
 
   const { id: clinicId } = await context.params;
-  const services = await getRepositories(clinicScope(clinicId));
-  if (!(await services.clinics.findById(clinicId))) {
-    return fail('Clínica não encontrada', 404);
-  }
-  return handleRequest(async () =>
-    (await new ManageClinicAdmins(services).list()).map(toClinicAdminDto),
-  );
+  return handleRequest(async () => {
+    const { services } = await loadPlatformClinic(clinicId);
+    return (await new ManageClinicAdmins(services).list()).map(
+      toClinicAdminDto,
+    );
+  });
 }
 
 /**
@@ -41,13 +39,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
 
   const { id: clinicId } = await context.params;
-  const services = await getRepositories(clinicScope(clinicId));
-  const clinic = await services.clinics.findById(clinicId);
-  if (!clinic) {
-    return fail('Clínica não encontrada', 404);
-  }
-
   return handleRequest(async () => {
+    const { services, clinic } = await loadPlatformClinic(clinicId);
     const body = bodySchema.parse(await request.json());
     const { account, delivered, inviteUrl } = await new ManageClinicAdmins(
       services,

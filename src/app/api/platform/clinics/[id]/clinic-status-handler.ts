@@ -4,12 +4,11 @@ import type {
   ClinicStatusChange,
   ClinicStatusServices,
 } from '@/application/platform/change-clinic-status';
-import { getRepositories } from '@/infrastructure/container';
-import { fail, handleRequest } from '@/lib/api-response';
+import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { clinicScope } from '@/lib/auth/tenant-scope';
 import { toPlatformClinicDto } from '@/lib/dto';
+import { loadPlatformClinic } from './platform-clinic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -36,12 +35,8 @@ export async function handleClinicStatus(
   if (!guard.ok) return guard.response;
 
   const { id } = await context.params;
-  const services = await getRepositories(clinicScope(id));
-  if (!(await services.clinics.findById(id))) {
-    return fail('Clínica não encontrada', 404);
-  }
-
   return handleRequest(async () => {
+    const { services } = await loadPlatformClinic(id);
     const result = await change(services, id, {
       by: guard.session?.subject ?? 'anonymous',
       at: new Date(),

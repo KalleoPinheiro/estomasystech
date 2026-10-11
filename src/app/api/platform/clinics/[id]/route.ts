@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { UpdateClinicInfo } from '@/application/platform/update-clinic-info';
-import { getRepositories } from '@/infrastructure/container';
-import { fail, handleRequest } from '@/lib/api-response';
+import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { clinicScope } from '@/lib/auth/tenant-scope';
 import { clinicInfoChangesSchema } from '@/lib/clinic-info-schema';
 import { toPlatformClinicDetailDto, toPlatformClinicDto } from '@/lib/dto';
+import { loadPlatformClinic } from './platform-clinic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -21,12 +20,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
 
   const { id } = await context.params;
-  const { clinics, clinicChannels } = await getRepositories(clinicScope(id));
-  const clinic = await clinics.findById(id);
-  if (!clinic) return fail(CLINIC_NOT_FOUND, 404);
-  return handleRequest(async () =>
-    toPlatformClinicDetailDto(clinic, await clinicChannels.findStatus('email')),
-  );
+  return handleRequest(async () => {
+    const { services, clinic } = await loadPlatformClinic(id);
+    return toPlatformClinicDetailDto(
+      clinic,
+      await services.clinicChannels.findStatus('email'),
+    );
+  });
 }
 
 /**
@@ -38,10 +38,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
 
   const { id } = await context.params;
-  const { clinics, auditEvents } = await getRepositories(clinicScope(id));
-  if (!(await clinics.findById(id))) return fail(CLINIC_NOT_FOUND, 404);
-
   return handleRequest(async () => {
+    const {
+      services: { clinics, auditEvents },
+    } = await loadPlatformClinic(id);
     const changes = clinicInfoChangesSchema.parse(await request.json());
     const updated = await new UpdateClinicInfo(clinics).execute(id, changes);
     if (!updated) throw new Error(CLINIC_NOT_FOUND);
