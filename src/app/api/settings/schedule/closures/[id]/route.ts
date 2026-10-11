@@ -15,9 +15,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const services = await getRepositories(writeScope(guard.session));
+    // A sessão é o ator: o caso de uso aplica a regra por papel (#215).
     const closure = await new DeleteScheduleClosure(
       services.scheduleAvailability,
-    ).execute(id);
+    ).execute(id, guard.session);
     recordAudit(services.auditEvents, guard.session, {
       action: 'delete',
       resourceType: 'schedule-closure',

@@ -4,6 +4,7 @@ import {
   ConflictError,
   ConsentRequiredError,
   DomainError,
+  ForbiddenError,
   InvalidStatusTransitionError,
   NotFoundError,
   ProvisioningDeniedError,
@@ -43,6 +44,7 @@ export function fail(
 function statusForDomainError(error: DomainError): number {
   if (error instanceof NotFoundError) return 404;
   if (error instanceof ConsentRequiredError) return 403;
+  if (error instanceof ForbiddenError) return 403;
   if (error instanceof ProvisioningDeniedError) return 403;
   if (error instanceof SchedulingConflictError) return 409;
   if (error instanceof ConflictError) return 409;

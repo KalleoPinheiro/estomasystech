@@ -92,7 +92,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
         path: '/api/settings/schedule/closures',
         respond: () => ok([natal, ferias]),
       },
-      { path: '/api/professionals', respond: () => ok([ana]) },
+      { path: '/api/options/professionals', respond: () => ok([ana]) },
     ]);
     renderWithToast(<ClosuresSection />);
 
@@ -104,10 +104,13 @@ describe('Feature: Feriados e ausências (configurações)', () => {
     expect(feriasRow).toHaveTextContent('01/07/2099 a 15/07/2099');
   });
 
-  it('Dado nenhum bloqueio e atendente sem acesso a profissionais, Quando abrir, Então estado vazio e só a opção clínica toda', async () => {
+  it('Dado nenhum bloqueio e lista de profissionais indisponível, Quando abrir, Então estado vazio e só a opção clínica toda', async () => {
     mockFetch([
       { path: '/api/settings/schedule/closures', respond: () => ok([]) },
-      { path: '/api/professionals', respond: () => failure('Acesso negado') },
+      {
+        path: '/api/options/professionals',
+        respond: () => failure('Acesso negado'),
+      },
     ]);
     renderWithToast(<ClosuresSection />);
 
@@ -137,7 +140,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
           }),
       },
       { path: '/api/settings/schedule/closures', respond: () => ok([]) },
-      { path: '/api/professionals', respond: () => ok([ana]) },
+      { path: '/api/options/professionals', respond: () => ok([ana]) },
     ]);
     renderWithToast(<ClosuresSection />);
 
@@ -177,7 +180,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
         respond: () => failure('O bloqueio não pode terminar antes de começar'),
       },
       { path: '/api/settings/schedule/closures', respond: () => ok([]) },
-      { path: '/api/professionals', respond: () => ok([]) },
+      { path: '/api/options/professionals', respond: () => ok([]) },
     ]);
     renderWithToast(<ClosuresSection />);
 
@@ -202,7 +205,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
         respond: () => ok({ id: 'c-1' }),
       },
       { path: '/api/settings/schedule/closures', respond: () => ok([natal]) },
-      { path: '/api/professionals', respond: () => ok([]) },
+      { path: '/api/options/professionals', respond: () => ok([]) },
     ]);
     renderWithToast(<ClosuresSection />);
 
@@ -224,7 +227,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
         respond: () => failure('Bloqueio de agenda não encontrado(a)'),
       },
       { path: '/api/settings/schedule/closures', respond: () => ok([natal]) },
-      { path: '/api/professionals', respond: () => ok([]) },
+      { path: '/api/options/professionals', respond: () => ok([]) },
     ]);
     renderWithToast(<ClosuresSection />);
 
@@ -243,7 +246,7 @@ describe('Feature: Feriados e ausências (configurações)', () => {
         path: '/api/settings/schedule/closures',
         respond: () => failure('Falha ao listar'),
       },
-      { path: '/api/professionals', respond: () => ok([]) },
+      { path: '/api/options/professionals', respond: () => ok([]) },
     ]);
     renderWithToast(<ClosuresSection />);
     expect(await screen.findByText('Falha ao listar')).toBeInTheDocument();

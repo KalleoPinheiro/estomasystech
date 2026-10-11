@@ -23,16 +23,21 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import {
+  type ClosureActor,
+  canManageClosure,
+} from '@/domain/scheduling/closure-permission';
+import {
   formatDateKey,
   localDateKey,
 } from '@/domain/scheduling/schedule-availability';
 import { apiFetch } from '@/lib/client';
 import type {
   AffectedAppointmentDto,
-  ProfessionalDto,
+  ProfessionalOptionDto,
   ScheduleClosureDto,
 } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
+import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 
 const LIST_WINDOW_DAYS = 400;
@@ -52,10 +57,27 @@ const EMPTY_DRAFT: ClosureDraft = {
 };
 
 /**
+ * Ator da sessão para a regra de bloqueios (#215). Sem provider ou sem conta
+ * conhecida não restringe — a API continua sendo a barreira (ADR-003).
+ */
+function useClosureActor(): ClosureActor | null {
+  const account = useStaffIdentity()?.identity?.account;
+  return account
+    ? { role: account.role, professionalId: account.professionalId }
+    : null;
+}
+
+/**
  * Feriados e recessos da clínica e ausências (férias, congresso) de um
- * profissional: a agenda e o portal deixam de oferecer esses dias.
+ * profissional: a agenda e o portal deixam de oferecer esses dias. Admin e
+ * Atendente cadastram qualquer um; o Profissional, só a própria ausência
+ * (#215, AGE-RN-13).
  */
 export function ClosuresSection() {
+  const actor = useClosureActor();
+  // Sem a identidade, o formulário ofereceria "Clínica toda" e colegas ao
+  // Profissional por um instante — espera em vez de piscar.
+  const identityLoading = useStaffIdentity()?.loading ?? false;
   // Janela fixada na montagem (o relógio não pode ser lido em render).
   const [range] = useState(() => ({
     from: localDateKey(new Date()),
@@ -64,10 +86,10 @@ export function ClosuresSection() {
   const { data, error, refresh } = useApiQuery<ScheduleClosureDto[]>(
     `/api/settings/schedule/closures?from=${range.from}&to=${range.to}`,
   );
-  // Atendente não lê o cadastro de profissionais: sem a lista, só dá para
-  // bloquear a clínica toda.
-  const { data: professionals } =
-    useApiQuery<ProfessionalDto[]>('/api/professionals');
+  // Lista reduzida (#188): toda a equipe lê, sem comissão.
+  const { data: professionals } = useApiQuery<ProfessionalOptionDto[]>(
+    '/api/options/professionals',
+  );
   const [affected, setAffected] = useState<AffectedAppointmentDto[]>([]);
 
   const professionalName = (id: string | null) =>
@@ -83,13 +105,18 @@ export function ClosuresSection() {
         profissional (férias, congresso). Nenhum agendamento cai nesses dias.
       </p>
 
-      <ClosureForm
-        professionals={professionals ?? []}
-        onCreated={(created) => {
-          setAffected(created);
-          refresh();
-        }}
-      />
+      {identityLoading ? (
+        <LoadingIndicator />
+      ) : (
+        <ClosureForm
+          professionals={professionals ?? []}
+          actor={actor}
+          onCreated={(created) => {
+            setAffected(created);
+            refresh();
+          }}
+        />
+      )}
 
       {affected.length > 0 && (
         <Alert variant="warning" className="mt-4">
@@ -123,6 +150,9 @@ export function ClosuresSection() {
           <ClosuresTable
             closures={data}
             professionalName={professionalName}
+            canRemove={(closure) =>
+              canManageClosure(actor, closure.professionalId)
+            }
             onDeleted={refresh}
           />
         )}
@@ -133,13 +163,25 @@ export function ClosuresSection() {
 
 function ClosureForm({
   professionals,
+  actor,
   onCreated,
 }: {
-  professionals: ProfessionalDto[];
+  professionals: ProfessionalOptionDto[];
+  actor: ClosureActor | null;
   onCreated: (affected: AffectedAppointmentDto[]) => void;
 }) {
   const { toast } = useToast();
+  // Profissional: o "Quem" é sempre ele — sem "Clínica toda" nem colegas.
+  // Lido do ator a cada render: a identidade pode chegar depois da montagem.
+  const ownProfessionalId =
+    actor !== null && !canManageClosure(actor, null)
+      ? (actor.professionalId ?? '')
+      : null;
+  const choices = professionals.filter(
+    (p) => p.active && canManageClosure(actor, p.id),
+  );
   const [draft, setDraft] = useState<ClosureDraft>(EMPTY_DRAFT);
+  const professionalId = ownProfessionalId ?? draft.professionalId;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -153,7 +195,7 @@ function ClosureForm({
       }>('/api/settings/schedule/closures', {
         method: 'POST',
         body: JSON.stringify({
-          professionalId: draft.professionalId || null,
+          professionalId: professionalId || null,
           startsOn: draft.startsOn,
           endsOn: draft.endsOn || null,
           reason: draft.reason,
@@ -178,20 +220,20 @@ function ClosureForm({
         <label className="font-medium text-sm">
           Quem
           <NativeSelect
-            value={draft.professionalId}
+            value={professionalId}
             onChange={(e) =>
               setDraft({ ...draft, professionalId: e.target.value })
             }
             className="mt-1"
           >
-            <option value="">Clínica toda</option>
-            {professionals
-              .filter((p) => p.active)
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.fullName}
-                </option>
-              ))}
+            {ownProfessionalId === null && (
+              <option value="">Clínica toda</option>
+            )}
+            {choices.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.fullName}
+              </option>
+            ))}
           </NativeSelect>
         </label>
         <label className="font-medium text-sm">
@@ -241,10 +283,12 @@ function ClosureForm({
 function ClosuresTable({
   closures,
   professionalName,
+  canRemove,
   onDeleted,
 }: {
   closures: ScheduleClosureDto[];
   professionalName: (id: string | null) => string;
+  canRemove: (closure: ScheduleClosureDto) => boolean;
   onDeleted: () => void;
 }) {
   const { toast } = useToast();
@@ -291,18 +335,20 @@ function ClosuresTable({
                 {closure.reason}
               </TableCell>
               <TableCell label="Ações" className="py-2 text-right">
-                <ConfirmAction
-                  trigger={
-                    <Button type="button" size="sm" variant="ghost">
-                      Remover
-                    </Button>
-                  }
-                  title="Remover bloqueio"
-                  description={`Remover "${closure.reason}"? Os dias voltam a aceitar agendamentos.`}
-                  confirmLabel="Remover"
-                  variant="danger"
-                  onConfirm={() => remove(closure)}
-                />
+                {canRemove(closure) && (
+                  <ConfirmAction
+                    trigger={
+                      <Button type="button" size="sm" variant="ghost">
+                        Remover
+                      </Button>
+                    }
+                    title="Remover bloqueio"
+                    description={`Remover "${closure.reason}"? Os dias voltam a aceitar agendamentos.`}
+                    confirmLabel="Remover"
+                    variant="danger"
+                    onConfirm={() => remove(closure)}
+                  />
+                )}
               </TableCell>
             </TableRow>
           ))}

@@ -22,7 +22,12 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/patients/abc', 'operational'],
       ['/api/partners', 'operational'],
       ['/api/follow-ups', 'operational'],
-      ['/api/settings/schedule', 'operational'],
+      // #215: editar a grade é do Admin; feriados/ausências e a leitura da
+      // grade pela agenda seguem abertos à equipe.
+      ['/api/settings/schedule', 'administrative'],
+      ['/api/settings/schedule/closures', 'operational'],
+      ['/api/settings/schedule/closures/c-1', 'operational'],
+      ['/api/schedule-config', 'operational'],
       ['/api/accounts', 'operational'],
       ['/api/professionals', 'administrative'],
       ['/api/supplies', 'administrative'],
