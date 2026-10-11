@@ -675,3 +675,51 @@ O teste novo `tests/docs/env-docs.test.ts` trava a divergência nos dois sentido
 - **Next step**: nenhum.
 - **Blockers**: nenhum.
 - **Branch**: `fix/221-docs-ambiente`. PR #288, squash-merged em `main` (`90d2bf0`). Issue #221 fechada via `Closes #221`.
+
+## Issue #291 — senha da equipe e 2FA por papel (2026-10-11) — ENCERRADO (#298)
+
+Decisões de @KalleoPinheiro sobre a AD-031 (#208).
+
+- **Senha da equipe:** mínimo de **10** caracteres e recusa de senhas de uma **lista local de senhas comuns** (`src/domain/auth/{password-policy,common-passwords}.ts`), no convite, na redefinição e na troca. Quem já tem senha continua entrando até a próxima troca. O portal segue com mínimo de 8.
+- **Link de convite e redefinição:** uma senha recusada **não queima o link** (`findUsableBySecretHash` antes da reivindicação atômica).
+- **2FA por papel** (`mfaPolicy`): obrigatório para super_admin e company_admin, opcional para atendente e profissional, inexistente nos portais. O Admin sem fator cadastra o autenticador no próximo login.
+
+ADR-012, ACE-RN-41/42, RM-22. Spec em `.specs/features/senha-2fa-equipe/`. AD-031 foi arquivada.
+
+**Detalhes**: não há migração. CI com os 4 jobs verdes, E2E 237/237 e Verifier independente com PASS. Perguntas abertas para @KalleoPinheiro: (1) derrubar na hora as sessões dos Admins sem fator; (2) remover o segundo fator de um Admin que perdeu o celular (sugerido dentro da #295); (3) aplicar a lista de senhas comuns também ao portal.
+
+- **Next step**: respostas às 3 perguntas. A tela "Minha conta" (#295) e o QR code (#250).
+- **Blockers**: nenhum.
+- **Branch**: `feat/291-senha-2fa-admin`. PR #298, squash-merged em `main` (`b7b8c3d`). Issue #291 fechada via `Closes #291`.
+
+## Issue #292 — parceiro só vê dado clínico com consentimento (2026-10-11) — ENCERRADO (#300)
+
+Decisão de @KalleoPinheiro sobre a #216 (item 2).
+
+- **Consentimento:** o portal do parceiro só mostra condições, avaliações e consultas de um paciente indicado quando o paciente deu **consentimento específico e revogável** para aquele parceiro. Ele é registrado por paciente × parceiro, com data e versão do texto (placeholder até o texto jurídico do #216).
+- **Sem consentimento:** o parceiro vê só "Atendido(a)" ou "Sem atendimento realizado".
+- **Janela:** o histórico visível tem limite de **24 meses**.
+- **Revogação:** o paciente revoga pelo portal e a equipe pela ficha.
+
+**Detalhes**: CI com os 4 jobs verdes e Verifier independente com PASS (PSC-01..08). Perguntas abertas para @KalleoPinheiro: (1) consultas sem consentimento ficam ocultas, ou mostrar datas e status sem o procedimento?; (2) "atendido" significa consulta concluída nos últimos 24 meses, ou qualquer consulta já feita?; (3) o aceite é só pelo portal, ou a equipe também registra um aceite assinado em papel?
+
+- **Next step**: texto jurídico do consentimento (#216) e respostas às 3 perguntas.
+- **Blockers**: nenhum.
+- **Branch**: `feat/292-consentimento-parceiro`. PR #300, squash-merged em `main` (`e8c8001`). Issue #292 fechada via `Closes #292`.
+
+## Issue #215 — grade, taxa e ausências por papel (2026-10-11) — ENCERRADO (#299)
+
+Decisão de @KalleoPinheiro.
+
+- **Grade, almoço, intervalo e política/taxa de cancelamento:** só `company_admin`, nas duas camadas (proxy e handler). A leitura da agenda passou a usar `/api/schedule-config` para todos os papéis.
+- **Feriados:** Admin e Atendente.
+- **Ausências:** Admin e Atendente para qualquer profissional. O Profissional registra e remove só a própria (`closure-permission.ts`). Fora disso, 403 sem gravar.
+- **Tela Configurações:** abre para toda a equipe, e cada papel vê só as seções permitidas.
+
+Regras novas: AGE-RN-13 e **ACE-RN-43**. A regra nasceu como ACE-RN-41; o orquestrador renumerou no merge com a `main`, porque a #298 já ocupava a 41 e a 42.
+
+**Detalhes**: o conflito com a `main` estava só em `docs/domains/acesso/README.md` e foi resolvido no merge commit `16e4e6d`. Depois disso, CI com os 4 jobs verdes e Verifier independente com PASS (292 testes em 13 arquivos). Pergunta aberta para @KalleoPinheiro: abrir a seção "Contas de acesso" de Configurações para Atendente e Profissional, só com os papéis de portal?
+
+- **Next step**: resposta à pergunta aberta.
+- **Blockers**: nenhum.
+- **Branch**: `fix/215-permissao-grade`. PR #299, squash-merged em `main` (`bf42f1d`). Issue #215 fechada via `Closes #215`.
