@@ -4,13 +4,15 @@ import {
   ADMIN_ACTIONS,
   ManageClinicAdmins,
 } from '@/application/platform/manage-clinic-admins';
-import { getRepositories } from '@/infrastructure/container';
-import { fail, handleRequest } from '@/lib/api-response';
+import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { forgetSessionStatus } from '@/lib/auth/staff-revocation';
-import { clinicScope } from '@/lib/auth/tenant-scope';
 import { toClinicAdminDto } from '@/lib/dto';
+import {
+  loadPlatformClinic,
+  PlatformNotFoundError,
+} from '../../platform-clinic';
 
 type RouteContext = { params: Promise<{ id: string; accountId: string }> };
 
@@ -26,14 +28,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (!guard.ok) return guard.response;
 
   const { id: clinicId, accountId } = await context.params;
-  const services = await getRepositories(clinicScope(clinicId));
-  const clinic = await services.clinics.findById(clinicId);
-  if (!clinic) return fail('Clínica não encontrada', 404);
-  const admins = new ManageClinicAdmins(services);
-  const account = await admins.find(accountId);
-  if (!account) return fail('Admin não encontrado', 404);
-
   return handleRequest(async () => {
+    const { services, clinic } = await loadPlatformClinic(clinicId);
+    const admins = new ManageClinicAdmins(services);
+    const account = await admins.find(accountId);
+    if (!account) throw new PlatformNotFoundError('Admin não encontrado');
     const { action } = bodySchema.parse(await request.json());
     const {
       account: updated,
