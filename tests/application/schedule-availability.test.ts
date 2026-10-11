@@ -12,7 +12,11 @@ import { Procedure } from '@/domain/catalog/procedure';
 import type { Patient } from '@/domain/patient/patient';
 import { Professional } from '@/domain/professional/professional';
 import { createScheduleClosure } from '@/domain/scheduling/schedule-availability';
-import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from '@/domain/shared/errors';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import {
   InMemoryProcedureRepository,
@@ -250,7 +254,7 @@ describe('Feature: Agenda por profissional, almoço e feriados', () => {
           availability,
           professionals,
           appointments,
-        ).execute(input);
+        ).execute(input, null);
       }
     })();
 
@@ -317,9 +321,54 @@ describe('Feature: Agenda por profissional, almoço e feriados', () => {
       });
       const remove = new DeleteScheduleClosure(availability);
 
-      expect((await remove.execute(closure.id)).id).toBe(closure.id);
+      expect((await remove.execute(closure.id, null)).id).toBe(closure.id);
       expect(await availability.findClosureById(closure.id)).toBeNull();
-      await expect(remove.execute(closure.id)).rejects.toThrow(NotFoundError);
+      await expect(remove.execute(closure.id, null)).rejects.toThrow(
+        NotFoundError,
+      );
+    });
+
+    it('Dado Profissional, Quando registrar feriado ou ausência de colega, Então Forbidden e nada é salvo; a própria ausência passa (#215)', async () => {
+      const actor = { role: 'profissional', professionalId: ana.id } as const;
+      const run = (professionalId: string | null) =>
+        new CreateScheduleClosure(
+          availability,
+          professionals,
+          appointments,
+        ).execute(
+          { professionalId, startsOn: '2026-07-21', reason: 'Férias' },
+          actor,
+        );
+
+      await expect(run(null)).rejects.toThrow(ForbiddenError);
+      await expect(run('nao-existe')).rejects.toThrow(ForbiddenError);
+      expect(
+        await availability.listClosures({
+          from: '2026-01-01',
+          to: '2026-12-31',
+        }),
+      ).toEqual([]);
+      expect((await run(ana.id)).closure.professionalId).toBe(ana.id);
+    });
+
+    it('Dado Profissional, Quando remover feriado da clínica, Então Forbidden e o bloqueio fica; a própria ausência sai (#215)', async () => {
+      const actor = { role: 'profissional', professionalId: ana.id } as const;
+      const { closure: holiday } = await create.run({
+        startsOn: '2026-07-21',
+        reason: 'Recesso',
+      });
+      const { closure: own } = await create.run({
+        professionalId: ana.id,
+        startsOn: '2026-07-22',
+        reason: 'Férias',
+      });
+      const remove = new DeleteScheduleClosure(availability);
+
+      await expect(remove.execute(holiday.id, actor)).rejects.toThrow(
+        ForbiddenError,
+      );
+      expect(await availability.findClosureById(holiday.id)).toEqual(holiday);
+      expect((await remove.execute(own.id, actor)).id).toBe(own.id);
     });
 
     it('Dado janelas válidas, Quando salvar horário, Então grava ordenado; profissional inexistente dá NotFound', async () => {

@@ -91,6 +91,15 @@ const ADMINISTRATIVE_PREFIXES = [
 ];
 
 /**
+ * Grade da empresa (dias, horário, folga, almoço) e política/taxa de
+ * cancelamento tardio (#215): só o Admin de Empresa, como os dados cadastrais.
+ * Comparação EXATA — `/api/settings/schedule/closures` (feriados e ausências)
+ * fica de fora e segue `operational`, com a regra por papel no caso de uso. A
+ * agenda de toda a equipe lê a grade por `/api/schedule-config`.
+ */
+const ADMINISTRATIVE_EXACT_PATHS = ['/api/settings/schedule'];
+
+/**
  * Dados do próprio Profissional (extrato de repasses): Admin e Profissional
  * entram; Atendente não. O handler restringe ao `professionalId` da sessão.
  */
@@ -135,6 +144,7 @@ export function classifyRoute(pathname: string): RouteFamily {
   }
   if (
     startsWithAny(pathname, ADMINISTRATIVE_PREFIXES) ||
+    ADMINISTRATIVE_EXACT_PATHS.includes(pathname) ||
     ACCOUNT_RESET_LINK.test(pathname)
   ) {
     return 'administrative';

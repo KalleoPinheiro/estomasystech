@@ -26,10 +26,12 @@ export const STAFF_PAGES = [
   { href: '/relatorios', label: 'Relatórios', api: '/api/reports' },
   { href: '/repasses', label: 'Repasses', api: '/api/my-payouts' },
   { href: '/auditoria', label: 'Auditoria', api: '/api/audit' },
+  // Toda a equipe entra: feriados e ausências são de todos os papéis; cada
+  // seção da tela se esconde quando o papel não usa a rota dela (#215).
   {
     href: '/configuracoes',
     label: 'Configurações',
-    api: '/api/settings/clinic-info',
+    api: '/api/settings/schedule/closures',
   },
 ] as const;
 

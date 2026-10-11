@@ -54,6 +54,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
       email: 'ana@clinica.com',
       role: 'company_admin',
       roleLabel: 'Admin de Empresa',
+      professionalId: null,
     });
   });
 
