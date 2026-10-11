@@ -111,6 +111,12 @@
 - Patient's signed agreement to data use (photos, clinical records).
 - Timestamp and IP address recorded.
 
+**Partner Share Consent** (consentimento para o parceiro)
+
+- Patient's specific, revocable consent for the Partner who referred them to see their conditions and assessments in the partner portal (last 24 months).
+- One per patient × partner; append-only (accept/revoke), with text version and hash, IP, and who recorded it. The patient grants and revokes in the portal; staff can only revoke.
+- Without it, the Partner sees only whether the patient was attended.
+
 **Audit Event** (evento de auditoria)
 
 - System activity log: create, read, update, delete of sensitive entities.
