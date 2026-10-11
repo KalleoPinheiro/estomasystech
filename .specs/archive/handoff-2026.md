@@ -648,3 +648,13 @@ O C21 já estava corrigido na `main` (`93b79dc`). Spec em `.specs/features/fix-2
 - **Next step**: nenhum. Revogação imediata no recadastro do segundo fator, se for desejada, numa issue nova.
 - **Blockers**: nenhum.
 - **Branch**: `fix/246-testes-portal-super-admin`. PR #287, squash-merged em `main` (`af53ff5`). Issue #246 fechada via `Closes #246`.
+
+## Issue #224 — fake timers do CalendarGrid restaurados em afterEach (2026-10-11) — ENCERRADO (#286)
+
+P3 da revisão pré-produção #183, só de testes. Dois testes de `CalendarGrid` (`tests/pages/staff-agenda.test.tsx`) ligavam `vi.useFakeTimers()` e só restauravam o relógio na última linha. Uma falha no meio vazava os fake timers e virava uma cascata de timeouts em `waitFor`. Agora o `describe('Feature: Grade do calendário')` tem `afterEach(() => vi.useRealTimers())`. A varredura de `tests/**` confirmou que os outros usos já restauram o relógio de forma garantida.
+
+**Detalhes**: o comportamento do `CalendarGrid` e de `isInvalidDay` fica fora do escopo. CI com os 4 jobs verdes e Verifier independente com PASS.
+
+- **Next step**: nenhum.
+- **Blockers**: nenhum.
+- **Branch**: `fix/224-calendar-grid-timers`. PR #286, squash-merged em `main` (`0d85711`). Issue #224 fechada via `Closes #224`.
