@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     email: session.subject,
     role: session.role,
     roleLabel: staffRoleLabel(session.role),
+    professionalId: session.professionalId,
   };
 
   if (session.clinicId === null) {

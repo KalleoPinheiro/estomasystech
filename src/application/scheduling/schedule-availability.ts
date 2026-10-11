@@ -2,6 +2,10 @@ import type { ProfessionalRepository } from '@/domain/professional/professional-
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import {
+  assertCanManageClosure,
+  type ClosureActor,
+} from '@/domain/scheduling/closure-permission';
+import {
   createScheduleClosure,
   type NewScheduleClosure,
   type ScheduleAvailabilityRepository,
@@ -46,7 +50,13 @@ export class CreateScheduleClosure {
     private readonly appointments: AppointmentRepository,
   ) {}
 
-  async execute(input: NewScheduleClosure): Promise<CreatedClosure> {
+  /** `actor` nulo = modo aberto (ver `canManageClosure`). */
+  async execute(
+    input: NewScheduleClosure,
+    actor: ClosureActor | null,
+  ): Promise<CreatedClosure> {
+    // Antes de validar o profissional: quem não pode não descobre se ele existe.
+    assertCanManageClosure(actor, input.professionalId ?? null);
     const closure = createScheduleClosure(input);
     if (closure.professionalId) {
       await assertActiveProfessional(
@@ -74,11 +84,15 @@ export class CreateScheduleClosure {
 export class DeleteScheduleClosure {
   constructor(private readonly availability: ScheduleAvailabilityRepository) {}
 
-  async execute(id: string): Promise<ScheduleClosure> {
+  async execute(
+    id: string,
+    actor: ClosureActor | null,
+  ): Promise<ScheduleClosure> {
     const closure = await this.availability.findClosureById(id);
     if (!closure) {
       throw new NotFoundError('Bloqueio de agenda', id);
     }
+    assertCanManageClosure(actor, closure.professionalId);
     await this.availability.deleteClosure(id);
     return closure;
   }

@@ -53,7 +53,6 @@ const ADMIN_ONLY = [
   'Relatórios',
   'Auditoria',
   'Profissionais',
-  'Configurações',
 ];
 
 /** Issue #199: o menu era o mesmo para todos os papéis (telas 403). */
@@ -67,7 +66,14 @@ describe('Feature: menu por papel (#199)', () => {
   it('C36 atendente vê só itens permitidos', async () => {
     const labels = await renderNav('atendente');
 
-    expect(labels).toEqual(['Dashboard', 'Agenda', 'Pacientes', 'Parceiros']);
+    // Configurações: só Feriados e ausências (#215).
+    expect(labels).toEqual([
+      'Dashboard',
+      'Agenda',
+      'Pacientes',
+      'Parceiros',
+      'Configurações',
+    ]);
     for (const hidden of [...ADMIN_ONLY, 'Repasses', 'Triagem']) {
       expect(labels).not.toContain(hidden);
     }
@@ -78,6 +84,7 @@ describe('Feature: menu por papel (#199)', () => {
 
     expect(labels).toContain('Triagem');
     expect(labels).toContain('Repasses');
+    expect(labels).toContain('Configurações');
     for (const hidden of ADMIN_ONLY) {
       expect(labels).not.toContain(hidden);
     }

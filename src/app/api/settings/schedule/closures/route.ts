@@ -44,11 +44,12 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
     const services = await getRepositories(writeScope(guard.session));
+    // A sessão é o ator: o caso de uso aplica a regra por papel (#215).
     const { closure, affectedAppointments } = await new CreateScheduleClosure(
       services.scheduleAvailability,
       services.professionals,
       services.appointments,
-    ).execute(body);
+    ).execute(body, guard.session);
 
     recordAudit(services.auditEvents, guard.session, {
       action: 'create',

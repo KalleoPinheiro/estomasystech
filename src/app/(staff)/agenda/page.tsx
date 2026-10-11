@@ -181,7 +181,7 @@ export default function AgendaPage() {
   const { data: scheduleData } = useApiQuery<{
     config: ScheduleConfig;
     isDefault: boolean;
-  }>('/api/settings/schedule');
+  }>('/api/schedule-config');
   const scheduleConfig = resolveScheduleConfig(scheduleData);
   // Grade do mês mostra até 6 dias do mês vizinho de cada lado.
   const closuresUrl = useMemo(() => {

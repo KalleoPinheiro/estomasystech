@@ -91,7 +91,7 @@ function mockAgenda(
         return options.catalogFails ? failure('Acesso negado') : ok([]);
       }
       if (url.startsWith('/api/settings/schedule/closures')) return ok([]);
-      if (url.startsWith('/api/settings/schedule')) {
+      if (url.startsWith('/api/schedule-config')) {
         return ok({
           config: {
             weekdays: [0, 1, 2, 3, 4, 5, 6],

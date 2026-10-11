@@ -183,7 +183,7 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
       if (url.startsWith('/api/settings/schedule/closures')) {
         return jsonResponse(true, closures);
       }
-      if (url.startsWith('/api/settings/schedule')) {
+      if (url.startsWith('/api/schedule-config')) {
         return jsonResponse(true, { config: scheduleConfig, isDefault: false });
       }
       throw new Error(`URL não mapeada no mock: ${method} ${url}`);

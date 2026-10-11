@@ -3,7 +3,13 @@ import type { UserRole } from '@/domain/auth/user-role';
 export interface SidebarIdentityDto {
   clinicLabel: string;
   /** `role` permite à UI escolher a visão (ex.: repasses da clínica × próprios). */
-  account: { email: string; role: UserRole; roleLabel: string } | null;
+  /** `professionalId`: vínculo da conta, para a UI limitar o Profissional ao que é dele (#215). */
+  account: {
+    email: string;
+    role: UserRole;
+    roleLabel: string;
+    professionalId: string | null;
+  } | null;
 }
 
 /** Status da conexão do Google Agenda da clínica (issue #124) — `email`/`connectedAt` são `null` quando `connected` é `false`. */

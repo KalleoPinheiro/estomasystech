@@ -5,7 +5,7 @@ import {
   validateScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
-import { handleRequest } from '@/lib/api-response';
+import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import {
@@ -33,6 +33,16 @@ const configSchema = z.object({
     .optional(),
 });
 
+/**
+ * Grade, almoço e política/taxa de cancelamento tardio são do Admin de Empresa
+ * (#215, AGE-RN-13). A família `administrative` já barra os outros papéis nas
+ * duas camadas; esta checagem repete a regra no PUT (defesa em profundidade,
+ * ADR-002), como em `/api/settings/clinic-info`. A agenda lê a grade por
+ * `/api/schedule-config`.
+ */
+const canEditSchedule = (role: string | undefined): boolean =>
+  role === 'company_admin';
+
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
@@ -50,6 +60,12 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
+  if (guard.session && !canEditSchedule(guard.session.role)) {
+    return fail(
+      'Apenas Admin de Empresa pode alterar a grade de horários',
+      403,
+    );
+  }
 
   return handleRequest(async () => {
     const body = configSchema.parse(await request.json());
