@@ -3,7 +3,7 @@
 Sistema de gestão clínica para **estomaterapia**: prontuário eletrônico (anamnese, evolução SOAP,
 acompanhamento seriado de estomias e feridas com fotos), agenda com regras de horário e lista de
 espera, faturamento com pagamentos parciais e repasse ao profissional, estoque de insumos, portal
-do paciente e do parceiro, lembretes por WhatsApp e relatórios gerenciais. Multiempresa, com
+do paciente e do parceiro, lembretes por e-mail e relatórios gerenciais. Multiempresa, com
 autenticação nativa e autorização que falha fechado.
 
 ## Comece por aqui
@@ -51,7 +51,7 @@ as integrações opcionais: [onboarding](docs/engineering/onboarding.md). Deu er
 | [Estoque](docs/domains/estoque/README.md) | insumos, lotes, movimentações, kits |
 | [Portal](docs/domains/portal/README.md) | área do paciente e do parceiro |
 | [Equipe e parceiros](docs/domains/equipe-parceiros/README.md) | profissionais, horários, parceiros que indicam |
-| [Comunicação](docs/domains/comunicacao/README.md) | lembretes por WhatsApp e e-mails de acesso |
+| [Comunicação](docs/domains/comunicacao/README.md) | lembretes automáticos por e-mail, botão de WhatsApp (`wa.me`) e e-mails de acesso |
 | [Relatórios](docs/domains/relatorios/README.md) | dashboard e relatório gerencial |
 
 ## Stack

@@ -13,13 +13,14 @@ last_reviewed: 2026-10-10
 Entrega os links de **convite** (primeiro acesso, 24 h, uso único) e de **reset de senha** (1 h),
 e os **lembretes ao paciente** do [cron](cron.md) — confirmação D-1 e recall de retorno
 ([comunicação](../../domains/comunicacao/README.md)).
-Sem e-mail ninguém faz o primeiro acesso — por isso é a única integração obrigatória em produção
-([ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md)). Domínio: [acesso](../../domains/acesso/README.md).
+Opcional em produção ([ADR-011](../../adr/011-canal-de-comunicacao-por-clinica.md)): cada clínica
+cadastra a própria chave, e a da plataforma (`RESEND_API_KEY`) só atende as contas sem clínica. Sem
+ela o bootstrap devolve o link de convite em `inviteUrl`. Domínio: [acesso](../../domains/acesso/README.md).
 
 | Campo | Valor |
 | --- | --- |
 | Direção | saída |
-| Obrigatória? | sim em produção |
+| Obrigatória? | não — por clínica e, opcional, a da plataforma |
 | Gateway | `src/infrastructure/email/resend-email-gateway.ts` |
 | Porta | `src/application/ports/email-gateway.ts` (`NullEmailGateway` = dry-run) |
 | Doc oficial | https://resend.com/docs/api-reference/emails/send-email |

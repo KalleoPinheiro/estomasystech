@@ -47,9 +47,9 @@ export default defineConfig({
         VITTA_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
         APP_URL: MAIN_BASE_URL,
         API_RATE_LIMIT_MAX: "100000",
-        // Produção exige canal de e-mail na subida. Chave de mentira: o envio
-        // falha (401) e o bootstrap devolve o link do convite na resposta,
-        // como já faz quando a entrega não acontece.
+        // Exercita o gateway Resend da plataforma (opcional, ADR-011). Chave de
+        // mentira: o envio falha (401) e o bootstrap devolve o link do convite
+        // na resposta, como já faz quando a entrega não acontece.
         RESEND_API_KEY: "re_e2e_invalid_key",
         EMAIL_FROM: "VittaFlow E2E <e2e@vitta.test>",
       },
