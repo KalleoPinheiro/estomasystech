@@ -126,7 +126,7 @@ describe('Feature: assertClinicalResourceAccessible', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('Dado profissional sem vínculo, Quando checar, Então NotFoundError cujo texto cita o recurso, nunca o paciente', async () => {
+  it('Dado profissional sem vínculo, Quando checar, Então NotFoundError do recurso: id só em entityId, nunca no texto; paciente nunca (#219)', async () => {
     const error = await assertClinicalResourceAccessible(
       session('profissional'),
       'photo',
@@ -135,7 +135,8 @@ describe('Feature: assertClinicalResourceAccessible', () => {
     ).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(NotFoundError);
-    expect((error as Error).message).toContain('foto-1');
+    expect((error as NotFoundError).entityId).toBe('foto-1');
+    expect((error as Error).message).toBe('Foto não encontrado(a)');
     expect((error as Error).message).not.toContain(PATIENT);
   });
 

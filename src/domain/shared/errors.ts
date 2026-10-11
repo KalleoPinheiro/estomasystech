@@ -23,11 +23,18 @@ export class InvalidStatusTransitionError extends DomainError {
   readonly code = 'INVALID_STATUS_TRANSITION';
 }
 
+/**
+ * A mensagem vai para a UI e não carrega o id (issue #219): identificador
+ * interno não é texto para o usuário. O id fica em `entityId`, para log.
+ */
 export class NotFoundError extends DomainError {
   readonly code = 'NOT_FOUND';
 
-  constructor(entity: string, id: string) {
-    super(`${entity} não encontrado(a): ${id}`);
+  constructor(
+    readonly entity: string,
+    readonly entityId: string,
+  ) {
+    super(`${entity} não encontrado(a)`);
   }
 }
 

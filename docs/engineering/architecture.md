@@ -3,7 +3,7 @@ title: "Arquitetura"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-10-11
 related:
   - docs/adr/001-multi-tenancy.md
   - docs/adr/002-autorizacao-em-duas-camadas.md
@@ -55,6 +55,7 @@ src/
 | Autenticação | só e-mail + senha própria; Google é integração | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
 | Paginação | cursor opaco em `meta.nextCursor` (pacientes, faturas) | `.specs/features/paginacao-cursor-csp-nonce/` |
 | CSP | nonce por request, sem `unsafe-inline`; por isso o layout raiz é `force-dynamic` | `src/proxy.ts` |
+| Headers estáticos | HSTS, `X-Frame-Options`, COOP/CORP `same-origin`, sem `X-Powered-By` (#219) | `next.config.ts` |
 | Várias réplicas | rate limit no Postgres, fotos no S3, caches só de dado imutável | [`CONTEXT.md`](../../CONTEXT.md) § Critical constraints |
 | Migrações | Drizzle em `drizzle/`, aplicadas no boot com advisory lock (`VITTA_MIGRATE_ON_BOOT=false` desliga) | `src/infrastructure/persistence/drizzle/db.ts` |
 
