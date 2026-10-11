@@ -9,6 +9,7 @@ import {
   clinicalConditions,
   conditionAssessments,
   conditionPhotos,
+  dataSubjectRequests,
   evolutionNotes,
   interventionRecords,
   outcomeEvaluations,
@@ -81,6 +82,15 @@ export const CIPHERED_TABLES: readonly CipheredTable[] = [
     table: waitlistEntries,
     key: waitlistEntries.id,
     columns: { notes: waitlistEntries.notes },
+  },
+  {
+    name: 'data_subject_requests',
+    table: dataSubjectRequests,
+    key: dataSubjectRequests.id,
+    columns: {
+      details: dataSubjectRequests.details,
+      resolution: dataSubjectRequests.resolution,
+    },
   },
   {
     name: 'condition_photos',

@@ -88,6 +88,9 @@ const ADMINISTRATIVE_PREFIXES = [
   // Livro de repasses da clínica: ver saldos de todos e registrar o
   // fechamento mensal é ato do Admin (decisão de 2026-09-23).
   '/api/commission-payouts',
+  // Fila de pedidos do titular (#293): correção e eliminação são analisadas
+  // pelo Admin de Empresa. O handler repete a checagem (ADR-002).
+  '/api/data-requests',
 ];
 
 /**

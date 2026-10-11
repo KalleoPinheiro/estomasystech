@@ -15,7 +15,7 @@ domain: portal
 próprios dados e agenda, cancela ou remarca sozinho; o **parceiro** vê só os pacientes que
 indicou. O papel da sessão escolhe a visão.
 
-**Termos ([`CONTEXT.md`](../../../CONTEXT.md)):** `Patient self-service`, `Partner`, `Waitlist`, `Consent Record`, `Partner Share Consent`.
+**Termos ([`CONTEXT.md`](../../../CONTEXT.md)):** `Patient self-service`, `Partner`, `Waitlist`, `Consent Record`, `Partner Share Consent`, `Data Subject Request`.
 
 ## Regras de negócio
 
@@ -33,6 +33,8 @@ indicou. O papel da sessão escolhe a visão.
 | POR-RN-10 | Contas de portal existentes antes do vínculo foram ligadas pelo e-mail atual, na mesma empresa (migração `0040`); as que não casaram ficam sem acesso e aparecem em `npm run db:portal-orphans` | `drizzle/0040_portal-account-link.sql`, `scripts/report-portal-orphans.ts` |
 | POR-RN-11 | O parceiro só vê consultas, condições e avaliações de um paciente indicado quando o paciente deu **consentimento específico e revogável** a ele (paciente × parceiro, texto vigente). Sem consentimento, revogado, de texto antigo ou dado a outro parceiro: só aparece se o paciente foi atendido (consulta realizada na janela). O paciente autoriza e revoga pelo portal; a equipe vê e revoga pela ficha, e não autoriza. Texto provisório `v0-placeholder` até o texto do jurídico ([#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216)) | `src/domain/consent/partner-share-consent.ts`, `src/application/partners/partner-share-consent.ts`, `src/lib/partner-share-consent-text.ts` ([#292](https://github.com/KalleoPinheiro/vitta-flow/issues/292)) |
 | POR-RN-12 | Janela de 24 meses no portal do parceiro, como no do paciente: consultas que terminam na janela, avaliações registradas na janela e condições abertas na janela ou com avaliação nela | `src/application/portal/get-partner-portal-data.ts` ([#292](https://github.com/KalleoPinheiro/vitta-flow/issues/292)) |
+| POR-RN-13 | O paciente baixa uma cópia dos próprios dados: o mesmo JSON da exportação LGPD da equipe (PRO-RN-11), só do titular da conta da sessão, sem escolher id. Sai com `Cache-Control: no-store` e como anexo; cada download grava `read`/`export` na auditoria **antes** de responder (#293) | `src/app/api/portal/patient/export/route.ts`, `src/application/patients/load-patient-data-export.ts` |
+| POR-RN-14 | O paciente pede **correção cadastral** (descrição obrigatória) ou **eliminação/anonimização** (motivo opcional). É um pedido, não uma ação: nada muda no cadastro nem no prontuário. Um pedido pendente por tipo (`409` no segundo); abrir o pedido grava `create`/`data_request` na auditoria. O paciente vê os próprios pedidos, a situação e a justificativa da clínica (#293) | `src/app/api/portal/patient/data-requests/route.ts`, `src/domain/patient/data-subject-request.ts` |
 
 ## Funcionalidades
 
@@ -44,9 +46,10 @@ indicou. O papel da sessão escolhe a visão.
 | Envio de foto para monitoramento remoto e consentimento | entregue | `/portal` |
 | Pacientes indicados | entregue | `/portal` (parceiro) |
 | Consentimento para o parceiro indicador: autorizar e revogar | entregue | `/portal` (paciente), ficha `/pacientes/[id]` (equipe revoga) |
+| Meus dados (LGPD): baixar a cópia dos próprios dados e pedir correção ou eliminação. O texto do aviso é **provisório** até o jurídico entregar o definitivo ([#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216)) | entregue | `/portal` ([#293](https://github.com/KalleoPinheiro/vitta-flow/issues/293)) |
 | Uso no celular: sem scroll horizontal e alvo de toque ≥ 44x44px em 390 e 375px | entregue | `/portal` ([#127](https://github.com/KalleoPinheiro/vitta-flow/issues/127)) |
 
-Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-portal-p0-p3-pontuais}/`.
+Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-portal-p0-p3-pontuais,direitos-titular-293}/`.
 
 ## Código
 
@@ -56,7 +59,7 @@ Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-port
 | API | `src/app/api/portal/{me,patient,partner}/`, `src/app/api/patients/[id]/partner-consent/` (ficha) |
 | UI | `src/app/portal/` |
 | layout mobile | regras de toque e de grid da `@still-void/ui@3.4.0`; só o alvo de toque de link segue local (`.portal-shell` em `src/app/globals.css`, lacuna `touch-target-size` em [`still-void-gaps.md`](../../still-void-gaps.md)) |
-| testes | `tests/application/`, `tests/api/portal-identity.test.ts`, `tests/api/partner-share-consent-routes.test.ts`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo,layout-mobile-first}.spec.ts` |
+| testes | `tests/application/`, `tests/api/{portal-identity,partner-share-consent-routes,data-subject-rights}.test.ts`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo,portal-direitos-titular,layout-mobile-first}.spec.ts` |
 
 ## Decisões
 

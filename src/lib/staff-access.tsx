@@ -27,6 +27,11 @@ export const STAFF_PAGES = [
   { href: '/repasses', label: 'Repasses', api: '/api/my-payouts' },
   { href: '/auditoria', label: 'Auditoria', api: '/api/audit' },
   {
+    href: '/pedidos-titular',
+    label: 'Pedidos do titular',
+    api: '/api/data-requests',
+  },
+  {
     href: '/configuracoes',
     label: 'Configurações',
     api: '/api/settings/clinic-info',

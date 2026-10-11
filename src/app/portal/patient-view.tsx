@@ -40,6 +40,7 @@ import {
   type ConsentStatusDto,
   PatientPhotoUpload,
 } from './consent-card';
+import { DataRights } from './data-rights';
 import { PartnerConsentSection } from './partner-consent-card';
 import { ScheduleReturn } from './schedule-return';
 import { MyWaitlist } from './waitlist';
@@ -212,6 +213,8 @@ export function PatientPortalView() {
       </Section>
 
       <PartnerConsentSection />
+
+      <DataRights />
     </div>
   );
 }

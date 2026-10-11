@@ -54,6 +54,7 @@ import type {
 } from '@/domain/inventory/inventory-repositories';
 import type { ReminderLogRepository } from '@/domain/messaging/reminder-log';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
+import type { DataSubjectRequestRepository } from '@/domain/patient/data-subject-request';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
@@ -107,6 +108,7 @@ import {
   DrizzleEvolutionNoteRepository,
 } from './persistence/drizzle/drizzle-clinical-repositories';
 import { DrizzleCommissionPayoutRepository } from './persistence/drizzle/drizzle-commission-payout-repository';
+import { DrizzleDataSubjectRequestRepository } from './persistence/drizzle/drizzle-data-subject-request-repository';
 import {
   DrizzleProcedureKitRepository,
   DrizzleProcedureRepository,
@@ -178,6 +180,8 @@ export interface Services {
   assessments: ConditionAssessmentRepository;
   conditionPhotos: ConditionPhotoRepository;
   consentRecords: ConsentRecordRepository;
+  /** Pedidos de correção/eliminação do titular (#293). */
+  dataSubjectRequests: DataSubjectRequestRepository;
   partnerShareConsents: PartnerShareConsentRepository;
   nursingDiagnoses: NursingDiagnosisRepository;
   nursingOutcomes: NursingOutcomeRepository;
@@ -438,6 +442,11 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       cipher,
     ),
     consentRecords: new DrizzleConsentRecordRepository(db, tenant.clinicId),
+    dataSubjectRequests: new DrizzleDataSubjectRequestRepository(
+      db,
+      tenant.clinicId,
+      cipher,
+    ),
     partnerShareConsents: new DrizzlePartnerShareConsentRepository(
       db,
       tenant.clinicId,

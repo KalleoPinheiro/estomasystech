@@ -724,6 +724,49 @@ export const partnerShareConsents = pgTable(
   ],
 );
 
+/**
+ * Pedidos do titular pelo portal (#293): correção cadastral e
+ * eliminação/anonimização, analisados pelo Admin. `details` e `resolution`
+ * são texto livre e vão cifrados (PRO-RN-12).
+ */
+export const dataSubjectRequests = pgTable(
+  'data_subject_requests',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    patientId: text('patient_id')
+      .notNull()
+      .references(() => patients.id),
+    kind: text('kind').notNull(),
+    details: text('details'),
+    status: text('status').notNull(),
+    resolution: text('resolution'),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'date' }),
+  },
+  (table) => [
+    index('idx_data_subject_requests_clinic_status').on(
+      table.clinicId,
+      table.status,
+      table.createdAt,
+    ),
+    index('idx_data_subject_requests_patient').on(table.patientId),
+    check(
+      'data_subject_requests_kind_check',
+      sql`${table.kind} in ('correction', 'erasure')`,
+    ),
+    check(
+      'data_subject_requests_status_check',
+      sql`${table.status} in ('pending', 'accepted', 'rejected')`,
+    ),
+  ],
+);
+
 export const supplies = pgTable(
   'supplies',
   {
