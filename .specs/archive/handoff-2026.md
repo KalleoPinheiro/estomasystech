@@ -706,3 +706,20 @@ Decisão de @KalleoPinheiro sobre a #216 (item 2).
 - **Next step**: texto jurídico do consentimento (#216) e respostas às 3 perguntas.
 - **Blockers**: nenhum.
 - **Branch**: `feat/292-consentimento-parceiro`. PR #300, squash-merged em `main` (`e8c8001`). Issue #292 fechada via `Closes #292`.
+
+## Issue #215 — grade, taxa e ausências por papel (2026-10-11) — ENCERRADO (#299)
+
+Decisão de @KalleoPinheiro.
+
+- **Grade, almoço, intervalo e política/taxa de cancelamento:** só `company_admin`, nas duas camadas (proxy e handler). A leitura da agenda passou a usar `/api/schedule-config` para todos os papéis.
+- **Feriados:** Admin e Atendente.
+- **Ausências:** Admin e Atendente para qualquer profissional. O Profissional registra e remove só a própria (`closure-permission.ts`). Fora disso, 403 sem gravar.
+- **Tela Configurações:** abre para toda a equipe, e cada papel vê só as seções permitidas.
+
+Regras novas: AGE-RN-13 e **ACE-RN-43**. A regra nasceu como ACE-RN-41; o orquestrador renumerou no merge com a `main`, porque a #298 já ocupava a 41 e a 42.
+
+**Detalhes**: o conflito com a `main` estava só em `docs/domains/acesso/README.md` e foi resolvido no merge commit `16e4e6d`. Depois disso, CI com os 4 jobs verdes e Verifier independente com PASS (292 testes em 13 arquivos). Pergunta aberta para @KalleoPinheiro: abrir a seção "Contas de acesso" de Configurações para Atendente e Profissional, só com os papéis de portal?
+
+- **Next step**: resposta à pergunta aberta.
+- **Blockers**: nenhum.
+- **Branch**: `fix/215-permissao-grade`. PR #299, squash-merged em `main` (`bf42f1d`). Issue #215 fechada via `Closes #215`.
