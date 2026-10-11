@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
-import type { APIRequestContext } from "@playwright/test";
+import { type APIRequestContext, request as playwrightRequest } from "@playwright/test";
+import { MAIN_BASE_URL } from "./constants";
+import { sessionCookie } from "./session-token";
 import { toApiDatetime } from "./iso-datetime";
 
 /**
@@ -444,4 +446,21 @@ export async function linkPortalAccount(
     role,
     ...(role === "patient" ? { patientId: record.id } : { partnerId: record.id }),
   });
+}
+
+/**
+ * O paciente autoriza o parceiro que o indicou a ver a evolução clínica
+ * (#292), pela rota do portal com a sessão dele — a equipe não autoriza.
+ * Exige a conta de portal do paciente já vinculada (`linkPortalAccount`).
+ */
+export async function grantPartnerConsent(record: { email: string }): Promise<void> {
+  const context = await playwrightRequest.newContext({
+    baseURL: MAIN_BASE_URL,
+    storageState: { cookies: [sessionCookie(record.email, "patient")], origins: [] },
+  });
+  try {
+    await unwrap(context, context.post("/api/portal/patient/partner-consent"));
+  } finally {
+    await context.dispose();
+  }
 }

@@ -28,13 +28,18 @@ describe('Feature: Guarda de vínculo Profissional-Paciente nas rotas clínicas 
     return body.data.id;
   };
 
-  const createPatient = async (email: string) => {
+  const createPatient = async (email: string, referredByPartnerId?: string) => {
     const route = await import('@/app/api/patients/route');
     const response = await route.POST(
       jsonRequest(
         '/api/patients',
         'POST',
-        { fullName: 'Paciente Guarda', email, phone: '11999990000' },
+        {
+          fullName: 'Paciente Guarda',
+          email,
+          phone: '11999990000',
+          referredByPartnerId,
+        },
         adminCookieHeader(CLINIC_A_ID),
       ),
     );
@@ -59,6 +64,10 @@ describe('Feature: Guarda de vínculo Profissional-Paciente nas rotas clínicas 
     {
       name: '/api/patients/[id]/care-plans',
       specifier: '@/app/api/patients/[id]/care-plans/route',
+    },
+    {
+      name: '/api/patients/[id]/partner-consent',
+      specifier: '@/app/api/patients/[id]/partner-consent/route',
     },
   ] as const;
 
@@ -134,6 +143,56 @@ describe('Feature: Guarda de vínculo Profissional-Paciente nas rotas clínicas 
       );
 
       expect(response.status).toBe(200);
+    });
+  });
+  describe('Cenário: revogação do consentimento para o parceiro pela ficha (#292)', () => {
+    it('Dado profissional SEM vínculo, Quando POST revoke, Então 404 e nada é gravado', async () => {
+      await ensureTestClinics();
+      const professionalId = await createProfessional('Dr. Sem Vínculo revoke');
+      // Paciente indicado: sem o guarda, a revogação seria gravada (200).
+      const partners = await import('@/app/api/partners/route');
+      const partner = (await (
+        await partners.POST(
+          jsonRequest(
+            '/api/partners',
+            'POST',
+            {
+              fullName: 'Dra. Parceira Guarda',
+              email: `parceira-guarda-${Math.random()}@x.com`,
+              phone: '11933332222',
+            },
+            adminCookieHeader(CLINIC_A_ID),
+          ),
+        )
+      ).json()) as Envelope<{ id: string }>;
+      const patientId = await createPatient(
+        `revoke-sem-vinculo-${Math.random()}@x.com`,
+        partner.data.id,
+      );
+
+      const route = await import(
+        '@/app/api/patients/[id]/partner-consent/revoke/route'
+      );
+      const response = await route.POST(
+        jsonRequest(
+          `/api/patients/${patientId}/partner-consent/revoke`,
+          'POST',
+          undefined,
+          cookieHeaderFor(
+            'profissional',
+            'dr@x.com',
+            CLINIC_A_ID,
+            professionalId,
+          ),
+        ),
+        { params: Promise.resolve({ id: patientId }) },
+      );
+
+      expect(response.status).toBe(404);
+      const { partnerShareConsents } = await getRepositories(
+        clinicScope(CLINIC_A_ID),
+      );
+      expect(await partnerShareConsents.findByPatientId(patientId)).toEqual([]);
     });
   });
 });
