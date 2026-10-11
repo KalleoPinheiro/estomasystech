@@ -629,3 +629,22 @@ Regra nova: AGE-RN-12. Spec em `.specs/features/endurecimento-219/spec.md` (H-01
 - **Next step**: respostas do dono a duas perguntas. Remarcar consulta de profissional inativado depois de marcar: hoje continua permitido. Registrar ausência de profissional inativo: agora dá 400.
 - **Blockers**: nenhum.
 - **Branch**: `fix/219-endurecimento`. PR #283, squash-merged em `main` (`13c78cc`). Issue #219 fechada via `Closes #219`.
+
+## Issue #246 — testes do portal do Super Admin com asserções fortes (2026-10-11) — ENCERRADO (#287)
+
+P3 que reúne as lacunas não bloqueantes que os Verifiers do B2 ao B6 apontaram. A mudança é só de testes: nenhum arquivo de `src/` mudou.
+
+- **C23:** um cookie emitido antes do recadastro do segundo fator recebe 401.
+- **C9:** o teste conta os `company_admin` órfãos quando `adminEmail` é inválido.
+- **E-mail de contato:** `contactEmail: ''` grava `null`, e a clínica volta a "Cadastro incompleto".
+- **C18:** o cookie do `partner` cai na suspensão.
+- **Trilha da plataforma em memória:** ordem e paginação.
+- **Tela de auditoria:** colunas, rótulos e "Carregar mais".
+
+O C21 já estava corrigido na `main` (`93b79dc`). Spec em `.specs/features/fix-246-testes-portal-super-admin/spec.md`.
+
+**Detalhes**: a discriminação foi provada por mutação manual em `src/` (M1–M4). Cada teste novo falha com a regra quebrada, e vários testes antigos passavam mesmo assim. Fica registrada uma nota: o recadastro do segundo fator incrementa `session_version`, mas não chama `forgetSessionStatus`. Por isso o cookie antigo pode valer até 60 s na instância que o tinha em cache, dentro da garantia do ADR-005. Revogar na hora pede uma issue separada. CI com os 4 jobs verdes e Verifier independente com PASS.
+
+- **Next step**: nenhum. Revogação imediata no recadastro do segundo fator, se for desejada, numa issue nova.
+- **Blockers**: nenhum.
+- **Branch**: `fix/246-testes-portal-super-admin`. PR #287, squash-merged em `main` (`af53ff5`). Issue #246 fechada via `Closes #246`.
