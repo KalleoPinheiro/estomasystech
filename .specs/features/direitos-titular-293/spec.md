@@ -26,7 +26,9 @@ guarda legal de 20 anos.
 | DT-06 | A fila **deve** ser só do Admin de Empresa (família `administrative` + checagem no handler); Profissional e Atendente `403`; pedido de outra empresa não aparece e dá `404` ao decidir. | `tests/api/data-subject-rights.test.ts` |
 | DT-07 | Aceitar ou recusar **deve** exigir justificativa, valer uma vez (`409` depois) e gravar `update`/`data_request`. | idem, domínio |
 | DT-08 | **Quando** a clínica decide, o paciente **deve** ser avisado por e-mail no endereço do cadastro, sem conteúdo do pedido nem da justificativa; falha de envio não desfaz a decisão. | `tests/application/data-subject-requests.test.ts`, API |
-| DT-09 | Descrição e justificativa **devem** ficar cifradas em repouso (PRO-RN-12) e entrar na recifragem. | `drizzle-data-subject-request-repository.ts`, `reencrypt-clinical-data.ts` |
+| DT-09 | Descrição e justificativa **devem** ficar cifradas em repouso (PRO-RN-12) e entrar na recifragem. | `tests/infrastructure/clinical-field-encryption.test.ts`, `tests/infrastructure/reencrypt-clinical-data.test.ts` |
+| DT-10 | Abrir e decidir **devem** ser write-ahead: a auditoria é gravada antes do pedido/decisão; sem trilha, nada é gravado nem enviado. | `tests/api/data-subject-rights.test.ts` |
+| DT-11 | Duas aberturas ou duas decisões simultâneas **não devem** passar juntas: índice único parcial (um pendente por titular e tipo) e update só de pedido pendente. | `tests/infrastructure/data-subject-request-repository.test.ts` |
 
 ## Decisões de escopo
 
@@ -36,3 +38,15 @@ guarda legal de 20 anos.
 | Aceitar não altera dado | A issue diz "pedidos que a clínica analisa". A correção é feita na ficha; a anonimização é da #294. |
 | Texto do aviso provisório | Texto jurídico pendente na #216: `src/lib/data-rights-text.ts`, marcado como placeholder na tela. |
 | Prazo de resposta, aviso ao Admin e destino do e-mail | Não decididos: ficam como perguntas abertas no PR, com a opção mais conservadora implementada (sem prazo automático, sem e-mail ao Admin, aviso no e-mail do cadastro). |
+
+## Perguntas abertas para @KalleoPinheiro
+
+Regras que a issue não fixou. Implementada a opção mais conservadora; trocar é ajuste pequeno.
+
+1. **Prazo de resposta** ao pedido (LGPD art. 19 fala em 15 dias para a declaração completa): hoje não há prazo nem alerta; a fila mostra a data de envio, por ordem de chegada.
+2. **Quem é avisado de pedido novo:** hoje ninguém por e-mail; o Admin vê a fila em "Pedidos do titular".
+3. **Destino do aviso ao paciente:** e-mail do cadastro (o mesmo dos lembretes), não o de login do portal, que pode ser de quem cuida do paciente.
+4. **Um pedido pendente por tipo** (`409` no segundo), descrição obrigatória só na correção, até 1000 caracteres.
+5. **Justificativa obrigatória também no aceite** (a issue fala em "aceitar/recusar com justificativa").
+6. **Aceitar não muda dado:** a correção é feita na ficha; a anonimização depende da #294.
+7. **Cópia completa, sem a janela de 24 meses do portal**, incluindo as observações internas do cadastro, porque a decisão é "mesmo conteúdo da exportação LGPD".

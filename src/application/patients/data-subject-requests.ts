@@ -21,12 +21,14 @@ export interface OpenDataSubjectRequestInput {
 /**
  * Titular abre um pedido de correção ou de eliminação pelo portal (#293).
  * Um pedido pendente por tipo: um segundo igual, antes da análise, é `409`
- * (a fila do Admin não acumula duplicatas; o paciente complementa depois).
+ * (a fila do Admin não acumula duplicatas; o índice único parcial fecha a
+ * corrida). Em dois passos para a rota auditar entre eles (write-ahead):
+ * `prepare` valida sem gravar, `commit` grava.
  */
 export class OpenDataSubjectRequest {
   constructor(private readonly requests: DataSubjectRequestRepository) {}
 
-  async execute(
+  async prepare(
     input: OpenDataSubjectRequestInput,
   ): Promise<DataSubjectRequest> {
     const request = DataSubjectRequest.create(input);
@@ -40,8 +42,11 @@ export class OpenDataSubjectRequest {
         'Você já tem um pedido deste tipo em análise pela clínica',
       );
     }
-    await this.requests.save(request);
     return request;
+  }
+
+  async commit(request: DataSubjectRequest): Promise<void> {
+    await this.requests.save(request);
   }
 }
 
@@ -82,17 +87,23 @@ export class ResolveDataSubjectRequest {
     private readonly email: EmailGateway,
   ) {}
 
-  async execute(
+  /** Carrega e decide, sem gravar: a rota audita antes do `commit`. */
+  async prepare(
     input: ResolveDataSubjectRequestInput,
-  ): Promise<ResolveDataSubjectRequestResult> {
+  ): Promise<DataSubjectRequest> {
     const current = await this.requests.findById(input.requestId);
     if (!current) {
       throw new NotFoundError('Pedido', input.requestId);
     }
-    const request =
-      input.decision === 'accept'
-        ? current.accept(input.justification)
-        : current.reject(input.justification);
+    return input.decision === 'accept'
+      ? current.accept(input.justification)
+      : current.reject(input.justification);
+  }
+
+  /** Grava a decisão (só se o pedido ainda está pendente) e avisa o paciente. */
+  async commit(
+    request: DataSubjectRequest,
+  ): Promise<ResolveDataSubjectRequestResult> {
     await this.requests.save(request);
     return { request, notified: await this.notify(request) };
   }

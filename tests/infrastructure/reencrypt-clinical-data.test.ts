@@ -75,6 +75,18 @@ describe('Feature: recifra do dado clínico (#195, npm run data:reencrypt)', () 
       plan: previous.encrypt('P antigo'),
       createdAt: new Date(),
     });
+    // Pedido do titular (#293) gravado em claro: entra na recifragem.
+    await db.insert(schema.dataSubjectRequests).values({
+      id: 'dsr-claro',
+      clinicId: 'legacy-clinic',
+      patientId: 'p-claro',
+      kind: 'correction',
+      details: 'Telefone em claro',
+      status: 'rejected',
+      resolution: previous.encrypt('Justificativa antiga'),
+      createdAt: new Date(),
+      resolvedAt: new Date(),
+    });
   });
 
   it('reencrypts to current key: claro, legado e chave anterior viram v1 da chave atual', async () => {
@@ -87,6 +99,12 @@ describe('Feature: recifra do dado clínico (#195, npm run data:reencrypt)', () 
 
     expect(counts.patients).toBe(2);
     expect(counts.evolution_notes).toBe(1);
+    expect(counts.data_subject_requests).toBe(1);
+    const [dsr] = await db.select().from(schema.dataSubjectRequests);
+    expect(cipher.decrypt(dsr.details as string)).toBe('Telefone em claro');
+    expect(cipher.decrypt(dsr.resolution as string)).toBe(
+      'Justificativa antiga',
+    );
     const patients = await db.select().from(schema.patients);
     const notes = Object.fromEntries(patients.map((p) => [p.id, p.notes]));
     for (const id of ['p-claro', 'p-antiga', 'p-atual']) {

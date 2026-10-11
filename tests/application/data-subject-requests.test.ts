@@ -37,6 +37,11 @@ const patient = Patient.create({
   phone: '11999990000',
 });
 
+const run = async (
+  useCase: ResolveDataSubjectRequest,
+  input: Parameters<ResolveDataSubjectRequest['prepare']>[0],
+) => useCase.commit(await useCase.prepare(input));
+
 const pending = () =>
   DataSubjectRequest.create({ patientId: patient.id, kind: 'erasure' });
 
@@ -50,7 +55,7 @@ describe('ResolveDataSubjectRequest (#293)', () => {
     const request = pending();
     stored.set(request.id, request);
 
-    const result = await useCase.execute({
+    const result = await run(useCase, {
       requestId: request.id,
       decision: 'reject',
       justification: 'Guarda legal',
@@ -80,7 +85,7 @@ describe('ResolveDataSubjectRequest (#293)', () => {
     stored.set(request.id, request);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const result = await useCase.execute({
+    const result = await run(useCase, {
       requestId: request.id,
       decision: 'accept',
       justification: 'Anonimização agendada',
@@ -99,7 +104,7 @@ describe('ResolveDataSubjectRequest (#293)', () => {
     const request = pending();
     stored.set(request.id, request);
 
-    const result = await useCase.execute({
+    const result = await run(useCase, {
       requestId: request.id,
       decision: 'accept',
       justification: 'ok',
@@ -116,7 +121,7 @@ describe('ResolveDataSubjectRequest (#293)', () => {
     });
 
     await expect(
-      useCase.execute({
+      useCase.prepare({
         requestId: 'x',
         decision: 'accept',
         justification: 'ok',

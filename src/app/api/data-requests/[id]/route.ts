@@ -34,19 +34,22 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = resolveSchema.parse(await request.json());
     const services = await getRepositories(writeScope(guard.session));
-    const { request: resolved, notified } = await new ResolveDataSubjectRequest(
+    const useCase = new ResolveDataSubjectRequest(
       services.dataSubjectRequests,
       services.patients,
       services.email,
-    ).execute({ requestId: id, ...body });
+    );
+    const decided = await useCase.prepare({ requestId: id, ...body });
 
+    // Write-ahead: a decisão só é gravada (e o paciente avisado) com trilha.
     await recordAuditNow(services.auditEvents, guard.session, {
       action: 'update',
       resourceType: 'data_request',
-      resourceId: resolved.id,
-      patientId: resolved.patientId,
-      detail: `${resolved.kind}: ${resolved.status}`,
+      resourceId: decided.id,
+      patientId: decided.patientId,
+      detail: `${decided.kind}: ${decided.status}`,
     });
+    const { request: resolved, notified } = await useCase.commit(decided);
     return { ...toDataSubjectRequestDto(resolved), notified };
   });
 }

@@ -756,6 +756,11 @@ export const dataSubjectRequests = pgTable(
       table.createdAt,
     ),
     index('idx_data_subject_requests_patient').on(table.patientId),
+    // Um pedido pendente por titular e tipo também no banco: duas aberturas
+    // simultâneas não passam juntas pela checagem da aplicação.
+    uniqueIndex('uq_data_subject_requests_pending')
+      .on(table.patientId, table.kind)
+      .where(sql`${table.status} = 'pending'`),
     check(
       'data_subject_requests_kind_check',
       sql`${table.kind} in ('correction', 'erasure')`,

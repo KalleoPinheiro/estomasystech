@@ -43,11 +43,10 @@ export async function POST(request: NextRequest) {
     const body = openSchema.parse(await request.json());
     const repos = await getRepositories(writeScope(auth.session));
     const patient = await resolvePortalPatient(repos, auth.session);
-    const created = await new OpenDataSubjectRequest(
-      repos.dataSubjectRequests,
-    ).execute({ ...body, patientId: patient.id });
+    const useCase = new OpenDataSubjectRequest(repos.dataSubjectRequests);
+    const created = await useCase.prepare({ ...body, patientId: patient.id });
 
-    // Pedido de direito do titular sem trilha não pode responder sucesso.
+    // Write-ahead: pedido de direito do titular sem trilha não é gravado.
     await recordAuditNow(repos.auditEvents, auth.session, {
       action: 'create',
       resourceType: 'data_request',
@@ -55,6 +54,7 @@ export async function POST(request: NextRequest) {
       patientId: patient.id,
       detail: created.kind,
     });
+    await useCase.commit(created);
     return toDataSubjectRequestDto(created);
   });
 }

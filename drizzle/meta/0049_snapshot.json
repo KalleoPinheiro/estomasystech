@@ -1,5 +1,5 @@
 {
-  "id": "1a831f74-ba08-4ac0-8efa-1dbedc34ecf8",
+  "id": "ee8f11b8-3283-4556-a746-7e5103cbbbcc",
   "prevId": "4c556532-83ec-4258-884f-7d0272af31f5",
   "version": "7",
   "dialect": "postgresql",
@@ -2425,6 +2425,28 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_data_subject_requests_pending": {
+          "name": "uq_data_subject_requests_pending",
+          "columns": [
+            {
+              "expression": "patient_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"data_subject_requests\".\"status\" = 'pending'",
           "concurrently": false,
           "method": "btree",
           "with": {}

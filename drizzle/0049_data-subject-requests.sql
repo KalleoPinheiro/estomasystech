@@ -17,4 +17,5 @@ CREATE TABLE "data_subject_requests" (
 ALTER TABLE "data_subject_requests" ADD CONSTRAINT "data_subject_requests_clinic_id_clinics_id_fk" FOREIGN KEY ("clinic_id") REFERENCES "public"."clinics"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_subject_requests" ADD CONSTRAINT "data_subject_requests_patient_id_patients_id_fk" FOREIGN KEY ("patient_id") REFERENCES "public"."patients"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_data_subject_requests_clinic_status" ON "data_subject_requests" USING btree ("clinic_id","status","created_at");--> statement-breakpoint
-CREATE INDEX "idx_data_subject_requests_patient" ON "data_subject_requests" USING btree ("patient_id");
+CREATE INDEX "idx_data_subject_requests_patient" ON "data_subject_requests" USING btree ("patient_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_data_subject_requests_pending" ON "data_subject_requests" USING btree ("patient_id","kind") WHERE "data_subject_requests"."status" = 'pending';

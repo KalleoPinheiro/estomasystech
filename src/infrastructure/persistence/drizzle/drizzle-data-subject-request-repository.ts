@@ -1,11 +1,16 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import {
   type DataRequestKind,
   type DataRequestStatus,
   DataSubjectRequest,
   type DataSubjectRequestRepository,
 } from '@/domain/patient/data-subject-request';
+import {
+  ConflictError,
+  InvalidStatusTransitionError,
+} from '@/domain/shared/errors';
 import type { FieldCipher } from '@/lib/data-cipher';
+import { isUniqueViolation } from '@/lib/db-errors';
 import { type AppDb, MAX_ROWS } from './db';
 import { dataSubjectRequests } from './schema';
 import { withTenant } from './tenant-scope';
@@ -50,19 +55,37 @@ export class DrizzleDataSubjectRequestRepository
       createdAt: request.createdAt,
       resolvedAt: request.resolvedAt,
     };
-    await this.db
-      .insert(dataSubjectRequests)
-      .values(values)
-      .onConflictDoUpdate({
-        target: dataSubjectRequests.id,
-        set: {
-          status: values.status,
-          resolution: values.resolution,
-          resolvedAt: values.resolvedAt,
-        },
-        // O upsert não atravessa empresa: id de outra clínica não é alterado.
-        setWhere: eq(dataSubjectRequests.clinicId, this.clinicId),
-      });
+    let written: { id: string }[];
+    try {
+      written = await this.db
+        .insert(dataSubjectRequests)
+        .values(values)
+        .onConflictDoUpdate({
+          target: dataSubjectRequests.id,
+          set: {
+            status: values.status,
+            resolution: values.resolution,
+            resolvedAt: values.resolvedAt,
+          },
+          // Só decide pedido ainda pendente e da própria empresa: duas
+          // decisões simultâneas não sobrescrevem uma à outra.
+          setWhere: and(
+            eq(dataSubjectRequests.clinicId, this.clinicId),
+            eq(dataSubjectRequests.status, 'pending'),
+          ),
+        })
+        .returning({ id: dataSubjectRequests.id });
+    } catch (error) {
+      if (isUniqueViolation(error, 'uq_data_subject_requests_pending')) {
+        throw new ConflictError(
+          'Você já tem um pedido deste tipo em análise pela clínica',
+        );
+      }
+      throw error;
+    }
+    if (written.length === 0) {
+      throw new InvalidStatusTransitionError('Este pedido já foi analisado');
+    }
   }
 
   async findById(id: string): Promise<DataSubjectRequest | null> {
