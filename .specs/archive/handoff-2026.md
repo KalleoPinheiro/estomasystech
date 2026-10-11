@@ -675,3 +675,19 @@ O teste novo `tests/docs/env-docs.test.ts` trava a divergência nos dois sentido
 - **Next step**: nenhum.
 - **Blockers**: nenhum.
 - **Branch**: `fix/221-docs-ambiente`. PR #288, squash-merged em `main` (`90d2bf0`). Issue #221 fechada via `Closes #221`.
+
+## Issue #291 — senha da equipe e 2FA por papel (2026-10-11) — ENCERRADO (#298)
+
+Decisões de @KalleoPinheiro sobre a AD-031 (#208).
+
+- **Senha da equipe:** mínimo de **10** caracteres e recusa de senhas de uma **lista local de senhas comuns** (`src/domain/auth/{password-policy,common-passwords}.ts`), no convite, na redefinição e na troca. Quem já tem senha continua entrando até a próxima troca. O portal segue com mínimo de 8.
+- **Link de convite e redefinição:** uma senha recusada **não queima o link** (`findUsableBySecretHash` antes da reivindicação atômica).
+- **2FA por papel** (`mfaPolicy`): obrigatório para super_admin e company_admin, opcional para atendente e profissional, inexistente nos portais. O Admin sem fator cadastra o autenticador no próximo login.
+
+ADR-012, ACE-RN-41/42, RM-22. Spec em `.specs/features/senha-2fa-equipe/`. AD-031 foi arquivada.
+
+**Detalhes**: não há migração. CI com os 4 jobs verdes, E2E 237/237 e Verifier independente com PASS. Perguntas abertas para @KalleoPinheiro: (1) derrubar na hora as sessões dos Admins sem fator; (2) remover o segundo fator de um Admin que perdeu o celular (sugerido dentro da #295); (3) aplicar a lista de senhas comuns também ao portal.
+
+- **Next step**: respostas às 3 perguntas. A tela "Minha conta" (#295) e o QR code (#250).
+- **Blockers**: nenhum.
+- **Branch**: `feat/291-senha-2fa-admin`. PR #298, squash-merged em `main` (`b7b8c3d`). Issue #291 fechada via `Closes #291`.
