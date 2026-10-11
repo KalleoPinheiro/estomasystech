@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PhotoStorage } from '@/application/ports/photo-storage';
 import {
+  CLINIC_RETENTION_FAILED,
   type ClinicRetentionServices,
   PATIENT_BATCH,
   PHOTO_BATCH,
+  PLATFORM_RETENTION_FAILED,
   RETENTION_ACTOR,
   RunRetention,
 } from '@/application/retention/run-retention';
@@ -220,7 +222,7 @@ describe('Feature: Job de retenção (#294)', () => {
         auditEvents: 0,
         waitlistEntries: 0,
         accounts: 0,
-        error: 'banco fora',
+        error: CLINIC_RETENTION_FAILED,
       },
       {
         clinicId: 'good',
@@ -233,16 +235,29 @@ describe('Feature: Job de retenção (#294)', () => {
     ]);
     expect(summary.platform).toEqual({
       auditEvents: 0,
-      error: 'sistema fora',
+      error: PLATFORM_RETENTION_FAILED,
     });
     expect(summary.waitlistEntries).toBe(3);
   });
 
-  it('Dado erro que não é Error, Quando a clínica falha, Então a mensagem é o valor como texto', async () => {
+  it('Dada falha no meio da clínica, Quando roda, Então a resposta e a trilha trazem o que já foi anonimizado (RET-10)', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const audit = fakeAudit();
+    const retention = fakeRetention({
+      findPatientsDue: vi.fn(async () => ['p1', 'p2']),
+      anonymizeAuditEvents: vi.fn(async () => 5),
+      anonymizeWaitlistEntries: vi.fn(async () => {
+        throw new Error('select * from waitlist_entries where ...');
+      }),
+    });
+
     const summary = await new RunRetention(
       ['c1'],
-      () => Promise.reject('falhou'),
+      async () => ({
+        retention,
+        photoStorage: fakeStorage(),
+        auditEvents: audit.repo,
+      }),
       async () => ({
         retention: fakeRetention(),
         auditEvents: fakeAudit().repo,
@@ -250,6 +265,50 @@ describe('Feature: Job de retenção (#294)', () => {
       NOW,
     ).execute();
 
-    expect(summary.clinics[0].error).toBe('falhou');
+    expect(retention.anonymizePatient).toHaveBeenCalledWith(
+      'p1',
+      NOW,
+      new Date('2006-10-11T12:00:00Z'),
+    );
+    const partial = {
+      clinicalRecords: 2,
+      photos: 0,
+      auditEvents: 5,
+      waitlistEntries: 0,
+      accounts: 0,
+    };
+    expect(summary.clinics).toEqual([
+      { clinicId: 'c1', ...partial, error: CLINIC_RETENTION_FAILED },
+    ]);
+    expect(audit.saved).toHaveLength(1);
+    expect(JSON.parse(audit.saved[0].detail ?? '')).toEqual(partial);
+  });
+
+  it('Dada falha também ao auditar o parcial, Quando roda, Então a resposta segue com o erro', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const audit = fakeAudit();
+    vi.mocked(audit.repo.save).mockRejectedValue(new Error('trilha fora'));
+
+    const summary = await new RunRetention(
+      ['c1'],
+      async () => ({
+        retention: fakeRetention({
+          anonymizeWaitlistEntries: vi.fn(async () => 1),
+        }),
+        photoStorage: fakeStorage(),
+        auditEvents: audit.repo,
+      }),
+      async () => ({
+        retention: fakeRetention(),
+        auditEvents: fakeAudit().repo,
+      }),
+      NOW,
+    ).execute();
+
+    expect(summary.clinics[0]).toMatchObject({
+      waitlistEntries: 1,
+      error: CLINIC_RETENTION_FAILED,
+    });
+    expect(audit.repo.save).toHaveBeenCalledTimes(2);
   });
 });

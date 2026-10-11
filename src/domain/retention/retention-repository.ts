@@ -12,8 +12,11 @@ export interface PendingPhoto {
 export interface RetentionRepository {
   /** Pacientes cuja última atividade clínica é anterior ao corte. */
   findPatientsDue(cutoff: Date, limit: number): Promise<string[]>;
-  /** Paciente, prontuário e conta de portal numa transação; 0 se já feito. */
-  anonymizePatient(patientId: string, now: Date): Promise<number>;
+  /**
+   * Paciente, prontuário e conta de portal numa transação; 0 se já feito ou
+   * se surgiu atividade a partir do corte desde a busca.
+   */
+  anonymizePatient(patientId: string, now: Date, cutoff: Date): Promise<number>;
   findPendingPhotos(limit: number): Promise<PendingPhoto[]>;
   markPhotoAnonymized(photoId: string, now: Date): Promise<void>;
   anonymizeAuditEvents(cutoff: Date): Promise<number>;

@@ -34,7 +34,7 @@ foto é apagar o arquivo e manter o registro sem texto livre.
 | RET-07 | Conta da equipe (`company_admin`, `atendente`, `profissional`) ou de paciente desativada há mais de 2 anos **deve** perder o e-mail e a senha, ter as sessões revogadas e os tokens, o segundo fator e os códigos de recuperação apagados. Papel, empresa e vínculos ficam. | idem |
 | RET-08 | Rodar de novo **não deve** alterar nada nem contar de novo o que já foi anonimizado. | `tests/infrastructure/retention-repository.test.ts`, `tests/api/retention-run.test.ts` |
 | RET-09 | O job **deve** gravar, por clínica e para a plataforma, um evento de auditoria `update`/`retention` só com as contagens por tipo (sem PII), e só quando algo foi anonimizado. | `tests/application/run-retention.test.ts` |
-| RET-10 | Falha numa clínica **não deve** parar as outras: a entrada dela traz `error` e contadores zerados. | idem |
+| RET-10 | Falha numa clínica **não deve** parar as outras: a entrada dela traz `error` genérico (o detalhe fica no log) e as contagens do que já foi anonimizado antes da falha, que também vão para a trilha. | idem |
 | RET-11 | A desativação de uma conta **deve** gravar `deactivated_at`; a reativação o limpa. Contas já inativas antes da migração contam a partir da migração. | `tests/infrastructure/retention-repository.test.ts` |
 
 ## Regras de anonimização por tipo
@@ -103,6 +103,7 @@ satisfaz; `session_version + 1`; apaga `auth_tokens`, `user_mfa` e `mfa_recovery
 | Cadastro do **profissional** (nome, registro) de conta anonimizada também é anonimizado? Ele assina o prontuário, que tem guarda de 20 anos. | Não processa: só a conta de login. |
 | Fatura e pagamento do paciente anonimizado (descrição, motivo do desconto) | Não processa: financeiro fora da decisão. |
 | Conta anonimizada pode ser reativada? | Sem bloqueio: sem e-mail nem senha, ela não entra. |
+| Eventos já criados no Google Agenda da clínica levam o nome do paciente no título (`Consulta: <nome>`). A retenção deve apagá-los ou renomeá-los? | Não processa: dado fora do banco, na conta Google da clínica. |
 
 ## Fora do escopo
 

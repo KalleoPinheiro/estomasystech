@@ -371,8 +371,8 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
       createdAt: NOW,
     });
 
-    expect(await repo.anonymizePatient(patientId, NOW)).toBe(1);
-    expect(await repo.anonymizePatient(patientId, NOW)).toBe(0);
+    expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(1);
+    expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(0);
 
     const [patient] = await db
       .select()
@@ -516,7 +516,7 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
     const { photoId } = await seedRecord(CLINIC, patientId);
     const alive = await insertPatient(CLINIC, NOW);
     const { photoId: alivePhoto } = await seedRecord(CLINIC, alive, NOW);
-    await repo.anonymizePatient(patientId, NOW);
+    await repo.anonymizePatient(patientId, NOW, CUTOFF_20);
 
     const pending = (await repo.findPendingPhotos(1000)).map((p) => p.id);
     expect(pending).toContain(photoId);
@@ -528,9 +528,23 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
     );
   });
 
+  it('Dado paciente com atividade nova depois da busca, Quando anonimiza, Então nada muda', async () => {
+    const patientId = await insertPatient(CLINIC);
+    await seedRecord(CLINIC, patientId);
+    expect(await repo.findPatientsDue(CUTOFF_20, 1000)).toContain(patientId);
+    await db.insert(schema.evolutionNotes).values({
+      id: nextId('evo'),
+      clinicId: CLINIC,
+      patientId,
+      createdAt: NOW,
+    });
+
+    expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(0);
+  });
+
   it('Dado paciente de outra clínica, Quando anonimiza pelo escopo errado, Então nada muda', async () => {
     const patientId = await insertPatient(OTHER);
-    expect(await repo.anonymizePatient(patientId, NOW)).toBe(0);
+    expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(0);
   });
 });
 

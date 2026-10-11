@@ -66,9 +66,9 @@ algo ganha um evento de auditoria `update`/`retention` só com as contagens.
 | --- | --- |
 | `CRON_SECRET` não configurado | `503` — job desativado |
 | header ausente ou diferente | `401` |
-| falha numa empresa | `200`; a entrada traz `error` e contadores zerados; as demais seguem |
+| falha numa empresa | `200`; a entrada traz `error` genérico e as contagens do que já foi feito (também gravadas na trilha); o detalhe fica no log; as demais seguem |
 | falha ao apagar o arquivo de uma foto | `200`; a foto fica pendente e volta na próxima execução |
-| falha na trilha de plataforma | `200`; `platform.error` |
+| falha na trilha de plataforma | `200`; `platform.error` genérico; detalhe no log |
 
 ## Teste local
 

@@ -25,9 +25,17 @@ export interface RetentionCounts {
 
 export interface ClinicRetentionSummary extends RetentionCounts {
   clinicId: string;
-  /** Presente quando a clínica falhou; os contadores vêm zerados. */
+  /**
+   * Presente quando a clínica falhou. Os contadores trazem o que já tinha sido
+   * anonimizado antes da falha; o detalhe do erro fica só no log.
+   */
   error?: string;
 }
+
+/** Mensagem da resposta: o erro do banco pode trazer SQL e parâmetros. */
+export const CLINIC_RETENTION_FAILED = 'Falha ao processar a empresa (ver log)';
+export const PLATFORM_RETENTION_FAILED =
+  'Falha ao processar a trilha de plataforma (ver log)';
 
 export interface RetentionRunSummary extends RetentionCounts {
   /** Trilha de plataforma (eventos sem empresa). */
@@ -51,9 +59,6 @@ const ZERO: RetentionCounts = {
   waitlistEntries: 0,
   accounts: 0,
 };
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /**
  * Job de retenção (#294): anonimiza, empresa a empresa, o que passou do prazo
@@ -90,43 +95,63 @@ export class RunRetention {
   }
 
   private async runClinic(clinicId: string): Promise<ClinicRetentionSummary> {
+    const counts = { ...ZERO };
+    let services: ClinicRetentionServices | null = null;
     try {
-      const services = await this.clinicServices(clinicId);
-      const counts = await this.anonymizeClinic(services);
+      services = await this.clinicServices(clinicId);
+      await this.anonymizeClinic(services, counts);
       await this.recordRun(services.auditEvents, clinicId, counts);
       return { clinicId, ...counts };
     } catch (error) {
       logError(`Retenção da empresa ${clinicId}: falha`, error);
-      return { clinicId, ...ZERO, error: errorMessage(error) };
+      // O que já foi anonimizado não volta a ser contado (idempotência):
+      // a trilha registra agora as contagens parciais.
+      await this.recordPartial(services, clinicId, counts);
+      return { clinicId, ...counts, error: CLINIC_RETENTION_FAILED };
     }
   }
 
+  /** Preenche `counts` passo a passo, para a falha no meio não perder o feito. */
   private async anonymizeClinic(
     services: ClinicRetentionServices,
-  ): Promise<RetentionCounts> {
+    counts: RetentionCounts,
+  ): Promise<void> {
     const { retention } = services;
-    let clinicalRecords = 0;
     const due = await retention.findPatientsDue(
       this.cutoffs.clinicalRecord,
       PATIENT_BATCH,
     );
     for (const patientId of due) {
-      clinicalRecords += await retention.anonymizePatient(patientId, this.now);
-    }
-    return {
-      clinicalRecords,
-      photos: await this.removePhotos(services),
-      auditEvents: await retention.anonymizeAuditEvents(
-        this.cutoffs.auditTrail,
-      ),
-      waitlistEntries: await retention.anonymizeWaitlistEntries(
-        this.cutoffs.waitlist,
-      ),
-      accounts: await retention.anonymizeInactiveAccounts(
-        this.cutoffs.inactiveAccount,
+      counts.clinicalRecords += await retention.anonymizePatient(
+        patientId,
         this.now,
-      ),
-    };
+        this.cutoffs.clinicalRecord,
+      );
+    }
+    counts.photos = await this.removePhotos(services);
+    counts.auditEvents = await retention.anonymizeAuditEvents(
+      this.cutoffs.auditTrail,
+    );
+    counts.waitlistEntries = await retention.anonymizeWaitlistEntries(
+      this.cutoffs.waitlist,
+    );
+    counts.accounts = await retention.anonymizeInactiveAccounts(
+      this.cutoffs.inactiveAccount,
+      this.now,
+    );
+  }
+
+  private async recordPartial(
+    services: ClinicRetentionServices | null,
+    clinicId: string,
+    counts: RetentionCounts,
+  ): Promise<void> {
+    if (!services) return;
+    try {
+      await this.recordRun(services.auditEvents, clinicId, counts);
+    } catch (error) {
+      logError(`Retenção da empresa ${clinicId}: falha ao auditar`, error);
+    }
   }
 
   /**
@@ -163,7 +188,7 @@ export class RunRetention {
       return { auditEvents };
     } catch (error) {
       logError('Retenção da trilha de plataforma: falha', error);
-      return { auditEvents: 0, error: errorMessage(error) };
+      return { auditEvents: 0, error: PLATFORM_RETENTION_FAILED };
     }
   }
 

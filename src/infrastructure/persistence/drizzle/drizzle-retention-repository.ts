@@ -94,7 +94,11 @@ export class DrizzleRetentionRepository implements RetentionRepository {
     return rows.map((row) => row.id);
   }
 
-  async anonymizePatient(patientId: string, now: Date): Promise<number> {
+  async anonymizePatient(
+    patientId: string,
+    now: Date,
+    cutoff: Date,
+  ): Promise<number> {
     const clinicId = this.clinic();
     return this.db.transaction(async (tx) => {
       const done = await tx
@@ -113,6 +117,9 @@ export class DrizzleRetentionRepository implements RetentionRepository {
             eq(patients.id, patientId),
             eq(patients.clinicId, clinicId),
             isNull(patients.anonymizedAt),
+            // Reavaliado aqui: atividade nova entre a busca e a transação adia.
+            lt(patients.createdAt, cutoff),
+            sql`not ${activitySince(tx, cutoff)}`,
           ),
         )
         .returning({ id: patients.id });
@@ -132,6 +139,7 @@ export class DrizzleRetentionRepository implements RetentionRepository {
         );
       await anonymizeAccounts(
         tx,
+        clinicId,
         accounts.map((row) => row.id),
         now,
       );
@@ -227,7 +235,7 @@ export class DrizzleRetentionRepository implements RetentionRepository {
         )
         .for('update');
       const ids = rows.map((row) => row.id);
-      await anonymizeAccounts(tx, ids, now);
+      await anonymizeAccounts(tx, clinicId, ids, now);
       return ids.length;
     });
   }
@@ -424,7 +432,12 @@ async function clearSchedulingText(
 }
 
 /** Tira e-mail e senha, derruba sessões e apaga tokens e segundo fator. */
-async function anonymizeAccounts(tx: Tx, ids: string[], now: Date) {
+async function anonymizeAccounts(
+  tx: Tx,
+  clinicId: string,
+  ids: string[],
+  now: Date,
+) {
   if (ids.length === 0) return;
   await tx
     .update(userAccounts)
@@ -436,7 +449,9 @@ async function anonymizeAccounts(tx: Tx, ids: string[], now: Date) {
       deactivatedAt: sql`coalesce(${userAccounts.deactivatedAt}, ${now.toISOString()}::timestamptz)`,
       anonymizedAt: now,
     })
-    .where(inArray(userAccounts.id, ids));
+    .where(
+      and(eq(userAccounts.clinicId, clinicId), inArray(userAccounts.id, ids)),
+    );
   await tx.delete(authTokens).where(inArray(authTokens.accountId, ids));
   await tx
     .delete(mfaRecoveryCodes)
