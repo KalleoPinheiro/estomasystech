@@ -17,7 +17,7 @@ desenho em [ADR-014](../../adr/014-observabilidade-sem-pii.md).
 
 | Campo | Valor |
 | --- | --- |
-| Direção | saída (app → GlitchTip, rede interna do compose) |
+| Direção | saída (app → GlitchTip, rede interna do compose). A interface só abre por túnel SSH (`127.0.0.1:8000`), sem porta pública |
 | Obrigatória? | não — sem DSN, no-op |
 | Código | `src/lib/observability/error-tracker.ts` (SDK `@sentry/core`, sem integrações) |
 | Servidor | [`docker-compose.glitchtip.yml`](../../../docker-compose.glitchtip.yml), imagem `glitchtip/glitchtip:v6`, modo `all_in_one` |
@@ -31,7 +31,7 @@ desenho em [ADR-014](../../adr/014-observabilidade-sem-pii.md).
 | `GLITCHTIP_DB_PASSWORD` | compose | `openssl rand -hex 24`; Postgres próprio do GlitchTip, separado do banco clínico |
 | `GLITCHTIP_SECRET_KEY` | compose | `openssl rand -hex 32` |
 | `GLITCHTIP_DOMAIN` | compose | URL que o operador usa; padrão `http://localhost:8000` (túnel SSH) |
-| `GLITCHTIP_MAX_EVENT_LIFE_DAYS` | compose | retenção dos eventos; padrão `30` (pergunta aberta, runbook § 1) |
+| `GLITCHTIP_MAX_EVENT_LIFE_DAYS` | compose | retenção dos eventos; **30 dias** (decidido, [runbook](../producao.md) § 1) |
 | `GLITCHTIP_EMAIL_URL` | compose | SMTP do GlitchTip para os avisos dele; padrão `consolemail://` (não envia) |
 
 ## O que sai do processo
@@ -47,8 +47,7 @@ Lista do que **pode** sair (`buildEvent`), não do que não pode:
 
 Nunca: `request` (URL, cabeçalhos, cookies, corpo), `user`, `breadcrumbs`, `extra`, `contexts`,
 `server_name`. O `beforeSend` (`scrubEvent`) apaga esses campos e limpa o texto de novo, se
-alguma versão do SDK os preencher. O erro do navegador não é capturado (pergunta aberta na
-#212).
+alguma versão do SDK os preencher. O erro do navegador **não é capturado por ora** (decisão do dono, [#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313)).
 
 ## Modos de falha
 
