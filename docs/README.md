@@ -45,7 +45,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | Arquivo | Para quê |
 | --- | --- |
 | [`engineering/onboarding.md`](engineering/onboarding.md) | requisitos, Docker, Node local, **variáveis de ambiente**, testes, gates |
-| [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: Vercel + Supabase, VPS + compose, TLS, backup/restore, segredos e rotação, migrações, cron |
+| [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Caddy, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
 | [`engineering/api.md`](engineering/api.md) | rotas REST centrais |
