@@ -10,6 +10,10 @@ export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { enforceProcessTimeZone } = await import('@/lib/app-timezone');
     await enforceProcessTimeZone();
+    const { warmUpDatabase } = await import(
+      '@/infrastructure/persistence/drizzle/db'
+    );
+    void warmUpDatabase();
   }
 }
 

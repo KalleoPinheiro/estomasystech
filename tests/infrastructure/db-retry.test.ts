@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   attachPoolErrorLogger,
   getDb,
+  warmUpDatabase,
 } from '@/infrastructure/persistence/drizzle/db';
 import { loggedLines } from '../support/log-lines';
 
@@ -18,6 +19,7 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
   const saved = {
     driver: process.env.VITTA_DB_DRIVER,
     url: process.env.DATABASE_URL,
+    migrateOnBoot: process.env.VITTA_MIGRATE_ON_BOOT,
     promise: globalForDb.vittaDbPromise,
   };
 
@@ -30,6 +32,11 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
     vi.restoreAllMocks();
     process.env.VITTA_DB_DRIVER = saved.driver;
     process.env.DATABASE_URL = saved.url;
+    if (saved.migrateOnBoot === undefined) {
+      delete process.env.VITTA_MIGRATE_ON_BOOT;
+    } else {
+      process.env.VITTA_MIGRATE_ON_BOOT = saved.migrateOnBoot;
+    }
     globalForDb.vittaDbPromise = saved.promise;
   });
 
@@ -80,5 +87,36 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
         }),
       }),
     );
+  });
+
+  // #212: o HEALTHCHECK (liveness) não toca o banco; a migração no boot vem daqui.
+  it('C14 warm-up no boot conecta e migra sem esperar a primeira requisição', async () => {
+    process.env.VITTA_DB_DRIVER = 'pglite';
+    process.env.DATABASE_URL = 'postgres://ignorado-pelo-pglite';
+    delete process.env.VITTA_MIGRATE_ON_BOOT;
+
+    await warmUpDatabase();
+
+    expect(globalForDb.vittaDbPromise).toBeDefined();
+  });
+
+  it('C15 warm-up com banco fora do ar não lança (getDb loga e tenta de novo depois)', async () => {
+    process.env.VITTA_DB_DRIVER = 'postgres';
+    process.env.DATABASE_URL = 'postgres://vitta:x@127.0.0.1:1/vitta';
+
+    await expect(warmUpDatabase()).resolves.toBeUndefined();
+    expect(globalForDb.vittaDbPromise).toBeUndefined();
+  });
+
+  it('C16 warm-up desligado sem DATABASE_URL ou com VITTA_MIGRATE_ON_BOOT=false', async () => {
+    process.env.VITTA_DB_DRIVER = 'pglite';
+    delete process.env.DATABASE_URL;
+    await warmUpDatabase();
+    expect(globalForDb.vittaDbPromise).toBeUndefined();
+
+    process.env.DATABASE_URL = 'postgres://ignorado-pelo-pglite';
+    process.env.VITTA_MIGRATE_ON_BOOT = 'false';
+    await warmUpDatabase();
+    expect(globalForDb.vittaDbPromise).toBeUndefined();
   });
 });
