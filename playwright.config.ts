@@ -37,7 +37,11 @@ export default defineConfig({
   // no processo pode ser lenta o bastante pra estourar o timeout da assertion;
   // 1 retry absorve esse cold-compile sem mascarar falhas reais (que persistem).
   retries: 1,
-  reporter: "list",
+  // `list` sozinho não deixa evidência (#308): o html gera `playwright-report/` e,
+  // no CI, `github` transforma o teste falho em annotation do check.
+  reporter: process.env.CI
+    ? [["list"], ["github"], ["html", { open: "never" }]]
+    : [["list"], ["html", { open: "never" }]],
   timeout: 60_000,
   // Servidor dev (Turbopack) compila rotas sob demanda na primeira visita —
   // o default de 5s para assertions é apertado demais para isso.
@@ -45,7 +49,7 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   use: {
     baseURL: MAIN_BASE_URL,
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
     storageState: ADMIN_STORAGE_STATE_PATH,
     // O servidor roda com TZ=America/Sao_Paulo (ver webServer.env abaixo) e telas
