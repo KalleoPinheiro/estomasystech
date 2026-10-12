@@ -1,5 +1,5 @@
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
-import { NotFoundError } from '@/domain/shared/errors';
+import { ForbiddenError, NotFoundError } from '@/domain/shared/errors';
 import type { Session } from './session';
 
 /**
@@ -22,5 +22,28 @@ export async function assertPatientAccessibleToProfessional(
     (await links.hasLink(session.professionalId, patientId));
   if (!hasLink) {
     throw new NotFoundError('Paciente', patientId);
+  }
+}
+
+/**
+ * Escrita sobre paciente sem vínculo (AD-026, #296): ao contrário da leitura,
+ * criar retorno ou entrada na lista de espera para quem não é seu paciente é
+ * um ato negado ao Profissional (403), não um paciente "inexistente".
+ */
+export async function assertPatientLinkedForProfessionalWrite(
+  session: Session | null,
+  patientId: string,
+  links: ProfessionalPatientLinkRepository,
+): Promise<void> {
+  if (session?.role !== 'profissional') {
+    return;
+  }
+  const hasLink =
+    session.professionalId !== null &&
+    (await links.hasLink(session.professionalId, patientId));
+  if (!hasLink) {
+    throw new ForbiddenError(
+      'Profissional só pode registrar para pacientes vinculados a ele',
+    );
   }
 }

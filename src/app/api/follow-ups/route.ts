@@ -6,6 +6,7 @@ import { FOLLOW_UP_STATUSES } from '@/domain/followup/follow-up';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { linkedPatientFilter } from '@/lib/auth/clinical-resource-scope';
+import { assertPatientLinkedForProfessionalWrite } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toFollowUpDto } from '@/lib/dto';
@@ -64,8 +65,12 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
-    const { followUps, patients } = await getRepositories(
-      writeScope(guard.session),
+    const { followUps, patients, professionalPatientLinks } =
+      await getRepositories(writeScope(guard.session));
+    await assertPatientLinkedForProfessionalWrite(
+      guard.session,
+      body.patientId,
+      professionalPatientLinks,
     );
     const followUp = await new CreateFollowUp(followUps, patients).execute({
       patientId: body.patientId,

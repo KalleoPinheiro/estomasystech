@@ -304,6 +304,7 @@ function buildRouter({
         account: { email: 'x@y.com', role, roleLabel: role },
       }),
     '/api/packages?patientId=pac-1': () => jsonResponse(packages),
+    '/api/patients/pac-1/packages': () => jsonResponse(packages),
   };
 
   return ({
@@ -563,18 +564,37 @@ describe('Feature: PatientRecordPage', () => {
   });
 
   describe('Cenário: acesso do Profissional (#189)', () => {
-    it('Dado profissional, Então a aba Pacotes não aparece', async () => {
-      mockFetch(buildRouter({ role: 'profissional' }));
+    it('Dado profissional, Então a aba Pacotes aparece e mostra o saldo sem preço (#296)', async () => {
+      const fetchMock = mockFetch(
+        buildRouter({
+          role: 'profissional',
+          packages: [
+            {
+              id: 'pk-1',
+              procedureId: 'proc-1',
+              procedureName: 'Curativo',
+              totalSessions: 10,
+              usedSessions: 4,
+              remainingSessions: 6,
+              expiresAt: null,
+              active: true,
+              createdAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        }),
+      );
 
       await renderDetail();
       await screen.findByText('Maria Souza');
 
-      await waitFor(() => {
-        expect(screen.getByRole('tab', { name: /Anamnese/ })).toBeVisible();
-      });
-      expect(
-        screen.queryByRole('tab', { name: 'Pacotes' }),
-      ).not.toBeInTheDocument();
+      fireEvent.mouseDown(await screen.findByRole('tab', { name: 'Pacotes' }));
+
+      expect(await screen.findByText('Curativo')).toBeInTheDocument();
+      expect(screen.getByText('6 de 10 sessões restantes')).toBeInTheDocument();
+      expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
+      const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+      expect(urls).toContain('/api/patients/pac-1/packages');
+      expect(urls.some((url) => url.startsWith('/api/packages'))).toBe(false);
     });
 
     it('Dado admin, Então a aba Pacotes aparece', async () => {
@@ -585,22 +605,6 @@ describe('Feature: PatientRecordPage', () => {
       expect(
         await screen.findByRole('tab', { name: 'Pacotes' }),
       ).toBeInTheDocument();
-    });
-
-    it('Dado profissional com ?aba=pacotes, Então abre a anamnese sem chamar /api/packages', async () => {
-      searchParamsRef.current = new URLSearchParams('aba=pacotes');
-      const fetchMock = mockFetch(
-        buildRouter({ role: 'profissional', anamnesis: anamnesisFixture }),
-      );
-
-      await renderDetail();
-      await screen.findByText('Maria Souza');
-
-      expect(
-        await screen.findByDisplayValue('Diabetes tipo 2'),
-      ).toBeInTheDocument();
-      const urls = fetchMock.mock.calls.map((call) => String(call[0]));
-      expect(urls.some((url) => url.startsWith('/api/packages'))).toBe(false);
     });
 
     it('Dado 404 do paciente, Então a mensagem não expõe o id', async () => {

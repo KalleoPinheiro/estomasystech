@@ -8,6 +8,7 @@ import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { linkedPatientFilter } from '@/lib/auth/clinical-resource-scope';
+import { assertPatientLinkedForProfessionalWrite } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { waitlistWithNames } from '@/lib/waitlist-names';
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = addSchema.parse(await request.json());
     const services = await getRepositories(writeScope(guard.session));
+    await assertPatientLinkedForProfessionalWrite(
+      guard.session,
+      body.patientId,
+      services.professionalPatientLinks,
+    );
     const entry = await new AddToWaitlist(
       services.waitlist,
       services.patients,

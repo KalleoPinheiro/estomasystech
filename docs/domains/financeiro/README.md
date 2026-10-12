@@ -34,6 +34,7 @@ em centavos inteiros.
 | FIN-RN-11 | Venda de pacote é atômica (pacote + fatura) | `src/application/billing/sell-session-package.ts` |
 | FIN-RN-12 | Pagamento, desconto e cancelamento da mesma fatura são serializados (lock da linha na transação): duas ações simultâneas nunca gravam recebimento em dobro — a segunda vê o saldo atualizado e é recusada se exceder (#192) | `PATCH /api/invoices/:id`, `InvoiceRepository.findByIdForUpdate` |
 | FIN-RN-13 | Retenção das faturas (#311): ao anonimizar o paciente (20 anos), a descrição vira "Fatura anonimizada" e o motivo do desconto sai, em todas as faturas dele; valor, desconto, datas, status, forma de pagamento e vínculos ficam (prazo fiscal). O recebimento só guarda valor, forma e data: nada a limpar | [spec](../../../.specs/features/retencao-restante/spec.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
+| FIN-RN-14 | O Profissional vê, nos pacientes vinculados, o nome do pacote e o saldo de sessões, **sem preço** (AD-027, #296): `GET /api/patients/:id/packages` (família `clinical`, vínculo R4, DTO `PackageBalanceDto` sem campo monetário). Sem vínculo, `404`. `GET /api/packages`, com preço, segue `administrative` | `src/app/api/patients/[id]/packages/route.ts`, `src/lib/dto/package.ts` |
 
 ## Funcionalidades
 

@@ -9,6 +9,7 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/portal/me', 'shared'],
       ['/api/auth/logout', 'shared'],
       ['/api/patients/abc/evolutions', 'clinical'],
+      ['/api/patients/abc/packages', 'clinical'],
       ['/api/patients/abc/conditions', 'clinical'],
       ['/api/patients/abc/anamnesis', 'clinical'],
       ['/api/patients/abc/care-plans', 'clinical'],
