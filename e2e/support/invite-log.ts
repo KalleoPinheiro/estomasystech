@@ -4,8 +4,8 @@ import { maskEmail } from "../../src/lib/redact";
  * Link do convite de `email` no log do servidor principal. Sem canal de e-mail,
  * o `NullEmailGateway` (`src/application/ports/email-gateway.ts`) imprime
  * "[e-mail desativado] Para <e-mail mascarado> — <assunto>" e, fora de
- * produção, uma linha com o link de senha — nunca o e-mail completo nem o
- * corpo (CWE-532).
+ * produção, o link de senha no campo `link` da mesma linha JSON (#212) — nunca
+ * o e-mail completo nem o corpo (CWE-532).
  *
  * Como o e-mail sai mascarado (`e2e-atendente@…` e `e2e-profissional@…` viram
  * ambos `e2***@vitta.test`), o chamador passa só o trecho do log escrito depois

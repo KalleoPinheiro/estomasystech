@@ -11,6 +11,7 @@ import {
 } from '@/domain/clinical/condition-photo';
 import { stripImageMetadata } from '@/domain/clinical/image-sanitizer';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import { logger } from '@/lib/observability/logger';
 
 export interface AddConditionPhotoInput {
   conditionId: string;
@@ -51,7 +52,7 @@ export class AddConditionPhoto {
       // Estrutura inesperada: os bytes originais seguem para o storage e podem
       // conter EXIF. Registrar é o que permite a clínica detectar o caso em vez
       // de supor que a remoção sempre funcionou.
-      console.warn(
+      logger.warn(
         `Sanitização de imagem não aplicada (condição ${input.conditionId}) — metadados podem ter sido preservados`,
       );
     }

@@ -39,11 +39,22 @@ describe('logError (#202)', () => {
     expect(logged).not.toContain('fulano@x.com');
     expect(logged).not.toContain('Fulano de Tal');
     expect(logged).not.toContain('insert into');
-    expect(log.mock.calls[0][1]).toMatchObject({
+    expect(JSON.parse(String(log.mock.calls[0][0])).error).toMatchObject({
       code: '23505',
       table: 'patients',
       constraint: 'uq_patients_clinic_email',
     });
+  });
+
+  it('erro comum: o stack perde a 1ª linha, que repete a mensagem crua (#212)', () => {
+    const safe = sanitizeError(new Error('falhou para fulano@x.com'));
+
+    expect(safe.message).toBe('falhou para [e-mail]');
+    expect(safe.stack).toBeDefined();
+    expect(safe.stack).not.toContain('fulano@x.com');
+    expect(
+      safe.stack?.split('\n').every((l) => l.trimStart().startsWith('at ')),
+    ).toBe(true);
   });
 
   it('erro do driver sem wrapper também perde detail e mensagem', () => {

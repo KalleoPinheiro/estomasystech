@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { logger } from '@/lib/observability/logger';
 
 const DEFAULT_TRUSTED_HOPS = 1;
 
@@ -48,7 +49,7 @@ function warnMissingForwardedFor(header: string | null, hops: number): void {
     return;
   }
   missingHeaderWarned = true;
-  console.warn(
+  logger.warn(
     `[config] Requisição sem x-forwarded-for com TRUSTED_PROXY_HOPS=${hops}: ` +
       'o IP do cliente fica "unknown" e anônimos dividem um único balde de rate ' +
       'limit. Configure o proxy reverso para repassar x-forwarded-for ou ajuste ' +

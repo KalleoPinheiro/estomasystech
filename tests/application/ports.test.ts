@@ -32,7 +32,7 @@ describe('Feature: Gateways nulos (integrações desativadas)', () => {
 
     expect(info).toHaveBeenCalledTimes(1);
     const logged = String(info.mock.calls[0][0]);
-    expect(logged).toBe(
+    expect(JSON.parse(logged).msg).toBe(
       `[mensageria desativada] WhatsApp para +55******7777 (${body.length} caracteres)`,
     );
     expect(logged).not.toContain('5511999997777');

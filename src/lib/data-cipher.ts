@@ -5,6 +5,7 @@ import {
   hkdfSync,
   randomBytes,
 } from 'node:crypto';
+import { logger } from '@/lib/observability/logger';
 
 /**
  * Cifra de dado clínico em repouso (#195, ADR-006) com chave própria,
@@ -205,7 +206,7 @@ export function dataCipherFromEnv(
   }
   if (!warnedDevKey) {
     warnedDevKey = true;
-    console.warn(
+    logger.warn(
       '[config] DATA_ENCRYPTION_KEY ausente: usando chave de desenvolvimento derivada do AUTH_SECRET (nunca em produção).',
     );
   }

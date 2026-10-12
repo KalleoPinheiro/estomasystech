@@ -17,6 +17,7 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import { startOfZonedDay, zonedParts } from '@/domain/shared/time-zone';
 import { logError } from '@/lib/log-error';
+import { recordSignal } from '@/lib/observability/signals';
 import { portalUrlFromEnv } from './portal-url';
 
 /** Canal de e-mail da clínica no disparo (C2, #265). */
@@ -191,6 +192,7 @@ class ClinicReminders {
         `Lembrete ${reminder.kind}/${reminder.referenceId}: falha no envio`,
         error,
       );
+      recordSignal('delivery-failure');
       return 'failed';
     }
     await this.services.reminderLog.save(

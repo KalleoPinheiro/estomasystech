@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-11
+last_reviewed: 2026-10-12
 ---
 
 # Runbook de produção
@@ -21,7 +21,8 @@ conhecidos, em [`troubleshooting.md`](troubleshooting.md).
 | Hospedagem | VPS Hetzner, `docker-compose.yml` + `docker-compose.prod.yml`, 1 réplica |
 | Fotos | volume `uploads` no servidor (`PHOTO_STORAGE` vazio) |
 | RPO / RTO | 24 h / 4 h: backup diário cifrado do banco e das fotos, 30 dias fora do servidor, teste de restauração mensal (§ 5) |
-| Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador (§ 9, [#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)) |
+| Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)) |
+| Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, GlitchTip self-hosted no compose ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
 
 **Pendência jurídica:** o servidor fica fora do Brasil, então guardar dado de saúde nele é
 transferência internacional (LGPD art. 33). A base legal está em aberto na
@@ -36,7 +37,11 @@ Nada abaixo foi decidido; o runbook indica onde cada resposta entra.
 | Localização do servidor na Hetzner (Alemanha, Finlândia ou EUA) — conversa com a #216 | § 2 |
 | Cifra do disco do servidor. ADR-006 conta com ela para as fotos em volume local; LUKS exige desbloqueio a cada boot (manual ou com chave remota), o que pesa no RTO | § 2 |
 | Horário do envio diário dos lembretes (ponto de partida: 08:00 de São Paulo) | § 7 |
-| Relay de e-mail do host para os alertas (a Hetzner bloqueia a porta 25 de saída em contas novas) | § 9 |
+| Relay de e-mail do host para o `MAILTO` do cron (a Hetzner bloqueia a porta 25 de saída em contas novas). Os alertas do app saem pelo Resend e não dependem dele | § 9 |
+| Limiares dos alertas: quantos 5xx e quantas falhas de entrega em 15 min (ponto de partida: 10 e 3) e o intervalo de 60 min entre avisos iguais | § 9 |
+| Retenção dos eventos no GlitchTip (ponto de partida: 30 dias, como o backup) | § 9 |
+| Verificador de uptime externo: qual serviço (fica fora do servidor e vê o país do servidor) | § 9 |
+| Captura de erro do navegador: exige DSN público, liberar o GlitchTip na CSP e tratar o texto da tela que o SDK coleta | § 9 |
 
 ## 2. Topologia e provisionamento
 
@@ -72,12 +77,15 @@ Provisionamento, uma vez:
    DATA_ENCRYPTION_KEY=...    # openssl rand -hex 32 — cópia no cofre (§ 6)
    CRON_SECRET=...            # openssl rand -hex 24
    VITTA_BOOTSTRAP_TOKEN=...  # só até o primeiro acesso (§ 8)
+   RESEND_API_KEY=...         # canal da plataforma: convite do Super Admin e alertas (§ 9)
+   EMAIL_FROM="Vitta Flow <nao-responda@exemplo.com.br>"
+   ALERT_EMAIL_TO=operador@exemplo.com.br
    ```
 
    Com `COMPOSE_FILE` no `.env`, todo `docker compose` rodado em `/opt/vitta-flow` (inclusive
    pelos scripts de backup) já inclui o Caddy.
 5. `docker compose up -d --build` e confira:
-   `curl -fsS https://clinica.exemplo.com.br/api/auth/providers`.
+   `curl -fsS https://clinica.exemplo.com.br/api/health/ready` (`200` com banco e migrações `ok`).
 6. Backup (§ 5), cron (§ 7), primeiro acesso (§ 8) e alertas (§ 9).
 
 **Atualizar a versão:** `git pull`,
@@ -228,13 +236,15 @@ com permissão `600`, fora do controle de versão (o `.gitignore` o ignora), e u
 | `VITTA_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **remova** depois do primeiro acesso (§ 8) |
 | `CRON_SECRET` | incidente | atualize junto em `/etc/vitta/cron.headers` (§ 7) |
 | `RESEND_API_KEY`, credenciais Google | conforme o provedor | troque no provedor e no `.env` |
+| `GLITCHTIP_SECRET_KEY`, `GLITCHTIP_DB_PASSWORD` | incidente | troca derruba as sessões da interface do GlitchTip; a senha do banco dele segue o roteiro da `POSTGRES_PASSWORD` no serviço `glitchtip-db` |
+| `GLITCHTIP_DSN` | incidente | gere outra chave no projeto do GlitchTip, troque no `.env`, `docker compose up -d app` e revogue a antiga |
 
 `npm run data:reencrypt` (a partir de um checkout, com `DATABASE_URL`, `DATA_ENCRYPTION_KEY`,
 `DATA_ENCRYPTION_KEY_PREVIOUS` e, se ainda houver dado legado, o `AUTH_SECRET` antigo) regrava
 com a chave atual todo texto clínico em claro, no formato legado ou de uma chave anterior. É
 idempotente: pode ser interrompido e rodado de novo.
 
-## 7. Cron (lembretes, backup, retenção)
+## 7. Cron (lembretes, backup, retenção, alertas)
 
 O host fica em UTC; São Paulo é UTC−3 o ano todo. Guarde o segredo do cron num arquivo, não na
 linha do crontab (`/etc/vitta/cron.headers`, `chmod 600`, com a linha
@@ -249,11 +259,14 @@ MAILTO=operador@exemplo.com.br
 # Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1). O flock espera o backup
 # terminar: apagar uma foto enquanto o tar lê o volume faria o backup falhar.
 0 6 * * * root flock -w 3600 /var/backups/vitta/.lock curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/retention/run
+# Alertas ao operador a cada 5 min (§ 9). O e-mail sai do app; se o app não responder, o
+# curl falha e o MAILTO avisa.
+*/5 * * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/alerts/run
 ```
 
 `/etc/vitta/backup.env` (`chmod 600`) exporta a configuração do § 5:
 `export BACKUP_AGE_RECIPIENTS_FILE=/etc/vitta/backup.pub` e `export BACKUP_OFFSITE_CMD='…'`.
-O `cron` manda por e-mail ao `MAILTO` tudo que o comando escrever; as três linhas só escrevem
+O `cron` manda por e-mail ao `MAILTO` tudo que o comando escrever; as quatro linhas só escrevem
 quando falham. Precisa de um relay de e-mail no host (§ 9).
 
 - Sem `CRON_SECRET` as rotas de lembretes e de retenção respondem 503 (job desligado). Falha do job: resposta
@@ -307,23 +320,89 @@ Issue: [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294).
 
 ## 9. Monitoramento e alertas
 
-Decisão: alertas por **e-mail** ao operador. Ferramenta e cobertura completas ficam na
-[#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212); até lá, o mínimo:
+Decisões do dono ([#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)): tudo
+self-hosted, alertas por **e-mail** ao operador pelo canal da plataforma. Desenho e o que sai do
+processo: [ADR-014](../adr/014-observabilidade-sem-pii.md).
+
+### 9.1 Health check
+
+| Rota | Checa | Quem usa |
+| --- | --- | --- |
+| `GET /api/health` | o processo responde (sem banco, sem rate limit) | `HEALTHCHECK` da imagem e do compose |
+| `GET /api/health/ready` | `select 1` e todas as migrações de `drizzle/` aplicadas; `503` senão, em até 3 s | verificador externo, alerta `readiness` |
+
+O corpo diz só `database` e `migrations` (`ok`/`fail`/`pending`/`unknown`). `docker compose ps`
+mostra `unhealthy` quando a liveness falha; `restart: unless-stopped` reinicia o processo que
+morre, mas não o que fica `unhealthy`.
+
+### 9.2 Alertas por e-mail
+
+`*/5` no `/etc/cron.d/vitta` (§ 7) chama `POST /api/alerts/run`. Precisa de `ALERT_EMAIL_TO` e
+do canal da plataforma (`RESEND_API_KEY`/`EMAIL_FROM`) no `.env`. Contrato e detalhes:
+[`integrations/alertas.md`](integrations/alertas.md).
+
+| Alerta | Ativo quando |
+| --- | --- |
+| aplicação não está pronta | `/api/health/ready` falharia (banco fora ou migração pendente) |
+| erros 5xx acima do limiar | ≥ `ALERT_5XX_THRESHOLD` (10) erros 500 em 15 min |
+| job de lembretes sem rodar | última execução há mais de 26 h |
+| falhas de entrega recorrentes | ≥ `ALERT_DELIVERY_FAILURE_THRESHOLD` (3) envios de e-mail recusados em 15 min |
+
+Mesmo alerta ativo volta no máximo a cada 60 min. Os contadores ficam em memória: reiniciar o
+app os zera (uma réplica). Sem destinatário ou sem canal, o alerta vira linha `error` no log.
+
+**Teste de fumaça:** com o app no ar, `docker compose stop db`; em até 5 min chega "aplicação
+não está pronta". `docker compose start db` em seguida.
+
+### 9.3 Outros sinais
 
 | Sinal | Como |
 | --- | --- |
+| App fora do ar | o `curl -f` do cron de alertas falha e o `MAILTO` avisa; com o servidor inteiro fora, só um verificador externo de uptime em `https://<domínio>/api/health/ready` avisa (serviço em aberto, § 1) |
 | Backup, lembretes ou retenção falharam | `MAILTO` do cron (§ 7) |
-| Site fora do ar | verificador externo de uptime em `https://<domínio>/api/auth/providers`, com aviso por e-mail (fora do servidor: se ele cair, o cron cai junto) |
-| Container doente | `docker compose ps` mostra `unhealthy`; `restart: unless-stopped` reinicia o processo que morre, mas não o que fica `unhealthy` |
 | Disco | linha no `/etc/cron.d/vitta`: `0 * * * * root df --output=pcent / /var/lib/docker \| awk 'NR>1 && $1+0 > 85 {print "disco em " $1}'` |
-| Backup que não rodou | o `MAILTO` não pega cron parado; o verificador de "último backup" fica na #212 |
+| Backup que não rodou | o `MAILTO` não pega cron parado; o verificador de "último backup" segue fora desta entrega |
 
-E-mail saindo do host: a Hetzner bloqueia a porta 25 de saída em contas novas, então o `cron`
-precisa de um relay pela 587 (ex.: `msmtp-mta` com o SMTP do provedor de e-mail da plataforma).
-Escolha registrada como pergunta aberta (§ 1).
+O `MAILTO` precisa de relay no host: a Hetzner bloqueia a porta 25 de saída em contas novas, então
+use a 587 (ex.: `msmtp-mta` com o SMTP do provedor de e-mail da plataforma). Escolha registrada
+como pergunta aberta (§ 1).
 
-Logs: `docker compose logs app` (e `caddy`). Os logs não carregam dado pessoal (`logError`,
-[#202](https://github.com/KalleoPinheiro/vitta-flow/issues/202)).
+### 9.4 Logs
+
+`docker compose logs app` traz uma linha JSON por evento: `time`, `level`, `msg`, `requestId` e
+campos. O `x-request-id` volta em toda resposta; com ele, ache todas as linhas do request:
+
+```bash
+docker compose logs --no-log-prefix app | grep '"requestId":"<id>"' | jq .
+docker compose logs --no-log-prefix app | jq -c 'select(.level == "error")'
+```
+
+Os logs não carregam dado pessoal (`logError`,
+[#202](https://github.com/KalleoPinheiro/vitta-flow/issues/202); e-mail e número longo viram
+`[e-mail]`/`[número]`). O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
+mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
+
+### 9.5 GlitchTip (error tracking)
+
+Opcional: sem `GLITCHTIP_DSN` o app funciona igual. Configurar, uma vez:
+
+1. No `.env`: `GLITCHTIP_DB_PASSWORD` (`openssl rand -hex 24`), `GLITCHTIP_SECRET_KEY`
+   (`openssl rand -hex 32`) e `docker-compose.glitchtip.yml` no fim do `COMPOSE_FILE`.
+   Guarde os dois no cofre.
+2. `docker compose up -d glitchtip` e crie o operador:
+   `docker compose exec glitchtip ./manage.py createsuperuser`. O cadastro aberto fica desligado.
+3. Da máquina do operador: `ssh -L 8000:127.0.0.1:8000 <servidor>` e abra
+   `http://localhost:8000`. A interface não tem porta pública.
+4. Crie organização e projeto (plataforma Node), copie o DSN e grave no `.env` trocando o host
+   pelo serviço: `GLITCHTIP_DSN=http://<chave>@glitchtip:8000/<projeto>`. Opcional:
+   `APP_RELEASE=$(git rev-parse --short HEAD)` a cada deploy.
+5. `docker compose up -d app`. Confira com um erro de verdade (ex. a fumaça do § 9.2).
+
+O que sai do app para o GlitchTip e o que nunca sai: [`integrations/glitchtip.md`](integrations/glitchtip.md).
+Os eventos ficam `GLITCHTIP_MAX_EVENT_LIFE_DAYS` dias (padrão 30). O banco do GlitchTip não
+entra no backup (§ 5): não guarda dado de paciente e perdê-lo só perde o histórico de erros.
+RAM: o GlitchTip `all_in_one` usa cerca de 512 MB a mais; com 4 GB, acompanhe no primeiro
+build com ele no ar.
 
 ## 10. Recuperação de emergência do Super Admin
 

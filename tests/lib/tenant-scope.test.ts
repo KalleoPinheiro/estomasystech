@@ -31,6 +31,8 @@ const SYSTEM_SCOPE_ALLOWLIST: Record<string, string> = {
     'segundo fator do super_admin: sem sessão; o token pendente identifica a conta (sem clínica)',
   'app/api/reminders/run/route.ts':
     'listar as empresas para o cron; o job roda com clinicScope de cada uma',
+  'app/api/alerts/run/route.ts':
+    'alertas (#212): lê a última execução dos lembretes na tabela de plataforma job_runs (sem empresa)',
   'app/api/retention/run/route.ts':
     'cron de retenção (#294): lista as empresas e anonimiza a trilha de plataforma (sem empresa); o resto roda com clinicScope de cada uma',
   'app/api/platform/clinics/route.ts':

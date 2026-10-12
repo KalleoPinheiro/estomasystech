@@ -33,3 +33,22 @@ export function maskPhone(phone: string): string {
     : '';
   return `${country}${HIDDEN_DIGITS}${tail}`;
 }
+
+const EMAIL_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+/** Sequência de dígitos com separadores comuns de CPF, CNPJ, telefone e data. */
+const NUMBER_PATTERN = /(?<![\w-])\+?\d[\d\s()./-]*\d(?![\w-])/g;
+const MIN_HIDDEN_DIGITS = 8;
+
+/**
+ * Texto livre que pode sair do processo (mensagem de erro no log e no
+ * GlitchTip, #212): troca e-mail e número longo (CPF, CNPJ, telefone, data)
+ * por um marcador. Ids (UUID) e números curtos (status HTTP, contagem)
+ * ficam.
+ */
+export function scrubText(text: string): string {
+  return text
+    .replace(EMAIL_PATTERN, '[e-mail]')
+    .replace(NUMBER_PATTERN, (match) =>
+      match.replace(/\D/g, '').length >= MIN_HIDDEN_DIGITS ? '[número]' : match,
+    );
+}

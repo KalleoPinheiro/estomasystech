@@ -58,6 +58,8 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`engineering/integrations/s3-storage.md`](engineering/integrations/s3-storage.md) | fotos em bucket S3-compatível |
 | [`engineering/integrations/cron.md`](engineering/integrations/cron.md) | disparo externo dos lembretes |
 | [`engineering/integrations/retencao.md`](engineering/integrations/retencao.md) | disparo externo da retenção e anonimização (#294) |
+| [`engineering/integrations/alertas.md`](engineering/integrations/alertas.md) | cron de alertas por e-mail ao operador (#212) |
+| [`engineering/integrations/glitchtip.md`](engineering/integrations/glitchtip.md) | error tracking self-hosted sem dado pessoal (#212) |
 
 ## Decisões
 
@@ -76,6 +78,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/011-canal-de-comunicacao-por-clinica.md`](adr/011-canal-de-comunicacao-por-clinica.md) | e-mail de cada clínica sai pela chave dela (`clinic_channels`, cifrada); sem canal, não sai; chave da plataforma opcional e só para contas sem clínica |
 | [`adr/012-segundo-fator-e-senha-da-equipe.md`](adr/012-segundo-fator-e-senha-da-equipe.md) | 2FA obrigatório também para o Admin de Empresa, opcional para Atendente/Profissional; senha da equipe com 10+ caracteres e fora da lista de senhas comuns |
 | [`adr/013-retencao-por-anonimizacao.md`](adr/013-retencao-por-anonimizacao.md) | dado vencido é anonimizado (nunca excluído) por um job de cron; só o repositório de retenção reescreve a trilha de auditoria |
+| [`adr/014-observabilidade-sem-pii.md`](adr/014-observabilidade-sem-pii.md) | logs JSON com request-id, GlitchTip self-hosted por evento montado pelo app (sem PII), health/ready e alertas por e-mail ao operador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 
