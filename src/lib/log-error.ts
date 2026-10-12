@@ -1,13 +1,18 @@
+import { captureError } from '@/lib/observability/error-tracker';
+import { emit, type LogFields } from '@/lib/observability/logger';
+import { scrubText } from '@/lib/redact';
+
 /**
- * Único ponto de `console.error` em `src/` (issue #202, LGPD art. 46 / CWE-532).
+ * Único ponto de log de erro em `src/` (issue #202, LGPD art. 46 / CWE-532).
  *
  * O Drizzle lança `DrizzleQueryError` com a query e os PARÂMETROS na mensagem
  * (`Failed query: … params: …`) — logar o objeto cru despeja nome, e-mail,
  * anamnese e até `password_hash` no stdout. O driver do Postgres, por sua vez,
  * põe valores em `detail` (`Key (email)=(fulano@x.com) already exists`). Aqui
  * erro de banco vira só metadados: SQLSTATE, tabela, constraint e o stack sem a
- * linha de mensagem. Teste de arquitetura (`tests/lib/log-error-architecture`)
- * proíbe `console.error` fora deste arquivo.
+ * linha de mensagem. A mensagem dos demais erros perde e-mail e número longo
+ * (`scrubText`, #212). A linha sai em JSON pelo logger estruturado e o mesmo
+ * erro vai ao GlitchTip quando configurado (`error-tracker.ts`).
  */
 
 export interface SafeErrorLog {
@@ -82,8 +87,8 @@ export function sanitizeError(error: unknown, depth = 0): SafeErrorLog {
   }
   const safe: SafeErrorLog = {
     name: error.name,
-    message: error.message,
-    stack: error.stack,
+    message: scrubText(error.message),
+    stack: framesOnly(error.stack),
   };
   // Erros de sistema do Node (ECONNREFUSED, ETIMEDOUT…) — sem dado pessoal.
   const code = stringField(error as unknown as Record<string, unknown>, 'code');
@@ -96,7 +101,17 @@ export function sanitizeError(error: unknown, depth = 0): SafeErrorLog {
   return safe;
 }
 
-/** Loga um erro inesperado sem dado pessoal. `context` não deve conter PII (use ids). */
-export function logError(context: string, error: unknown): void {
-  console.error(context, sanitizeError(error));
+/**
+ * Loga um erro inesperado sem dado pessoal. `context` e `fields` não devem
+ * conter PII (use ids).
+ */
+export function logError(
+  context: string,
+  error: unknown,
+  fields: LogFields = {},
+): void {
+  const safe = sanitizeError(error);
+  emit('error', context, { ...fields, error: safe }, (entry) =>
+    captureError({ context, error: safe, requestId: entry.requestId }),
+  );
 }

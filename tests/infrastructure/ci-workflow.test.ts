@@ -43,6 +43,8 @@ describe('CI de produção (#203)', () => {
     expect(block).not.toMatch(/docker (compose )?push/);
     expect(block).toMatch(/run: bash scripts\/docker-smoke\.sh/);
     expect(smoke).toContain('/api/auth/providers');
+    expect(smoke).toContain('/api/health/ready');
+    expect(smoke).toContain('x-request-id: smoke-req-0001');
     expect(smoke).toContain('/app/uploads/.smoke');
     expect(smoke).toContain('--force-recreate');
   });

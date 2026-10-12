@@ -123,6 +123,9 @@ npm run dev                   # http://localhost:3000
 | `TRUSTED_PROXY_HOPS` | não | quantos proxies reversos confiáveis ficam à frente do app (define o IP do cliente no `x-forwarded-for`) | padrão `1`; Nginx/Caddy = `1`, Cloudflare + Nginx = `2` |
 | `API_RATE_LIMIT_MAX` | não | req/min em `/api/*`, somado entre réplicas: **por conta** quando autenticado (empresa + e-mail), por IP quando anônimo | padrão `120` — cada tela faz de 2 a 8 chamadas ao abrir (Agenda 7, Configurações 8, Dashboard 5, Ficha 6), ou seja ~15 trocas de tela por minuto por pessoa |
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | não | tuning do pool Postgres | — |
+| `GLITCHTIP_DSN` / `APP_RELEASE` | não | error tracking no GlitchTip self-hosted ([ADR-014](../adr/014-observabilidade-sem-pii.md)) e a versão marcada em cada evento | vazio = no-op; [glitchtip.md](integrations/glitchtip.md) |
+| `GLITCHTIP_DB_PASSWORD` / `GLITCHTIP_SECRET_KEY` | só com o GlitchTip | senha do Postgres próprio e chave do GlitchTip, lidas por `docker-compose.glitchtip.yml` (não pelo app) | [producao.md](producao.md) § 9.5 |
+| `ALERT_EMAIL_TO` / `ALERT_5XX_THRESHOLD` / `ALERT_DELIVERY_FAILURE_THRESHOLD` | não (sim em produção) | alertas por e-mail ao operador (`POST /api/alerts/run`) pelo canal da plataforma | limiares em 15 min, padrão `10` e `3`; [alertas.md](integrations/alertas.md) |
 | `VITTA_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
 | `VITTA_ALLOW_OPEN_MODE` | só dev | roda sem login | ignorada com `NODE_ENV=production` |
 | `POSTGRES_PORT` / `APP_PORT` | não | portas publicadas pelo compose no host | padrão `5432` (só loopback) e `3000` |

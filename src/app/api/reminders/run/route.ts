@@ -4,6 +4,7 @@ import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { passwordMatches } from '@/lib/auth/session';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 
 /**
  * Disparo do job de lembretes (cron externo). Dois formatos, mesmo segredo:
@@ -42,9 +43,9 @@ async function runReminders(provided: string) {
   return handleRequest(async () => {
     // Listar as empresas é a única leitura cross-empresa; todo o resto do job
     // roda no escopo de cada uma (N3).
-    const { clinics } = await getRepositories(systemScope());
+    const { clinics, jobRuns } = await getRepositories(systemScope());
     const all = await clinics.findAll();
-    return new SendReminders(
+    const summary = await new SendReminders(
       all.map((clinic) => ({
         id: clinic.id,
         name: clinic.name,
@@ -52,5 +53,13 @@ async function runReminders(provided: string) {
       })),
       (clinicId) => getRepositories(clinicScope(clinicId)),
     ).execute();
+    // Alerta "lembretes sem rodar há 26 h" (#212). Falhar aqui não desfaz o
+    // envio: o resumo volta igual e o alerta avisa no dia seguinte.
+    await jobRuns
+      .recordRun('reminders', new Date())
+      .catch((error: unknown) =>
+        logError('Lembretes: falha ao registrar a execução', error),
+      );
+    return summary;
   });
 }

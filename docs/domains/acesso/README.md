@@ -3,7 +3,7 @@ title: "Domínio: Acesso, empresas e auditoria"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-11
+last_reviewed: 2026-10-12
 domain: acesso
 ---
 
@@ -68,6 +68,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-43 | Configurações por papel (#215): a tela abre para toda a equipe da clínica e cada seção aparece só se o papel usa a rota dela (mesma matriz de `route-family.ts`). O `company_admin` vê tudo; Atendente e Profissional, só "Feriados e ausências". Alterar grade, almoço e política/taxa de cancelamento é só do `company_admin` (AGE-RN-13) | `src/app/(staff)/configuracoes/page.tsx`, `src/lib/staff-access.tsx` |
 | ACE-RN-44 | Retenção da trilha de auditoria (#294): evento com mais de 5 anos perde ator, recurso, paciente e detalhe (`anonimizado`/nulo); papel, ação, tipo de recurso, empresa e data ficam. Vale para a trilha de cada clínica e para a de plataforma. Fora do job de retenção a trilha continua append-only. Cada execução que anonimiza algo grava um evento `update`/`retention` (ator `system`/`retention-job`) só com as contagens por tipo | [ADR-013](../../adr/013-retencao-por-anonimizacao.md), `src/application/retention/run-retention.ts` |
 | ACE-RN-45 | Retenção de contas (#294): desativar uma conta grava `deactivated_at` (reativar o limpa; contas já inativas antes da migração `0049` contam dela). Conta da equipe (`company_admin`, `atendente`, `profissional`) ou de paciente desativada há mais de 2 anos perde e-mail e senha, tem as sessões revogadas e os tokens, o segundo fator e os códigos de recuperação apagados; papel, empresa e vínculos ficam. Conta de parceiro e o cadastro do profissional não entram (pergunta aberta na spec) | [spec](../../../.specs/features/retencao-anonimizacao/spec.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
+| ACE-RN-46 | Rotas públicas de operação (#212): `GET /api/health` (liveness, sem I/O e sem rate limit) e `GET /api/health/ready` (banco e migrações; `503` quando não) não pedem sessão e respondem só `ok`/`fail`/`pending`/`unknown`, sem detalhe do erro. `POST /api/alerts/run` exige o `CRON_SECRET`, como os outros crons. Toda resposta que passa pelo proxy traz `x-request-id` (o de entrada, se bem formado, ou um UUID novo) | `src/proxy.ts`, `src/app/api/health/`, [ADR-014](../../adr/014-observabilidade-sem-pii.md) |
 
 ### Papéis
 

@@ -3,6 +3,7 @@ import { getDb } from '@/infrastructure/persistence/drizzle/db';
 import { DrizzleRateLimitStore } from '@/infrastructure/persistence/drizzle/drizzle-rate-limit-store';
 import { rateLimitWindows } from '@/infrastructure/persistence/drizzle/schema';
 import { type RateLimitStore, SharedRateLimiter } from '@/lib/auth/rate-limit';
+import { loggedLines } from '../support/log-lines';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
@@ -114,9 +115,14 @@ describe('Feature: Rate limit compartilhado entre réplicas (issue #77)', () => 
       ];
 
       expect(results).toEqual([true, true, false]);
-      expect(log).toHaveBeenCalledWith(
-        expect.stringContaining('Rate limit login'),
-        expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
+      expect(loggedLines(log)).toContainEqual(
+        expect.objectContaining({
+          msg: expect.stringContaining('Rate limit login'),
+          error: expect.objectContaining({
+            name: 'Error',
+            stack: expect.any(String),
+          }),
+        }),
       );
       log.mockRestore();
     });

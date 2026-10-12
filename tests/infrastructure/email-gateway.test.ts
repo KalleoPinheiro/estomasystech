@@ -41,8 +41,10 @@ describe('Feature: Porta de e-mail transacional (gateway nulo)', () => {
       text,
     });
     expect(info).toHaveBeenCalledTimes(1);
+    // Linha JSON do logger (#212): `msg` com os metadados, `link` à parte.
     return String(info.mock.calls[0][0]);
   };
+  const header = (logged: string) => JSON.parse(logged).msg as string;
 
   it('Dado gateway nulo, Quando send, Então loga destinatário mascarado e assunto, sem o corpo (CWE-532)', async () => {
     const logged = await sendAndCapture(inviteBody);
@@ -72,9 +74,10 @@ describe('Feature: Porta de e-mail transacional (gateway nulo)', () => {
 
     expect(logged).not.toContain('definir-senha');
     expect(logged).not.toContain('abc_DEF-123');
-    expect(logged).toBe(
+    expect(header(logged)).toBe(
       '[e-mail desativado] Para pe***@clinica.com — Defina sua senha',
     );
+    expect(JSON.parse(logged)).not.toHaveProperty('link');
   });
 
   it('Dado corpo sem link de senha (lembrete), Quando send fora de produção, Então loga só os metadados', async () => {
@@ -82,9 +85,11 @@ describe('Feature: Porta de e-mail transacional (gateway nulo)', () => {
 
     const logged = await sendAndCapture('Olá, Maria! Sua consulta é amanhã.');
 
-    expect(logged).toBe(
+    expect(header(logged)).toBe(
       '[e-mail desativado] Para pe***@clinica.com — Defina sua senha',
     );
+    expect(logged).not.toContain('Maria');
+    expect(JSON.parse(logged)).not.toHaveProperty('link');
   });
 
   describe('Cenário: gateway preguiçoso (ADR-011)', () => {

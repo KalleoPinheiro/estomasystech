@@ -8,7 +8,7 @@ export type AppDb = PgDatabase<PgQueryResultHKT, typeof schema>;
 /** Teto de linhas por listagem — protege o banco de queries sem limite (paginação real: P1). */
 export const MAX_ROWS = 500;
 
-const MIGRATIONS_FOLDER = path.join(process.cwd(), 'drizzle');
+export const MIGRATIONS_FOLDER = path.join(process.cwd(), 'drizzle');
 
 const globalForDb = globalThis as unknown as {
   vittaDbPromise?: Promise<AppDb>;
@@ -140,4 +140,26 @@ export function getDb(): Promise<AppDb> {
     globalForDb.vittaDbPromise = attempt;
   }
   return globalForDb.vittaDbPromise;
+}
+
+/**
+ * Migra no boot de fato (#212): o HEALTHCHECK passou a ser o liveness
+ * `/api/health`, que não toca o banco, então nada mais chamava `getDb` antes
+ * do primeiro acesso e o container ficava healthy sem migrar (runbook § 4).
+ * Dispara a conexão + migração em segundo plano, sem bloquear a subida: banco
+ * fora do ar não derruba o processo (a falha já é logada por `getDb` e a
+ * próxima chamada tenta de novo). Sem `DATABASE_URL` ou com
+ * `VITTA_MIGRATE_ON_BOOT=false`, não faz nada.
+ */
+export function warmUpDatabase(): Promise<void> {
+  if (
+    process.env.VITTA_MIGRATE_ON_BOOT === 'false' ||
+    !process.env.DATABASE_URL
+  ) {
+    return Promise.resolve();
+  }
+  return getDb().then(
+    () => undefined,
+    () => undefined,
+  );
 }

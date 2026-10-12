@@ -89,14 +89,37 @@ describe('Feature: compose e Dockerfile seguros para produção (#191)', () => {
     }
   });
 
-  it('C10 app tem healthcheck em /api/auth/providers', () => {
+  it('C10 app tem healthcheck na liveness /api/health (#212, OBS-03)', () => {
     const app = serviceBlock('app');
     const healthcheck = app.slice(app.indexOf('    healthcheck:'));
 
     expect(app).toContain('    healthcheck:');
-    expect(healthcheck).toContain(
-      "fetch('http://127.0.0.1:3000/api/auth/providers')",
+    expect(healthcheck).toContain("fetch('http://127.0.0.1:3000/api/health')");
+  });
+
+  it('C10b Dockerfile usa a liveness, que não depende do banco (#212, OBS-03)', () => {
+    const healthcheck = dockerfile.slice(dockerfile.indexOf('HEALTHCHECK'));
+
+    expect(healthcheck).toContain("fetch('http://127.0.0.1:3000/api/health')");
+    expect(healthcheck).not.toContain('/api/health/ready');
+  });
+
+  it('C10c GlitchTip fica em arquivo próprio, sem porta pública e sem cadastro aberto (#212)', () => {
+    const glitchtip = readFileSync(
+      path.join(root, 'docker-compose.glitchtip.yml'),
+      'utf8',
     );
+    const prod = readFileSync(
+      path.join(root, 'docker-compose.prod.yml'),
+      'utf8',
+    );
+
+    expect(glitchtip).toContain('image: glitchtip/glitchtip:v6');
+    expect(glitchtip).toContain('- "127.0.0.1:8000:8000"');
+    expect(glitchtip).toContain('ENABLE_USER_REGISTRATION: "false"');
+    expect(glitchtip).toMatch(/SECRET_KEY: \$\{GLITCHTIP_SECRET_KEY:\?/);
+    expect(prod).not.toContain('glitchtip');
+    expect(compose).toMatch(/^ {6}GLITCHTIP_DSN: \$\{GLITCHTIP_DSN:-\}$/m);
   });
 });
 
@@ -153,7 +176,7 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
       '## 4. Migrações',
       '## 5. Backup e restore',
       '## 6. Segredos e rotação',
-      '## 7. Cron (lembretes, backup, retenção)',
+      '## 7. Cron (lembretes, backup, retenção, alertas)',
       '## 8. Primeiro acesso',
       '## 9. Monitoramento e alertas',
     ]) {

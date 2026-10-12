@@ -1,0 +1,54 @@
+# Error tracking (#212, ADR-014): GlitchTip self-hosted, compatível com o SDK do
+# Sentry. Opcional — entra acrescentando este arquivo ao COMPOSE_FILE do .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml:docker-compose.glitchtip.yml
+# Sem porta pública: a interface fica no loopback do host e o operador entra por
+# túnel SSH (ssh -L 8000:127.0.0.1:8000 …). O app fala com ele pela rede do
+# compose, com GLITCHTIP_DSN=http://<chave>@glitchtip:8000/<projeto>.
+# Roteiro: docs/engineering/producao.md § 9.
+services:
+  glitchtip-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:?defina GLITCHTIP_DB_PASSWORD (ex. openssl rand -hex 24)}
+      POSTGRES_DB: glitchtip
+    volumes:
+      - glitchtip_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glitchtip -d glitchtip"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  glitchtip:
+    # Major fixado; o modo all_in_one (web + worker + migração no mesmo
+    # processo, sem Valkey) é o recomendado pelo GlitchTip para instância pequena.
+    image: glitchtip/glitchtip:v6
+    restart: unless-stopped
+    depends_on:
+      glitchtip-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD:?defina GLITCHTIP_DB_PASSWORD}@glitchtip-db:5432/glitchtip
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?defina GLITCHTIP_SECRET_KEY (ex. openssl rand -hex 32)}
+      SERVER_ROLE: all_in_one
+      PORT: "8000"
+      # URL que o operador usa (túnel SSH); entra nos links da interface.
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8000}
+      # Ninguém se cadastra sozinho: o operador cria a conta pelo manage.py.
+      ENABLE_USER_REGISTRATION: "false"
+      ENABLE_ORGANIZATION_CREATION: "false"
+      # Retenção dos eventos (dias). Ponto de partida igual ao do backup (30);
+      # pergunta aberta em producao.md § 1.
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: ${GLITCHTIP_MAX_EVENT_LIFE_DAYS:-30}
+      DEFAULT_FROM_EMAIL: ${EMAIL_FROM:-}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - glitchtip_uploads:/code/uploads
+
+volumes:
+  glitchtip_pgdata:
+  glitchtip_uploads:

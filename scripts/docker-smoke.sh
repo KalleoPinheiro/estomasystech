@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Smoke do container de produção (issue #203), rodado pelo CI depois de
 # `docker compose build`: sobe Postgres + app pelo docker-compose.yml do repo,
-# espera o healthcheck, confere /api/auth/providers e que o usuário do app
+# espera o healthcheck, confere /api/auth/providers, o health check (#212:
+# liveness, readiness com o banco migrado e o x-request-id devolvido) e que o usuário do app
 # (nextjs) grava no volume de fotos e o arquivo sobrevive à recriação do
 # container (#191). Segredos são descartáveis, gerados a cada execução.
 set -euo pipefail
@@ -40,6 +41,16 @@ docker compose up -d --no-build
 wait_healthy
 curl -fsS "$APP_URL_LOCAL/api/auth/providers" > /dev/null
 echo "✓ /api/auth/providers 200"
+
+# Saída em variável, não em pipe para `grep -q`: com pipefail, o grep que fecha
+# o pipe cedo derrubaria o curl com SIGPIPE.
+ready="$(curl -fsS "$APP_URL_LOCAL/api/health/ready")"
+grep -q '"migrations":"ok"' <<< "$ready"
+echo "✓ /api/health/ready 200 (banco e migrações)"
+
+liveness_headers="$(curl -fsS -D - -o /dev/null -H "x-request-id: smoke-req-0001" "$APP_URL_LOCAL/api/health")"
+grep -qix 'x-request-id: smoke-req-0001' <<< "${liveness_headers//$'\r'/}"
+echo "✓ /api/health devolve o x-request-id recebido"
 
 docker compose exec -T app sh -c 'id -un | grep -qx nextjs && echo smoke > /app/uploads/.smoke'
 echo "✓ nextjs grava em /app/uploads"

@@ -25,6 +25,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# O HEALTHCHECK é o liveness `/api/health` (#212), que não depende do banco:
+# `up --wait` pode voltar antes de o app terminar a migração do boot. O
+# readiness só dá 200 com o banco no ar e todas as migrações aplicadas.
+wait_ready() {
+  for _ in $(seq 1 60); do
+    if docker compose exec -T app node -e "fetch('http://127.0.0.1:3000/api/health/ready').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "app não ficou pronto (banco/migrações)" >&2
+  return 1
+}
+
 sql() {
   docker compose exec -T db psql -U vitta -d vitta -tAq -v ON_ERROR_STOP=1 -c "$1"
 }
@@ -34,6 +48,7 @@ age-keygen -y "$work/key.txt" > "$work/recipients.txt"
 mkdir "$work/offsite"
 
 docker compose up -d --no-build --wait
+wait_ready
 sql "CREATE TABLE backup_smoke (v text); INSERT INTO backup_smoke VALUES ('prontuario');"
 docker compose exec -T app sh -c 'mkdir -p /app/uploads/c1 && echo foto > /app/uploads/c1/p.jpg'
 migrations="$(sql 'SELECT count(*) FROM drizzle.__drizzle_migrations')"
@@ -59,6 +74,7 @@ echo "✓ backup cifrado com age e copiado para fora do servidor"
 
 docker compose down -v
 docker compose up -d --no-build --wait
+wait_ready
 BACKUP_AGE_IDENTITY_FILE="$work/key.txt" bash scripts/restore.sh "$backup"
 test -z "$(sql "SELECT to_regclass('backup_smoke')")"
 echo "✓ restore sem --confirmar não altera nada"

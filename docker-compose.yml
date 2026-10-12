@@ -70,6 +70,13 @@ services:
       PG_CONNECT_TIMEOUT_MS: ${PG_CONNECT_TIMEOUT_MS:-}
       PG_IDLE_TIMEOUT_MS: ${PG_IDLE_TIMEOUT_MS:-}
       PG_STATEMENT_TIMEOUT_MS: ${PG_STATEMENT_TIMEOUT_MS:-}
+      # Observabilidade (#212): GlitchTip (vazio = sem error tracking) e alertas
+      # por e-mail ao operador pelo canal da plataforma (RESEND_API_KEY/EMAIL_FROM).
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      APP_RELEASE: ${APP_RELEASE:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+      ALERT_5XX_THRESHOLD: ${ALERT_5XX_THRESHOLD:-}
+      ALERT_DELIVERY_FAILURE_THRESHOLD: ${ALERT_DELIVERY_FAILURE_THRESHOLD:-}
     volumes:
       # Fotos clínicas fora da camada gravável do container (#191): sem isto
       # elas somem no próximo `docker compose up --build` (perda de prontuário).
@@ -79,7 +86,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:3000/api/auth/providers').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 30s
       timeout: 5s
       start_period: 30s

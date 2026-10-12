@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { Session } from '@/lib/auth/session';
+import { loggedLines } from '../support/log-lines';
 
 const afterTasks: Array<() => Promise<void>> = [];
 
@@ -118,9 +119,14 @@ describe('Feature: Registro de auditoria best-effort (após a resposta)', () => 
     });
 
     await expect(afterTasks[0]?.()).resolves.toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Auditoria: falha ao registrar evento',
-      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
+    expect(loggedLines(consoleSpy)).toContainEqual(
+      expect.objectContaining({
+        msg: 'Auditoria: falha ao registrar evento',
+        error: expect.objectContaining({
+          name: 'Error',
+          stack: expect.any(String),
+        }),
+      }),
     );
   });
 });

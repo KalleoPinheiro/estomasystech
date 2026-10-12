@@ -1521,3 +1521,16 @@ export const clinicChannels = pgTable(
     ),
   ],
 );
+
+/**
+ * Última execução de cada job agendado (#212): sem empresa, de plataforma. O
+ * alerta "lembretes sem rodar há 26 h" lê daqui. A migração grava a linha
+ * dos lembretes com a hora dela: a contagem começa na migração.
+ */
+export const jobRuns = pgTable('job_runs', {
+  job: text('job').primaryKey(),
+  lastRunAt: timestamp('last_run_at', {
+    withTimezone: true,
+    mode: 'date',
+  }).notNull(),
+});

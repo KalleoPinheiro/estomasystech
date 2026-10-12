@@ -7,6 +7,7 @@ import {
 } from '@/application/ports/calendar-gateway';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import { loggedLines } from '../support/log-lines';
 
 const afterTasks: Array<() => Promise<void>> = [];
 
@@ -77,9 +78,14 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
     scheduleCalendarSync(services, action);
 
     await expect(afterTasks[0]?.()).resolves.toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Google Calendar: falha na sincronização pós-request',
-      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
+    expect(loggedLines(consoleSpy)).toContainEqual(
+      expect.objectContaining({
+        msg: 'Google Calendar: falha na sincronização pós-request',
+        error: expect.objectContaining({
+          name: 'Error',
+          stack: expect.any(String),
+        }),
+      }),
     );
   });
 
@@ -124,9 +130,14 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
 
     await expect(afterTasks[0]?.()).resolves.toBeUndefined();
     expect(action).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Google Calendar: falha na sincronização pós-request',
-      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
+    expect(loggedLines(consoleSpy)).toContainEqual(
+      expect.objectContaining({
+        msg: 'Google Calendar: falha na sincronização pós-request',
+        error: expect.objectContaining({
+          name: 'Error',
+          stack: expect.any(String),
+        }),
+      }),
     );
   });
 });

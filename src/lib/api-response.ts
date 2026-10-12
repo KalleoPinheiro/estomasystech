@@ -11,6 +11,8 @@ import {
   SchedulingConflictError,
 } from '@/domain/shared/errors';
 import { logError } from '@/lib/log-error';
+import { logger } from '@/lib/observability/logger';
+import { recordSignal } from '@/lib/observability/signals';
 
 export interface ApiEnvelope<T> {
   success: boolean;
@@ -68,12 +70,16 @@ export async function handleRequest<T>(
     }
     if (error instanceof NotFoundError) {
       // O id saiu da mensagem (issue #219); fica só aqui, para diagnóstico.
-      console.info('[api] 404:', error.entity, error.entityId);
+      logger.info('[api] 404', {
+        entity: error.entity,
+        entityId: error.entityId,
+      });
     }
     if (error instanceof DomainError) {
       return fail(error.message, statusForDomainError(error));
     }
     logError('Erro inesperado na API:', error);
+    recordSignal('server-error');
     return fail('Erro interno do servidor', 500);
   }
 }
