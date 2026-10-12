@@ -169,7 +169,7 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
   it('runbook sections: producao.md cobre a VPS decidida e a operação, e está linkado', () => {
     const runbook = read('docs/engineering/producao.md');
     for (const section of [
-      '## 1. Decisões e perguntas abertas',
+      '## 1. Decisões',
       '## 2. Topologia e provisionamento',
       '### Alternativa não adotada: Vercel + Supabase',
       '## 3. TLS, URL pública e proxy',

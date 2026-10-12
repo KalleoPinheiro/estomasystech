@@ -30,8 +30,8 @@ O canal não depende do banco: banco fora do ar ainda vira alerta. Decisão do d
 | `CRON_SECRET` | para a rota existir | o mesmo dos lembretes e da retenção |
 | `ALERT_EMAIL_TO` | sim, para o e-mail sair | destinatário único |
 | `RESEND_API_KEY` / `EMAIL_FROM` | sim, para o e-mail sair | canal da plataforma |
-| `ALERT_5XX_THRESHOLD` | não | padrão `10` em 15 min |
-| `ALERT_DELIVERY_FAILURE_THRESHOLD` | não | padrão `3` em 15 min |
+| `ALERT_5XX_THRESHOLD` | não | padrão `10` em 15 min (mantido, [runbook](../producao.md) § 1) |
+| `ALERT_DELIVERY_FAILURE_THRESHOLD` | não | padrão `3` em 15 min (mantido) |
 
 ## Alertas
 
@@ -42,7 +42,7 @@ O canal não depende do banco: banco fora do ar ainda vira alerta. Decisão do d
 | `reminders-stale` | última execução dos lembretes há mais de 26 h, ou nenhuma | tabela `job_runs` (a migração `0051` grava a hora dela) |
 | `delivery-failures` | falhas de envio de e-mail em 15 min ≥ `ALERT_DELIVERY_FAILURE_THRESHOLD` | convite/reset (`IssueAuthToken`) e lembretes |
 
-"Falha de envio" é recusa ou erro do provedor. Clínica sem canal (`delivered: false` por falta
+"Falha de envio" é só erro do provedor (decisão do dono, [#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313)): recusa ou erro devolvido por ele. Clínica sem canal (`delivered: false` por falta
 de credencial, lembrete `skipped`) é configuração, não falha, e não conta.
 
 Mesmo alerta ativo não sai de novo antes de 60 min. Contadores e esse intervalo ficam em memória
@@ -78,7 +78,7 @@ paciente, conta ou clínica.
 | header ausente ou diferente | `401` |
 | sem `ALERT_EMAIL_TO` ou sem canal da plataforma | `200` com `channel: "none"`; cada alerta ativo vira linha `error` no log (e evento no GlitchTip) |
 | envio do e-mail falhou | `200`, `notified: false`; tenta de novo na próxima execução |
-| app fora do ar | o `curl -f` do cron falha e o `MAILTO` do host avisa ([runbook](../producao.md) § 7) |
+| app fora do ar | o `curl -f` do cron falha e o `MAILTO` do host avisa ([runbook](../producao.md) § 7); com o servidor inteiro fora, o UptimeRobot em `/api/health/ready` avisa por e-mail (§ 9.3) |
 
 ## Teste local
 
