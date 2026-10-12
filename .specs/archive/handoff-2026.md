@@ -771,3 +771,27 @@ Decisão de @KalleoPinheiro (2026-10-11): VPS Hetzner com docker compose, uma r�
 - **Next step**: decisão do dono sobre os 5 pontos; monitoramento segue na #212.
 - **Blockers**: nenhum.
 - **Branch**: `docs/206-runbook-producao`. PR #304, squash-merged em `main` (`2ed747e`). Issue #206 fechada via `Closes #206`.
+
+## Issue #293 — direitos do titular no portal (2026-10-12) — ENCERRADO (#303)
+
+Decisão de @KalleoPinheiro (#216, item 3; LGPD art. 18). Roadmap RM-24.
+
+- **Cópia dos próprios dados:** o portal ganha `GET /api/portal/patient/export`, com o mesmo JSON da exportação LGPD da equipe, mas só do titular da sessão. A resposta não fica em cache, e a auditoria `read`/`export` é gravada antes de responder (POR-RN-13).
+- **Pedidos de correção ou eliminação/anonimização:** o paciente faz o pedido em `/api/portal/patient/data-requests`. Pedido não muda dado, e só pode haver um pendente por tipo (`409`, com índice único parcial). O paciente acompanha a situação e a justificativa (POR-RN-14).
+- **Fila do Admin de Empresa:** fica em `/pedidos-titular`. Aceitar e recusar exigem justificativa e valem uma vez só. O paciente é avisado por e-mail no endereço do cadastro, sem o conteúdo do pedido (PRO-RN-16). A auditoria é gravada antes de qualquer escrita.
+- **Persistência:** tabela `data_subject_requests` (migração `0050`), com `details`/`resolution` cifrados (PRO-RN-12) e incluídos na recifragem. A retenção (#294) apaga esses textos ao anonimizar o paciente (PRO-RN-15).
+- **Texto jurídico:** o aviso em `src/lib/data-rights-text.ts` é **placeholder** e depende da #216.
+
+**Detalhes**: CI com os 4 jobs verdes, depois de update-branch com a #304. O Verifier independente deu FAIL na 1ª rodada (DT-09, corridas, auditoria) e PASS na 2ª (AC1–AC4, DT-01..DT-11). O E2E `portal-parceiro` foi ajustado (684d499) depois do merge com a #294. Ficam **para decisão de @KalleoPinheiro** (implementada a opção mais conservadora):
+
+1. prazo de resposta ao pedido (art. 19 fala em 15 dias): hoje sem prazo nem alerta;
+2. aviso por e-mail ao Admin quando chega pedido novo (hoje não há);
+3. destino do aviso ao paciente: o e-mail do cadastro, não o de login do portal;
+4. limites: um pendente por tipo, descrição obrigatória só na correção, até 1000 caracteres;
+5. justificativa obrigatória também ao aceitar;
+6. aceitar não altera dado (correção pela ficha; anonimização pela #294);
+7. a cópia é completa, sem a janela de 24 meses e com as observações internas do cadastro.
+
+- **Next step**: decisão do dono sobre os 7 pontos; texto jurídico na #216.
+- **Blockers**: nenhum.
+- **Branch**: `feat/293-direitos-titular`. PR #303, squash-merged em `main` (`c7f586e`). Issue #293 fechada via `Closes #293`.
