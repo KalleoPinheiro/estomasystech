@@ -38,6 +38,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   consent: 'Consentimento',
   'partner-consent': 'Consentimento para o parceiro',
   export: 'Exportação',
+  data_request: 'Pedido do titular',
   intervention_record: 'Registro de intervenção',
   outcome_evaluation: 'Avaliação de desfecho',
   patient: 'Paciente',

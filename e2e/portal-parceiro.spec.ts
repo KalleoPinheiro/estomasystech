@@ -77,10 +77,14 @@ test.describe("portal do parceiro", () => {
     // 4. A equipe revoga pela ficha (sessão de Admin do storageState).
     await page.goto(`/pacientes/${referred.id}`);
     const panel = page.locator("[data-partner-consent-panel]");
-    await expect(panel.getByText(/Autorizado pelo paciente em/)).toBeVisible();
+    // As rotas `partner-consent` e `.../revoke` só são chamadas aqui: no
+    // servidor dev, a primeira chamada compila a rota, o que no runner do CI
+    // passa dos 10s padrão (falhou assim no CI da #303).
+    const firstCompile = { timeout: 30_000 };
+    await expect(panel.getByText(/Autorizado pelo paciente em/)).toBeVisible(firstCompile);
     await panel.getByRole("button", { name: "Revogar a pedido do paciente" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Revogar" }).click();
-    await expect(panel.getByText(/Revogado pela equipe em/)).toBeVisible();
+    await expect(panel.getByText(/Revogado pela equipe em/)).toBeVisible(firstCompile);
 
     // 5. Revogado: o parceiro volta a ver só o status.
     await partnerPortal.page.reload();

@@ -117,6 +117,12 @@
 - One per patient × partner; append-only (accept/revoke), with text version and hash, IP, and who recorded it. The patient grants and revokes in the portal; staff can only revoke.
 - Without it, the Partner sees only whether the patient was attended.
 
+**Data Subject Request** (pedido do titular)
+
+- Patient's request, made in the portal, to correct their registration data or to erase/anonymize their data (LGPD art. 18).
+- Analyzed by the Company Admin: accepted or rejected, always with a justification the patient sees in the portal.
+- A request, not an action: accepting does not change the record (clinical records have a 20-year legal retention).
+
 **Audit Event** (evento de auditoria)
 
 - System activity log: create, read, update, delete of sensitive entities.

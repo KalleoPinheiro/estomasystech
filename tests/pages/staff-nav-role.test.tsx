@@ -52,6 +52,7 @@ const ADMIN_ONLY = [
   'Materiais',
   'Relatórios',
   'Auditoria',
+  'Pedidos do titular',
   'Profissionais',
 ];
 
@@ -90,10 +91,11 @@ describe('Feature: menu por papel (#199)', () => {
     }
   });
 
-  it('admin vê as 13 telas', async () => {
+  it('admin vê as 14 telas (inclui Pedidos do titular, #293)', async () => {
     const labels = await renderNav('company_admin');
 
-    expect(labels).toHaveLength(13);
+    expect(labels).toHaveLength(14);
+    expect(labels).toContain('Pedidos do titular');
   });
 
   it('C41 página proibida mostra sem permissão', async () => {

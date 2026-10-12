@@ -351,6 +351,13 @@
       "when": 1791741996583,
       "tag": "0049_retention-anonymization",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791769391445,
+      "tag": "0050_data-subject-requests",
+      "breakpoints": true
     }
   ]
 }

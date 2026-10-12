@@ -16,7 +16,7 @@ clínicas (estomias e feridas) com avaliações seriadas e fotos, planos de cuid
 clínicos. É dado de saúde sob LGPD: consentimento, imutabilidade e isolamento por empresa são
 requisitos, não detalhes.
 
-**Termos ([`CONTEXT.md`](../../../CONTEXT.md)):** `Patient`, `Anamnesis`, `Evolution Note`, `Clinical Condition`, `Condition Assessment`, `Condition Photo`, `Consent Record`.
+**Termos ([`CONTEXT.md`](../../../CONTEXT.md)):** `Patient`, `Anamnesis`, `Evolution Note`, `Clinical Condition`, `Condition Assessment`, `Condition Photo`, `Consent Record`, `Data Subject Request`.
 
 ## Regras de negócio
 
@@ -32,11 +32,12 @@ requisitos, não detalhes.
 | PRO-RN-08 | Profissional só vê pacientes com quem tem consulta ou evolução — também nas rotas endereçadas por id de condição, foto, plano, intervenção ou resultado (sem vínculo: `404`) e na fila de triagem, filtrada pelos vinculados (#186) | `src/domain/clinical/professional-patient-link.ts`, `src/lib/auth/clinical-resource-scope.ts`, `tests/api/clinical-resource-scope-conformance.test.ts` |
 | PRO-RN-09 | Atestado, relatório e plano de cuidados bloqueiam sem CNPJ e responsável técnico da empresa; atestado exige consulta `completed` | `src/app/documentos/` |
 | PRO-RN-10 | Alergias aparecem em destaque no topo do prontuário | UI do prontuário |
-| PRO-RN-11 | Exportação LGPD do titular (JSON com o prontuário completo) só para Admins e Profissional com vínculo; o link "Exportar dados (LGPD)" some para quem não pode exportar | `src/app/api/patients/[id]/export/`, `.specs/STATE.md` AD-025 |
+| PRO-RN-11 | Exportação LGPD do titular (JSON com o prontuário completo) só para Admins e Profissional com vínculo; o link "Exportar dados (LGPD)" some para quem não pode exportar. O próprio paciente baixa o mesmo conteúdo pelo portal (POR-RN-13) | `src/app/api/patients/[id]/export/`, `src/application/patients/load-patient-data-export.ts`, `.specs/STATE.md` AD-025 |
 | PRO-RN-12 | Todo texto clínico livre fica cifrado em repouso com `DATA_ENCRYPTION_KEY` (chave própria, separada do `AUTH_SECRET`): SOAP, anamnese, notas do paciente, da consulta, da lista de espera, da condição, da avaliação (inclusive pele periestomal e observação de complicações), da foto enviada pelo portal, do diagnóstico, da avaliação de resultado e do registro de intervenção. Fotos no bucket vão com `ServerSideEncryption` | [ADR-006](../../adr/006-chave-de-dados-clinicos.md), `src/lib/data-cipher.ts` |
 | PRO-RN-13 | O binário da foto (`GET /api/photos/[id]` da equipe e `GET /api/portal/patient/photos/[id]` do paciente) sai com `Cache-Control: no-store` — a imagem não fica no cache do navegador depois do logout — e cada download grava `read`/`photo` na auditoria, com o paciente. Leitura no escopo da sessão (`sessionScope`); exclusão e triagem seguem em `writeScope`. O Super Admin continua sem acesso (`403`, ACE-RN-10) (#209) | `src/app/api/photos/[id]/route.ts`, `src/app/api/portal/patient/photos/[id]/route.ts`, `tests/api/photo-binary-read.test.ts` |
 | PRO-RN-14 | SOAP ou anamnese cujo salvamento falha por sessão expirada (`401`) voltam ao formulário depois do novo login, com o aviso "Recuperamos o texto que não foi salvo…". O texto fica só no `sessionStorage` da aba, com o e-mail da conta: outra conta não o vê, e ele é apagado na primeira leitura (#207) | `src/lib/use-session-draft.ts` |
-| PRO-RN-15 | Retenção do prontuário (#294): 20 anos depois da **última atividade clínica** do paciente (a mais recente entre cadastro, fim de consulta de qualquer status, anamnese, evolução, condição, avaliação, foto e plano de cuidados), o job de retenção anonimiza o paciente e o prontuário numa transação: nome vira "Paciente anonimizado", e-mail e telefone saem, nascimento vira 1º de janeiro do ano; todo texto livre (anamnese, SOAP, título e notas da condição, notas da avaliação e da foto, plano de cuidados, observação da consulta, motivo do retorno, IP dos consentimentos) é apagado; medidas, códigos, escalas, status, datas e valores ficam. A conta de portal do paciente é anonimizada junto. Depois, o **arquivo** de cada foto é apagado do armazenamento e só então a foto é marcada; o registro fica. Nada é excluído; faturas não são tocadas | [spec](../../../.specs/features/retencao-anonimizacao/spec.md), [ADR-013](../../adr/013-retencao-por-anonimizacao.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
+| PRO-RN-15 | Retenção do prontuário (#294): 20 anos depois da **última atividade clínica** do paciente (a mais recente entre cadastro, fim de consulta de qualquer status, anamnese, evolução, condição, avaliação, foto e plano de cuidados), o job de retenção anonimiza o paciente e o prontuário numa transação: nome vira "Paciente anonimizado", e-mail e telefone saem, nascimento vira 1º de janeiro do ano; todo texto livre (anamnese, SOAP, título e notas da condição, notas da avaliação e da foto, plano de cuidados, observação da consulta, motivo do retorno, IP dos consentimentos, texto dos pedidos do titular) é apagado; medidas, códigos, escalas, status, datas e valores ficam. A conta de portal do paciente é anonimizada junto. Depois, o **arquivo** de cada foto é apagado do armazenamento e só então a foto é marcada; o registro fica. Nada é excluído; faturas não são tocadas | [spec](../../../.specs/features/retencao-anonimizacao/spec.md), [ADR-013](../../adr/013-retencao-por-anonimizacao.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
+| PRO-RN-16 | Pedidos do titular (correção cadastral e eliminação/anonimização, POR-RN-14) vão para a fila **Pedidos do titular**, só do Admin de Empresa (família `administrative`; Profissional e Atendente `403`; pedido de outra empresa `404`). Aceitar ou recusar exige justificativa, vale uma vez (`409` depois, também sob decisões simultâneas) e grava `update`/`data_request` na auditoria **antes** de gravar a decisão e avisar o paciente. Aceitar **não** altera o cadastro nem o prontuário: a correção é feita na ficha, e a anonimização segue a política de retenção ([#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294)). O paciente é avisado por e-mail no endereço do cadastro, sem o conteúdo do pedido nem da justificativa (ficam no portal); falha no envio não desfaz a decisão. Descrição e justificativa vão cifradas (PRO-RN-12) (#293) | `src/application/patients/data-subject-requests.ts`, `src/app/api/data-requests/`, `tests/api/data-subject-rights.test.ts` |
 
 ## Funcionalidades
 
@@ -49,6 +50,7 @@ requisitos, não detalhes.
 | Fotos (equipe e envio remoto pelo paciente) e fila de triagem | entregue | `/pacientes/[id]`, `/triagem` |
 | Plano de cuidados (diagnóstico, intervenção, resultado) | entregue | `/pacientes/[id]` |
 | Documentos: atestado, relatório, plano, consentimento | entregue | `/documentos/*` |
+| Fila de pedidos do titular (correção e eliminação vindas do portal) | entregue | `/pedidos-titular` ([#293](https://github.com/KalleoPinheiro/vitta-flow/issues/293)) |
 
 Specs de execução: `.specs/features/{fase-3-compliance-ux-clinico,fase-b-clinico-legal-critico,prontuario-p1-p3-pontuais,documentos-clinicos-pontuais}/`. PRD: [fase 1](../../product/prd-fase-1.md).
 
@@ -58,8 +60,8 @@ Specs de execução: `.specs/features/{fase-3-compliance-ux-clinico,fase-b-clini
 | --- | --- |
 | domínio | `src/domain/{patient,clinical,consent,taxonomy}/` |
 | casos de uso | `src/application/{patients,clinical,taxonomy}/` |
-| API | `src/app/api/{patients,conditions,photos,care-plans,care-plan-interventions,care-plan-outcomes,documents,taxonomy}/` |
-| UI | `src/app/(staff)/{pacientes,triagem}/`, `src/app/documentos/` |
+| API | `src/app/api/{patients,data-requests,conditions,photos,care-plans,care-plan-interventions,care-plan-outcomes,documents,taxonomy}/` |
+| UI | `src/app/(staff)/{pacientes,triagem,pedidos-titular}/`, `src/app/documentos/` |
 | testes | `tests/domain/`, `tests/application/`, `e2e/{pacientes,clinico,triagem,plano-cuidados,documentos}.spec.ts` |
 
 ## Decisões

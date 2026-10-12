@@ -12,6 +12,7 @@ import { ConditionPhoto } from '@/domain/clinical/condition-photo';
 import { EvolutionNote } from '@/domain/clinical/evolution-note';
 import { InterventionRecord } from '@/domain/clinical/intervention-record';
 import { OutcomeEvaluation } from '@/domain/clinical/outcome-evaluation';
+import { DataSubjectRequest } from '@/domain/patient/data-subject-request';
 import { Patient } from '@/domain/patient/patient';
 import { Appointment } from '@/domain/scheduling/appointment';
 import { WaitlistEntry } from '@/domain/scheduling/waitlist';
@@ -34,6 +35,7 @@ import {
   DrizzleConditionPhotoRepository,
   DrizzleEvolutionNoteRepository,
 } from '@/infrastructure/persistence/drizzle/drizzle-clinical-repositories';
+import { DrizzleDataSubjectRequestRepository } from '@/infrastructure/persistence/drizzle/drizzle-data-subject-request-repository';
 import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import { DrizzleWaitlistRepository } from '@/infrastructure/persistence/drizzle/drizzle-waitlist-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
@@ -126,6 +128,25 @@ describe('Feature: textos clínicos cifrados em repouso (#195)', () => {
       columns: ['notes'],
       id: entry.id,
       readBack: async () => [(await waitlist.findById(entry.id))?.notes],
+    });
+
+    // Pedido do titular (#293): o que pede e a justificativa da clínica.
+    const dataRequests = repo(DrizzleDataSubjectRequestRepository);
+    const dataRequest = DataSubjectRequest.create({
+      patientId: patient.id,
+      kind: 'correction',
+      details: SECRET_TEXT,
+    });
+    await dataRequests.save(dataRequest);
+    await dataRequests.save(dataRequest.accept(SECRET_TEXT));
+    cases.push({
+      table: 'data_subject_requests',
+      columns: ['details', 'resolution'],
+      id: dataRequest.id,
+      readBack: async () => {
+        const read = await dataRequests.findById(dataRequest.id);
+        return [read?.details, read?.resolution];
+      },
     });
 
     const anamneses = repo(DrizzleAnamnesisRepository);
@@ -297,11 +318,11 @@ describe('Feature: textos clínicos cifrados em repouso (#195)', () => {
     });
   });
 
-  it('stores ciphertext: 21 colunas em 11 tabelas gravam v1 e voltam em claro pelo repositório', async () => {
+  it('stores ciphertext: 23 colunas em 12 tabelas gravam v1 e voltam em claro pelo repositório', async () => {
     const columns = cases.flatMap((c) =>
       c.columns.map((col) => `${c.table}.${col}`),
     );
-    expect(columns).toHaveLength(21);
+    expect(columns).toHaveLength(23);
 
     for (const c of cases) {
       const stored = await rawColumns(c.table, c.columns, c.id);
