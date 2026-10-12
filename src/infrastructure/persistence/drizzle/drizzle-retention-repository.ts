@@ -38,6 +38,7 @@ import {
   conditionAssessments,
   conditionPhotos,
   consentRecords,
+  dataSubjectRequests,
   evolutionNotes,
   followUps,
   interventionRecords,
@@ -407,7 +408,10 @@ async function clearCarePlanText(tx: Tx, clinicId: string, patientId: string) {
     );
 }
 
-/** Observações da agenda, motivo do retorno e IP dos consentimentos. */
+/**
+ * Observações da agenda, motivo do retorno, IP dos consentimentos e o texto
+ * dos pedidos do titular (#293).
+ */
 async function clearSchedulingText(
   tx: Tx,
   clinicId: string,
@@ -429,6 +433,10 @@ async function clearSchedulingText(
     .update(partnerShareConsents)
     .set({ ipAddress: null })
     .where(ofPatient(partnerShareConsents));
+  await tx
+    .update(dataSubjectRequests)
+    .set({ details: null, resolution: null })
+    .where(ofPatient(dataSubjectRequests));
 }
 
 /** Tira e-mail e senha, derruba sessões e apaga tokens e segundo fator. */

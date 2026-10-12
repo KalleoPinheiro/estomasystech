@@ -29,6 +29,11 @@ export const STAFF_PAGES = [
   // Toda a equipe entra: feriados e ausências são de todos os papéis; cada
   // seção da tela se esconde quando o papel não usa a rota dela (#215).
   {
+    href: '/pedidos-titular',
+    label: 'Pedidos do titular',
+    api: '/api/data-requests',
+  },
+  {
     href: '/configuracoes',
     label: 'Configurações',
     api: '/api/settings/schedule/closures',

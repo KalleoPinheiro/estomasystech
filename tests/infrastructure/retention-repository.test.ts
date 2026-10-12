@@ -194,6 +194,17 @@ async function seedRecord(clinicId: string, patientId: string, at = OLD) {
     ipAddress: '10.0.0.1',
     acceptedAt: at,
   });
+  await db.insert(schema.dataSubjectRequests).values({
+    id: nextId('dsr'),
+    clinicId,
+    patientId,
+    kind: 'correction',
+    details: TEST_CIPHER.encrypt('telefone da Maria'),
+    status: 'accepted',
+    resolution: TEST_CIPHER.encrypt('corrigido'),
+    createdAt: at,
+    resolvedAt: at,
+  });
   return { conditionId, photoId };
 }
 
@@ -488,6 +499,16 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
       .from(schema.consentRecords)
       .where(eq(schema.consentRecords.patientId, patientId));
     expect(consent).toMatchObject({ ipAddress: null, textHash: 'hash' });
+    const [dataRequest] = await db
+      .select()
+      .from(schema.dataSubjectRequests)
+      .where(eq(schema.dataSubjectRequests.patientId, patientId));
+    expect(dataRequest).toMatchObject({
+      details: null,
+      resolution: null,
+      kind: 'correction',
+      status: 'accepted',
+    });
     const [account] = await db
       .select()
       .from(schema.userAccounts)
