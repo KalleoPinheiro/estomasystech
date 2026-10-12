@@ -818,3 +818,31 @@ Decisões de @KalleoPinheiro (2026-10-11): VPS Hetzner, GlitchTip self-hosted, a
 - **Next step**: decisão do dono sobre os 6 pontos.
 - **Blockers**: nenhum.
 - **Branch**: `feat/212-observabilidade`. PR #306, squash-merged em `main` (`9d00509`). Issue #212 fechada via `Closes #212`.
+
+## Revisão pré-produção #183 — P1 restantes (2026-09-26) — ENCERRADO
+
+> Arquivado em 2026-10-12: o lote saiu (#229 e seguintes), e o alvo de produção mudou para VPS Hetzner + compose (#206, PR #304). O texto abaixo é o snapshot original.
+
+Lote P0+P1 anterior mergeado (#229). Agora #194 (`session_version`, [ADR-005](../../docs/adr/005-revogacao-de-sessao-por-versao.md)), #195 (`DATA_ENCRYPTION_KEY`, [ADR-006](../../docs/adr/006-chave-de-dados-clinicos.md)), #196 (conta de portal ↔ cadastro por FK) e #206 ([runbook](../../docs/engineering/producao.md), alvo Vercel + Supabase, VPS + compose pronto) via `tlc-implement` ([checklist](../../.checks/pre-producao-p1-restante.md)), branch `feature/trusting-johnson-yvvp0j`. Deploy exige `DATA_ENCRYPTION_KEY`; depois das migrações: `npm run db:portal-orphans` e `npm run data:reencrypt`. Next: P2/P3 (#207–#224) em outro PR.
+
+## Sequência `/improve-codebase-architecture` (2026-09-06, 2ª rodada) — ENCERRADO
+
+> Arquivado em 2026-10-12: #150 e #149 mergeadas; #151 fechada como not_planned; o flake da #146 foi fechado (ver #308). O texto abaixo é o snapshot original.
+
+Novo relatório de arquitetura rodado em 2026-09-06 (hot spots: `container.ts`, `dto.ts`, `configuracoes/page.tsx`), 3 achados viraram issues via `triage-issue`, resolução via `tlc-spec-driven` um por vez.
+
+| # | Achado | Issue | Triagem | PR | Status |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Seam de save de rascunho duplicado em Configurações (2 adapters, não 3 como a issue original citava — `AccountsSection` tem shape diferente) | #150 | ready-for-agent | #152 | ✅ mergeada (squash) |
+| 2 | Grab-bag de DTOs (`src/lib/dto.ts`, ~32 mappers rasos) | #149 | ready-for-agent | #153 | ✅ mergeada (squash) |
+| 3 | Bag flat de repositórios (`src/infrastructure/container.ts`, 30 props) | #151 | ready-for-human (especulativo, decisão de valer a pena fica com humano) | — | não iniciado |
+
+**#150 — detalhes**: hook `useSavableForm` extraído em `src/lib/use-savable-form.ts`; `ClinicInfoSection` e `ScheduleSection` consumindo. Verifier independente: PASS, 6/6 ACs, sensor 3/3 mutantes mortos. 1 gap não-bloqueante (CFG-SEAM-06, refresh pós-save não asserta refetch diretamente, pré-existente) registrado como lição candidata L-038. E2E flakou em `clinico.spec.ts:110` (issue #146, conhecido) no primeiro run — re-rodado, passou.
+
+**#149 — detalhes**: decisão pré-spec com o usuário — DTOs continuam em `src/lib/dto/` (não `domain/*`, que violaria a camada documentada em `CONTEXT.md`). `src/lib/dto.ts` (845 linhas) virou 17 módulos por aggregate + `src/lib/dto/index.ts` como barrel de compatibilidade; zero dos 102 consumidores de `@/lib/dto` mudou (troca de arquivo por diretório é transparente pro resolver). Verifier independente: PASS limpo, 5/5 ACs, 2808/2808 testes idênticos ao baseline, 3 mappers com lógica computada confirmados byte-idênticos ao original, zero ciclo de import. E2E flakou de novo em `clinico.spec.ts:110` (2ª ocorrência na mesma sessão) — re-rodado, passou.
+
+**Observação sobre #146**: o flake recorreu 2x na mesma sessão (PRs #152 e #153), sempre a mesma asserção (`clinico.spec.ts:130`, bloqueio de avaliação em condição resolvida), sempre passa no re-run. Reforça a suspeita de race condition já registrada na issue; candidato a subir de prioridade se recorrer numa 3ª vez.
+
+- **Next step**: nenhum agendável sem o usuário — #151 é `ready-for-human` (decisão de valer a pena fica com humano). Próximo trabalho depende de nova demanda ou de decidir #151/#146.
+- **Blockers**: nenhum.
+- **Branches**: `refactor/configuracoes-savable-form-seam` e `refactor/lib-dto-split` (ambas deletadas local e remota após squash-merge). PRs #152 e #153, squash-merged em `main`. Issues #150 e #149 fechadas via `Closes #`.
