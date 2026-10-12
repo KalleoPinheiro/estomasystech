@@ -1,9 +1,15 @@
 import { sql } from 'drizzle-orm';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
 describe('Feature: readiness do banco (#212, OBS-02)', () => {
+  // Abre o PGlite antes: carregar o snapshot sob carga comeria o prazo de 3 s.
+  beforeAll(async () => {
+    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+    await getDb();
+  });
+
   afterEach(() => {
     vi.doUnmock('@/infrastructure/persistence/drizzle/db');
     vi.resetModules();

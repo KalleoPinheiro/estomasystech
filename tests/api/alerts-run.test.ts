@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { recordSignal, resetSignals } from '@/lib/observability/signals';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -30,6 +30,13 @@ const get = async (headers: Record<string, string> = {}) => {
 };
 
 describe('Feature: rota do cron de alertas (#212, OBS-11, OBS-13)', () => {
+  // Abre o PGlite antes: o primeiro getDb() do arquivo carrega o snapshot e,
+  // sob carga, comeria o prazo de 3 s da readiness.
+  beforeAll(async () => {
+    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+    await getDb();
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();

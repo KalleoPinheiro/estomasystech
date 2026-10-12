@@ -46,6 +46,17 @@ describe('logError (#202)', () => {
     });
   });
 
+  it('erro comum: o stack perde a 1ª linha, que repete a mensagem crua (#212)', () => {
+    const safe = sanitizeError(new Error('falhou para fulano@x.com'));
+
+    expect(safe.message).toBe('falhou para [e-mail]');
+    expect(safe.stack).toBeDefined();
+    expect(safe.stack).not.toContain('fulano@x.com');
+    expect(
+      safe.stack?.split('\n').every((l) => l.trimStart().startsWith('at ')),
+    ).toBe(true);
+  });
+
   it('erro do driver sem wrapper também perde detail e mensagem', () => {
     const safe = sanitizeError(pgUniqueViolation());
 

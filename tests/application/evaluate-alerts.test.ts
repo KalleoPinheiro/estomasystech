@@ -12,6 +12,11 @@ import type {
   EmailGateway,
   EmailMessage,
 } from '@/application/ports/email-gateway';
+import { captureError } from '@/lib/observability/error-tracker';
+
+vi.mock('@/lib/observability/error-tracker', () => ({
+  captureError: vi.fn(),
+}));
 
 const NOW = new Date('2026-10-12T12:00:00Z');
 const HOUR = 60 * 60_000;
@@ -189,6 +194,16 @@ describe('Feature: alertas ao operador (#212, OBS-11..OBS-14)', () => {
         level: 'error',
         alert: 'server-errors',
         msg: 'Alerta sem canal de e-mail: erros 5xx acima do limiar',
+        detail: '99 nos últimos 15 min (limiar 10)',
+        error: expect.objectContaining({
+          name: 'AlertWithoutChannel',
+          message: 'erros 5xx acima do limiar',
+        }),
+      }),
+    );
+    expect(captureError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: 'Alerta sem canal de e-mail: erros 5xx acima do limiar',
       }),
     );
   });

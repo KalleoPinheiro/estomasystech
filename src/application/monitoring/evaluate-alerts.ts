@@ -1,6 +1,5 @@
 import type { EmailGateway } from '@/application/ports/email-gateway';
 import { logError } from '@/lib/log-error';
-import { logger } from '@/lib/observability/logger';
 import type { SignalKind } from '@/lib/observability/signals';
 
 /**
@@ -51,6 +50,11 @@ export interface AlertCheck {
 export interface AlertRunSummary {
   channel: 'configured' | 'none';
   checks: AlertCheck[];
+}
+
+/** Alerta ativo que não teve por onde sair (#212, OBS-13). */
+class AlertWithoutChannelError extends Error {
+  override name = 'AlertWithoutChannel';
 }
 
 const MINUTE_MS = 60_000;
@@ -206,10 +210,14 @@ export class EvaluateAlerts {
       return false;
     }
     if (channel === 'none' || !this.config.recipient) {
-      logger.error(`Alerta sem canal de e-mail: ${TITLES[evaluation.key]}`, {
-        alert: evaluation.key,
-        detail: evaluation.detail,
-      });
+      // Pelo logError: a linha vai ao log e o alerta vira evento no GlitchTip.
+      logError(
+        `Alerta sem canal de e-mail: ${TITLES[evaluation.key]}`,
+        new AlertWithoutChannelError(TITLES[evaluation.key]),
+        // `detail` é medida e limiar, sem PII: vai como campo, fora do
+        // scrubText da mensagem (que trocaria a data por [número]).
+        { alert: evaluation.key, detail: evaluation.detail },
+      );
       return false;
     }
     try {

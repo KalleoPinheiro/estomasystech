@@ -81,7 +81,10 @@ describe('Error tracking no GlitchTip (#212, OBS-07, OBS-08)', () => {
     expect(body).not.toContain('fulano@x.com');
     expect(body).not.toContain('Fulano de Tal');
     expect(body).not.toContain('insert into');
-    expect(body).not.toMatch(/"(request|user|breadcrumbs|server_name)"/);
+    // `contexts` só some pelo beforeSend (o SDK põe `contexts.trace`).
+    expect(body).not.toMatch(
+      /"(request|user|breadcrumbs|server_name|contexts|extra)"/,
+    );
   });
 
   it('Dado erro com e-mail na mensagem, Quando monta o evento, Então a mensagem sai limpa e com frames', () => {

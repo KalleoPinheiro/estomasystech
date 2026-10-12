@@ -1,8 +1,15 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
 describe('Feature: health check (#212, OBS-01, OBS-02)', () => {
+  // Abre o PGlite antes: o primeiro getDb() do arquivo carrega o snapshot e,
+  // sob carga, comeria o prazo de 3 s da readiness.
+  beforeAll(async () => {
+    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+    await getDb();
+  });
+
   afterEach(() => {
     vi.doUnmock('@/infrastructure/persistence/drizzle/readiness');
     vi.resetModules();
