@@ -143,21 +143,30 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
     expect(read('.env.example')).toMatch(/^DATA_ENCRYPTION_KEY=$/m);
   });
 
-  it('runbook sections: producao.md cobre as duas topologias e a operação, e está linkado', () => {
+  it('runbook sections: producao.md cobre a VPS decidida e a operação, e está linkado', () => {
     const runbook = read('docs/engineering/producao.md');
     for (const section of [
-      '## 1. Perguntas abertas',
-      '### Vercel + Supabase (alvo)',
-      '### VPS + docker compose (alternativa pronta)',
-      '## 3. TLS e URL pública',
+      '## 1. Decisões e perguntas abertas',
+      '## 2. Topologia e provisionamento',
+      '### Alternativa não adotada: Vercel + Supabase',
+      '## 3. TLS, URL pública e proxy',
       '## 4. Migrações',
       '## 5. Backup e restore',
       '## 6. Segredos e rotação',
-      '## 7. Cron de lembretes',
+      '## 7. Cron (lembretes, backup, retenção)',
       '## 8. Primeiro acesso',
+      '## 9. Monitoramento e alertas',
     ]) {
       expect(runbook, section).toContain(section);
     }
+    for (const issue of ['issues/212', 'issues/216', 'issues/294']) {
+      expect(runbook, issue).toContain(issue);
+    }
+    expect(runbook).toContain('TRUSTED_PROXY_HOPS=1');
+    expect(runbook).toContain('/api/retention/run');
+    expect(runbook).toContain(
+      'COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml',
+    );
     expect(runbook).toContain('npm run data:reencrypt');
     expect(runbook).toContain('npm run db:portal-orphans');
     expect(read('docs/README.md')).toContain('(engineering/producao.md)');
@@ -182,5 +191,45 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
     expect(read('docs/engineering/producao.md')).toContain(
       'npm run admin:recover',
     );
+  });
+});
+
+describe('Feature: VPS com Caddy e backup cifrado (#206)', () => {
+  it('prod compose: Caddy termina TLS e o app não publica porta no host', () => {
+    const prod = read('docker-compose.prod.yml');
+    expect(prod).toMatch(/^ {2}app:\n(?: {4}#.*\n)* {4}ports: !reset \[\]$/m);
+    expect(prod).toMatch(/^ {4}image: caddy:2-alpine$/m);
+    expect(prod).toContain('./deploy/Caddyfile:/etc/caddy/Caddyfile:ro');
+    expect(prod).toContain('caddy_data:/data');
+    expect(prod).toContain('APP_DOMAIN: ${APP_DOMAIN:?');
+    expect(read('deploy/Caddyfile')).toMatch(
+      /^\{\$APP_DOMAIN\} \{[\s\S]*reverse_proxy app:3000/m,
+    );
+  });
+
+  it('backup: cifra com age por chave pública e exige cópia fora do servidor', () => {
+    const backup = read('scripts/backup.sh');
+    expect(backup).toContain('set -euo pipefail');
+    expect(backup).toContain('age -R "$recipients" -o "$partial/db.dump.age"');
+    expect(backup).toContain(
+      'age -R "$recipients" -o "$partial/uploads.tar.age"',
+    );
+    expect(backup).toContain('fail 3 "BACKUP_OFFSITE_CMD não definido');
+    expect(backup).toContain('BACKUP_KEEP_DAYS:-30');
+
+    // O tar das fotos sai pelo stdout: sem log, ele não para em claro no json-file.
+    expect(backup).toContain('--entrypoint tar uploads-backup');
+    const reader = serviceBlock('uploads-backup');
+    expect(reader).toMatch(/^ {4}profiles: \[ops\]$/m);
+    expect(reader).toMatch(/^ {4}logging:\n {6}driver: none$/m);
+    expect(reader).toMatch(/^ {6}- uploads:\/app\/uploads:ro$/m);
+
+    const restore = read('scripts/restore.sh');
+    expect(restore).toContain('--confirmar) confirm=true');
+    expect(restore).toContain('sha256sum --quiet -c SHA256SUMS');
+
+    const ci = read('.github/workflows/ci.yml');
+    expect(ci).toContain('run: bash scripts/backup-smoke.sh');
+    expect(ci).toContain('apt-get install -y -qq age');
   });
 });

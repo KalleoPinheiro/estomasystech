@@ -136,3 +136,10 @@ jobs:
 
       - name: Smoke do container
         run: bash scripts/docker-smoke.sh
+
+      # Backup cifrado + restore contra o compose (#206, runbook § 5).
+      - name: Instalar age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Smoke do backup/restore
+        run: bash scripts/backup-smoke.sh

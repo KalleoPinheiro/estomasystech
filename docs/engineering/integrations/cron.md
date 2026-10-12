@@ -3,7 +3,7 @@ title: "Integração: cron de lembretes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-11
 ---
 
 # Cron de lembretes (`POST /api/reminders/run`)
@@ -33,7 +33,8 @@ POST /api/reminders/run
 x-cron-secret: $CRON_SECRET
 ```
 
-Ou, no formato do Vercel Cron (`vercel.json`, [runbook](../producao.md) § 7):
+Na produção (VPS), o `/etc/cron.d/vitta` do host chama a forma acima ([runbook](../producao.md) § 7).
+Ou, no formato do Vercel Cron (`vercel.json`, alternativa não adotada — runbook § 2):
 
 ```http
 GET /api/reminders/run
