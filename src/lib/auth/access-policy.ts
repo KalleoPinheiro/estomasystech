@@ -40,6 +40,7 @@ export const PUBLIC_PATHS = [
   '/api/auth/bootstrap',
   // Cron externo — a própria rota exige o header x-cron-secret (CRON_SECRET).
   '/api/reminders/run',
+  '/api/retention/run',
 ] as const;
 
 /** Rotas acessíveis a qualquer papel autenticado; todo o resto é exclusivo do admin (equipe). */

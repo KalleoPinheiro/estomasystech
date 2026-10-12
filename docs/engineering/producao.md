@@ -90,7 +90,8 @@ O código continua compatível (`vercel.json`), mas não é o alvo. Diferenças 
 usa o pooler do Supabase em modo transação (porta `6543`) e as migrações a conexão direta
 (`5432`), com `VITTA_MIGRATE_ON_BOOT=false` e `PG_POOL_MAX=5`; fotos **obrigatoriamente** em
 bucket (`PHOTO_STORAGE=s3`, a aplicação recusa o disco local quando `VERCEL` existe); o Vercel
-Cron chama `GET /api/reminders/run` com `Authorization: Bearer $CRON_SECRET`; `TZ` é reservado e
+Cron chama `GET /api/reminders/run` e `GET /api/retention/run` com
+`Authorization: Bearer $CRON_SECRET`; `TZ` é reservado e
 o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
 
 ## 3. TLS, URL pública e proxy
@@ -241,20 +242,20 @@ linha do crontab (`/etc/vitta/cron.headers`, `chmod 600`, com a linha
 
 ```text
 MAILTO=operador@exemplo.com.br
-# Backup diário às 03:00 de São Paulo. Silencioso quando dá certo; a falha vai por e-mail.
-0 6 * * * root . /etc/vitta/backup.env && /opt/vitta-flow/scripts/backup.sh >> /var/log/vitta-backup.log 2>&1 || echo "backup falhou: /var/log/vitta-backup.log"
+# Backup diário às 02:00 de São Paulo. Silencioso quando dá certo; a falha vai por e-mail.
+0 5 * * * root . /etc/vitta/backup.env && /opt/vitta-flow/scripts/backup.sh >> /var/log/vitta-backup.log 2>&1 || echo "backup falhou: /var/log/vitta-backup.log"
 # Lembretes às 08:00 de São Paulo.
 0 11 * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/reminders/run
+# Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1).
+0 6 * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/retention/run
 ```
 
 `/etc/vitta/backup.env` (`chmod 600`) exporta a configuração do § 5:
 `export BACKUP_AGE_RECIPIENTS_FILE=/etc/vitta/backup.pub` e `export BACKUP_OFFSITE_CMD='…'`.
-O `cron` manda por e-mail ao `MAILTO` tudo que o comando escrever; as duas linhas só escrevem
+O `cron` manda por e-mail ao `MAILTO` tudo que o comando escrever; as três linhas só escrevem
 quando falham. Precisa de um relay de e-mail no host (§ 9).
 
-- **Retenção LGPD** ([#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294)): quando o
-  job de anonimização entrar na `main`, ele ganha uma linha aqui, no mesmo formato.
-- Sem `CRON_SECRET` a rota de lembretes responde 503 (job desligado). Falha do job: resposta
+- Sem `CRON_SECRET` as rotas de lembretes e de retenção respondem 503 (job desligado). Falha do job: resposta
   não-2xx (o `curl -f` escreve o erro) e `docker compose logs app`.
 - **Antes do primeiro disparo real:**
   - Nome da empresa em */configuracoes*: a empresa criada pela migração se chama "Clínica
@@ -269,6 +270,27 @@ quando falham. Precisa de um relay de e-mail no host (§ 9).
   o job manualmente e espere `channel: "configured"` e `sent: 1` na entrada da clínica, e nenhuma entrada com `error`.
   Disparar de novo no mesmo dia deve devolver `sent: 0`. Na agenda, **Enviar WhatsApp** abre o
   `wa.me` e passa a mostrar "enviado hoje às HH:MM".
+
+### 7.1 Cron de retenção e anonimização (#294)
+
+Anonimiza o que passou do prazo (prontuário e fotos 20 anos após a última atividade, trilha de
+auditoria 5 anos, lista de espera e contas inativas 2 anos). Nada é excluído do banco; o arquivo
+da foto é apagado do volume `uploads`. Contrato e regras:
+[`integrations/retencao.md`](integrations/retencao.md), [ADR-013](../adr/013-retencao-por-anonimizacao.md).
+Issue: [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294).
+
+- Linha do `/etc/cron.d/vitta` no § 7: uma vez por dia, fora do horário da clínica, com o mesmo
+  `CRON_SECRET` dos lembretes. Na alternativa Vercel, o `vercel.json` agenda
+  `GET /api/retention/run` às 06:00 UTC.
+- **Backup:** o dado anonimizado continua identificável nos backups até eles expirarem — no
+  máximo 30 dias (§ 5), mais o que a retenção do destino fora do servidor guardar.
+- **Primeira execução:** a trilha de auditoria pode ter muitos eventos com mais de 5 anos e a
+  atualização é uma só por empresa; rode fora do horário de uso. Contagem prévia:
+  `SELECT clinic_id, count(*) FROM audit_events WHERE occurred_at < now() - interval '5 years' AND actor_id <> 'anonimizado' GROUP BY 1;`
+- **Verificação:** a resposta traz só contagens por tipo e por empresa; a segunda execução no
+  mesmo dia devolve tudo `0`. Entrada com `error` indica empresa que falhou (as outras seguem);
+  veja `docker compose logs app`.
+- Contas inativas antes da migração `0049` contam os 2 anos a partir dela.
 
 ## 8. Primeiro acesso
 
@@ -289,7 +311,7 @@ Decisão: alertas por **e-mail** ao operador. Ferramenta e cobertura completas f
 
 | Sinal | Como |
 | --- | --- |
-| Backup e lembretes falharam | `MAILTO` do cron (§ 7) |
+| Backup, lembretes ou retenção falharam | `MAILTO` do cron (§ 7) |
 | Site fora do ar | verificador externo de uptime em `https://<domínio>/api/auth/providers`, com aviso por e-mail (fora do servidor: se ele cair, o cron cai junto) |
 | Container doente | `docker compose ps` mostra `unhealthy`; `restart: unless-stopped` reinicia o processo que morre, mas não o que fica `unhealthy` |
 | Disco | linha no `/etc/cron.d/vitta`: `0 * * * * root df --output=pcent / /var/lib/docker \| awk 'NR>1 && $1+0 > 85 {print "disco em " $1}'` |

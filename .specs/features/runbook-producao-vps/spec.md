@@ -19,7 +19,7 @@ Não havia script de backup nem de restore versionado.
 ## Goals
 
 - [ ] Runbook com provisionamento, TLS (Caddy), `TRUSTED_PROXY_HOPS`, segredos e rotação,
-      migrações, cron (lembretes, backup, retenção #294), primeiro acesso, backup/restore e
+      migrações, cron (lembretes, backup e retenção #294, que entrou na `main` pelo PR #302), primeiro acesso, backup/restore e
       monitoramento (#212), apontando a #216.
 - [ ] `scripts/backup.sh`: dump do Postgres e tar do volume `uploads`, cifrados com `age`
       (chave pública no servidor), sem dado em claro no disco, cópia fora do servidor por
@@ -34,7 +34,6 @@ Não havia script de backup nem de restore versionado.
 | --- | --- |
 | Provedor do destino fora do servidor | Não decidido: fica em `BACKUP_OFFSITE_CMD`, pergunta aberta no runbook § 1 |
 | Ferramenta de monitoramento e alerta de "backup não rodou" | #212 |
-| Linha do cron do job de retenção | #294 ainda não está na `main` (PR #302); o runbook reserva o lugar |
 | Base legal da transferência internacional | #216 (jurídico) |
 | Mudança em código de aplicação | Não necessária |
 
