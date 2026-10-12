@@ -771,3 +771,50 @@ Decisão de @KalleoPinheiro (2026-10-11): VPS Hetzner com docker compose, uma r�
 - **Next step**: decisão do dono sobre os 5 pontos; monitoramento segue na #212.
 - **Blockers**: nenhum.
 - **Branch**: `docs/206-runbook-producao`. PR #304, squash-merged em `main` (`2ed747e`). Issue #206 fechada via `Closes #206`.
+
+## Issue #293 — direitos do titular no portal (2026-10-12) — ENCERRADO (#303)
+
+Decisão de @KalleoPinheiro (#216, item 3; LGPD art. 18). Roadmap RM-24.
+
+- **Cópia dos próprios dados:** o portal ganha `GET /api/portal/patient/export`, com o mesmo JSON da exportação LGPD da equipe, mas só do titular da sessão. A resposta não fica em cache, e a auditoria `read`/`export` é gravada antes de responder (POR-RN-13).
+- **Pedidos de correção ou eliminação/anonimização:** o paciente faz o pedido em `/api/portal/patient/data-requests`. Pedido não muda dado, e só pode haver um pendente por tipo (`409`, com índice único parcial). O paciente acompanha a situação e a justificativa (POR-RN-14).
+- **Fila do Admin de Empresa:** fica em `/pedidos-titular`. Aceitar e recusar exigem justificativa e valem uma vez só. O paciente é avisado por e-mail no endereço do cadastro, sem o conteúdo do pedido (PRO-RN-16). A auditoria é gravada antes de qualquer escrita.
+- **Persistência:** tabela `data_subject_requests` (migração `0050`), com `details`/`resolution` cifrados (PRO-RN-12) e incluídos na recifragem. A retenção (#294) apaga esses textos ao anonimizar o paciente (PRO-RN-15).
+- **Texto jurídico:** o aviso em `src/lib/data-rights-text.ts` é **placeholder** e depende da #216.
+
+**Detalhes**: CI com os 4 jobs verdes, depois de update-branch com a #304. O Verifier independente deu FAIL na 1ª rodada (DT-09, corridas, auditoria) e PASS na 2ª (AC1–AC4, DT-01..DT-11). O E2E `portal-parceiro` foi ajustado (684d499) depois do merge com a #294. Ficam **para decisão de @KalleoPinheiro** (implementada a opção mais conservadora):
+
+1. prazo de resposta ao pedido (art. 19 fala em 15 dias): hoje sem prazo nem alerta;
+2. aviso por e-mail ao Admin quando chega pedido novo (hoje não há);
+3. destino do aviso ao paciente: o e-mail do cadastro, não o de login do portal;
+4. limites: um pendente por tipo, descrição obrigatória só na correção, até 1000 caracteres;
+5. justificativa obrigatória também ao aceitar;
+6. aceitar não altera dado (correção pela ficha; anonimização pela #294);
+7. a cópia é completa, sem a janela de 24 meses e com as observações internas do cadastro.
+
+- **Next step**: decisão do dono sobre os 7 pontos; texto jurídico na #216.
+- **Blockers**: nenhum.
+- **Branch**: `feat/293-direitos-titular`. PR #303, squash-merged em `main` (`c7f586e`). Issue #293 fechada via `Closes #293`.
+
+## Issue #212 — observabilidade de produção (2026-10-12) — ENCERRADO (#306)
+
+Decisões de @KalleoPinheiro (2026-10-11): VPS Hetzner, GlitchTip self-hosted, alertas por e-mail pelo canal da plataforma. Roadmap RM-25; ADR-014 (`@sentry/core` com evento montado por lista do que pode sair, sem PII).
+
+- **Health:** `GET /api/health` (liveness sem I/O, alvo do HEALTHCHECK) e `GET /api/health/ready` (banco + todas as migrações aplicadas, `503` senão).
+- **Request-id e logs:** o proxy aceita ou gera `x-request-id` e devolve em toda resposta; uma linha JSON por evento; `console.*` só no logger.
+- **Erros:** `logError` sanitiza e envia o mesmo objeto ao GlitchTip; sem `GLITCHTIP_DSN`, no-op. `docker-compose.glitchtip.yml` opcional, porta só no loopback.
+- **Alertas:** `POST /api/alerts/run` (cron a cada 5 min) para readiness, 5xx, lembretes sem rodar há > 26 h e falha de envio de e-mail, com um e-mail a `ALERT_EMAIL_TO` no máximo a cada 60 min. Migração `0051_job-runs` (ACE-RN-46, COM-RN-14).
+- **Migração no boot (0a9a850, pelo orquestrador):** como o HEALTHCHECK deixou de tocar o banco, o container ficava healthy sem migrar e o smoke do backup/restore quebrava. `warmUpDatabase()` no `instrumentation.ts` dispara a migração em segundo plano (respeita `VITTA_MIGRATE_ON_BOOT=false`), e `backup-smoke.sh` espera o readiness.
+
+**Detalhes**: CI com os 4 jobs verdes no head 0a9a850. O Verifier independente deu FAIL na 1ª rodada (6 achados) e PASS na 2ª (OBS-01..14). Ficam **para decisão de @KalleoPinheiro**:
+
+1. limiares dos alertas (ponto de partida: 10 erros 5xx e 3 falhas de envio em 15 min; 60 min entre avisos iguais);
+2. "falha de envio" conta só recusa/erro do provedor, não clínica sem canal configurado;
+3. captura de erro no navegador (não implementada: exige DSN público, CSP e cuidado com texto da tela);
+4. retenção de 30 dias dos eventos no GlitchTip;
+5. qual verificador de uptime externo usar para o servidor inteiro fora;
+6. interface do GlitchTip só por túnel SSH ou subdomínio pelo Caddy.
+
+- **Next step**: decisão do dono sobre os 6 pontos.
+- **Blockers**: nenhum.
+- **Branch**: `feat/212-observabilidade`. PR #306, squash-merged em `main` (`9d00509`). Issue #212 fechada via `Closes #212`.
