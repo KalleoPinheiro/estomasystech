@@ -198,6 +198,16 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: em dev o link-credencial ainda vai para o log local (aceito pelo produto). Em produção o e-mail nulo nem é montado (`buildEmailGateway` lança), então o corte por `NODE_ENV` é defesa em profundidade. Os testes deixaram de ler o log e espiam `NullEmailGateway.prototype.send` (`tests/support/email.ts`); o E2E acha o convite no trecho do log escrito após o cadastro, porque as máscaras das contas por papel colidem.
 - **Scope / Date / Status**: `src/application/ports/{email,messaging}-gateway.ts`, `src/lib/redact.ts`, `e2e/support/invite-log.ts` · 2026-09-26 · active
 
+### AD-032
+- **Decision**: @KalleoPinheiro decidiu em 2026-10-12, por questionário, as 32 perguntas abertas do bloco 1 do go-live (#291, #292, #215, #294, #206, #293, #212), quase todas pela opção recomendada. Exigem código ou doc: #309 (sessões de Admin sem 2FA caem na hora; política de senha da equipe no portal), #295 (reset do 2FA pelo Admin de Empresa, auditado), #310 (consentimento em papel registrado pela equipe), #311 (retenção: espera vencida vira expirada + 2 anos, parceiro inativo 2 anos, textos de fatura, Google Agenda, reativação bloqueada), #312 (prazo de 15 dias com alerta, e-mail ao Admin, resposta no e-mail de login) e #313 (runbook + ADR-015). Mantidos como estão: "Contas de acesso" só para o Admin; parceiro sem consentimento não vê nada e "atendido" = 24 meses; cadastro do profissional guardado; backups 30 dias; limites e justificativa dos pedidos do titular; aceite sem efeito automático; cópia completa; alertas 10/3 em 15 min; sem captura de erro do navegador; GlitchTip 30 dias só por túnel; UptimeRobot; lembretes às 08:00.
+- **Reason**: regra 5 do `AGENTS.md`; cada decisão está comentada na issue de origem.
+- **Scope / Date / Status**: issues #291–#294, #206, #212, #215 e #309–#313 · 2026-10-12 · active
+
+### AD-033
+- **Decision**: produção na Hetzner **Alemanha**, cópia fora do servidor numa Storage Box, **sem LUKS**: as fotos ficam em claro no disco da VPS, protegidas só pelo acesso ao servidor, e o que vale são os backups `age` e os campos cifrados do ADR-006. E-mail do host por msmtp na porta 587 do Resend.
+- **Trade-off**: contradiz o ADR-006, que contava com disco cifrado para as fotos; risco aceito pelo dono. Registro formal no ADR-015, que a #313 vai escrever; reabrir cifrando as fotos na aplicação.
+- **Scope / Date / Status**: `docs/engineering/producao.md`, ADR-006 · 2026-10-12 · active — #313, #216 (base legal da transferência para a UE)
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
@@ -219,26 +229,9 @@ serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
 
 Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto.
 
-## Revisão pré-produção #183 — P1 restantes (2026-09-26) — EM ANDAMENTO
+## Go-live — depois do bloco 1 (2026-10-12) — EM ANDAMENTO
 
-Lote P0+P1 anterior mergeado (#229). Agora #194 (`session_version`, [ADR-005](../docs/adr/005-revogacao-de-sessao-por-versao.md)), #195 (`DATA_ENCRYPTION_KEY`, [ADR-006](../docs/adr/006-chave-de-dados-clinicos.md)), #196 (conta de portal ↔ cadastro por FK) e #206 ([runbook](../docs/engineering/producao.md), alvo Vercel + Supabase, VPS + compose pronto) via `tlc-implement` ([checklist](../.checks/pre-producao-p1-restante.md)), branch `feature/trusting-johnson-yvvp0j`. Deploy exige `DATA_ENCRYPTION_KEY`; depois das migrações: `npm run db:portal-orphans` e `npm run data:reencrypt`. Next: P2/P3 (#207–#224) em outro PR.
-
-## Sequência `/improve-codebase-architecture` (2026-09-06, 2ª rodada) — EM ANDAMENTO
-
-Novo relatório de arquitetura rodado em 2026-09-06 (hot spots: `container.ts`, `dto.ts`, `configuracoes/page.tsx`), 3 achados viraram issues via `triage-issue`, resolução via `tlc-spec-driven` um por vez.
-
-| # | Achado | Issue | Triagem | PR | Status |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Seam de save de rascunho duplicado em Configurações (2 adapters, não 3 como a issue original citava — `AccountsSection` tem shape diferente) | #150 | ready-for-agent | #152 | ✅ mergeada (squash) |
-| 2 | Grab-bag de DTOs (`src/lib/dto.ts`, ~32 mappers rasos) | #149 | ready-for-agent | #153 | ✅ mergeada (squash) |
-| 3 | Bag flat de repositórios (`src/infrastructure/container.ts`, 30 props) | #151 | ready-for-human (especulativo, decisão de valer a pena fica com humano) | — | não iniciado |
-
-**#150 — detalhes**: hook `useSavableForm` extraído em `src/lib/use-savable-form.ts`; `ClinicInfoSection` e `ScheduleSection` consumindo. Verifier independente: PASS, 6/6 ACs, sensor 3/3 mutantes mortos. 1 gap não-bloqueante (CFG-SEAM-06, refresh pós-save não asserta refetch diretamente, pré-existente) registrado como lição candidata L-038. E2E flakou em `clinico.spec.ts:110` (issue #146, conhecido) no primeiro run — re-rodado, passou.
-
-**#149 — detalhes**: decisão pré-spec com o usuário — DTOs continuam em `src/lib/dto/` (não `domain/*`, que violaria a camada documentada em `CONTEXT.md`). `src/lib/dto.ts` (845 linhas) virou 17 módulos por aggregate + `src/lib/dto/index.ts` como barrel de compatibilidade; zero dos 102 consumidores de `@/lib/dto` mudou (troca de arquivo por diretório é transparente pro resolver). Verifier independente: PASS limpo, 5/5 ACs, 2808/2808 testes idênticos ao baseline, 3 mappers com lógica computada confirmados byte-idênticos ao original, zero ciclo de import. E2E flakou de novo em `clinico.spec.ts:110` (2ª ocorrência na mesma sessão) — re-rodado, passou.
-
-**Observação sobre #146**: o flake recorreu 2x na mesma sessão (PRs #152 e #153), sempre a mesma asserção (`clinico.spec.ts:130`, bloqueio de avaliação em condição resolvida), sempre passa no re-run. Reforça a suspeita de race condition já registrada na issue; candidato a subir de prioridade se recorrer numa 3ª vez.
-
-- **Next step**: nenhum agendável sem o usuário — #151 é `ready-for-human` (decisão de valer a pena fica com humano). Próximo trabalho depende de nova demanda ou de decidir #151/#146.
-- **Blockers**: nenhum.
-- **Branches**: `refactor/configuracoes-savable-form-seam` e `refactor/lib-dto-split` (ambas deletadas local e remota após squash-merge). PRs #152 e #153, squash-merged em `main`. Issues #150 e #149 fechadas via `Closes #`.
+Bloco 1 encerrado (#215, #291, #292, #293, #294, #206, #212; handoffs no arquivo). Próximo trabalho vem das decisões da AD-032:
+- **Prontas para agente:** #309, #310, #311, #312, #313 e a #295, que ganhou o reset do 2FA.
+- **Precisa de triagem:** #308, o E2E intermitente sem evidência no CI.
+- **Bloqueada por decisão:** a #216 (jurídico).
