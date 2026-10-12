@@ -795,3 +795,26 @@ Decisão de @KalleoPinheiro (#216, item 3; LGPD art. 18). Roadmap RM-24.
 - **Next step**: decisão do dono sobre os 7 pontos; texto jurídico na #216.
 - **Blockers**: nenhum.
 - **Branch**: `feat/293-direitos-titular`. PR #303, squash-merged em `main` (`c7f586e`). Issue #293 fechada via `Closes #293`.
+
+## Issue #212 — observabilidade de produção (2026-10-12) — ENCERRADO (#306)
+
+Decisões de @KalleoPinheiro (2026-10-11): VPS Hetzner, GlitchTip self-hosted, alertas por e-mail pelo canal da plataforma. Roadmap RM-25; ADR-014 (`@sentry/core` com evento montado por lista do que pode sair, sem PII).
+
+- **Health:** `GET /api/health` (liveness sem I/O, alvo do HEALTHCHECK) e `GET /api/health/ready` (banco + todas as migrações aplicadas, `503` senão).
+- **Request-id e logs:** o proxy aceita ou gera `x-request-id` e devolve em toda resposta; uma linha JSON por evento; `console.*` só no logger.
+- **Erros:** `logError` sanitiza e envia o mesmo objeto ao GlitchTip; sem `GLITCHTIP_DSN`, no-op. `docker-compose.glitchtip.yml` opcional, porta só no loopback.
+- **Alertas:** `POST /api/alerts/run` (cron a cada 5 min) para readiness, 5xx, lembretes sem rodar há > 26 h e falha de envio de e-mail, com um e-mail a `ALERT_EMAIL_TO` no máximo a cada 60 min. Migração `0051_job-runs` (ACE-RN-46, COM-RN-14).
+- **Migração no boot (0a9a850, pelo orquestrador):** como o HEALTHCHECK deixou de tocar o banco, o container ficava healthy sem migrar e o smoke do backup/restore quebrava. `warmUpDatabase()` no `instrumentation.ts` dispara a migração em segundo plano (respeita `VITTA_MIGRATE_ON_BOOT=false`), e `backup-smoke.sh` espera o readiness.
+
+**Detalhes**: CI com os 4 jobs verdes no head 0a9a850. O Verifier independente deu FAIL na 1ª rodada (6 achados) e PASS na 2ª (OBS-01..14). Ficam **para decisão de @KalleoPinheiro**:
+
+1. limiares dos alertas (ponto de partida: 10 erros 5xx e 3 falhas de envio em 15 min; 60 min entre avisos iguais);
+2. "falha de envio" conta só recusa/erro do provedor, não clínica sem canal configurado;
+3. captura de erro no navegador (não implementada: exige DSN público, CSP e cuidado com texto da tela);
+4. retenção de 30 dias dos eventos no GlitchTip;
+5. qual verificador de uptime externo usar para o servidor inteiro fora;
+6. interface do GlitchTip só por túnel SSH ou subdomínio pelo Caddy.
+
+- **Next step**: decisão do dono sobre os 6 pontos.
+- **Blockers**: nenhum.
+- **Branch**: `feat/212-observabilidade`. PR #306, squash-merged em `main` (`9d00509`). Issue #212 fechada via `Closes #212`.
