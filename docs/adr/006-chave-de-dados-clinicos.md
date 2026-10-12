@@ -52,8 +52,8 @@ executável em produção.
   `.defining_characteristics`, `outcome_evaluations.notes`, `intervention_records.notes`, além do
   refresh token do Google Agenda.
 - Fotos: `PutObject` com `ServerSideEncryption` conforme `S3_SSE` (`AES256` padrão, `aws:kms`, ou
-  `provider` para provedor que já cifra e rejeita o cabeçalho). Disco local (VPS) conta com a cifra
-  do volume no host, documentada no runbook.
+  `provider` para provedor que já cifra e rejeita o cabeçalho). Disco local (VPS): **sem cifra de
+  disco** — as fotos ficam em claro no volume, risco aceito no [ADR-015](./015-servidor-sem-cifra-de-disco.md).
 
 B fica para quando houver exigência de custódia externa; C não resolve a issue.
 

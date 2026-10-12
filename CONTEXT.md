@@ -323,3 +323,4 @@ See `src/` structure:
 - [ADR-009: Recuperação de emergência do Super Admin](./docs/adr/009-recuperacao-de-emergencia-do-super-admin.md) — script no servidor em vez de SQL à mão; sessão de sistema conferida pelo papel; emenda o ADR-004 e o ADR-005.
 - [ADR-011: Canal de comunicação por clínica](./docs/adr/011-canal-de-comunicacao-por-clinica.md) — e-mail de cada clínica pela chave dela, sem fallback; chave da plataforma opcional; emenda o ADR-004.
 - [ADR-014: Observabilidade sem dado pessoal](./docs/adr/014-observabilidade-sem-pii.md) — logs JSON com request-id, GlitchTip self-hosted com evento montado pelo app, health/ready e alertas por e-mail ao operador; amplia o ADR-011.
+- [ADR-015: Servidor sem cifra de disco](./docs/adr/015-servidor-sem-cifra-de-disco.md) — sem LUKS na VPS: fotos em claro no disco, risco aceito; ajusta o ADR-006.
