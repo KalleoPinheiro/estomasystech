@@ -206,7 +206,7 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-033
 - **Decision**: produção na Hetzner **Alemanha**, cópia fora do servidor numa Storage Box, **sem LUKS**: as fotos ficam em claro no disco da VPS, protegidas só pelo acesso ao servidor, e o que vale são os backups `age` e os campos cifrados do ADR-006. E-mail do host por msmtp na porta 587 do Resend.
 - **Trade-off**: contradiz o ADR-006, que contava com disco cifrado para as fotos; risco aceito pelo dono. Registro formal no ADR-015, que a #313 vai escrever; reabrir cifrando as fotos na aplicação.
-- **Scope / Date / Status**: `docs/engineering/producao.md`, ADR-006 · 2026-10-12 · active — #313, #216 (base legal da transferência para a UE)
+- **Scope / Date / Status**: `docs/engineering/producao.md`, ADR-006, ADR-015 · 2026-10-12 · active. ADR-015 entregue pela #316, redação confirmada pelo dono; snapshots da Storage Box: 1 por dia, os 14 mais recentes guardados; 60 min entre avisos iguais, confirmado. Pendente: #216 (base legal da transferência para a UE)
 
 ### Baseline de segurança medido em `fcd6110`
 
