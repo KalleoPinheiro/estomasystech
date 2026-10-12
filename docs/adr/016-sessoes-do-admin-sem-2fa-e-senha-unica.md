@@ -1,12 +1,12 @@
 ---
-title: "ADR 015 — Sessões do Admin sem 2FA derrubadas e senha única para todos os papéis"
+title: "ADR 016 — Sessões do Admin sem 2FA derrubadas e senha única para todos os papéis"
 status: frozen
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-12
 ---
 
-# ADR 015 — Sessões do Admin sem 2FA derrubadas e senha única para todos os papéis
+# ADR 016 — Sessões do Admin sem 2FA derrubadas e senha única para todos os papéis
 
 - **Data:** 2026-10-12
 - **Status:** aceito (decisões do dono do produto na issue [#309](https://github.com/KalleoPinheiro/vitta-flow/issues/309), que respondeu às perguntas abertas da PR #298)
