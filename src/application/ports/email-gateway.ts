@@ -1,3 +1,4 @@
+import { logger } from '@/lib/observability/logger';
 import { maskEmail } from '@/lib/redact';
 
 export interface EmailMessage {
@@ -40,9 +41,7 @@ export class NullEmailGateway implements EmailGateway {
       process.env.NODE_ENV === 'production'
         ? null
         : message.text.match(AUTH_LINK)?.[0];
-    console.info(
-      link ? `${header}\nLink (só fora de produção): ${link}` : header,
-    );
+    logger.info(header, link ? { link } : undefined);
   }
 }
 

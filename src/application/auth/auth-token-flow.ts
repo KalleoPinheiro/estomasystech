@@ -18,6 +18,7 @@ import type { UserRole } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
 import { hashPassword } from '@/lib/auth/password';
 import { logError } from '@/lib/log-error';
+import { recordSignal } from '@/lib/observability/signals';
 
 /**
  * Mensagem única para link inexistente, expirado, já usado ou de conta inativa.
@@ -121,11 +122,17 @@ export class IssueAuthToken {
     input: IssueAuthTokenInput,
     link: string,
   ): Promise<void> {
-    await this.email.send({
-      to: input.account.email,
-      subject: SUBJECT_BY_PURPOSE[input.purpose],
-      text: `${INTRO_BY_PURPOSE[input.purpose]}\n\n${link}\n\n${VALIDITY_BY_PURPOSE[input.purpose]}`,
-    });
+    try {
+      await this.email.send({
+        to: input.account.email,
+        subject: SUBJECT_BY_PURPOSE[input.purpose],
+        text: `${INTRO_BY_PURPOSE[input.purpose]}\n\n${link}\n\n${VALIDITY_BY_PURPOSE[input.purpose]}`,
+      });
+    } catch (error) {
+      // Sinal do alerta de entrega recorrente (#212); o chamador decide o resto.
+      recordSignal('delivery-failure');
+      throw error;
+    }
   }
 }
 

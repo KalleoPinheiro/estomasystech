@@ -33,6 +33,9 @@ const UNGUARDED_PREFIXES = [
   'api/auth/',
   'api/reminders/run',
   'api/retention/run',
+  // #212: cron de alertas (CRON_SECRET) e health check (sem dado sensível).
+  'api/alerts/run',
+  'api/health',
 ] as const;
 
 interface RouteFile {
@@ -147,11 +150,13 @@ describe('Feature: Conformidade das guardas de rota', () => {
       }
     });
 
-    it('Dado a allowlist deste teste, Quando conferir, Então só cobre auth e os crons de lembretes e de retenção', () => {
+    it('Dado a allowlist deste teste, Quando conferir, Então só cobre auth, os crons e o health check', () => {
       expect([...UNGUARDED_PREFIXES]).toEqual([
         'api/auth/',
         'api/reminders/run',
         'api/retention/run',
+        'api/alerts/run',
+        'api/health',
       ]);
     });
   });

@@ -39,7 +39,7 @@ describe('logError (#202)', () => {
     expect(logged).not.toContain('fulano@x.com');
     expect(logged).not.toContain('Fulano de Tal');
     expect(logged).not.toContain('insert into');
-    expect(log.mock.calls[0][1]).toMatchObject({
+    expect(JSON.parse(String(log.mock.calls[0][0])).error).toMatchObject({
       code: '23505',
       table: 'patients',
       constraint: 'uq_patients_clinic_email',

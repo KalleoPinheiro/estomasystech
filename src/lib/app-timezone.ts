@@ -1,4 +1,5 @@
 import { appTimeZone } from '@/domain/shared/time-zone';
+import { logger } from '@/lib/observability/logger';
 
 /** Fuso efetivo do processo Node (`TZ`), como o `Date` local o enxerga. */
 export function processTimeZone(): string {
@@ -25,7 +26,7 @@ export function assertProcessTimeZone(): void {
   if (process.env.NODE_ENV === 'production') {
     throw new Error(message);
   }
-  console.warn(`[config] ${message}`);
+  logger.warn(`[config] ${message}`);
 }
 
 /**
@@ -38,7 +39,7 @@ export function alignProcessTimeZone(): void {
   const expected = appTimeZone();
   if (processTimeZone() !== expected) {
     process.env.TZ = expected;
-    console.warn(
+    logger.warn(
       `[config] Fuso do processo alinhado a APP_TIMEZONE (${expected}): TZ do ambiente ausente ou diferente (ex.: Vercel, sempre UTC).`,
     );
   }

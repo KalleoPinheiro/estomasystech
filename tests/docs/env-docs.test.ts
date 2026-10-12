@@ -79,7 +79,9 @@ const onboardingNames = new Set(
   ),
 );
 
-const consumers = `${code}\n${compose}`;
+// O GlitchTip (#212) mora em compose próprio: as variáveis dele no .env.example
+// são lidas lá, não pelo app.
+const consumers = `${code}\n${compose}\n${read('docker-compose.glitchtip.yml')}`;
 
 describe('Feature: Documentação das variáveis de ambiente (#221)', () => {
   it('Dado o código, Quando ler as variáveis, Então cada uma está no .env.example', () => {

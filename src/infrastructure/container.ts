@@ -9,6 +9,7 @@ import {
   LazyEmailGateway,
   NullEmailGateway,
 } from '@/application/ports/email-gateway';
+import type { JobRunRepository } from '@/application/ports/job-run-repository';
 import {
   type MessagingGateway,
   NullMessagingGateway,
@@ -122,6 +123,7 @@ import {
   DrizzleSupplyRepository,
 } from './persistence/drizzle/drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './persistence/drizzle/drizzle-invoice-repository';
+import { DrizzleJobRunRepository } from './persistence/drizzle/drizzle-job-run-repository';
 import { DrizzleMfaRepository } from './persistence/drizzle/drizzle-mfa-repository';
 import { DrizzleSessionPackageRepository } from './persistence/drizzle/drizzle-package-repository';
 import { DrizzlePartnerRepository } from './persistence/drizzle/drizzle-partner-repository';
@@ -201,6 +203,8 @@ export interface Services {
   reminderLog: ReminderLogRepository;
   /** Anonimização por prazo (#294); em escopo de sistema, só a plataforma. */
   retention: RetentionRepository;
+  /** Última execução dos jobs agendados (#212); de plataforma, sem empresa. */
+  jobRuns: JobRunRepository;
   calendar: CalendarGateway;
   messaging: MessagingGateway;
   /** Canal da clínica do escopo (ADR-011); lança no escopo de sistema. */
@@ -483,6 +487,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     auditEvents: new DrizzleAuditEventRepository(db, tenant.clinicId),
     reminderLog: new DrizzleReminderLogRepository(db, tenant.clinicId),
     retention: new DrizzleRetentionRepository(db, tenant.clinicId),
+    jobRuns: new DrizzleJobRunRepository(db),
     calendar: calendarGatewayFor(db, tenant.clinicId),
     messaging: buildMessagingGateway(),
     clinicChannels,

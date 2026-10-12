@@ -16,6 +16,11 @@ import { SESSION_COOKIE, type Session } from '@/lib/auth/session';
 import { isSessionRevoked } from '@/lib/auth/staff-revocation';
 import { isStaffRole } from '@/lib/auth/staff-roles';
 import { loginPath, SESSION_EXPIRED_ERROR } from '@/lib/login-redirect';
+import { runWithRequestId } from '@/lib/observability/request-context';
+import {
+  REQUEST_ID_HEADER,
+  resolveRequestId,
+} from '@/lib/observability/request-id';
 
 /**
  * Camada 1 de autorização (borda). No Next.js 16 este arquivo se chama `proxy.ts`
@@ -44,6 +49,12 @@ const API_RATE_LIMIT = new SharedRateLimiter(
 );
 
 const isApiPath = (pathname: string): boolean => pathname.startsWith('/api/');
+
+/**
+ * Liveness (#212) passa direto: sem rate limit, que conta no banco — o
+ * HEALTHCHECK do Docker não pode depender do Postgres.
+ */
+const LIVENESS_PATH = '/api/health';
 
 /**
  * Chave do limite geral da API (#201). Autenticado: a conta (empresa +
@@ -127,7 +138,7 @@ function authNotConfiguredResponse(): NextResponse {
  * continua exigindo nonce pra qualquer `<style>` injetado, que é o vetor real
  * de CSS injection.
  */
-function nextWithCsp(request: NextRequest): NextResponse {
+function nextWithCsp(request: NextRequest, requestId: string): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const isDev = process.env.NODE_ENV === 'development';
   const csp = [
@@ -146,6 +157,7 @@ function nextWithCsp(request: NextRequest): NextResponse {
   ].join('; ');
 
   const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(REQUEST_ID_HEADER, requestId);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);
 
@@ -154,8 +166,35 @@ function nextWithCsp(request: NextRequest): NextResponse {
   return response;
 }
 
+/**
+ * Request-id (#212): aceito do proxy reverso se bem formado, senão gerado.
+ * Vai ao handler no cabeçalho da requisição, volta na resposta e marca toda
+ * linha de log desta requisição — inclusive as do próprio proxy.
+ */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
+  const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
+  const response = await runWithRequestId(requestId, () =>
+    route(request, requestId),
+  );
+  response.headers.set(REQUEST_ID_HEADER, requestId);
+  return response;
+}
+
+function liveness(request: NextRequest, requestId: string): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(REQUEST_ID_HEADER, requestId);
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
+async function route(
+  request: NextRequest,
+  requestId: string,
+): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
+
+  if (pathname === LIVENESS_PATH) {
+    return liveness(request, requestId);
+  }
 
   if (
     isApiPath(pathname) &&
@@ -168,7 +207,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   }
 
   if (isPublicPath(pathname)) {
-    return nextWithCsp(request);
+    return nextWithCsp(request, requestId);
   }
 
   const mode = resolveAuthMode();
@@ -176,7 +215,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return authNotConfiguredResponse();
   }
   if (mode === 'open') {
-    return nextWithCsp(request);
+    return nextWithCsp(request, requestId);
   }
 
   const session = getRequestSession(request);
@@ -192,7 +231,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return forbidden(request, session);
   }
 
-  return nextWithCsp(request);
+  return nextWithCsp(request, requestId);
 }
 
 export const config = {

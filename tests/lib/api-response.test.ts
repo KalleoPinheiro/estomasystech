@@ -79,7 +79,11 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
     const body = await response.json();
     expect(body.error).toBe('Paciente não encontrado(a)');
     expect(body.error).not.toContain(id);
-    expect(info).toHaveBeenCalledWith('[api] 404:', 'Paciente', id);
+    expect(JSON.parse(String(info.mock.calls[0][0]))).toMatchObject({
+      msg: '[api] 404',
+      entity: 'Paciente',
+      entityId: id,
+    });
     info.mockRestore();
   });
 
@@ -119,9 +123,10 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.error).toBe('Erro interno do servidor');
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Erro inesperado na API:',
-      expect.objectContaining({ name: 'Error', stack: expect.any(String) }),
-    );
+    expect(JSON.parse(String(consoleSpy.mock.calls[0][0]))).toMatchObject({
+      level: 'error',
+      msg: 'Erro inesperado na API:',
+      error: { name: 'Error', stack: expect.any(String) },
+    });
   });
 });

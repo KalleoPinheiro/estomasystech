@@ -3,7 +3,7 @@ title: "Integração: cron de lembretes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-11
+last_reviewed: 2026-10-12
 ---
 
 # Cron de lembretes (`POST /api/reminders/run`)
@@ -74,6 +74,10 @@ Vercel `TZ` é reservado e as funções rodam em UTC).
 | header ausente ou diferente | `401` |
 | clínica sem canal de e-mail | `200`; a entrada da clínica traz `channel: "none"` e os lembretes contam `skipped` (dry-run) |
 | falha ao ler uma empresa | `200`; a entrada da empresa traz `error` |
+
+Ao terminar, o job grava a hora em `job_runs` (`job = 'reminders'`): é o que o alerta "lembretes
+sem rodar há 26 h" lê ([alertas.md](alertas.md), #212). Falha ao gravar só vai para o log; a
+resposta não muda.
 
 ## Teste local
 

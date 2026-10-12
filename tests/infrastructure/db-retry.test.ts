@@ -4,6 +4,7 @@ import {
   attachPoolErrorLogger,
   getDb,
 } from '@/infrastructure/persistence/drizzle/db';
+import { loggedLines } from '../support/log-lines';
 
 /**
  * Issue #193: `getDb` guardava a Promise rejeitada — uma falha transitória do
@@ -45,9 +46,11 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
     const db = await getDb();
 
     expect(db).toBeDefined();
-    expect(console.error).toHaveBeenCalledWith(
-      'Banco: falha ao inicializar a conexão/migração',
-      expect.objectContaining({ code: 'ECONNREFUSED' }),
+    expect(loggedLines(vi.mocked(console.error))).toContainEqual(
+      expect.objectContaining({
+        msg: 'Banco: falha ao inicializar a conexão/migração',
+        error: expect.objectContaining({ code: 'ECONNREFUSED' }),
+      }),
     );
   });
 
@@ -69,9 +72,13 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
     pool.emit('error', new Error('conexão encerrada pelo servidor'));
 
     expect(pool.listenerCount('error')).toBe(1);
-    expect(console.error).toHaveBeenCalledWith(
-      'Banco: erro em conexão ociosa do pool (descartada)',
-      expect.objectContaining({ message: 'conexão encerrada pelo servidor' }),
+    expect(loggedLines(vi.mocked(console.error))).toContainEqual(
+      expect.objectContaining({
+        msg: 'Banco: erro em conexão ociosa do pool (descartada)',
+        error: expect.objectContaining({
+          message: 'conexão encerrada pelo servidor',
+        }),
+      }),
     );
   });
 });

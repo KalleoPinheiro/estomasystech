@@ -3,7 +3,7 @@ title: "Domínio: Comunicação"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-10
+last_reviewed: 2026-10-12
 domain: comunicacao
 ---
 
@@ -35,6 +35,7 @@ e-mails transacionais de acesso (convite e reset, detalhados em [acesso](../aces
 | COM-RN-11 | Configuração do canal (C3, #266): só o `company_admin` salva, testa e remove o canal de e-mail da própria clínica em `/configuracoes` (família `administrative`; demais papéis e o `super_admin` recebem `403` e não veem a seção). Provedor: só Resend. Remetente `Nome <a@b.c>` ou `a@b.c`, senão `400`; chave obrigatória no 1º salvamento; salvar de novo com a chave vazia mantém a gravada (e o último teste), com chave nova o último teste volta a nulo. A chave nunca volta por API, log ou trilha: a tela mostra só `••••` + os 4 últimos caracteres | `src/application/clinic/manage-email-channel.ts`, `src/app/api/settings/email-channel/` |
 | COM-RN-12 | E-mail de teste do canal: vai para o e-mail da conta logada, pelo canal da clínica, com o assunto `VittaFlow — teste do canal de e-mail` e sem dado de paciente; grava `last_status` (`ok`/`failed`), `last_status_at` e, na recusa do provedor, `last_error` (mensagem do provedor sem o destinatário, até 300 caracteres) — a recusa responde `200`. Sem canal, `409` "Configure o canal antes de testar". No máximo 5 testes por minuto por clínica (`429`) | idem, `POST /api/settings/email-channel/test` |
 | COM-RN-13 | Salvar, testar e remover o canal gravam na trilha da clínica `resourceType: 'clinic_channel'` com o id do canal: `create` no 1º salvamento, `update` nos seguintes e no teste (`detail` `test-ok`/`test-failed`), `delete` na remoção. Remover apaga a linha sem decifrar a chave (funciona mesmo com a chave de dados trocada) e o próximo envio da clínica não sai. Dois admins salvando ao mesmo tempo: vence a última escrita | idem |
+| COM-RN-14 | Alertas ao operador (#212): `POST /api/alerts/run`, pelo cron a cada 5 min, manda um e-mail por alerta ativo a `ALERT_EMAIL_TO` **pelo canal da plataforma** — readiness falhando, 5xx ≥ `ALERT_5XX_THRESHOLD` em 15 min, lembretes sem rodar há mais de 26 h (`job_runs`), falhas de envio de e-mail ≥ `ALERT_DELIVERY_FAILURE_THRESHOLD` em 15 min. Clínica sem canal não conta como falha. Mesmo alerta ativo no máximo a cada 60 min; sem destinatário ou canal, vira linha de erro no log. O e-mail não leva dado de paciente, conta ou clínica. O job de lembretes grava a hora de cada execução em `job_runs` | `src/application/monitoring/evaluate-alerts.ts`, [`alertas.md`](../../engineering/integrations/alertas.md), [ADR-014](../../adr/014-observabilidade-sem-pii.md) |
 
 ## Funcionalidades
 

@@ -40,4 +40,39 @@ describe('Feature: Vercel Cron dispara o job de lembretes (#206)', () => {
 
     expect((await get({ authorization: 'Bearer qualquer' })).status).toBe(503);
   });
+
+  it('Dado execução concluída, Quando termina, Então registra a hora em job_runs (#212, OBS-10)', async () => {
+    vi.stubEnv('CRON_SECRET', 'segredo-do-cron-123');
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { systemScope } = await import('@/lib/auth/tenant-scope');
+    const { jobRuns } = await getRepositories(systemScope());
+    await jobRuns.recordRun('reminders', new Date('2020-01-01T00:00:00Z'));
+    const before = Date.now();
+
+    await get({ authorization: 'Bearer segredo-do-cron-123' });
+
+    const last = await jobRuns.lastRun('reminders');
+    expect(last?.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('Dado falha ao registrar a execução, Quando termina, Então a resposta não muda (#212)', async () => {
+    vi.stubEnv('CRON_SECRET', 'segredo-do-cron-123');
+    const { DrizzleJobRunRepository } = await import(
+      '@/infrastructure/persistence/drizzle/drizzle-job-run-repository'
+    );
+    vi.spyOn(DrizzleJobRunRepository.prototype, 'recordRun').mockRejectedValue(
+      new Error('banco fora'),
+    );
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await get({ authorization: 'Bearer segredo-do-cron-123' });
+
+    expect(response.status).toBe(200);
+    expect(
+      log.mock.calls.some(([line]) =>
+        String(line).includes('Lembretes: falha ao registrar a execução'),
+      ),
+    ).toBe(true);
+    vi.restoreAllMocks();
+  });
 });

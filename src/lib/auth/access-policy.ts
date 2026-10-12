@@ -1,4 +1,5 @@
 import type { UserRole } from '@/domain/auth/user-role';
+import { logger } from '@/lib/observability/logger';
 import { classifyRoute, isFamilyAllowedForRole } from './route-family';
 import { getAuthConfig } from './session';
 
@@ -41,6 +42,10 @@ export const PUBLIC_PATHS = [
   // Cron externo — a própria rota exige o header x-cron-secret (CRON_SECRET).
   '/api/reminders/run',
   '/api/retention/run',
+  '/api/alerts/run',
+  // Health check (#212): liveness e readiness, sem dado sensível.
+  '/api/health',
+  '/api/health/ready',
 ] as const;
 
 /** Rotas acessíveis a qualquer papel autenticado; todo o resto é exclusivo do admin (equipe). */
@@ -102,7 +107,7 @@ function warnAuthDisabledOnce(): void {
     return;
   }
   warnedAuthDisabled = true;
-  console.warn(
+  logger.warn(
     `⚠ Autenticação DESATIVADA por ${ALLOW_OPEN_MODE_ENV}=true — nenhuma rota exige sessão (permitido apenas fora de produção)`,
   );
 }

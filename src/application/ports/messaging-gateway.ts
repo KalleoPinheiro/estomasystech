@@ -1,3 +1,4 @@
+import { logger } from '@/lib/observability/logger';
 import { maskPhone } from '@/lib/redact';
 
 export interface MessagingGateway {
@@ -16,7 +17,7 @@ export class NullMessagingGateway implements MessagingGateway {
   readonly enabled = false;
 
   async sendText(phone: string, message: string): Promise<void> {
-    console.info(
+    logger.info(
       `[mensageria desativada] WhatsApp para ${maskPhone(phone)} (${message.length} caracteres)`,
     );
   }
