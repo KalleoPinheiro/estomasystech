@@ -752,3 +752,22 @@ Decisão de @KalleoPinheiro (#216, item 4). O job de cron `POST /api/retention/r
 - **Next step**: decisão do dono sobre os 7 pontos.
 - **Blockers**: nenhum.
 - **Branch**: `feat/294-retencao-anonimizacao`. PR #302, squash-merged em `main` (`a514f9e`). Issue #294 fechada via `Closes #294`.
+
+## Issue #206 — runbook de produção na VPS Hetzner (2026-10-12) — ENCERRADO (#304)
+
+Decisão de @KalleoPinheiro (2026-10-11): VPS Hetzner com docker compose, uma réplica, Caddy com TLS, fotos em volume, RPO 24 h / RTO 4 h e alertas por e-mail. O runbook (`docs/engineering/producao.md`, § 1–9) cobre provisionamento, TLS e `TRUSTED_PROXY_HOPS`, segredos e rotação (inclusive a chave `age`), migrações, backup/restore com teste mensal, `/etc/cron.d/vitta` (backup → lembretes → retenção), primeiro acesso e alertas. Vercel + Supabase vira "alternativa não adotada".
+
+- **Scripts:** `scripts/backup.sh` (`pg_dump` e tar do volume `uploads` direto para `age -R`, sem dado em claro no disco, `SHA256SUMS`, cópia externa por `BACKUP_OFFSITE_CMD`, retenção local de 30 dias, `flock`); `scripts/restore.sh` (só confere sem `--confirmar`); `scripts/backup-smoke.sh` no job `docker` do CI.
+- **Compose:** `docker-compose.prod.yml` + `deploy/Caddyfile`; o app deixa de expor porta direto. Sem mudança em `src/`.
+
+**Detalhes**: CI com os 4 jobs verdes e Verifier independente com PASS (D1–D6, V1–V4), depois de um FAIL na 1ª rodada (tar das fotos vazando em claro pelo log do Docker). Ficam **para decisão de @KalleoPinheiro**:
+
+1. provedor e local da cópia fora do servidor, e se haverá snapshot ou retenção imutável no destino;
+2. localização do servidor na Hetzner (DE/FI/EUA), junto com a #216;
+3. cifra do disco do servidor (LUKS pesa no RTO);
+4. relay de e-mail do host para os alertas do cron (porta 25 de saída bloqueada);
+5. horário dos lembretes (ponto de partida: 08:00 de São Paulo).
+
+- **Next step**: decisão do dono sobre os 5 pontos; monitoramento segue na #212.
+- **Blockers**: nenhum.
+- **Branch**: `docs/206-runbook-producao`. PR #304, squash-merged em `main` (`2ed747e`). Issue #206 fechada via `Closes #206`.
