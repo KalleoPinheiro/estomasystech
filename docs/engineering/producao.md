@@ -103,7 +103,7 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
   esse cabeçalho pelo IP de quem conectou, então a cadeia tem um item só:
   - Caddy sozinho (o decidido): `TRUSTED_PROXY_HOPS=1`.
   - Cloudflare (proxy laranja) na frente do Caddy: declare as faixas de IP da Cloudflare em
-    `trusted_proxies` no bloco global do `deploy/Caddyfile` (o Caddy passa a manter a cadeia e
+    `trusted_proxies static …` dentro da opção global `servers { }` do `deploy/Caddyfile` (o Caddy passa a manter a cadeia e
     acrescentar o IP da Cloudflare) e só então use `TRUSTED_PROXY_HOPS=2`. Com `2` e sem
     `trusted_proxies`, todo mundo cai no mesmo balde `unknown`.
   - Valor maior que o número real de proxies deixa o cliente escolher o próprio IP; menor junta
@@ -246,8 +246,9 @@ MAILTO=operador@exemplo.com.br
 0 5 * * * root . /etc/vitta/backup.env && /opt/vitta-flow/scripts/backup.sh >> /var/log/vitta-backup.log 2>&1 || echo "backup falhou: /var/log/vitta-backup.log"
 # Lembretes às 08:00 de São Paulo.
 0 11 * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/reminders/run
-# Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1).
-0 6 * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/retention/run
+# Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1). O flock espera o backup
+# terminar: apagar uma foto enquanto o tar lê o volume faria o backup falhar.
+0 6 * * * root flock -w 3600 /var/backups/vitta/.lock curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/retention/run
 ```
 
 `/etc/vitta/backup.env` (`chmod 600`) exporta a configuração do § 5:
