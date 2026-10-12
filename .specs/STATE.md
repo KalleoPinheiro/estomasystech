@@ -171,13 +171,13 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: padrão seguro aplicado a três perguntas em aberto para o dono do produto — (1) `password` no PATCH foi mantido (agora sob hierarquia + auditoria); (2) Atendente/Profissional não trocam a própria senha nem se reativam pelo PATCH (a matriz não os deixa gerir o próprio papel; o caminho é "esqueci a senha"); (3) desativação concorrente de dois admins não tem trava transacional.
 - **Scope**: src/domain/auth/account-management.ts, src/lib/auth/account-manager.ts, src/app/api/accounts/**
 - **Date**: 2026-09-26
-- **Status**: active — perguntas abertas no PR da #184
+- **Status**: active — perguntas respondidas por @KalleoPinheiro em 2026-10-11: o PATCH perde `password` (só o link de redefinição), a tela "Minha conta" troca a própria senha e uma trava com 409 impede ficar sem admin ativo. A implementação está na #295
 
 ### AD-025
 - **Decision**: `GET /api/patients/:id/export` (exportação LGPD, art. 18) é família `clinical` e aplica o vínculo R4: Atendente recebe 403, Profissional sem vínculo recebe 404. Toda sub-rota de `/api/patients/:id/*` passa a ser clínica por padrão; a exceção é uma allowlist explícita (`NON_CLINICAL_PATIENT_SUBROUTES` em `src/lib/auth/route-family.ts`, hoje vazia).
 - **Reason**: o export devolve anamnese, SOAP, condições e fotos; qualquer subrota nova nascia `operational` e aberta ao Atendente porque a regra antiga listava só as clínicas e casava com `pathname.includes`.
 - **Trade-off**: a recepção não gera a portabilidade sozinha. **Pergunta aberta** (issue #185): o Atendente deve poder gerar uma exportação **sem** dado clínico? Até o usuário decidir, padrão seguro: negar.
-- **Scope / Date / Status**: lib/auth/route-family, api/patients/[id]/export, (staff)/pacientes/[id] · 2026-09-26 · active — issue #185
+- **Scope / Date / Status**: lib/auth/route-family, api/patients/[id]/export, (staff)/pacientes/[id] · 2026-09-26 · active — issue #185. **Resposta (2026-10-12):** manter negado. O paciente baixa a própria cópia pelo portal (#293)
 
 ### AD-026
 - **Decision**: R4 nas rotas clínicas endereçadas pelo id do recurso (#186) via helper único `src/lib/auth/clinical-resource-scope.ts` (cadeia recurso→paciente + `assertPatientAccessibleToProfessional`). O `404` cita o recurso pedido, nunca o `patientId`. `GET /api/follow-ups`, `GET /api/waitlist` e `GET /api/photos/triage` filtram para o Profissional só pacientes vinculados — **padrão seguro** aplicado; a issue deixava em aberto se follow-ups/waitlist precisavam do filtro.
@@ -185,12 +185,12 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: Profissional deixa de ver retornos/lista de espera de pacientes sem vínculo (inclusive para oferecer horário vago da própria agenda). Perguntas abertas ao produto: (1) o Profissional deve ver a lista de espera inteira para preencher horários vagos? (2) `POST /api/follow-ups` e `POST /api/waitlist` pelo Profissional para paciente sem vínculo devem ser negados? — hoje seguem permitidos (fora do escopo de #186).
 - **Scope**: 13 rotas em `src/app/api/{conditions,photos,care-plans,care-plan-interventions,care-plan-outcomes,follow-ups,waitlist}`, `.checks/r4-resource-routes.md`.
 - **Date**: 2026-09-26
-- **Status**: open — perguntas acima aguardam @KalleoPinheiro; PR da issue #186
+- **Status**: active — respondidas por @KalleoPinheiro em 2026-10-11: (1) a lista de espera continua só com os pacientes vinculados; (2) os dois POSTs sem vínculo passam a ser negados (403). A implementação está na #296
 
 ### AD-027
 - **Decision**: Padrão seguro até decisão de produto — a aba "Pacotes" do prontuário fica **oculta para o Profissional** (e `/api/packages` continua `administrative`); só aparece com o papel da sessão já conhecido e diferente de `profissional`. **Pergunta aberta**: o Profissional deve ver os pacotes dos pacientes vinculados (com preço? só saldo de sessões?)
 - **Reason**: pacote carrega preço (dado financeiro); a #189 deixa a pergunta aberta e indica esconder como padrão seguro (regra 5 do `AGENTS.md`). Trade-off: o Profissional não vê saldo de sessões do pacote até a decisão.
-- **Scope / Date / Status**: `src/app/(staff)/pacientes/[id]/page.tsx` · 2026-09-26 · active — issue #189 (pergunta aberta)
+- **Scope / Date / Status**: `src/app/(staff)/pacientes/[id]/page.tsx` · 2026-09-26 · active — issue #189. **Resposta (2026-10-11):** o Profissional vê o nome do pacote e o saldo de sessões, sem preço, nos pacientes vinculados. A implementação está na #296
 
 ### AD-028
 - **Decision**: Gateways nulos (`NullEmailGateway`, `NullMessagingGateway`) logam só metadados: canal, assunto (e-mail) ou tamanho do texto (WhatsApp) e destinatário mascarado por `src/lib/redact.ts` (`fu***@x.com`, `+55******7777`) — nunca o corpo. Exceção decidida por @KalleoPinheiro: com `NODE_ENV !== 'production'` o e-mail nulo também loga o link `/definir-senha?token=…`, porque o dev e o `e2e/global-setup.ts` definem senha por ele.
@@ -201,7 +201,7 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-032
 - **Decision**: @KalleoPinheiro decidiu em 2026-10-12, por questionário, as 32 perguntas abertas do bloco 1 do go-live (#291, #292, #215, #294, #206, #293, #212), quase todas pela opção recomendada. Exigem código ou doc: #309 (sessões de Admin sem 2FA caem na hora; política de senha da equipe no portal), #295 (reset do 2FA pelo Admin de Empresa, auditado), #310 (consentimento em papel registrado pela equipe), #311 (retenção: espera vencida vira expirada + 2 anos, parceiro inativo 2 anos, textos de fatura, Google Agenda, reativação bloqueada), #312 (prazo de 15 dias com alerta, e-mail ao Admin, resposta no e-mail de login) e #313 (runbook + ADR-015). Mantidos como estão: "Contas de acesso" só para o Admin; parceiro sem consentimento não vê nada e "atendido" = 24 meses; cadastro do profissional guardado; backups 30 dias; limites e justificativa dos pedidos do titular; aceite sem efeito automático; cópia completa; alertas 10/3 em 15 min; sem captura de erro do navegador; GlitchTip 30 dias só por túnel; UptimeRobot; lembretes às 08:00.
 - **Reason**: regra 5 do `AGENTS.md`; cada decisão está comentada na issue de origem.
-- **Scope / Date / Status**: issues #291–#294, #206, #212, #215 e #309–#313 · 2026-10-12 · active
+- **Scope / Date / Status**: issues #291–#294, #206, #212, #215 e #309–#313 · 2026-10-12 · active. Depois disso: na #310, o consentimento em papel é registrado pelo Admin e pelo Atendente; na #312, o alerta sai 3 dias antes
 
 ### AD-033
 - **Decision**: produção na Hetzner **Alemanha**, cópia fora do servidor numa Storage Box, **sem LUKS**: as fotos ficam em claro no disco da VPS, protegidas só pelo acesso ao servidor, e o que vale são os backups `age` e os campos cifrados do ADR-006. E-mail do host por msmtp na porta 587 do Resend.
