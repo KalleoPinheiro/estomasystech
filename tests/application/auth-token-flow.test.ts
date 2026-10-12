@@ -406,7 +406,7 @@ describe('Feature: Emissão e consumo de token de convite/reset', () => {
       ).not.toBeNull();
     });
 
-    it('Dado senha com menos de 8 caracteres, Quando consumir, Então recusa e o token continua usável', async () => {
+    it('Dado senha com menos de 10 caracteres, Quando consumir, Então recusa e o token continua usável', async () => {
       const secret = await issueInvite();
 
       await expect(
@@ -416,7 +416,7 @@ describe('Feature: Emissão e consumo de token de convite/reset', () => {
           expectedPurposes: ['invite', 'reset'],
           nowMs: NOW + 1000,
         }),
-      ).rejects.toThrow('ao menos 8 caracteres');
+      ).rejects.toThrow('ao menos 10 caracteres');
       expect(
         await tokens.findUsableBySecretHash(
           hashAuthTokenSecret(secret),
@@ -472,7 +472,35 @@ describe('Feature: Emissão e consumo de token de convite/reset', () => {
       ).toBe(true);
     });
 
-    it('Dado conta de paciente e senha de 8 caracteres, Quando consumir, Então segue valendo o mínimo do portal (#291)', async () => {
+    it.each([
+      ['patient', '12345678', 'A senha precisa ter ao menos 10 caracteres'],
+      ['partner', 'xk7#pq2vz', 'A senha precisa ter ao menos 10 caracteres'],
+      ['patient', 'Senha12345', COMMON_PASSWORD_MESSAGE],
+    ] as const)(
+      'Dada conta %s e a senha %s, Quando consumir, Então recusa com a mensagem da equipe e o token continua usável (#309)',
+      async (role, password, message) => {
+        account = UserAccount.create({
+          email: `${role}@clinica.com`,
+          passwordHash: 'scrypt$0$sem-senha$sem-senha',
+          role,
+          clinicId: 'clinic-a',
+        });
+        await accounts.save(account);
+        const secret = await issueInvite();
+
+        await expect(
+          new ConsumeAuthToken(tokens, accounts).execute({
+            secret,
+            newPassword: password,
+            expectedPurposes: ['invite', 'reset'],
+            nowMs: NOW + 1000,
+          }),
+        ).rejects.toThrow(message);
+        expect(await stillUsable(secret)).not.toBeNull();
+      },
+    );
+
+    it('Dada conta de paciente e senha incomum de 10 caracteres, Quando consumir, Então grava a senha (#309)', async () => {
       account = UserAccount.create({
         email: 'paciente@clinica.com',
         passwordHash: 'scrypt$0$sem-senha$sem-senha',
@@ -484,14 +512,14 @@ describe('Feature: Emissão e consumo de token de convite/reset', () => {
 
       await new ConsumeAuthToken(tokens, accounts).execute({
         secret,
-        newPassword: '12345678',
+        newPassword: 'xk7#pq2vzm',
         expectedPurposes: ['invite', 'reset'],
         nowMs: NOW + 1000,
       });
 
       const updated = await accounts.findById(account.id);
       expect(
-        await verifyPassword('12345678', updated?.passwordHash ?? ''),
+        await verifyPassword('xk7#pq2vzm', updated?.passwordHash ?? ''),
       ).toBe(true);
     });
 

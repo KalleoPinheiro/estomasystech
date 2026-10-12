@@ -5,11 +5,7 @@ import {
   type AuthTokenPurpose,
   hashAuthTokenSecret,
 } from '@/domain/auth/auth-token';
-import {
-  assertPasswordPolicy,
-  PORTAL_MIN_PASSWORD_LENGTH,
-  PORTAL_PASSWORD_TOO_SHORT_MESSAGE,
-} from '@/domain/auth/password-policy';
+import { assertPasswordPolicy } from '@/domain/auth/password-policy';
 import type {
   UserAccount,
   UserAccountRepository,
@@ -167,7 +163,9 @@ export class ConsumeAuthToken {
 
   async execute(input: ConsumeAuthTokenInput): Promise<ConsumeAuthTokenResult> {
     const nowMs = input.nowMs ?? Date.now();
-    await this.assertPolicyBeforeClaim(input, nowMs);
+    // A política não depende do papel (#309): confere antes de queimar o token,
+    // para que uma senha recusada não inutilize o link.
+    assertPasswordPolicy(input.newPassword);
     // Reivindica ANTES de qualquer outra coisa: o token é queimado no mesmo
     // comando que o valida, então duas requisições simultâneas com o mesmo link
     // não conseguem as duas trocar a senha (TOCTOU).
@@ -210,28 +208,5 @@ export class ConsumeAuthToken {
       clinicId: account.clinicId,
       purpose: token.purpose,
     };
-  }
-
-  /**
-   * A política depende do papel da conta (#291), que só o token revela. Lê o
-   * token sem queimá-lo: uma senha recusada não pode inutilizar o link. Token
-   * inválido aqui cai na mesma mensagem genérica da reivindicação.
-   */
-  private async assertPolicyBeforeClaim(
-    input: ConsumeAuthTokenInput,
-    nowMs: number,
-  ): Promise<void> {
-    if (input.newPassword.length < PORTAL_MIN_PASSWORD_LENGTH) {
-      throw new ValidationError(PORTAL_PASSWORD_TOO_SHORT_MESSAGE);
-    }
-    const token = await this.tokens.findUsableBySecretHash(
-      hashAuthTokenSecret(input.secret),
-      nowMs,
-    );
-    const account = token && (await this.accounts.findById(token.accountId));
-    if (!account) {
-      throw new ValidationError(INVALID_TOKEN_MESSAGE);
-    }
-    assertPasswordPolicy(account.role, input.newPassword);
   }
 }
