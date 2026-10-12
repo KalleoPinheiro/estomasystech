@@ -1,3 +1,8 @@
+import {
+  type CalendarGateway,
+  NullCalendarGateway,
+  resolveCalendarGateway,
+} from '@/application/ports/calendar-gateway';
 import type { PhotoStorage } from '@/application/ports/photo-storage';
 import { AuditEvent } from '@/domain/audit/audit-event';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
@@ -6,12 +11,15 @@ import {
   retentionCutoffs,
 } from '@/domain/retention/retention-policy';
 import type { RetentionRepository } from '@/domain/retention/retention-repository';
+import { zonedDateKey } from '@/domain/shared/time-zone';
 import { logError } from '@/lib/log-error';
 
 /** Pacientes anonimizados por clínica a cada execução; o resto fica para a próxima. */
 export const PATIENT_BATCH = 200;
 /** Arquivos de foto apagados por clínica a cada execução. */
 export const PHOTO_BATCH = 500;
+/** Eventos do Google Agenda apagados por clínica a cada execução. */
+export const CALENDAR_BATCH = 500;
 
 export const RETENTION_ACTOR = 'retention-job';
 
@@ -19,8 +27,12 @@ export interface RetentionCounts {
   clinicalRecords: number;
   photos: number;
   auditEvents: number;
+  /** Entradas `waiting` cujo período terminou e viraram `expired` (#311). */
+  waitlistExpired: number;
   waitlistEntries: number;
   accounts: number;
+  /** Eventos do Google Agenda apagados (#311). */
+  calendarEvents: number;
 }
 
 export interface ClinicRetentionSummary extends RetentionCounts {
@@ -50,14 +62,17 @@ export interface RetentionServices {
 
 export interface ClinicRetentionServices extends RetentionServices {
   photoStorage: PhotoStorage;
+  calendar: CalendarGateway;
 }
 
 const ZERO: RetentionCounts = {
   clinicalRecords: 0,
   photos: 0,
   auditEvents: 0,
+  waitlistExpired: 0,
   waitlistEntries: 0,
   accounts: 0,
+  calendarEvents: 0,
 };
 
 /**
@@ -129,8 +144,12 @@ export class RunRetention {
       );
     }
     counts.photos = await this.removePhotos(services);
+    counts.calendarEvents = await this.removeCalendarEvents(services);
     counts.auditEvents = await retention.anonymizeAuditEvents(
       this.cutoffs.auditTrail,
+    );
+    counts.waitlistExpired = await retention.expireWaitlistEntries(
+      zonedDateKey(this.now),
     );
     counts.waitlistEntries = await retention.anonymizeWaitlistEntries(
       this.cutoffs.waitlist,
@@ -170,6 +189,42 @@ export class RunRetention {
         removed += 1;
       } catch (error) {
         logError(`Retenção: falha ao apagar a foto ${photo.id}`, error);
+      }
+    }
+    return removed;
+  }
+
+  /**
+   * Apaga no Google Agenda os eventos das consultas de paciente anonimizado e
+   * só então limpa o id (#311). Falha — da credencial ou de um evento — fica no
+   * log e o id continua, para a próxima execução tentar de novo. Gateway nulo
+   * não apagou nada, então nada é limpo.
+   */
+  private async removeCalendarEvents({
+    retention,
+    calendar,
+  }: ClinicRetentionServices): Promise<number> {
+    let gateway: CalendarGateway;
+    try {
+      gateway = await resolveCalendarGateway(calendar);
+    } catch (error) {
+      logError('Retenção: falha ao resolver o Google Agenda', error);
+      return 0;
+    }
+    if (gateway instanceof NullCalendarGateway) return 0;
+    let removed = 0;
+    for (const event of await retention.findPendingCalendarEvents(
+      CALENDAR_BATCH,
+    )) {
+      try {
+        await gateway.purgeEvent(event.googleEventId);
+        await retention.markCalendarEventRemoved(event.appointmentId);
+        removed += 1;
+      } catch (error) {
+        logError(
+          `Retenção: falha ao apagar o evento da consulta ${event.appointmentId}`,
+          error,
+        );
       }
     }
     return removed;

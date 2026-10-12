@@ -3,7 +3,7 @@ title: "Integração: Google Calendar"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-10-12
 ---
 
 # Google Calendar
@@ -11,7 +11,9 @@ last_reviewed: 2026-09-23
 ## Propósito
 
 Espelha as consultas da [agenda](../../domains/agenda/README.md) num calendário Google: agendar
-cria o evento, remarcar atualiza, cancelar/falta remove. **É integração, não login**
+cria o evento, remarcar atualiza, cancelar/falta remove. Quando o paciente é anonimizado pela
+[retenção](retencao.md) (#311), o job também apaga os eventos dele (`purgeEvent`, que propaga a falha
+para a próxima execução tentar de novo; AGE-RN-16). **É integração, não login**
 ([ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md)): conectar nunca cria nem troca sessão.
 
 | Campo | Valor |

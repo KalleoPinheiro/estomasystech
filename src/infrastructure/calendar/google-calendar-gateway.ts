@@ -108,4 +108,18 @@ export class GoogleCalendarGateway implements CalendarGateway {
       logError('Google Calendar: falha ao remover evento', error);
     }
   }
+
+  async purgeEvent(eventId: string): Promise<void> {
+    try {
+      await this.client.events.delete({ calendarId: this.calendarId, eventId });
+    } catch (error) {
+      if (!isGone(error)) throw error;
+    }
+  }
+}
+
+/** 404/410: o evento já não existe, que é o resultado pedido. */
+function isGone(error: unknown): boolean {
+  const code = (error as { code?: number | string } | null)?.code;
+  return code === 404 || code === 410 || code === '404' || code === '410';
 }

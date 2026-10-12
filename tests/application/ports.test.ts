@@ -13,6 +13,7 @@ describe('Feature: Gateways nulos (integrações desativadas)', () => {
     await expect(gateway.createEvent()).resolves.toBeNull();
     await expect(gateway.updateEvent()).resolves.toBeUndefined();
     await expect(gateway.deleteEvent()).resolves.toBeUndefined();
+    await expect(gateway.purgeEvent()).resolves.toBeUndefined();
   });
 
   it('Dado NullMessagingGateway, Quando enabled, Então false e sendText não lança', async () => {

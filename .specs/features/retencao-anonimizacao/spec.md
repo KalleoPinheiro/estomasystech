@@ -94,7 +94,7 @@ satisfaz; `session_version + 1`; apaga `auth_tokens`, `user_mfa` e `mfa_recovery
 | Repositório próprio (`RetentionRepository`) | O de auditoria segue append-only; a única atualização permitida é esta, num lugar só. |
 | `deactivated_at` gravado no `save` da conta | Todo caminho de desativação passa por ele; contas já inativas contam a partir da migração (mais tarde = mais conservador). |
 
-## Perguntas abertas (não processadas até decisão)
+## Perguntas abertas (decididas em 2026-10-12 — ver [`retencao-restante`](../retencao-restante/spec.md), #311)
 
 | Pergunta | Opção conservadora adotada |
 | --- | --- |

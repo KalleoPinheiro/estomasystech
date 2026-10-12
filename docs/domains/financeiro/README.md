@@ -33,6 +33,7 @@ em centavos inteiros.
 | FIN-RN-10 | Cancelar repasse exige motivo, é auditado, e só vale para o último repasse ativo do profissional | `POST /api/commission-payouts/:id/cancel` |
 | FIN-RN-11 | Venda de pacote é atômica (pacote + fatura) | `src/application/billing/sell-session-package.ts` |
 | FIN-RN-12 | Pagamento, desconto e cancelamento da mesma fatura são serializados (lock da linha na transação): duas ações simultâneas nunca gravam recebimento em dobro — a segunda vê o saldo atualizado e é recusada se exceder (#192) | `PATCH /api/invoices/:id`, `InvoiceRepository.findByIdForUpdate` |
+| FIN-RN-13 | Retenção das faturas (#311): ao anonimizar o paciente (20 anos), a descrição vira "Fatura anonimizada" e o motivo do desconto sai, em todas as faturas dele; valor, desconto, datas, status, forma de pagamento e vínculos ficam (prazo fiscal). O recebimento só guarda valor, forma e data: nada a limpar | [spec](../../../.specs/features/retencao-restante/spec.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
 
 ## Funcionalidades
 

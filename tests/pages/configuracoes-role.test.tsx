@@ -48,7 +48,11 @@ const congressoBia: ScheduleClosureDto = {
 };
 
 /** Responde à identidade do papel e às rotas que a tela carrega; grava as URLs. */
-function mockFetch(role: UserRole, professionalId: string | null = null) {
+function mockFetch(
+  role: UserRole,
+  professionalId: string | null = null,
+  accounts: unknown[] = [],
+) {
   const calls: { url: string; method: string; body: string | null }[] = [];
   vi.stubGlobal(
     'fetch',
@@ -81,7 +85,7 @@ function mockFetch(role: UserRole, professionalId: string | null = null) {
       if (url.startsWith('/api/settings/calendar-integration'))
         return ok({ connected: false, email: null, connectedAt: null });
       if (url.startsWith('/api/settings/email-channel')) return ok(null);
-      if (url.startsWith('/api/accounts')) return ok([]);
+      if (url.startsWith('/api/accounts')) return ok(accounts);
       if (url.startsWith('/api/professionals')) return ok([]);
       return ok(null);
     }),
@@ -182,5 +186,45 @@ describe('Feature: Configurações por papel (#215)', () => {
     expect(JSON.parse(post?.body ?? '{}')).toMatchObject({
       professionalId: ANA.id,
     });
+  });
+
+  it('Dada conta anonimizada, Quando o Admin abre as contas, Então vê "Anonimizada" e o convite novo no lugar de "Reativar" (#311, RES-07)', async () => {
+    const base = { professionalId: null, passwordSet: true };
+    mockFetch('company_admin', null, [
+      {
+        ...base,
+        id: 'acc-anon',
+        email: 'anonimizado+acc-anon@anonimizado.invalid',
+        active: false,
+        anonymized: true,
+      },
+      {
+        ...base,
+        id: 'acc-off',
+        email: 'desativada@clinica.com',
+        active: false,
+        anonymized: false,
+      },
+    ]);
+    await renderPage();
+
+    const anonymized = (
+      await screen.findByText('anonimizado+acc-anon@anonimizado.invalid')
+    ).closest('tr') as HTMLElement;
+    expect(within(anonymized).getByText('Anonimizada')).toBeInTheDocument();
+    expect(
+      within(anonymized).getByText(/convide a pessoa novamente/i),
+    ).toBeInTheDocument();
+    expect(
+      within(anonymized).queryByRole('button', { name: 'Reativar' }),
+    ).toBeNull();
+
+    const deactivated = screen
+      .getByText('desativada@clinica.com')
+      .closest('tr') as HTMLElement;
+    expect(within(deactivated).getByText('Desativada')).toBeInTheDocument();
+    expect(
+      within(deactivated).getByRole('button', { name: 'Reativar' }),
+    ).toBeInTheDocument();
   });
 });

@@ -148,6 +148,7 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       role: 'company_admin',
       clinicId,
       active: true,
+      anonymized: false,
       passwordSet: false,
       professionalId: null,
       // A clínica nova não tem canal: o convite nunca sai por e-mail (C2, #265).

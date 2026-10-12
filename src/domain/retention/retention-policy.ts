@@ -18,6 +18,7 @@ export const ANONYMIZED_MARKER = 'anonimizado';
 
 export const ANONYMIZED_PATIENT_NAME = 'Paciente anonimizado';
 export const ANONYMIZED_CONDITION_TITLE = 'Condição anonimizada';
+export const ANONYMIZED_INVOICE_DESCRIPTION = 'Fatura anonimizada';
 
 /**
  * Hash de senha de conta anonimizada: formato aceito pelo domínio, custo `0`

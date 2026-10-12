@@ -80,6 +80,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
       role: 'company_admin',
       clinicId: CLINIC_B_ID,
       active: true,
+      anonymized: false,
       passwordSet: false,
       professionalId: null,
       // Sem canal de e-mail na clínica (ADR-011): o link volta ao operador.
