@@ -7,6 +7,8 @@ export interface UserAccountDto {
   email: string;
   professionalId: string | null;
   active: boolean;
+  /** Anonimizada pela retenção: sem reativação, só convite novo (#311). */
+  anonymized: boolean;
   /** `false` = conta nunca logou (convite ainda não consumido) — habilita reenvio na UI. */
   passwordSet: boolean;
 }
@@ -16,5 +18,6 @@ export const toUserAccountDto = (account: UserAccount): UserAccountDto => ({
   email: account.email,
   professionalId: account.professionalId,
   active: account.isActive,
+  anonymized: account.isAnonymized,
   passwordSet: account.passwordHash !== UNSET_PASSWORD_HASH,
 });

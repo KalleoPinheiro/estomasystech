@@ -5,6 +5,7 @@ import { UserAccount } from '@/domain/auth/user-account';
 import { Clinic } from '@/domain/clinic/clinic';
 import {
   ANONYMIZED_CONDITION_TITLE,
+  ANONYMIZED_INVOICE_DESCRIPTION,
   ANONYMIZED_MARKER,
   ANONYMIZED_PASSWORD_HASH,
   ANONYMIZED_PATIENT_NAME,
@@ -699,7 +700,7 @@ describe('Feature: Retenção da lista de espera — 2 anos (#294, RET-06)', () 
 });
 
 describe('Feature: Retenção de contas inativas — 2 anos após a desativação (#294, RET-07, RET-11)', () => {
-  it('Dadas contas inativas, Quando anonimiza, Então só equipe e paciente desativados antes do corte; parceiro e ativos ficam', async () => {
+  it('Dadas contas inativas, Quando anonimiza, Então só equipe e paciente desativados antes do corte; ativos e os do corte ficam', async () => {
     const staff = await insertAccount({
       role: 'atendente',
       active: false,
@@ -722,11 +723,6 @@ describe('Feature: Retenção de contas inativas — 2 anos após a desativaçã
       active: false,
       deactivatedAt: CUTOFF_2,
     });
-    const partner = await insertAccount({
-      role: 'partner',
-      active: false,
-      deactivatedAt: OLD,
-    });
     const active = await insertAccount({ role: 'company_admin' });
 
     expect(await repo.anonymizeInactiveAccounts(CUTOFF_2, NOW)).toBe(1);
@@ -743,7 +739,6 @@ describe('Feature: Retenção de contas inativas — 2 anos após a desativaçã
       clinicId: CLINIC,
     });
     expect(row(atCutoff)?.anonymizedAt).toBeNull();
-    expect(row(partner)?.anonymizedAt).toBeNull();
     expect(row(active)?.anonymizedAt).toBeNull();
     expect(
       await db
@@ -803,5 +798,336 @@ describe('Feature: Retenção de contas inativas — 2 anos após a desativaçã
       .from(schema.userAccounts)
       .where(eq(schema.userAccounts.id, born.id));
     expect(row.deactivatedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe('Feature: Retenção restante (#311)', () => {
+  const insertEntry = async (
+    clinicId: string,
+    patientId: string | null,
+    values: Partial<typeof schema.waitlistEntries.$inferInsert>,
+  ) => {
+    const id = nextId('wl311');
+    await db.insert(schema.waitlistEntries).values({
+      id,
+      clinicId,
+      patientId,
+      fromDate: '2020-01-01',
+      toDate: '2020-02-01',
+      source: 'staff',
+      status: 'waiting',
+      createdAt: OLD,
+      ...values,
+    });
+    return id;
+  };
+  const waitlistRow = async (id: string) =>
+    (
+      await db
+        .select()
+        .from(schema.waitlistEntries)
+        .where(eq(schema.waitlistEntries.id, id))
+    )[0];
+  const invoiceRow = async (id: string) =>
+    (
+      await db.select().from(schema.invoices).where(eq(schema.invoices.id, id))
+    )[0];
+  const appointmentRow = async (id: string) =>
+    (
+      await db
+        .select()
+        .from(schema.appointments)
+        .where(eq(schema.appointments.id, id))
+    )[0];
+
+  it('RES-01/02: fila "waiting" com o período terminado expira no fim do período; vigente, outra clínica e resolvida ficam; de novo, 0', async () => {
+    // Esvazia o que testes anteriores deixaram em "waiting".
+    await repo.expireWaitlistEntries('2026-10-11');
+    const patientId = await insertPatient(CLINIC, NOW);
+    const otherPatient = await insertPatient(OTHER, NOW);
+    const ended = await insertEntry(CLINIC, patientId, {
+      fromDate: '2026-10-01',
+      toDate: '2026-10-10',
+    });
+    const endsToday = await insertEntry(CLINIC, patientId, {
+      fromDate: '2026-10-01',
+      toDate: '2026-10-11',
+    });
+    const future = await insertEntry(CLINIC, patientId, {
+      fromDate: '2026-10-20',
+      toDate: '2026-11-20',
+    });
+    const resolved = await insertEntry(CLINIC, patientId, {
+      status: 'scheduled',
+      toDate: '2026-10-05',
+      resolvedAt: new Date('2026-10-03T10:00:00Z'),
+    });
+    const otherClinic = await insertEntry(OTHER, otherPatient, {
+      toDate: '2026-10-05',
+    });
+
+    expect(await repo.expireWaitlistEntries('2026-10-11')).toBe(1);
+    expect(await repo.expireWaitlistEntries('2026-10-11')).toBe(0);
+
+    const get = waitlistRow;
+    expect(await get(ended)).toMatchObject({
+      status: 'expired',
+      resolvedAt: new Date('2026-10-11T00:00:00Z'),
+      patientId,
+    });
+    expect((await get(endsToday)).status).toBe('waiting');
+    expect((await get(future)).status).toBe('waiting');
+    expect(await get(resolved)).toMatchObject({
+      status: 'scheduled',
+      resolvedAt: new Date('2026-10-03T10:00:00Z'),
+    });
+    expect((await get(otherClinic)).status).toBe('waiting');
+    const waitlist = new DrizzleWaitlistRepository(appDb, CLINIC, TEST_CIPHER);
+    expect(
+      (await waitlist.listWaiting()).map((entry) => entry.id),
+    ).not.toContain(ended);
+  });
+
+  it('RES-01: a expirada conta os 2 anos do fim do período e é anonimizada como as resolvidas', async () => {
+    await repo.expireWaitlistEntries('2026-10-11');
+    await repo.anonymizeWaitlistEntries(CUTOFF_2);
+    const patientId = await insertPatient(CLINIC, NOW);
+    const old = await insertEntry(CLINIC, patientId, {
+      toDate: '2024-10-10',
+      notes: 'prefere manhã',
+    });
+    const recent = await insertEntry(CLINIC, patientId, {
+      toDate: '2024-10-11',
+    });
+
+    expect(await repo.expireWaitlistEntries('2026-10-11')).toBe(2);
+    // Fim do período de `old` = 2024-10-11T00:00Z, antes do corte de 2 anos.
+    expect(await repo.anonymizeWaitlistEntries(CUTOFF_2)).toBe(1);
+    expect(await repo.anonymizeWaitlistEntries(CUTOFF_2)).toBe(0);
+
+    expect(await waitlistRow(old)).toMatchObject({
+      status: 'expired',
+      patientId: null,
+      notes: null,
+    });
+    expect(await waitlistRow(recent)).toMatchObject({
+      status: 'expired',
+      patientId,
+    });
+  });
+
+  it('RES-03: conta de parceiro desativada há mais de 2 anos é anonimizada e solta o vínculo; a do corte e a de outra clínica ficam', async () => {
+    const partnerOf = async (clinicId: string) => {
+      const id = nextId('par');
+      await db.insert(schema.partners).values({
+        id,
+        clinicId,
+        fullName: 'Dra. Parceira',
+        email: `${id}@x.com`,
+        phone: '11',
+        createdAt: OLD,
+      });
+      return id;
+    };
+    const partnerId = await partnerOf(CLINIC);
+    const atCutoffPartner = await partnerOf(CLINIC);
+    const otherPartner = await partnerOf(OTHER);
+    const due = await insertAccount({
+      role: 'partner',
+      partnerId,
+      active: false,
+      deactivatedAt: ms(CUTOFF_2, -1),
+    });
+    const atCutoff = await insertAccount({
+      role: 'partner',
+      partnerId: atCutoffPartner,
+      active: false,
+      deactivatedAt: CUTOFF_2,
+    });
+    const other = await insertAccount({
+      clinicId: OTHER,
+      role: 'partner',
+      partnerId: otherPartner,
+      active: false,
+      deactivatedAt: OLD,
+    });
+
+    expect(await repo.anonymizeInactiveAccounts(CUTOFF_2, NOW)).toBe(1);
+    expect(await repo.anonymizeInactiveAccounts(CUTOFF_2, NOW)).toBe(0);
+
+    const rows = await db.select().from(schema.userAccounts);
+    const row = (id: string) => rows.find((r) => r.id === id);
+    expect(row(due)).toMatchObject({
+      email: anonymizedEmail(due),
+      passwordHash: ANONYMIZED_PASSWORD_HASH,
+      partnerId: null,
+      anonymizedAt: NOW,
+      role: 'partner',
+    });
+    expect(row(atCutoff)).toMatchObject({
+      partnerId: atCutoffPartner,
+      anonymizedAt: null,
+    });
+    expect(row(other)).toMatchObject({
+      partnerId: otherPartner,
+      anonymizedAt: null,
+    });
+    // O cadastro do parceiro não muda (pergunta aberta na spec).
+    expect(
+      (
+        await db
+          .select()
+          .from(schema.partners)
+          .where(eq(schema.partners.id, partnerId))
+      )[0].fullName,
+    ).toBe('Dra. Parceira');
+    // Convite novo para o mesmo parceiro: o vínculo único está livre.
+    await expect(
+      insertAccount({ role: 'partner', partnerId }),
+    ).resolves.toBeTruthy();
+  });
+
+  it('RES-04: ao anonimizar o paciente, descrição e motivo do desconto das faturas saem; valores, datas e status ficam; outro paciente não muda', async () => {
+    const patientId = await insertPatient(CLINIC);
+    const keeper = await insertPatient(CLINIC, NOW);
+    const invoice = (id: string, owner: string, extra = {}) =>
+      db.insert(schema.invoices).values({
+        id,
+        clinicId: CLINIC,
+        patientId: owner,
+        description: 'Curativo de lesão da Maria',
+        amountCents: 15000,
+        status: 'paid',
+        issuedAt: OLD,
+        paidAt: OLD,
+        paymentMethod: 'pix',
+        discountCents: 1000,
+        discountReason: 'amiga da família',
+        ...extra,
+      });
+    const own = nextId('inv');
+    const ownNoDiscount = nextId('inv');
+    const foreign = nextId('inv');
+    await invoice(own, patientId);
+    await invoice(ownNoDiscount, patientId, {
+      discountCents: 0,
+      discountReason: null,
+      status: 'cancelled',
+      paidAt: null,
+      paymentMethod: null,
+    });
+    await invoice(foreign, keeper);
+    await db.insert(schema.invoicePayments).values({
+      id: nextId('pay'),
+      clinicId: CLINIC,
+      invoiceId: own,
+      amountCents: 14000,
+      method: 'pix',
+      paidAt: OLD,
+    });
+
+    expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(1);
+    expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(0);
+
+    const get = invoiceRow;
+    expect(await get(own)).toMatchObject({
+      description: ANONYMIZED_INVOICE_DESCRIPTION,
+      discountReason: null,
+      amountCents: 15000,
+      discountCents: 1000,
+      status: 'paid',
+      paymentMethod: 'pix',
+      issuedAt: OLD,
+      paidAt: OLD,
+    });
+    expect(await get(ownNoDiscount)).toMatchObject({
+      description: ANONYMIZED_INVOICE_DESCRIPTION,
+      status: 'cancelled',
+    });
+    expect(await get(foreign)).toMatchObject({
+      description: 'Curativo de lesão da Maria',
+      discountReason: 'amiga da família',
+    });
+    const payments = await db
+      .select()
+      .from(schema.invoicePayments)
+      .where(eq(schema.invoicePayments.invoiceId, own));
+    expect(payments).toHaveLength(1);
+    expect(payments[0].amountCents).toBe(14000);
+  });
+
+  it('RES-05/09: eventos do Google Agenda de paciente anonimizado ficam pendentes até limpar o id; só da própria clínica', async () => {
+    const patientId = await insertPatient(CLINIC);
+    const keeper = await insertPatient(CLINIC, NOW);
+    const otherPatient = await insertPatient(OTHER);
+    const appointment = async (
+      clinicId: string,
+      owner: string,
+      googleEventId: string | null,
+    ) => {
+      const id = nextId('apt');
+      await db.insert(schema.appointments).values({
+        id,
+        clinicId,
+        patientId: owner,
+        startsAt: OLD,
+        endsAt: ms(OLD, 3_600_000),
+        procedure: 'Curativo',
+        priceCents: 10000,
+        status: 'completed',
+        googleEventId,
+        createdAt: OLD,
+      });
+      return id;
+    };
+    const withEvent = await appointment(CLINIC, patientId, 'g-own');
+    const withoutEvent = await appointment(CLINIC, patientId, null);
+    const keeperAppt = await appointment(CLINIC, keeper, 'g-keeper');
+    const otherAppt = await appointment(OTHER, otherPatient, 'g-other');
+
+    // Antes de anonimizar o paciente, nada está pendente.
+    expect(await repo.findPendingCalendarEvents(10)).toEqual([]);
+    expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(1);
+    await new DrizzleRetentionRepository(appDb, OTHER).anonymizePatient(
+      otherPatient,
+      NOW,
+      CUTOFF_20,
+    );
+
+    expect(await repo.findPendingCalendarEvents(10)).toEqual([
+      { appointmentId: withEvent, googleEventId: 'g-own' },
+    ]);
+    expect(await repo.findPendingCalendarEvents(0)).toEqual([]);
+
+    await repo.markCalendarEventRemoved(withEvent);
+    // Escopo errado não limpa o id da outra clínica.
+    await repo.markCalendarEventRemoved(otherAppt);
+
+    expect(await repo.findPendingCalendarEvents(10)).toEqual([]);
+    const get = appointmentRow;
+    expect((await get(withEvent)).googleEventId).toBeNull();
+    expect((await get(withoutEvent)).googleEventId).toBeNull();
+    expect((await get(keeperAppt)).googleEventId).toBe('g-keeper');
+    expect((await get(otherAppt)).googleEventId).toBe('g-other');
+    expect(
+      await new DrizzleRetentionRepository(
+        appDb,
+        OTHER,
+      ).findPendingCalendarEvents(10),
+    ).toEqual([{ appointmentId: otherAppt, googleEventId: 'g-other' }]);
+  });
+
+  it('Dado escopo de sistema, Quando pede expirar a fila ou os eventos, Então recusa', async () => {
+    const system = new DrizzleRetentionRepository(appDb, null);
+
+    await expect(system.expireWaitlistEntries('2026-10-11')).rejects.toThrow(
+      RETENTION_NEEDS_CLINIC_SCOPE,
+    );
+    await expect(system.findPendingCalendarEvents(1)).rejects.toThrow(
+      RETENTION_NEEDS_CLINIC_SCOPE,
+    );
+    await expect(system.markCalendarEventRemoved('x')).rejects.toThrow(
+      RETENTION_NEEDS_CLINIC_SCOPE,
+    );
   });
 });

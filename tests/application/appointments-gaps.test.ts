@@ -30,6 +30,8 @@ class FakeCalendarGateway implements CalendarGateway {
     this.updated = [...this.updated, { eventId, input }];
   }
 
+  async purgeEvent(): Promise<void> {}
+
   async deleteEvent(eventId: string): Promise<void> {
     this.deleted = [...this.deleted, eventId];
   }

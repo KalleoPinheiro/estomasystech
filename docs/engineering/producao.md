@@ -153,6 +153,12 @@ Meta decidida: RPO 24 h, RTO 4 h.
 | Retenção | 30 dias (`BACKUP_KEEP_DAYS`) no servidor; fora dele, espelhe a pasta com `rsync --delete`; os snapshots da Storage Box guardam o que o espelho apagar |
 | Chaves | `DATA_ENCRYPTION_KEY` (e as anteriores) e a chave privada `age` no cofre de segredos, **nunca** dentro do backup |
 
+**Retenção e backup (#311, [ADR-013](../adr/013-retencao-por-anonimizacao.md)):** a anonimização
+não reescreve cópias antigas. Com a guarda de 30 dias, o dado identificável de um paciente
+anonimizado some dos backups 30 dias depois. Ao restaurar um backup, rode
+`POST /api/retention/run` em seguida: o job é idempotente e refaz a anonimização do que já tinha
+vencido.
+
 Sem `DATA_ENCRYPTION_KEY` o backup do banco não serve: os textos clínicos estão cifrados com ela.
 Sem a chave privada `age`, nenhum backup serve.
 

@@ -18,6 +18,7 @@ const fakeGateway = (): CalendarGateway => ({
   createEvent: vi.fn().mockResolvedValue('evt-1'),
   updateEvent: vi.fn().mockResolvedValue(undefined),
   deleteEvent: vi.fn().mockResolvedValue(undefined),
+  purgeEvent: vi.fn().mockResolvedValue(undefined),
 });
 
 describe('Feature: Gateway de agenda preguiçoso', () => {
@@ -37,11 +38,13 @@ describe('Feature: Gateway de agenda preguiçoso', () => {
     await expect(lazy.createEvent(input)).resolves.toBe('evt-1');
     await lazy.updateEvent('evt-1', input);
     await lazy.deleteEvent('evt-1');
+    await lazy.purgeEvent('evt-1');
 
     expect(load).toHaveBeenCalledTimes(1);
     expect(real.createEvent).toHaveBeenCalledWith(input);
     expect(real.updateEvent).toHaveBeenCalledWith('evt-1', input);
     expect(real.deleteEvent).toHaveBeenCalledWith('evt-1');
+    expect(real.purgeEvent).toHaveBeenCalledWith('evt-1');
   });
 
   it('Dadas chamadas simultâneas, Então compartilham a mesma resolução', async () => {

@@ -1,4 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  type CalendarGateway,
+  NullCalendarGateway,
+} from '@/application/ports/calendar-gateway';
 import type { PhotoStorage } from '@/application/ports/photo-storage';
 import {
   CLINIC_RETENTION_FAILED,
@@ -24,6 +28,9 @@ function fakeRetention(
     findPendingPhotos: vi.fn(async () => []),
     markPhotoAnonymized: vi.fn(async () => undefined),
     anonymizeAuditEvents: vi.fn(async () => 0),
+    findPendingCalendarEvents: vi.fn(async () => []),
+    markCalendarEventRemoved: vi.fn(async () => undefined),
+    expireWaitlistEntries: vi.fn(async () => 0),
     anonymizeWaitlistEntries: vi.fn(async () => 0),
     anonymizeInactiveAccounts: vi.fn(async () => 0),
     ...overrides,
@@ -84,6 +91,7 @@ describe('Feature: Job de retenção (#294)', () => {
       async () => ({
         retention,
         photoStorage: storage,
+        calendar: new NullCalendarGateway(),
         auditEvents: audit.repo,
       }),
       async () => ({
@@ -119,6 +127,8 @@ describe('Feature: Job de retenção (#294)', () => {
       auditEvents: 7,
       waitlistEntries: 2,
       accounts: 1,
+      waitlistExpired: 0,
+      calendarEvents: 0,
     };
     expect(summary).toEqual({
       ...counts,
@@ -146,6 +156,8 @@ describe('Feature: Job de retenção (#294)', () => {
       auditEvents: 4,
       waitlistEntries: 0,
       accounts: 0,
+      waitlistExpired: 0,
+      calendarEvents: 0,
     });
   });
 
@@ -158,6 +170,7 @@ describe('Feature: Job de retenção (#294)', () => {
       async () => ({
         retention: fakeRetention(),
         photoStorage: fakeStorage(),
+        calendar: new NullCalendarGateway(),
         auditEvents: audit.repo,
       }),
       async () => ({
@@ -175,6 +188,8 @@ describe('Feature: Job de retenção (#294)', () => {
         auditEvents: 0,
         waitlistEntries: 0,
         accounts: 0,
+        waitlistExpired: 0,
+        calendarEvents: 0,
       },
     ]);
     expect(audit.saved).toEqual([]);
@@ -195,12 +210,14 @@ describe('Feature: Job de retenção (#294)', () => {
             }),
           }),
           photoStorage: fakeStorage(),
+          calendar: new NullCalendarGateway(),
           auditEvents: fakeAudit().repo,
         });
       }
       return Promise.resolve({
         retention: healthy,
         photoStorage: fakeStorage(),
+        calendar: new NullCalendarGateway(),
         auditEvents: fakeAudit().repo,
       });
     };
@@ -222,6 +239,8 @@ describe('Feature: Job de retenção (#294)', () => {
         auditEvents: 0,
         waitlistEntries: 0,
         accounts: 0,
+        waitlistExpired: 0,
+        calendarEvents: 0,
         error: CLINIC_RETENTION_FAILED,
       },
       {
@@ -231,6 +250,8 @@ describe('Feature: Job de retenção (#294)', () => {
         auditEvents: 0,
         waitlistEntries: 3,
         accounts: 0,
+        waitlistExpired: 0,
+        calendarEvents: 0,
       },
     ]);
     expect(summary.platform).toEqual({
@@ -256,6 +277,7 @@ describe('Feature: Job de retenção (#294)', () => {
       async () => ({
         retention,
         photoStorage: fakeStorage(),
+        calendar: new NullCalendarGateway(),
         auditEvents: audit.repo,
       }),
       async () => ({
@@ -276,6 +298,8 @@ describe('Feature: Job de retenção (#294)', () => {
       auditEvents: 5,
       waitlistEntries: 0,
       accounts: 0,
+      waitlistExpired: 0,
+      calendarEvents: 0,
     };
     expect(summary.clinics).toEqual([
       { clinicId: 'c1', ...partial, error: CLINIC_RETENTION_FAILED },
@@ -296,6 +320,7 @@ describe('Feature: Job de retenção (#294)', () => {
           anonymizeWaitlistEntries: vi.fn(async () => 1),
         }),
         photoStorage: fakeStorage(),
+        calendar: new NullCalendarGateway(),
         auditEvents: audit.repo,
       }),
       async () => ({
@@ -310,5 +335,128 @@ describe('Feature: Job de retenção (#294)', () => {
       error: CLINIC_RETENTION_FAILED,
     });
     expect(audit.repo.save).toHaveBeenCalledTimes(2);
+  });
+
+  describe('Feature: Google Agenda e fila expirada (#311)', () => {
+    const gateway = (
+      purge: (id: string) => Promise<void>,
+    ): CalendarGateway => ({
+      createEvent: vi.fn(async () => null),
+      updateEvent: vi.fn(async () => undefined),
+      deleteEvent: vi.fn(async () => undefined),
+      purgeEvent: vi.fn(purge),
+    });
+    const run = (
+      retention: RetentionRepository,
+      calendar: CalendarGateway,
+      audit = fakeAudit(),
+    ) =>
+      new RunRetention(
+        ['c1'],
+        async () => ({
+          retention,
+          photoStorage: fakeStorage(),
+          calendar,
+          auditEvents: audit.repo,
+        }),
+        async () => ({
+          retention: fakeRetention(),
+          auditEvents: fakeAudit().repo,
+        }),
+        NOW,
+      ).execute();
+
+    it('Dado evento de paciente anonimizado, Quando roda, Então apaga na agenda externa e só então limpa o id (RES-05)', async () => {
+      const calendar = gateway(async () => undefined);
+      const retention = fakeRetention({
+        findPendingCalendarEvents: vi.fn(async () => [
+          { appointmentId: 'a1', googleEventId: 'g1' },
+        ]),
+      });
+      const audit = fakeAudit();
+
+      const summary = await run(retention, calendar, audit);
+
+      expect(retention.findPendingCalendarEvents).toHaveBeenCalledWith(500);
+      expect(calendar.purgeEvent).toHaveBeenCalledWith('g1');
+      expect(retention.markCalendarEventRemoved).toHaveBeenCalledWith('a1');
+      expect(summary.calendarEvents).toBe(1);
+      expect(JSON.parse(audit.saved[0].detail ?? '')).toMatchObject({
+        calendarEvents: 1,
+      });
+      expect(audit.saved[0].detail).not.toContain('g1');
+    });
+
+    it('Dada falha num evento, Quando roda, Então o id fica, o job segue e o resto é apagado (RES-06)', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const calendar = gateway(async (id) => {
+        if (id === 'g1') throw new Error('Google fora');
+      });
+      const retention = fakeRetention({
+        findPendingCalendarEvents: vi.fn(async () => [
+          { appointmentId: 'a1', googleEventId: 'g1' },
+          { appointmentId: 'a2', googleEventId: 'g2' },
+        ]),
+        anonymizeWaitlistEntries: vi.fn(async () => 2),
+      });
+
+      const summary = await run(retention, calendar);
+
+      expect(retention.markCalendarEventRemoved).toHaveBeenCalledTimes(1);
+      expect(retention.markCalendarEventRemoved).toHaveBeenCalledWith('a2');
+      expect(summary.clinics[0]).toMatchObject({
+        calendarEvents: 1,
+        waitlistEntries: 2,
+      });
+      expect(summary.clinics[0].error).toBeUndefined();
+    });
+
+    it('Dada falha ao resolver a credencial, Quando roda, Então nada é limpo e o job segue (RES-06)', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const { LazyCalendarGateway } = await import(
+        '@/application/ports/calendar-gateway'
+      );
+      const retention = fakeRetention({
+        anonymizeInactiveAccounts: vi.fn(async () => 1),
+      });
+      const lazy = new LazyCalendarGateway(async () => {
+        throw new Error('credencial ilegível');
+      });
+
+      const summary = await run(retention, lazy);
+
+      expect(retention.findPendingCalendarEvents).not.toHaveBeenCalled();
+      expect(summary.clinics[0]).toMatchObject({
+        calendarEvents: 0,
+        accounts: 1,
+      });
+      expect(summary.clinics[0].error).toBeUndefined();
+    });
+
+    it('Dado gateway nulo, Quando roda, Então não busca nem limpa eventos (RES-06)', async () => {
+      const retention = fakeRetention();
+
+      await run(retention, new NullCalendarGateway());
+
+      expect(retention.findPendingCalendarEvents).not.toHaveBeenCalled();
+      expect(retention.markCalendarEventRemoved).not.toHaveBeenCalled();
+    });
+
+    it('Dada fila com período terminado, Quando roda, Então expira com o "hoje" do fuso da aplicação e conta (RES-01)', async () => {
+      const retention = fakeRetention({
+        expireWaitlistEntries: vi.fn(async () => 3),
+      });
+      const audit = fakeAudit();
+
+      const summary = await run(retention, new NullCalendarGateway(), audit);
+
+      expect(retention.expireWaitlistEntries).toHaveBeenCalledWith(
+        '2026-10-11',
+      );
+      expect(summary.waitlistExpired).toBe(3);
+      expect(JSON.parse(audit.saved[0].detail ?? '')).toMatchObject({
+        waitlistExpired: 3,
+      });
+    });
   });
 });

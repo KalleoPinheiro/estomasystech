@@ -52,6 +52,7 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
       createEvent: vi.fn().mockResolvedValue('evt-1'),
       updateEvent: vi.fn().mockResolvedValue(undefined),
       deleteEvent: vi.fn().mockResolvedValue(undefined),
+      purgeEvent: vi.fn().mockResolvedValue(undefined),
     };
     const services = buildServices(gateway);
     const action = vi.fn().mockResolvedValue(undefined);
@@ -70,6 +71,7 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
       createEvent: vi.fn().mockResolvedValue(null),
       updateEvent: vi.fn().mockResolvedValue(undefined),
       deleteEvent: vi.fn().mockResolvedValue(undefined),
+      purgeEvent: vi.fn().mockResolvedValue(undefined),
     };
     const services = buildServices(gateway);
     const action = vi.fn().mockRejectedValue(new Error('Google fora do ar'));
@@ -108,6 +110,7 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
       createEvent: vi.fn().mockResolvedValue('evt-1'),
       updateEvent: vi.fn().mockResolvedValue(undefined),
       deleteEvent: vi.fn().mockResolvedValue(undefined),
+      purgeEvent: vi.fn().mockResolvedValue(undefined),
     };
     const services = buildServices(new LazyCalendarGateway(async () => real));
     const action = vi.fn().mockResolvedValue(undefined);

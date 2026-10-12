@@ -57,5 +57,29 @@ excluído. A trilha de auditoria era append-only por contrato (`AuditEventReposi
 - O job processa até 200 pacientes e 500 fotos por empresa a cada execução; o resto entra no dia
   seguinte.
 - `waitlist_entries.patient_id` aceita nulo; as leituras da fila ignoram entrada sem paciente.
-- Perguntas abertas (parceiro, cadastro do profissional, fila ainda `waiting`, faturas) ficam
-  sem processamento até decisão — ver a [spec](../../.specs/features/retencao-anonimizacao/spec.md).
+- As perguntas abertas desta decisão (parceiro, cadastro do profissional, fila ainda `waiting`,
+  faturas, Google Agenda, reativação) foram decididas em 2026-10-12 — ver a atualização abaixo.
+
+## Atualização de 2026-10-12 ([#311](https://github.com/KalleoPinheiro/vitta-flow/issues/311))
+
+Decisões de @KalleoPinheiro sobre o que a primeira versão deixou sem processar. Não mudam a
+decisão acima; completam o que o job cobre ([spec](../../.specs/features/retencao-restante/spec.md)).
+
+1. **Fila `waiting` vencida:** quando o período desejado termina, a entrada vira `expired`; daí
+   contam os 2 anos e ela é anonimizada como as resolvidas (AGE-RN-14, AGE-RN-15).
+2. **Contas de parceiro inativas:** mesma regra das contas da equipe, 2 anos após a desativação
+   (ACE-RN-45, EQP-RN-07).
+3. **Textos livres de fatura:** descrição e motivo do desconto são anonimizados junto com o
+   paciente; valores, datas e status ficam pelo prazo fiscal (FIN-RN-13).
+4. **Google Agenda:** o job apaga os eventos que o sistema criou para o paciente anonimizado. O id
+   do evento é o marcador: só é limpo depois de apagar, e a falha fica para a próxima execução
+   (AGE-RN-16). Complementa o §5 desta decisão.
+5. **Reativação:** conta anonimizada não volta; a pessoa entra por convite novo, como conta nova
+   (ACE-RN-47).
+6. **Cadastro do profissional: guardado.** Nome e conselho aparecem na autoria do prontuário, que
+   tem guarda de 20 anos (EQP-RN-08).
+7. **Backups: 30 dias de guarda**, como o [runbook](../engineering/producao.md) (§ 5) já faz.
+   Depois disso o dado anonimizado também some dos backups: uma cópia de antes da anonimização
+   deixa de existir 30 dias depois dela, e restaurar um backup mais antigo desfaz a anonimização
+   até o job rodar de novo (idempotente, ele a refaz).
+

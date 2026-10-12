@@ -780,6 +780,7 @@ describe('Feature: DTO de conta de usuário', () => {
       email: 'ana@clinica.com',
       professionalId: 'prof-1',
       active: true,
+      anonymized: false,
       passwordSet: true,
     });
     expect(dto).not.toHaveProperty('passwordHash');
