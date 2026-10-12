@@ -117,7 +117,7 @@ npm run dev                   # http://localhost:3000
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | sync de agenda via OAuth (nunca login) | [google-calendar.md](integrations/google-calendar.md) |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_CALENDAR_ID` | não | sync via service account (alternativa) | idem |
 | `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | não | opt-in futuro da Meta Cloud API (RM-14); os lembretes saem por e-mail e o WhatsApp de hoje é o botão `wa.me`, sem credencial | [whatsapp-meta.md](integrations/whatsapp-meta.md) |
-| `CRON_SECRET` | sim para os lembretes | header `x-cron-secret` de `POST /api/reminders/run` (ou `Authorization: Bearer` do Vercel Cron em `GET`); sem ele, 503 | [cron.md](integrations/cron.md) |
+| `CRON_SECRET` | sim para os lembretes e a retenção | header `x-cron-secret` de `POST /api/reminders/run` e `POST /api/retention/run` (ou `Authorization: Bearer` do Vercel Cron em `GET`); sem ele, 503 | [cron.md](integrations/cron.md), [retencao.md](integrations/retencao.md) |
 | `PHOTO_STORAGE` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` / `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE` / `S3_SSE` | não (sim com várias réplicas e na Vercel) | fotos em bucket S3-compatível | [s3-storage.md](integrations/s3-storage.md) |
 | `UPLOADS_DIR` | não | diretório das fotos no disco local | padrão `./uploads`; no compose, `/app/uploads` (volume `uploads`) |
 | `TRUSTED_PROXY_HOPS` | não | quantos proxies reversos confiáveis ficam à frente do app (define o IP do cliente no `x-forwarded-for`) | padrão `1`; Nginx/Caddy = `1`, Cloudflare + Nginx = `2` |

@@ -3,7 +3,7 @@ title: "Índice de docs/"
 status: living
 audience: [dev, po, stakeholder, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-10-11
 ---
 
 # docs/
@@ -57,6 +57,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`engineering/integrations/whatsapp-meta.md`](engineering/integrations/whatsapp-meta.md) | lembretes por WhatsApp |
 | [`engineering/integrations/s3-storage.md`](engineering/integrations/s3-storage.md) | fotos em bucket S3-compatível |
 | [`engineering/integrations/cron.md`](engineering/integrations/cron.md) | disparo externo dos lembretes |
+| [`engineering/integrations/retencao.md`](engineering/integrations/retencao.md) | disparo externo da retenção e anonimização (#294) |
 
 ## Decisões
 
@@ -74,6 +75,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/010-trilha-de-auditoria-de-plataforma.md`](adr/010-trilha-de-auditoria-de-plataforma.md) | evento sem empresa é de plataforma (`clinic_id` nulo), visto só pelo Super Admin; auditoria escopada por empresa |
 | [`adr/011-canal-de-comunicacao-por-clinica.md`](adr/011-canal-de-comunicacao-por-clinica.md) | e-mail de cada clínica sai pela chave dela (`clinic_channels`, cifrada); sem canal, não sai; chave da plataforma opcional e só para contas sem clínica |
 | [`adr/012-segundo-fator-e-senha-da-equipe.md`](adr/012-segundo-fator-e-senha-da-equipe.md) | 2FA obrigatório também para o Admin de Empresa, opcional para Atendente/Profissional; senha da equipe com 10+ caracteres e fora da lista de senhas comuns |
+| [`adr/013-retencao-por-anonimizacao.md`](adr/013-retencao-por-anonimizacao.md) | dado vencido é anonimizado (nunca excluído) por um job de cron; só o repositório de retenção reescreve a trilha de auditoria |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 

@@ -167,6 +167,15 @@ export const userAccounts = pgTable(
       withTimezone: true,
       mode: 'date',
     }).notNull(),
+    // Retenção (#294): a conta inativa é anonimizada 2 anos depois daqui.
+    deactivatedAt: timestamp('deactivated_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    anonymizedAt: timestamp('anonymized_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
   },
   (table) => [
     // Um acesso de portal por cadastro, dentro da empresa (#196).
@@ -290,9 +299,8 @@ export const waitlistEntries = pgTable(
     clinicId: text('clinic_id')
       .notNull()
       .references(() => clinics.id),
-    patientId: text('patient_id')
-      .notNull()
-      .references(() => patients.id),
+    // Nulo = entrada anonimizada pela retenção (#294); as leituras a ignoram.
+    patientId: text('patient_id').references(() => patients.id),
     procedureId: text('procedure_id').references(() => procedures.id),
     professionalId: text('professional_id').references(() => professionals.id),
     fromDate: date('from_date', { mode: 'string' }).notNull(),
@@ -336,6 +344,11 @@ export const patients = pgTable(
       withTimezone: true,
       mode: 'date',
     }).notNull(),
+    // Retenção (#294): prontuário anonimizado 20 anos após a última atividade.
+    anonymizedAt: timestamp('anonymized_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
   },
   (table) => [
     index('idx_patients_referrer').on(table.referredByPartnerId),
@@ -651,6 +664,11 @@ export const conditionPhotos = pgTable(
       withTimezone: true,
       mode: 'date',
     }).notNull(),
+    // Retenção (#294): arquivo apagado do armazenamento; o registro fica.
+    anonymizedAt: timestamp('anonymized_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
   },
   (table) => [
     index('idx_condition_photos_condition').on(table.conditionId),

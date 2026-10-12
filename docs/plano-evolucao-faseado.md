@@ -3,7 +3,7 @@ title: "Plano de Evolução Faseado e Roadmap"
 status: living
 audience: [po, stakeholder, dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-28
+last_reviewed: 2026-10-11
 ---
 
 # Plano de Evolução Faseado — VittaFlow
@@ -78,7 +78,8 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 | RM-20 | Portal do Super Admin: `/plataforma` para cadastrar, editar, suspender e reativar clínicas e gerir o `company_admin`; super_admin único, sem acesso clínico, com segundo fator, recuperação de emergência e trilha de auditoria de plataforma | entrar no ar com 1 clínica e abrir a segunda sem `INSERT` manual | entregue | [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) | [`portal-super-admin/`](../.specs/features/portal-super-admin/) |
 | RM-21 | Canal de e-mail por clínica: cada clínica cadastra a própria chave (Resend) em `/configuracoes`; convite, redefinição e lembretes saem pelo canal dela, sem fallback para a conta da plataforma; link manual quando o e-mail não sai; `/plataforma` organizado (navegação, status do canal por clínica, importação de taxonomia) | plataforma agnóstica: a clínica responde pelo próprio custo e remetente | entregue | [#264](https://github.com/KalleoPinheiro/vitta-flow/issues/264)–[#267](https://github.com/KalleoPinheiro/vitta-flow/issues/267) | [`canal-por-clinica/`](../.specs/features/canal-por-clinica/) |
 | RM-22 | Senha da equipe com 10+ caracteres e fora da lista de senhas comuns; segundo fator obrigatório para o Admin de Empresa e opcional para Atendente/Profissional ([ADR-012](./adr/012-segundo-fator-e-senha-da-equipe.md)) | senha vazada de Admin não basta para levar os dados de uma clínica | entregue | [#291](https://github.com/KalleoPinheiro/vitta-flow/issues/291) | [`senha-2fa-equipe/`](../.specs/features/senha-2fa-equipe/) |
-| RM-23 | Direitos do titular no portal (LGPD art. 18): o paciente baixa a cópia dos próprios dados e pede correção ou eliminação; o Admin de Empresa aceita ou recusa com justificativa e o paciente é avisado. Texto jurídico do aviso ainda provisório ([#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216)) | transparência e direitos do titular antes do go-live | entregue | [#293](https://github.com/KalleoPinheiro/vitta-flow/issues/293) | [`direitos-titular-293/`](../.specs/features/direitos-titular-293/) |
+| RM-23 | Retenção e anonimização automática: prontuário e fotos 20 anos após a última atividade, trilha de auditoria 5 anos, lista de espera e contas inativas 2 anos; ao fim, anonimiza (nunca exclui) por um job de cron idempotente e auditado só com contagens ([ADR-013](./adr/013-retencao-por-anonimizacao.md)) | dado de saúde não fica identificável para sempre (LGPD) | entregue | [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294) | [`retencao-anonimizacao/`](../.specs/features/retencao-anonimizacao/) |
+| RM-24 | Direitos do titular no portal (LGPD art. 18): o paciente baixa a cópia dos próprios dados e pede correção ou eliminação; o Admin de Empresa aceita ou recusa com justificativa e o paciente é avisado. Texto jurídico do aviso ainda provisório ([#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216)) | transparência e direitos do titular antes do go-live | entregue | [#293](https://github.com/KalleoPinheiro/vitta-flow/issues/293) | [`direitos-titular-293/`](../.specs/features/direitos-titular-293/) |
 
 As seções por fase abaixo são o detalhe (L2) — escopo, decisões pendentes e critérios de cada uma.
 

@@ -104,7 +104,7 @@ const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 
 /** #195/#206: preparação para Vercel + Supabase e para VPS + compose. */
 describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', () => {
-  it('vercel cron: vercel.json agenda GET /api/reminders/run uma vez por dia', () => {
+  it('vercel cron: vercel.json agenda GET dos lembretes e da retenção (#294) uma vez por dia', () => {
     const config = JSON.parse(read('vercel.json')) as {
       crons: { path: string; schedule: string }[];
     };
@@ -112,6 +112,10 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
     expect(config.crons).toEqual([
       {
         path: '/api/reminders/run',
+        schedule: expect.stringMatching(/^\d+ \d+ \* \* \*$/),
+      },
+      {
+        path: '/api/retention/run',
         schedule: expect.stringMatching(/^\d+ \d+ \* \* \*$/),
       },
     ]);

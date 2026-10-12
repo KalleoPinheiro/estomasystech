@@ -57,6 +57,7 @@ import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { DataSubjectRequestRepository } from '@/domain/patient/data-subject-request';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
+import type { RetentionRepository } from '@/domain/retention/retention-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
@@ -131,6 +132,7 @@ import { DrizzlePatientRepository } from './persistence/drizzle/drizzle-patient-
 import { DrizzleProducedSessionRepository } from './persistence/drizzle/drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './persistence/drizzle/drizzle-professional-repository';
 import { DrizzleReminderLogRepository } from './persistence/drizzle/drizzle-reminder-log-repository';
+import { DrizzleRetentionRepository } from './persistence/drizzle/drizzle-retention-repository';
 import { DrizzleScheduleAvailabilityRepository } from './persistence/drizzle/drizzle-schedule-availability-repository';
 import {
   DrizzleNursingDiagnosisRepository,
@@ -201,6 +203,8 @@ export interface Services {
   professionalPatientLinks: ProfessionalPatientLinkRepository;
   auditEvents: AuditEventRepository;
   reminderLog: ReminderLogRepository;
+  /** Anonimização por prazo (#294); em escopo de sistema, só a plataforma. */
+  retention: RetentionRepository;
   calendar: CalendarGateway;
   messaging: MessagingGateway;
   /** Canal da clínica do escopo (ADR-011); lança no escopo de sistema. */
@@ -487,6 +491,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     ),
     auditEvents: new DrizzleAuditEventRepository(db, tenant.clinicId),
     reminderLog: new DrizzleReminderLogRepository(db, tenant.clinicId),
+    retention: new DrizzleRetentionRepository(db, tenant.clinicId),
     calendar: calendarGatewayFor(db, tenant.clinicId),
     messaging: buildMessagingGateway(),
     clinicChannels,
