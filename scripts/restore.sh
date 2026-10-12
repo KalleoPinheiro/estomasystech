@@ -56,6 +56,9 @@ decrypt() {
   age -d -i "$identity" "$source_dir/$1"
 }
 
+for file in db.dump.age uploads.tar.age; do
+  decrypt "$file" > /dev/null || fail 2 "não foi possível decifrar $file (chave privada errada?)"
+done
 docker compose up -d --wait db > /dev/null
 tables="$(decrypt db.dump.age | docker compose exec -T db pg_restore --list | awk '/ TABLE /{n++} END{print n+0}')"
 [ "$tables" -gt 0 ] || fail 2 "o dump não tem nenhuma tabela"

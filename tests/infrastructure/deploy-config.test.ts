@@ -212,6 +212,13 @@ describe('Feature: VPS com Caddy e backup cifrado (#206)', () => {
     expect(backup).toContain('fail 3 "BACKUP_OFFSITE_CMD não definido');
     expect(backup).toContain('BACKUP_KEEP_DAYS:-30');
 
+    // O tar das fotos sai pelo stdout: sem log, ele não para em claro no json-file.
+    expect(backup).toContain('--entrypoint tar uploads-backup');
+    const reader = serviceBlock('uploads-backup');
+    expect(reader).toMatch(/^ {4}profiles: \[ops\]$/m);
+    expect(reader).toMatch(/^ {4}logging:\n {6}driver: none$/m);
+    expect(reader).toMatch(/^ {6}- uploads:\/app\/uploads:ro$/m);
+
     const restore = read('scripts/restore.sh');
     expect(restore).toContain('--confirmar) confirm=true');
     expect(restore).toContain('sha256sum --quiet -c SHA256SUMS');

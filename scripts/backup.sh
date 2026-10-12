@@ -53,8 +53,9 @@ mkdir "$partial"
 docker compose exec -T db pg_dump -U vitta -d vitta -Fc \
   | age -R "$recipients" -o "$partial/db.dump.age"
 
-# `run --no-deps` monta o volume mesmo com o app parado.
-docker compose run --rm --no-deps -T --entrypoint tar app -C /app/uploads -cf - . \
+# Serviço sem log (docker-compose.yml): o stdout do `run` não vai para o json-file.
+# Monta o volume mesmo com o app parado.
+docker compose run --rm --no-deps -T --entrypoint tar uploads-backup -C /app/uploads -cf - . \
   | age -R "$recipients" -o "$partial/uploads.tar.age"
 
 (cd "$partial" && sha256sum db.dump.age uploads.tar.age > SHA256SUMS)

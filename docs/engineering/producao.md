@@ -80,7 +80,8 @@ Provisionamento, uma vez:
    `curl -fsS https://clinica.exemplo.com.br/api/auth/providers`.
 6. Backup (§ 5), cron (§ 7), primeiro acesso (§ 8) e alertas (§ 9).
 
-**Atualizar a versão:** `git pull`, `scripts/backup.sh` (rollback é restaurar, § 4) e
+**Atualizar a versão:** `git pull`,
+`sudo sh -c '. /etc/vitta/backup.env && scripts/backup.sh'` (rollback é restaurar, § 4) e
 `docker compose up -d --build`. O app fica fora do ar só enquanto o container novo sobe e migra.
 
 ### Alternativa não adotada: Vercel + Supabase
@@ -96,10 +97,14 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
 
 - O cookie de sessão é `Secure` em produção: **login não funciona por HTTP** fora de `localhost`.
 - `APP_URL` precisa ser `https://…` (compõe os links de convite/reset e o redirect da agenda).
-- O Caddy grava o IP de quem conectou no fim do `x-forwarded-for`. O app lê o IP do cliente
-  contando `TRUSTED_PROXY_HOPS` saltos a partir do fim da cadeia (rate limit do login e da API):
-  - Caddy sozinho: `TRUSTED_PROXY_HOPS=1`.
-  - Cloudflare (proxy laranja) na frente do Caddy: `TRUSTED_PROXY_HOPS=2`.
+- O app lê o IP do cliente contando `TRUSTED_PROXY_HOPS` saltos a partir do fim do
+  `x-forwarded-for` (rate limit do login e da API). Sem `trusted_proxies`, o Caddy **substitui**
+  esse cabeçalho pelo IP de quem conectou, então a cadeia tem um item só:
+  - Caddy sozinho (o decidido): `TRUSTED_PROXY_HOPS=1`.
+  - Cloudflare (proxy laranja) na frente do Caddy: declare as faixas de IP da Cloudflare em
+    `trusted_proxies` no bloco global do `deploy/Caddyfile` (o Caddy passa a manter a cadeia e
+    acrescentar o IP da Cloudflare) e só então use `TRUSTED_PROXY_HOPS=2`. Com `2` e sem
+    `trusted_proxies`, todo mundo cai no mesmo balde `unknown`.
   - Valor maior que o número real de proxies deixa o cliente escolher o próprio IP; menor junta
     todo mundo no IP do proxy. O log `[config] Requisição sem x-forwarded-for` indica app exposto
     sem proxy.
@@ -129,7 +134,7 @@ Meta decidida: RPO 24 h, RTO 4 h.
 | O quê | Como |
 | --- | --- |
 | Banco | [`scripts/backup.sh`](../../scripts/backup.sh): `pg_dump -Fc` do serviço `db` → `db.dump.age` |
-| Fotos | o mesmo script: `tar` do volume `uploads` → `uploads.tar.age` |
+| Fotos | o mesmo script: `tar` do volume `uploads` pelo serviço `uploads-backup` do compose (sem log, para o tar não parar em claro no disco) → `uploads.tar.age` |
 | Cifra | `age` com chave pública no servidor; a **chave privada fica fora dele** (cofre + cópia offline). O dado em claro não toca o disco |
 | Destino | `$BACKUP_DIR/<data UTC>/` no servidor e cópia fora dele por `BACKUP_OFFSITE_CMD` (provedor em aberto, § 1) |
 | Retenção | 30 dias (`BACKUP_KEEP_DAYS`) no servidor; fora dele, espelhe a pasta (ex.: `rsync --delete`) ou use a retenção do provedor |
@@ -147,6 +152,8 @@ Sem a chave privada `age`, nenhum backup serve.
    `sh -c`, exportando `BACKUP_PATH` (pasta do backup novo) e `BACKUP_DIR` (todas). Exemplo com
    `rsync` por SSH, espelhando os 30 dias:
    `BACKUP_OFFSITE_CMD='rsync -a --delete -e "ssh -p 23" "$BACKUP_DIR"/ usuario@destino:vitta/'`.
+   Cuidado: com `--delete`, quem apagar os backups do servidor apaga também a cópia de fora no
+   próximo ciclo. Snapshots ou retenção imutável no destino protegem disso (pergunta aberta, § 1).
 3. Rode uma vez à mão e confira a pasta nova no destino:
 
    ```bash
@@ -171,7 +178,8 @@ BACKUP_AGE_IDENTITY_FILE=./vitta-backup.key scripts/restore.sh /caminho/20261011
 BACKUP_AGE_IDENTITY_FILE=./vitta-backup.key scripts/restore.sh /caminho/20261011T060000Z --confirmar
 ```
 
-Sem `--confirmar` o script só confere: `SHA256SUMS`, decifra e lista o dump e o tar das fotos.
+Sem `--confirmar` o script só confere: `SHA256SUMS`, decifra os dois arquivos (chave errada sai
+com `2`) e lista o dump e o tar das fotos.
 Com `--confirmar` ele para o app, recria o banco `vitta`, restaura o dump, troca o conteúdo do
 volume de fotos e sobe o app (que roda as migrações pendentes se o backup for de versão
 anterior). Saída `0` ok, `2` uso ou pré-condição (nada foi alterado), `1` falha no meio — rode de
@@ -207,7 +215,7 @@ tudo, restaura e confere.
 ## 6. Segredos e rotação
 
 Gere com `openssl rand -hex 32` (ou `-hex 24` onde indicado no `.env.example`). Na VPS, `.env`
-com permissão `600`, fora do repositório, e uma cópia no cofre de segredos do operador (o `.env`
+com permissão `600`, fora do controle de versão (o `.gitignore` o ignora), e uma cópia no cofre de segredos do operador (o `.env`
 **não** entra no backup).
 
 | Segredo | Rotação | Efeito |
