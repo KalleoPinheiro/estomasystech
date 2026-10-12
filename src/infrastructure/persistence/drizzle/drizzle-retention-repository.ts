@@ -15,12 +15,14 @@ import {
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import {
   ANONYMIZED_CONDITION_TITLE,
+  ANONYMIZED_INVOICE_DESCRIPTION,
   ANONYMIZED_MARKER,
   ANONYMIZED_PASSWORD_HASH,
   ANONYMIZED_PATIENT_NAME,
   anonymizedEmail,
 } from '@/domain/retention/retention-policy';
 import type {
+  PendingCalendarEvent,
   PendingPhoto,
   RetentionRepository,
 } from '@/domain/retention/retention-repository';
@@ -42,6 +44,7 @@ import {
   evolutionNotes,
   followUps,
   interventionRecords,
+  invoices,
   mfaRecoveryCodes,
   outcomeEvaluations,
   partnerShareConsents,
@@ -54,9 +57,15 @@ import {
 type Tx = Parameters<Parameters<AppDb['transaction']>[0]>[0];
 type Db = AppDb | Tx;
 
-/** Papéis cobertos pela regra de contas inativas (#294); parceiro fica de fora. */
-const ACCOUNT_ROLES = ['company_admin', 'atendente', 'profissional', 'patient'];
-const RESOLVED_WAITLIST = ['scheduled', 'removed'];
+/** Papéis cobertos pela regra de contas inativas (#294; parceiro desde a #311). */
+const ACCOUNT_ROLES = [
+  'company_admin',
+  'atendente',
+  'profissional',
+  'patient',
+  'partner',
+];
+const RESOLVED_WAITLIST = ['scheduled', 'removed', 'expired'];
 
 export const RETENTION_NEEDS_CLINIC_SCOPE =
   'Retenção do prontuário, da fila e das contas exige escopo de clínica';
@@ -128,6 +137,7 @@ export class DrizzleRetentionRepository implements RetentionRepository {
       await clearClinicalText(tx, clinicId, patientId);
       await clearCarePlanText(tx, clinicId, patientId);
       await clearSchedulingText(tx, clinicId, patientId);
+      await clearBillingText(tx, clinicId, patientId);
       const accounts = await tx
         .select({ id: userAccounts.id })
         .from(userAccounts)
@@ -179,6 +189,48 @@ export class DrizzleRetentionRepository implements RetentionRepository {
       );
   }
 
+  async findPendingCalendarEvents(
+    limit: number,
+  ): Promise<PendingCalendarEvent[]> {
+    const rows = await this.db
+      .select({
+        appointmentId: appointments.id,
+        googleEventId: appointments.googleEventId,
+      })
+      .from(appointments)
+      .innerJoin(patients, eq(patients.id, appointments.patientId))
+      .where(
+        and(
+          eq(appointments.clinicId, this.clinic()),
+          isNotNull(appointments.googleEventId),
+          isNotNull(patients.anonymizedAt),
+        ),
+      )
+      .limit(limit);
+    return rows.flatMap((row) =>
+      row.googleEventId
+        ? [
+            {
+              appointmentId: row.appointmentId,
+              googleEventId: row.googleEventId,
+            },
+          ]
+        : [],
+    );
+  }
+
+  async markCalendarEventRemoved(appointmentId: string): Promise<void> {
+    await this.db
+      .update(appointments)
+      .set({ googleEventId: null })
+      .where(
+        and(
+          eq(appointments.id, appointmentId),
+          eq(appointments.clinicId, this.clinic()),
+        ),
+      );
+  }
+
   async anonymizeAuditEvents(cutoff: Date): Promise<number> {
     const owner =
       this.clinicId === null
@@ -200,6 +252,26 @@ export class DrizzleRetentionRepository implements RetentionRepository {
         ),
       )
       .returning({ id: auditEvents.id });
+    return rows.length;
+  }
+
+  async expireWaitlistEntries(today: string): Promise<number> {
+    const rows = await this.db
+      .update(waitlistEntries)
+      .set({
+        status: 'expired',
+        // Fim do período: o instante em que o último dia acaba (UTC, como
+        // `resolved_at` das demais resoluções).
+        resolvedAt: sql`((${waitlistEntries.toDate} + 1)::timestamp at time zone 'UTC')`,
+      })
+      .where(
+        and(
+          eq(waitlistEntries.clinicId, this.clinic()),
+          eq(waitlistEntries.status, 'waiting'),
+          lt(waitlistEntries.toDate, today),
+        ),
+      )
+      .returning({ id: waitlistEntries.id });
     return rows.length;
   }
 
@@ -439,6 +511,19 @@ async function clearSchedulingText(
     .where(ofPatient(dataSubjectRequests));
 }
 
+/** Descrição e motivo do desconto das faturas; valores, datas e status ficam. */
+async function clearBillingText(tx: Tx, clinicId: string, patientId: string) {
+  await tx
+    .update(invoices)
+    .set({
+      description: ANONYMIZED_INVOICE_DESCRIPTION,
+      discountReason: null,
+    })
+    .where(
+      and(eq(invoices.clinicId, clinicId), eq(invoices.patientId, patientId)),
+    );
+}
+
 /** Tira e-mail e senha, derruba sessões e apaga tokens e segundo fator. */
 async function anonymizeAccounts(
   tx: Tx,
@@ -455,6 +540,9 @@ async function anonymizeAccounts(
       active: false,
       sessionVersion: sql`${userAccounts.sessionVersion} + 1`,
       deactivatedAt: sql`coalesce(${userAccounts.deactivatedAt}, ${now.toISOString()}::timestamptz)`,
+      // Conta de parceiro solta o cadastro: sem isso o convite novo do mesmo
+      // parceiro bateria no vínculo único (#311).
+      partnerId: null,
       anonymizedAt: now,
     })
     .where(

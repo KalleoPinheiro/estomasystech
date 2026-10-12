@@ -1,4 +1,4 @@
-import { ValidationError } from '../shared/errors';
+import { ConflictError, ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 import type { UserRole } from './user-role';
 
@@ -27,7 +27,12 @@ export interface UserAccountState extends UserAccountProps {
    * revogado. Só o repositório incrementa (`revokeSessions`, atômico).
    */
   sessionVersion?: number;
+  /** Anonimizada pela retenção (#294): não volta a ser ativada (#311). */
+  anonymizedAt?: Date | null;
 }
+
+export const ANONYMIZED_ACCOUNT_REACTIVATION =
+  'Conta anonimizada não pode ser reativada. Convide a pessoa novamente.';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -80,6 +85,9 @@ export class UserAccount {
   }
 
   reactivate(): UserAccount {
+    if (this.isAnonymized) {
+      throw new ConflictError(ANONYMIZED_ACCOUNT_REACTIVATION);
+    }
     return new UserAccount({ ...this.state, active: true });
   }
 
@@ -105,6 +113,10 @@ export class UserAccount {
 
   get partnerId(): string | null {
     return this.state.partnerId ?? null;
+  }
+
+  get isAnonymized(): boolean {
+    return (this.state.anonymizedAt ?? null) !== null;
   }
 
   get sessionVersion(): number {

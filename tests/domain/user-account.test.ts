@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { UserAccount } from '@/domain/auth/user-account';
-import { ValidationError } from '@/domain/shared/errors';
+import {
+  ANONYMIZED_ACCOUNT_REACTIVATION,
+  UserAccount,
+} from '@/domain/auth/user-account';
+import { ConflictError, ValidationError } from '@/domain/shared/errors';
 
 const validProps = {
   email: 'equipe@vittaflow.com',
@@ -101,6 +104,29 @@ describe('Feature: Conta de acesso da equipe (UserAccount)', () => {
       const account = UserAccount.create(validProps).deactivate();
 
       expect(account.reactivate().isActive).toBe(true);
+    });
+
+    it('Dada conta anonimizada, Quando reativar, Então recusa com erro claro (RES-07)', () => {
+      const account = UserAccount.restore({
+        id: 'user-anon',
+        email: 'anonimizado+user-anon@anonimizado.invalid',
+        passwordHash: 'scrypt$0$anonimizado$anonimizado',
+        role: 'profissional',
+        clinicId: 'legacy-clinic',
+        active: false,
+        createdAt: new Date('2020-01-01T00:00:00Z'),
+        anonymizedAt: new Date('2026-10-12T00:00:00Z'),
+      });
+
+      expect(account.isAnonymized).toBe(true);
+      expect(() => account.reactivate()).toThrow(
+        ANONYMIZED_ACCOUNT_REACTIVATION,
+      );
+      expect(() => account.reactivate()).toThrow(ConflictError);
+    });
+
+    it('Dada conta comum, Então não consta como anonimizada', () => {
+      expect(UserAccount.create(validProps).isAnonymized).toBe(false);
     });
   });
 

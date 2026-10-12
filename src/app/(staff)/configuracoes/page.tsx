@@ -616,6 +616,11 @@ function AccountsTable({
   );
 }
 
+function accountStatusLabel(account: UserAccountDto): string {
+  if (account.anonymized) return 'Anonimizada';
+  return account.active ? 'Ativa' : 'Desativada';
+}
+
 function AccountRow({
   account,
   professionalName,
@@ -643,7 +648,7 @@ function AccountRow({
       <TableCell label="Situação" className="py-2 pr-3">
         <StatusBadge
           status={account.active ? 'confirmed' : 'cancelled'}
-          label={account.active ? 'Ativa' : 'Desativada'}
+          label={accountStatusLabel(account)}
         />
       </TableCell>
       <TableCell label="Ações" className="py-2 text-right">
@@ -691,6 +696,10 @@ function AccountRow({
             variant="danger"
             onConfirm={onToggleActive}
           />
+        ) : account.anonymized ? (
+          <span className="text-ink-3 text-xs">
+            Anonimizada: para voltar, convide a pessoa novamente.
+          </span>
         ) : (
           <Button
             type="button"

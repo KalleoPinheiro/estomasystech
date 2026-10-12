@@ -10,6 +10,12 @@ export interface CalendarGateway {
   createEvent(input: CalendarEventInput): Promise<string | null>;
   updateEvent(eventId: string, input: CalendarEventInput): Promise<void>;
   deleteEvent(eventId: string): Promise<void>;
+  /**
+   * Apaga o evento e **propaga a falha** (diferente de `deleteEvent`, que a
+   * engole): quem precisa de certeza de que o evento sumiu — a retenção (#311)
+   * — só limpa o id depois. Evento já inexistente não é falha.
+   */
+  purgeEvent(eventId: string): Promise<void>;
 }
 
 export class NullCalendarGateway implements CalendarGateway {
@@ -20,6 +26,8 @@ export class NullCalendarGateway implements CalendarGateway {
   async updateEvent(): Promise<void> {}
 
   async deleteEvent(): Promise<void> {}
+
+  async purgeEvent(): Promise<void> {}
 }
 
 /**
@@ -50,6 +58,10 @@ export class LazyCalendarGateway implements CalendarGateway {
 
   async deleteEvent(eventId: string): Promise<void> {
     return (await this.resolve()).deleteEvent(eventId);
+  }
+
+  async purgeEvent(eventId: string): Promise<void> {
+    return (await this.resolve()).purgeEvent(eventId);
   }
 }
 

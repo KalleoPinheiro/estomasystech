@@ -4,7 +4,13 @@ import {
 } from '../shared/errors';
 import { newId } from '../shared/id';
 
-export const WAITLIST_STATUSES = ['waiting', 'scheduled', 'removed'] as const;
+/** `expired`: o período desejado terminou sem vaga (job de retenção, #311). */
+export const WAITLIST_STATUSES = [
+  'waiting',
+  'scheduled',
+  'removed',
+  'expired',
+] as const;
 export type WaitlistStatus = (typeof WAITLIST_STATUSES)[number];
 
 /** Quem colocou o paciente na fila: a recepção ou o próprio paciente (portal). */

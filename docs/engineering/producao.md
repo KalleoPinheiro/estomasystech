@@ -14,7 +14,7 @@ Hetzner + `docker compose`** (app + Postgres), **uma réplica**, Caddy na frente
 fotos em volume local. Desenvolvimento local fica em [`onboarding.md`](onboarding.md); erros
 conhecidos, em [`troubleshooting.md`](troubleshooting.md).
 
-## 1. Decisões e perguntas abertas
+## 1. Decisões
 
 | Decidido (#206) | Valor |
 | --- | --- |
@@ -24,24 +24,26 @@ conhecidos, em [`troubleshooting.md`](troubleshooting.md).
 | Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)) |
 | Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, GlitchTip self-hosted no compose ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
 
-**Pendência jurídica:** o servidor fica fora do Brasil, então guardar dado de saúde nele é
-transferência internacional (LGPD art. 33). A base legal está em aberto na
+**Pendência jurídica:** o servidor fica fora do Brasil (Alemanha, UE), então guardar dado de
+saúde nele é transferência internacional (LGPD art. 33). A base legal está em aberto na
 [#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216) — resolva antes de cadastrar
-paciente real. O mesmo vale para o destino do backup fora do servidor.
+paciente real. A região escolhida vale também para essa base legal, e o mesmo vale para o destino
+do backup fora do servidor.
 
-Nada abaixo foi decidido; o runbook indica onde cada resposta entra.
+Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313),
+`.specs/STATE.md` AD-033):
 
-| Pergunta aberta | Onde impacta |
-| --- | --- |
-| Provedor e local da cópia fora do servidor (ex.: Hetzner Storage Box em outra localização, ou um bucket S3-compatível). Se o provedor oferece snapshots ou retenção imutável, ligar? | § 5 — `BACKUP_OFFSITE_CMD` |
-| Localização do servidor na Hetzner (Alemanha, Finlândia ou EUA) — conversa com a #216 | § 2 |
-| Cifra do disco do servidor. ADR-006 conta com ela para as fotos em volume local; LUKS exige desbloqueio a cada boot (manual ou com chave remota), o que pesa no RTO | § 2 |
-| Horário do envio diário dos lembretes (ponto de partida: 08:00 de São Paulo) | § 7 |
-| Relay de e-mail do host para o `MAILTO` do cron (a Hetzner bloqueia a porta 25 de saída em contas novas). Os alertas do app saem pelo Resend e não dependem dele | § 9 |
-| Limiares dos alertas: quantos 5xx e quantas falhas de entrega em 15 min (ponto de partida: 10 e 3) e o intervalo de 60 min entre avisos iguais | § 9 |
-| Retenção dos eventos no GlitchTip (ponto de partida: 30 dias, como o backup) | § 9 |
-| Verificador de uptime externo: qual serviço (fica fora do servidor e vê o país do servidor) | § 9 |
-| Captura de erro do navegador: exige DSN público, liberar o GlitchTip na CSP e tratar o texto da tela que o SDK coleta | § 9 |
+| Tema | Decisão | Onde entra |
+| --- | --- | --- |
+| Cópia fora do servidor | **Hetzner Storage Box** em outra localização, com snapshot automático diário e os 14 mais recentes guardados. O `rsync --delete` não pode apagar os snapshots | § 5 — `BACKUP_OFFSITE_CMD` |
+| Região | **Alemanha** (UE); vale também para a base legal da transferência internacional (#216) | § 2 |
+| Cifra do disco | **Sem LUKS**: só os backups cifrados (`age`) e os campos cifrados ([ADR-006](../adr/006-chave-de-dados-clinicos.md)). As fotos ficam em claro no disco da VPS e o servidor volta sozinho após um reboot ([ADR-015](../adr/015-servidor-sem-cifra-de-disco.md)) | § 2 |
+| E-mail do host (alertas do cron) | **`msmtp` pela porta 587 com o SMTP do Resend** (a porta 25 é bloqueada) | § 9.3 |
+| Lembretes | **08:00 de São Paulo** (mantido) | § 7 |
+| Uptime externo | **UptimeRobot**, checando `/api/health/ready` a cada 5 min, com alerta por e-mail | § 9.3 |
+| GlitchTip | acesso **só por túnel SSH**; retenção de **30 dias** | § 9.5 |
+| Limiares dos alertas | `10` (5xx) e `3` (falha de envio) em 15 min, mantidos; "falha de envio" = só erro do provedor | § 9.2 |
+| Erro do navegador | **não capturar por ora** | § 9.5 |
 
 ## 2. Topologia e provisionamento
 
@@ -50,13 +52,15 @@ Nada abaixo foi decidido; o runbook indica onde cada resposta entra.
 | Servidor | Ubuntu 24.04 LTS. **4 GB de RAM** no mínimo: o build do Next usa até 4 GB de heap (`npm run build`), e cada login é um scrypt de ~128 MiB (#208), até 4 em paralelo |
 | App + banco | `docker compose up -d --build`; o Postgres só no loopback (`127.0.0.1:5432`) |
 | TLS | serviço `caddy` de [`docker-compose.prod.yml`](../../docker-compose.prod.yml) + [`deploy/Caddyfile`](../../deploy/Caddyfile): certificado Let's Encrypt automático; o app deixa de ser publicado no host |
+| Região | Hetzner, Alemanha (UE) |
 | Fotos | volume `uploads` (uma réplica). Mais de uma réplica exige bucket (`PHOTO_STORAGE=s3`) |
+| Disco | **sem LUKS** ([ADR-015](../adr/015-servidor-sem-cifra-de-disco.md)): o servidor volta sozinho após um reboot; as fotos ficam em claro no volume, e o que protege são os backups `age`, os campos cifrados (ADR-006), o acesso SSH só por chave e o Cloud Firewall |
 | Cron | `/etc/cron.d/vitta` do host (§ 7) |
 | Fuso | a imagem define `TZ=America/Sao_Paulo`; o host pode ficar em UTC (as linhas do cron estão em UTC) |
 
 Provisionamento, uma vez:
 
-1. Crie o servidor com chave SSH (sem senha) e um **Cloud Firewall** da Hetzner liberando só
+1. Crie o servidor na região da Alemanha, com chave SSH (sem senha) e um **Cloud Firewall** da Hetzner liberando só
    22 (de preferência restrito ao IP do operador), 80 e 443. Use o firewall da Hetzner, não o
    `ufw`: porta publicada pelo Docker passa por fora do `ufw`.
 2. No host: usuário não-root com `sudo`, `PasswordAuthentication no` no SSH,
@@ -145,9 +149,15 @@ Meta decidida: RPO 24 h, RTO 4 h.
 | Banco | [`scripts/backup.sh`](../../scripts/backup.sh): `pg_dump -Fc` do serviço `db` → `db.dump.age` |
 | Fotos | o mesmo script: `tar` do volume `uploads` pelo serviço `uploads-backup` do compose (sem log, para o tar não parar em claro no disco) → `uploads.tar.age` |
 | Cifra | `age` com chave pública no servidor; a **chave privada fica fora dele** (cofre + cópia offline). O dado em claro não toca o disco |
-| Destino | `$BACKUP_DIR/<data UTC>/` no servidor e cópia fora dele por `BACKUP_OFFSITE_CMD` (provedor em aberto, § 1) |
-| Retenção | 30 dias (`BACKUP_KEEP_DAYS`) no servidor; fora dele, espelhe a pasta (ex.: `rsync --delete`) ou use a retenção do provedor |
+| Destino | `$BACKUP_DIR/<data UTC>/` no servidor e cópia fora dele, numa Hetzner Storage Box de outra localização, por `BACKUP_OFFSITE_CMD` |
+| Retenção | 30 dias (`BACKUP_KEEP_DAYS`) no servidor; fora dele, espelhe a pasta com `rsync --delete`; os snapshots da Storage Box guardam o que o espelho apagar |
 | Chaves | `DATA_ENCRYPTION_KEY` (e as anteriores) e a chave privada `age` no cofre de segredos, **nunca** dentro do backup |
+
+**Retenção e backup (#311, [ADR-013](../adr/013-retencao-por-anonimizacao.md)):** a anonimização
+não reescreve cópias antigas. Com a guarda de 30 dias, o dado identificável de um paciente
+anonimizado some dos backups 30 dias depois. Ao restaurar um backup, rode
+`POST /api/retention/run` em seguida: o job é idempotente e refaz a anonimização do que já tinha
+vencido.
 
 Sem `DATA_ENCRYPTION_KEY` o backup do banco não serve: os textos clínicos estão cifrados com ela.
 Sem a chave privada `age`, nenhum backup serve.
@@ -157,12 +167,24 @@ Sem a chave privada `age`, nenhum backup serve.
 1. Na máquina do operador (não no servidor): `age-keygen -o vitta-backup.key`. Guarde o arquivo
    no cofre e numa cópia offline; a linha `# public key: age1…` vai para o servidor em
    `/etc/vitta/backup.pub` (`chmod 600`).
-2. Escolha o destino fora do servidor (§ 1) e escreva o comando de cópia. O script o roda com
-   `sh -c`, exportando `BACKUP_PATH` (pasta do backup novo) e `BACKUP_DIR` (todas). Exemplo com
-   `rsync` por SSH, espelhando os 30 dias:
-   `BACKUP_OFFSITE_CMD='rsync -a --delete -e "ssh -p 23" "$BACKUP_DIR"/ usuario@destino:vitta/'`.
-   Cuidado: com `--delete`, quem apagar os backups do servidor apaga também a cópia de fora no
-   próximo ciclo. Snapshots ou retenção imutável no destino protegem disso (pergunta aberta, § 1).
+2. Prepare a Storage Box (uma vez, no painel da Hetzner e na máquina do operador): crie a caixa
+   **em outra localização** que não a do servidor; habilite o acesso por SSH; instale a chave
+   pública SSH do servidor na caixa (`~/.ssh/authorized_keys` dela); ligue os **snapshots
+   automáticos** da caixa: **1 por dia, guardando os 14 mais recentes** (decisão de 2026-10-12). Os
+   snapshots são incrementais, ocupam a cota da própria caixa e são geridos só pelo painel ou pela API
+   da Hetzner: a chave SSH do servidor não consegue apagá-los. Assim, 14 dias é a janela para
+   perceber um incidente que tenha apagado os backups.
+   O script roda o comando de cópia com `sh -c`, exportando `BACKUP_PATH` (pasta do backup novo) e
+   `BACKUP_DIR` (todas). Para a Storage Box (SSH na porta 23), em `/etc/vitta/backup.env` (§ 7):
+
+   ```bash
+   export BACKUP_OFFSITE_CMD='rsync -a --delete -e "ssh -p 23" "$BACKUP_DIR"/ u123456@u123456.your-storagebox.de:vitta/'
+   ```
+
+   (`u123456` é o usuário da sua caixa.) O `--delete` espelha a pasta `vitta/` dentro da caixa:
+   quem apagar os backups do servidor apaga também a cópia espelhada no próximo ciclo. O que
+   protege disso são os **snapshots da caixa**; o comando acima mexe só na pasta espelhada, e
+   nenhum comando do runbook apaga snapshots.
 3. Rode uma vez à mão e confira a pasta nova no destino:
 
    ```bash
@@ -254,7 +276,7 @@ linha do crontab (`/etc/vitta/cron.headers`, `chmod 600`, com a linha
 MAILTO=operador@exemplo.com.br
 # Backup diário às 02:00 de São Paulo. Silencioso quando dá certo; a falha vai por e-mail.
 0 5 * * * root . /etc/vitta/backup.env && /opt/vitta-flow/scripts/backup.sh >> /var/log/vitta-backup.log 2>&1 || echo "backup falhou: /var/log/vitta-backup.log"
-# Lembretes às 08:00 de São Paulo.
+# Lembretes às 08:00 de São Paulo (decidido em 2026-10-12, #313).
 0 11 * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/reminders/run
 # Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1). O flock espera o backup
 # terminar: apagar uma foto enquanto o tar lê o volume faria o backup falhar.
@@ -267,7 +289,7 @@ MAILTO=operador@exemplo.com.br
 `/etc/vitta/backup.env` (`chmod 600`) exporta a configuração do § 5:
 `export BACKUP_AGE_RECIPIENTS_FILE=/etc/vitta/backup.pub` e `export BACKUP_OFFSITE_CMD='…'`.
 O `cron` manda por e-mail ao `MAILTO` tudo que o comando escrever; as quatro linhas só escrevem
-quando falham. Precisa de um relay de e-mail no host (§ 9).
+quando falham. Precisa de um relay de e-mail no host (`msmtp`, § 9.3).
 
 - Sem `CRON_SECRET` as rotas de lembretes e de retenção respondem 503 (job desligado). Falha do job: resposta
   não-2xx (o `curl -f` escreve o erro) e `docker compose logs app`.
@@ -358,14 +380,49 @@ não está pronta". `docker compose start db` em seguida.
 
 | Sinal | Como |
 | --- | --- |
-| App fora do ar | o `curl -f` do cron de alertas falha e o `MAILTO` avisa; com o servidor inteiro fora, só um verificador externo de uptime em `https://<domínio>/api/health/ready` avisa (serviço em aberto, § 1) |
+| App fora do ar | o `curl -f` do cron de alertas falha e o `MAILTO` avisa; com o servidor inteiro fora, só o verificador externo avisa (UptimeRobot, abaixo) |
 | Backup, lembretes ou retenção falharam | `MAILTO` do cron (§ 7) |
 | Disco | linha no `/etc/cron.d/vitta`: `0 * * * * root df --output=pcent / /var/lib/docker \| awk 'NR>1 && $1+0 > 85 {print "disco em " $1}'` |
 | Backup que não rodou | o `MAILTO` não pega cron parado; o verificador de "último backup" segue fora desta entrega |
 
-O `MAILTO` precisa de relay no host: a Hetzner bloqueia a porta 25 de saída em contas novas, então
-use a 587 (ex.: `msmtp-mta` com o SMTP do provedor de e-mail da plataforma). Escolha registrada
-como pergunta aberta (§ 1).
+**E-mail do host (`msmtp`).** O `MAILTO` do cron precisa de um relay no host: a Hetzner bloqueia a
+porta 25 de saída, então o decidido é o `msmtp` na **porta 587** com o SMTP do Resend (o mesmo
+provedor do canal da plataforma). Uma vez, no servidor:
+
+1. `sudo apt install msmtp-mta` (entrega o `sendmail` que o `cron` usa).
+2. `/etc/msmtprc` (`chmod 600`, dono `root`):
+
+   ```text
+   defaults
+   auth           on
+   tls            on
+   tls_starttls   on
+   tls_trust_file /etc/ssl/certs/ca-certificates.crt
+   logfile        /var/log/msmtp.log
+
+   account        resend
+   host           smtp.resend.com
+   port           587
+   user           resend
+   password       <RESEND_API_KEY>
+   from           nao-responda@exemplo.com.br
+
+   account default : resend
+   ```
+
+   `from` é um endereço do domínio verificado no Resend (o mesmo do `EMAIL_FROM`); a senha é a
+   `RESEND_API_KEY`, que passa a morar também nesse arquivo: troque nos dois ao rotacionar (§ 6).
+3. Teste: `printf 'Subject: teste msmtp\n\nok\n' | sendmail operador@exemplo.com.br`. Se não
+   chegar, veja `/var/log/msmtp.log`.
+
+**Uptime externo (UptimeRobot).** Fica fora do servidor, então avisa também quando a VPS inteira
+cai. Cadastro, uma vez:
+
+1. Crie o monitor do tipo **HTTP(s)** com a URL `https://<domínio>/api/health/ready`.
+2. Intervalo de **5 min**.
+3. Contato de alerta: o **e-mail** do operador.
+4. Confira derrubando o banco (`docker compose stop db`; `/api/health/ready` passa a responder
+   `503`) e religue depois (`docker compose start db`).
 
 ### 9.4 Logs
 
@@ -399,9 +456,9 @@ Opcional: sem `GLITCHTIP_DSN` o app funciona igual. Configurar, uma vez:
 5. `docker compose up -d app`. Confira com um erro de verdade (ex. a fumaça do § 9.2).
 
 O que sai do app para o GlitchTip e o que nunca sai: [`integrations/glitchtip.md`](integrations/glitchtip.md).
-Os eventos ficam `GLITCHTIP_MAX_EVENT_LIFE_DAYS` dias (padrão 30). O banco do GlitchTip não
+A interface só abre por túnel SSH (passo 3), sem porta pública. Retenção decidida: **30 dias** (`GLITCHTIP_MAX_EVENT_LIFE_DAYS`, o padrão do compose). O banco do GlitchTip não
 entra no backup (§ 5): não guarda dado de paciente e perdê-lo só perde o histórico de erros.
-RAM: o GlitchTip `all_in_one` usa cerca de 512 MB a mais; com 4 GB, acompanhe no primeiro
+O erro do navegador **não é capturado por ora**: só o servidor envia eventos. RAM: o GlitchTip `all_in_one` usa cerca de 512 MB a mais; com 4 GB, acompanhe no primeiro
 build com ele no ar.
 
 ## 10. Recuperação de emergência do Super Admin

@@ -846,3 +846,19 @@ Novo relatório de arquitetura rodado em 2026-09-06 (hot spots: `container.ts`, 
 - **Next step**: nenhum agendável sem o usuário — #151 é `ready-for-human` (decisão de valer a pena fica com humano). Próximo trabalho depende de nova demanda ou de decidir #151/#146.
 - **Blockers**: nenhum.
 - **Branches**: `refactor/configuracoes-savable-form-seam` e `refactor/lib-dto-split` (ambas deletadas local e remota após squash-merge). PRs #152 e #153, squash-merged em `main`. Issues #150 e #149 fechadas via `Closes #`.
+
+## Issue #313 — runbook com as decisões de infra e ADR-015 (2026-10-12) — ENCERRADO (#316)
+
+Decisões de @KalleoPinheiro de 2026-10-12 (AD-033) registradas na documentação:
+- **ADR-015** (servidor sem LUKS): as fotos ficam em claro no disco da VPS, com risco aceito. O ADR-006 passa a apontar para ele.
+- **Runbook (`producao.md`)** sem perguntas abertas de infraestrutura: Hetzner Alemanha, Storage Box com `BACKUP_OFFSITE_CMD`, `msmtp` na porta 587 com o Resend, UptimeRobot, GlitchTip por túnel SSH com 30 dias de retenção.
+- **`alertas.md` e `glitchtip.md`** coerentes com essas decisões.
+
+**Detalhes**: os 4 jobs de CI ficaram verdes e o Verifier deu PASS. Implementado pela sessão filha com o modelo Sonnet 5.5. As perguntas abertas da PR foram respondidas pelo dono no mesmo dia:
+1. snapshots da Storage Box: 1 por dia, guardando os 14 mais recentes (registrado no runbook § 5);
+2. os 60 min entre avisos iguais ficam;
+3. a redação do ADR-015 está confirmada.
+
+- **Next step**: nenhum.
+- **Blockers**: nenhum. A base legal da transferência para a UE segue na #216.
+- **Branch**: `docs/313-runbook-adr-015`. PR #316, squash-merged em `main` (`c8aa07b`). A issue #313 foi fechada manualmente, porque a PR não tinha `Closes`.
