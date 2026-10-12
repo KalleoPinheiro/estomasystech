@@ -35,7 +35,7 @@ Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/vitta-
 
 | Tema | Decisão | Onde entra |
 | --- | --- | --- |
-| Cópia fora do servidor | **Hetzner Storage Box** em outra localização, com snapshots no destino. O `rsync --delete` não pode apagar os snapshots | § 5 — `BACKUP_OFFSITE_CMD` |
+| Cópia fora do servidor | **Hetzner Storage Box** em outra localização, com snapshot automático diário e os 14 mais recentes guardados. O `rsync --delete` não pode apagar os snapshots | § 5 — `BACKUP_OFFSITE_CMD` |
 | Região | **Alemanha** (UE); vale também para a base legal da transferência internacional (#216) | § 2 |
 | Cifra do disco | **Sem LUKS**: só os backups cifrados (`age`) e os campos cifrados ([ADR-006](../adr/006-chave-de-dados-clinicos.md)). As fotos ficam em claro no disco da VPS e o servidor volta sozinho após um reboot ([ADR-015](../adr/015-servidor-sem-cifra-de-disco.md)) | § 2 |
 | E-mail do host (alertas do cron) | **`msmtp` pela porta 587 com o SMTP do Resend** (a porta 25 é bloqueada) | § 9.3 |
@@ -163,7 +163,11 @@ Sem a chave privada `age`, nenhum backup serve.
    `/etc/vitta/backup.pub` (`chmod 600`).
 2. Prepare a Storage Box (uma vez, no painel da Hetzner e na máquina do operador): crie a caixa
    **em outra localização** que não a do servidor; habilite o acesso por SSH; instale a chave
-   pública SSH do servidor na caixa (`~/.ssh/authorized_keys` dela); ligue os **snapshots** da caixa.
+   pública SSH do servidor na caixa (`~/.ssh/authorized_keys` dela); ligue os **snapshots
+   automáticos** da caixa: **1 por dia, guardando os 14 mais recentes** (decisão de 2026-10-12). Os
+   snapshots são incrementais, ocupam a cota da própria caixa e são geridos só pelo painel ou pela API
+   da Hetzner: a chave SSH do servidor não consegue apagá-los. Assim, 14 dias é a janela para
+   perceber um incidente que tenha apagado os backups.
    O script roda o comando de cópia com `sh -c`, exportando `BACKUP_PATH` (pasta do backup novo) e
    `BACKUP_DIR` (todas). Para a Storage Box (SSH na porta 23), em `/etc/vitta/backup.env` (§ 7):
 
