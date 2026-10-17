@@ -245,7 +245,10 @@ const TABLE_SET: Member[] = [
 
 async function openTable(page: Page, seeded: Seeded) {
   await page.goto(seeded.url);
-  await page.waitForLoadState("networkidle").catch(() => undefined);
+  // `networkidle` é só um atalho: o build de produção faz prefetch dos links visíveis
+  // e a rede pode nunca ficar ociosa (#308); sem teto próprio ele consumiria o
+  // timeout do teste. A prontidão de verdade é a asserção seguinte.
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
   if (seeded.prepare) await seeded.prepare(page);
   const table = page.locator("table", {
     has: page.locator("th", { hasText: new RegExp(`^\\s*${seeded.header}\\s*$`) }),

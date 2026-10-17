@@ -28,7 +28,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run lint` / `npm run format` | antes de commitar | Biome é a única ferramenta de lint+format |
 | `npm run test:coverage` | gate de CI | **mínimo 90%** |
 | `npm run test:changed [-- <ref>]` | loop local (ex.: `-- origin/main`) | não substitui `test:coverage`; o CI roda a suíte completa |
-| `npm run test:e2e` | fluxos de UI | Playwright |
+| `npm run test:e2e` | fluxos de UI | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados |
 | `npm run check:sv` | toca JSX | adoção de `@still-void/ui` |
 | `npm run check:docs` | toca `.md` | links e frontmatter |
 | `npm run db:migrate` | schema mudou | drizzle-kit |

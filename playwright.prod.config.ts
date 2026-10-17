@@ -5,14 +5,17 @@ import {
   E2E_BOOTSTRAP_TOKEN,
   E2E_DATA_ENCRYPTION_KEY,
   MAIN_BASE_URL,
+  ROLE_ACCOUNT_SPECS,
 } from "./e2e/support/constants";
 
 /**
- * Subconjunto do E2E contra o build de produção (issue #203): `next start`
- * sobre um `npm run build` já feito, com NODE_ENV=production — CSP estrita
- * (sem 'unsafe-eval'/'unsafe-inline'), cookie `Secure`, e-mail obrigatório.
- * Cobre login, agenda, prontuário e portal, mais o spec que falha em qualquer
- * violação de CSP. O modo aberto fica de fora: é só de desenvolvimento.
+ * Suíte E2E contra o build de produção (issues #203 e #308): `next start` sobre
+ * um `npm run build` já feito, com NODE_ENV=production — CSP estrita (sem
+ * 'unsafe-eval'/'unsafe-inline'), cookie `Secure`, e-mail obrigatório. É o gate
+ * principal do E2E: sem compilação sob demanda nem Fast Refresh, é determinística
+ * e igual ao artefato que vai para produção. Ficam de fora o modo aberto (só de
+ * desenvolvimento) e `ROLE_ACCOUNT_SPECS`, que precisam do convite no log do
+ * servidor em desenvolvimento e rodam em `playwright.config.ts`.
  *
  * Uso: `npm run build && npx playwright test -c playwright.prod.config.ts`.
  */
@@ -20,14 +23,8 @@ export default defineConfig({
   ...base,
   // Sem as contas por papel (#204): o convite delas só sai no log sem e-mail.
   globalSetup: "./e2e/global-setup.prod.ts",
-  testMatch: [
-    "csp-producao.spec.ts",
-    "auth.spec.ts",
-    "agenda.spec.ts",
-    "pacientes.spec.ts",
-    "portal-paciente.spec.ts",
-    "plataforma.spec.ts",
-  ],
+  testMatch: /.*\.spec\.ts/,
+  testIgnore: [...ROLE_ACCOUNT_SPECS],
   grepInvert: /modo aberto/,
   // Build de produção não compila rota sob demanda: sem retry para mascarar.
   retries: 0,

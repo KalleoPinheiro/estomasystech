@@ -8,6 +8,7 @@ import {
   MAIN_SERVER_LOG_PATH,
   OPEN_MODE_BASE_URL,
   OPEN_MODE_PORT,
+  ROLE_ACCOUNT_SPECS,
 } from "./e2e/support/constants";
 
 /**
@@ -29,6 +30,12 @@ import {
  */
 export default defineConfig({
   testDir: "./e2e",
+  // Contra o `next dev` rodam só o que exige o servidor em desenvolvimento: as
+  // contas por papel (convite no log, #204) e o modo aberto de `auth.spec.ts`. O
+  // dev compila rota sob demanda e refaz o Fast Refresh no meio do teste, o que
+  // deixava a suíte inteira intermitente (#308); o resto roda em
+  // `playwright.prod.config.ts`, contra `next start`.
+  testMatch: [...ROLE_ACCOUNT_SPECS, "auth.spec.ts"],
   // Banco PGlite em memória é compartilhado por todo o processo do servidor
   // principal — rodar specs em paralelo geraria corrida em agenda/estoque/etc.
   fullyParallel: false,

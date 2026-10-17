@@ -19,6 +19,7 @@ import {
 import { readServerLog, waitForInviteUrl } from "./support/server-log";
 import { mintSessionToken } from "./support/session-token";
 import { slotFromSeed } from "./support/slots";
+import { warmUpRoutes } from "./support/warm-up";
 import { saveTotpState, SUPER_ADMIN_TOTP_PATH, totpCode, totpStatePath, totpStep } from "./support/totp";
 
 /**
@@ -459,6 +460,15 @@ export async function runGlobalSetup({ roleAccounts }: GlobalSetupOptions): Prom
   await mkdir(path.dirname(SEED_DATA_PATH), { recursive: true });
   await writeFile(SEED_DATA_PATH, JSON.stringify({ ...seed, ...roleSeed }, null, 2));
   if (!roleAccounts) return;
+  // Só o `next dev` compila rota sob demanda; o build de produção (`roleAccounts: false`) não precisa.
+  // Cada aba da ficha busca a própria API, que também compila na primeira chamada.
+  const tabs = ["anamnese", "condicoes", "evolucoes", "planoCuidados", "pacotes"];
+  await warmUpRoutes([
+    "/pacientes",
+    ...tabs.map((tab) => `/pacientes/${roleSeed.linkedPatientId}?aba=${tab}`),
+    "/agenda",
+    "/configuracoes",
+  ]);
   for (const role of E2E_STAFF_ROLES) {
     await provisionRoleAccount(cookie, role, seed.professionalId);
   }

@@ -63,5 +63,5 @@ last_reviewed: 2026-09-26
 
 - Conventional Commits (`feat(scope): …`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`).
 - Hooks: `lint-staged` roda `biome check --write` nos arquivos alterados; `.claude/hooks/` bloqueia comandos git destrutivos.
-- Gates do CI (`.github/workflows/ci.yml`): typecheck, lint, `check:sv`, `check:docs`, `test:coverage`; job separado de E2E.
+- Gates do CI (`.github/workflows/ci.yml`): typecheck, lint, `check:sv`, `check:docs`, `test:coverage`; jobs separados de E2E: o principal contra o build de produção (`build-e2e-prod`) e o de papéis contra `next dev` ([ADR-021](../adr/021-e2e-contra-build-de-producao.md)).
 - Mudou comportamento de domínio → atualize `docs/domains/<slug>/` no mesmo PR ([governance.md](../governance.md)).

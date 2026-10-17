@@ -49,7 +49,7 @@ describe('CI de produção (#203)', () => {
     expect(smoke).toContain('--force-recreate');
   });
 
-  it('C45 CI roda E2E de produção com checagem de CSP', () => {
+  it('C45 CI roda o E2E principal contra o build de produção, com checagem de CSP', () => {
     const block = job('build-e2e-prod');
     const config = readFileSync(
       path.join(root, 'playwright.prod.config.ts'),
@@ -63,16 +63,33 @@ describe('CI de produção (#203)', () => {
       block.indexOf('playwright.prod.config.ts'),
     );
     expect(config).toContain('command: "npm run start"');
+    // #308: a suíte principal roda contra o build; o `next dev` fica só com os
+    // specs que precisam do convite no log (contas por papel) e o modo aberto.
+    expect(config).toContain('testIgnore: [...ROLE_ACCOUNT_SPECS]');
+    expect(config).not.toMatch(/testMatch: \[/);
+    expect(config).toContain('grepInvert: /modo aberto/');
+  });
+});
+
+describe('E2E: next dev só para o que depende dele (#308)', () => {
+  it('C46 o job e2e roda os specs de papéis e modo aberto contra o next dev', () => {
+    const block = job('e2e');
+    const dev = readFileSync(path.join(root, 'playwright.config.ts'), 'utf8');
+    const constants = readFileSync(
+      path.join(root, 'e2e/support/constants.ts'),
+      'utf8',
+    );
+
+    expect(block).toMatch(/run: npm run test:e2e:dev$/m);
+    expect(dev).toContain('testMatch: [...ROLE_ACCOUNT_SPECS, "auth.spec.ts"]');
     for (const spec of [
-      'csp-producao.spec.ts',
-      'auth.spec.ts',
-      'agenda.spec.ts',
-      'pacientes.spec.ts',
-      'portal-paciente.spec.ts',
-      // B3 (ADR-009): a sessão real do super_admin também contra o build.
-      'plataforma.spec.ts',
+      'papeis-atendente.spec.ts',
+      'papeis-profissional.spec.ts',
+      'papeis-smoke.spec.ts',
+      'sessao-expirada.spec.ts',
+      'feriados-ausencias-profissional.spec.ts',
     ]) {
-      expect(config).toContain(`"${spec}"`);
+      expect(constants).toContain(`"${spec}"`);
     }
   });
 });

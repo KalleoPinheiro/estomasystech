@@ -51,7 +51,7 @@ jobs:
         run: npm run test:coverage
 
   e2e:
-    name: E2E (Playwright)
+    name: E2E (Playwright, papéis no next dev)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -69,8 +69,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Test (e2e)
-        run: npm run test:e2e
+      - name: Test (e2e: papéis e modo aberto, contra o next dev)
+        run: npm run test:e2e:dev
 
       - name: Upload Playwright report
         if: failure()
@@ -82,9 +82,10 @@ jobs:
             test-results/
           retention-days: 7
 
-  # Issue #203: o artefato que vai para produção é verificado antes do deploy.
-  # Build de produção (bloqueante) + subconjunto do E2E contra `next start`,
-  # com a CSP estrita de produção e falha em qualquer violação de CSP.
+  # Issues #203 e #308: o artefato que vai para produção é verificado antes do
+  # deploy. Build de produção (bloqueante) + E2E principal contra `next start`,
+  # com a CSP estrita de produção e falha em qualquer violação de CSP. O `next dev`
+  # (job acima) fica só com o que depende dele: contas por papel e modo aberto.
   build-e2e-prod:
     name: Build de produção + E2E (next start)
     runs-on: ubuntu-24.04

@@ -116,6 +116,19 @@ export const ROLE_ACCOUNTS: Record<E2EStaffRole, { email: string; storageState: 
   },
 };
 
+/**
+ * Specs que dependem das contas por papel (#204): o convite delas só sai no log do
+ * `NullEmailGateway` fora de produção, então só rodam contra o `next dev`. O resto
+ * da suíte roda contra o build de produção (`playwright.prod.config.ts`, #308).
+ */
+export const ROLE_ACCOUNT_SPECS = [
+  "papeis-atendente.spec.ts",
+  "papeis-profissional.spec.ts",
+  "papeis-smoke.spec.ts",
+  "sessao-expirada.spec.ts",
+  "feriados-ausencias-profissional.spec.ts",
+] as const;
+
 /** Espelha `LEGACY_CLINIC_ID` — a empresa onde o `global-setup` semeia tudo. */
 export const E2E_CLINIC_ID = "legacy-clinic";
 export const SEED_DATA_PATH = "e2e/support/seed-data.json";

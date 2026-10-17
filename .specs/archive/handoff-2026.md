@@ -1086,3 +1086,17 @@ Decisões de @KalleoPinheiro de 2026-10-11 implementadas.
 - **Testes:** `appointment-professional-validation` (ativo, inativado, sem profissional, inexistente) e `session-revocation` (recadastro).
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Next step:** nenhum. **Blockers:** nenhum. Sem migração.
+
+## Issue #308 — causa raiz do E2E intermitente (2026-10-17)
+
+**Causa raiz:** o `next dev` (Turbopack) compila rota sob demanda e emite `[Fast Refresh] rebuilding` por vários segundos depois que o navegador conecta o HMR. Em máquina lenta isso cai no meio do teste (modal não fecha, aba ou item não aparece, clique perdido). Os traces mostram o rebuild durante as ações.
+
+**Prova (local, o Actions está sem cota):** `clinico.spec.ts` "registra avaliação PUSH", 20 repetições, `--retries 0`, 1 CPU: `next dev` 9 falhas em 20 (22 min); `next start` 0 em 20 (1,6 min). Aquecer as rotas no `global-setup` foi testado (10 falhas em 20) e descartado. O `--repeat-each` dos specs com horário (`slotForAttempt`) não serve para medir, como já dito na #308.
+
+**Correção (ADR-021):** a suíte principal passa a rodar contra `next start` (`playwright.prod.config.ts`, 222 testes, sem retry); o `next dev` fica só com `ROLE_ACCOUNT_SPECS` (contas por papel, convite lido do log fora de produção) e o modo aberto de `auth.spec.ts` (26 testes). O spec do Profissional de `feriados-ausencias` foi movido para arquivo próprio. Scripts `test:e2e:prod`, `test:e2e:dev` e `test:e2e` (build + os dois). No build apareceu um segundo problema: `settle`/`openTable` usavam `waitForLoadState("networkidle")` sem teto e o prefetch de links da produção impedia a rede de ficar ociosa, estourando o timeout de 60 s nos testes do dashboard; agora há teto de 5 s.
+
+**Validação local (2 CPUs):** suíte de produção, suíte `next dev` (26/26), `typecheck`, `lint`, `check:sv`, `check:docs`, `test:coverage`, `build`.
+
+- **Subconjunto em `next dev`:** o `global-setup` aquece as telas e abas dos specs de papel (`e2e/support/warm-up.ts`) e a asserção da aba Pacotes do Profissional tem 30 s (a API compilava depois dos 10 s); 2 execuções seguidas em 2 CPUs deram 26/26.
+- **Pendente:** o subconjunto em `next dev` segue exposto ao Fast Refresh; migrar para o build quando as contas por papel puderem ser criadas sem o log do servidor. O critério "10 execuções seguidas na `main`" fica para quando o Actions voltar (job manual ou cron).
+- **Branch:** `claude/project-thread-a0mssu`.

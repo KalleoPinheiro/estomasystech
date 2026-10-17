@@ -183,7 +183,10 @@ async function openAs(
 }
 
 async function settle(page: Page): Promise<void> {
-  await page.waitForLoadState("networkidle").catch(() => undefined);
+  // `networkidle` é só um atalho: o build de produção faz prefetch dos links visíveis
+  // e a rede pode nunca ficar ociosa (#308); sem teto próprio ele consumiria o
+  // timeout do teste. A prontidão de verdade é a asserção dos esqueletos abaixo.
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => undefined);
   // Nenhum esqueleto de carregamento visível: a medida é da tela pronta.
   await expect(page.locator(".sv-skeleton:visible")).toHaveCount(0, { timeout: 20_000 });
 }
