@@ -23,7 +23,7 @@
 
 **Guardian** (responsável ou cuidador)
 
-- Person who answers for one or more Patients of the same Clinic (family member, legal representative or hired caregiver). Contact only: name, relationship (closed list), phone, optional e-mail. No login, no portal access ([ADR-024](./docs/adr/024-responsavel-do-paciente.md)).
+- Person who answers for one or more Patients of the same Clinic (family member, legal representative or hired caregiver). Contact only: name, relationship (closed list), phone, optional e-mail. No login by default; the clinic may grant a **Guardian** account that opens the portal on behalf of the Patient, always flagged in the UI and written to the audit trail ([ADR-024](./docs/adr/024-responsavel-do-paciente.md), [ADR-027](./docs/adr/027-responsavel-acessa-portal-em-nome-do-paciente.md)).
 - A Patient has at most one Guardian; a Guardian can serve several Patients. Reminders use the Guardian's e-mail when the Patient has none; the consent form prints the Guardian's name and relationship.
 
 **Professional** (profissional)
@@ -152,7 +152,7 @@
 
 **Role** (papel)
 
-Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or permissions.
+Fixed catalog of seven; a Clinic's Admin de Empresa cannot invent new roles or permissions.
 
 - **Super Admin** (sistema, operador da plataforma): the one platform operator ([ADR-007](./docs/adr/007-super-admin-operador-da-plataforma.md)). Reaches only the `platform` route family (`/plataforma`, `/api/platform/**`) plus logout; no access to any Clinic's data — no patient record, schedule, billing or settings. Invites the first Admin de Empresa of a Clinic and imports the global taxonomy catalog. There is exactly one: it comes from bootstrap, no one creates another, and the database refuses a second one. Signs in with password **and** a second factor ([ADR-008](./docs/adr/008-segundo-fator-do-super-admin.md)).
 - **Admin de Empresa** (equipe, admin da clínica): full access within its own Clinic only — operational data, clinical data, clinic settings, account management. A Clinic may have more than one. Creates Profissional, Atendente, Patient, Partner, and other Admin de Empresa accounts, all within its own Clinic.
@@ -160,6 +160,7 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 - **Profissional** (equipe): clinical access, but scoped dynamically — sees only patients it has at least one appointment or evolution note with. Not a fixed "ownership": a patient can accumulate access for several professionals over time (coverage, transfer, return). Creates Patient and Partner accounts.
 - **Patient** (paciente): own portal, can read own records and submit photos. Never self-registers — always created by staff.
 - **Partner** (parceiro): own portal, referral tracking. Never self-registers, and creates no one.
+- **Guardian** (responsável): own portal login that acts **on behalf of** the linked Patient(s) — sees and schedules for them, never accepts consents or files LGPD requests for them. Created by Admin de Empresa or Atendente, who attest the Patient's authorization; every request is written to the audit trail with the Guardian as actor and the Patient as data subject ([ADR-027](./docs/adr/027-responsavel-acessa-portal-em-nome-do-paciente.md)).
 
 **Account provisioning** (cadastro de contas)
 

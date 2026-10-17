@@ -160,14 +160,14 @@ export const userAccounts = pgTable(
     email: text('email').notNull(),
     // Formato scrypt$custo$salt$hash — nunca a senha em claro.
     passwordHash: text('password_hash').notNull(),
-    // Um dos 7 valores de UserRole (RBAC-01, ADR-026).
+    // Um dos 7 valores de UserRole (RBAC-01, ADR-027).
     role: text('role').notNull(),
     professionalId: text('professional_id').references(() => professionals.id),
     // Titular da conta de portal (#196): o portal resolve paciente/parceiro
     // por aqui, nunca pelo e-mail (mutável) do cadastro.
     patientId: text('patient_id').references(() => patients.id),
     partnerId: text('partner_id').references(() => partners.id),
-    // Responsável dono da conta de portal (ADR-026): acessa o portal em nome
+    // Responsável dono da conta de portal (ADR-027): acessa o portal em nome
     // dos pacientes ligados a ele (patients.guardian_id).
     guardianId: text('guardian_id').references(() => guardians.id),
     active: boolean('active').notNull().default(true),

@@ -17,7 +17,7 @@ interface RepresentedPatientsDto {
 }
 
 /**
- * Portal do responsável (ADR-026): escolhe o paciente que representa e passa a
+ * Portal do responsável (ADR-027): escolhe o paciente que representa e passa a
  * ver o portal dele, sempre com o aviso "acessando em nome de". A escolha vai
  * ao servidor (cookie validado a cada requisição e gravado na trilha).
  */

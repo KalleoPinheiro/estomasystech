@@ -574,7 +574,7 @@ async function deleteOrphanGuardian(
     .where(eq(patients.guardianId, guardianId))
     .limit(1);
   if (stillLinked.length > 0) return;
-  // O acesso ao portal do responsável (ADR-026) cai junto com o cadastro.
+  // O acesso ao portal do responsável (ADR-027) cai junto com o cadastro.
   const accounts = await tx
     .select({ id: userAccounts.id })
     .from(userAccounts)
@@ -615,7 +615,7 @@ async function anonymizeAccounts(
       // Conta de parceiro solta o cadastro: sem isso o convite novo do mesmo
       // parceiro bateria no vínculo único (#311).
       partnerId: null,
-      // Idem para o responsável (ADR-026): solta o cadastro, que pode ser
+      // Idem para o responsável (ADR-027): solta o cadastro, que pode ser
       // apagado quando nenhum paciente o usa.
       guardianId: null,
       anonymizedAt: now,

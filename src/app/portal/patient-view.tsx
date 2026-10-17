@@ -52,9 +52,9 @@ interface PatientPortalDto {
   conditions: ConditionWithAssessmentsDto[];
   invoices: InvoiceDto[];
   followUps: FollowUpDto[];
-  /** Responsável logado: em nome de quem ele age (ADR-026). */
+  /** Responsável logado: em nome de quem ele age (ADR-027). */
   actingFor: { patientId: string; fullName: string } | null;
-  /** Paciente logado: quem pode acessar o portal em nome dele (ADR-026). */
+  /** Paciente logado: quem pode acessar o portal em nome dele (ADR-027). */
   guardianAccess: {
     fullName: string;
     relationshipLabel: string;
@@ -69,7 +69,7 @@ const PAGE_LOAD_MS = Date.now();
 
 /**
  * `onSwitchPatient` só existe para o responsável com mais de um paciente
- * (ADR-026): o aviso "acessando em nome de" fica sempre visível no topo.
+ * (ADR-027): o aviso "acessando em nome de" fica sempre visível no topo.
  */
 export function PatientPortalView({
   onSwitchPatient,
@@ -230,7 +230,7 @@ export function PatientPortalView({
                   <PatientPhotoUpload
                     conditionId={entry.condition.id}
                     consentPending={consent !== null && !consent.accepted}
-                    byGuardian={data.actingFor !== null}
+                    byGuardian={Boolean(data.actingFor)}
                     onSent={refresh}
                   />
                 )}
@@ -401,7 +401,7 @@ function AppointmentList({
 }
 
 /**
- * Evidência permanente de que o acesso é em nome de outra pessoa (ADR-026):
+ * Evidência permanente de que o acesso é em nome de outra pessoa (ADR-027):
  * aparece em toda tela do responsável, não só na primeira.
  */
 function ActingForBanner({

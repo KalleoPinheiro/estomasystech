@@ -87,7 +87,7 @@ describe('Feature: Responsável reutilizável entre pacientes (#329)', () => {
     expect(unlinked.guardianId).toBeNull();
   });
 
-  it('Dado responsável com acesso ao portal, Quando excluir, Então ConflictError (ADR-026)', async () => {
+  it('Dado responsável com acesso ao portal, Quando excluir, Então ConflictError (ADR-027)', async () => {
     const guardian = await new CreateGuardian(guardians).execute(ana);
     await accounts.save(
       UserAccount.create({

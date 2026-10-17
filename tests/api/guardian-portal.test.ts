@@ -47,7 +47,7 @@ const portalRequest = (
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-describe('Feature: Responsável acessa o portal em nome do paciente (ADR-026)', () => {
+describe('Feature: Responsável acessa o portal em nome do paciente (ADR-027)', () => {
   let guardiansRoute: typeof import('@/app/api/guardians/route');
   let guardianByIdRoute: typeof import('@/app/api/guardians/[id]/route');
   let patientsRoute: typeof import('@/app/api/patients/route');

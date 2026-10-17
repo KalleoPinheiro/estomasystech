@@ -16,7 +16,7 @@ export interface UserAccountProps {
   patientId?: string | null;
   /** Cadastro de parceiro dono da conta de portal (#196) — só no papel `partner`. */
   partnerId?: string | null;
-  /** Cadastro de responsável dono da conta de portal (ADR-026) — só no papel `guardian`. */
+  /** Cadastro de responsável dono da conta de portal (ADR-027) — só no papel `guardian`. */
   guardianId?: string | null;
 }
 

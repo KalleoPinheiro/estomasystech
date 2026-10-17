@@ -1,7 +1,7 @@
 import { SESSION_TTL_MS } from './session';
 
 /**
- * Paciente que o responsável escolheu representar no portal (ADR-026). O valor
+ * Paciente que o responsável escolheu representar no portal (ADR-027). O valor
  * é só um id: cada requisição o revalida contra o vínculo do responsável
  * (`patients.guardian_id`), então adulterar o cookie não abre outro paciente.
  */

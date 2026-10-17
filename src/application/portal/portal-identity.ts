@@ -15,7 +15,7 @@ import { ConflictError, NotFoundError } from '@/domain/shared/errors';
 export interface PortalSessionIdentity {
   subject: string;
   role: UserRole;
-  /** Empresa da sessão — a trilha do responsável (ADR-026) nasce nela. */
+  /** Empresa da sessão — a trilha do responsável (ADR-027) nasce nela. */
   clinicId?: string | null;
   /** Paciente que o responsável escolheu representar (cookie; revalidado aqui). */
   actingPatientId?: string | null;
@@ -49,7 +49,7 @@ async function linkedAccount(
 /**
  * Pacientes ativos que a conta de responsável pode representar: os ligados ao
  * cadastro dela (`patients.guardian_id`). Desvincular o paciente, inativá-lo ou
- * desativar a conta encerra o acesso sem mais nenhum passo (ADR-026).
+ * desativar a conta encerra o acesso sem mais nenhum passo (ADR-027).
  */
 export async function listRepresentablePatients(
   repos: { userAccounts: UserAccountRepository; patients: PatientRepository },

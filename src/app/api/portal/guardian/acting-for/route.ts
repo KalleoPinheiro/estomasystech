@@ -14,7 +14,7 @@ import { writeScope } from '@/lib/auth/tenant-scope';
 
 const bodySchema = z.object({ patientId: z.string().min(1).max(100) });
 
-/** Escolhe em nome de quem o responsável age (ADR-026); grava a escolha na trilha. */
+/** Escolhe em nome de quem o responsável age (ADR-027); grava a escolha na trilha. */
 export async function PUT(request: NextRequest) {
   const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;

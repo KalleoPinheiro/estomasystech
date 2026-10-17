@@ -159,7 +159,7 @@ export function PatientPhotoUpload({
   // Envio exige consentimento vigente (COMP3-01) — avisa antes de escolher o
   // arquivo. Enquanto o status não chegou (null no pai), não bloqueia a tela.
   consentPending: boolean;
-  /** O responsável não aceita o termo (ato do titular, ADR-026): a mensagem muda. */
+  /** O responsável não aceita o termo (ato do titular, ADR-027): a mensagem muda. */
   byGuardian?: boolean;
   onSent: () => void;
 }) {

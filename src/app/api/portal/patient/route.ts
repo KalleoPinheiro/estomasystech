@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       invoices: data.invoices.map((i) => toInvoiceDto(i)),
       followUps: data.followUps.map((f) => toFollowUpDto(f)),
       // Antecedência mínima para cancelar/remarcar pelo portal (política da clínica).
-      // Evidência (ADR-026): o responsável vê em nome de quem age; o paciente
+      // Evidência (ADR-027): o responsável vê em nome de quem age; o paciente
       // vê quem pode agir em nome dele e quando foi o último acesso.
       actingFor: isGuardian
         ? { patientId: data.patient.id, fullName: data.patient.fullName }

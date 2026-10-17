@@ -6,7 +6,7 @@ export const GUARDIAN_AUTHORIZATION_MESSAGE =
   'Confirme que o paciente (ou o representante legal dele) autorizou o acesso do responsável ao portal';
 
 /**
- * Pré-condições para dar à pessoa responsável uma conta de portal (ADR-026):
+ * Pré-condições para dar à pessoa responsável uma conta de portal (ADR-027):
  * o cadastro existe na empresa, há ao menos um paciente ativo ligado a ele e a
  * equipe atestou a autorização do paciente. Cadastro de outra empresa nem é
  * encontrado (repositórios escopados).

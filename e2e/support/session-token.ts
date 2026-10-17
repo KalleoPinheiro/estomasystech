@@ -16,7 +16,8 @@ export type UserRole =
   | "atendente"
   | "profissional"
   | "patient"
-  | "partner";
+  | "partner"
+  | "guardian";
 
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 

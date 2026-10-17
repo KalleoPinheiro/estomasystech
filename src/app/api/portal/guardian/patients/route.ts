@@ -6,7 +6,7 @@ import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 
 /**
- * Pacientes que o responsável pode representar (ADR-026) e o escolhido agora.
+ * Pacientes que o responsável pode representar (ADR-027) e o escolhido agora.
  * Só nome: a escolha não exige dado clínico. Com um único paciente, ele já
  * vale como escolhido, mas a tela continua dizendo em nome de quem age.
  */

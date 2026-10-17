@@ -805,7 +805,7 @@ function AccountForm({
   const [professionalId, setProfessionalId] = useState('');
   // Cadastro de paciente/parceiro dono da conta de portal (#196).
   const [recordId, setRecordId] = useState('');
-  // Equipe atesta que o paciente autorizou o acesso do responsável (ADR-026).
+  // Equipe atesta que o paciente autorizou o acesso do responsável (ADR-027).
   const [guardianAuthorized, setGuardianAuthorized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

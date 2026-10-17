@@ -590,7 +590,7 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
     expect(await guardianRows()).toHaveLength(0);
   });
 
-  it('Dado responsável com conta de portal (ADR-026), Quando anonimiza o último paciente, Então a conta é anonimizada e o cadastro apagado', async () => {
+  it('Dado responsável com conta de portal (ADR-027), Quando anonimiza o último paciente, Então a conta é anonimizada e o cadastro apagado', async () => {
     const guardianId = nextId('grd');
     await db.insert(schema.guardians).values({
       id: guardianId,

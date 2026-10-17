@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { USER_ROLES, type UserRole } from '@/domain/auth/user-role';
 
-describe('Feature: Catálogo de 7 papéis (RBAC-01, ADR-026)', () => {
+describe('Feature: Catálogo de 7 papéis (RBAC-01, ADR-027)', () => {
   it('Dado o catálogo de papéis, Quando listado, Então contém exatamente os 7 valores fixos', () => {
     expect(USER_ROLES).toEqual([
       'super_admin',

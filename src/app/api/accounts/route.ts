@@ -30,7 +30,7 @@ const createSchema = z
     patientId: z.string().max(100).nullish(),
     partnerId: z.string().max(100).nullish(),
     guardianId: z.string().max(100).nullish(),
-    // Acesso do responsável ao portal (ADR-026): a equipe atesta que o paciente
+    // Acesso do responsável ao portal (ADR-027): a equipe atesta que o paciente
     // (ou seu representante legal) autorizou.
     guardianAuthorization: z.boolean().optional(),
   })
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     };
     if (account.role === 'guardian') {
       // Conceder acesso a dado de saúde de terceiro: write-ahead, com a
-      // atestação da equipe na trilha (ADR-026).
+      // atestação da equipe na trilha (ADR-027).
       await recordAuditNow(auditEvents, guard.session, {
         ...audit,
         detail:

@@ -82,6 +82,7 @@ export async function createPatient(
     phone: string;
     cpf: string;
     referredByPartnerId: string | null;
+    guardianId: string | null;
   }> = {},
 ): Promise<PatientDto> {
   const id = unique();
@@ -91,6 +92,7 @@ export async function createPatient(
     phone: overrides.phone ?? "11999990000",
     ...(overrides.cpf ? { cpf: overrides.cpf } : {}),
     referredByPartnerId: overrides.referredByPartnerId ?? null,
+    ...(overrides.guardianId ? { guardianId: overrides.guardianId } : {}),
   });
 }
 
@@ -448,6 +450,34 @@ export async function linkPortalAccount(
     email: record.email,
     role,
     ...(role === "patient" ? { patientId: record.id } : { partnerId: record.id }),
+  });
+}
+
+/** Responsável cadastrado pela recepção (#329); devolve o id para ligar pacientes. */
+export async function createGuardian(
+  request: APIRequestContext,
+  fullName: string,
+  email: string,
+): Promise<{ id: string; fullName: string; email: string }> {
+  const guardian = await apiPost<{ id: string }>(request, "/api/guardians", {
+    fullName,
+    relationship: "filho",
+    phone: "11999990000",
+    email,
+  });
+  return { id: guardian.id, fullName, email };
+}
+
+/** Conta de portal do responsável (#351): a equipe atesta a autorização do paciente. */
+export async function linkGuardianAccount(
+  request: APIRequestContext,
+  guardian: { id: string; email: string },
+): Promise<void> {
+  await apiPost(request, "/api/accounts", {
+    email: guardian.email,
+    role: "guardian",
+    guardianId: guardian.id,
+    guardianAuthorization: true,
   });
 }
 

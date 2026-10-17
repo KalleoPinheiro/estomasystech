@@ -118,7 +118,7 @@ export type PatientPortalSession = Session & {
 };
 
 /**
- * Rotas do portal em que o paciente ou o responsável dele (ADR-026) podem
+ * Rotas do portal em que o paciente ou o responsável dele (ADR-027) podem
  * entrar. Ato personalíssimo (consentimento, pedido LGPD, cópia dos dados)
  * continua em `requirePortalSession(request, 'patient')`: o responsável recebe
  * `403`. O paciente representado vem do cookie e é revalidado no caso de uso.

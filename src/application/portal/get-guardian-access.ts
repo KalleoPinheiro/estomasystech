@@ -4,7 +4,7 @@ import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { Patient } from '@/domain/patient/patient';
 import { GUARDIAN_ACCESS_RESOURCE } from './portal-identity';
 
-/** O que o paciente vê de quem pode acessar o portal em nome dele (ADR-026). */
+/** O que o paciente vê de quem pode acessar o portal em nome dele (ADR-027). */
 export interface GuardianAccessView {
   fullName: string;
   relationshipLabel: string;

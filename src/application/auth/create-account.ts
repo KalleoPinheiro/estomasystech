@@ -27,7 +27,7 @@ export interface CreateAccountInput {
   patientId?: string | null;
   /** Cadastro de parceiro dono da conta — obrigatório no papel `partner` (#196). */
   partnerId?: string | null;
-  /** Cadastro de responsável dono da conta — obrigatório no papel `guardian` (ADR-026). */
+  /** Cadastro de responsável dono da conta — obrigatório no papel `guardian` (ADR-027). */
   guardianId?: string | null;
 }
 
