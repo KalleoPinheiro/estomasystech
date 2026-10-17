@@ -491,12 +491,10 @@ describe('Feature: PatientRecordPage', () => {
           url === '/api/auth/identity' ? identity : undefined,
       });
 
-    const identityFor = (role: UserRole | null) =>
+    const identityFor = (role: UserRole) =>
       jsonResponse({
         clinicLabel: 'Clínica Teste',
-        account: role
-          ? { email: `${role}@x.com`, role, roleLabel: role }
-          : null,
+        account: { email: `${role}@x.com`, role, roleLabel: role },
       });
 
     it.each(['company_admin', 'profissional'] as const)(
@@ -512,16 +510,6 @@ describe('Feature: PatientRecordPage', () => {
         expect(link).toHaveAttribute('href', '/api/patients/pac-1/export');
       },
     );
-
-    it('Dado modo aberto (sem conta na sessão), Quando renderizar, Então mostra o link de exportação', async () => {
-      mockFetch(identityRouter(identityFor(null)));
-
-      await renderDetail();
-
-      expect(
-        await screen.findByRole('link', { name: 'Exportar dados (LGPD)' }),
-      ).toBeInTheDocument();
-    });
 
     // O super_admin nem chega à ficha (o proxy o leva a /plataforma, ADR-007);
     // se chegasse, a mesma matriz esconderia o link.

@@ -15,17 +15,10 @@ import { randomBytes } from "node:crypto";
  * specs de portal seguem assinando um cookie de sessão manualmente (mesma assinatura
  * HMAC de `src/lib/auth/session.ts`), já que a suíte não semeia contas de
  * paciente/parceiro.
- *
- * Um segundo servidor (porta 3100), sem AUTH_SECRET, sobe em paralelo só para o
- * cenário de "modo aberto" em `auth.spec.ts` — ele tem seu próprio banco PGlite
- * isolado (cada processo Next tem sua própria instância em memória), então só serve
- * para checar navegação sem login, nunca para dados semeados.
  */
 export const MAIN_BASE_URL = "http://localhost:3000";
 export const MAIN_PORT = 3000;
 
-export const OPEN_MODE_BASE_URL = "http://localhost:3100";
-export const OPEN_MODE_PORT = 3100;
 
 /**
  * Credenciais da suíte E2E. Nunca são credenciais de produção.

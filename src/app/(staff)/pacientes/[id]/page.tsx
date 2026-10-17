@@ -98,17 +98,13 @@ function tabLabel(
 /**
  * O link de exportação LGPD só aparece para quem a API deixa exportar (#185):
  * mesma matriz de família de rota do servidor. Sem identidade carregada (ou
- * com erro) o link fica escondido; `account: null` é o modo aberto, em que o
- * servidor libera tudo.
+ * com erro) o link fica escondido.
  */
 function useCanExport(exportPath: string): boolean {
   const { data: identity } =
     useApiQuery<SidebarIdentityDto>('/api/auth/identity');
   if (!identity) {
     return false;
-  }
-  if (identity.account === null) {
-    return true;
   }
   return isFamilyAllowedForRole(
     classifyRoute(exportPath),

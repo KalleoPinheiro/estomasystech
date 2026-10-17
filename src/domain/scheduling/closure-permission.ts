@@ -13,15 +13,13 @@ const MANAGES_ANY_CLOSURE: readonly UserRole[] = ['company_admin', 'atendente'];
 /**
  * Decisão de @KalleoPinheiro (#215, AGE-RN-13): Admin de Empresa e Atendente
  * cadastram feriados da clínica e ausências de qualquer profissional; o
- * Profissional, só a própria ausência. `actor` nulo é o modo aberto de
- * desenvolvimento (sem autenticação), que não restringe — como a guarda de
- * equipe (`requireStaffSession`).
- */
+ * Profissional, só a própria ausência.
+ * */
 export function canManageClosure(
-  actor: ClosureActor | null,
+  actor: ClosureActor,
   closureProfessionalId: string | null,
 ): boolean {
-  if (actor === null || MANAGES_ANY_CLOSURE.includes(actor.role)) {
+  if (MANAGES_ANY_CLOSURE.includes(actor.role)) {
     return true;
   }
   return (
@@ -32,7 +30,7 @@ export function canManageClosure(
 }
 
 export function assertCanManageClosure(
-  actor: ClosureActor | null,
+  actor: ClosureActor,
   closureProfessionalId: string | null,
 ): void {
   if (!canManageClosure(actor, closureProfessionalId)) {

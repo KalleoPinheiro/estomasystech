@@ -43,7 +43,7 @@ Deploy, backup, segredos e rotação em produção: [`docs/engineering/producao.
    escrita: `writeScope(guard.session)`; explícito: `clinicScope(id)`. `systemScope()` só em
    arquivos da allowlist de `tests/lib/tenant-scope.test.ts`, com justificativa. → [ADR-001](docs/adr/001-multi-tenancy.md)
 2. **Auth falha fechado.** Sem `AUTH_SECRET` tudo responde 503; não há senha mestre nem login
-   Google. `VITTA_ALLOW_OPEN_MODE` é só dev. → [ADR-002](docs/adr/002-autorizacao-em-duas-camadas.md), [ADR-004](docs/adr/004-remocao-google-oauth-autenticacao.md)
+   Google. Não existe modo sem autenticação (removido na #327). → [ADR-002](docs/adr/002-autorizacao-em-duas-camadas.md), [ADR-004](docs/adr/004-remocao-google-oauth-autenticacao.md)
 3. **UI só com `@still-void/ui`.** `<button>`, `<input>`, `<select>`, `<textarea>`, `<table>` crus e
    cores Tailwind cruas são proibidos; exceção exige `// sv-gap: <slug>` + entrada em
    [`docs/still-void-gaps.md`](docs/still-void-gaps.md).

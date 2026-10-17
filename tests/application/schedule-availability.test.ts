@@ -28,6 +28,8 @@ import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-
 import { portalPatientId } from '../support/portal-identity';
 
 // 2026-07-20 = segunda. Testes rodam com TZ=UTC; grade padrão 8h–18h.
+const ADMIN = { role: 'company_admin', professionalId: null } as const;
+
 describe('Feature: Agenda por profissional, almoço e feriados', () => {
   let patients: InMemoryPatientRepository;
   let appointments: InMemoryAppointmentRepository;
@@ -254,7 +256,7 @@ describe('Feature: Agenda por profissional, almoço e feriados', () => {
           availability,
           professionals,
           appointments,
-        ).execute(input, null);
+        ).execute(input, ADMIN);
       }
     })();
 
@@ -321,9 +323,9 @@ describe('Feature: Agenda por profissional, almoço e feriados', () => {
       });
       const remove = new DeleteScheduleClosure(availability);
 
-      expect((await remove.execute(closure.id, null)).id).toBe(closure.id);
+      expect((await remove.execute(closure.id, ADMIN)).id).toBe(closure.id);
       expect(await availability.findClosureById(closure.id)).toBeNull();
-      await expect(remove.execute(closure.id, null)).rejects.toThrow(
+      await expect(remove.execute(closure.id, ADMIN)).rejects.toThrow(
         NotFoundError,
       );
     });

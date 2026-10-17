@@ -15,9 +15,7 @@ export const ONLY_COMPANY_ADMIN_MESSAGE =
  * os outros papéis; a checagem de `company_admin` aqui é a defesa em
  * profundidade do ADR-002 — o super_admin nunca configura (ADR-007).
  */
-export function requireChannelAdmin(
-  request: NextRequest,
-): Guard<Session | null> {
+export function requireChannelAdmin(request: NextRequest): Guard<Session> {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard;
   if (accountManager(guard.session).role !== 'company_admin') {
@@ -34,7 +32,7 @@ export interface ChannelContext {
 
 /** Serviços da clínica da sessão e o caso de uso do canal. */
 export async function channelContext(
-  session: Session | null,
+  session: Session,
 ): Promise<ChannelContext> {
   const clinicId = writeClinicId(session);
   const services = await getRepositories(writeScope(session));

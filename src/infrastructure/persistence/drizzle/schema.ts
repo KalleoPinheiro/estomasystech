@@ -550,7 +550,7 @@ export const googleAccounts = pgTable(
     // id determinístico (`${clinicId ?? 'system'}:${email}`) — permite upsert
     // por `target: id` sem depender de índice único parcial (issue #74).
     id: text('id').primaryKey(),
-    // Nulo somente para o papel de sistema (modo aberto), igual a user_accounts.
+    // Nulo somente para o papel de sistema, igual a user_accounts.
     clinicId: text('clinic_id').references(() => clinics.id),
     email: text('email').notNull(),
     // Refresh token do OAuth cifrado com AES-256-GCM (chave derivada de AUTH_SECRET).

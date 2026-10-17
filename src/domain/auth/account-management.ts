@@ -9,7 +9,7 @@ import type { UserRole } from './user-role';
 
 /**
  * Quem está gerindo a conta. `subject` é o e-mail gravado na sessão pelo login
- * (`null` no modo aberto de dev, que não tem conta própria).
+ * (`null` quando o ator não tem conta própria, ex.: fluxos de sistema).
  */
 export interface AccountManager {
   role: UserRole;

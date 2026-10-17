@@ -1,5 +1,4 @@
 import type { UserRole } from '@/domain/auth/user-role';
-import { logger } from '@/lib/observability/logger';
 import { classifyRoute, isFamilyAllowedForRole } from './route-family';
 import { getAuthConfig } from './session';
 
@@ -64,14 +63,6 @@ export const ROLE_FAMILY_DENIED_MESSAGE =
 export const AUTH_NOT_CONFIGURED_MESSAGE =
   'Autenticação não configurada: defina AUTH_SECRET';
 
-/**
- * Opt-in explícito para rodar SEM autenticação (desenvolvimento, testes E2E do
- * cenário "modo aberto"). Sem esta variável o app é fail-closed: auth ausente
- * responde 503 em vez de liberar o prontuário. Antes, bastava `NODE_ENV` não ser
- * "production" — um deploy self-hosted que esquecesse essa variável ficava aberto.
- */
-export const ALLOW_OPEN_MODE_ENV = 'VITTA_ALLOW_OPEN_MODE';
-
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => path === pathname);
 }
@@ -94,29 +85,10 @@ export function isAllowedForRole(pathname: string, role: UserRole): boolean {
 
 /**
  * - `configured`: autenticação utilizável — exige sessão válida.
- * - `open`: sem autenticação configurada, liberado (só fora de produção).
- * - `unconfigured`: sem autenticação configurada e sem liberação — responde 503.
+ * - `unconfigured`: sem `AUTH_SECRET` — fail-closed, responde 503. Não existe
+ *   modo "sem autenticação" (ADR-002, #327): nenhuma variável o libera.
  */
-export type AuthMode = 'configured' | 'open' | 'unconfigured';
-
-const isProduction = (): boolean => process.env.NODE_ENV === 'production';
-
-let warnedAuthDisabled = false;
-
-function warnAuthDisabledOnce(): void {
-  if (warnedAuthDisabled) {
-    return;
-  }
-  warnedAuthDisabled = true;
-  logger.warn(
-    `⚠ Autenticação DESATIVADA por ${ALLOW_OPEN_MODE_ENV}=true — nenhuma rota exige sessão (permitido apenas fora de produção)`,
-  );
-}
-
-/** Só para testes: zera o estado do aviso "uma vez por processo". */
-export function resetAuthModeWarning(): void {
-  warnedAuthDisabled = false;
-}
+export type AuthMode = 'configured' | 'unconfigured';
 
 /**
  * Autenticação utilizável = segredo de assinatura de sessão presente. Depois da
@@ -128,13 +100,5 @@ function isAuthUsable(): boolean {
 }
 
 export function resolveAuthMode(): AuthMode {
-  if (isAuthUsable()) {
-    return 'configured';
-  }
-  // Fail-closed: liberar exige NÃO ser produção E o opt-in explícito.
-  if (isProduction() || process.env[ALLOW_OPEN_MODE_ENV] !== 'true') {
-    return 'unconfigured';
-  }
-  warnAuthDisabledOnce();
-  return 'open';
+  return isAuthUsable() ? 'configured' : 'unconfigured';
 }

@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetAuthModeWarning } from '@/lib/auth/access-policy';
 import {
   requirePortalSession,
   requireStaffSession,
@@ -18,22 +17,11 @@ describe('Feature: Guarda de sessão nas rotas (camada 2 de autorização)', () 
   const saved = {
     secret: process.env.AUTH_SECRET,
     password: process.env.AUTH_PASSWORD,
-    openMode: process.env.VITTA_ALLOW_OPEN_MODE,
   };
-
-  beforeEach(() => {
-    resetAuthModeWarning();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-  });
 
   afterEach(() => {
     process.env.AUTH_SECRET = saved.secret;
     process.env.AUTH_PASSWORD = saved.password;
-    if (saved.openMode === undefined) {
-      delete process.env.VITTA_ALLOW_OPEN_MODE;
-    } else {
-      process.env.VITTA_ALLOW_OPEN_MODE = saved.openMode;
-    }
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
@@ -140,9 +128,6 @@ describe('Feature: Guarda de sessão nas rotas (camada 2 de autorização)', () 
     });
 
     it('Dada autenticação não configurada, Então responde 503 (fail-closed)', async () => {
-      // invariant: fail-closed só se sustenta se VITTA_ALLOW_OPEN_MODE também
-      // estiver limpo (forçado em vitest.config.mts) — um "true" vazado do
-      // ambiente do host faz este guard responder como modo aberto, não 503.
       delete process.env.AUTH_SECRET;
       delete process.env.AUTH_PASSWORD;
 
@@ -156,17 +141,17 @@ describe('Feature: Guarda de sessão nas rotas (camada 2 de autorização)', () 
       );
     });
 
-    it('Dado modo aberto explícito, Então libera com sessão nula (auditoria anônima)', () => {
+    it('Dado VITTA_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 503 sem AUTH_SECRET', () => {
       delete process.env.AUTH_SECRET;
       delete process.env.AUTH_PASSWORD;
       vi.stubEnv('NODE_ENV', 'development');
-      process.env.VITTA_ALLOW_OPEN_MODE = 'true';
+      vi.stubEnv('VITTA_ALLOW_OPEN_MODE', 'true');
 
       const guard = requireStaffSession(request());
 
-      expect(guard.ok).toBe(true);
-      if (!guard.ok) return;
-      expect(guard.session).toBeNull();
+      expect(guard.ok).toBe(false);
+      if (guard.ok) return;
+      expect(guard.response.status).toBe(503);
     });
   });
 
@@ -228,19 +213,6 @@ describe('Feature: Guarda de sessão nas rotas (camada 2 de autorização)', () 
           requirePortalSession(request(cookieHeaderFor(role)), roles).ok,
         ).toBe(true);
       }
-    });
-
-    it('Dado modo aberto, Então AINDA exige sessão (o handler precisa da identidade)', async () => {
-      delete process.env.AUTH_SECRET;
-      delete process.env.AUTH_PASSWORD;
-      vi.stubEnv('NODE_ENV', 'development');
-      process.env.VITTA_ALLOW_OPEN_MODE = 'true';
-
-      const guard = requirePortalSession(request(), 'patient');
-
-      expect(guard.ok).toBe(false);
-      if (guard.ok) return;
-      expect(guard.response.status).toBe(401);
     });
 
     it('Dada autenticação não configurada, Então responde 503', () => {

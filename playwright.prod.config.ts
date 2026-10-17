@@ -13,8 +13,7 @@ import {
  * um `npm run build` já feito, com NODE_ENV=production — CSP estrita (sem
  * 'unsafe-eval'/'unsafe-inline'), cookie `Secure`, e-mail obrigatório. É o gate
  * principal do E2E: sem compilação sob demanda nem Fast Refresh, é determinística
- * e igual ao artefato que vai para produção. Ficam de fora o modo aberto (só de
- * desenvolvimento) e `ROLE_ACCOUNT_SPECS`, que precisam do convite no log do
+ * e igual ao artefato que vai para produção. Fica de fora `ROLE_ACCOUNT_SPECS`, que precisa do convite no log do
  * servidor em desenvolvimento e rodam em `playwright.config.ts`.
  *
  * Uso: `npm run build && npx playwright test -c playwright.prod.config.ts`.
@@ -25,7 +24,6 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.prod.ts",
   testMatch: /.*\.spec\.ts/,
   testIgnore: [...ROLE_ACCOUNT_SPECS],
-  grepInvert: /modo aberto/,
   // Build de produção não compila rota sob demanda: sem retry para mascarar.
   retries: 0,
   webServer: [

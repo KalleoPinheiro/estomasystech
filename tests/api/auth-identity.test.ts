@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SidebarIdentityDto } from '@/lib/dto';
 import {
   CLINIC_A_ID,
@@ -19,18 +19,13 @@ interface Envelope<T> {
 
 describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
   const savedAuthSecret = process.env.AUTH_SECRET;
-  const savedOpenMode = process.env.VITTA_ALLOW_OPEN_MODE;
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     if (savedAuthSecret === undefined) {
       delete process.env.AUTH_SECRET;
     } else {
       process.env.AUTH_SECRET = savedAuthSecret;
-    }
-    if (savedOpenMode === undefined) {
-      delete process.env.VITTA_ALLOW_OPEN_MODE;
-    } else {
-      process.env.VITTA_ALLOW_OPEN_MODE = savedOpenMode;
     }
   });
 
@@ -92,9 +87,9 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     expect(body.data?.clinicLabel).toBe('Clínica não encontrada');
   });
 
-  it('Dado modo aberto sem sessão real, Quando GET, Então clinicLabel é "Conta de sistema" e account é null', async () => {
+  it('Dado AUTH_SECRET ausente (mesmo com VITTA_ALLOW_OPEN_MODE, removida em #327), Quando GET, Então retorna 503', async () => {
     delete process.env.AUTH_SECRET;
-    process.env.VITTA_ALLOW_OPEN_MODE = 'true';
+    vi.stubEnv('VITTA_ALLOW_OPEN_MODE', 'true');
     const route = await import('@/app/api/auth/identity/route');
 
     const response = await route.GET(
@@ -102,11 +97,8 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
         method: 'GET',
       }),
     );
-    const body = (await response.json()) as Envelope<SidebarIdentityDto>;
 
-    expect(response.status).toBe(200);
-    expect(body.data?.clinicLabel).toBe('Conta de sistema');
-    expect(body.data?.account).toBeNull();
+    expect(response.status).toBe(503);
   });
 
   it('Dado sem sessão (modo configurado), Quando GET, Então retorna 401', async () => {

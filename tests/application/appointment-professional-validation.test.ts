@@ -128,7 +128,7 @@ describe('Feature: Profissional da consulta existe na empresa e está ativo (iss
             startsOn: '2026-07-21',
             reason: 'Férias',
           },
-          null,
+          { role: 'company_admin', professionalId: null },
         ),
       ).rejects.toThrow(ValidationError);
       expect(

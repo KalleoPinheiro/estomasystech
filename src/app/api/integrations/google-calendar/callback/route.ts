@@ -74,14 +74,10 @@ interface CredentialOwner {
 }
 
 /**
- * Dono da credencial = a sessão nativa que iniciou o fluxo. Em modo aberto não
- * há sessão, e a credencial fica sob um rótulo fixo em vez de um e-mail real.
+ * Dono da credencial = a sessão nativa que iniciou o fluxo.
  */
-function credentialOwner(session: Session | null): CredentialOwner {
-  return {
-    subject: session?.subject ?? 'sessao-aberta',
-    clinicId: session?.clinicId ?? null,
-  };
+function credentialOwner(session: Session): CredentialOwner {
+  return { subject: session.subject, clinicId: session.clinicId };
 }
 
 /**

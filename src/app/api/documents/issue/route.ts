@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
       (await (async () => {
         const created = AuditEvent.create({
           clinicId: writeClinicId(guard.session),
-          actorRole: guard.session?.role ?? 'anonymous',
-          actorId: guard.session?.subject ?? 'anonymous',
+          actorRole: guard.session.role,
+          actorId: guard.session.subject,
           action: 'create',
           resourceType: body.documentType,
           resourceId: body.resourceId,

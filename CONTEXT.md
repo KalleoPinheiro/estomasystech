@@ -269,7 +269,7 @@ One account belongs to exactly one Clinic (email is unique per Clinic, not globa
 **Auth fail-closed**
 
 - Without `AUTH_SECRET` configured, all routes return 503.
-- `VITTA_ALLOW_OPEN_MODE=true` bypasses in dev; has no effect in production.
+- There is no unauthenticated mode: `VITTA_ALLOW_OPEN_MODE` was removed (#327) and has no effect anywhere.
 - There is no master/break-glass password: every account, including Super Admin, is a real record with its own credential.
 
 **Photo storage**

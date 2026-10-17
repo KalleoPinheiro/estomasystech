@@ -64,15 +64,15 @@ describe('CI de produção (#203)', () => {
     );
     expect(config).toContain('command: "npm run start"');
     // #308: a suíte principal roda contra o build; o `next dev` fica só com os
-    // specs que precisam do convite no log (contas por papel) e o modo aberto.
+    // specs que precisam do convite no log (contas por papel) e o login.
     expect(config).toContain('testIgnore: [...ROLE_ACCOUNT_SPECS]');
     expect(config).not.toMatch(/testMatch: \[/);
-    expect(config).toContain('grepInvert: /modo aberto/');
+    expect(config).not.toContain('modo aberto');
   });
 });
 
 describe('E2E: next dev só para o que depende dele (#308)', () => {
-  it('C46 o job e2e roda os specs de papéis e modo aberto contra o next dev', () => {
+  it('C46 o job e2e roda os specs de papéis e de login contra o next dev', () => {
     const block = job('e2e');
     const dev = readFileSync(path.join(root, 'playwright.config.ts'), 'utf8');
     const constants = readFileSync(

@@ -201,7 +201,7 @@ describe('Feature: POST /api/settings/email-channel/test', () => {
     ]);
   });
 
-  it('modo aberto (dev, sem conta): 409 — não há e-mail para onde enviar', async () => {
+  it('sem AUTH_SECRET (mesmo com VITTA_ALLOW_OPEN_MODE, removida em #327): 503, nada é enviado', async () => {
     vi.stubEnv('AUTH_SECRET', '');
     vi.stubEnv('VITTA_ALLOW_OPEN_MODE', 'true');
     const fetchMock = stubProviderFetch(200);
@@ -212,8 +212,8 @@ describe('Feature: POST /api/settings/email-channel/test', () => {
       );
       const json = (await response.json()) as Envelope<TestResult>;
 
-      expect(response.status).toBe(409);
-      expect(json.error).toBe('Entre com uma conta para testar o canal');
+      expect(response.status).toBe(503);
+      expect(json.error).toMatch(/Autenticação não configurada/);
       expect(fetchMock).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllEnvs();

@@ -63,20 +63,11 @@ const roleMessage = (roles: readonly UserRole[]): string => {
  * handlers. Consequência: nos cenários em que a camada 1 é contornada (matcher
  * alterado, chamada fora do pipeline HTTP), uma sessão de conta desativada
  * ainda passaria aqui. No fluxo HTTP normal a camada 1 barra em ≤ 60s.
- *
- * Espelha a semântica do proxy: em "modo aberto" (sem autenticação configurada
- * e com `VITTA_ALLOW_OPEN_MODE=true`, nunca em produção) a rota executa com
- * `session: null` — a auditoria registra o ator `anonymous`, como já fazia.
  */
-export function requireStaffSession(
-  request: NextRequest,
-): Guard<Session | null> {
+export function requireStaffSession(request: NextRequest): Guard<Session> {
   const mode = resolveAuthMode();
   if (mode === 'unconfigured') {
     return denied(AUTH_NOT_CONFIGURED_MESSAGE, 503);
-  }
-  if (mode === 'open') {
-    return { ok: true, session: null };
   }
 
   const session = getRequestSession(request);
@@ -94,7 +85,7 @@ export function requireStaffSession(
 
 /**
  * Rotas do portal (paciente/parceiro). Diferente da guarda de equipe, exige
- * sessão REAL mesmo em modo aberto: o handler identifica o titular dos dados
+ * sessão REAL: o handler identifica o titular dos dados
  * por `session.subject`, então sem sessão não há o que responder.
  */
 export function requirePortalSession(

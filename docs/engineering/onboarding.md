@@ -88,8 +88,8 @@ npm install
 npm run dev                   # http://localhost:3000
 ```
 
-- **Modo aberto (só dev):** sem `AUTH_SECRET`, tudo responde 503. Para navegar sem login,
-  `VITTA_ALLOW_OPEN_MODE=true` (ignorado em produção; auditoria registra `anonymous`).
+- **Sem login não há app:** sem `AUTH_SECRET`, tudo responde 503, em qualquer ambiente. O antigo
+  "modo aberto" (`VITTA_ALLOW_OPEN_MODE`) foi removido (#327) e a variável não tem efeito.
 - **Migração manual:** `npm run db:migrate` e `VITTA_MIGRATE_ON_BOOT=false`.
 - **E-mail em dev:** sem `RESEND_API_KEY` o gateway é dry-run: o log traz destinatário mascarado,
   assunto e o link de definição de senha (`[e-mail desativado] Para fu***@x.com — …`) — nunca o
@@ -128,11 +128,10 @@ npm run dev                   # http://localhost:3000
 | `GLITCHTIP_DB_PASSWORD` / `GLITCHTIP_SECRET_KEY` | só com o GlitchTip | senha do Postgres próprio e chave do GlitchTip, lidas por `docker-compose.glitchtip.yml` (não pelo app) | [producao.md](producao.md) § 9.5 |
 | `ALERT_EMAIL_TO` / `ALERT_5XX_THRESHOLD` / `ALERT_DELIVERY_FAILURE_THRESHOLD` | não (sim em produção) | alertas por e-mail ao operador (`POST /api/alerts/run`) pelo canal da plataforma | limiares em 15 min, padrão `10` e `3`; [alertas.md](integrations/alertas.md) |
 | `VITTA_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
-| `VITTA_ALLOW_OPEN_MODE` | só dev | roda sem login | ignorada com `NODE_ENV=production` |
 | `POSTGRES_PORT` / `APP_PORT` | não | portas publicadas pelo compose no host | padrão `5432` (só loopback) e `3000` |
 | `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 | `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |
-| `NEXT_DIST_DIR` / `VITTA_DB_DRIVER` / `VITTA_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: diretório de build do servidor E2E em modo aberto, banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
+| `VITTA_DB_DRIVER` / `VITTA_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
 
 ## 5. Testes
 
@@ -142,7 +141,7 @@ npm run test:changed     # só o afetado pelo diff (loop local; não substitui o
 npm run test:coverage    # gate de CI: mínimo 90% (limiar em vitest.config.mts)
 npm run test:e2e         # build + Playwright contra `next start` e contra `next dev` (ADR-021); na 1ª vez ou após bump: npx playwright install
 npm run test:e2e:prod    # só a suíte principal, contra o build (precisa de `npm run build` antes)
-npm run test:e2e:dev     # só papéis e modo aberto, contra `next dev`
+npm run test:e2e:dev     # só papéis e login, contra `next dev`
 ```
 
 A suíte E2E sobe os próprios servidores e gera as credenciais a cada execução. Só para
@@ -160,7 +159,7 @@ bash scripts/backup-smoke.sh                                         # backup ci
 ```
 
 O E2E de produção é a suíte principal ([ADR-021](../adr/021-e2e-contra-build-de-producao.md)): todos os
-specs, menos modo aberto e contas por papel, com a CSP estrita (sem
+specs, menos as contas por papel, com a CSP estrita (sem
 `'unsafe-eval'`/`'unsafe-inline'`) e falha em qualquer violação de CSP
 (`e2e/csp-producao.spec.ts`). Módulo que chega ao bundle do cliente não pode importar `node:*`:
 o polyfill do Node usa `Function(...)` e a CSP de produção bloqueia. O smoke sobe o

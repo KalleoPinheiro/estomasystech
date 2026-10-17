@@ -11,15 +11,6 @@ const session = (role: Session['role'], subject: string): Session => ({
 });
 
 describe('Feature: ator das rotas de gestão de conta (#253)', () => {
-  describe('Cenário: modo aberto (sem sessão)', () => {
-    it('Dado session null, Quando resolver o ator, Então age como company_admin, igual ao POST /api/accounts', () => {
-      expect(accountManager(null)).toEqual({
-        role: 'company_admin',
-        subject: null,
-      });
-    });
-  });
-
   describe('Cenário: sessão real', () => {
     it('Dado uma sessão, Quando resolver o ator, Então usa o papel e o subject da própria sessão', () => {
       expect(accountManager(session('atendente', 'atendente@x.com'))).toEqual({

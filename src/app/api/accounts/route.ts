@@ -56,12 +56,10 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
     // A conta nasce sempre na empresa da sessão: o super_admin convida pela
-    // plataforma (`/api/platform/clinics/[id]/admins`, ADR-007). O "modo
-    // aberto" (sem sessão, só dev) age como Admin de Empresa da clínica de
-    // escrita.
+    // plataforma (`/api/platform/clinics/[id]/admins`, ADR-007).
     const targetClinicId = writeClinicId(guard.session);
     const actor = {
-      role: guard.session?.role ?? ('company_admin' as const),
+      role: guard.session.role,
       clinicId: targetClinicId,
     };
 

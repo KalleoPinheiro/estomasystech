@@ -61,8 +61,11 @@ O que **era** problema real:
 - **Fonte da verdade única (`src/lib/auth/access-policy.ts`)**: módulo puro (só
   `pathname` + env, sem `next/server`) consumido pelas duas camadas. Allowlists
   divergentes entre camadas seriam pior do que ter uma só.
-- **Modo aberto fail-closed**: exige `VITTA_ALLOW_OPEN_MODE=true` **e** fora de
-  produção. Sem a variável, auth não configurada responde 503 em vez de liberar.
+- **Sem modo aberto (#327)**: não existe caminho sem autenticação. Auth não configurada
+  (sem `AUTH_SECRET`) responde 503 em qualquer ambiente; `VITTA_ALLOW_OPEN_MODE` foi removida
+  e não tem efeito (teste em `tests/lib/access-policy.test.ts`). `requireStaffSession`
+  devolve sempre uma sessão real, então handlers não tratam mais `session: null`. O modo
+  já estava quebrado (APIs em 500 sem chave de cifra) e consertá-lo conflitaria com a #195.
 - **Conformidade automática** (`tests/api/route-guard-conformance.test.ts`): varre
   `src/app/api/**/route.ts` via `fs` e exige 401 sem cookie / 403 com papel de
   paciente. Rota nova sem guarda quebra o build.
