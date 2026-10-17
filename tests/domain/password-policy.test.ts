@@ -5,53 +5,37 @@ import {
   assertPasswordPolicy,
   COMMON_PASSWORD_MESSAGE,
   isCommonPassword,
-  PORTAL_PASSWORD_TOO_SHORT_MESSAGE,
+  PASSWORD_TOO_SHORT_MESSAGE,
   passwordPolicyViolation,
-  STAFF_PASSWORD_TOO_SHORT_MESSAGE,
-  usesStaffPasswordPolicy,
 } from '@/domain/auth/password-policy';
 import { USER_ROLES } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
 
-const STAFF = ['super_admin', 'company_admin', 'atendente', 'profissional'];
-const PORTAL = ['patient', 'partner'] as const;
+describe('Feature: Política de senha (#291, #309)', () => {
+  describe.each(USER_ROLES)(
+    'papel %s (equipe, paciente e parceiro)',
+    (_role) => {
+      const check = (password: string) => passwordPolicyViolation(password);
 
-describe('Feature: Política de senha da equipe (#291)', () => {
-  describe.each(STAFF)('papel de equipe %s', (role) => {
-    const check = (password: string) =>
-      passwordPolicyViolation(role as (typeof USER_ROLES)[number], password);
+      it('Dada senha de 9 caracteres, Então recusa pelo tamanho com a mensagem dos 10', () => {
+        expect(check('xk7#pq2vz')).toBe(PASSWORD_TOO_SHORT_MESSAGE);
+        expect(PASSWORD_TOO_SHORT_MESSAGE).toBe(
+          'A senha precisa ter ao menos 10 caracteres',
+        );
+      });
 
-    it('Dada senha de 9 caracteres, Então recusa pelo tamanho com a mensagem dos 10', () => {
-      expect(check('xk7#pq2vz')).toBe(STAFF_PASSWORD_TOO_SHORT_MESSAGE);
-      expect(STAFF_PASSWORD_TOO_SHORT_MESSAGE).toBe(
-        'A senha precisa ter ao menos 10 caracteres',
-      );
-    });
+      it('Dada senha incomum de 10 caracteres, Então aceita', () => {
+        expect(check('xk7#pq2vzm')).toBeNull();
+      });
 
-    it('Dada senha incomum de 10 caracteres, Então aceita', () => {
-      expect(check('xk7#pq2vzm')).toBeNull();
-    });
-
-    it('Dada senha da lista, Então recusa como comum, ignorando maiúsculas e espaços nas pontas', () => {
-      expect(check('senha12345')).toBe(COMMON_PASSWORD_MESSAGE);
-      expect(check('Senha12345')).toBe(COMMON_PASSWORD_MESSAGE);
-      expect(check(' QWERTYUIOP ')).toBe(COMMON_PASSWORD_MESSAGE);
-      expect(check('1234567890')).toBe(COMMON_PASSWORD_MESSAGE);
-    });
-  });
-
-  describe.each(PORTAL)('portal %s (fora da política da equipe)', (role) => {
-    it('Dada senha de 7 caracteres, Então recusa com o mínimo de 8', () => {
-      expect(passwordPolicyViolation(role, 'xk7#pq2')).toBe(
-        PORTAL_PASSWORD_TOO_SHORT_MESSAGE,
-      );
-    });
-
-    it('Dada senha de 8 caracteres, mesmo comum, Então aceita como antes', () => {
-      expect(passwordPolicyViolation(role, '12345678')).toBeNull();
-      expect(passwordPolicyViolation(role, 'senha12345')).toBeNull();
-    });
-  });
+      it('Dada senha da lista, Então recusa como comum, ignorando maiúsculas e espaços nas pontas', () => {
+        expect(check('senha12345')).toBe(COMMON_PASSWORD_MESSAGE);
+        expect(check('Senha12345')).toBe(COMMON_PASSWORD_MESSAGE);
+        expect(check(' QWERTYUIOP ')).toBe(COMMON_PASSWORD_MESSAGE);
+        expect(check('1234567890')).toBe(COMMON_PASSWORD_MESSAGE);
+      });
+    },
+  );
 
   it('Dada a lista embutida, Então só tem entradas em minúsculas com 10 ou mais caracteres', () => {
     expect(COMMON_PASSWORDS.size).toBeGreaterThan(100);
@@ -63,17 +47,11 @@ describe('Feature: Política de senha da equipe (#291)', () => {
     expect(isCommonPassword('xk7#pq2vzm')).toBe(false);
   });
 
-  it('Dado o papel, Então só a equipe usa a política de 10 caracteres', () => {
-    expect(USER_ROLES.filter(usesStaffPasswordPolicy)).toEqual(STAFF);
-  });
-
   it('Dada violação, Quando assertPasswordPolicy, Então lança ValidationError com a mensagem', () => {
-    expect(() => assertPasswordPolicy('company_admin', 'curta')).toThrow(
-      new ValidationError(STAFF_PASSWORD_TOO_SHORT_MESSAGE),
+    expect(() => assertPasswordPolicy('curta')).toThrow(
+      new ValidationError(PASSWORD_TOO_SHORT_MESSAGE),
     );
-    expect(() =>
-      assertPasswordPolicy('company_admin', 'xk7#pq2vzm'),
-    ).not.toThrow();
+    expect(() => assertPasswordPolicy('xk7#pq2vzm')).not.toThrow();
   });
 });
 

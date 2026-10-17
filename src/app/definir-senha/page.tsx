@@ -6,14 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { AuthCard } from '@/components/auth-card';
 import { ErrorAlert } from '@/components/feedback';
-import {
-  PORTAL_MIN_PASSWORD_LENGTH,
-  STAFF_MIN_PASSWORD_LENGTH,
-} from '@/domain/auth/password-policy';
+import { MIN_PASSWORD_LENGTH } from '@/domain/auth/password-policy';
 import { apiFetch } from '@/lib/client';
-
-/** O piso do campo é o do portal; o da equipe (#291) quem confere é o servidor. */
-const MIN_PASSWORD_LENGTH = PORTAL_MIN_PASSWORD_LENGTH;
 
 export default function SetPasswordPage() {
   return (
@@ -30,9 +24,8 @@ function SetPasswordCard() {
     <AuthCard>
       <h1 className="sv-display font-bold text-xl">Defina sua senha</h1>
       <p className="mt-1 mb-6 text-ink-3 text-sm">
-        Equipe da clínica: pelo menos {STAFF_MIN_PASSWORD_LENGTH} caracteres e
-        nada de senhas comuns (como “senha12345”). Paciente e parceiro: pelo
-        menos {PORTAL_MIN_PASSWORD_LENGTH} caracteres.
+        Pelo menos {MIN_PASSWORD_LENGTH} caracteres e nada de senhas comuns
+        (como “senha12345”).
       </p>
       {token ? (
         <SetPasswordForm token={token} />

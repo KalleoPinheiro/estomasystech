@@ -27,7 +27,7 @@ import { toUserAccountDto } from '@/lib/dto';
 
 const updateSchema = z.object({
   active: z.boolean().optional(),
-  // Tamanho e senhas comuns: `assertPasswordPolicy`, pelo papel da conta (#291).
+  // Tamanho e senhas comuns: `assertPasswordPolicy`, a mesma para todos os papéis (#291, #309).
   password: z.string().min(1).max(200).optional(),
 });
 type UpdateBody = z.infer<typeof updateSchema>;
@@ -51,8 +51,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
     const actor = accountManager(guard.session);
     assertCanManageAccount(actor, existing);
-    // Política do papel da conta-alvo (#291), antes da auditoria e da escrita.
-    if (body.password) assertPasswordPolicy(existing.role, body.password);
+    // Política de senha (#291, #309), antes da auditoria e da escrita.
+    if (body.password) assertPasswordPolicy(body.password);
 
     const updated =
       body.active === false
