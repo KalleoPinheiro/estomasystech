@@ -907,3 +907,20 @@ Decisões de @KalleoPinheiro de 2026-10-11 (AD-026 e AD-027):
 - **Next step**: nenhum.
 - **Blockers**: nenhum. O Atendente segue sem a aba Pacotes, porque a decisão cobre só o Profissional.
 - **Branch**: `feat/296-profissional-vinculo-pacotes`. PR #320, squash-merged em `main`.
+
+## Perguntas abertas das PRs #298–#318 e #216 (2026-10-17) — ENCERRADO (#330)
+
+@KalleoPinheiro delegou as decisões (segurança, escalabilidade, performance, coerência com o negócio). Registro: ADR-017 (retenção, completa o ADR-013, que voltou ao texto original), ADR-018 (transferência para a UE) e AD-034 no STATE.
+- **Cadastro de `partners`:** guardado (indicação, consentimento e comissões dependem dele).
+- **Paciente anonimizado:** não reativa (`409`, PRO-RN-17). Único código novo.
+- **Conta anonimizada:** já não recebia senha nem convite (inativa, tokens apagados); ganhou teste (ACE-RN-50).
+- **Storage Box:** outra localização da UE, backup `age`-cifrado, snapshots diários com 14 guardados.
+- **#306:** limiares 10/3, `delivered=false` só do provedor, sem erro do navegador, UptimeRobot, GlitchTip por túnel e 30 dias já constavam em AD-032; nova a regra de deploy **0050 antes da 0051** (runbook § 4).
+- **#300:** consentimento do parceiro é do par paciente × parceiro e não acompanha troca nem inativação (POR-RN-11).
+- **#216:** base técnica no ADR-018; texto jurídico segue pendente.
+
+**Detalhes**: gate local (Actions sem cota) sobre o head rebaseado: typecheck, lint, check:sv, check:docs, test:coverage (4798 testes, 97,15% linhas), build e Playwright completo (239). ADRs 016/017 e ACE-RN-48/49 já tinham sido tomados pela #317, então os meus viraram 017/018 e ACE-RN-50.
+
+- **Next step**: jurídico confere a Res. CD/ANPD nº 32/2026 na fonte primária, define o mecanismo para Resend/Google Agenda e entrega os textos (#216); ao receber o do consentimento do parceiro, trocar texto e versão juntos.
+- **Blockers**: nenhum para o código.
+- **Branch**: `claude/project-thread-kbdcsh`. PR #330.
