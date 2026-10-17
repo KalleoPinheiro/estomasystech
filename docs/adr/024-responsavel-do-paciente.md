@@ -78,7 +78,7 @@ branco para o nome. Um mesmo cuidador costuma responder por vários pacientes da
 - A exclusão pela ficha desvincula antes de apagar; se outro paciente usa o cadastro, só o vínculo desta
   ficha se desfaz e a tela avisa.
 
-**O que esta decisão fecha:** responsável com acesso ao portal ou mais de um por paciente exigem novo ADR.
+**O que esta decisão fecha:** responsável com acesso ao portal ou mais de um por paciente exigem novo ADR. O acesso ao portal foi decidido depois, no [ADR-027](027-responsavel-acessa-portal-em-nome-do-paciente.md); mais de um responsável por paciente segue fechado.
 
 ## Relacionado
 

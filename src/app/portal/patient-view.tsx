@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Hero,
+  Icon,
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
@@ -51,6 +52,14 @@ interface PatientPortalDto {
   conditions: ConditionWithAssessmentsDto[];
   invoices: InvoiceDto[];
   followUps: FollowUpDto[];
+  /** Responsável logado: em nome de quem ele age (ADR-027). */
+  actingFor: { patientId: string; fullName: string } | null;
+  /** Paciente logado: quem pode acessar o portal em nome dele (ADR-027). */
+  guardianAccess: {
+    fullName: string;
+    relationshipLabel: string;
+    lastAccessAt: string | null;
+  } | null;
   /** Antecedência mínima para cancelar/remarcar (política da clínica). */
   changeNoticeHours?: number;
 }
@@ -58,7 +67,15 @@ interface PatientPortalDto {
 // Momento de carregamento da página — suficiente para separar futuras × passadas.
 const PAGE_LOAD_MS = Date.now();
 
-export function PatientPortalView() {
+/**
+ * `onSwitchPatient` só existe para o responsável com mais de um paciente
+ * (ADR-027): o aviso "acessando em nome de" fica sempre visível no topo.
+ */
+export function PatientPortalView({
+  onSwitchPatient,
+}: {
+  onSwitchPatient?: () => void;
+}) {
   const { toast } = useToast();
   const { data, error, refresh } = useApiQuery<PatientPortalDto>(
     '/api/portal/patient',
@@ -116,14 +133,36 @@ export function PatientPortalView() {
 
   return (
     <div className="flex flex-col gap-6">
+      {data.actingFor && (
+        <ActingForBanner
+          patientName={data.actingFor.fullName}
+          onSwitchPatient={onSwitchPatient}
+        />
+      )}
       <Hero
         className="pt-0 pb-2"
-        eyebrow="Portal do paciente"
-        title={`Olá, ${data.patient.fullName.split(' ')[0]}!`}
-        description="Acompanhe aqui suas consultas e sua evolução clínica."
+        eyebrow={
+          data.actingFor ? 'Portal do responsável' : 'Portal do paciente'
+        }
+        title={
+          data.actingFor
+            ? data.patient.fullName
+            : `Olá, ${data.patient.fullName.split(' ')[0]}!`
+        }
+        description={
+          data.actingFor
+            ? 'Você acompanha as consultas e a evolução clínica deste paciente.'
+            : 'Acompanhe aqui suas consultas e sua evolução clínica.'
+        }
       />
 
-      <ConsentCard status={consent} onAccepted={refreshConsent} />
+      {data.guardianAccess && <GuardianAccessNotice {...data.guardianAccess} />}
+
+      {data.actingFor ? (
+        <GuardianConsentNote status={consent} />
+      ) : (
+        <ConsentCard status={consent} onAccepted={refreshConsent} />
+      )}
 
       <CancelledAppointmentsAlert appointments={cancelledUpcoming} />
 
@@ -191,6 +230,7 @@ export function PatientPortalView() {
                   <PatientPhotoUpload
                     conditionId={entry.condition.id}
                     consentPending={consent !== null && !consent.accepted}
+                    byGuardian={Boolean(data.actingFor)}
                     onSent={refresh}
                   />
                 )}
@@ -212,9 +252,13 @@ export function PatientPortalView() {
         <InvoicesList invoices={data.invoices} />
       </Section>
 
-      <PartnerConsentSection />
+      {!data.actingFor && (
+        <>
+          <PartnerConsentSection />
 
-      <DataRights />
+          <DataRights />
+        </>
+      )}
     </div>
   );
 }
@@ -353,5 +397,75 @@ function AppointmentList({
         ))}
       </ul>
     </Card>
+  );
+}
+
+/**
+ * Evidência permanente de que o acesso é em nome de outra pessoa (ADR-027):
+ * aparece em toda tela do responsável, não só na primeira.
+ */
+function ActingForBanner({
+  patientName,
+  onSwitchPatient,
+}: {
+  patientName: string;
+  onSwitchPatient?: () => void;
+}) {
+  return (
+    <Alert variant="warning" icon={<Icon name="info" />} role="status">
+      <AlertDescription>
+        <strong>Acessando em nome de {patientName}.</strong> Cada ação fica
+        registrada com o seu nome de responsável.
+        {onSwitchPatient && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-2"
+            onClick={onSwitchPatient}
+          >
+            Trocar paciente
+          </Button>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** O responsável não aceita nem revoga termos: só informa o estado. */
+function GuardianConsentNote({ status }: { status: ConsentStatusDto | null }) {
+  if (!status || status.accepted) return null;
+  return (
+    <Alert variant="warning">
+      <AlertDescription>
+        O termo de consentimento ainda não foi aceito. Ele é aceito pelo próprio
+        paciente; fale com a clínica se precisar de ajuda.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** O titular vê quem pode agir em nome dele e quando foi o último acesso. */
+function GuardianAccessNotice({
+  fullName,
+  relationshipLabel,
+  lastAccessAt,
+}: {
+  fullName: string;
+  relationshipLabel: string;
+  lastAccessAt: string | null;
+}) {
+  return (
+    <Alert variant="info" icon={<Icon name="info" />}>
+      <AlertDescription>
+        <strong>
+          {fullName} ({relationshipLabel})
+        </strong>{' '}
+        pode acessar este portal em seu nome.{' '}
+        {lastAccessAt
+          ? `Último acesso em ${formatDateTime(lastAccessAt)}.`
+          : 'Ainda não houve acesso.'}{' '}
+        Para encerrar esse acesso, fale com a clínica.
+      </AlertDescription>
+    </Alert>
   );
 }

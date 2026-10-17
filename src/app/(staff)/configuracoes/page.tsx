@@ -5,6 +5,7 @@ import {
   AlertDescription,
   Button,
   Card,
+  Checkbox,
   Input,
   NativeSelect,
   Table,
@@ -56,7 +57,8 @@ type AccountRole =
   | 'atendente'
   | 'profissional'
   | 'patient'
-  | 'partner';
+  | 'partner'
+  | 'guardian';
 
 const ACCOUNT_ROLE_OPTIONS: { value: AccountRole; label: string }[] = [
   { value: 'company_admin', label: 'Admin de Empresa' },
@@ -64,6 +66,7 @@ const ACCOUNT_ROLE_OPTIONS: { value: AccountRole; label: string }[] = [
   { value: 'profissional', label: 'Profissional' },
   { value: 'patient', label: 'Paciente' },
   { value: 'partner', label: 'Parceiro' },
+  { value: 'guardian', label: 'Responsável do paciente' },
 ];
 
 const WEEKDAYS = [
@@ -641,9 +644,13 @@ function AccountsTable({
   );
 }
 
-/** Contas da equipe têm segundo fator; paciente e parceiro, não (ACE-RN-42). */
+/** Contas da equipe têm segundo fator; os portais (paciente, parceiro, responsável), não (ACE-RN-42). */
 function usesMfa(account: UserAccountDto): boolean {
-  return account.role !== 'patient' && account.role !== 'partner';
+  return (
+    account.role !== 'patient' &&
+    account.role !== 'partner' &&
+    account.role !== 'guardian'
+  );
 }
 
 function accountStatusLabel(account: UserAccountDto): string {
@@ -779,6 +786,9 @@ function missingLinkMessage(
   if (role === 'partner' && !recordId) {
     return 'Selecione o parceiro dono desta conta de portal';
   }
+  if (role === 'guardian' && !recordId) {
+    return 'Selecione o responsável dono desta conta de portal';
+  }
   return null;
 }
 
@@ -795,15 +805,21 @@ function AccountForm({
   const [professionalId, setProfessionalId] = useState('');
   // Cadastro de paciente/parceiro dono da conta de portal (#196).
   const [recordId, setRecordId] = useState('');
+  // Equipe atesta que o paciente autorizou o acesso do responsável (ADR-027).
+  const [guardianAuthorized, setGuardianAuthorized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const requiresProfessional = role === 'profissional';
-  const portalRole = role === 'patient' || role === 'partner' ? role : null;
+  const portalRole =
+    role === 'patient' || role === 'partner' || role === 'guardian'
+      ? role
+      : null;
 
   const changeRole = (next: AccountRole) => {
     setRole(next);
     setRecordId('');
+    setGuardianAuthorized(false);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -827,6 +843,9 @@ function AccountForm({
             // Só nas contas de portal; ausentes (undefined) nas demais.
             patientId: role === 'patient' ? recordId : undefined,
             partnerId: role === 'partner' ? recordId : undefined,
+            guardianId: role === 'guardian' ? recordId : undefined,
+            guardianAuthorization:
+              role === 'guardian' ? guardianAuthorized : undefined,
           }),
         },
       );
@@ -889,6 +908,20 @@ function AccountForm({
             outro (ex.: de quem cuida do paciente) e não muda se o e-mail do
             cadastro for corrigido depois.
           </p>
+          {role === 'guardian' && (
+            <label className="flex items-start gap-2 font-medium text-sm">
+              <Checkbox
+                checked={guardianAuthorized}
+                onChange={(e) => setGuardianAuthorized(e.target.checked)}
+              />
+              <span>
+                Confirmo que o paciente (ou o representante legal dele)
+                autorizou este responsável a acessar o portal em seu nome. O
+                responsável verá consultas, evolução, fotos e faturas do
+                paciente, e cada acesso fica registrado.
+              </span>
+            </label>
+          )}
         </>
       )}
       <label className="font-medium text-sm">

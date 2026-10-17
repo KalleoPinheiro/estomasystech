@@ -66,6 +66,7 @@ describe('Feature: Segundo fator por papel (#291)', () => {
       profissional: 'optional',
       patient: 'none',
       partner: 'none',
+      guardian: 'none',
     });
   });
 });

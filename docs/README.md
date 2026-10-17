@@ -68,7 +68,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | --- | --- |
 | [`adr/001-multi-tenancy.md`](adr/001-multi-tenancy.md) | multiempresa por `clinic_id`, RLS adiada |
 | [`adr/002-autorizacao-em-duas-camadas.md`](adr/002-autorizacao-em-duas-camadas.md) | proxy + handler, fail-closed |
-| [`adr/003-modelo-de-papeis-multi-empresa.md`](adr/003-modelo-de-papeis-multi-empresa.md) | catálogo fechado de seis papéis |
+| [`adr/003-modelo-de-papeis-multi-empresa.md`](adr/003-modelo-de-papeis-multi-empresa.md) | catálogo fechado de seis papéis (o sétimo, `guardian`, no ADR-027) |
 | [`adr/004-remocao-google-oauth-autenticacao.md`](adr/004-remocao-google-oauth-autenticacao.md) | login nativo; Google só como integração |
 | [`adr/005-revogacao-de-sessao-por-versao.md`](adr/005-revogacao-de-sessao-por-versao.md) | `session_version` revoga sessões (logout, senha, desativação) |
 | [`adr/006-chave-de-dados-clinicos.md`](adr/006-chave-de-dados-clinicos.md) | `DATA_ENCRYPTION_KEY` versionada cifra o texto clínico |
@@ -90,6 +90,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/021-e2e-contra-build-de-producao.md`](adr/021-e2e-contra-build-de-producao.md) | E2E principal contra `next start`; `next dev` só para contas por papel (causa raiz da #308) |
 | [`adr/024-responsavel-do-paciente.md`](adr/024-responsavel-do-paciente.md) | responsável ou cuidador do paciente: entidade própria, só de contato |
 | [`adr/026-textos-lgpd-previa-nao-ligada.md`](adr/026-textos-lgpd-previa-nao-ligada.md) | textos LGPD em versão prévia ficam em `docs/legal/`, fora do código, até a revisão jurídica; nenhum aceite cai |
+| [`adr/027-responsavel-acessa-portal-em-nome-do-paciente.md`](adr/027-responsavel-acessa-portal-em-nome-do-paciente.md) | responsável do paciente acessa o portal em nome dele, com conta própria (`guardian`), aviso fixo e trilha |
 | [`adr/025-cpf-no-recibo-e-protecao.md`](adr/025-cpf-no-recibo-e-protecao.md) | CPF do paciente/pagador opcional, validado, cifrado e mascarado; exigido só no recibo do IRPF, com CNPJ do prestador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).

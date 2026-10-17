@@ -5,7 +5,7 @@ import type { Clinic } from '@/domain/clinic/clinic';
 export const SUSPENDED_CLINIC_MESSAGE =
   'O acesso desta clínica está suspenso. Fale com o responsável pela clínica.';
 
-const PORTAL_ROLES: readonly UserRole[] = ['patient', 'partner'];
+const PORTAL_ROLES: readonly UserRole[] = ['patient', 'partner', 'guardian'];
 
 /**
  * Paciente e parceiro não conhecem "o responsável" como a equipe conhece: a

@@ -5,7 +5,10 @@ import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import {
+  requirePatientPortalSession,
+  requirePortalSession,
+} from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { CONSENT_TEXT, CONSENT_TEXT_VERSION } from '@/lib/consent-text';
 
@@ -32,7 +35,7 @@ function toConsentStatusDto(
 
 /** Texto vigente + status do aceite do paciente logado. */
 export async function GET(request: NextRequest) {
-  const auth = requirePortalSession(request, 'patient');
+  const auth = requirePatientPortalSession(request);
   if (!auth.ok) return auth.response;
 
   return handleRequest(async () => {

@@ -2,7 +2,7 @@
 
 import { NativeSelect } from '@still-void/ui/react';
 import { PatientPicker } from '@/components/patient-picker';
-import type { PartnerDto } from '@/lib/dto';
+import type { GuardianDto, PartnerDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 
 /**
@@ -17,7 +17,7 @@ export function PortalLinkField({
   onChange,
   onSuggestEmail,
 }: {
-  role: 'patient' | 'partner';
+  role: 'patient' | 'partner' | 'guardian';
   value: string;
   onChange: (recordId: string) => void;
   onSuggestEmail: (email: string) => void;
@@ -31,6 +31,15 @@ export function PortalLinkField({
           onChange(id);
           if (patient?.email) onSuggestEmail(patient.email);
         }}
+      />
+    );
+  }
+  if (role === 'guardian') {
+    return (
+      <GuardianSelect
+        value={value}
+        onChange={onChange}
+        onSuggestEmail={onSuggestEmail}
       />
     );
   }
@@ -71,6 +80,42 @@ function PartnerSelect({
         {active.map((partner) => (
           <option key={partner.id} value={partner.id}>
             {partner.fullName}
+          </option>
+        ))}
+      </NativeSelect>
+    </label>
+  );
+}
+
+function GuardianSelect({
+  value,
+  onChange,
+  onSuggestEmail,
+}: {
+  value: string;
+  onChange: (guardianId: string) => void;
+  onSuggestEmail: (email: string) => void;
+}) {
+  const { data: guardians } = useApiQuery<GuardianDto[]>('/api/guardians');
+  return (
+    <label className="font-medium text-sm">
+      Responsável vinculado *
+      <NativeSelect
+        required
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          const guardian = (guardians ?? []).find(
+            (g) => g.id === e.target.value,
+          );
+          if (guardian?.email) onSuggestEmail(guardian.email);
+        }}
+        className="mt-1"
+      >
+        <option value="">— selecione —</option>
+        {(guardians ?? []).map((guardian) => (
+          <option key={guardian.id} value={guardian.id}>
+            {guardian.fullName} ({guardian.relationshipLabel})
           </option>
         ))}
       </NativeSelect>

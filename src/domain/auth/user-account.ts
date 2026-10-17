@@ -16,6 +16,8 @@ export interface UserAccountProps {
   patientId?: string | null;
   /** Cadastro de parceiro dono da conta de portal (#196) — só no papel `partner`. */
   partnerId?: string | null;
+  /** Cadastro de responsável dono da conta de portal (ADR-027) — só no papel `guardian`. */
+  guardianId?: string | null;
 }
 
 export interface UserAccountState extends UserAccountProps {
@@ -62,6 +64,7 @@ export class UserAccount {
       professionalId: props.professionalId ?? null,
       patientId: props.patientId ?? null,
       partnerId: props.partnerId ?? null,
+      guardianId: props.guardianId ?? null,
       id: newId(),
       active: true,
       createdAt: new Date(),
@@ -113,6 +116,10 @@ export class UserAccount {
 
   get partnerId(): string | null {
     return this.state.partnerId ?? null;
+  }
+
+  get guardianId(): string | null {
+    return this.state.guardianId ?? null;
   }
 
   get isAnonymized(): boolean {
@@ -195,7 +202,10 @@ export interface UserAccountRepository {
   revokeAllSessions(): Promise<void>;
   /** Conta de portal já vinculada a este cadastro (#196), se houver. */
   findByPortalLink(
-    link: { patientId: string } | { partnerId: string },
+    link:
+      | { patientId: string }
+      | { partnerId: string }
+      | { guardianId: string },
   ): Promise<UserAccount | null>;
   /** Existe ao menos uma conta na instalação? Guarda do bootstrap do primeiro Super Admin. */
   hasAnyAccount(): Promise<boolean>;

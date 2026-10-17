@@ -1161,3 +1161,15 @@ Kalléo pediu que a própria thread escrevesse uma versão prévia dos textos pa
 - **Docs:** índice `docs/README.md`, README de pacientes-prontuario, `CONTEXT.md` (Consent Record).
 - **Sem código, sem migração.** `check:docs` rodado local; o resto do gate não se aplica (nenhum `.ts` mudou).
 - **Pendências para o Kalléo:** (1) revisão jurídica; (2) decidir os pontos da § 7 (encarregado, uso didático de foto, mecanismo do art. 33 para Resend/Google Agenda, menores); (3) depois do texto fechado, abrir tickets: aceite de imagem separado (hoje o `ConsentRecord` tem um tipo só), colunas `encarregado_*`/`endereco` em `clinics`, páginas de aviso em login/portal/e-mail. **#216 não fechada; #323 segue bloqueada.**
+
+## Issue #351 — Responsável acessa o portal em nome do paciente (2026-10-17) — ENCERRADO
+
+O responsável (#329) ganha conta própria de portal e age em nome do paciente, sempre evidenciado ([ADR-027](../../docs/adr/027-responsavel-acessa-portal-em-nome-do-paciente.md), AD-046, POR-RN-21..23, ACE-RN-56). Decisão de @KalleoPinheiro; desenho delegado ao coordenador.
+- **Código**: papel `guardian` (7º do catálogo, sem 2º fator), `user_accounts.guardian_id` único por empresa (**migração 0061**). `resolvePortalPatient` resolve o paciente pelo vínculo `patients.guardian_id` + cookie `vitta_acting_patient` revalidado a cada requisição, e grava `read`/`guardian-access` antes de seguir. Guarda nova `requirePatientPortalSession`; rotas `/api/portal/guardian/{patients,acting-for}`.
+- **Fechado ao responsável (403)**: consentimento, parceiro indicador, cópia dos dados e pedidos LGPD. Foto só com o aceite do paciente.
+- **Evidência**: aviso fixo "Acessando em nome de X", "Trocar paciente", cartão no portal do paciente com quem acessa e o último acesso, `detail` "pelo responsável" nas ações, concessão auditada com a atestação da equipe.
+- **Equipe**: papel "Responsável do paciente" em Configurações > Contas, com a caixa de atestação. Cadastro com conta não é excluído (409); retenção anonimiza a conta com o último paciente.
+- **Numeração**: ADR-026 já era da #352 (#216); este é o 027. Corrigi também a tabela "Variável" de `docs/legal/textos-lgpd-previa.md` (agora "Campo"), que quebrava `tests/docs/structure.test.ts` na main.
+- **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build de produção, E2E prod e dev). Docker/smoke não rodam (sem daemon). the-judge não posta (sem `gh`): autorrevisão.
+- **Pergunta aberta**: o paciente adulto revogar sozinho o acesso do responsável pelo portal (hoje, pela clínica). Texto final do consentimento (#216) não muda isto.
+- **Next step**: nenhum. **Blockers**: nenhum. Deploy: aplicar a migração 0061 antes do código.

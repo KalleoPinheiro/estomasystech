@@ -152,12 +152,15 @@ export function ConsentCard({
 export function PatientPhotoUpload({
   conditionId,
   consentPending,
+  byGuardian = false,
   onSent,
 }: {
   conditionId: string;
   // Envio exige consentimento vigente (COMP3-01) — avisa antes de escolher o
   // arquivo. Enquanto o status não chegou (null no pai), não bloqueia a tela.
   consentPending: boolean;
+  /** O responsável não aceita o termo (ato do titular, ADR-027): a mensagem muda. */
+  byGuardian?: boolean;
   onSent: () => void;
 }) {
   const { toast } = useToast();
@@ -220,7 +223,9 @@ export function PatientPhotoUpload({
     return (
       <Alert variant="warning" className="mt-2">
         <AlertDescription>
-          Aceite o termo de consentimento acima para enviar fotos à equipe.
+          {byGuardian
+            ? 'O termo de consentimento é aceito pelo próprio paciente. Enquanto isso não acontece, não é possível enviar fotos.'
+            : 'Aceite o termo de consentimento acima para enviar fotos à equipe.'}
         </AlertDescription>
       </Alert>
     );

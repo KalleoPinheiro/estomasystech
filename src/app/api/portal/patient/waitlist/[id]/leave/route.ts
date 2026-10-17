@@ -4,7 +4,8 @@ import { ResolveWaitlistEntry } from '@/application/scheduling/waitlist';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { portalActorNoun } from '@/lib/auth/portal-actor';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toWaitlistEntryDto } from '@/lib/dto';
 
@@ -12,7 +13,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** Paciente sai da lista de espera (só a própria entrada). */
 export async function POST(request: NextRequest, context: RouteContext) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       resourceType: 'waitlist-entry',
       resourceId: entry.id,
       patientId: entry.patientId,
-      detail: 'saiu da lista pelo portal',
+      detail: `saiu da lista pelo portal (${portalActorNoun(session)})`,
     });
     return toWaitlistEntryDto(entry);
   });

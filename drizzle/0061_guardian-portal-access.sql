@@ -1,0 +1,3 @@
+ALTER TABLE "user_accounts" ADD COLUMN "guardian_id" text;--> statement-breakpoint
+ALTER TABLE "user_accounts" ADD CONSTRAINT "user_accounts_guardian_id_guardians_id_fk" FOREIGN KEY ("guardian_id") REFERENCES "public"."guardians"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_user_accounts_clinic_guardian" ON "user_accounts" USING btree ("clinic_id","guardian_id") WHERE "user_accounts"."guardian_id" IS NOT NULL;

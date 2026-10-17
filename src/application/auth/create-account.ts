@@ -27,6 +27,8 @@ export interface CreateAccountInput {
   patientId?: string | null;
   /** Cadastro de parceiro dono da conta — obrigatório no papel `partner` (#196). */
   partnerId?: string | null;
+  /** Cadastro de responsável dono da conta — obrigatório no papel `guardian` (ADR-027). */
+  guardianId?: string | null;
 }
 
 /**
@@ -75,6 +77,7 @@ export class CreateAccount {
       professionalId: input.professionalId ?? null,
       patientId: input.role === 'patient' ? (input.patientId ?? null) : null,
       partnerId: input.role === 'partner' ? (input.partnerId ?? null) : null,
+      guardianId: input.role === 'guardian' ? (input.guardianId ?? null) : null,
     });
     await this.accounts.save(account);
     return account;
@@ -109,6 +112,18 @@ export class CreateAccount {
         await this.accounts.findByPortalLink({ partnerId: input.partnerId })
       ) {
         throw new ValidationError('Este parceiro já tem acesso ao portal');
+      }
+    }
+    if (input.role === 'guardian') {
+      if (!input.guardianId) {
+        throw new ValidationError(
+          'guardianId é obrigatório para o papel responsável',
+        );
+      }
+      if (
+        await this.accounts.findByPortalLink({ guardianId: input.guardianId })
+      ) {
+        throw new ValidationError('Este responsável já tem acesso ao portal');
       }
     }
   }

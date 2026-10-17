@@ -228,8 +228,10 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-045
 - **Decision**: textos LGPD da #216 entregues como **versão prévia fora do código** (`docs/legal/textos-lgpd-previa.md`, `status: draft`), a pedido de @KalleoPinheiro (2026-10-17, "faça você mesmo uma versão prévia, eu ajusto depois"). Decidido pelo coordenador/thread: **não ligar ao sistema** e **não disparar a invalidação** dos aceites do #310 (texto e hash vigentes `v1`/`v0-placeholder` não mudam); só a promoção do texto revisado troca constante e versão juntas. Imagem separada do TCLE, interpolação de clínica/encarregado e páginas de aviso ficam como tickets futuros, não requisito. Trade-off: paciente não vê a prévia até a promoção. #216 segue aberta (`needs-info`); #323 segue bloqueada. [ADR-026](../docs/adr/026-textos-lgpd-previa-nao-ligada.md) · 2026-10-17 · active
 
-### Baseline de segurança medido em `fcd6110`
+### AD-046
+- **Decision**: o responsável do paciente acessa o portal **em nome dele** (#351, [ADR-027](../docs/adr/027-responsavel-acessa-portal-em-nome-do-paciente.md)), por decisão de @KalleoPinheiro (2026-10-17) com a exigência de evidência; desenho delegado ao coordenador: papel `guardian` com conta própria (migração `0061`), concedida pelo Admin de Empresa ou Atendente com **atestação** de que o paciente autorizou; o responsável escolhe o paciente, a tela mostra "Acessando em nome de X" o tempo todo, cada requisição grava `guardian-access` antes de seguir (ator = responsável, titular = paciente) e o paciente vê quem tem acesso e o último acesso. **Trade-off**: consentimento, parceiro indicador, cópia dos dados e pedidos LGPD ficam `403` para o responsável; foto só com o aceite do paciente; a prova é a atestação da equipe, sem convite ao paciente; um `read` por requisição enche a trilha. Pergunta aberta: o paciente adulto revogar sozinho o acesso pelo portal. POR-RN-21..23, ACE-RN-56 · 2026-10-17 · active
 
+### Baseline de segurança medido em `fcd6110`
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
 
 | Medição | Valor esperado |
@@ -241,9 +243,7 @@ Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/eng
 | — `detect-non-literal-regexp` | 0 |
 | `npm audit` | 0 HIGH/CRITICAL; 4 MODERATE de `esbuild` (AD-009) |
 
-Um scan GitGuard sobre `fcd6110` deve cair de 54 para ~9 findings: 2 `hardcoded_secrets`
-deduplicados, 1 `unsafe-formatstring` e os 6 TRIVY obsoletos, que só somem quando o
-serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
+Um scan GitGuard sobre `fcd6110` deve cair de 54 para ~9 findings: 2 `hardcoded_secrets` deduplicados, 1 `unsafe-formatstring` e os 6 TRIVY obsoletos, que só somem quando o serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
 
 ## Handoff
 

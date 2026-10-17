@@ -35,7 +35,7 @@ em § 7, nunca escondido no texto.
 
 ## 2. Variáveis (preenchidas por empresa)
 
-| Variável | Conteúdo | Hoje existe no cadastro da empresa? |
+| Campo | Conteúdo | Hoje existe no cadastro da empresa? |
 | --- | --- | --- |
 | `{{CLINICA_NOME}}` | razão social ou nome fantasia da clínica | sim |
 | `{{CLINICA_CNPJ}}` | CNPJ da clínica | sim (PRO-RN-09) |

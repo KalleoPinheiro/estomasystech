@@ -1,13 +1,14 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CreateAccount } from '@/application/auth/create-account';
+import { assertCanGrantGuardianAccess } from '@/application/auth/grant-guardian-access';
 import { sendInvite } from '@/application/auth/send-invite';
 import { visibleAccounts } from '@/domain/auth/account-management';
 import { USER_ROLES } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
-import { recordAudit } from '@/lib/audit';
+import { recordAudit, recordAuditNow } from '@/lib/audit';
 import { accountManager } from '@/lib/auth/account-manager';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -28,6 +29,10 @@ const createSchema = z
     // Conta de portal nasce vinculada ao cadastro (#196).
     patientId: z.string().max(100).nullish(),
     partnerId: z.string().max(100).nullish(),
+    guardianId: z.string().max(100).nullish(),
+    // Acesso do responsável ao portal (ADR-027): a equipe atesta que o paciente
+    // (ou seu representante legal) autorizou.
+    guardianAuthorization: z.boolean().optional(),
   })
   .refine((data) => data.role !== 'profissional' || !!data.professionalId, {
     // Sem professionalId, a sessão do profissional nasce com vínculo nulo e o
@@ -64,8 +69,14 @@ export async function POST(request: NextRequest) {
     };
 
     const services = await getRepositories(clinicScope(targetClinicId));
-    const { userAccounts, professionals, patients, partners, auditEvents } =
-      services;
+    const {
+      userAccounts,
+      professionals,
+      patients,
+      partners,
+      guardians,
+      auditEvents,
+    } = services;
 
     if (body.professionalId) {
       const professional = await professionals.findById(body.professionalId);
@@ -86,6 +97,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (body.role === 'guardian') {
+      await assertCanGrantGuardianAccess(
+        { guardians, patients },
+        body.guardianId,
+        body.guardianAuthorization === true,
+      );
+    }
+
     const account = await new CreateAccount(userAccounts).execute(actor, {
       email: body.email,
       passwordHash: UNSET_PASSWORD_HASH,
@@ -94,13 +113,25 @@ export async function POST(request: NextRequest) {
       professionalId: body.professionalId ?? null,
       patientId: body.patientId ?? null,
       partnerId: body.partnerId ?? null,
+      guardianId: body.guardianId ?? null,
     });
     const { delivered, inviteUrl } = await sendInvite(services, account);
-    recordAudit(auditEvents, guard.session, {
-      action: 'create',
+    const audit = {
+      action: 'create' as const,
       resourceType: 'account',
       resourceId: account.id,
-    });
+    };
+    if (account.role === 'guardian') {
+      // Conceder acesso a dado de saúde de terceiro: write-ahead, com a
+      // atestação da equipe na trilha (ADR-027).
+      await recordAuditNow(auditEvents, guard.session, {
+        ...audit,
+        detail:
+          'acesso do responsável ao portal; autorização do paciente atestada pela equipe',
+      });
+    } else {
+      recordAudit(auditEvents, guard.session, audit);
+    }
     return { ...toUserAccountDto(account), delivered, inviteUrl };
   });
 }

@@ -4,6 +4,7 @@ import { Card, CardContent, Icon } from '@still-void/ui/react';
 import Link from 'next/link';
 import { LoadingIndicator } from '@/components/feedback';
 import { useApiQuery } from '@/lib/use-api-query';
+import { GuardianPortalView } from './guardian-view';
 import { PartnerPortalView } from './partner-view';
 import { PatientPortalView } from './patient-view';
 
@@ -15,7 +16,8 @@ interface Me {
     | 'atendente'
     | 'profissional'
     | 'partner'
-    | 'patient';
+    | 'patient'
+    | 'guardian';
 }
 
 // PORT-01/PORT-10: mensagens cruas de sessão ("Não autenticado", "Rota
@@ -47,6 +49,7 @@ export default function PortalPage() {
   if (!me) return <LoadingIndicator />;
 
   if (me.role === 'patient') return <PatientPortalView />;
+  if (me.role === 'guardian') return <GuardianPortalView />;
   if (me.role === 'partner') return <PartnerPortalView />;
 
   return (

@@ -22,11 +22,13 @@ export const PROVISIONING_MATRIX: Record<UserRole, readonly UserRole[]> = {
     'profissional',
     'patient',
     'partner',
+    'guardian',
   ],
-  atendente: ['patient', 'partner'],
+  atendente: ['patient', 'partner', 'guardian'],
   profissional: ['patient', 'partner'],
   patient: [],
   partner: [],
+  guardian: [],
 };
 
 export function canProvision(

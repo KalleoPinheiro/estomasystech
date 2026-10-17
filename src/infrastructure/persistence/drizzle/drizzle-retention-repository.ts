@@ -66,6 +66,7 @@ const ACCOUNT_ROLES = [
   'profissional',
   'patient',
   'partner',
+  'guardian',
 ];
 const RESOLVED_WAITLIST = ['scheduled', 'removed', 'expired'];
 
@@ -573,6 +574,23 @@ async function deleteOrphanGuardian(
     .where(eq(patients.guardianId, guardianId))
     .limit(1);
   if (stillLinked.length > 0) return;
+  // O acesso ao portal do responsável (ADR-027) cai junto com o cadastro.
+  const accounts = await tx
+    .select({ id: userAccounts.id })
+    .from(userAccounts)
+    .where(
+      and(
+        eq(userAccounts.clinicId, clinicId),
+        eq(userAccounts.guardianId, guardianId),
+        isNull(userAccounts.anonymizedAt),
+      ),
+    );
+  await anonymizeAccounts(
+    tx,
+    clinicId,
+    accounts.map((row) => row.id),
+    new Date(),
+  );
   await tx
     .delete(guardians)
     .where(and(eq(guardians.id, guardianId), eq(guardians.clinicId, clinicId)));
@@ -597,6 +615,9 @@ async function anonymizeAccounts(
       // Conta de parceiro solta o cadastro: sem isso o convite novo do mesmo
       // parceiro bateria no vínculo único (#311).
       partnerId: null,
+      // Idem para o responsável (ADR-027): solta o cadastro, que pode ser
+      // apagado quando nenhum paciente o usa.
+      guardianId: null,
       anonymizedAt: now,
     })
     .where(

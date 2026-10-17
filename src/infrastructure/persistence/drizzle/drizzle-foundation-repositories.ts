@@ -116,6 +116,7 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       professionalId: account.professionalId,
       patientId: account.patientId,
       partnerId: account.partnerId,
+      guardianId: account.guardianId,
       active: account.isActive,
       createdAt: account.createdAt,
     };
@@ -252,12 +253,17 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
   }
 
   async findByPortalLink(
-    link: { patientId: string } | { partnerId: string },
+    link:
+      | { patientId: string }
+      | { partnerId: string }
+      | { guardianId: string },
   ): Promise<UserAccount | null> {
     const condition =
       'patientId' in link
         ? eq(userAccounts.patientId, link.patientId)
-        : eq(userAccounts.partnerId, link.partnerId);
+        : 'partnerId' in link
+          ? eq(userAccounts.partnerId, link.partnerId)
+          : eq(userAccounts.guardianId, link.guardianId);
     const rows = await this.db
       .select()
       .from(userAccounts)

@@ -3,17 +3,20 @@ import {
   CreateGuardian,
   DeleteGuardian,
   GetGuardian,
+  GUARDIAN_HAS_ACCOUNT_MESSAGE,
   GUARDIAN_IN_USE_MESSAGE,
   ListGuardians,
   UpdateGuardian,
 } from '@/application/guardians/guardian-use-cases';
 import { CreatePatient } from '@/application/patients/create-patient';
 import { UpdatePatient } from '@/application/patients/update-patient';
+import { UserAccount } from '@/domain/auth/user-account';
 import {
   ConflictError,
   NotFoundError,
   ValidationError,
 } from '@/domain/shared/errors';
+import { InMemoryUserAccountRepository } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryGuardianRepository } from '@/infrastructure/persistence/in-memory/in-memory-guardian-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 
@@ -27,10 +30,12 @@ const ana = {
 describe('Feature: Responsável reutilizável entre pacientes (#329)', () => {
   let guardians: InMemoryGuardianRepository;
   let patients: InMemoryPatientRepository;
+  let accounts: InMemoryUserAccountRepository;
 
   beforeEach(() => {
     guardians = new InMemoryGuardianRepository();
     patients = new InMemoryPatientRepository();
+    accounts = new InMemoryUserAccountRepository();
   });
 
   const newPatient = (fullName: string, guardianId?: string) =>
@@ -82,10 +87,27 @@ describe('Feature: Responsável reutilizável entre pacientes (#329)', () => {
     expect(unlinked.guardianId).toBeNull();
   });
 
+  it('Dado responsável com acesso ao portal, Quando excluir, Então ConflictError (ADR-027)', async () => {
+    const guardian = await new CreateGuardian(guardians).execute(ana);
+    await accounts.save(
+      UserAccount.create({
+        email: 'ana@exemplo.com',
+        passwordHash: 'scrypt$x',
+        role: 'guardian',
+        clinicId: 'c1',
+        guardianId: guardian.id,
+      }),
+    );
+
+    await expect(
+      new DeleteGuardian(guardians, patients, accounts).execute(guardian.id),
+    ).rejects.toThrow(new ConflictError(GUARDIAN_HAS_ACCOUNT_MESSAGE));
+  });
+
   it('Dado responsável ligado a paciente, Quando excluir, Então ConflictError; sem vínculo, exclui', async () => {
     const guardian = await new CreateGuardian(guardians).execute(ana);
     const maria = await newPatient('Maria Souza', guardian.id);
-    const remove = new DeleteGuardian(guardians, patients);
+    const remove = new DeleteGuardian(guardians, patients, accounts);
 
     await expect(remove.execute(guardian.id)).rejects.toThrow(
       new ConflictError(GUARDIAN_IN_USE_MESSAGE),

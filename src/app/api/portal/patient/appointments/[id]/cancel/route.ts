@@ -5,7 +5,8 @@ import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { portalActorNoun } from '@/lib/auth/portal-actor';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toPortalAppointmentDto } from '@/lib/dto';
@@ -18,7 +19,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** Cancelamento da própria consulta pelo paciente, com antecedência mínima. */
 export async function POST(request: NextRequest, context: RouteContext) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         resourceType: 'appointment',
         resourceId: cancelled.id,
         patientId: cancelled.patientId,
-        detail: 'cancelada pelo paciente no portal',
+        detail: `cancelada pelo ${portalActorNoun(session)} no portal`,
       });
       const eventId = cancelled.googleEventId;
       if (eventId) {
