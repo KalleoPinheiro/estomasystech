@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  ConditionPhoto,
+  PATIENT_MAX_PHOTOS_PER_DAY,
+} from '@/domain/clinical/condition-photo';
 import { PartnerShareConsent } from '@/domain/consent/partner-share-consent';
 import { getRepositories } from '@/infrastructure/container';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
@@ -8,6 +12,7 @@ import {
   PARTNER_SHARE_CONSENT_TEXT,
   PARTNER_SHARE_CONSENT_TEXT_VERSION,
 } from '@/lib/partner-share-consent-text';
+import { pinClock, unpinClock } from '../support/clock';
 import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
 
@@ -78,6 +83,9 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
   let partnerCookieToken: string;
 
   beforeAll(async () => {
+    // Relógio fixo: as datas do cenário são absolutas e o portal só agenda
+    // até 60 dias à frente (#213) — sem fixar, o teste apodreceria com o tempo.
+    pinClock('2027-02-15T12:00:00.000Z');
     meRoute = await import('@/app/api/portal/me/route');
     patientPortalRoute = await import('@/app/api/portal/patient/route');
     partnerPortalRoute = await import('@/app/api/portal/partner/route');
@@ -157,8 +165,8 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
     const appointmentResponse = await appointmentsRoute.POST(
       staffRequest('/api/appointments', 'POST', {
         patientId,
-        startsAt: '2027-01-11T12:00:00.000Z',
-        endsAt: '2027-01-11T13:00:00.000Z',
+        startsAt: '2027-03-01T12:00:00.000Z',
+        endsAt: '2027-03-01T13:00:00.000Z',
         procedure: 'Avaliação de ferida',
         priceCents: 15000,
       }),
@@ -262,6 +270,10 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
       partnerEmail,
       'partner',
     );
+  });
+
+  afterAll(() => {
+    unpinClock();
   });
 
   const cookieHeader = (token: string) => ({
@@ -982,6 +994,47 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
       expect(response.status).toBe(200);
       expect(body.data.triageStatus).toBe('pending');
     });
+
+    it('Dado a cota diária de fotos esgotada, Quando POST photos, Então 400 com mensagem clara e nada é gravado (#213)', async () => {
+      const { conditionPhotos } = await getRepositories(
+        clinicScope(LEGACY_CLINIC_ID),
+      );
+      const before = (await conditionPhotos.findByConditionId(conditionId))
+        .length;
+      const seeded: string[] = [];
+      for (let i = 0; i < PATIENT_MAX_PHOTOS_PER_DAY; i++) {
+        const photo = ConditionPhoto.create({
+          conditionId,
+          contentType: 'image/png',
+          sizeBytes: 100,
+          origin: 'patient',
+        });
+        await conditionPhotos.save(photo);
+        seeded.push(photo.id);
+      }
+
+      try {
+        const file = new File([pngBytes], 'foto.png', { type: 'image/png' });
+        const response = await photosRoute.POST(
+          multipartRequest(
+            '/api/portal/patient/photos',
+            { file, conditionId },
+            cookieHeader(patientCookieToken),
+          ),
+        );
+        const body = (await response.json()) as Envelope<null> & {
+          error: string;
+        };
+
+        expect(response.status).toBe(400);
+        expect(body.error).toMatch(/já enviou 10 fotos nas últimas 24 horas/);
+        expect(
+          (await conditionPhotos.findByConditionId(conditionId)).length,
+        ).toBe(before + PATIENT_MAX_PHOTOS_PER_DAY);
+      } finally {
+        for (const id of seeded) await conditionPhotos.delete(id);
+      }
+    });
   });
 
   describe('GET /api/portal/patient/procedures e /slots', () => {
@@ -1147,6 +1200,71 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
         .id;
     });
 
+    // O teto de 2 consultas futuras (#213) vale entre testes: cada cenário
+    // começa só com a consulta do beforeAll geral.
+    beforeEach(async () => {
+      const { appointments } = await getRepositories(
+        clinicScope(LEGACY_CLINIC_ID),
+      );
+      for (const extra of await appointments.findByPatientId(patientId)) {
+        if (extra.id !== appointmentId && extra.isActive) {
+          await appointments.save(extra.cancel());
+        }
+      }
+    });
+
+    it('Dado 2 consultas futuras, Quando POST da terceira, Então 400 com mensagem clara e nada é criado (#213)', async () => {
+      // A consulta do cenário (staff) já conta como a primeira.
+      const book = (startsAt: string) =>
+        portalAppointmentsRoute.POST(
+          jsonRequest(
+            '/api/portal/patient/appointments',
+            'POST',
+            { procedureId, startsAt },
+            cookieHeader(patientCookieToken),
+          ),
+        );
+
+      expect((await book('2027-04-13T12:00:00.000Z')).status).toBe(200);
+      const response = await book('2027-04-14T12:00:00.000Z');
+      const body = (await response.json()) as Envelope<null> & {
+        error: string;
+      };
+
+      expect(response.status).toBe(400);
+      expect(body.error).toMatch(/já tem 2 consultas futuras/);
+    });
+
+    it('Dado horário além de 60 dias, Quando POST, Então 400 com mensagem clara (#213)', async () => {
+      const response = await portalAppointmentsRoute.POST(
+        jsonRequest(
+          '/api/portal/patient/appointments',
+          'POST',
+          { procedureId, startsAt: '2027-05-03T12:00:00.000Z' },
+          cookieHeader(patientCookieToken),
+        ),
+      );
+      const body = (await response.json()) as Envelope<null> & {
+        error: string;
+      };
+
+      expect(response.status).toBe(400);
+      expect(body.error).toMatch(/em até 60 dias/);
+    });
+
+    it('Dado dia além de 60 dias, Quando GET slots, Então 400 com mensagem clara (#213)', async () => {
+      const response = await slotsRoute.GET(
+        jsonRequest(
+          `/api/portal/patient/slots?procedureId=${procedureId}&date=2027-05-04`,
+          'GET',
+          undefined,
+          cookieHeader(patientCookieToken),
+        ),
+      );
+
+      expect(response.status).toBe(400);
+    });
+
     it('Dado sem sessão, Quando POST, Então retorna 401', async () => {
       const response = await portalAppointmentsRoute.POST(
         jsonRequest('/api/portal/patient/appointments', 'POST', {
@@ -1261,14 +1379,15 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
     });
 
     it('Dado horário já ocupado, Quando POST, Então retorna 409 (PORT4-05)', async () => {
-      // Cria o próprio bloqueio: depender da consulta de outro teste quebraria
-      // com reordenação, `.only` ou isolamento por teste.
+      // Cria o próprio bloqueio (de outro paciente, para não esbarrar no teto
+      // de consultas futuras, #213): depender da consulta de outro teste
+      // quebraria com reordenação, `.only` ou isolamento por teste.
       const blocking = await portalAppointmentsRoute.POST(
         jsonRequest(
           '/api/portal/patient/appointments',
           'POST',
           { procedureId, startsAt: '2027-04-12T12:00:00.000Z' },
-          cookieHeader(patientCookieToken),
+          cookieHeader(otherPatientCookieToken),
         ),
       );
       expect(blocking.status).toBe(200);

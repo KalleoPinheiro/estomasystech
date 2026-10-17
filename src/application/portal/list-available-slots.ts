@@ -2,6 +2,10 @@ import { assertSlotAvailable } from '@/application/appointments/assert-slot-avai
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import {
+  PORTAL_HORIZON_MESSAGE,
+  portalBookingHorizon,
+} from '@/domain/scheduling/patient-self-service';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import {
   DEFAULT_SCHEDULE_CONFIG,
@@ -74,13 +78,21 @@ export class ListAvailableSlots {
     }
 
     const now = input.now ?? new Date();
+    // Horizonte do autoagendamento (#213): dia além dele recebe mensagem clara
+    // em vez de uma lista vazia que parece "sem horário".
+    const horizon = portalBookingHorizon(now);
+    if (day.getTime() > horizon.getTime()) {
+      throw new ValidationError(PORTAL_HORIZON_MESSAGE);
+    }
     const candidates = candidateSlots(
       day,
       config,
       request.durationMinutes,
     ).filter(
-      // Horário já passado não é ofertado.
-      (slot) => slot.startsAt.getTime() > now.getTime(),
+      // Horário já passado ou além do horizonte não é ofertado.
+      (slot) =>
+        slot.startsAt.getTime() > now.getTime() &&
+        slot.startsAt.getTime() <= horizon.getTime(),
     );
 
     const slots: AvailableSlot[] = [];

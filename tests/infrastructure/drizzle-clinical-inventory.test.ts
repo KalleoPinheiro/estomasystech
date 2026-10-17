@@ -417,6 +417,24 @@ describe('Feature: Persistência PostgreSQL — módulos clínico, estoque e ret
     expect(await photoRepo.findByConditionIds([])).toEqual([]);
     expect(await photoRepo.findByConditionIds([condition.id])).toHaveLength(2);
 
+    // Cota diária do portal (#213): só foto de paciente, na janela, nas condições dadas.
+    expect(await photoRepo.countPatientUploadsSince([], new Date(0))).toBe(0);
+    expect(
+      await photoRepo.countPatientUploadsSince([condition.id], new Date(0)),
+    ).toBe(1);
+    expect(
+      await photoRepo.countPatientUploadsSince(
+        [condition.id],
+        new Date(Date.now() + 60_000),
+      ),
+    ).toBe(0);
+    expect(
+      await photoRepo.countPatientUploadsSince(
+        ['condicao-de-outro-paciente'],
+        new Date(0),
+      ),
+    ).toBe(0);
+
     await photoRepo.delete(staffPhoto.id);
     expect(await photoRepo.findByConditionId(condition.id)).toHaveLength(1);
   });

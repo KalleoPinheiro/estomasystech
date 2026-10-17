@@ -221,6 +221,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: sem migração de dados — legado fora do padrão segue válido até alguém mudar o telefone, é sinalizado (`phoneNeedsCorrection`, selo "Corrigir telefone") e o link do WhatsApp falha com motivo se não normalizar. Parceiro e telefone da empresa ficam fora (sem pedido). Lista de DDDs fixa no código: DDD novo da Anatel exige atualizar `phone.ts`.
 - **Scope / Date / Status**: PRO-RN-18, COM-RN-08, `src/domain/shared/phone.ts` · 2026-10-17 · active
 
+### AD-036
+- **Decision**: limites anti-abuso do portal (#213), números de @KalleoPinheiro (2026-10-11): 2 consultas futuras, 60 dias, 10 fotos/dia e `proxyClientMaxBodySize` 6 MB. Delegado: o teto conta consultas futuras ativas de qualquer origem (a agenda é uma só); "por dia" é janela móvel de 24 h; o horizonte é instante e a UI passou de 14 para 60 dias; estouro responde `400` com mensagem clara. Trade-off: paciente com duas consultas da equipe não agenda outra sozinho; checagem não atômica pode passar do teto por 1–2 unidades. POR-RN-17 · 2026-10-17 · active
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
@@ -244,7 +247,4 @@ Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archi
 
 ## Go-live — depois do bloco 1 (2026-10-12) — EM ANDAMENTO
 
-Bloco 1 encerrado (#215, #291, #292, #293, #294, #206, #212; handoffs no arquivo). Próximo trabalho vem das decisões da AD-032:
-- **Prontas para agente:** #309, #310, #311, #312, #313 e a #295, que ganhou o reset do 2FA.
-- **Precisa de triagem:** #308, o E2E intermitente sem evidência no CI.
-- **Bloqueada por decisão:** a #216 (jurídico).
+Bloco 1 encerrado (handoffs no arquivo). Seguem em aberto a #308 (E2E intermitente, em investigação) e a #216 (jurídico); o resto da fila segue pelo coordenador do projeto.

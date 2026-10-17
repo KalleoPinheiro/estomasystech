@@ -50,3 +50,43 @@ export function assertPatientCanChange(
     );
   }
 }
+
+/** Teto de consultas futuras que o paciente mantém marcadas pelo portal (#213). */
+export const PORTAL_MAX_FUTURE_APPOINTMENTS = 2;
+
+/** Até quantos dias à frente o paciente agenda ou remarca sozinho (#213). */
+export const PORTAL_BOOKING_HORIZON_DAYS = 60;
+
+const DAY_MS = 86_400_000;
+
+/** Último instante em que o paciente pode marcar pelo portal. */
+export function portalBookingHorizon(now: Date): Date {
+  return new Date(now.getTime() + PORTAL_BOOKING_HORIZON_DAYS * DAY_MS);
+}
+
+export const PORTAL_HORIZON_MESSAGE = `Só é possível agendar pelo portal em até ${PORTAL_BOOKING_HORIZON_DAYS} dias: escolha uma data mais próxima ou fale com a clínica`;
+
+export function assertWithinPortalHorizon(at: Date, now: Date): void {
+  if (at.getTime() > portalBookingHorizon(now).getTime()) {
+    throw new ValidationError(PORTAL_HORIZON_MESSAGE);
+  }
+}
+
+/**
+ * Consultas futuras ativas do paciente, qualquer que seja a origem do
+ * agendamento: o teto protege a agenda da clínica, não importa quem marcou.
+ */
+export function assertUnderPortalFutureCap(
+  appointments: readonly Appointment[],
+  now: Date,
+): void {
+  const future = appointments.filter(
+    (appointment) =>
+      appointment.isActive && appointment.slot.start.getTime() > now.getTime(),
+  );
+  if (future.length >= PORTAL_MAX_FUTURE_APPOINTMENTS) {
+    throw new ValidationError(
+      `Você já tem ${PORTAL_MAX_FUTURE_APPOINTMENTS} consultas futuras marcadas: cancele ou aguarde uma delas, ou fale com a clínica para marcar outra`,
+    );
+  }
+}

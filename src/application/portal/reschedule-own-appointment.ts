@@ -2,7 +2,10 @@ import { RescheduleAppointment } from '@/application/appointments/reschedule-app
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
-import { assertPatientCanChange } from '@/domain/scheduling/patient-self-service';
+import {
+  assertPatientCanChange,
+  assertWithinPortalHorizon,
+} from '@/domain/scheduling/patient-self-service';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import {
   cancellationPolicyOf,
@@ -47,6 +50,8 @@ export class RescheduleOwnAppointment {
     if (input.startsAt.getTime() <= now.getTime()) {
       throw new ValidationError('Escolha um horário futuro para a consulta');
     }
+    // Remarcar não cria consulta (o teto não muda), mas o horizonte vale (#213).
+    assertWithinPortalHorizon(input.startsAt, now);
 
     const durationMs =
       appointment.slot.end.getTime() - appointment.slot.start.getTime();

@@ -4,6 +4,10 @@ import type { FollowUpRepository } from '@/domain/followup/follow-up-repository'
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import {
+  assertUnderPortalFutureCap,
+  assertWithinPortalHorizon,
+} from '@/domain/scheduling/patient-self-service';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
@@ -51,9 +55,17 @@ export class ScheduleOwnAppointment {
 
     // A listagem de horários não oferta o passado; o POST é alcançável direto,
     // então a regra também vale aqui (PORT4-04).
-    if (input.startsAt.getTime() <= (input.now ?? new Date()).getTime()) {
+    const now = input.now ?? new Date();
+    if (input.startsAt.getTime() <= now.getTime()) {
       throw new ValidationError('Escolha um horário futuro para o retorno');
     }
+    // Limites anti-abuso (#213): valem aqui, não só na UI, porque o POST é
+    // alcançável direto. Uma consulta sem profissional bloqueia a agenda toda.
+    assertWithinPortalHorizon(input.startsAt, now);
+    assertUnderPortalFutureCap(
+      await this.appointments.findByPatientId(patient.id, { endsAfter: now }),
+      now,
+    );
 
     const followUp = await this.resolveOwnFollowUp(
       input.followUpId ?? null,

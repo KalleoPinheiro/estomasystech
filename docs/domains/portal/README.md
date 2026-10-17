@@ -3,7 +3,7 @@ title: "Domínio: Portal do paciente e do parceiro"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-11
+last_reviewed: 2026-10-17
 domain: portal
 ---
 
@@ -37,6 +37,7 @@ indicou. O papel da sessão escolhe a visão.
 | POR-RN-14 | O paciente pede **correção cadastral** (descrição obrigatória) ou **eliminação/anonimização** (motivo opcional). É um pedido, não uma ação: nada muda no cadastro nem no prontuário. Um pedido pendente por tipo (`409` no segundo, garantido também por índice único parcial); abrir o pedido grava `create`/`data_request` na auditoria **antes** de gravar o pedido. O paciente vê os próprios pedidos, a situação e a justificativa da clínica (#293). A clínica tem **15 dias corridos** para responder e o Admin é avisado por e-mail de cada pedido novo e do prazo perto de vencer; a resposta é avisada no **e-mail de login do portal** (PRO-RN-16, #312) | `src/app/api/portal/patient/data-requests/route.ts`, `src/domain/patient/data-subject-request.ts` |
 | POR-RN-15 | A senha de paciente e parceiro segue a política da equipe (ACE-RN-41, ACE-RN-48): mínimo de 10 caracteres e fora da lista de senhas comuns, ao definir (convite), redefinir e trocar, com as mesmas mensagens. Senha antiga vale até a próxima troca | [ADR-016](../../adr/016-sessoes-do-admin-sem-2fa-e-senha-unica.md), `src/domain/auth/password-policy.ts` (#309) |
 | POR-RN-16 | **Consentimento em papel** (#310): na ficha, o **Admin de Empresa e o Atendente** registram que o paciente assinou o termo em papel autorizando o parceiro indicador; o **Profissional recebe `403`** (decisão de @KalleoPinheiro de 2026-10-12). O registro é um aceite novo (append-only) com ator `equipe` (origem `papel`), quem lançou (`recorded_by`, e-mail da conta) e a data, e grava `create`/`partner-consent` na auditoria. Vale como o aceite do portal: o parceiro passa a ver o que o POR-RN-11 libera, só com o texto vigente — a equipe atesta que o termo assinado tem esse texto (a tela o mostra na confirmação). Idempotente: com consentimento já ativo não grava outro registro nem evento. A ficha mostra a origem ("Autorizado em papel, registrado pela equipe por ..."); o portal do paciente mostra a origem, mas **não** o nome de quem lançou. A revogação segue pelo portal ou pela equipe (inclusive o Atendente, pedido no balcão). Como `/api/patients/:id/partner-consent` é ato de recepção, a sub-rota é `operational` (não clínica) e o handler de `/paper` repete a restrição de papel (ADR-002). Migração `0055` (`recorded_by`) | `src/app/api/patients/[id]/partner-consent/paper/route.ts`, `src/application/partners/partner-share-consent.ts`, `src/lib/auth/route-family.ts`, `drizzle/0055_*`, `tests/api/partner-share-consent-routes.test.ts` ([#310](https://github.com/KalleoPinheiro/vitta-flow/issues/310)) |
+| POR-RN-17 | **Limites anti-abuso do portal** (#213, decisão de @KalleoPinheiro de 2026-10-11, [AD-036](../../../.specs/STATE.md)): o paciente mantém **no máximo 2 consultas futuras ativas** (conta as da equipe também: a agenda é a mesma; cancelada ou passada não conta), agenda e remarca **até 60 dias à frente** (a UI oferta os mesmos 60; a lista de horários de um dia além responde `400`) e envia **até 10 fotos por janela móvel de 24 h**, somadas em todas as condições (só `origin = patient`). Tudo é checado no caso de uso, não só na UI, e responde `400` com mensagem clara em português. Remarcar não cria consulta, então só o horizonte vale. A checagem não é atômica com a gravação: envios simultâneos podem passar do teto por uma ou duas unidades (o limite contém abuso, não é contábil). `experimental.proxyClientMaxBodySize` = `6mb` em `next.config.ts` (foto de 5 MB + multipart), em vez dos 10 MB padrão | `src/domain/scheduling/patient-self-service.ts`, `src/application/portal/{schedule-own-appointment,reschedule-own-appointment,list-available-slots,assert-photo-quota}.ts`, `src/domain/clinical/condition-photo.ts`, `next.config.ts`, `tests/application/portal-abuse-limits.test.ts` ([#213](https://github.com/KalleoPinheiro/vitta-flow/issues/213)) |
 
 ## Funcionalidades
 
@@ -44,8 +45,8 @@ indicou. O papel da sessão escolhe a visão.
 | --- | --- | --- |
 | Próximas consultas, retornos, evolução, histórico e faturas | entregue | `/portal` (paciente) |
 | Confirmar, cancelar e remarcar | entregue | `/portal` |
-| Auto-agendamento e lista de espera | entregue | `/portal` |
-| Envio de foto para monitoramento remoto e consentimento | entregue | `/portal` |
+| Auto-agendamento (até 2 consultas futuras, 60 dias à frente) e lista de espera | entregue (limites: #213) | `/portal` |
+| Envio de foto para monitoramento remoto (10 por 24 h) e consentimento | entregue (cota: #213) | `/portal` |
 | Pacientes indicados | entregue | `/portal` (parceiro) |
 | Consentimento para o parceiro indicador: autorizar e revogar | entregue | `/portal` (paciente), ficha `/pacientes/[id]` (equipe revoga) |
 | Consentimento em papel registrado pela equipe, com origem e autoria na auditoria | entregue (#310) | ficha `/pacientes/[id]` (Admin de Empresa e Atendente) |

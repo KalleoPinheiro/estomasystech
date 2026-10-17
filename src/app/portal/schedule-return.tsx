@@ -11,6 +11,7 @@ import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
+import { PORTAL_BOOKING_HORIZON_DAYS } from '@/domain/scheduling/patient-self-service';
 import { apiFetch } from '@/lib/client';
 import type { ProcedureDto } from '@/lib/dto';
 import { formatDateTime, formatTime } from '@/lib/format';
@@ -28,7 +29,7 @@ export const dayKey = (date: Date): string =>
     date.getDate(),
   ).padStart(2, '0')}`;
 
-export const OFFER_WINDOW_DAYS = 14;
+export const OFFER_WINDOW_DAYS = PORTAL_BOOKING_HORIZON_DAYS;
 
 interface ScheduleReturnProps {
   followUpId: string;

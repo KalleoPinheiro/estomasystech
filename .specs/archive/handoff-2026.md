@@ -1012,3 +1012,16 @@ Decisão de @KalleoPinheiro de 2026-10-11 implementada: o evento leva `Consulta 
 - **Testes:** payload de criação e remarcação (idêntico, sem nome/telefone/procedimento), iniciais, `APP_URL`, E2E do link.
 - **Pendências para o Kalléo:** eventos criados antes da #217 mantêm o conteúdo antigo até remarcar (sem reescrita em lote; abrir issue se quiser). Docker/smoke não rodam no container (sem daemon). Nenhuma migração.
 - **Next step:** nenhum. **Blockers:** nenhum.
+
+
+## Issue #213 — Portal: limites anti-abuso de consultas e fotos (2026-10-17) — ENCERRADO
+
+Números de @KalleoPinheiro (2026-10-11): 2 consultas futuras, 60 dias, 10 fotos por dia, `proxyClientMaxBodySize` ajustado.
+- **Domínio:** `PORTAL_MAX_FUTURE_APPOINTMENTS`, `PORTAL_BOOKING_HORIZON_DAYS` e as asserções em `patient-self-service.ts`; `PATIENT_MAX_PHOTOS_PER_DAY` em `condition-photo.ts`; `ConditionPhotoRepository.countPatientUploadsSince` (Drizzle e memória).
+- **Casos de uso:** `ScheduleOwnAppointment` (horizonte + teto), `RescheduleOwnAppointment` (horizonte), `ListAvailableSlots` (dia além do horizonte = `400`, nunca lista vazia), `assertPatientPhotoQuota` chamado pela rota de fotos depois do consentimento. Mensagens em português, `400`.
+- **Config/UI:** `next.config.ts` com `proxyClientMaxBodySize: '6mb'`; a oferta da UI passou de 14 para 60 dias (`OFFER_WINDOW_DAYS`).
+- **Decisões delegadas (AD-036):** o teto conta consultas de qualquer origem; "por dia" = janela móvel de 24 h; horizonte é instante; `400` e não `429`.
+- **Testes:** `portal-abuse-limits.test.ts` (cada limite, bordas, cancelada/passada/equipe/outro paciente), rota de fotos, rota de agendamento/slots, repositório Drizzle (pglite), `next-config`. Os testes de rota com datas absolutas de 2027 agora fixam o relógio (`tests/support/clock.ts`), senão o horizonte de 60 dias os quebraria com o tempo.
+- **Docs:** POR-RN-17 no portal, AD-036. Sem migração, sem ADR.
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Next step:** #325 (e-mail do cuidador) já não depende da #213. **Blockers:** nenhum.

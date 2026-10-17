@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { AddConditionPhoto } from '@/application/clinical/add-condition-photo';
+import { assertPatientPhotoQuota } from '@/application/portal/assert-photo-quota';
 import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { MAX_PHOTO_BYTES } from '@/domain/clinical/condition-photo';
 import { ConsentRecord } from '@/domain/consent/consent-record';
@@ -71,6 +72,9 @@ export async function POST(request: NextRequest) {
         'Consentimento pendente — aceite o termo de consentimento no portal antes de enviar fotos',
       );
     }
+
+    // Cota diária (#213): checada depois do consentimento e antes de gravar.
+    await assertPatientPhotoQuota(conditions, conditionPhotos, patient.id);
 
     const photo = await new AddConditionPhoto(
       conditionPhotos,

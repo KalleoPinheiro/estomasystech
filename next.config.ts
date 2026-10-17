@@ -21,11 +21,19 @@ export const SECURITY_HEADERS = [
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
 ];
 
+/**
+ * Maior corpo que o proxy bufferiza (#213): foto de 5 MB (`MAX_PHOTO_BYTES`)
+ * mais a folga do multipart (`conditionId`, `note`, delimitadores). Sem isso
+ * valia o padrão de 10 MB, e a rota só recusava a foto depois de ler tudo.
+ */
+export const PROXY_CLIENT_MAX_BODY_SIZE = "6mb";
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   // Issue #219: não anuncia `X-Powered-By: Next.js` em toda resposta.
   poweredByHeader: false,
   output: "standalone",
+  experimental: { proxyClientMaxBodySize: PROXY_CLIENT_MAX_BODY_SIZE },
   // O indicador de dev tools (<nextjs-portal>) fica fixo no canto da tela e
   // intercepta cliques em elementos reais ali embaixo (ex.: botão "Sair" da
   // sidebar) — atrapalha o Playwright em modo dev sem existir em produção.
