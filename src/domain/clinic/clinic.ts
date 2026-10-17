@@ -36,6 +36,31 @@ export interface ClinicProps {
  */
 export type ClinicStatus = 'active' | 'suspended';
 
+/**
+ * Motivo da suspensão (#251): lista fechada, escolhida pelo operador da
+ * plataforma. Só a plataforma o vê; nunca a clínica nem a mensagem de login.
+ */
+export const CLINIC_SUSPENSION_REASONS = [
+  'non_payment',
+  'clinic_request',
+  'security_incident',
+  'other',
+] as const;
+export type ClinicSuspensionReason = (typeof CLINIC_SUSPENSION_REASONS)[number];
+
+export const isClinicSuspensionReason = (
+  value: unknown,
+): value is ClinicSuspensionReason =>
+  CLINIC_SUSPENSION_REASONS.includes(value as ClinicSuspensionReason);
+
+export const CLINIC_SUSPENSION_NOTE_MAX = 500;
+
+export interface ClinicSuspension {
+  reason: ClinicSuspensionReason;
+  /** Texto livre opcional; fica só na clínica, nunca na auditoria. */
+  note?: string | null;
+}
+
 export interface ClinicState extends ClinicInfoFields {
   id: string;
   name: string;
@@ -44,6 +69,9 @@ export interface ClinicState extends ClinicInfoFields {
   status?: ClinicStatus;
   statusChangedAt?: Date | null;
   statusChangedBy?: string | null;
+  /** Motivo da suspensão vigente; `null` ativa, e nas suspensas antes da #251. */
+  statusReason?: ClinicSuspensionReason | null;
+  statusReasonNote?: string | null;
 }
 
 /**
@@ -130,6 +158,8 @@ const EMPTY_STATUS = {
   status: 'active' as ClinicStatus,
   statusChangedAt: null,
   statusChangedBy: null,
+  statusReason: null,
+  statusReasonNote: null,
 };
 
 const EMPTY_INFO: Required<ClinicInfoFields> = {
@@ -171,6 +201,8 @@ export class Clinic {
       status: state.status ?? EMPTY_STATUS.status,
       statusChangedAt: state.statusChangedAt ?? null,
       statusChangedBy: state.statusChangedBy ?? null,
+      statusReason: state.statusReason ?? null,
+      statusReasonNote: state.statusReasonNote ?? null,
     });
   }
 
@@ -230,26 +262,54 @@ export class Clinic {
     return this.state.statusChangedBy ?? null;
   }
 
+  get statusReason(): ClinicSuspensionReason | null {
+    return this.state.statusReason ?? null;
+  }
+
+  get statusReasonNote(): string | null {
+    return this.state.statusReasonNote ?? null;
+  }
+
   get isSuspended(): boolean {
     return this.status === 'suspended';
   }
 
-  /** Suspende a clínica (Journey 7): nenhum dado muda além do estado. */
-  suspend(by: string, at: Date): Clinic {
-    return this.withStatus('suspended', by, at);
+  /**
+   * Suspende a clínica (Journey 7): nenhum dado muda além do estado. O motivo
+   * é obrigatório e da lista fechada (#251, AD-039).
+   */
+  suspend(by: string, at: Date, suspension: ClinicSuspension): Clinic {
+    if (!isClinicSuspensionReason(suspension.reason)) {
+      throw new ValidationError('Motivo da suspensão é obrigatório');
+    }
+    const note = trimToNull(suspension.note);
+    if (note && note.length > CLINIC_SUSPENSION_NOTE_MAX) {
+      throw new ValidationError(
+        `Observação da suspensão: no máximo ${CLINIC_SUSPENSION_NOTE_MAX} caracteres`,
+      );
+    }
+    return this.withStatus('suspended', by, at, suspension.reason, note);
   }
 
-  /** Reativa a clínica (Journey 8). */
+  /** Reativa a clínica (Journey 8): o motivo vigente é limpo (a trilha guarda o histórico). */
   reactivate(by: string, at: Date): Clinic {
-    return this.withStatus('active', by, at);
+    return this.withStatus('active', by, at, null, null);
   }
 
-  private withStatus(status: ClinicStatus, by: string, at: Date): Clinic {
+  private withStatus(
+    status: ClinicStatus,
+    by: string,
+    at: Date,
+    reason: ClinicSuspensionReason | null,
+    note: string | null,
+  ): Clinic {
     return new Clinic({
       ...this.state,
       status,
       statusChangedAt: at,
       statusChangedBy: by,
+      statusReason: reason,
+      statusReasonNote: note,
     });
   }
 

@@ -141,6 +141,8 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       status: 'active',
       statusChangedAt: null,
       statusChangedBy: null,
+      statusReason: null,
+      statusReasonNote: null,
       createdAt: expect.any(String),
     });
     const clinicId = json.data.clinic.id;

@@ -2,7 +2,7 @@
 
 ## Decisions
 
-Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-029, AD-030, AD-031.
+Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-026, AD-027, AD-029, AD-030, AD-031.
 
 ### AD-001
 - **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
@@ -176,19 +176,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: a recepção não gera a portabilidade sozinha. **Pergunta aberta** (issue #185): o Atendente deve poder gerar uma exportação **sem** dado clínico? Até o usuário decidir, padrão seguro: negar.
 - **Scope / Date / Status**: lib/auth/route-family, api/patients/[id]/export, (staff)/pacientes/[id] · 2026-09-26 · active — issue #185. **Resposta (2026-10-12):** manter negado. O paciente baixa a própria cópia pelo portal (#293)
 
-### AD-026
-- **Decision**: R4 nas rotas clínicas endereçadas pelo id do recurso (#186) via helper único `src/lib/auth/clinical-resource-scope.ts` (cadeia recurso→paciente + `assertPatientAccessibleToProfessional`). O `404` cita o recurso pedido, nunca o `patientId`. `GET /api/follow-ups`, `GET /api/waitlist` e `GET /api/photos/triage` filtram para o Profissional só pacientes vinculados — **padrão seguro** aplicado; a issue deixava em aberto se follow-ups/waitlist precisavam do filtro.
-- **Reason**: o motivo do retorno e a fila de espera carregam nome e motivo clínico; mostrar para quem não tem vínculo contradiz RBAC-17/19.
-- **Trade-off**: Profissional deixa de ver retornos/lista de espera de pacientes sem vínculo (inclusive para oferecer horário vago da própria agenda). Perguntas abertas ao produto: (1) o Profissional deve ver a lista de espera inteira para preencher horários vagos? (2) `POST /api/follow-ups` e `POST /api/waitlist` pelo Profissional para paciente sem vínculo devem ser negados? — hoje seguem permitidos (fora do escopo de #186).
-- **Scope**: 13 rotas em `src/app/api/{conditions,photos,care-plans,care-plan-interventions,care-plan-outcomes,follow-ups,waitlist}`, `.checks/r4-resource-routes.md`.
-- **Date**: 2026-09-26
-- **Status**: resolved — respondidas por @KalleoPinheiro em 2026-10-11: (1) a lista de espera continua só com os pacientes vinculados; (2) os dois POSTs sem vínculo passam a ser negados (403). Implementação na #296: `POST /api/follow-ups` e `POST /api/waitlist` negam o Profissional sem vínculo com 403 (AGE-RN-17). **Resolvida.**
-
-### AD-027
-- **Decision**: Padrão seguro até decisão de produto — a aba "Pacotes" do prontuário fica **oculta para o Profissional** (e `/api/packages` continua `administrative`); só aparece com o papel da sessão já conhecido e diferente de `profissional`. **Pergunta aberta**: o Profissional deve ver os pacotes dos pacientes vinculados (com preço? só saldo de sessões?)
-- **Reason**: pacote carrega preço (dado financeiro); a #189 deixa a pergunta aberta e indica esconder como padrão seguro (regra 5 do `AGENTS.md`). Trade-off: o Profissional não vê saldo de sessões do pacote até a decisão.
-- **Scope / Date / Status**: `src/app/(staff)/pacientes/[id]/page.tsx` · 2026-09-26 · resolved — issue #189. **Resposta (2026-10-11):** o Profissional vê o nome do pacote e o saldo de sessões, sem preço, nos pacientes vinculados. Implementação na #296: a aba "Pacotes" aparece para o Profissional e lê `GET /api/patients/:id/packages` (família `clinical`, vínculo R4, DTO sem valores monetários — FIN-RN-14). **Resolvida.**
-
 ### AD-028
 - **Decision**: Gateways nulos (`NullEmailGateway`, `NullMessagingGateway`) logam só metadados: canal, assunto (e-mail) ou tamanho do texto (WhatsApp) e destinatário mascarado por `src/lib/redact.ts` (`fu***@x.com`, `+55******7777`) — nunca o corpo. Exceção decidida por @KalleoPinheiro: com `NODE_ENV !== 'production'` o e-mail nulo também loga o link `/definir-senha?token=…`, porque o dev e o `e2e/global-setup.ts` definem senha por ele.
 - **Reason**: mesma classe de vazamento da #202 (CWE-532, LGPD art. 46) — o corpo leva nome do paciente e data da consulta, e o link de convite/reset é credencial.
@@ -223,6 +210,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 
 ### AD-038
 - **Decision**: e-mail de contato do paciente **opcional e repetível** na empresa (#325, delegado, opção mais segura); o portal segue sem identificá-lo por ele (POR-RN-08) e o login é a conta de e-mail único criada por convite. Migração `0057` solta `NOT NULL` e o índice único, sem alterar dados; `findByEmail`/`countByEmail` saem do repositório de pacientes; lembrete sem e-mail é pulado. Trade-off: sem e-mail não há lembrete por e-mail (WhatsApp segue); reverter exige sanear duplicados. ADR-023, PRO-RN-20, POR-RN-18, COM-RN-18 · 2026-10-17 · active
+
+### AD-039
+- **Decision**: suspensão de clínica com **motivo obrigatório** (#251), números de @KalleoPinheiro (2026-10-11): lista fechada (inadimplência, pedido da clínica, incidente de segurança, outro) + observação opcional, visíveis só na plataforma (nunca na mensagem de login, ACE-RN-28); `company_admin` recebe e-mail ao suspender e reativar, sem o motivo, pelo canal da plataforma (ADR-011). Delegado: o motivo vive em `clinics.status_reason`/`status_reason_note` (migração `0058`) e é **limpo na reativação** (o histórico fica na trilha); a auditoria grava só o **código** (`suspend:non_payment`), porque a observação livre pode citar pessoa; o aviso vai a todo `company_admin` ativo, em melhor esforço (falha de envio não desfaz a suspensão); suspensas antes da #251 ficam sem motivo, sem backfill inventado. Trade-off: sem canal da plataforma configurado o aviso não sai. ACE-RN-27, ACE-RN-55 · 2026-10-17 · active
 
 ### Baseline de segurança medido em `fcd6110`
 

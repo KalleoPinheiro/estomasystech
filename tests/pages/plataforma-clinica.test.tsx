@@ -32,6 +32,8 @@ const CLINIC = {
   status: 'active',
   statusChangedAt: null,
   statusChangedBy: null,
+  statusReason: null,
+  statusReasonNote: null,
   createdAt: '2026-09-27T00:00:00.000Z',
   emailChannel: {
     configured: false,
@@ -46,6 +48,8 @@ const SUSPENDED_CLINIC = {
   status: 'suspended',
   statusChangedAt: '2026-09-27T15:30:00.000Z',
   statusChangedBy: 'dono@vitta.app',
+  statusReason: 'non_payment',
+  statusReasonNote: 'Três faturas em atraso',
 };
 
 const ADMINS = [
@@ -226,28 +230,77 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
     vi.unstubAllGlobals();
   });
 
-  it('Dada clínica ativa, Quando clicar em Suspender clínica, Então suspende com confirmação: o POST só sai depois de confirmar', async () => {
+  it('Dada clínica ativa, Quando clicar em Suspender clínica, Então o motivo é obrigatório e o POST só sai depois de confirmar, com motivo e observação', async () => {
     const fetchMock = mockApi();
     renderWithToast(<PlatformClinicPage />);
 
     expect(await screen.findByText('Clínica ativa.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Suspender clínica' }));
-    const dialog = await screen.findByRole('alertdialog');
+    const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Suspender clínica?')).toBeInTheDocument();
     expect(
-      within(dialog).getByText(
-        'Todas as contas da clínica — equipe, pacientes e parceiros — perdem o acesso em até 1 minuto e os lembretes param. Nenhum dado é apagado.',
-      ),
+      within(dialog).getByText(/perdem o acesso em até 1 minuto/),
     ).toBeInTheDocument();
+    const confirm = within(dialog).getByRole('button', { name: 'Suspender' });
+    expect(confirm).toBeDisabled();
     expect(callsWith(fetchMock, 'POST')).toHaveLength(0);
 
+    fireEvent.change(within(dialog).getByLabelText('Motivo'), {
+      target: { value: 'non_payment' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Observação (opcional)'), {
+      target: { value: '  Três faturas em atraso  ' },
+    });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(callsWith(fetchMock, 'POST')).toHaveLength(1));
+    const [url, init] = callsWith(fetchMock, 'POST')[0];
+    expect(url).toBe('/api/platform/clinics/c1/suspend');
+    expect(JSON.parse(init?.body as string)).toEqual({
+      reason: 'non_payment',
+      note: 'Três faturas em atraso',
+    });
+    expect(await screen.findByText('Clínica suspensa')).toBeInTheDocument();
+  });
+
+  it('Dada a confirmação aberta, Quando cancelar, Então nada é enviado; sem observação, vai note nulo', async () => {
+    const fetchMock = mockApi();
+    renderWithToast(<PlatformClinicPage />);
+
+    await screen.findByText('Clínica ativa.');
+    fireEvent.click(screen.getByRole('button', { name: 'Suspender clínica' }));
+    let dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(callsWith(fetchMock, 'POST')).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Suspender clínica' }));
+    dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Motivo'), {
+      target: { value: 'other' },
+    });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Suspender' }));
 
     await waitFor(() => expect(callsWith(fetchMock, 'POST')).toHaveLength(1));
-    expect(callsWith(fetchMock, 'POST')[0][0]).toBe(
-      '/api/platform/clinics/c1/suspend',
+    expect(
+      JSON.parse(callsWith(fetchMock, 'POST')[0][1]?.body as string),
+    ).toEqual({ reason: 'other', note: null });
+  });
+
+  it('Dada clínica suspensa antes da #251, Quando abrir o detalhe, Então avisa que o motivo não foi registrado', async () => {
+    mockApi(
+      envelope({
+        ...SUSPENDED_CLINIC,
+        statusReason: null,
+        statusReasonNote: null,
+      }),
     );
-    expect(await screen.findByText('Clínica suspensa')).toBeInTheDocument();
+    renderWithToast(<PlatformClinicPage />);
+
+    expect(
+      await screen.findByText('Motivo não registrado.'),
+    ).toBeInTheDocument();
   });
 
   it('Dada clínica suspensa, Quando abrir o detalhe, Então selo, data e autor, reativar direto, convite desabilitado e sem reenviar', async () => {
@@ -260,6 +313,8 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
     expect(
       await screen.findByText(`Suspensa em ${since} por dono@vitta.app.`),
     ).toBeInTheDocument();
+    expect(screen.getByText('Inadimplência')).toBeInTheDocument();
+    expect(screen.getByText('Três faturas em atraso')).toBeInTheDocument();
     const title = screen.getByRole('heading', { level: 1, name: 'Clínica Um' });
     expect(
       within(title.parentElement as HTMLElement).getByText('Suspensa'),

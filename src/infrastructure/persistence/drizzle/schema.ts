@@ -41,11 +41,19 @@ export const clinics = pgTable(
       mode: 'date',
     }),
     statusChangedBy: text('status_changed_by'),
+    // Motivo da suspensão vigente (#251): só a plataforma lê. Nulo na clínica
+    // ativa e nas suspensas antes da #251; a reativação limpa os dois.
+    statusReason: text('status_reason'),
+    statusReasonNote: text('status_reason_note'),
   },
   (table) => [
     check(
       'clinics_status_check',
       sql`${table.status} IN ('active', 'suspended')`,
+    ),
+    check(
+      'clinics_status_reason_check',
+      sql`${table.statusReason} IS NULL OR ${table.statusReason} IN ('non_payment', 'clinic_request', 'security_incident', 'other')`,
     ),
     // CNPJ repetido entre clínicas é recusado (design, Open 1); filiais têm CNPJ
     // próprio. Gravado na forma canônica (`normalizeCnpj`).

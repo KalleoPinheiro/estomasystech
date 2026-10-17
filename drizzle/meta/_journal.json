@@ -407,6 +407,13 @@
       "when": 1792243029367,
       "tag": "0057_patient-email-optional",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1792245419753,
+      "tag": "0058_clinic-suspension-reason",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import type { ClinicProvisioning } from '@/application/ports/clinic-provisioning';
-import type { Clinic } from '@/domain/clinic/clinic';
+import type { Clinic, ClinicSuspension } from '@/domain/clinic/clinic';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 
 export interface ClinicStatusServices {
@@ -17,12 +17,16 @@ export interface ClinicStatusChange {
 export interface ClinicStatusActor {
   by: string;
   at: Date;
-  /** Auditoria write-ahead (#184): roda antes de gravar; se falha, nada muda. */
-  audit: () => Promise<void>;
+  /**
+   * Auditoria write-ahead (#184): roda antes de gravar; se falha, nada muda.
+   * `detail` é a ação, e na suspensão leva o código do motivo (`suspend:non_payment`,
+   * #251) — nunca a observação em texto livre, que pode citar pessoa.
+   */
+  audit: (detail: string) => Promise<void>;
 }
 
 /**
- * Suspende a clínica (B5, Journey 7). Na mesma transação, o estado vira
+ * Suspende a clínica (B5, Journey 7) com o motivo obrigatório (#251). Na mesma transação, o estado vira
  * `suspended` e toda conta da clínica tem a `session_version` incrementada: as
  * sessões emitidas antes da suspensão não voltam a valer na reativação
  * (Journey 8, "com novo login"). Repetir é idempotente. `null` = inexistente.
@@ -33,12 +37,13 @@ export class SuspendClinic {
   async execute(
     clinicId: string,
     actor: ClinicStatusActor,
+    suspension: ClinicSuspension,
   ): Promise<ClinicStatusChange | null> {
     const clinic = await this.services.clinics.findById(clinicId);
     if (!clinic) return null;
     if (clinic.isSuspended) return { clinic, changed: false };
-    await actor.audit();
-    const suspended = clinic.suspend(actor.by, actor.at);
+    const suspended = clinic.suspend(actor.by, actor.at, suspension);
+    await actor.audit(`suspend:${suspension.reason}`);
     await this.services.clinicProvisioning.run(
       clinicId,
       async ({ clinics, userAccounts }) => {
@@ -64,7 +69,7 @@ export class ReactivateClinic {
     const clinic = await this.clinics.findById(clinicId);
     if (!clinic) return null;
     if (!clinic.isSuspended) return { clinic, changed: false };
-    await actor.audit();
+    await actor.audit('reactivate');
     const reactivated = clinic.reactivate(actor.by, actor.at);
     await this.clinics.saveStatus(reactivated);
     return { clinic: reactivated, changed: true };

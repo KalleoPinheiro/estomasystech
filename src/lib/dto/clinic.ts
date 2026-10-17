@@ -1,6 +1,10 @@
 import type { AdminStatus } from '@/application/platform/clinic-overview';
 import type { UserAccount } from '@/domain/auth/user-account';
-import type { Clinic, ClinicStatus } from '@/domain/clinic/clinic';
+import type {
+  Clinic,
+  ClinicStatus,
+  ClinicSuspensionReason,
+} from '@/domain/clinic/clinic';
 import type {
   ChannelTestStatus,
   ClinicChannel,
@@ -72,6 +76,9 @@ export interface PlatformClinicDto extends ClinicRegistrationDto {
   status: ClinicStatus;
   statusChangedAt: string | null;
   statusChangedBy: string | null;
+  /** Motivo da suspensão vigente (#251): só a plataforma lê este DTO. */
+  statusReason: ClinicSuspensionReason | null;
+  statusReasonNote: string | null;
   createdAt: string;
 }
 
@@ -82,6 +89,8 @@ export const toPlatformClinicDto = (clinic: Clinic): PlatformClinicDto => ({
   status: clinic.status,
   statusChangedAt: clinic.statusChangedAt?.toISOString() ?? null,
   statusChangedBy: clinic.statusChangedBy,
+  statusReason: clinic.statusReason,
+  statusReasonNote: clinic.statusReasonNote,
   createdAt: clinic.createdAt.toISOString(),
 });
 

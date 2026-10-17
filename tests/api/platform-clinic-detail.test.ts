@@ -91,6 +91,8 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
       status: 'active',
       statusChangedAt: null,
       statusChangedBy: null,
+      statusReason: null,
+      statusReasonNote: null,
       createdAt: clinic.createdAt.toISOString(),
       emailChannel: {
         configured: false,

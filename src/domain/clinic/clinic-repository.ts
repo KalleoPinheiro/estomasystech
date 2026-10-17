@@ -10,7 +10,7 @@ export interface ClinicRepository {
   /** Grava só o cadastro — nunca o estado. */
   update(clinic: Clinic): Promise<void>;
   /**
-   * Grava só o estado (`status`, `status_changed_at`, `status_changed_by`, B5):
+   * Grava só o estado (`status`, `status_changed_at`, `status_changed_by`, B5, e o motivo, #251):
    * uma edição de cadastro concorrente não regrava o estado lido antes dela.
    */
   saveStatus(clinic: Clinic): Promise<void>;

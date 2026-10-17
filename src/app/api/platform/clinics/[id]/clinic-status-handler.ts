@@ -4,6 +4,8 @@ import type {
   ClinicStatusChange,
   ClinicStatusServices,
 } from '@/application/platform/change-clinic-status';
+import { notifyClinicStatusChange } from '@/application/platform/notify-clinic-status';
+import { platformEmailGateway } from '@/infrastructure/email/resend-email-gateway';
 import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -22,7 +24,8 @@ type ChangeStatus = (
 
 /**
  * Suspender/reativar pela plataforma (B5, Journey 7 e 8). A auditoria vai para
- * a clínica-alvo antes da mudança (write-ahead); repetir não grava nada.
+ * a clínica-alvo antes da mudança (write-ahead); repetir não grava nada. Quem
+ * administra a clínica é avisado por e-mail, pelo canal da plataforma (#251).
  */
 export async function handleClinicStatus(
   request: NextRequest,
@@ -40,17 +43,27 @@ export async function handleClinicStatus(
     const result = await change(services, id, {
       by: guard.session?.subject ?? 'anonymous',
       at: new Date(),
-      audit: () =>
+      audit: (detail) =>
         recordAuditNow(services.auditEvents, guard.session, {
           action: 'update',
           resourceType: 'clinic-status',
           resourceId: id,
-          detail: action,
+          detail,
           clinicId: id,
         }),
     });
     if (!result) throw new Error('Clínica não encontrada');
-    if (result.changed) afterChange(id);
+    if (result.changed) {
+      afterChange(id);
+      await notifyClinicStatusChange(
+        {
+          admins: services.userAccounts,
+          email: platformEmailGateway(),
+        },
+        result.clinic,
+        action,
+      );
+    }
     return toPlatformClinicDto(result.clinic);
   });
 }

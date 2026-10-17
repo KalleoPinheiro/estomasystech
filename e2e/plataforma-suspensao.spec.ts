@@ -39,7 +39,7 @@ test.describe("clínica suspensa", () => {
       headers: { "x-forwarded-for": LOGIN_IP },
     });
     expect(setPassword.status()).toBe(200);
-    await apiPost(page.request, `/api/platform/clinics/${clinic.id}/suspend`, {});
+    await apiPost(page.request, `/api/platform/clinics/${clinic.id}/suspend`, { reason: "other" });
 
     const member = await browser.newContext({
       storageState: { cookies: [], origins: [] },

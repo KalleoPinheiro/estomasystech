@@ -157,7 +157,12 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       await clinicRepo.create(clinic);
       const at = new Date('2026-09-27T12:00:00.000Z');
 
-      await clinicRepo.saveStatus(clinic.suspend('root@vitta.com', at));
+      await clinicRepo.saveStatus(
+        clinic.suspend('root@vitta.com', at, {
+          reason: 'non_payment',
+          note: 'Três faturas em atraso',
+        }),
+      );
       // Edição concorrente com a instância lida antes da suspensão.
       await clinicRepo.update(clinic.updateInfo({ city: 'Recife' }));
 
@@ -165,6 +170,8 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       expect(stored?.status).toBe('suspended');
       expect(stored?.statusChangedAt).toEqual(at);
       expect(stored?.statusChangedBy).toBe('root@vitta.com');
+      expect(stored?.statusReason).toBe('non_payment');
+      expect(stored?.statusReasonNote).toBe('Três faturas em atraso');
       expect(stored?.city).toBe('Recife');
       const listed = (await clinicRepo.findAll()).find(
         (c) => c.id === clinic.id,
@@ -174,7 +181,10 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       await clinicRepo.saveStatus(
         (stored as Clinic).reactivate('root@vitta.com', new Date()),
       );
-      expect((await clinicRepo.findById(clinic.id))?.status).toBe('active');
+      const reactivated = await clinicRepo.findById(clinic.id);
+      expect(reactivated?.status).toBe('active');
+      expect(reactivated?.statusReason).toBeNull();
+      expect(reactivated?.statusReasonNote).toBeNull();
     });
   });
 });
