@@ -3,8 +3,12 @@ import { ScheduleAppointment } from '@/application/appointments/schedule-appoint
 import { CreatePatient } from '@/application/patients/create-patient';
 import { CancelOwnAppointment } from '@/application/portal/cancel-own-appointment';
 import { ListAvailableSlots } from '@/application/portal/list-available-slots';
-import { RescheduleOwnAppointment } from '@/application/portal/reschedule-own-appointment';
+import {
+  PROFESSIONAL_UNAVAILABLE_MESSAGE,
+  RescheduleOwnAppointment,
+} from '@/application/portal/reschedule-own-appointment';
 import type { Patient } from '@/domain/patient/patient';
+import { Professional } from '@/domain/professional/professional';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import {
   canPatientChange,
@@ -19,6 +23,7 @@ import {
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import { InMemoryProcedureRepository } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
 import { portalPatientId } from '../support/portal-identity';
 
 // 2026-07-20 = segunda. Testes rodam com TZ=UTC; grade padrão 8h–18h.
@@ -246,6 +251,68 @@ describe('Feature: Paciente cancela e remarca a própria consulta (portal)', () 
       await expect(list('2026-07-20', 'joao@example.com')).rejects.toThrow(
         NotFoundError,
       );
+    });
+  });
+
+  describe('Profissional da consulta (AD-040)', () => {
+    const rescheduleWith = async (
+      professionals: InMemoryProfessionalRepository,
+    ) =>
+      new RescheduleOwnAppointment(
+        patientRepo,
+        appointmentRepo,
+        undefined,
+        undefined,
+        professionals,
+      ).execute({
+        patientId: await portalPatientId(patientRepo, 'maria@example.com'),
+        appointmentId: appointment.id,
+        startsAt: new Date('2026-07-21T09:00:00Z'),
+        now: beforeDeadline,
+      });
+
+    const withProfessional = async (professional: Professional) => {
+      const professionals = new InMemoryProfessionalRepository();
+      await professionals.save(professional);
+      appointment = await new ScheduleAppointment(
+        appointmentRepo,
+        patientRepo,
+      ).execute({
+        patientId: maria.id,
+        startsAt: new Date('2026-07-20T11:00:00Z'),
+        endsAt: new Date('2026-07-20T11:45:00Z'),
+        procedure: 'Curativo',
+        priceCents: 15000,
+        professionalId: professional.id,
+      });
+      return professionals;
+    };
+
+    it('Dado profissional ativo, Quando o paciente remarcar, Então remarca', async () => {
+      const ana = Professional.create({ fullName: 'Enf. Ana Costa' });
+      const moved = await rescheduleWith(await withProfessional(ana));
+      expect(moved.slot.start).toEqual(new Date('2026-07-21T09:00:00Z'));
+    });
+
+    it('Dado profissional inativado, Quando o paciente remarcar, Então recusa pedindo contato com a clínica e mantém o horário', async () => {
+      const bia = Professional.create({ fullName: 'Enf. Bia' }).deactivate();
+      const professionals = await withProfessional(bia);
+
+      await expect(rescheduleWith(professionals)).rejects.toThrow(
+        PROFESSIONAL_UNAVAILABLE_MESSAGE,
+      );
+      expect(
+        (await appointmentRepo.findById(appointment.id))?.slot.start,
+      ).toEqual(new Date('2026-07-20T11:00:00Z'));
+    });
+
+    it('Dado profissional que sumiu, Quando o paciente remarcar, Então recusa com a mesma mensagem', async () => {
+      const ana = Professional.create({ fullName: 'Enf. Ana Costa' });
+      await withProfessional(ana);
+
+      await expect(
+        rescheduleWith(new InMemoryProfessionalRepository()),
+      ).rejects.toThrow(ValidationError);
     });
   });
 });
