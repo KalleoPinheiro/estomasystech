@@ -208,7 +208,7 @@ describe('Feature: Lista de espera', () => {
     joao = await new CreatePatient(patients).execute({
       fullName: 'João',
       email: 'joao@example.com',
-      phone: '11888880000',
+      phone: '11988880000',
     });
     curativo = Procedure.create({
       name: 'Curativo',

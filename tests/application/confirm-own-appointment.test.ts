@@ -63,7 +63,7 @@ describe('Feature: Confirmação de presença pelo próprio paciente (portal)', 
     await new CreatePatient(patientRepo).execute({
       fullName: 'João Souza',
       email: 'joao@example.com',
-      phone: '11888880000',
+      phone: '11988880000',
     });
 
     await expect(confirm('joao@example.com', appointment.id)).rejects.toThrow(

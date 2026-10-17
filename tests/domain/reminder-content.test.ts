@@ -104,6 +104,13 @@ describe('Feature: Link wa.me', () => {
     );
   });
 
+  it('Dado telefone inválido, Quando montar link, Então lança com o motivo e nunca gera link', () => {
+    expect(() => whatsappLink('99999-0000', 'Olá')).toThrow(
+      /Informe o DDD.*Corrija o telefone no cadastro do paciente/,
+    );
+    expect(() => whatsappLink('+1 415 555 2671', 'Olá')).toThrow(/Brasil/);
+  });
+
   it('Dado número já internacional, Quando normalizar, Então mantém', () => {
     expect(normalizeBrazilianPhone('+55 11 99999-0000')).toBe('5511999990000');
   });

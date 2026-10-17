@@ -91,7 +91,7 @@ describe('Feature: Regras de borda do domínio e aplicação', () => {
       await new CreatePatient(repo).execute({
         fullName: 'João Souza',
         email: 'joao@example.com',
-        phone: '11888880000',
+        phone: '11988880000',
       });
 
       await expect(

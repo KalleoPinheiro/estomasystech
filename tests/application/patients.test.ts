@@ -36,7 +36,7 @@ describe('Feature: Gestão de pacientes', () => {
         new CreatePatient(repo).execute({
           fullName: 'Outra Maria',
           email: 'MARIA@example.com',
-          phone: '11888880000',
+          phone: '11988880000',
         }),
       ).rejects.toThrow(ValidationError);
     });
@@ -48,11 +48,11 @@ describe('Feature: Gestão de pacientes', () => {
 
       await new UpdatePatient(repo).execute({
         id: patient.id,
-        phone: '11777770000',
+        phone: '11977770000',
       });
 
       const stored = await repo.findById(patient.id);
-      expect(stored?.phone).toBe('11777770000');
+      expect(stored?.phone).toBe('+5511977770000');
     });
 
     it('Dado id inexistente, Quando atualizar, Então lança NotFoundError', async () => {
@@ -68,13 +68,23 @@ describe('Feature: Gestão de pacientes', () => {
       await new CreatePatient(repo).execute({
         fullName: 'João Souza',
         email: 'joao@example.com',
-        phone: '11666660000',
+        phone: '11966660000',
       });
 
       const result = await new ListPatients(repo).execute({ search: 'joão' });
 
       expect(result).toHaveLength(1);
       expect(result[0].fullName).toBe('João Souza');
+    });
+
+    it('Dado telefone digitado com máscara, Quando buscar, Então acha o E.164 guardado', async () => {
+      await createMaria();
+
+      const result = await new ListPatients(repo).execute({
+        search: '(11) 99999',
+      });
+
+      expect(result).toHaveLength(1);
     });
 
     it('Dado id existente, Quando buscar, Então retorna paciente', async () => {

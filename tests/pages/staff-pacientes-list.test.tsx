@@ -51,6 +51,7 @@ const patientFixture: PatientDto = {
   fullName: 'Maria Souza',
   email: 'maria@example.com',
   phone: '11988887777',
+  phoneNeedsCorrection: false,
   birthDate: '1990-05-10T00:00:00.000Z',
   notes: null,
   referredByPartnerId: null,
@@ -65,6 +66,7 @@ const inactivePatientFixture: PatientDto = {
   fullName: 'João Pereira',
   email: 'joao.pereira@example.com',
   phone: '11966665555',
+  phoneNeedsCorrection: false,
   birthDate: null,
   active: false,
 };
@@ -232,6 +234,82 @@ describe('Feature: PatientsPage', () => {
           .getByText('Maria Souza')
           .closest('[aria-busy="true"]');
         expect(container).not.toBeNull();
+      });
+    });
+  });
+
+  describe('Cenário: telefone em E.164 (#324)', () => {
+    const legacyFixture: PatientDto = {
+      ...patientFixture,
+      id: 'pat-legacy',
+      fullName: 'Lia Legado',
+      email: 'lia@example.com',
+      phone: '(11) 9999',
+      phoneNeedsCorrection: true,
+    };
+    const e164Fixture: PatientDto = {
+      ...patientFixture,
+      id: 'pat-e164',
+      fullName: 'Eva Nova',
+      email: 'eva@example.com',
+      phone: '+5511999990000',
+    };
+
+    it('Dado telefone E.164 e legado, Quando listar, Então formata o primeiro e sinaliza o segundo', async () => {
+      mockFetch(buildRouter({ patients: [e164Fixture, legacyFixture] }));
+
+      renderWithToast(<PatientsPage />);
+      await screen.findByText('Eva Nova');
+
+      expect(screen.getByText('(11) 99999-0000')).toBeInTheDocument();
+      expect(screen.getByText('(11) 9999')).toBeInTheDocument();
+      expect(screen.getAllByText('Corrigir telefone')).toHaveLength(1);
+    });
+
+    it('Dado telefone sem DDD, Quando salvar, Então mostra o motivo e não chama a API', async () => {
+      const fetchMock = mockFetch(buildRouter({ patients: [] }));
+      renderWithToast(<PatientsPage />);
+      await screen.findByText('Nenhum paciente cadastrado.');
+      fireEvent.click(screen.getByText('+ Novo paciente'));
+      fireEvent.change(screen.getByLabelText(/Nome completo/), {
+        target: { value: 'Ana Lima' },
+      });
+      fireEvent.change(screen.getByLabelText(/Email \*/), {
+        target: { value: 'ana@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/Telefone \*/), {
+        target: { value: '99999-0000' },
+      });
+      fireEvent.click(screen.getByText('Salvar'));
+
+      expect(await screen.findByText(/Informe o DDD/)).toBeInTheDocument();
+      expect(
+        fetchMock.mock.calls.some(([, init]) => init?.method === 'POST'),
+      ).toBe(false);
+    });
+
+    it('Dado paciente legado, Quando edita sem mexer no telefone, Então salva e a dica pede correção', async () => {
+      const fetchMock = mockFetch(
+        buildRouter({
+          patients: [legacyFixture],
+          extra: ({ url, init }) =>
+            url === `/api/patients/${legacyFixture.id}` &&
+            init?.method === 'PUT'
+              ? jsonResponse(legacyFixture)
+              : undefined,
+        }),
+      );
+      renderWithToast(<PatientsPage />);
+      await screen.findByText('Lia Legado');
+
+      fireEvent.click(screen.getByText('Editar'));
+      expect(screen.getByText(/Telefone fora do padrão/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Salvar'));
+
+      await waitFor(() => {
+        expect(
+          fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT'),
+        ).toBe(true);
       });
     });
   });

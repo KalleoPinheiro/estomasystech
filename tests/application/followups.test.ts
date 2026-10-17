@@ -30,7 +30,7 @@ describe('Feature: Retornos (follow-ups) de pacientes', () => {
     joao = await new CreatePatient(patientRepo).execute({
       fullName: 'João Souza',
       email: 'joao@example.com',
-      phone: '11888880000',
+      phone: '11988880000',
     });
   });
 

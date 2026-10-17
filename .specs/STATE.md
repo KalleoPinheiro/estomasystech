@@ -215,6 +215,12 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Fora desta decisão**: a pergunta da #317 (contas inativas na migração) e as sessões/2FA da #309 e #295, que têm thread própria; a política de senha do portal vai pela #309.
 - **Scope / Date / Status**: ADR-013, ADR-017, ADR-018, `docs/engineering/producao.md`, `src/domain/patient/patient.ts` · 2026-10-17 · active. Pendente de jurídico: #216 (textos, mecanismo para Resend/Google, encarregado)
 
+### AD-035
+- **Decision**: telefone do paciente guardado em **E.164 brasileiro** (`+55…`), validado no domínio. Tolera máscara, `+55`/`0055` e zero de tronco; **sem DDD é rejeitado com mensagem, não adivinhado**; internacional é rejeitado (a clínica atende no Brasil e o `wa.me`/lembretes assumem DDI 55). Delegado por @KalleoPinheiro na #218 (pergunta 4).
+- **Reason**: um formato único evita `wa.me` quebrado e duplicidade por máscara; adivinhar o DDD mandaria mensagem de saúde para a pessoa errada (LGPD).
+- **Trade-off**: sem migração de dados — legado fora do padrão segue válido até alguém mudar o telefone, é sinalizado (`phoneNeedsCorrection`, selo "Corrigir telefone") e o link do WhatsApp falha com motivo se não normalizar. Parceiro e telefone da empresa ficam fora (sem pedido). Lista de DDDs fixa no código: DDD novo da Anatel exige atualizar `phone.ts`.
+- **Scope / Date / Status**: PRO-RN-18, COM-RN-08, `src/domain/shared/phone.ts` · 2026-10-17 · active
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).

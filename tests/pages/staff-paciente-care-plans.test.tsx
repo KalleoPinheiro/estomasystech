@@ -77,6 +77,7 @@ const patient: PatientDto = {
   fullName: 'Maria Souza',
   email: 'maria@example.com',
   phone: '11988887777',
+  phoneNeedsCorrection: false,
   birthDate: null,
   notes: null,
   referredByPartnerId: null,

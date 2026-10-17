@@ -26,7 +26,7 @@ describe('DrizzleDataSubjectRequestRepository: corridas (#293)', () => {
     const patient = Patient.create({
       fullName: 'Paciente Corrida',
       email: 'corrida@x.com',
-      phone: '1',
+      phone: '11999990000',
     });
     await new DrizzlePatientRepository(appDb, 'legacy-clinic', cipher).save(
       patient,

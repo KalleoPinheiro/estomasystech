@@ -68,6 +68,9 @@ export class SendWhatsAppReminder {
       portalUrlFromEnv(),
     );
 
+    // Link antes do registro: telefone inválido não conta como clique (#324).
+    const url = whatsappLink(patient.phone, content.text);
+
     // Índice único diário + onConflictDoNothing: cliques repetidos ou
     // simultâneos deixam um único registro; o horário é o do primeiro.
     await this.reminderLog.save(
@@ -83,7 +86,7 @@ export class SendWhatsAppReminder {
     );
 
     return {
-      url: whatsappLink(patient.phone, content.text),
+      url,
       sentAt: firstClicks.get(input.referenceId) ?? now,
     };
   }

@@ -16,6 +16,22 @@ test.describe("pacientes", () => {
     await expect(page.getByRole("cell", { name })).toBeVisible();
   });
 
+  test("telefone sem DDD é recusado com motivo e com máscara é guardado formatado", async ({ page }) => {
+    const name = `Paciente Telefone UI ${unique()}`;
+    await page.goto("/pacientes");
+    await page.getByRole("button", { name: "+ Novo paciente" }).click();
+    await page.getByLabel("Nome completo *").fill(name);
+    await page.getByLabel("Email *").fill(`${unique()}@e2e.vittaflow.test`);
+    await page.getByLabel("Telefone *").fill("99999-0000");
+    await page.getByRole("button", { name: "Salvar" }).click();
+    await expect(page.getByText("Informe o DDD junto com o número")).toBeVisible();
+
+    await page.getByLabel("Telefone *").fill("(011) 97777-6666");
+    await page.getByRole("button", { name: "Salvar" }).click();
+    await expect(page.getByRole("heading", { name: "Novo paciente" })).not.toBeVisible();
+    await expect(page.getByRole("row", { name: literal(name) })).toContainText("(11) 97777-6666");
+  });
+
   test("edita um paciente existente", async ({ page, request }) => {
     const patient = await createPatient(request);
     const newName = `${patient.fullName} (editado)`;
