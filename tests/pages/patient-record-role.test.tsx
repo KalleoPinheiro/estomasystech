@@ -38,6 +38,7 @@ function mockApi(role: UserRole) {
     if (url === '/api/patients/pac-1') return ok(patient);
     if (CLINICAL.test(url)) return ok(url.endsWith('anamnesis') ? null : []);
     if (url.startsWith('/api/packages')) return ok([]);
+    if (url.endsWith('/packages')) return ok([]);
     if (url.startsWith('/api/procedures')) return ok([]);
     throw new Error(`unexpected fetch: ${url}`);
   });
@@ -77,14 +78,14 @@ describe('Feature: ficha do paciente por papel (#199)', () => {
     expect(urls.filter((u) => CLINICAL.test(u))).toEqual([]);
   });
 
-  it('profissional vê as abas clínicas, sem a de pacotes', async () => {
+  it('profissional vê as cinco abas, inclusive a de pacotes (#296)', async () => {
     await renderAs('profissional');
 
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: 'Anamnese' })).toBeInTheDocument(),
     );
-    expect(screen.getAllByRole('tab')).toHaveLength(4);
-    expect(screen.queryByRole('tab', { name: 'Pacotes' })).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(screen.getByRole('tab', { name: 'Pacotes' })).toBeInTheDocument();
   });
 
   it('admin vê as cinco abas', async () => {

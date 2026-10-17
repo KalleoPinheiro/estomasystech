@@ -2,6 +2,7 @@
 
 import { LoadingIndicator } from '@/components/feedback';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 
 export interface PackageDto {
@@ -11,7 +12,8 @@ export interface PackageDto {
   totalSessions: number;
   usedSessions: number;
   remainingSessions: number;
-  priceCents: number;
+  /** Ausente para o Profissional: a API de saldo não devolve valores (AD-027). */
+  priceCents?: number;
   expiresAt: string | null;
   active: boolean;
   createdAt: string;
@@ -22,8 +24,12 @@ const isExpired = (pkg: PackageDto): boolean =>
 
 /** Pacotes pré-pagos do paciente: saldo e validade à vista da equipe (COMP3-10). */
 export function PackagesSection({ patientId }: { patientId: string }) {
+  // O Profissional lê o saldo sem preço (AD-027, #296); o Admin segue com o valor.
+  const isProfessional = useStaffIdentity()?.role === 'profissional';
   const { data: packages } = useApiQuery<PackageDto[]>(
-    `/api/packages?patientId=${patientId}`,
+    isProfessional
+      ? `/api/patients/${patientId}/packages`
+      : `/api/packages?patientId=${patientId}`,
   );
 
   if (!packages) return <LoadingIndicator />;
@@ -48,7 +54,9 @@ export function PackagesSection({ patientId }: { patientId: string }) {
           <span className="text-ink-2">
             {pkg.remainingSessions} de {pkg.totalSessions} sessões restantes
           </span>
-          <span className="text-ink-3">{formatCurrency(pkg.priceCents)}</span>
+          {pkg.priceCents !== undefined && (
+            <span className="text-ink-3">{formatCurrency(pkg.priceCents)}</span>
+          )}
           <span
             className={
               isExpired(pkg) ? 'font-medium text-danger' : 'text-ink-3'

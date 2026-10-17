@@ -11,6 +11,7 @@ export * from './evolution-note';
 export * from './followup';
 export * from './inventory';
 export * from './options';
+export * from './package';
 export * from './partner';
 export * from './patient';
 export * from './patient-export';

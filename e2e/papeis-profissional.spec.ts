@@ -34,8 +34,9 @@ test.describe("profissional", () => {
 
     await expect(page.getByRole("heading", { name: linkedPatientName })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Anamnese/ })).toBeVisible();
-    // Pacotes (preço) fica oculto para o Profissional até a decisão da #189.
-    await expect(page.getByRole("tab", { name: "Pacotes" })).toHaveCount(0);
+    // Pacotes: o Profissional vê o saldo, sem preço (AD-027, #296).
+    await page.getByRole("tab", { name: "Pacotes" }).click();
+    await expect(page.getByText("Nenhum pacote de sessões para este paciente.")).toBeVisible();
     expect(failures.list()).toEqual([]);
   });
 

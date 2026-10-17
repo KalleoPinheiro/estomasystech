@@ -894,3 +894,16 @@ Decisões de @KalleoPinheiro de 2026-10-12 aplicadas ao job `POST /api/retention
 - **Next step**: decisão do dono sobre os 4 pontos.
 - **Blockers**: nenhum.
 - **Branch**: `feat/311-retencao-restante`. PR #318, squash-merged em `main` (`4ad4219`). Issue #311 fechada via `Closes #311`.
+
+## Issue #296 — Profissional: POSTs sem vínculo e saldo de pacotes (2026-10-17) — ENCERRADO (#320)
+
+Decisões de @KalleoPinheiro de 2026-10-11 (AD-026 e AD-027):
+- `POST /api/follow-ups` e `POST /api/waitlist` devolvem 403 ao Profissional para paciente sem vínculo (`assertPatientLinkedForProfessionalWrite` roda antes de gravar). Admin e Atendente não mudam.
+- Nova rota `GET /api/patients/:id/packages` (família `clinical`, vínculo R4, `sessionScope`) com `PackageBalanceDto` sem campo monetário. `GET /api/packages` segue `administrative`.
+- A aba Pacotes do prontuário aparece para o Profissional, sem preço.
+
+**Detalhes**: sem migração (não colide com a 0052 da #317). Como o GitHub Actions estava sem cota, o gate do CI foi rodado localmente sobre a branch já na ponta da `main`: typecheck, lint, check:sv, check:docs, test:coverage (96,8% statements) e E2E dev e de produção. O Chromium do container é outra revisão, então os E2E usaram uma config temporária só com `executablePath`, não commitada.
+
+- **Next step**: nenhum.
+- **Blockers**: nenhum. O Atendente segue sem a aba Pacotes, porque a decisão cobre só o Profissional.
+- **Branch**: `feat/296-profissional-vinculo-pacotes`. PR #320, squash-merged em `main`.
