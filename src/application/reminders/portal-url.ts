@@ -5,6 +5,12 @@
  * usa a orientação de contato com a clínica.
  */
 export function portalUrlFromEnv(): string | null {
+  const base = appUrlFromEnv();
+  return base ? `${base}/portal` : null;
+}
+
+/** `APP_URL` absoluta http(s), sem barra final; `null` se ausente ou inválida. */
+export function appUrlFromEnv(): string | null {
   const appUrl = process.env.APP_URL?.trim();
   if (!appUrl) {
     return null;
@@ -17,5 +23,5 @@ export function portalUrlFromEnv(): string | null {
   } catch {
     return null;
   }
-  return `${appUrl.replace(/\/+$/, '')}/portal`;
+  return appUrl.replace(/\/+$/, '');
 }

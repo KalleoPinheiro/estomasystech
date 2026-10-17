@@ -1,16 +1,49 @@
 import type { EmailGateway } from '@/application/ports/email-gateway';
+import { appUrlFromEnv } from '@/application/reminders/portal-url';
+import type { UserAccountRepository } from '@/domain/auth/user-account';
 import {
   type DataRequestKind,
   DataSubjectRequest,
   type DataSubjectRequestRepository,
 } from '@/domain/patient/data-subject-request';
-import type { PatientRepository } from '@/domain/patient/patient-repository';
 import { ConflictError, NotFoundError } from '@/domain/shared/errors';
 import { logError } from '@/lib/log-error';
 
 /** Defesa em profundidade das rotas da fila (ADR-002), além da família `administrative`. */
 export const ADMIN_ONLY_MESSAGE =
   'Somente o Admin de Empresa analisa pedidos do titular';
+
+/** E-mails de login dos Admins de Empresa ativos (a empresa é a do escopo). */
+export async function companyAdminEmails(
+  accounts: UserAccountRepository,
+): Promise<string[]> {
+  const admins = await accounts.findByRole('company_admin');
+  return [
+    ...new Set(
+      admins.filter((account) => account.isActive).map((a) => a.email),
+    ),
+  ];
+}
+
+/** Link da fila do Admin; sem `APP_URL` válida, o texto só orienta o caminho. */
+export function queueLinkLine(): string {
+  const base = appUrlFromEnv();
+  return base
+    ? `Acesse a fila: ${base}/pedidos-titular`
+    : 'Acesse o menu "Pedidos do titular" no sistema.';
+}
+
+/** Aviso ao Admin de pedido novo: sem o conteúdo do pedido (#312). */
+export const NEW_REQUEST_EMAIL_SUBJECT =
+  'Há um pedido novo de titular de dados';
+export const newRequestEmailText = (): string =>
+  [
+    'Olá,',
+    '',
+    'Um paciente abriu um pedido sobre os próprios dados pessoais no portal.',
+    'A clínica tem 15 dias corridos para responder (LGPD, art. 19).',
+    queueLinkLine(),
+  ].join('\n');
 
 export interface OpenDataSubjectRequestInput {
   patientId: string;
@@ -26,7 +59,11 @@ export interface OpenDataSubjectRequestInput {
  * `prepare` valida sem gravar, `commit` grava.
  */
 export class OpenDataSubjectRequest {
-  constructor(private readonly requests: DataSubjectRequestRepository) {}
+  constructor(
+    private readonly requests: DataSubjectRequestRepository,
+    private readonly accounts: UserAccountRepository,
+    private readonly email: EmailGateway,
+  ) {}
 
   async prepare(
     input: OpenDataSubjectRequestInput,
@@ -45,8 +82,32 @@ export class OpenDataSubjectRequest {
     return request;
   }
 
+  /**
+   * Grava o pedido e avisa os Admins de Empresa. O aviso não leva o texto do
+   * pedido e uma falha nele nunca desfaz a criação (#312).
+   */
   async commit(request: DataSubjectRequest): Promise<void> {
     await this.requests.save(request);
+    await this.notifyAdmins(request);
+  }
+
+  private async notifyAdmins(request: DataSubjectRequest): Promise<void> {
+    try {
+      const recipients = await companyAdminEmails(this.accounts);
+      const message = {
+        subject: NEW_REQUEST_EMAIL_SUBJECT,
+        text: newRequestEmailText(),
+      };
+      for (const to of recipients) {
+        try {
+          await this.email.send({ to, ...message });
+        } catch (error) {
+          logError(`Pedido do titular ${request.id}: falha no aviso`, error);
+        }
+      }
+    } catch (error) {
+      logError(`Pedido do titular ${request.id}: falha no aviso`, error);
+    }
   }
 }
 
@@ -76,14 +137,14 @@ export const DECISION_EMAIL_TEXT = [
 
 /**
  * Admin aceita ou recusa um pedido do titular, sempre com justificativa, e o
- * paciente é avisado por e-mail no endereço do cadastro (o mesmo dos
- * lembretes). Aceitar não altera o cadastro nem o prontuário: a correção é
+ * paciente é avisado por e-mail no endereço de login da conta do portal
+ * (#312), não no do cadastro, que pode ser de outra pessoa. Aceitar não altera o cadastro nem o prontuário: a correção é
  * feita na ficha, e a anonimização segue a política de retenção (#294).
  */
 export class ResolveDataSubjectRequest {
   constructor(
     private readonly requests: DataSubjectRequestRepository,
-    private readonly patients: PatientRepository,
+    private readonly accounts: UserAccountRepository,
     private readonly email: EmailGateway,
   ) {}
 
@@ -110,15 +171,18 @@ export class ResolveDataSubjectRequest {
 
   private async notify(request: DataSubjectRequest): Promise<boolean> {
     try {
-      const patient = await this.patients.findById(request.patientId);
-      if (!patient) {
+      const account = await this.accounts.findByPortalLink({
+        patientId: request.patientId,
+      });
+      // Sem conta ativa não há para onde mandar: a resposta fica no portal.
+      if (!account?.isActive) {
         return false;
       }
       // Canal desativado: o gateway nulo só registra o envio (dry-run), como
       // nos lembretes; a resposta segue visível no portal.
       const enabled = await this.email.isEnabled();
       await this.email.send({
-        to: patient.email,
+        to: account.email,
         subject: DECISION_EMAIL_SUBJECT,
         text: DECISION_EMAIL_TEXT,
       });

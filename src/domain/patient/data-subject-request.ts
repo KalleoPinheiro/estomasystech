@@ -3,6 +3,7 @@ import {
   ValidationError,
 } from '../shared/errors';
 import { newId } from '../shared/id';
+import { appTimeZone, zonedParts } from '../shared/time-zone';
 
 /** Correção cadastral ou eliminação/anonimização (LGPD art. 18, III e IV/VI). */
 export const DATA_REQUEST_KINDS = ['correction', 'erasure'] as const;
@@ -32,6 +33,47 @@ export interface DataSubjectRequestState {
   resolution: string | null;
   createdAt: Date;
   resolvedAt: Date | null;
+  /** Quando o Admin foi avisado de que o prazo está perto de vencer (uma vez). */
+  deadlineAlertedAt: Date | null;
+}
+
+/** Prazo de resposta ao titular em dias corridos (LGPD art. 19, II). */
+export const RESPONSE_DEADLINE_DAYS = 15;
+
+const MS_PER_DAY = 86_400_000;
+
+const dayNumber = (date: Date, timeZone: string): number => {
+  const { year, month, day } = zonedParts(date, timeZone);
+  return Math.floor(Date.UTC(year, month - 1, day) / MS_PER_DAY);
+};
+
+/**
+ * Dias corridos até o fim do prazo, contados em dias de calendário no fuso da
+ * aplicação (a virada de dia é a da clínica, não a do UTC): o recebimento
+ * conta como dia 0, o último dia do prazo é o 15º, e `0` = vence hoje.
+ * Negativo = vencido há |n| dias.
+ */
+export function daysUntilDeadline(
+  createdAt: Date,
+  now: Date,
+  timeZone: string = appTimeZone(),
+): number {
+  return (
+    dayNumber(createdAt, timeZone) +
+    RESPONSE_DEADLINE_DAYS -
+    dayNumber(now, timeZone)
+  );
+}
+
+/** Dia limite (`AAAA-MM-DD`) para responder, no fuso da aplicação. */
+export function deadlineDateKey(
+  createdAt: Date,
+  timeZone: string = appTimeZone(),
+): string {
+  const limit = new Date(
+    (dayNumber(createdAt, timeZone) + RESPONSE_DEADLINE_DAYS) * MS_PER_DAY,
+  );
+  return limit.toISOString().slice(0, 10);
 }
 
 export const MAX_DETAILS_LENGTH = 1000;
@@ -75,6 +117,7 @@ export class DataSubjectRequest {
       resolution: null,
       createdAt: now,
       resolvedAt: null,
+      deadlineAlertedAt: null,
     });
   }
 
@@ -105,6 +148,14 @@ export class DataSubjectRequest {
       resolution,
       resolvedAt: at,
     });
+  }
+
+  /** Registra o aviso de prazo ao Admin; só pedido pendente, uma vez. */
+  markDeadlineAlerted(at = new Date()): DataSubjectRequest {
+    if (this.state.status !== 'pending') {
+      throw new InvalidStatusTransitionError('Este pedido já foi analisado');
+    }
+    return new DataSubjectRequest({ ...this.state, deadlineAlertedAt: at });
   }
 
   accept(justification: string, at = new Date()): DataSubjectRequest {
@@ -138,6 +189,9 @@ export class DataSubjectRequest {
   }
   get resolvedAt(): Date | null {
     return this.state.resolvedAt;
+  }
+  get deadlineAlertedAt(): Date | null {
+    return this.state.deadlineAlertedAt;
   }
 }
 

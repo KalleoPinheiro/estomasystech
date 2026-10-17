@@ -938,3 +938,15 @@ Decisões de @KalleoPinheiro de 2026-10-11 (AD-026 e AD-027):
 - **Next step**: a umbrella #210 fecha quando seus filhos fecharem (#322 era um deles).
 - **Blockers**: nenhum.
 
+## Issue #312 — Direitos do titular: prazo de 15 dias, aviso ao Admin e resposta no e-mail de login (2026-10-17) — EM REVISÃO
+
+Decisões de @KalleoPinheiro de 2026-10-12 sobre as perguntas abertas da #303:
+- Prazo de 15 dias corridos (LGPD, art. 19), contado em dias de calendário no fuso `APP_TIMEZONE`. A fila `/pedidos-titular` mostra o dia limite e os dias restantes; vencido e a 3 dias ou menos ficam em destaque.
+- O Admin de Empresa recebe e-mail a cada pedido novo (aviso e link da fila, sem o texto do pedido) e um alerta único quando falta `DATA_REQUEST_ALERT_DAYS` dias (padrão 3, 1 a 14) ou o pedido venceu sem aviso. O alerta roda dentro do cron diário `/api/reminders/run` (sem rota nem segredo novos), pelo canal de e-mail de cada clínica; sem canal, nada é marcado.
+- A resposta ao paciente vai para o e-mail de login da conta do portal (`findByPortalLink`), nunca para o do cadastro; sem conta ativa, não há aviso e a resposta fica no portal.
+
+**Detalhes**: migração `0054` (coluna `deadline_alerted_at`). Contrato do cron ganhou o campo aditivo `dataRequestDeadlines`. Docs: PRO-RN-16, POR-RN-14, `cron.md`, onboarding, `.env.example` e a spec `direitos-titular-293` (DT-12 a DT-15 e decisões). Pergunta aberta da issue (antecedência do alerta) resolvida com o ponto de partida dela: 3 dias, configurável.
+
+- **Next step**: nenhum.
+- **Blockers**: nenhum.
+- **Ordem de deploy**: aplicar a migração 0054 antes de subir o código (o `SELECT` do repositório lê a coluna nova).

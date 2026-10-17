@@ -46,6 +46,8 @@ const request = (
   resolution: null,
   createdAt: '2026-10-10T12:00:00.000Z',
   resolvedAt: null,
+  deadlineDate: '2026-10-25',
+  daysLeft: 12,
   ...overrides,
 });
 
@@ -259,5 +261,45 @@ describe('Equipe: fila de pedidos do titular (#293)', () => {
 
     expect(await screen.findByText(/Feito na ficha/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Aceitar' })).toBeNull();
+  });
+});
+
+describe('Equipe: prazo dos pedidos do titular (#312)', () => {
+  const deadlineOf = async (daysLeft: number | null) => {
+    mockFetch((url) =>
+      url.startsWith('/api/data-requests?status=')
+        ? {
+            ok: true,
+            body: [
+              request({
+                daysLeft,
+                deadlineDate: '2026-10-25',
+                status: daysLeft === null ? 'accepted' : 'pending',
+              }),
+            ],
+          }
+        : undefined,
+    );
+    const view = renderWithToast(<DataRequestsPage />);
+    await screen.findByText('Maria da Silva');
+    return view.container.querySelector('[data-deadline]');
+  };
+
+  it.each([
+    [12, 'ok', 'Prazo para responder: 25/10/2026 · faltam 12 dias'],
+    [3, 'soon', 'faltam 3 dias'],
+    [1, 'soon', 'falta 1 dia'],
+    [0, 'soon', 'vence hoje'],
+    [-1, 'overdue', 'vencido há 1 dia'],
+    [-4, 'overdue', 'vencido há 4 dias'],
+  ])('com %i dia(s) restantes, destaca como %s', async (days, state, text) => {
+    const line = await deadlineOf(days);
+
+    expect(line?.getAttribute('data-deadline')).toBe(state);
+    expect(line?.textContent).toContain(text);
+  });
+
+  it('pedido já decidido não mostra prazo', async () => {
+    expect(await deadlineOf(null)).toBeNull();
   });
 });

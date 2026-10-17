@@ -1,0 +1,1 @@
+ALTER TABLE "data_subject_requests" ADD COLUMN "deadline_alerted_at" timestamp with time zone;

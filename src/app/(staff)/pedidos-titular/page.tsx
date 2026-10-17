@@ -22,6 +22,9 @@ import { useApiQuery } from '@/lib/use-api-query';
 
 type Status = DataSubjectRequestDto['status'];
 
+/** Destaque visual do prazo a partir de quantos dias antes (o aviso por e-mail é configurável). */
+const DEADLINE_WARNING_DAYS = 3;
+
 /**
  * Fila de pedidos do titular (#293): o Admin de Empresa aceita ou recusa,
  * sempre com justificativa. Aceitar só registra a decisão — a correção é feita
@@ -122,6 +125,7 @@ function RequestCard({
           label={DATA_REQUEST_STATUS_LABELS[request.status]}
         />
       </div>
+      {request.status === 'pending' && <DeadlineLine request={request} />}
       {request.details && <p className="break-words">{request.details}</p>}
       {request.resolution && (
         <p className="break-words text-ink-2">
@@ -133,6 +137,31 @@ function RequestCard({
         <ResolveForm requestId={request.id} onResolved={onResolved} />
       )}
     </Card>
+  );
+}
+
+/** Prazo de 15 dias (LGPD art. 19): perto de vencer e vencido ficam em destaque. */
+function DeadlineLine({ request }: { request: DataSubjectRequestDto }) {
+  const [year, month, day] = request.deadlineDate.split('-');
+  const daysLeft = request.daysLeft ?? 0;
+  const urgent = daysLeft <= DEADLINE_WARNING_DAYS;
+  let state = urgent ? 'soon' : 'ok';
+  let remaining = `faltam ${daysLeft} dias`;
+  if (daysLeft < 0) {
+    state = 'overdue';
+    remaining = `vencido há ${-daysLeft} ${daysLeft === -1 ? 'dia' : 'dias'}`;
+  } else if (daysLeft === 0) {
+    remaining = 'vence hoje';
+  } else if (daysLeft === 1) {
+    remaining = 'falta 1 dia';
+  }
+  return (
+    <p
+      className={urgent ? 'font-medium text-danger' : 'text-ink-2'}
+      data-deadline={state}
+    >
+      Prazo para responder: {day}/{month}/{year} · {remaining}
+    </p>
   );
 }
 

@@ -1,7 +1,9 @@
-import type {
-  DataRequestKind,
-  DataRequestStatus,
-  DataSubjectRequest,
+import {
+  type DataRequestKind,
+  type DataRequestStatus,
+  type DataSubjectRequest,
+  daysUntilDeadline,
+  deadlineDateKey,
 } from '@/domain/patient/data-subject-request';
 
 export interface DataSubjectRequestDto {
@@ -15,11 +17,16 @@ export interface DataSubjectRequestDto {
   resolution: string | null;
   createdAt: string;
   resolvedAt: string | null;
+  /** Dia limite (`AAAA-MM-DD`, fuso da aplicação) para responder (#312). */
+  deadlineDate: string;
+  /** Dias até o limite; negativo = vencido. `null` se já foi analisado. */
+  daysLeft: number | null;
 }
 
 export const toDataSubjectRequestDto = (
   request: DataSubjectRequest,
   patientName?: string,
+  now: Date = new Date(),
 ): DataSubjectRequestDto => ({
   id: request.id,
   patientId: request.patientId,
@@ -30,6 +37,11 @@ export const toDataSubjectRequestDto = (
   resolution: request.resolution,
   createdAt: request.createdAt.toISOString(),
   resolvedAt: request.resolvedAt?.toISOString() ?? null,
+  deadlineDate: deadlineDateKey(request.createdAt),
+  daysLeft:
+    request.status === 'pending'
+      ? daysUntilDeadline(request.createdAt, now)
+      : null,
 });
 
 export const DATA_REQUEST_KIND_LABELS: Record<DataRequestKind, string> = {

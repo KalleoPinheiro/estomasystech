@@ -61,6 +61,13 @@ tem — aí os lembretes dela contam `skipped`. A que falhou ao ser lida aparece
 | `confirmation` | consulta de amanhã (data local no fuso `APP_TIMEZONE`) ainda `scheduled` |
 | `recall` | retorno `pending` vencido, em D+1, D+7 e D+30 (teto de 3 tentativas) |
 
+Na mesma execução, cada clínica ativa também roda o **aviso de prazo dos pedidos do titular** (#312,
+PRO-RN-16): os Admins de Empresa recebem um e-mail, pelo canal da clínica, com a contagem dos pedidos
+pendentes que vencem em até `DATA_REQUEST_ALERT_DAYS` dias (padrão 3, aceita 1 a 14) ou já venceram
+sem aviso; cada pedido é avisado uma vez (`deadline_alerted_at`). Sem canal de e-mail a clínica conta
+`skipped` e nada é marcado. O resumo ganha o campo aditivo `dataRequestDeadlines`
+(`{ "alerted": 1, "skipped": 0, "failed": 0 }`, somado de todas as empresas).
+
 Rodar duas vezes no mesmo dia não duplica: a confirmação é única por (referência, dia) e o recall
 por tentativa. "Amanhã", o dia do registro e a data/hora do e-mail usam `APP_TIMEZONE` (padrão
 `America/Sao_Paulo`); o app alinha o fuso do processo a esse valor na subida (#205, #206 — na

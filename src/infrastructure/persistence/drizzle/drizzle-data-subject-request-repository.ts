@@ -27,6 +27,7 @@ const toRequest = (row: Row, cipher: FieldCipher): DataSubjectRequest =>
     resolution: cipher.decryptNullable(row.resolution),
     createdAt: row.createdAt,
     resolvedAt: row.resolvedAt,
+    deadlineAlertedAt: row.deadlineAlertedAt,
   });
 
 export class DrizzleDataSubjectRequestRepository
@@ -54,6 +55,7 @@ export class DrizzleDataSubjectRequestRepository
       resolution: this.cipher.encryptNullable(request.resolution),
       createdAt: request.createdAt,
       resolvedAt: request.resolvedAt,
+      deadlineAlertedAt: request.deadlineAlertedAt,
     };
     let written: { id: string }[];
     try {
@@ -66,6 +68,7 @@ export class DrizzleDataSubjectRequestRepository
             status: values.status,
             resolution: values.resolution,
             resolvedAt: values.resolvedAt,
+            deadlineAlertedAt: values.deadlineAlertedAt,
           },
           // Só decide pedido ainda pendente e da própria empresa: duas
           // decisões simultâneas não sobrescrevem uma à outra.

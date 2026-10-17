@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { AlertDataRequestDeadlines } from '@/application/patients/alert-data-request-deadlines';
 import { SendReminders } from '@/application/reminders/send-reminders';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
@@ -53,6 +54,9 @@ async function runReminders(provided: string) {
       })),
       (clinicId) => getRepositories(clinicScope(clinicId)),
     ).execute();
+    const dataRequestDeadlines = await alertDataRequestDeadlines(
+      all.filter((clinic) => clinic.status !== 'suspended'),
+    );
     // Alerta "lembretes sem rodar há 26 h" (#212). Falhar aqui não desfaz o
     // envio: o resumo volta igual e o alerta avisa no dia seguinte.
     await jobRuns
@@ -60,6 +64,33 @@ async function runReminders(provided: string) {
       .catch((error: unknown) =>
         logError('Lembretes: falha ao registrar a execução', error),
       );
-    return summary;
+    return { ...summary, dataRequestDeadlines };
   });
+}
+
+/**
+ * Aviso de prazo dos pedidos do titular (#312), empresa a empresa e pelo canal
+ * de cada clínica. Falha numa empresa não derruba o lote de lembretes.
+ */
+async function alertDataRequestDeadlines(
+  clinics: readonly { id: string }[],
+): Promise<{ alerted: number; skipped: number; failed: number }> {
+  const total = { alerted: 0, skipped: 0, failed: 0 };
+  for (const clinic of clinics) {
+    try {
+      const repos = await getRepositories(clinicScope(clinic.id));
+      const result = await new AlertDataRequestDeadlines(
+        repos.dataSubjectRequests,
+        repos.userAccounts,
+        repos.email,
+      ).execute();
+      total.alerted += result.alerted;
+      total.skipped += result.skipped;
+      total.failed += result.failed;
+    } catch (error) {
+      logError(`Prazo dos pedidos do titular da empresa ${clinic.id}`, error);
+      total.failed += 1;
+    }
+  }
+  return total;
 }

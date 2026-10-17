@@ -36,7 +36,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const services = await getRepositories(writeScope(guard.session));
     const useCase = new ResolveDataSubjectRequest(
       services.dataSubjectRequests,
-      services.patients,
+      services.userAccounts,
       services.email,
     );
     const decided = await useCase.prepare({ requestId: id, ...body });
