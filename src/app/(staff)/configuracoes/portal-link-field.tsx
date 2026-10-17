@@ -29,7 +29,7 @@ export function PortalLinkField({
         value={value}
         onChange={(id, patient) => {
           onChange(id);
-          if (patient) onSuggestEmail(patient.email);
+          if (patient?.email) onSuggestEmail(patient.email);
         }}
       />
     );

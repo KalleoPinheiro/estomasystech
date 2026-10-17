@@ -68,7 +68,7 @@ describe('Feature: Fluxo completo da API (paciente → consulta → fatura → r
     expect(event?.patientId).toBe(patientId);
   });
 
-  it('Dado email duplicado, Quando POST /api/patients, Então retorna 400', async () => {
+  it('Dado e-mail já usado por outro paciente, Quando POST /api/patients, Então aceita: e-mail de contato é repetível (#325)', async () => {
     const response = await patientsRoute.POST(
       jsonRequest('/api/patients', 'POST', {
         fullName: 'Maria Clone',
@@ -77,7 +77,7 @@ describe('Feature: Fluxo completo da API (paciente → consulta → fatura → r
       }),
     );
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
   });
 
   it('Dado body sem campos, Quando POST /api/patients, Então retorna 400 com detalhe zod', async () => {

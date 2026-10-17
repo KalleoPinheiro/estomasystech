@@ -70,7 +70,7 @@ function PatientsTable({
                 {patient.fullName}
               </TableCell>
               <TableCell label="Contato" className="px-4 py-3 text-ink-2">
-                <div>{patient.email}</div>
+                {patient.email && <div>{patient.email}</div>}
                 <div className="text-ink-3 text-xs">
                   <PatientPhone
                     phone={patient.phone}
@@ -173,7 +173,7 @@ export default function PatientsPage() {
   const handleSubmit = async (values: PatientFormValues) => {
     const payload = {
       fullName: values.fullName,
-      email: values.email,
+      email: values.email.trim() || null,
       phone: values.phone,
       birthDate: values.birthDate
         ? new Date(values.birthDate).toISOString()

@@ -16,22 +16,9 @@ export class InMemoryPatientRepository implements PatientRepository {
     return this.patients.get(id) ?? null;
   }
 
-  async findByEmail(email: string): Promise<Patient | null> {
-    const normalized = email.trim().toLowerCase();
-    return (
-      [...this.patients.values()].find((p) => p.email === normalized) ?? null
-    );
-  }
-
   /** Repositório in-memory não é tenant-aware — usado só em testes de camada de aplicação. */
   async findClinicIdById(): Promise<string | null> {
     return null;
-  }
-
-  async countByEmail(email: string): Promise<number> {
-    const normalized = email.trim().toLowerCase();
-    return [...this.patients.values()].filter((p) => p.email === normalized)
-      .length;
   }
 
   async findByReferrer(partnerId: string): Promise<Patient[]> {
@@ -62,7 +49,7 @@ export class InMemoryPatientRepository implements PatientRepository {
       ? all.filter(
           (p) =>
             p.fullName.toLowerCase().includes(term) ||
-            p.email.toLowerCase().includes(term) ||
+            (p.email ?? '').toLowerCase().includes(term) ||
             p.phone.includes(term) ||
             (termDigits.length >= 3 && p.phone.includes(termDigits)),
         )

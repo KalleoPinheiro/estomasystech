@@ -1599,14 +1599,17 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       expect(await repo.findById('nao-existe')).toBeNull();
     });
 
-    it('Dado paciente salvo, Quando buscar por email normalizado, Então encontra; email inexistente retorna null', async () => {
+    it('Dado paciente salvo, Quando buscar pelo email, Então a busca ignora caixa; sem e-mail não quebra a busca (#325)', async () => {
       const repo = new InMemoryPatientRepository();
       await repo.save(makePatient('Maria da Silva', 'Maria@Example.com'));
+      await repo.save(
+        Patient.create({ fullName: 'Sem Email', phone: '11999990000' }),
+      );
 
-      expect((await repo.findByEmail('maria@example.com'))?.fullName).toBe(
+      expect((await repo.findAll('maria@example.com'))[0]?.fullName).toBe(
         'Maria da Silva',
       );
-      expect(await repo.findByEmail('nao@existe.com')).toBeNull();
+      expect(await repo.findAll('nao@existe.com')).toHaveLength(0);
     });
 
     it('Dado pacientes indicados por parceiros distintos, Quando findByReferrer, Então retorna só os indicados por ele', async () => {

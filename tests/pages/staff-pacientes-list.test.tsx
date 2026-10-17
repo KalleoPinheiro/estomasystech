@@ -274,7 +274,7 @@ describe('Feature: PatientsPage', () => {
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: 'Ana Lima' },
       });
-      fireEvent.change(screen.getByLabelText(/Email \*/), {
+      fireEvent.change(screen.getByLabelText(/Email \(opcional\)/), {
         target: { value: 'ana@example.com' },
       });
       fireEvent.change(screen.getByLabelText(/Telefone \*/), {
@@ -338,7 +338,7 @@ describe('Feature: PatientsPage', () => {
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: 'Ana Lima' },
       });
-      fireEvent.change(screen.getByLabelText(/Email \*/), {
+      fireEvent.change(screen.getByLabelText(/Email \(opcional\)/), {
         target: { value: 'ana@example.com' },
       });
       fireEvent.change(screen.getByLabelText(/Telefone \*/), {
@@ -367,6 +367,42 @@ describe('Feature: PatientsPage', () => {
       });
       const toastText = await screen.findByText('Paciente criado');
       expect(toastText.closest('.sv-toast--success')).not.toBeNull();
+    });
+
+    it('Dado cadastro sem e-mail (#325), Quando submetido, Então envia email null', async () => {
+      const fetchMock = mockFetch(
+        buildRouter({
+          patients: [],
+          partners: [partnerFixture],
+          extra: ({ url, init }) => {
+            if (url === '/api/patients' && init?.method === 'POST') {
+              return jsonResponse({ ...patientFixture, id: 'pat-4' });
+            }
+            return undefined;
+          },
+        }),
+      );
+
+      renderWithToast(<PatientsPage />);
+      await screen.findByText('Nenhum paciente cadastrado.');
+      fireEvent.click(screen.getByText('+ Novo paciente'));
+      fireEvent.change(screen.getByLabelText(/Nome completo/), {
+        target: { value: 'Ana Lima' },
+      });
+      fireEvent.change(screen.getByLabelText(/Telefone \*/), {
+        target: { value: '11977776666' },
+      });
+      fireEvent.click(screen.getByText('Salvar'));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/patients',
+          expect.objectContaining({
+            method: 'POST',
+            body: expect.stringContaining('"email":null'),
+          }),
+        );
+      });
     });
   });
 

@@ -194,7 +194,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta (portal)', () 
     });
 
     it('Dado horário ocupado por outra consulta, Quando remarcar, Então SchedulingConflictError', async () => {
-      const joao = await patientRepo.findByEmail('joao@example.com');
+      const joao = (await patientRepo.findAll('joao@example.com'))[0];
       await schedule(
         '2026-07-21T14:00:00Z',
         '2026-07-21T15:00:00Z',

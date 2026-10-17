@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import { jsonRequest } from '../support/request';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
@@ -26,15 +27,38 @@ describe('Feature: log de erro sem dado pessoal (#202)', () => {
       email: 'maria.sigilosa@exemplo.com',
       phone: '11988887777',
     };
+    // O e-mail do paciente deixou de ser único (#325): o erro de banco é
+    // simulado no formato do DrizzleQueryError (query + params na mensagem,
+    // SQLSTATE e detalhe com o valor na causa do driver).
+    const driverError = Object.assign(
+      new Error(
+        `duplicate key value violates unique constraint "x" Key (full_name)=(${body.fullName})`,
+      ),
+      {
+        code: '23505',
+        severity: 'ERROR',
+        detail: `Key (full_name)=(${body.fullName}) already exists.`,
+      },
+    );
+    const queryError = Object.assign(
+      new Error(
+        `Failed query: insert into "patients" params: ${body.fullName},${body.email},${body.phone}`,
+      ),
+      {
+        query: 'insert into "patients"',
+        params: [body.fullName, body.email, body.phone],
+        cause: driverError,
+      },
+    );
+    vi.spyOn(DrizzlePatientRepository.prototype, 'save').mockRejectedValueOnce(
+      queryError,
+    );
 
-    // Duas criações simultâneas com o mesmo e-mail: a checagem da aplicação
-    // passa nas duas e o banco rejeita a segunda (uq_patients_clinic_email).
-    const responses = await Promise.all([
-      patientsRoute.POST(jsonRequest('/api/patients', 'POST', body)),
-      patientsRoute.POST(jsonRequest('/api/patients', 'POST', body)),
-    ]);
+    const response = await patientsRoute.POST(
+      jsonRequest('/api/patients', 'POST', body),
+    );
 
-    expect(responses.map((r) => r.status).sort()).toEqual([200, 500]);
+    expect(response.status).toBe(500);
     expect(log).toHaveBeenCalled();
     const logged = JSON.stringify(log.mock.calls);
     expect(logged).not.toContain('maria.sigilosa@exemplo.com');

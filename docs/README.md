@@ -85,6 +85,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/018-transferencia-internacional-ue.md`](adr/018-transferencia-internacional-ue.md) | dados na UE (Alemanha), adequação Brasil ↔ UE como base do art. 33, backup cifrado em outra localização da UE; texto jurídico pendente |
 | [`adr/019-gestao-de-contas-senha-propria-e-reset-de-2fa.md`](adr/019-gestao-de-contas-senha-propria-e-reset-de-2fa.md) | admin não define a senha de outra conta, "Minha conta", trava do último admin com 409 e reset de 2º fator auditado |
 | [`adr/020-evento-do-google-agenda-so-com-iniciais.md`](adr/020-evento-do-google-agenda-so-com-iniciais.md) | evento do Google Agenda leva só iniciais, horário e link; conta Workspace é recomendação |
+| [`adr/023-email-de-contato-do-paciente-e-login-do-portal.md`](adr/023-email-de-contato-do-paciente-e-login-do-portal.md) | e-mail de contato do paciente opcional e repetível; login do portal em conta própria |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 

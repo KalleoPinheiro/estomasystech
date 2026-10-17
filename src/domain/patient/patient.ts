@@ -1,6 +1,9 @@
 import { ConflictError } from '../shared/errors';
 import { newId } from '../shared/id';
-import { validatePersonContact } from '../shared/person-validation';
+import {
+  normalizeOptionalEmail,
+  validateNameAndPhone,
+} from '../shared/person-validation';
 import {
   isBrazilianE164,
   normalizeBrazilianPhoneOrThrow,
@@ -8,7 +11,12 @@ import {
 
 export interface PatientProps {
   fullName: string;
-  email: string;
+  /**
+   * E-mail de contato, opcional e repetível entre pacientes da mesma empresa
+   * (ex.: o do cuidador). Não é identidade: o login do portal é uma conta com
+   * e-mail próprio, vinculada ao paciente (ADR-023).
+   */
+  email?: string | null;
   phone: string;
   birthDate?: Date | null;
   notes?: string | null;
@@ -47,9 +55,10 @@ export class Patient {
     props: PatientProps,
     normalizePhone = true,
   ): PatientProps {
-    const contact = validatePersonContact(props);
+    const contact = validateNameAndPhone(props);
     return {
-      ...contact,
+      fullName: contact.fullName,
+      email: normalizeOptionalEmail(props.email),
       phone: normalizePhone
         ? normalizeBrazilianPhoneOrThrow(contact.phone)
         : contact.phone,
@@ -67,7 +76,7 @@ export class Patient {
     const validated = Patient.validate(
       {
         fullName: changes.fullName ?? this.state.fullName,
-        email: changes.email ?? this.state.email,
+        email: changes.email !== undefined ? changes.email : this.state.email,
         phone: phoneChanged ? (changes.phone ?? '') : this.state.phone,
         birthDate:
           changes.birthDate !== undefined
@@ -107,8 +116,8 @@ export class Patient {
     return this.state.fullName;
   }
 
-  get email(): string {
-    return this.state.email;
+  get email(): string | null {
+    return this.state.email ?? null;
   }
 
   get phone(): string {

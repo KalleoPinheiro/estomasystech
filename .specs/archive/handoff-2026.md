@@ -1050,3 +1050,16 @@ Eventos criados antes da #217 passam a ser reescritos só com iniciais, horário
 - **Pendências para o Kalléo:** rodar `npm run calendar:minimize -- --confirmar` em produção por empresa depois do deploy (runbook § 7.2). O histórico de revisões do evento no Google não é alterável pela API.
 - **Ordem de deploy:** aplicar a migração 0056 antes de subir o código (o `SELECT` de consultas usa a coluna nova).
 - **Next step:** nenhum. **Blockers:** nenhum.
+
+## Issue #325 — Paciente: e-mail opcional e repetível (2026-10-17) — ENCERRADO
+
+Decisão delegada por @KalleoPinheiro (opção mais segura) implementada: o e-mail de contato deixa de identificar o paciente; o login do portal já era conta vinculada (#196).
+- **Domínio/aplicação:** `Patient.email` é `string | null` (vazio vira `null`; `update` com `undefined` mantém e `null` remove); `normalizeOptionalEmail`/`validateNameAndPhone` em `person-validation.ts` (Parceiro segue com `validatePersonContact`). `CreatePatient`/`UpdatePatient` não checam mais duplicidade; `findByEmail`/`countByEmail` saíram do repositório.
+- **Dados:** migração `0057` (`DROP NOT NULL` em `patients.email` + `DROP INDEX uq_patients_clinic_email`); nenhuma linha alterada, reversão exige sanear duplicados.
+- **Lembretes:** paciente sem e-mail é `skipped` em `send-reminders.ts`, sem `reminder_logs` nem erro.
+- **UI/API:** campo "Email (opcional)" no cadastro; lista e ficha omitem o campo vazio; `POST/PUT /api/patients` aceitam e-mail ausente/`null`; a tela de contas só sugere o e-mail do paciente se existir.
+- **Decisões (ADR-023, AD-038):** sem e-mail de contato não há lembrete por e-mail (WhatsApp segue); parceiro e profissional inalterados; o convite da clínica continua sendo o único caminho para criar o login.
+- **Testes:** domínio, casos de uso, repositórios (memória e pglite), lembretes, e a rota do portal (dois pacientes com o mesmo e-mail de contato isolados; paciente sem e-mail abre o portal pela conta).
+- **Docs:** ADR-023, PRO-RN-01/20, POR-RN-18, COM-RN-18, `docs/README.md`, AD-038.
+- **Pendências para o Kalléo:** deploy aplica a migração `0057` depois das anteriores. Docker/smoke não rodam no container (sem daemon).
+- **Next step:** #329 (depende de #325). **Blockers:** nenhum.

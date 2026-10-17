@@ -80,8 +80,8 @@ describe('Feature: Regras de borda do domínio e aplicação', () => {
     });
   });
 
-  describe('Cenário: unicidade de email na atualização de paciente', () => {
-    it('Dado email de outro paciente, Quando atualizar, Então lança ValidationError', async () => {
+  describe('Cenário: e-mail na atualização de paciente (repetível, #325)', () => {
+    it('Dado email de outro paciente, Quando atualizar, Então permite (e-mail de contato é repetível)', async () => {
       const repo = new InMemoryPatientRepository();
       const maria = await new CreatePatient(repo).execute({
         fullName: 'Maria da Silva',
@@ -99,7 +99,7 @@ describe('Feature: Regras de borda do domínio e aplicação', () => {
           id: maria.id,
           email: 'joao@example.com',
         }),
-      ).rejects.toThrow(ValidationError);
+      ).resolves.toBeTruthy();
     });
 
     it('Dado o próprio email, Quando atualizar, Então permite', async () => {
@@ -200,7 +200,7 @@ describe('Feature: Regras de borda do domínio e aplicação', () => {
 
       expect(await repo.findAll('maria@')).toHaveLength(1);
       expect(await repo.findAll('11999')).toHaveLength(1);
-      expect(await repo.findByEmail('nao-existe@example.com')).toBeNull();
+      expect(await repo.findAll('nao-existe@example.com')).toHaveLength(0);
       expect(await repo.findById('ghost')).toBeNull();
     });
   });
