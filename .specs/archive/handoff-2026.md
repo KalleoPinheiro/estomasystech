@@ -981,6 +981,7 @@ Paciente guarda telefone em E.164 BR (PRO-RN-18, AD-035), validado no domínio e
 - **Blockers**: nenhum.
 
 
+<<<<<<< HEAD
 
 ## Issue #250 — QR code no cadastro do 2º fator (2026-10-17) — ENCERRADO
 
@@ -992,8 +993,8 @@ Decisão de @KalleoPinheiro de 2026-10-11 implementada: o QR é gerado no navega
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Next step:** nenhum. **Blockers:** nenhum.
 
-## Issue #310 — Parceiro: consentimento em papel registrado pela equipe, com auditoria (2026-10-17) — EM REVISÃO
-
+## Issue #310 — Parceiro: consentimento em papel registrado pela equipe, com auditoria (2026-10-17) — ENCERRADO (#335)
+>>>>>>> 38ef30c (docs: handoff da #310 encerrado)
 Decisões de @KalleoPinheiro (2026-10-12): só o **Admin de Empresa e o Atendente** registram; o Profissional recebe `403`.
 - `POST /api/patients/:id/partner-consent/paper`: aceite novo (ator `staff` = origem `papel`) com `recorded_by` (e-mail da conta) e data, auditoria `create`/`partner-consent`, idempotente. Libera o parceiro como o aceite do portal (POR-RN-11, POR-RN-16).
 - **Migração `0055`**: coluna `partner_share_consents.recorded_by`. Revogação pela equipe passa a gravar `recorded_by` também.
