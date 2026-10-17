@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       paidAt: new Date(`${body.paidAt}T12:00:00`),
       paymentMethod: body.paymentMethod,
       notes: body.notes,
-      createdBy: session?.subject ?? 'sistema',
+      createdBy: session.subject,
     });
     await recordAuditNow(auditEvents, session, {
       action: 'create',

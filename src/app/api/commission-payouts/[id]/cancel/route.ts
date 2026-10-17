@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const cancelled = await new CancelPayout(commissionPayouts).execute({
       payoutId: id,
       reason: body.reason,
-      cancelledBy: session?.subject ?? 'sistema',
+      cancelledBy: session.subject,
     });
     await recordAuditNow(auditEvents, session, {
       action: 'update',

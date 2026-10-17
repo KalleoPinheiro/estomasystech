@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   if (!PAYOUT_PERIOD_REGEX.test(period)) {
     return fail('Parâmetro month deve estar no formato AAAA-MM', 400);
   }
-  const professionalId = guard.session?.professionalId ?? null;
+  const professionalId = guard.session.professionalId;
 
   return handleRequest(async (): Promise<PayoutsResponseDto> => {
     // Conta sem profissional vinculado (ex.: Admin) não tem extrato próprio.

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       patient,
       'staff',
       clientIp(request),
-      guard.session?.subject ?? 'anonymous',
+      guard.session.subject,
     );
     recordAudit(services.auditEvents, guard.session, {
       action: 'update',

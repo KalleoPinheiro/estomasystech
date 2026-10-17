@@ -1114,3 +1114,11 @@ Decisões de @KalleoPinheiro de 2026-10-11 implementadas.
 - **Subconjunto em `next dev`:** o `global-setup` aquece as telas e abas dos specs de papel (`e2e/support/warm-up.ts`) e a asserção da aba Pacotes do Profissional tem 30 s (a API compilava depois dos 10 s); 2 execuções seguidas em 2 CPUs deram 26/26.
 - **Pendente:** o subconjunto em `next dev` segue exposto ao Fast Refresh; migrar para o build quando as contas por papel puderem ser criadas sem o log do servidor. O critério "10 execuções seguidas na `main`" fica para quando o Actions voltar (job manual ou cron).
 - **Branch:** `claude/project-thread-a0mssu`.
+
+## Issue #327 — Remoção do modo aberto (2026-10-17) — ENCERRADO
+
+- **O que mudou:** sem `AUTH_SECRET` tudo responde 503; `VITTA_ALLOW_OPEN_MODE` removida (sem efeito, com teste). Proxy, `requireStaffSession`, identidade, fechamentos de agenda, gestão de conta, Google Agenda, emissão de documentos, canal de e-mail e responsáveis (#329) não aceitam mais sessão nula.
+- **E2E:** removido o segundo `next dev` (porta 3100) e os 2 specs do modo aberto; `next dev` fica só com papéis e login (ADR-021 ajustado).
+- **Docs:** ADR-002, AD-042, CONTEXT.md, AGENTS.md, onboarding, troubleshooting, `.env.example`, ACE-RN-01/26.
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke não rodam no container (sem daemon): pendente.
+- **Next step:** nenhum. **Blockers:** nenhum. Sem migração.

@@ -41,7 +41,7 @@ export async function handleClinicStatus(
   return handleRequest(async () => {
     const { services } = await loadPlatformClinic(id);
     const result = await change(services, id, {
-      by: guard.session?.subject ?? 'anonymous',
+      by: guard.session.subject,
       at: new Date(),
       audit: (detail) =>
         recordAuditNow(services.auditEvents, guard.session, {

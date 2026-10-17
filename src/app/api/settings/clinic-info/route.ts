@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
-  if (!canEditClinicInfo(guard.session?.role)) {
+  if (!canEditClinicInfo(guard.session.role)) {
     return fail('Apenas Admin de Empresa pode editar os dados da clínica', 403);
   }
   const clinicId = writeClinicId(guard.session);

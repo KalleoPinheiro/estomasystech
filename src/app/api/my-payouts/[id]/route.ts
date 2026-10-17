@@ -15,7 +15,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
-  const professionalId = guard.session?.professionalId ?? null;
+  const professionalId = guard.session.professionalId;
 
   return handleRequest(async (): Promise<PayoutReceiptDto> => {
     const { id } = await context.params;

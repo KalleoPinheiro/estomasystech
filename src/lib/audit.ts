@@ -34,7 +34,7 @@ export interface AuditInput {
 /**
  * Registra evento de auditoria após a resposta (after()), best-effort:
  * falha de auditoria nunca falha o request — é logada no servidor.
- * Sem sessão (dev aberto), registra ator "anonymous" para não perder a trilha.
+ * Sem sessão (login, cron, bootstrap), registra ator "anonymous" para não perder a trilha.
  */
 export function recordAudit(
   auditEvents: AuditEventRepository,

@@ -35,14 +35,14 @@ export async function GET(request: NextRequest) {
   // Escopo dinâmico do Profissional (R4/RBAC-19): a sessão profissional só
   // pode ver a própria agenda — ignora professionalId vindo da query string.
   const professionalId =
-    guard.session?.role === 'profissional'
+    guard.session.role === 'profissional'
       ? (guard.session.professionalId ?? undefined)
       : (request.nextUrl.searchParams.get('professionalId') ?? undefined);
   return handleRequest(async () => {
     // Profissional sem vínculo de conta (dado legado/corrompido) nunca vê
     // agenda alheia por ausência de filtro — nunca cai no "sem filtro = tudo".
     if (
-      guard.session?.role === 'profissional' &&
+      guard.session.role === 'profissional' &&
       !guard.session.professionalId
     ) {
       return [];
