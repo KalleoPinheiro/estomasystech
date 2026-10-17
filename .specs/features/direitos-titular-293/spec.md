@@ -50,3 +50,24 @@ Regras que a issue não fixou. Implementada a opção mais conservadora; trocar 
 5. **Justificativa obrigatória também no aceite** (a issue fala em "aceitar/recusar com justificativa").
 6. **Aceitar não muda dado:** a correção é feita na ficha; a anonimização depende da #294.
 7. **Cópia completa, sem a janela de 24 meses do portal**, incluindo as observações internas do cadastro, porque a decisão é "mesmo conteúdo da exportação LGPD".
+
+## Continuação (#312) — respostas de @KalleoPinheiro em 2026-10-12
+
+As perguntas 1 a 3 acima foram decididas; 4 a 7 foram mantidas como estão.
+
+| ID | Requisito | Teste |
+| --- | --- | --- |
+| DT-12 | O pedido **deve** ter prazo de 15 dias corridos (LGPD, art. 19) a partir do recebimento, contado em dias de calendário no fuso `APP_TIMEZONE` (virada de dia da clínica). A fila **deve** mostrar o dia limite e os dias restantes e destacar o vencido. | `tests/domain/data-subject-request.test.ts`, `tests/pages/data-subject-rights-ui.test.tsx`, `tests/api/data-subject-rights.test.ts` |
+| DT-13 | **Quando** o paciente abre um pedido, os Admins de Empresa ativos **devem** receber e-mail pelo canal da clínica com o aviso e o link da fila, **sem** o texto do pedido, o nome ou o e-mail do titular; falha no envio **não deve** desfazer a criação. | `tests/api/data-subject-rights.test.ts`, `tests/application/data-subject-requests.test.ts` |
+| DT-14 | O job diário **deve** avisar os Admins uma vez por pedido pendente que vence em até `DATA_REQUEST_ALERT_DAYS` dias (padrão 3) ou venceu sem aviso, sem canal de e-mail nada é marcado. | `tests/application/alert-data-request-deadlines.test.ts`, `tests/api/reminders-run-data-request-deadlines.test.ts` |
+| DT-15 | A resposta da clínica **deve** ir para o e-mail de login da conta do portal vinculada ao paciente, nunca para o do cadastro; sem conta ativa não há aviso. | `tests/api/data-subject-rights.test.ts` (cadastro e login diferentes), `tests/application/data-subject-requests.test.ts` |
+
+### Decisões do #312
+
+| Decisão | Motivo |
+| --- | --- |
+| Alerta de prazo dentro do cron de lembretes (`/api/reminders/run`) | O host já agenda esse cron uma vez por dia; uma rota nova exigiria novo segredo, entrada de crontab e atualização do guarda de rotas. O resumo ganha só um campo aditivo. |
+| Antecedência de 3 dias, configurável por `DATA_REQUEST_ALERT_DAYS` (1 a 14) | Pergunta aberta da issue: o ponto de partida proposto nela. Valor inválido volta ao padrão em vez de derrubar o job. |
+| Um alerta por pedido (`deadline_alerted_at`) e um e-mail por Admin com a contagem | Evita repetir o aviso todo dia; sem nome nem texto do pedido (dado de saúde fora do e-mail). O vencido segue destacado na fila. |
+| Fuso da clínica = `APP_TIMEZONE` | Fuso por empresa continua decisão de produto em aberto (#205). |
+| Sem conta de portal ativa, não envia a resposta e não cai no e-mail do cadastro | O e-mail do cadastro pode ser de outra pessoa; a resposta continua visível no portal. |

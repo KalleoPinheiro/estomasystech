@@ -43,7 +43,11 @@ export async function POST(request: NextRequest) {
     const body = openSchema.parse(await request.json());
     const repos = await getRepositories(writeScope(auth.session));
     const patient = await resolvePortalPatient(repos, auth.session);
-    const useCase = new OpenDataSubjectRequest(repos.dataSubjectRequests);
+    const useCase = new OpenDataSubjectRequest(
+      repos.dataSubjectRequests,
+      repos.userAccounts,
+      repos.email,
+    );
     const created = await useCase.prepare({ ...body, patientId: patient.id });
 
     // Write-ahead: pedido de direito do titular sem trilha não é gravado.

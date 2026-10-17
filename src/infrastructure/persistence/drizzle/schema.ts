@@ -766,6 +766,11 @@ export const dataSubjectRequests = pgTable(
       mode: 'date',
     }).notNull(),
     resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'date' }),
+    // Aviso de prazo perto de vencer enviado ao Admin (#312): uma vez por pedido.
+    deadlineAlertedAt: timestamp('deadline_alerted_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
   },
   (table) => [
     index('idx_data_subject_requests_clinic_status').on(

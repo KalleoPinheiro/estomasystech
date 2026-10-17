@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DataSubjectRequest,
+  daysUntilDeadline,
+  deadlineDateKey,
   MAX_DETAILS_LENGTH,
   MAX_RESOLUTION_LENGTH,
 } from '@/domain/patient/data-subject-request';
@@ -86,9 +88,75 @@ describe('DataSubjectRequest (#293)', () => {
       resolution: original.resolution,
       createdAt: original.createdAt,
       resolvedAt: original.resolvedAt,
+      deadlineAlertedAt: original.deadlineAlertedAt,
     });
 
     expect(restored.id).toBe(original.id);
     expect(restored.createdAt).toBe(original.createdAt);
+  });
+
+  it('registra o aviso de prazo só em pedido pendente', () => {
+    const request = DataSubjectRequest.create({
+      patientId: 'p1',
+      kind: 'erasure',
+    });
+    const at = new Date('2026-10-20T12:00:00Z');
+
+    const alerted = request.markDeadlineAlerted(at);
+
+    expect(alerted.deadlineAlertedAt).toEqual(at);
+    expect(request.deadlineAlertedAt).toBeNull();
+    expect(() => request.accept('ok').markDeadlineAlerted()).toThrow(
+      InvalidStatusTransitionError,
+    );
+  });
+});
+
+describe('Prazo de 15 dias (#312)', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const tz = 'America/Sao_Paulo';
+
+  it('o recebimento é o dia 0 e o limite é o 15º dia corrido', () => {
+    const createdAt = new Date('2026-10-01T15:00:00Z'); // 12h em São Paulo
+
+    expect(deadlineDateKey(createdAt, tz)).toBe('2026-10-16');
+    expect(daysUntilDeadline(createdAt, createdAt, tz)).toBe(15);
+    expect(
+      daysUntilDeadline(createdAt, new Date('2026-10-13T15:00:00Z'), tz),
+    ).toBe(3);
+    expect(
+      daysUntilDeadline(createdAt, new Date('2026-10-16T15:00:00Z'), tz),
+    ).toBe(0);
+    expect(
+      daysUntilDeadline(createdAt, new Date('2026-10-17T15:00:00Z'), tz),
+    ).toBe(-1);
+  });
+
+  it('a virada de dia é a do fuso da clínica, não a do UTC', () => {
+    // 22h30 do dia 1º em São Paulo já é dia 2 em UTC.
+    const createdAt = new Date('2026-10-02T01:30:00Z');
+
+    expect(deadlineDateKey(createdAt, tz)).toBe('2026-10-16');
+    // 23h30 de 15/10 em São Paulo (02h30 de 16/10 em UTC): ainda 1 dia.
+    expect(
+      daysUntilDeadline(createdAt, new Date('2026-10-16T02:30:00Z'), tz),
+    ).toBe(1);
+    // 00h10 de 16/10 em São Paulo: vence hoje.
+    expect(
+      daysUntilDeadline(createdAt, new Date('2026-10-16T03:10:00Z'), tz),
+    ).toBe(0);
+    // 00h10 de 17/10 em São Paulo (03h10 UTC): venceu ontem.
+    expect(
+      daysUntilDeadline(createdAt, new Date('2026-10-17T03:10:00Z'), tz),
+    ).toBe(-1);
+  });
+
+  it('usa APP_TIMEZONE quando o fuso não é informado', () => {
+    vi.stubEnv('APP_TIMEZONE', tz);
+    const createdAt = new Date('2026-10-02T01:30:00Z');
+
+    expect(deadlineDateKey(createdAt)).toBe('2026-10-16');
+    expect(daysUntilDeadline(createdAt, createdAt)).toBe(15);
   });
 });

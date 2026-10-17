@@ -1,6 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { NullEmailGateway } from '@/application/ports/email-gateway';
+import { UserAccount } from '@/domain/auth/user-account';
 import { getRepositories } from '@/infrastructure/container';
 import { DrizzleAuditEventRepository } from '@/infrastructure/persistence/drizzle/drizzle-audit-event-repository';
+import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import {
   CLINIC_A_ID,
@@ -123,6 +126,7 @@ describe('Feature: Direitos do titular no portal (#293)', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     spy?.restore();
     spy = null;
   });
@@ -195,6 +199,82 @@ describe('Feature: Direitos do titular no portal (#293)', () => {
       );
 
       expect(response.status).toBe(403);
+    });
+  });
+
+  describe('Aviso ao Admin de pedido novo (#312)', () => {
+    const adminEmail = 'admin-aviso@clinica-a.com';
+
+    beforeAll(async () => {
+      const { userAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
+      await userAccounts.save(
+        UserAccount.create({
+          email: adminEmail,
+          passwordHash: UNSET_PASSWORD_HASH,
+          role: 'company_admin',
+          clinicId: CLINIC_A_ID,
+        }),
+      );
+    });
+
+    it('Quando o paciente abre um pedido, Então o Admin é avisado com o link da fila e sem o texto do pedido', async () => {
+      vi.stubEnv('APP_URL', 'https://clinica.exemplo.com.br');
+      spy = spyOnSentEmails();
+      const titular = await seedTitular(CLINIC_A_ID, 'aviso');
+
+      const response = await open(titular, {
+        kind: 'correction',
+        details: 'Segredo clínico do pedido',
+      });
+
+      expect(response.status).toBe(200);
+      const toAdmin = spy.bodies.filter((body) =>
+        body.startsWith(`${adminEmail} —`),
+      );
+      expect(toAdmin).toHaveLength(1);
+      expect(toAdmin[0]).toContain('Há um pedido novo de titular de dados');
+      expect(toAdmin[0]).toContain(
+        'https://clinica.exemplo.com.br/pedidos-titular',
+      );
+      expect(toAdmin[0]).not.toContain('Segredo clínico');
+      expect(toAdmin[0]).not.toContain(titular.email);
+      expect(toAdmin[0]).not.toContain(titular.loginEmail);
+    });
+
+    it('Dada falha no envio, Quando o paciente abre um pedido, Então o pedido é criado mesmo assim', async () => {
+      const send = vi
+        .spyOn(NullEmailGateway.prototype, 'send')
+        .mockRejectedValue(new Error('provedor fora'));
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const titular = await seedTitular(CLINIC_A_ID, 'aviso-falha');
+      try {
+        const response = await open(titular, { kind: 'erasure' });
+        const created = ((await response.json()) as Envelope<RequestDto>).data;
+        const { dataSubjectRequests } = await getRepositories(
+          clinicScope(CLINIC_A_ID),
+        );
+
+        expect(response.status).toBe(200);
+        expect(send).toHaveBeenCalled();
+        expect(await dataSubjectRequests.findById(created.id)).not.toBeNull();
+      } finally {
+        send.mockRestore();
+        vi.restoreAllMocks();
+      }
+    });
+
+    it('Quando o Admin lista a fila, Então cada pedido pendente traz o prazo de 15 dias', async () => {
+      const listed = (
+        (await (await queue('pending')).json()) as Envelope<
+          (RequestDto & { deadlineDate: string; daysLeft: number | null })[]
+        >
+      ).data;
+
+      expect(listed.length).toBeGreaterThan(0);
+      for (const item of listed) {
+        expect(item.deadlineDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(item.daysLeft).toBe(15);
+      }
     });
   });
 
@@ -307,7 +387,7 @@ describe('Feature: Direitos do titular no portal (#293)', () => {
       expect(response.status).toBe(400);
     });
 
-    it('Quando o Admin aceita, Então o paciente é avisado no e-mail do cadastro, vê a resposta no portal e a decisão é auditada', async () => {
+    it('Quando o Admin aceita, Então o paciente é avisado no e-mail de login do portal, vê a resposta no portal e a decisão é auditada', async () => {
       spy = spyOnSentEmails();
       const pending = (
         (await (await queue('pending')).json()) as Envelope<RequestDto[]>
@@ -347,7 +427,10 @@ describe('Feature: Direitos do titular no portal (#293)', () => {
         notified: false,
       });
       expect(spy.bodies).toHaveLength(1);
-      expect(spy.bodies[0]).toContain(titularA.email);
+      // Cadastro e login diferentes: o aviso vai para a conta do portal (#312).
+      expect(titularA.loginEmail).not.toBe(titularA.email.toLowerCase());
+      expect(spy.bodies[0]).toContain(`${titularA.loginEmail} —`);
+      expect(spy.bodies[0]).not.toContain(titularA.email);
       expect(spy.bodies[0]).not.toContain('Telefone atualizado');
       expect(again.status).toBe(409);
       expect(portal.find((item) => item.id === resolved.id)).toMatchObject({

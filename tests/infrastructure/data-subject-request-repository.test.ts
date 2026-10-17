@@ -62,6 +62,26 @@ describe('DrizzleDataSubjectRequestRepository: corridas (#293)', () => {
     expect((await repo.findById(request.id))?.resolution).toBe('primeira');
   });
 
+  it('persiste o aviso de prazo e só em pedido pendente (#312)', async () => {
+    const request = DataSubjectRequest.create({
+      patientId,
+      kind: 'correction',
+      details: 'x',
+    });
+    await repo.save(request);
+    const at = new Date('2026-10-20T12:00:00Z');
+
+    await repo.save(request.markDeadlineAlerted(at));
+    const alerted = await repo.findById(request.id);
+    await repo.save(request.accept('ok'));
+
+    expect(alerted?.deadlineAlertedAt).toEqual(at);
+    expect((await repo.findById(request.id))?.status).toBe('accepted');
+    await expect(
+      repo.save(request.markDeadlineAlerted(at)),
+    ).rejects.toBeInstanceOf(InvalidStatusTransitionError);
+  });
+
   it('papel de sistema não grava', async () => {
     const system = new DrizzleDataSubjectRequestRepository(
       {} as AppDb,
