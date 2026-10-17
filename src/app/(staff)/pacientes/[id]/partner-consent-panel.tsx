@@ -9,13 +9,34 @@ import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { PartnerShareConsentDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
+import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 
 const REVOKED_BY = { patient: 'pelo paciente', staff: 'pela equipe' };
 
+const PAPER_ROLES = ['company_admin', 'atendente'];
+
+/** Só Admin de Empresa e Atendente registram o consentimento em papel (#310); a API repete a regra. */
+function useCanRegisterPaper(): boolean {
+  const identity = useStaffIdentity();
+  // Sem provider (tela isolada) ou sem papel conhecido não restringe: a API é a barreira.
+  if (identity === null) return true;
+  if (identity.loading) return false;
+  return identity.role === null || PAPER_ROLES.includes(identity.role);
+}
+
+function describeAccepted(consent: PartnerShareConsentDto, at: string): string {
+  const version = `texto ${consent.acceptedVersion ?? '—'}`;
+  if (consent.acceptedSource === 'paper') {
+    const by = consent.acceptedBy ? ` por ${consent.acceptedBy}` : '';
+    return `Autorizado em papel, registrado pela equipe${by} em ${formatDateTime(at)} (${version}).`;
+  }
+  return `Autorizado pelo paciente em ${formatDateTime(at)} (${version}).`;
+}
+
 function describe(consent: PartnerShareConsentDto): string {
   if (consent.active && consent.acceptedAt) {
-    return `Autorizado pelo paciente em ${formatDateTime(consent.acceptedAt)} (texto ${consent.acceptedVersion ?? '—'}).`;
+    return describeAccepted(consent, consent.acceptedAt);
   }
   if (consent.revoked && consent.revokedAt) {
     const by = consent.revokedBy ? ` ${REVOKED_BY[consent.revokedBy]}` : '';
@@ -29,8 +50,9 @@ function describe(consent: PartnerShareConsentDto): string {
 
 /**
  * Consentimento do paciente para o parceiro indicador ver a evolução clínica
- * no portal (#292). A equipe só revoga (ex.: pedido na recepção); autorizar é
- * sempre do paciente, pelo portal. Sem parceiro indicador, não aparece.
+ * no portal (#292). A equipe revoga (ex.: pedido na recepção) e, no Admin de
+ * Empresa e no Atendente, registra o consentimento dado em papel (#310), com
+ * origem e autoria auditadas. Sem parceiro indicador, não aparece.
  */
 export function PartnerConsentPanel({ patientId }: { patientId: string }) {
   const { toast } = useToast();
@@ -40,8 +62,32 @@ export function PartnerConsentPanel({ patientId }: { patientId: string }) {
   );
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const canRegisterPaper = useCanRegisterPaper();
 
   if (!consent) return null;
+
+  const registerPaper = async () => {
+    setRegistering(true);
+    setError(null);
+    try {
+      await apiFetch(`${endpoint}/paper`, { method: 'POST' });
+      toast({
+        description: 'Consentimento em papel registrado',
+        variant: 'success',
+      });
+      refresh();
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Erro ao registrar consentimento em papel';
+      setError(message);
+      toast({ description: message, variant: 'danger' });
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const revoke = async () => {
     setRevoking(true);
@@ -73,6 +119,27 @@ export function PartnerConsentPanel({ patientId }: { patientId: string }) {
       </div>
       {error && <ErrorAlert message={error} />}
       <p className="text-ink-2 text-sm">{describe(consent)}</p>
+      {!consent.active && canRegisterPaper && (
+        <ConfirmAction
+          trigger={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={registering}
+              className="self-start"
+            >
+              {registering
+                ? 'Registrando…'
+                : 'Registrar consentimento em papel'}
+            </Button>
+          }
+          title="Registrar consentimento em papel"
+          description={`Confirme que o paciente assinou o termo em papel autorizando ${consent.partnerName} a ver condições e avaliações dele (texto ${consent.textVersion}). O registro guarda a origem "papel", seu nome e a data, e libera o parceiro de imediato.\n\n${consent.consentText}`}
+          confirmLabel="Registrar"
+          onConfirm={() => void registerPaper()}
+        />
+      )}
       {consent.active && (
         <ConfirmAction
           trigger={

@@ -31,6 +31,10 @@ export interface PartnerShareConsentDto {
   /** Data e versão do último ACEITE, mesmo se revogado depois. */
   acceptedAt: string | null;
   acceptedVersion: string | null;
+  /** Origem do último aceite: `portal` (paciente) ou `paper` (equipe, termo em papel — #310). */
+  acceptedSource: 'portal' | 'paper' | null;
+  /** Quem da equipe lançou o aceite em papel; só na ficha (a equipe), nunca no portal do paciente. */
+  acceptedBy: string | null;
   revokedAt: string | null;
   revokedBy: 'patient' | 'staff' | null;
 }
@@ -38,6 +42,7 @@ export interface PartnerShareConsentDto {
 export const toPartnerShareConsentDto = (
   view: PartnerShareConsentView,
   consent: { text: string; version: string },
+  options: { includeRecordedBy?: boolean } = {},
 ): PartnerShareConsentDto => {
   const { current, latestAccept, active } = view.status;
   const revoked = current?.kind === 'revoke';
@@ -49,6 +54,10 @@ export const toPartnerShareConsentDto = (
     revoked,
     acceptedAt: latestAccept?.recordedAt.toISOString() ?? null,
     acceptedVersion: latestAccept?.textVersion ?? null,
+    acceptedSource: latestAccept?.source ?? null,
+    acceptedBy: options.includeRecordedBy
+      ? (latestAccept?.recordedBy ?? null)
+      : null,
     revokedAt: revoked ? (current?.recordedAt.toISOString() ?? null) : null,
     revokedBy: revoked ? (current?.actor ?? null) : null,
   };

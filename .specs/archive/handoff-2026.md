@@ -981,7 +981,6 @@ Paciente guarda telefone em E.164 BR (PRO-RN-18, AD-035), validado no domínio e
 - **Blockers**: nenhum.
 
 
-
 ## Issue #250 — QR code no cadastro do 2º fator (2026-10-17) — ENCERRADO
 
 Decisão de @KalleoPinheiro de 2026-10-11 implementada: o QR é gerado no navegador a partir do `otpauthUri`, sem ser gravado nem enviado; a chave em texto e o link continuam como alternativa.
@@ -991,3 +990,16 @@ Decisão de @KalleoPinheiro de 2026-10-11 implementada: o QR é gerado no navega
 - **Testes:** componente (o QR é gerado com exatamente o link recebido; falha silenciosa; muda o link, muda o QR), login e Minha conta.
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Next step:** nenhum. **Blockers:** nenhum.
+
+## Issue #310 — Parceiro: consentimento em papel registrado pela equipe, com auditoria (2026-10-17) — ENCERRADO (#335)
+
+Decisões de @KalleoPinheiro (2026-10-12): só o **Admin de Empresa e o Atendente** registram; o Profissional recebe `403`.
+- `POST /api/patients/:id/partner-consent/paper`: aceite novo (ator `staff` = origem `papel`) com `recorded_by` (e-mail da conta) e data, auditoria `create`/`partner-consent`, idempotente. Libera o parceiro como o aceite do portal (POR-RN-11, POR-RN-16).
+- **Migração `0055`**: coluna `partner_share_consents.recorded_by`. Revogação pela equipe passa a gravar `recorded_by` também.
+- **Decisão delegada**: a sub-rota `partner-consent` saiu da família clínica (`route-family.ts`), senão o Atendente receberia `403` antes do handler. Efeito: o Atendente também lê o status e revoga (só reduz o compartilhamento; pedido típico de balcão). O handler de `/paper` repete a restrição por papel (ADR-002). A varredura de conformidade ganhou a lista `HANDLER_DENIED_ROLES`.
+- **Decisão delegada**: o aceite em papel usa o texto vigente; trocar o texto (#216) invalida o aceite em papel como o do portal. O nome de quem lançou aparece só na ficha, nunca no portal do paciente.
+- **UI**: botão "Registrar consentimento em papel" no painel da ficha, com confirmação mostrando o texto; escondido ao Profissional e enquanto a identidade carrega.
+
+- **Next step**: o texto jurídico final (#216) invalida consentimentos já registrados; planejar a recoleta.
+- **Blockers**: nenhum.
+- **Ordem de deploy**: aplicar a migração 0055 antes de subir o código (o `INSERT`/`SELECT` do repositório usa a coluna nova).

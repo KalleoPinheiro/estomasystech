@@ -19,9 +19,14 @@ export interface PartnerShareConsentState {
   /** Versão do texto vigente no aceite. Nula em revogações. */
   textVersion: string | null;
   actor: PartnerShareConsentActor;
+  /** Quem da equipe lançou o registro (e-mail da conta); nulo quando o próprio paciente agiu pelo portal. */
+  recordedBy: string | null;
   ipAddress: string | null;
   recordedAt: Date;
 }
+
+/** Origem do aceite: o paciente pelo portal ou a equipe a partir de um termo em papel (#310). */
+export type PartnerShareConsentSource = 'portal' | 'paper';
 
 export interface PartnerShareConsentStatus {
   /** Consentimento ativo para o texto vigente. */
@@ -77,8 +82,34 @@ export class PartnerShareConsent {
       textHash: hashConsentText(input.consentText),
       textVersion: input.textVersion,
       actor: 'patient',
+      recordedBy: null,
       ipAddress: input.ipAddress?.trim() || null,
       recordedAt: new Date(),
+    });
+  }
+
+  /**
+   * Aceite dado em papel e lançado pela equipe (#310). Mesmo efeito do aceite
+   * pelo portal (hash do texto vigente), mas com a origem `papel` e quem
+   * lançou: a equipe atesta que o paciente assinou o termo com esse texto.
+   */
+  static acceptOnPaper(input: {
+    patientId: string;
+    partnerId: string;
+    consentText: string;
+    textVersion: string;
+    recordedBy: string;
+    ipAddress?: string | null;
+  }): PartnerShareConsent {
+    const recordedBy = input.recordedBy.trim();
+    if (!recordedBy) {
+      throw new ValidationError('Quem lançou o consentimento é obrigatório');
+    }
+    const record = PartnerShareConsent.accept(input);
+    return new PartnerShareConsent({
+      ...record.state,
+      actor: 'staff',
+      recordedBy,
     });
   }
 
@@ -86,6 +117,7 @@ export class PartnerShareConsent {
     patientId: string;
     partnerId: string;
     actor: PartnerShareConsentActor;
+    recordedBy?: string | null;
     ipAddress?: string | null;
   }): PartnerShareConsent {
     requireIds(input.patientId, input.partnerId);
@@ -97,6 +129,7 @@ export class PartnerShareConsent {
       textHash: '',
       textVersion: null,
       actor: input.actor,
+      recordedBy: input.recordedBy?.trim() || null,
       ipAddress: input.ipAddress?.trim() || null,
       recordedAt: new Date(),
     });
@@ -155,6 +188,15 @@ export class PartnerShareConsent {
 
   get actor(): PartnerShareConsentActor {
     return this.state.actor;
+  }
+
+  get recordedBy(): string | null {
+    return this.state.recordedBy;
+  }
+
+  /** Só faz sentido em aceites: `papel` quando a equipe lançou, `portal` quando foi o paciente. */
+  get source(): PartnerShareConsentSource {
+    return this.state.actor === 'staff' ? 'paper' : 'portal';
   }
 
   get ipAddress(): string | null {

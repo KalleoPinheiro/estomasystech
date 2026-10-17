@@ -14,6 +14,10 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
       ['/api/patients/abc/anamnesis', 'clinical'],
       ['/api/patients/abc/care-plans', 'clinical'],
       ['/api/patients/abc/export', 'clinical'],
+      // Recepção (#310): consentimento do parceiro não é prontuário.
+      ['/api/patients/abc/partner-consent', 'operational'],
+      ['/api/patients/abc/partner-consent/paper', 'operational'],
+      ['/api/patients/abc/partner-consent/revoke', 'operational'],
       ['/api/conditions/abc', 'clinical'],
       ['/api/photos/abc', 'clinical'],
       ['/api/care-plans', 'clinical'],

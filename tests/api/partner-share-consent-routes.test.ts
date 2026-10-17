@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { getRepositories } from '@/infrastructure/container';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { clinicScope } from '@/lib/auth/tenant-scope';
+import { CLINIC_B_ID, ensureTestClinics } from '../support/clinics';
 import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -23,6 +24,8 @@ interface ConsentDto {
   revoked: boolean;
   acceptedAt: string | null;
   acceptedVersion: string | null;
+  acceptedSource: 'portal' | 'paper' | null;
+  acceptedBy: string | null;
   revokedAt: string | null;
   revokedBy: 'patient' | 'staff' | null;
 }
@@ -58,12 +61,15 @@ describe('Feature: Consentimento do paciente para o parceiro (#292)', () => {
   let portalRevokeRoute: typeof import('@/app/api/portal/patient/partner-consent/revoke/route');
   let staffConsentRoute: typeof import('@/app/api/patients/[id]/partner-consent/route');
   let staffRevokeRoute: typeof import('@/app/api/patients/[id]/partner-consent/revoke/route');
+  let staffPaperRoute: typeof import('@/app/api/patients/[id]/partner-consent/paper/route');
   let partnerPortalRoute: typeof import('@/app/api/portal/partner/route');
 
   let partnerId: string;
   let referredId: string;
   let loneId: string;
+  let paperId: string;
   const referredEmail = 'consent292.indicado@example.com';
+  const paperEmail = 'consent310.papel@example.com';
   const loneEmail = 'consent292.sozinho@example.com';
   const partnerEmail = 'consent292.parceiro@example.com';
 
@@ -86,15 +92,13 @@ describe('Feature: Consentimento do paciente para o parceiro (#292)', () => {
     return (await json<{ id: string }>(response)).id;
   };
 
-  const partnerView = async () => {
+  const partnerView = async (patientId: string = referredId) => {
     const response = await partnerPortalRoute.GET(
       portalRequest('/api/portal/partner', 'GET', asPartner()),
     );
     expect(response.status).toBe(200);
     const data = await json<PartnerPortalDto>(response);
-    const entry = data.referredPatients.find(
-      (e) => e.patient.id === referredId,
-    );
+    const entry = data.referredPatients.find((e) => e.patient.id === patientId);
     if (!entry) throw new Error('paciente indicado ausente do portal');
     return entry;
   };
@@ -123,7 +127,11 @@ describe('Feature: Consentimento do paciente para o parceiro (#292)', () => {
     staffRevokeRoute = await import(
       '@/app/api/patients/[id]/partner-consent/revoke/route'
     );
+    staffPaperRoute = await import(
+      '@/app/api/patients/[id]/partner-consent/paper/route'
+    );
     partnerPortalRoute = await import('@/app/api/portal/partner/route');
+    await ensureTestClinics();
 
     const partners = await import('@/app/api/partners/route');
     partnerId = (
@@ -139,6 +147,7 @@ describe('Feature: Consentimento do paciente para o parceiro (#292)', () => {
     ).id;
     referredId = await createPatient(referredEmail, partnerId);
     loneId = await createPatient(loneEmail);
+    paperId = await createPatient(paperEmail, partnerId);
 
     const conditions = await import('@/app/api/patients/[id]/conditions/route');
     const condition = await json<{ id: string }>(
@@ -384,17 +393,168 @@ describe('Feature: Consentimento do paciente para o parceiro (#292)', () => {
       expect(response.status).toBe(404);
     });
 
-    it('Dado Atendente, Quando revogar na ficha, Então 403 (rota clínica)', async () => {
-      const response = await staffRevokeRoute.POST(
+    it('Dado Atendente, Quando ler o status na ficha, Então 200 (recepção, #310)', async () => {
+      const response = await staffConsentRoute.GET(
         staffRequest(
-          `/api/patients/${referredId}/partner-consent/revoke`,
-          'POST',
+          `/api/patients/${referredId}/partner-consent`,
+          'GET',
           undefined,
           cookieHeaderFor('atendente'),
         ),
         context(referredId),
       );
+      expect(response.status).toBe(200);
+    });
+  });
+  describe('Cenário: consentimento dado em papel (#310)', () => {
+    const paperRequest = (id: string, headers?: Record<string, string>) =>
+      staffRequest(
+        `/api/patients/${id}/partner-consent/paper`,
+        'POST',
+        undefined,
+        headers,
+      );
+
+    const staffStatus = async (id: string) =>
+      json<ConsentDto>(
+        await staffConsentRoute.GET(
+          staffRequest(`/api/patients/${id}/partner-consent`, 'GET'),
+          context(id),
+        ),
+      );
+
+    it('Dado Profissional, Quando registrar em papel, Então 403 e nada é gravado', async () => {
+      const response = await staffPaperRoute.POST(
+        paperRequest(paperId, cookieHeaderFor('profissional')),
+        context(paperId),
+      );
       expect(response.status).toBe(403);
+      expect((await staffStatus(paperId)).active).toBe(false);
+      expect((await partnerView(paperId)).sharing).toBe(false);
+    });
+
+    it('Dado sem sessão, Quando registrar em papel, Então 401', async () => {
+      const response = await staffPaperRoute.POST(
+        portalRequest(`/api/patients/${paperId}/partner-consent/paper`, 'POST'),
+        context(paperId),
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('Dado paciente sem indicação, Quando registrar em papel, Então 404', async () => {
+      const response = await staffPaperRoute.POST(
+        paperRequest(loneId),
+        context(loneId),
+      );
+      expect(response.status).toBe(404);
+    });
+
+    it('Dado outra empresa, Quando registrar em papel, Então 404 (isolamento por empresa)', async () => {
+      const response = await staffPaperRoute.POST(
+        paperRequest(
+          paperId,
+          cookieHeaderFor('company_admin', 'admin@b.com', CLINIC_B_ID),
+        ),
+        context(paperId),
+      );
+      expect(response.status).toBe(404);
+      expect((await staffStatus(paperId)).active).toBe(false);
+    });
+
+    it('Dado Atendente, Quando registrar em papel, Então libera o parceiro, mostra a origem e audita', async () => {
+      const response = await staffPaperRoute.POST(
+        paperRequest(
+          paperId,
+          cookieHeaderFor('atendente', 'recepcao.310@clinica.com'),
+        ),
+        context(paperId),
+      );
+      expect(response.status).toBe(200);
+      expect(await json<ConsentDto>(response)).toMatchObject({
+        active: true,
+        acceptedSource: 'paper',
+        acceptedBy: 'recepcao.310@clinica.com',
+      });
+
+      const entry = await partnerView(paperId);
+      expect(entry).toMatchObject({ sharing: true });
+      expect(entry.conditions).toEqual([]);
+
+      const { auditEvents } = await getRepositories(
+        clinicScope(LEGACY_CLINIC_ID),
+      );
+      const events = await auditEvents.findAll({
+        resourceType: 'partner-consent',
+      });
+      const paperEvents = events.filter((e) => e.detail?.includes('em papel'));
+      expect(paperEvents).toHaveLength(1);
+      expect(paperEvents[0]).toMatchObject({
+        actorId: 'recepcao.310@clinica.com',
+        actorRole: 'atendente',
+        action: 'create',
+        patientId: paperId,
+      });
+    });
+
+    it('Dado consentimento em papel ativo, Quando registrar de novo, Então idempotente (sem novo evento)', async () => {
+      const response = await staffPaperRoute.POST(
+        paperRequest(paperId),
+        context(paperId),
+      );
+      expect(response.status).toBe(200);
+      expect((await json<ConsentDto>(response)).acceptedBy).toBe(
+        'recepcao.310@clinica.com',
+      );
+      const { auditEvents } = await getRepositories(
+        clinicScope(LEGACY_CLINIC_ID),
+      );
+      const events = await auditEvents.findAll({
+        resourceType: 'partner-consent',
+      });
+      expect(events.filter((e) => e.detail?.includes('em papel'))).toHaveLength(
+        1,
+      );
+    });
+
+    it('Dado o portal do paciente, Quando ler o status, Então vê a origem papel sem o nome de quem lançou', async () => {
+      await linkPortalAccount({
+        role: 'patient',
+        email: paperEmail,
+        recordId: paperId,
+      });
+      const status = await json<ConsentDto>(
+        await portalConsentRoute.GET(
+          portalRequest(
+            '/api/portal/patient/partner-consent',
+            'GET',
+            asPatient(paperEmail),
+          ),
+        ),
+      );
+      expect(status).toMatchObject({
+        active: true,
+        acceptedSource: 'paper',
+        acceptedBy: null,
+      });
+    });
+
+    it('Dado Atendente, Quando revogar na ficha, Então revoga (pedido no balcão) e o parceiro perde o acesso', async () => {
+      const response = await staffRevokeRoute.POST(
+        staffRequest(
+          `/api/patients/${paperId}/partner-consent/revoke`,
+          'POST',
+          undefined,
+          cookieHeaderFor('atendente', 'recepcao.310@clinica.com'),
+        ),
+        context(paperId),
+      );
+      expect(response.status).toBe(200);
+      expect(await staffStatus(paperId)).toMatchObject({
+        active: false,
+        revoked: true,
+        revokedBy: 'staff',
+      });
+      expect((await partnerView(paperId)).sharing).toBe(false);
     });
   });
 });

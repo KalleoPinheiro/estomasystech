@@ -114,7 +114,7 @@
 **Partner Share Consent** (consentimento para o parceiro)
 
 - Patient's specific, revocable consent for the Partner who referred them to see their conditions and assessments in the partner portal (last 24 months).
-- One per patient × partner; append-only (accept/revoke), with text version and hash, IP, and who recorded it. The patient grants and revokes in the portal; staff can only revoke.
+- One per patient × partner; append-only (accept/revoke), with text version and hash, IP, and who recorded it. The patient grants and revokes in the portal; staff can revoke and, only Company Admin and Receptionist, record a consent given on paper (source `paper`, who recorded it and when, audited).
 - Without it, the Partner sees only whether the patient was attended.
 
 **Data Subject Request** (pedido do titular)

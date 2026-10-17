@@ -48,12 +48,17 @@ const PATIENT_RECORD_PREFIX = '/api/patients/';
 
 /**
  * Fail-closed (#185): toda sub-rota de `/api/patients/:id/*` é clínica, exceto
- * as listadas aqui (primeiro segmento depois do `:id`). Hoje nenhuma é
- * operacional — `anamnesis`, `care-plans`, `conditions`, `evolutions` e
- * `export` são todas prontuário. Sub-rota nova nasce negada ao Atendente até
- * alguém decidir incluí-la nesta lista.
+ * as listadas aqui (primeiro segmento depois do `:id`). `anamnesis`,
+ * `care-plans`, `conditions`, `evolutions` e `export` são prontuário.
+ * Sub-rota nova nasce negada ao Atendente até alguém decidir incluí-la nesta
+ * lista.
+ *
+ * `partner-consent` (#310) é ato da recepção — o paciente consente em papel ou
+ * pede a revogação no balcão — e só devolve o status do consentimento, sem
+ * dado clínico. O handler do consentimento em papel restringe ao Admin de
+ * Empresa e ao Atendente (ADR-002); revogar só reduz o compartilhamento.
  */
-const NON_CLINICAL_PATIENT_SUBROUTES: readonly string[] = [];
+const NON_CLINICAL_PATIENT_SUBROUTES: readonly string[] = ['partner-consent'];
 
 /**
  * `/api/accounts` fica de fora desta lista de propósito: a hierarquia de

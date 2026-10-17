@@ -295,6 +295,15 @@ describe('Feature: Conformidade das guardas de rota', () => {
       profissional: new Set(['administrative', 'platform']),
     } as const;
 
+    /**
+     * Rotas operacionais cujo HANDLER nega um papel que a família deixaria
+     * passar (camada 2, ADR-002). Cada uma tem o 403 conferido abaixo.
+     */
+    const HANDLER_DENIED_ROLES: Record<string, readonly string[]> = {
+      // #310: consentimento em papel é do Admin de Empresa e do Atendente.
+      'api/patients/[id]/partner-consent/paper/route.ts': ['profissional'],
+    };
+
     /** O super_admin não tem clínica: a sessão dele nasce com `clinicId` nulo. */
     const headersFor = (role: keyof typeof DENIED_FAMILIES) =>
       cookieHeaderFor(
@@ -348,8 +357,27 @@ describe('Feature: Conformidade das guardas de rota', () => {
         },
       );
 
+      const handlerDenied = staffGuarded.filter((f) =>
+        HANDLER_DENIED_ROLES[f.relative]?.includes(role),
+      );
+
+      it.each(handlerDenied.map((f) => [f.relative, f] as const))(
+        `Dado %s com sessão de ${role}, Quando chamar cada handler, Então o handler responde 403 (restrição do caso de uso)`,
+        async (_relative, file) => {
+          for (const [method, handler] of await loadHandlers(file)) {
+            const response = await handler(
+              requestFor(file.pathname, method, headersFor(role)),
+              anyContext(),
+            );
+            expect(response.status, `${method} ${file.pathname}`).toBe(403);
+          }
+        },
+      );
+
       const allowedRoutes = staffGuarded.filter(
-        (f) => !deniedFamilies.has(classifyRoute(f.pathname)),
+        (f) =>
+          !deniedFamilies.has(classifyRoute(f.pathname)) &&
+          !HANDLER_DENIED_ROLES[f.relative]?.includes(role),
       );
 
       it.each(allowedRoutes.map((f) => [f.relative, f] as const))(

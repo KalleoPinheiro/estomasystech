@@ -20,6 +20,7 @@ const toDomain = (row: Row): PartnerShareConsent =>
     textHash: row.textHash,
     textVersion: row.textVersion,
     actor: row.actor as PartnerShareConsentActor,
+    recordedBy: row.recordedBy,
     ipAddress: row.ipAddress,
     recordedAt: row.recordedAt,
   });
@@ -48,6 +49,7 @@ export class DrizzlePartnerShareConsentRepository
       textHash: record.textHash,
       textVersion: record.textVersion,
       actor: record.actor,
+      recordedBy: record.recordedBy,
       ipAddress: record.ipAddress,
       recordedAt: record.recordedAt,
     });

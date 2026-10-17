@@ -23,9 +23,10 @@ atendido. O histórico visível tem **limite de 24 meses**, como no portal do pa
 | PSC-03 | **Quando** houver consentimento ativo, `GetPartnerPortalData` **deve** devolver só consultas que terminam na janela de 24 meses, avaliações registradas na janela e condições abertas na janela ou com avaliação na janela. | idem |
 | PSC-04 | Consentimento revogado, de texto antigo (hash diferente) ou dado a outro parceiro **não deve** valer. | idem, `tests/domain/partner-share-consent.test.ts` |
 | PSC-05 | O paciente **deve** poder autorizar e revogar pelo portal; aceite repetido não grava outro registro. Paciente sem parceiro indicador ativo não vê o cartão (`GET` → `null`; `POST` → `404`). | `tests/api/partner-share-consent-routes.test.ts`, `tests/pages/partner-consent.test.tsx` |
-| PSC-06 | A equipe **deve** poder ver o status e revogar pela ficha (`/api/patients/:id/partner-consent`, família clínica: Atendente recebe `403`; Profissional só com vínculo). A equipe **não** autoriza. | idem, `tests/api/professional-patient-scope-guard.test.ts` |
+| PSC-06 | A equipe **deve** poder ver o status e revogar pela ficha (`/api/patients/:id/partner-consent`, família `operational` desde a #310: Atendente também acessa; Profissional só com vínculo). A equipe só autoriza pelo registro em papel (PSC-09). | idem, `tests/api/professional-patient-scope-guard.test.ts` |
 | PSC-07 | Aceite e revogação **devem** gerar evento de auditoria `partner-consent`. | `tests/api/partner-share-consent-routes.test.ts` |
 | PSC-08 | O texto **deve** ser o placeholder versionado `v0-placeholder` até o texto do jurídico (#216). | `tests/lib/partner-share-consent-text.test.ts` |
+| PSC-09 | O **Admin de Empresa e o Atendente deve** poder registrar o consentimento dado em papel (`POST /api/patients/:id/partner-consent/paper`); o Profissional recebe `403`. O registro vale como o aceite do portal, guarda ator `staff` (origem `papel`), quem lançou (`recorded_by`) e a data, e grava `create`/`partner-consent` na auditoria; é idempotente. A ficha mostra a origem; o portal do paciente, sem o nome de quem lançou. Outra empresa: `404`. (#310) | `tests/api/partner-share-consent-routes.test.ts`, `tests/domain/partner-share-consent.test.ts`, `tests/application/partner-share-consent.test.ts`, `tests/pages/partner-consent.test.tsx` |
 
 ## Decisões de escopo
 
@@ -34,8 +35,10 @@ atendido. O histórico visível tem **limite de 24 meses**, como no portal do pa
 | Tabela nova `partner_share_consents` (migração `0048`), não colunas em `consent_records` | O TCLE resolve status por paciente; misturar finalidades exigiria filtrar todo leitor atual do TCLE. Tabela vazia: o parceiro deixa de ver dado clínico até o paciente autorizar (falha fechado). |
 | O consentimento vale para o "Indicado por" atual | O registro guarda o `partnerId`; trocar a indicação não leva a autorização junto. |
 | "Atendido" = consulta `completed` dentro da janela de 24 meses | Sem consentimento, consulta e procedimento também ficam ocultos; o portal inteiro do parceiro respeita a mesma janela. |
+| Sub-rota `partner-consent` sai da família clínica (#310) | A decisão exige que o Atendente registre; a família clínica nega o Atendente em toda sub-rota de `/api/patients/:id/*`. O dado exposto é só o status do consentimento. Efeito colateral aceito: o Atendente também lê o status e revoga (revogar só reduz o compartilhamento e é pedido típico de balcão). O registro em papel repete a restrição por papel no handler (ADR-002), com `403` ao Profissional. |
+| Registro em papel usa o texto vigente | O hash do aceite precisa casar com o texto vigente para valer; a equipe atesta que o termo assinado tem esse texto (a confirmação mostra o texto). Se o texto mudar (#216), o consentimento em papel perde a validade como o do portal e é preciso registrar de novo. |
 | Texto fixo, sem nome do parceiro interpolado | Hash igual para todo paciente; o parceiro aparece no título do cartão e fica no registro. |
-| Só o paciente autoriza | A issue fala em "paciente revoga pelo portal, a equipe pela ficha". Registrar autorização em papel pela equipe ficou como pergunta aberta no PR. |
+| Só o paciente autoriza (até a #310) | A issue fala em "paciente revoga pelo portal, a equipe pela ficha". Registrar autorização em papel pela equipe foi decidido na #310 (PSC-09). |
 
 ## Fora do escopo
 

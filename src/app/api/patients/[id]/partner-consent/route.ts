@@ -35,6 +35,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       patient,
       PARTNER_SHARE_CONSENT,
     );
-    return view ? toPartnerShareConsentDto(view, PARTNER_SHARE_CONSENT) : null;
+    return view
+      ? toPartnerShareConsentDto(view, PARTNER_SHARE_CONSENT, {
+          includeRecordedBy: true,
+        })
+      : null;
   });
 }
