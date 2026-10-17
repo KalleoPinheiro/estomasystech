@@ -1125,7 +1125,7 @@ Decisões de @KalleoPinheiro de 2026-10-11 implementadas.
 
 Pergunta aberta do AD-040 decidida pelo coordenador: o paciente também não remarca consulta de profissional inativo.
 - **Código:** `RescheduleOwnAppointment` recebe o repositório de profissionais (opcional) e recusa com `400` "O profissional desta consulta não está mais disponível. Entre em contato com a clínica para remarcar." (inativo ou inexistente); a rota do portal passa `services.professionals`. Cancelar não muda.
-- **Docs:** POR-RN-19, AGE-RN-20, AD-040 (decidido).
+- **Docs:** POR-RN-20, AGE-RN-20, AD-040 (decidido).
 - **Testes:** ativo remarca; inativado e sumido são recusados e o horário não muda.
 - **Gate:** Actions sem cota; gate rodado local. Docker/smoke não rodam (sem daemon).
 - **Next step:** nenhum. **Blockers:** nenhum. Sem migração.
