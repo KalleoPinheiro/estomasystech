@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hashAuthTokenSecret, INVITE_TTL_MS } from '@/domain/auth/auth-token';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
+import { validCnpj } from '../support/cnpj';
 import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -57,7 +58,8 @@ const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
 
 let cnpjSeq = 10;
 /** CNPJ novo por teste — `uq_clinics_cnpj` recusa repetido. */
-const nextCnpj = () => `90.${String(cnpjSeq++).padStart(3, '0')}.000/0001-00`;
+const nextCnpj = () =>
+  validCnpj(`90${String(cnpjSeq++).padStart(3, '0')}0000001`);
 
 const validBody = (overrides: Record<string, unknown> = {}) => ({
   name: 'Clínica Nova',

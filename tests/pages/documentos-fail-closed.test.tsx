@@ -62,7 +62,7 @@ const CLINIC_INCOMPLETE: ClinicInfoDto = {
 
 const CLINIC_COMPLETE: ClinicInfoDto = {
   name: 'Clínica VittaFlow',
-  cnpj: '12.345.678/0001-90',
+  cnpj: '12.345.678/0001-95',
   address: 'Rua das Flores, 100',
   city: 'São Paulo',
   professionalName: 'Enf. Ana',

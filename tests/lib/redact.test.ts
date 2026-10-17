@@ -31,7 +31,7 @@ describe('Feature: limpeza de texto livre que sai do processo (#212, OBS-06)', (
       'Resend 422: [e-mail] inválido',
     ],
     ['CPF', 'CPF 123.456.789-09 já existe', 'CPF [número] já existe'],
-    ['CNPJ', 'CNPJ 12.345.678/0001-90', 'CNPJ [número]'],
+    ['CNPJ', 'CNPJ 12.345.678/0001-95', 'CNPJ [número]'],
     ['telefone', 'para +55 (11) 99999-7777 falhou', 'para [número] falhou'],
     ['data', 'nascimento 1980-04-03 inválido', 'nascimento [número] inválido'],
   ])(

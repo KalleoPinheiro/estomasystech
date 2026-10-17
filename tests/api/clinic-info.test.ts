@@ -46,7 +46,7 @@ describe('Feature: /api/clinic-info lê dados cadastrais do banco (issue #61)', 
         '/api/settings/clinic-info',
         'PUT',
         {
-          cnpj: '22.222.222/0001-22',
+          cnpj: '22.222.222/0001-91',
           professionalName: 'Enf. Bia',
           professionalRegistry: 'COREN-SP 654321',
         },
@@ -63,7 +63,7 @@ describe('Feature: /api/clinic-info lê dados cadastrais do banco (issue #61)', 
     );
     const body = (await response.json()) as Envelope<ClinicInfoDto>;
 
-    expect(body.data?.cnpj).toBe('22.222.222/0001-22');
+    expect(body.data?.cnpj).toBe('22.222.222/0001-91');
     expect(body.data?.professionalName).toBe('Enf. Bia');
     expect(body.data?.professionalRegistry).toBe('COREN-SP 654321');
   });

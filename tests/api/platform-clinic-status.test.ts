@@ -5,6 +5,7 @@ import { Clinic } from '@/domain/clinic/clinic';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import type { PlatformClinicDto, PlatformClinicSummaryDto } from '@/lib/dto';
+import { validCnpj } from '../support/cnpj';
 import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -35,7 +36,7 @@ const freshClinic = async (): Promise<string> => {
   seq += 1;
   const clinic = Clinic.create({
     name: `Clínica estado ${seq}`,
-    cnpj: `${String(seq).padStart(12, '0')}${String(seq % 100).padStart(2, '0')}`,
+    cnpj: validCnpj(String(seq).padStart(12, '0')),
     contactPhone: '11 3333-4444',
     contactEmail: `contato-${seq}@estado.test`,
     createdBy: 'test',

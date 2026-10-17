@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Clinic } from '@/domain/clinic/clinic';
 import { clinicScope } from '@/lib/auth/tenant-scope';
+import { validCnpj } from '../support/cnpj';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -71,7 +72,7 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
   });
 
   it('Dada clínica existente ou não, Quando abrir o detalhe da clínica, Então 200 com o cadastro ou 404', async () => {
-    const clinic = await seedClinic('11.000.000/0001-00');
+    const clinic = await seedClinic('11.000.000/0001-08');
 
     const { response, json } = await detail(clinic.id);
 
@@ -79,7 +80,7 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
     expect(json.data).toEqual({
       id: clinic.id,
       name: clinic.name,
-      cnpj: '11.000.000/0001-00',
+      cnpj: '11.000.000/0001-08',
       contactPhone: '11 3333-4444',
       contactEmail: 'contato@x.com',
       address: null,
@@ -110,14 +111,14 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
   it('Dada a clínica do go-live, Quando o super_admin edita o cadastro em partes, Então só os campos enviados mudam', async () => {
     const first = await patch('legacy-clinic', {
       name: 'Clínica Real Ltda',
-      cnpj: '33444555000166',
+      cnpj: '33444555000181',
       contactPhone: '11 94444-5555',
     });
 
     expect(first.response.status).toBe(200);
     expect(first.json.data).toMatchObject({
       name: 'Clínica Real Ltda',
-      cnpj: '33.444.555/0001-66',
+      cnpj: '33.444.555/0001-81',
       contactPhone: '11 94444-5555',
       contactEmail: null,
       registrationComplete: false,
@@ -130,7 +131,7 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
 
     expect(second.json.data).toMatchObject({
       name: 'Clínica Real Ltda',
-      cnpj: '33.444.555/0001-66',
+      cnpj: '33.444.555/0001-81',
       contactEmail: 'contato@real.com',
       professionalName: 'Enf. Bia',
       registrationComplete: true,
@@ -153,7 +154,7 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
     'Dado %s, Quando editar, Então nome vazio e dado inválido respondem 400 e nada muda',
     async (_label, body) => {
       const clinic = await seedClinic(
-        `12.${String(++seq).padStart(3, '0')}.000/0001-00`,
+        validCnpj(`12${String(++seq).padStart(3, '0')}0000001`),
       );
 
       const { response } = await patch(clinic.id, body);
@@ -168,7 +169,7 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
   );
 
   it('Dada clínica completa, Quando o super_admin limpa o contato, Então 200 e a clínica volta a cadastro incompleto', async () => {
-    const clinic = await seedClinic('47.000.000/0001-00');
+    const clinic = await seedClinic('47.000.000/0001-55');
 
     const { response, json } = await patch(clinic.id, {
       contactEmail: null,
@@ -184,26 +185,26 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
   });
 
   it('Dado CNPJ de outra clínica, Quando editar, Então 400 e a clínica não muda; o próprio CNPJ passa', async () => {
-    const owner = await seedClinic('44.000.000/0001-00');
-    const other = await seedClinic('45.000.000/0001-00');
+    const owner = await seedClinic('44.000.000/0001-67');
+    const other = await seedClinic('45.000.000/0001-20');
 
     const { response, json } = await patch(other.id, {
-      cnpj: '44000000000100',
+      cnpj: '44000000000167',
       name: 'Tentou roubar',
     });
 
     expect(response.status).toBe(400);
     expect(json.error).toBe('Já existe clínica com este CNPJ');
     const { clinics } = await repositories(other.id);
-    expect((await clinics.findById(other.id))?.cnpj).toBe('45.000.000/0001-00');
+    expect((await clinics.findById(other.id))?.cnpj).toBe('45.000.000/0001-20');
     expect((await clinics.findById(other.id))?.name).toBe(other.name);
 
-    const same = await patch(owner.id, { cnpj: '44.000.000/0001-00' });
+    const same = await patch(owner.id, { cnpj: '44.000.000/0001-67' });
     expect(same.response.status).toBe(200);
   });
 
   it('Dada a edição, Quando registrar a auditoria da edição, Então o evento fica na clínica-alvo com o super_admin', async () => {
-    const clinic = await seedClinic('46.000.000/0001-00');
+    const clinic = await seedClinic('46.000.000/0001-92');
 
     await patch(clinic.id, { city: 'Campinas' });
 

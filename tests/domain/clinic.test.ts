@@ -29,23 +29,23 @@ describe('Feature: Dados cadastrais da clínica (issue #61/#62)', () => {
     it('Dada uma clínica, Quando atualizar CNPJ, Então retorna nova instância sem mutar a original', () => {
       const clinic = bareClinic();
 
-      const updated = clinic.updateInfo({ cnpj: '12.345.678/0001-90' });
+      const updated = clinic.updateInfo({ cnpj: '12.345.678/0001-95' });
 
       expect(clinic.cnpj).toBeNull();
-      expect(updated.cnpj).toBe('12.345.678/0001-90');
+      expect(updated.cnpj).toBe('12.345.678/0001-95');
       expect(updated).not.toBe(clinic);
     });
 
     it('Dada uma clínica com dados salvos, Quando atualizar só um campo, Então os demais são preservados', () => {
       const clinic = bareClinic().updateInfo({
-        cnpj: '12.345.678/0001-90',
+        cnpj: '12.345.678/0001-95',
         professionalName: 'Enf. Ana',
         professionalRegistry: 'COREN-SP 123456',
       });
 
       const updated = clinic.updateInfo({ city: 'São Paulo' });
 
-      expect(updated.cnpj).toBe('12.345.678/0001-90');
+      expect(updated.cnpj).toBe('12.345.678/0001-95');
       expect(updated.professionalName).toBe('Enf. Ana');
       expect(updated.city).toBe('São Paulo');
     });
@@ -70,14 +70,14 @@ describe('Feature: Dados cadastrais da clínica (issue #61/#62)', () => {
     it('Dado nenhum campo name no update, Quando atualizar outro campo, Então o nome permanece intacto', () => {
       const clinic = bareClinic();
 
-      const updated = clinic.updateInfo({ cnpj: '12.345.678/0001-90' });
+      const updated = clinic.updateInfo({ cnpj: '12.345.678/0001-95' });
 
       expect(updated.name).toBe('Clínica Alfa');
     });
 
     it('Dado um campo com espaços em branco, Quando atualizar, Então normaliza para null', () => {
       const clinic = bareClinic().updateInfo({
-        cnpj: '12.345.678/0001-90',
+        cnpj: '12.345.678/0001-95',
       });
 
       const updated = clinic.updateInfo({ cnpj: '   ' });
@@ -89,7 +89,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61/#62)', () => {
   describe('Cenário: completude para emissão de documento (#62)', () => {
     it('Dados os 3 campos obrigatórios preenchidos, Quando checar completude, Então retorna true', () => {
       const clinic = bareClinic().updateInfo({
-        cnpj: '12.345.678/0001-90',
+        cnpj: '12.345.678/0001-95',
         professionalName: 'Enf. Ana',
         professionalRegistry: 'COREN-SP 123456',
       });
@@ -107,11 +107,11 @@ describe('Feature: Dados cadastrais da clínica (issue #61/#62)', () => {
       ],
       [
         'professionalName',
-        { cnpj: '12.345.678/0001-90', professionalRegistry: 'COREN-SP 123456' },
+        { cnpj: '12.345.678/0001-95', professionalRegistry: 'COREN-SP 123456' },
       ],
       [
         'professionalRegistry',
-        { cnpj: '12.345.678/0001-90', professionalName: 'Enf. Ana' },
+        { cnpj: '12.345.678/0001-95', professionalName: 'Enf. Ana' },
       ],
     ])(
       'Dado %s ausente, Quando checar completude, Então retorna false',
@@ -124,7 +124,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61/#62)', () => {
 
     it('Dado endereço e cidade ausentes mas os 3 obrigatórios presentes, Quando checar completude, Então retorna true', () => {
       const clinic = bareClinic().updateInfo({
-        cnpj: '12.345.678/0001-90',
+        cnpj: '12.345.678/0001-95',
         professionalName: 'Enf. Ana',
         professionalRegistry: 'COREN-SP 123456',
       });

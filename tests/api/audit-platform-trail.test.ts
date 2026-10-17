@@ -11,6 +11,7 @@ import {
   systemScope,
 } from '@/lib/auth/tenant-scope';
 import type { AuditEventDto, PlatformAuditEventDto } from '@/lib/dto';
+import { validCnpj } from '../support/cnpj';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
@@ -40,7 +41,7 @@ const freshClinic = async (): Promise<Clinic> => {
   seq += 1;
   const clinic = Clinic.create({
     name: `Clínica trilha ${seq}`,
-    cnpj: `${String(seq + 70).padStart(12, '0')}${String(seq % 100).padStart(2, '0')}`,
+    cnpj: validCnpj(`${String(seq + 70).padStart(12, '0')}`),
     contactPhone: '11 3333-4444',
     contactEmail: `contato-${seq}@trilha.test`,
     createdBy: 'test',

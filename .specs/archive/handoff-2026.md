@@ -1025,3 +1025,13 @@ Números de @KalleoPinheiro (2026-10-11): 2 consultas futuras, 60 dias, 10 fotos
 - **Docs:** POR-RN-17 no portal, AD-036. Sem migração, sem ADR.
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Next step:** #325 (e-mail do cuidador) já não depende da #213. **Blockers:** nenhum.
+
+## Issue #248 — CNPJ da clínica: conferir o dígito verificador (2026-10-17) — ENCERRADO
+
+Decisão de @KalleoPinheiro de 2026-10-11 (opção b) implementada: `normalizeCnpj` confere o DV pelo módulo 11 da Receita (valor do caractere = ASCII − 48, serve ao CNPJ numérico e ao alfanumérico) e recusa com `CNPJ inválido: dígito verificador não confere` (`400`) na criação e edição pela plataforma e em `PUT /api/settings/clinic-info`.
+- **Código:** `src/domain/clinic/cnpj.ts` (único ponto; os dois caminhos já passam por `Clinic.updateInfo`/`Clinic.create`).
+- **Decisão delegada (CNPJ já gravado e inválido):** sem migração nem saneamento; o valor gravado segue valendo e só é recusado quando reenviado (a tela de edição reenvia o CNPJ, então o admin corrige ao editar). Motivo: migração que falha ou apaga CNPJ derruba cadastro em produção sem ganho; o impacto é corrigível pela própria clínica. Sem ADR (decisão de escopo pequeno, registrada em ACE-RN-23).
+- **Fixtures:** testes e `e2e/global-setup.ts` passaram a usar CNPJs válidos; `legacy-clinic` não tem CNPJ (nada a mudar).
+- **Docs:** ACE-RN-23 em `docs/domains/acesso/README.md`.
+- **Testes:** `tests/domain/cnpj.test.ts` (numérico, vetor alfanumérico `12.ABC.345/01DE-35`, DV errado, formato).
+- **Next step:** nenhum. **Blockers:** nenhum. Nenhuma migração.

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { apiPost } from "./support/api";
 import { MAIN_BASE_URL, SUPER_ADMIN_STORAGE_STATE_PATH } from "./support/constants";
 import { totpCode, totpStep } from "./support/totp";
+import { validCnpj } from "./support/cnpj";
 
 /**
  * B5 (#214, Journey 7 e 8): conta de clínica suspensa não entra, e volta a
@@ -26,7 +27,7 @@ test.describe("clínica suspensa", () => {
       "/api/platform/clinics",
       {
         name: `Clínica Suspensa ${digits}`,
-        cnpj: `${digits}02`,
+        cnpj: validCnpj(`${digits.slice(0, 11)}3`),
         contactPhone: "11 3333-4444",
         contactEmail: "contato@suspensa-e2e.test",
         adminEmail,

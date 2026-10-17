@@ -372,7 +372,7 @@ async function seedBaseData(cookie: string): Promise<SeedIds> {
  * cuidados) bateria no bloqueio fail-closed do #62 — a clínica nasce sem
  * CNPJ/responsável técnico cadastrados.
  */
-const E2E_CLINIC_CNPJ = "12.345.678/0001-90";
+const E2E_CLINIC_CNPJ = "12.345.678/0001-95";
 
 async function seedClinicInfo(cookie: string): Promise<void> {
   await put(cookie, "/api/settings/clinic-info", {
