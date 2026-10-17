@@ -16,6 +16,8 @@ clínicas (estomias e feridas) com avaliações seriadas e fotos, planos de cuid
 clínicos. É dado de saúde sob LGPD: consentimento, imutabilidade e isolamento por empresa são
 requisitos, não detalhes.
 
+> **Textos do consentimento:** a versão vigente no sistema é `CONSENT_TEXT` `v1`. Há uma **versão prévia** (aviso de privacidade, TCLE, imagem separada) em [`docs/legal/textos-lgpd-previa.md`](../../legal/textos-lgpd-previa.md), **não ligada** e pendente de revisão jurídica (#216, [ADR-026](../../adr/026-textos-lgpd-previa-nao-ligada.md)); só a promoção do texto revisado invalida aceites.
+
 **Termos ([`CONTEXT.md`](../../../CONTEXT.md)):** `Patient`, `Guardian`, `Anamnesis`, `Evolution Note`, `Clinical Condition`, `Condition Assessment`, `Condition Photo`, `Consent Record`, `Data Subject Request`.
 
 ## Regras de negócio
