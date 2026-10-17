@@ -346,7 +346,7 @@ describe('Feature: SettingsPage', () => {
           return jsonResponse({
             info: {
               ...EMPTY_CLINIC_INFO,
-              cnpj: '12.345.678/0001-90',
+              cnpj: '12.345.678/0001-95',
               professionalName: 'Enf. Ana',
             },
           });
@@ -369,7 +369,7 @@ describe('Feature: SettingsPage', () => {
         target: { value: 'Clínica VittaFlow Ltda' },
       });
       fireEvent.change(screen.getByPlaceholderText('00.000.000/0001-00'), {
-        target: { value: '12.345.678/0001-90' },
+        target: { value: '12.345.678/0001-95' },
       });
       fireEvent.change(screen.getByPlaceholderText('Nome completo'), {
         target: { value: 'Enf. Ana' },

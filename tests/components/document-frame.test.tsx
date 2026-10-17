@@ -6,7 +6,7 @@ import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 
 const fullClinic: ClinicInfoDto = {
   name: 'Clínica Vitta',
-  cnpj: '12.345.678/0001-90',
+  cnpj: '12.345.678/0001-95',
   address: 'Rua das Flores, 100',
   professionalName: 'Dra. Ana Souza',
   professionalRegistry: 'COREN 123456',
@@ -45,7 +45,7 @@ describe('Feature: Moldura de documento', () => {
       );
 
       expect(screen.getByText('Clínica Vitta')).toBeInTheDocument();
-      expect(screen.getByText('CNPJ: 12.345.678/0001-90')).toBeInTheDocument();
+      expect(screen.getByText('CNPJ: 12.345.678/0001-95')).toBeInTheDocument();
       expect(screen.getByText('Rua das Flores, 100')).toBeInTheDocument();
     });
 

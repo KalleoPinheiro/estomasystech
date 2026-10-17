@@ -55,7 +55,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       await clinicRepo.create(clinic);
 
       const updated = clinic.updateInfo({
-        cnpj: '12.345.678/0001-90',
+        cnpj: '12.345.678/0001-95',
         address: 'Rua das Flores, 100',
         city: 'São Paulo',
         professionalName: 'Enf. Ana',
@@ -64,7 +64,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       await clinicRepo.update(updated);
       const stored = await clinicRepo.findById(clinic.id);
 
-      expect(stored?.cnpj).toBe('12.345.678/0001-90');
+      expect(stored?.cnpj).toBe('12.345.678/0001-95');
       expect(stored?.address).toBe('Rua das Flores, 100');
       expect(stored?.city).toBe('São Paulo');
       expect(stored?.professionalName).toBe('Enf. Ana');
@@ -90,11 +90,11 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       await clinicRepo.create(clinic);
 
       await clinicRepo.update(
-        clinic.updateInfo({ cnpj: '99.999.999/0001-00' }),
+        clinic.updateInfo({ cnpj: '99.999.999/0001-91' }),
       );
       const stored = await clinicRepo.findById(clinic.id);
 
-      expect(stored?.cnpj).toBe('99.999.999/0001-00');
+      expect(stored?.cnpj).toBe('99.999.999/0001-91');
       expect(stored?.address).toBeNull();
       expect(stored?.city).toBeNull();
       expect(stored?.professionalName).toBeNull();
@@ -111,7 +111,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       await clinicRepo.create(clinicB);
 
       await clinicRepo.update(
-        clinicA.updateInfo({ cnpj: '11.111.111/0001-11' }),
+        clinicA.updateInfo({ cnpj: '11.111.111/0001-91' }),
       );
       const storedB = await clinicRepo.findById(clinicB.id);
 
@@ -147,7 +147,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       const edited = await clinicRepo.findById(clinic.id);
       expect(edited?.contactPhone).toBe('11 98888-7777');
       expect(edited?.contactEmail).toBe('novo@clinica.com');
-      expect(await clinicRepo.findByCnpj('99.999.999/0001-99')).toBeNull();
+      expect(await clinicRepo.findByCnpj('98.999.999/0001-29')).toBeNull();
     });
   });
 

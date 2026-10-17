@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, SUPER_ADMIN_STORAGE_STATE_PATH } from "./support/constants";
 import { apiPost } from "./support/api";
 import { nextTotpCode } from "./support/totp";
+import { validCnpj } from "./support/cnpj";
 
 /**
  * B1 (#214, ADR-007): o super_admin é o operador da plataforma. Sessão real
@@ -51,7 +52,7 @@ test.describe("área da plataforma", () => {
     test("cria clínica pela tela e vê o admin aguardando primeiro acesso", async ({ page }) => {
       // CNPJ novo a cada execução: `uq_clinics_cnpj` recusa repetido (B4).
       const digits = String(Date.now()).slice(-12).padStart(12, "0");
-      const cnpj = `${digits}00`;
+      const cnpj = validCnpj(`${digits.slice(0, 11)}0`);
       const name = `Clínica E2E ${digits}`;
 
       await page.goto("/plataforma");
@@ -87,7 +88,7 @@ test.describe("área da plataforma", () => {
       const name = `Clínica Suspensão ${digits}`;
       const created = await apiPost<{ clinic: { id: string } }>(page.request, "/api/platform/clinics", {
         name,
-        cnpj: `${digits}01`,
+        cnpj: validCnpj(`${digits.slice(0, 11)}1`),
         contactPhone: "11 3333-4444",
         contactEmail: "contato@suspensao-e2e.test",
         adminEmail: `admin-${digits}@suspensao-e2e.test`,
@@ -119,7 +120,7 @@ test.describe("área da plataforma", () => {
       const name = `Clínica Trilha ${digits}`;
       await apiPost(page.request, "/api/platform/clinics", {
         name,
-        cnpj: `${digits}02`,
+        cnpj: validCnpj(`${digits.slice(0, 11)}2`),
         contactPhone: "11 3333-4444",
         contactEmail: "contato@trilha-e2e.test",
         adminEmail: `admin-${digits}@trilha-e2e.test`,

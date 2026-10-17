@@ -47,7 +47,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
         '/api/settings/clinic-info',
         'PUT',
         {
-          cnpj: '12.345.678/0001-90',
+          cnpj: '12.345.678/0001-95',
           address: 'Rua das Flores, 100',
           city: 'São Paulo',
           professionalName: 'Enf. Ana',
@@ -66,7 +66,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     );
     const body = (await response.json()) as Envelope<{ info: ClinicInfoDto }>;
 
-    expect(body.data?.info.cnpj).toBe('12.345.678/0001-90');
+    expect(body.data?.info.cnpj).toBe('12.345.678/0001-95');
     expect(body.data?.info.professionalName).toBe('Enf. Ana');
     expect(body.data?.info.professionalRegistry).toBe('COREN-SP 123456');
   });
@@ -143,7 +143,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
       jsonRequest(
         '/api/settings/clinic-info',
         'PUT',
-        { cnpj: '11.111.111/0001-11' },
+        { cnpj: '11.111.111/0001-91' },
         adminCookieHeader(CLINIC_A_ID),
       ),
     );
@@ -157,7 +157,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     );
     const bodyB = (await responseB.json()) as Envelope<{ info: ClinicInfoDto }>;
 
-    expect(bodyB.data?.info.cnpj).not.toBe('11.111.111/0001-11');
+    expect(bodyB.data?.info.cnpj).not.toBe('11.111.111/0001-91');
   });
 
   it('Dado papel atendente, Quando tentar salvar, Então retorna 403', async () => {
@@ -203,7 +203,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
       jsonRequest(
         '/api/settings/clinic-info',
         'PUT',
-        { name: 'Invadida pelo operador', cnpj: '99.999.999/0001-99' },
+        { name: 'Invadida pelo operador', cnpj: '99.999.999/0001-91' },
         cookieHeaderFor('super_admin', 'dono@vitta.app', null),
       ),
     );
@@ -301,7 +301,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     };
 
     const filled = await put({
-      cnpj: '33.444.555/0001-66',
+      cnpj: '33.444.555/0001-81',
       contactPhone: '11 94444-5555',
       contactEmail: 'contato@clinicab.com',
     });
@@ -326,7 +326,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
       jsonRequest(
         '/api/settings/clinic-info',
         'PUT',
-        { cnpj: '55.666.777/0001-88' },
+        { cnpj: '55.666.777/0001-81' },
         adminCookieHeader(CLINIC_A_ID),
       ),
     );
@@ -335,7 +335,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
       jsonRequest(
         '/api/settings/clinic-info',
         'PUT',
-        { cnpj: '55666777000188' },
+        { cnpj: '55666777000181' },
         adminCookieHeader(CLINIC_B_ID),
       ),
     );
@@ -346,7 +346,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     const { getRepositories } = await import('@/infrastructure/container');
     const { clinics } = await getRepositories(clinicScope(CLINIC_B_ID));
     expect((await clinics.findById(CLINIC_B_ID))?.cnpj).not.toBe(
-      '55.666.777/0001-88',
+      '55.666.777/0001-81',
     );
   });
 });

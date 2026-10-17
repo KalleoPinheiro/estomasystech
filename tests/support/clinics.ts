@@ -46,8 +46,8 @@ export async function ensureClinic(id: string): Promise<string> {
 
 /** CNPJ de exemplo por clínica de teste — `uq_clinics_cnpj` não aceita repetido. */
 const TEST_CNPJ: Record<string, string> = {
-  [CLINIC_A_ID]: '11.111.111/0001-11',
-  [CLINIC_B_ID]: '22.222.222/0001-22',
+  [CLINIC_A_ID]: '11.111.111/0001-91',
+  [CLINIC_B_ID]: '22.222.222/0001-91',
 };
 
 /**
@@ -64,7 +64,7 @@ export async function completeClinicRegistration(
   }
   await clinics.update(
     clinic.updateInfo({
-      cnpj: TEST_CNPJ[clinicId] ?? '33.333.333/0001-33',
+      cnpj: TEST_CNPJ[clinicId] ?? '33.333.333/0001-91',
       contactPhone: '11 3333-4444',
       contactEmail: `contato@${clinicId}.test`,
     }),
