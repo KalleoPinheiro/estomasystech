@@ -566,7 +566,7 @@ describe('Feature: Recorrência de consultas, grade de horários, profissionais,
       expect(body.data.some((account) => account.id === accountId)).toBe(true);
     });
 
-    it('Dado nova senha, Quando PATCH /api/accounts/:id, Então atualiza a senha', async () => {
+    it('Dado nova senha, Quando PATCH /api/accounts/:id, Então recusa: o admin não define a senha de outra conta (#295)', async () => {
       const response = await accountByIdRoute.PATCH(
         jsonRequest(`/api/accounts/${accountId}`, 'PATCH', {
           password: 'novaSenhaForte123',
@@ -574,7 +574,7 @@ describe('Feature: Recorrência de consultas, grade de horários, profissionais,
         context(accountId),
       );
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(400);
     });
 
     it('Dado conta ativa, Quando PATCH active=false, Então desativa', async () => {

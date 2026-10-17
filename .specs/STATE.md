@@ -171,7 +171,7 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Trade-off**: padrão seguro aplicado a três perguntas em aberto para o dono do produto — (1) `password` no PATCH foi mantido (agora sob hierarquia + auditoria); (2) Atendente/Profissional não trocam a própria senha nem se reativam pelo PATCH (a matriz não os deixa gerir o próprio papel; o caminho é "esqueci a senha"); (3) desativação concorrente de dois admins não tem trava transacional.
 - **Scope**: src/domain/auth/account-management.ts, src/lib/auth/account-manager.ts, src/app/api/accounts/**
 - **Date**: 2026-09-26
-- **Status**: active — perguntas respondidas por @KalleoPinheiro em 2026-10-11: o PATCH perde `password` (só o link de redefinição), a tela "Minha conta" troca a própria senha e uma trava com 409 impede ficar sem admin ativo. A implementação está na #295
+- **Status**: resolved — perguntas respondidas por @KalleoPinheiro em 2026-10-11 (o PATCH perde `password`, "Minha conta" troca a própria senha, trava com 409 no último admin) e 2026-10-12 (Admin remove o 2º fator de quem perdeu o celular). Implementado na #295; ver ADR-019 e ACE-RN-11, ACE-RN-52 a ACE-RN-54. **Resolvida.**
 
 ### AD-025
 - **Decision**: `GET /api/patients/:id/export` (exportação LGPD, art. 18) é família `clinical` e aplica o vínculo R4: Atendente recebe 403, Profissional sem vínculo recebe 404. Toda sub-rota de `/api/patients/:id/*` passa a ser clínica por padrão; a exceção é uma allowlist explícita (`NON_CLINICAL_PATIENT_SUBROUTES` em `src/lib/auth/route-family.ts`, hoje vazia).

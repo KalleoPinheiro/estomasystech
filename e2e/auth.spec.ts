@@ -46,7 +46,7 @@ test.describe("login por e-mail e senha", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Plataforma" })).toBeVisible();
     await expect(page).toHaveURL("/plataforma");
     // Só a navegação da plataforma (C4, #267) — nunca a sidebar da equipe.
-    await expect(page.getByRole("navigation").getByRole("link")).toHaveText(["Clínicas", "Auditoria", "Taxonomia"]);
+    await expect(page.getByRole("navigation").getByRole("link")).toHaveText(["Clínicas", "Auditoria", "Taxonomia", "Minha conta"]);
   });
 
   test("sai da sessão e volta para o login", async ({ page, context }) => {

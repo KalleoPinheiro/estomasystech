@@ -158,7 +158,7 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
     expect(after?.sessionVersion).toBe(versionBefore + 1);
   });
 
-  it('Dado o último admin ativo, Quando desativar, Então último admin ativo responde 400 e nada muda', async () => {
+  it('Dado o último admin ativo, Quando desativar, Então último admin ativo responde 409 e nada muda', async () => {
     const clinicId = await freshClinic();
     const only = await seedAccount(clinicId);
     await seedAccount(clinicId, { active: false });
@@ -167,7 +167,7 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
       action: 'deactivate',
     });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
     expect(json.error).toBe(
       'Não é possível desativar o último administrador ativo da empresa',
     );

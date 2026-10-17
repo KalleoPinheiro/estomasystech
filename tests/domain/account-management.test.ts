@@ -3,11 +3,13 @@ import {
   accountChangeDetail,
   assertCanDeactivate,
   assertCanManageAccount,
+  LAST_ADMIN_MESSAGE,
   visibleAccounts,
 } from '@/domain/auth/account-management';
 import { UserAccount } from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
 import {
+  ConflictError,
   ProvisioningDeniedError,
   ValidationError,
 } from '@/domain/shared/errors';
@@ -83,11 +85,7 @@ describe('Feature: regra de gestão de contas existentes (#184)', () => {
           admin,
           [admin, inactiveAdmin, account('atendente')],
         ),
-      ).toThrow(
-        new ValidationError(
-          'Não é possível desativar o último administrador ativo da empresa',
-        ),
-      );
+      ).toThrow(new ConflictError(LAST_ADMIN_MESSAGE));
     });
 
     it('Dado outro company_admin ativo, Quando desativar um admin, Então permite', () => {
@@ -158,12 +156,8 @@ describe('Feature: regra de gestão de contas existentes (#184)', () => {
 
   describe('accountChangeDetail', () => {
     it('Dado cada combinação, Então descreve a alteração para a auditoria', () => {
-      expect(accountChangeDetail({ password: 'x' })).toBe('password');
       expect(accountChangeDetail({ active: false })).toBe('deactivate');
       expect(accountChangeDetail({ active: true })).toBe('reactivate');
-      expect(accountChangeDetail({ password: 'x', active: false })).toBe(
-        'password, deactivate',
-      );
       expect(accountChangeDetail({})).toBeNull();
     });
   });

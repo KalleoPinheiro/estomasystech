@@ -26,7 +26,7 @@ describe('Feature: navegação de /plataforma', () => {
     cleanup();
   });
 
-  it('o topo tem os três links, nessa ordem', () => {
+  it('o topo tem os quatro links, nessa ordem', () => {
     const nav = renderAt('/plataforma');
 
     const links = nav.getAllByRole('link');
@@ -34,11 +34,13 @@ describe('Feature: navegação de /plataforma', () => {
       'Clínicas',
       'Auditoria',
       'Taxonomia',
+      'Minha conta',
     ]);
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/plataforma',
       '/plataforma/auditoria',
       '/plataforma/taxonomia',
+      '/plataforma/minha-conta',
     ]);
   });
 
@@ -48,6 +50,7 @@ describe('Feature: navegação de /plataforma', () => {
     ['/plataforma/clinicas/nova', 'Clínicas'],
     ['/plataforma/auditoria', 'Auditoria'],
     ['/plataforma/taxonomia', 'Taxonomia'],
+    ['/plataforma/minha-conta', 'Minha conta'],
   ])('aria-current: em %s só %s fica marcado', (path, current) => {
     const nav = renderAt(path);
 

@@ -161,24 +161,27 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
     expect(await proxyStatus(cookie)).toBe(401);
   });
 
-  it('admin password change revokes sessions: PATCH com senha incrementa a versão', async () => {
+  it('own password change revokes the other sessions: Minha conta sobe a versão e renova só o cookie de quem trocou', async () => {
     const account = await seedAccount();
-    const cookie = await loginCookie(account.email);
-    const route = await import('@/app/api/accounts/[id]/route');
+    const changer = await loginCookie(account.email);
+    const other = await loginCookie(account.email);
+    const route = await import('@/app/api/me/password/route');
 
-    const response = await route.PATCH(
+    const response = await route.POST(
       jsonRequest(
-        `/api/accounts/${account.id}`,
-        'PATCH',
-        { password: 'nova-senha-789' },
-        cookieHeaderFor('company_admin', 'admin-revoga@x.com', CLINIC_A_ID),
+        '/api/me/password',
+        'POST',
+        { currentPassword: PASSWORD, newPassword: 'nova-senha-789-xyz' },
+        { cookie: changer },
       ),
-      { params: Promise.resolve({ id: account.id }) },
     );
 
     expect(response.status).toBe(200);
     expect(await versionOf(account.id)).toBe(1);
-    expect(await proxyStatus(cookie)).toBe(401);
+    const renewed = `${SESSION_COOKIE}=${response.cookies.get(SESSION_COOKIE)?.value}`;
+    expect(await proxyStatus(other)).toBe(401);
+    expect(await proxyStatus(changer)).toBe(401);
+    expect(await proxyStatus(renewed)).not.toBe(401);
   });
 
   it('deactivation revokes sessions: PATCH active=false incrementa a versão; reativar não', async () => {

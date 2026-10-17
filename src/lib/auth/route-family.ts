@@ -15,7 +15,14 @@ export type RouteFamily =
   | 'platform'
   | 'shared';
 
-const SHARED_PREFIXES = ['/portal', '/api/portal', '/api/auth/logout'];
+const SHARED_PREFIXES = [
+  '/portal',
+  '/api/portal',
+  '/api/auth/logout',
+  // "Minha conta" (#295): todo papel de equipe cuida da própria senha e do
+  // próprio segundo fator; o handler recusa quem não é da equipe.
+  '/api/me',
+];
 
 /**
  * Área do operador da plataforma (ADR-007): só o super_admin entra, e ele não
@@ -114,6 +121,8 @@ const PROFESSIONAL_SELF_PREFIXES = ['/api/my-payouts'];
  * ao Profissional para o cadastro de portal.
  */
 const ACCOUNT_RESET_LINK = /^\/api\/accounts\/[^/]+\/reset-link$/;
+/** Reset do segundo fator de outra conta: também só do Admin de Empresa (#295). */
+const ACCOUNT_RESET_MFA = /^\/api\/accounts\/[^/]+\/reset-mfa$/;
 
 function startsWithAny(pathname: string, prefixes: readonly string[]): boolean {
   return prefixes.some(
@@ -148,7 +157,8 @@ export function classifyRoute(pathname: string): RouteFamily {
   if (
     startsWithAny(pathname, ADMINISTRATIVE_PREFIXES) ||
     ADMINISTRATIVE_EXACT_PATHS.includes(pathname) ||
-    ACCOUNT_RESET_LINK.test(pathname)
+    ACCOUNT_RESET_LINK.test(pathname) ||
+    ACCOUNT_RESET_MFA.test(pathname)
   ) {
     return 'administrative';
   }

@@ -26,6 +26,11 @@ const PLATFORM_SECTIONS = [
     href: '/plataforma/taxonomia',
     match: (path: string) => path.startsWith('/plataforma/taxonomia'),
   },
+  {
+    label: 'Minha conta',
+    href: '/plataforma/minha-conta',
+    match: (path: string) => path.startsWith('/plataforma/minha-conta'),
+  },
 ];
 
 /** Topo da área do operador: marca, navegação fixa e Sair. */

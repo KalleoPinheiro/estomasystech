@@ -86,6 +86,19 @@ export class DrizzleMfaRepository implements MfaRepository {
     });
   }
 
+  removeFactor(accountId: string): Promise<boolean> {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .delete(mfaRecoveryCodes)
+        .where(eq(mfaRecoveryCodes.accountId, accountId));
+      const removed = await tx
+        .delete(userMfa)
+        .where(eq(userMfa.accountId, accountId))
+        .returning({ accountId: userMfa.accountId });
+      return removed.length === 1;
+    });
+  }
+
   async listUnusedRecoveryCodes(
     accountId: string,
   ): Promise<RecoveryCodeRecord[]> {

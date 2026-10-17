@@ -95,7 +95,7 @@ describe('Feature: desativação atômica do último admin (#244)', () => {
     ];
     const statuses = [a.status, b.status].sort();
 
-    expect(statuses).toEqual([200, 400]);
+    expect(statuses).toEqual([200, 409]);
     const errors = [aJson, bJson]
       .filter((json) => !json.success)
       .map((json) => json.error);
@@ -136,7 +136,7 @@ describe('Feature: desativação atômica do último admin (#244)', () => {
     ];
     const statuses = [a.status, b.status].sort();
 
-    expect(statuses).toEqual([200, 400]);
+    expect(statuses).toEqual([200, 409]);
     const errors = [aJson, bJson]
       .filter((json) => !json.success)
       .map((json) => json.error);

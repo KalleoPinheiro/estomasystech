@@ -38,6 +38,8 @@ export const STAFF_PAGES = [
     label: 'Configurações',
     api: '/api/settings/schedule/closures',
   },
+  // Toda a equipe cuida da própria senha e do segundo fator (#295).
+  { href: '/minha-conta', label: 'Minha conta', api: '/api/me' },
 ] as const;
 
 export type StaffPage = (typeof STAFF_PAGES)[number];

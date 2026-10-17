@@ -449,6 +449,27 @@ function AccountsSection() {
     }
   };
 
+  /** Remove o 2º fator de quem perdeu o celular (#295); a pessoa cadastra de novo no login. */
+  const resetMfa = async (account: UserAccountDto) => {
+    try {
+      await apiFetch(`/api/accounts/${account.id}/reset-mfa`, {
+        method: 'POST',
+      });
+      const notice = `Segundo fator de ${account.email} redefinido. As sessões dela foram encerradas.`;
+      setActionError(null);
+      setActionNotice(notice);
+      toast({ description: notice, variant: 'success' });
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Erro ao redefinir o segundo fator';
+      setActionNotice(null);
+      setActionError(message);
+      toast({ description: message, variant: 'danger' });
+    }
+  };
+
   /** Reenvio do convite e link de redefinição: mesma resposta, mesmo tratamento. */
   const issueLink = async (
     account: UserAccountDto,
@@ -514,6 +535,7 @@ function AccountsSection() {
         onToggleActive={(account) => void toggleActive(account)}
         onResendInvite={(account) => void issueLink(account, 'resend-invite')}
         onResetLink={(account) => void issueLink(account, 'reset-link')}
+        onResetMfa={(account) => void resetMfa(account)}
       />
 
       {creating && (
@@ -577,12 +599,14 @@ function AccountsTable({
   onToggleActive,
   onResendInvite,
   onResetLink,
+  onResetMfa,
 }: {
   accounts: UserAccountDto[] | null;
   professionalName: (id: string | null) => string;
   onToggleActive: (account: UserAccountDto) => void;
   onResendInvite: (account: UserAccountDto) => void;
   onResetLink: (account: UserAccountDto) => void;
+  onResetMfa: (account: UserAccountDto) => void;
 }) {
   if (!accounts) return <LoadingIndicator />;
   if (accounts.length === 0)
@@ -608,12 +632,18 @@ function AccountsTable({
               onToggleActive={() => onToggleActive(account)}
               onResendInvite={() => onResendInvite(account)}
               onResetLink={() => onResetLink(account)}
+              onResetMfa={() => onResetMfa(account)}
             />
           ))}
         </TableBody>
       </Table>
     </div>
   );
+}
+
+/** Contas da equipe têm segundo fator; paciente e parceiro, não (ACE-RN-42). */
+function usesMfa(account: UserAccountDto): boolean {
+  return account.role !== 'patient' && account.role !== 'partner';
 }
 
 function accountStatusLabel(account: UserAccountDto): string {
@@ -627,12 +657,14 @@ function AccountRow({
   onToggleActive,
   onResendInvite,
   onResetLink,
+  onResetMfa,
 }: {
   account: UserAccountDto;
   professionalName: string;
   onToggleActive: () => void;
   onResendInvite: () => void;
   onResetLink: () => void;
+  onResetMfa: () => void;
 }) {
   return (
     <TableRow className={account.active ? '' : 'bg-surface-2/60'}>
@@ -677,6 +709,24 @@ function AccountRow({
             description={`Gerar um link de redefinição de senha para ${account.email}? Links anteriores deixam de valer.`}
             confirmLabel="Gerar link"
             onConfirm={onResetLink}
+          />
+        )}
+        {account.active && account.passwordSet && usesMfa(account) && (
+          <ConfirmAction
+            trigger={
+              <Button
+                type="button"
+                variant="link"
+                className="mr-3 h-auto p-0 text-ink-3"
+              >
+                Redefinir segundo fator
+              </Button>
+            }
+            title="Redefinir o segundo fator?"
+            description={`Remove o autenticador e os códigos de recuperação de ${account.email} e encerra as sessões dela. Quem precisa do segundo fator cadastra um novo no próximo login.`}
+            confirmLabel="Redefinir"
+            variant="danger"
+            onConfirm={onResetMfa}
           />
         )}
         {account.active ? (

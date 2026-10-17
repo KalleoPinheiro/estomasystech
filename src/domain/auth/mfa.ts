@@ -62,6 +62,11 @@ export interface MfaRepository {
    * códigos de recuperação. `false` = token já consumido; nada muda.
    */
   completeEnrollment(input: CompleteEnrollmentInput): Promise<boolean>;
+  /**
+   * Remove o fator e todos os códigos de recuperação (reset pelo Admin,
+   * #295). `false` = a conta não tinha fator; nada muda.
+   */
+  removeFactor(accountId: string): Promise<boolean>;
   listUnusedRecoveryCodes(accountId: string): Promise<RecoveryCodeRecord[]>;
   /** Marca o código como usado se ainda não estava (atômico). */
   claimRecoveryCode(id: string, usedAt: Date): Promise<boolean>;

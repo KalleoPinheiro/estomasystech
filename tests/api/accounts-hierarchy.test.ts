@@ -108,7 +108,7 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
     vi.restoreAllMocks();
   });
 
-  it('C1 atendente não troca a senha do admin', async () => {
+  it('C1 ninguém define senha pelo PATCH: password → 400, sem troca nem auditoria', async () => {
     await ensureTestClinics();
     const admin = await seed('company_admin', 'c1-admin@x.com');
 
@@ -117,8 +117,14 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
       { password: 'hacked-by-reception' },
       as('atendente', 'c1-atendente@x.com'),
     );
+    const byAdmin = await patch(
+      (await seed('atendente', 'c1-alvo@x.com')).id,
+      { active: true, password: 'xk7#pq2vzm' },
+      as('company_admin', 'c1-admin-ator@x.com'),
+    );
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(400);
+    expect(byAdmin.response.status).toBe(400);
     const after = await findAccount(admin.id);
     expect(after?.passwordHash).toBe(UNSET_PASSWORD_HASH);
     expect(await accountAudit(admin.id)).toHaveLength(0);
@@ -223,7 +229,6 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
     const atendente = await seed('atendente', 'c8-atendente@x.com');
     const admin = as('company_admin', 'c8-admin@x.com');
 
-    await patch(atendente.id, { password: 'nova-senha-123' }, admin);
     await patch(atendente.id, { active: false }, admin);
     await patch(atendente.id, { active: true }, admin);
     await resend(atendente.id, admin);
@@ -231,7 +236,6 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
     const events = await accountAudit(atendente.id);
     expect(events.map((e) => e.detail).sort()).toEqual([
       'deactivate',
-      'password',
       'reactivate',
       'resend-invite',
     ]);
@@ -253,14 +257,13 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
 
     const { response } = await patch(
       atendente.id,
-      { active: false, password: 'nova-senha-123' },
+      { active: false },
       as('company_admin', 'c9-admin@x.com'),
     );
 
     expect(response.status).toBe(500);
     const after = await findAccount(atendente.id);
     expect(after?.isActive).toBe(true);
-    expect(after?.passwordHash).toBe(UNSET_PASSWORD_HASH);
   });
 
   it('C10 não desativa a própria conta', async () => {
@@ -285,7 +288,7 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
     const actor = as('company_admin', 'c11-sem-conta@x.com', CLINIC_B_ID);
 
     const denied = await patch(only.id, { active: false }, actor);
-    expect(denied.response.status).toBe(400);
+    expect(denied.response.status).toBe(409);
     expect(denied.json.error).toBe(
       'Não é possível desativar o último administrador ativo da empresa',
     );
@@ -295,47 +298,5 @@ describe('Feature: hierarquia na edição de contas (#184)', () => {
     const allowed = await patch(only.id, { active: false }, actor);
     expect(allowed.response.status).toBe(200);
     expect(allowed.json.data.active).toBe(false);
-  });
-
-  it('C-291 senha de conta da equipe segue a política: 9 caracteres ou comum → 400, sem auditoria nem troca', async () => {
-    await ensureTestClinics();
-    const atendente = await seed('atendente', 'c291-atendente@x.com');
-    const admin = as('company_admin', 'c291-admin@x.com');
-
-    const short = await patch(atendente.id, { password: 'xk7#pq2vz' }, admin);
-    const common = await patch(atendente.id, { password: 'Senha12345' }, admin);
-
-    expect(short.response.status).toBe(400);
-    expect(short.json.error).toBe('A senha precisa ter ao menos 10 caracteres');
-    expect(common.response.status).toBe(400);
-    expect(common.json.error).toBe(
-      'Essa senha é muito comum e fácil de adivinhar. Escolha outra.',
-    );
-    expect(await accountAudit(atendente.id)).toEqual([]);
-    expect((await findAccount(atendente.id))?.passwordHash).toBe(
-      UNSET_PASSWORD_HASH,
-    );
-  });
-
-  it('C-309 senha de paciente segue a mesma política da equipe: 9 caracteres ou comum → 400, sem troca', async () => {
-    await ensureTestClinics();
-    const patient = await seed('patient', 'c309-paciente@x.com');
-    const atendente = as('atendente', 'c309-recepcao@x.com');
-
-    const short = await patch(patient.id, { password: '12345678' }, atendente);
-    const common = await patch(
-      patient.id,
-      { password: 'Senha12345' },
-      atendente,
-    );
-    const ok = await patch(patient.id, { password: 'xk7#pq2vzm' }, atendente);
-
-    expect(short.response.status).toBe(400);
-    expect(short.json.error).toBe('A senha precisa ter ao menos 10 caracteres');
-    expect(common.response.status).toBe(400);
-    expect(common.json.error).toBe(
-      'Essa senha é muito comum e fácil de adivinhar. Escolha outra.',
-    );
-    expect(ok.response.status).toBe(200);
   });
 });

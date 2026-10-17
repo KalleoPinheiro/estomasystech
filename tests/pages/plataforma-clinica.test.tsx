@@ -415,6 +415,36 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
         LINK_URL,
       );
     });
+
+    it('segundo fator: Redefinir segundo fator pede confirmação e chama a ação reset-mfa', async () => {
+      const fetchMock = mockApi(envelope(CLINIC), {});
+      renderWithToast(<PlatformClinicPage />);
+
+      const activeRow = (await screen.findByText('ativo@um.com')).closest(
+        'tr',
+      ) as HTMLElement;
+      fireEvent.click(
+        within(activeRow).getByRole('button', {
+          name: 'Redefinir segundo fator',
+        }),
+      );
+      const dialog = await screen.findByRole('alertdialog');
+      expect(callsWith(fetchMock, 'PATCH')).toHaveLength(0);
+
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Redefinir' }),
+      );
+
+      await waitFor(() =>
+        expect(callsWith(fetchMock, 'PATCH')).toHaveLength(1),
+      );
+      expect(
+        JSON.parse(callsWith(fetchMock, 'PATCH')[0][1]?.body as string),
+      ).toEqual({ action: 'reset-mfa' });
+      expect(
+        await screen.findByText('Segundo fator redefinido'),
+      ).toBeInTheDocument();
+    });
   });
 });
 

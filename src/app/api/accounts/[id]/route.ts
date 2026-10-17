@@ -8,7 +8,6 @@ import {
   assertCanDeactivate,
   assertCanManageAccount,
 } from '@/domain/auth/account-management';
-import { assertPasswordPolicy } from '@/domain/auth/password-policy';
 import type {
   UserAccount,
   UserAccountRepository,
@@ -18,18 +17,16 @@ import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { accountManager } from '@/lib/auth/account-manager';
-import { hashPassword } from '@/lib/auth/password';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import type { Session } from '@/lib/auth/session';
 import { forgetSessionStatus } from '@/lib/auth/staff-revocation';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toUserAccountDto } from '@/lib/dto';
 
-const updateSchema = z.object({
-  active: z.boolean().optional(),
-  // Tamanho e senhas comuns: `assertPasswordPolicy`, a mesma para todos os papéis (#291, #309).
-  password: z.string().min(1).max(200).optional(),
-});
+// `strict`: o admin não define a senha de outra conta (#295). `password` no
+// corpo é `400`; o caminho é o link de redefinição (C2, #265) e, para a
+// própria senha, "Minha conta".
+const updateSchema = z.object({ active: z.boolean().optional() }).strict();
 type UpdateBody = z.infer<typeof updateSchema>;
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -51,8 +48,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
     const actor = accountManager(guard.session);
     assertCanManageAccount(actor, existing);
-    // Política de senha (#291, #309), antes da auditoria e da escrita.
-    if (body.password) assertPasswordPolicy(body.password);
 
     const updated =
       body.active === false
@@ -65,7 +60,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             guard.session,
           );
 
-    if (body.password || body.active === false) {
+    if (body.active === false) {
       forgetSessionStatus(updated.email, updated.clinicId);
     }
     return toUserAccountDto(updated);
@@ -77,8 +72,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
  * do último `company_admin` ativo, #244): tranca as linhas `company_admin`
  * da empresa (`SELECT ... FOR UPDATE`) e reavalia a regra dentro da mesma
  * transação que grava a mudança — duas desativações concorrentes de admins
- * diferentes nunca passam as duas. Senha (se enviada junto) grava no mesmo
- * `save`.
+ * diferentes nunca passam as duas (a segunda recebe `409`).
  */
 async function deactivate(
   transactions: TransactionManager,
@@ -92,11 +86,7 @@ async function deactivate(
       await userAccounts.findByRoleForUpdate('company_admin');
     assertCanDeactivate(actor, existing, clinicAdmins);
 
-    let updated = existing;
-    if (body.password) {
-      updated = updated.withPasswordHash(await hashPassword(body.password));
-    }
-    updated = updated.deactivate();
+    const updated = existing.deactivate();
 
     const detail = accountChangeDetail(body);
     if (detail) {
@@ -115,7 +105,7 @@ async function deactivate(
   });
 }
 
-/** Troca de senha e/ou reativação — nenhuma depende do estado de outras contas. */
+/** Reativação não depende do estado de outras contas. */
 async function applyChange(
   userAccounts: UserAccountRepository,
   auditEvents: AuditEventRepository,
@@ -123,16 +113,11 @@ async function applyChange(
   body: UpdateBody,
   session: Session | null,
 ): Promise<UserAccount> {
-  let updated = existing;
-  if (body.password) {
-    updated = updated.withPasswordHash(await hashPassword(body.password));
-  }
-  if (body.active === true) updated = updated.reactivate();
+  const updated = body.active === true ? existing.reactivate() : existing;
 
   const detail = accountChangeDetail(body);
   if (detail) {
-    // Write-ahead (#184): senha e ativação são tomada de conta em potencial;
-    // sem trilha, a alteração não acontece.
+    // Write-ahead (#184): sem trilha, a alteração não acontece.
     await recordAuditNow(auditEvents, session, {
       action: 'update',
       resourceType: 'account',
@@ -141,8 +126,5 @@ async function applyChange(
     });
   }
   await userAccounts.save(updated);
-  if (body.password) {
-    await userAccounts.revokeSessions(updated.id);
-  }
   return updated;
 }

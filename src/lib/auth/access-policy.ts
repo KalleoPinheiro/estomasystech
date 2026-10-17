@@ -53,6 +53,7 @@ export const SHARED_PATH_PREFIXES = [
   '/portal',
   '/api/portal',
   '/api/auth/logout',
+  '/api/me',
 ] as const;
 
 export const UNAUTHENTICATED_MESSAGE = 'Não autenticado';

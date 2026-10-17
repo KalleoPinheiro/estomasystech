@@ -21,11 +21,11 @@ test.describe("área da plataforma", () => {
       await expect(page.getByRole("link", { name: "Pacientes" })).toHaveCount(0);
     });
 
-    test("navegação da plataforma leva às três seções", async ({ page }) => {
+    test("navegação da plataforma leva às seções", async ({ page }) => {
       // C4 (#267): Clínicas · Auditoria · Taxonomia, com a seção atual marcada.
       await page.goto("/plataforma");
       const nav = page.getByRole("navigation");
-      await expect(nav.getByRole("link")).toHaveText(["Clínicas", "Auditoria", "Taxonomia"]);
+      await expect(nav.getByRole("link")).toHaveText(["Clínicas", "Auditoria", "Taxonomia", "Minha conta"]);
       await expect(nav.getByRole("link", { name: "Clínicas" })).toHaveAttribute("aria-current", "page");
 
       await nav.getByRole("link", { name: "Taxonomia" }).click();

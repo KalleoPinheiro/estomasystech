@@ -74,6 +74,7 @@ describe('Feature: menu por papel (#199)', () => {
       'Pacientes',
       'Parceiros',
       'Configurações',
+      'Minha conta',
     ]);
     for (const hidden of [...ADMIN_ONLY, 'Repasses', 'Triagem']) {
       expect(labels).not.toContain(hidden);
@@ -91,10 +92,10 @@ describe('Feature: menu por papel (#199)', () => {
     }
   });
 
-  it('admin vê as 14 telas (inclui Pedidos do titular, #293)', async () => {
+  it('admin vê as 15 telas (inclui Pedidos do titular, #293, e Minha conta, #295)', async () => {
     const labels = await renderNav('company_admin');
 
-    expect(labels).toHaveLength(14);
+    expect(labels).toHaveLength(15);
     expect(labels).toContain('Pedidos do titular');
   });
 
