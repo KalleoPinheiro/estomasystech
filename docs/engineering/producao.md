@@ -24,18 +24,20 @@ conhecidos, em [`troubleshooting.md`](troubleshooting.md).
 | Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)) |
 | Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, GlitchTip self-hosted no compose ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
 
-**Pendência jurídica:** o servidor fica fora do Brasil (Alemanha, UE), então guardar dado de
-saúde nele é transferência internacional (LGPD art. 33). A base legal está em aberto na
-[#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216) — resolva antes de cadastrar
-paciente real. A região escolhida vale também para essa base legal, e o mesmo vale para o destino
-do backup fora do servidor.
+**Transferência internacional (LGPD art. 33):** o servidor fica fora do Brasil (Alemanha, UE). A
+base técnica está decidida no [ADR-018](../adr/018-transferencia-internacional-ue.md): destino na
+UE, adequação recíproca Brasil ↔ UE como base e cláusulas-padrão da ANPD como reserva; o backup
+sai cifrado (`age`) e a Storage Box fica em outra localização **da UE**. **Pendência jurídica
+(bloqueia cadastrar paciente real):** a conferência da adequação na fonte primária, o mecanismo
+para Resend e Google Agenda (fora da UE) e os textos do aviso e do TCLE, na
+[#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216).
 
 Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313),
 `.specs/STATE.md` AD-033):
 
 | Tema | Decisão | Onde entra |
 | --- | --- | --- |
-| Cópia fora do servidor | **Hetzner Storage Box** em outra localização, com snapshot automático diário e os 14 mais recentes guardados. O `rsync --delete` não pode apagar os snapshots | § 5 — `BACKUP_OFFSITE_CMD` |
+| Cópia fora do servidor | **Hetzner Storage Box** em outra localização da UE (Helsinki, ou outra diferente da do servidor; [ADR-018](../adr/018-transferencia-internacional-ue.md)), com snapshot automático diário e os 14 mais recentes guardados. O `rsync --delete` não pode apagar os snapshots | § 5 — `BACKUP_OFFSITE_CMD` |
 | Região | **Alemanha** (UE); vale também para a base legal da transferência internacional (#216) | § 2 |
 | Cifra do disco | **Sem LUKS**: só os backups cifrados (`age`) e os campos cifrados ([ADR-006](../adr/006-chave-de-dados-clinicos.md)). As fotos ficam em claro no disco da VPS e o servidor volta sozinho após um reboot ([ADR-015](../adr/015-servidor-sem-cifra-de-disco.md)) | § 2 |
 | E-mail do host (alertas do cron) | **`msmtp` pela porta 587 com o SMTP do Resend** (a porta 25 é bloqueada) | § 9.3 |
@@ -131,6 +133,14 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
 - Para migrar como passo separado: `VITTA_MIGRATE_ON_BOOT=false` e, de um checkout no host,
   `DATABASE_URL=postgres://vitta:…@127.0.0.1:5432/vitta npm run db:migrate` (a imagem standalone
   não tem `drizzle-kit`).
+- **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
+  última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`
+  (#303). Por isso **nunca deploye um commit que tenha a 0051 sem a 0050**: se a 0051 rodar antes,
+  o migrador pula a 0050 para sempre. Na `main` as duas já vêm juntas e na ordem certa, então o
+  deploy normal (`main` inteira) está seguro; o risco é cherry-pick ou deploy de branch. Se
+  acontecer, `/api/health/ready` responde `503` com `migrations: "pending"`; restaure o backup
+  (§ 5) e refaça o deploy pelo commit completo. Mesma regra para qualquer par de migrações
+  geradas em branches paralelas: confira a ordem de `when` em `drizzle/meta/_journal.json`.
 - **Rollback:** as migrações não têm `down`. Reverter é restaurar o backup tirado antes do deploy
   (§ 5) ou escrever uma migração nova que desfaça a mudança.
 - **Depois das migrações deste lote:**

@@ -1,3 +1,4 @@
+import { ConflictError } from '../shared/errors';
 import { newId } from '../shared/id';
 import { validatePersonContact } from '../shared/person-validation';
 
@@ -15,7 +16,12 @@ export interface PatientState extends PatientProps {
   id: string;
   active: boolean;
   createdAt: Date;
+  /** Anonimizado pela retenção (#294): não volta a ser ativado (ADR-017). */
+  anonymizedAt?: Date | null;
 }
+
+export const ANONYMIZED_PATIENT_REACTIVATION =
+  'Paciente anonimizado não pode ser reativado. Cadastre a pessoa novamente.';
 
 export class Patient {
   private constructor(private readonly state: PatientState) {}
@@ -65,7 +71,14 @@ export class Patient {
   }
 
   reactivate(): Patient {
+    if (this.isAnonymized) {
+      throw new ConflictError(ANONYMIZED_PATIENT_REACTIVATION);
+    }
     return new Patient({ ...this.state, active: true });
+  }
+
+  get isAnonymized(): boolean {
+    return (this.state.anonymizedAt ?? null) !== null;
   }
 
   get id(): string {

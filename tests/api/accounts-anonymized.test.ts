@@ -4,6 +4,10 @@ import {
   ANONYMIZED_ACCOUNT_REACTIVATION,
   UserAccount,
 } from '@/domain/auth/user-account';
+import {
+  ANONYMIZED_PATIENT_REACTIVATION,
+  Patient,
+} from '@/domain/patient/patient';
 import { getRepositories } from '@/infrastructure/container';
 import { getDb } from '@/infrastructure/persistence/drizzle/db';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
@@ -96,5 +100,94 @@ describe('Feature: reativação de conta anonimizada (#311)', () => {
     const json = (await response.json()) as Envelope<AccountDto[]>;
 
     expect(json.data.find((a) => a.id === account.id)?.anonymized).toBe(true);
+  });
+
+  it('Dada conta anonimizada, Quando o Admin reenvia convite ou gera link de redefinição, Então recusa e nenhum link é emitido (ADR-017)', async () => {
+    const account = await seedInactive('anon-3@x.com', true);
+    const ctx = { params: Promise.resolve({ id: account.id }) };
+
+    const resend = await import('@/app/api/accounts/[id]/resend-invite/route');
+    const resendResponse = await resend.POST(
+      jsonRequest(
+        `/api/accounts/${account.id}/resend-invite`,
+        'POST',
+        undefined,
+        admin(),
+      ),
+      ctx,
+    );
+    const reset = await import('@/app/api/accounts/[id]/reset-link/route');
+    const resetResponse = await reset.POST(
+      jsonRequest(
+        `/api/accounts/${account.id}/reset-link`,
+        'POST',
+        undefined,
+        cookieHeaderFor('company_admin', 'admin-ret-2@x.com', CLINIC_A_ID),
+      ),
+      ctx,
+    );
+
+    expect(resendResponse.status).toBe(400);
+    expect(resetResponse.status).toBe(409);
+  });
+});
+
+describe('Feature: reativação de paciente anonimizado (ADR-017)', () => {
+  beforeAll(async () => {
+    await ensureTestClinics();
+  });
+
+  async function seedPatient(anonymized: boolean) {
+    const { patients } = await getRepositories(clinicScope(CLINIC_A_ID));
+    const patient = Patient.create({
+      fullName: 'Paciente Retenção',
+      email: `ret-${anonymized}@x.com`,
+      phone: '11999990000',
+    }).deactivate();
+    await patients.save(patient);
+    if (anonymized) {
+      const db = await getDb();
+      await db.execute(
+        sql`UPDATE patients SET anonymized_at = now() WHERE id = ${patient.id}`,
+      );
+    }
+    return patient;
+  }
+
+  async function setActive(id: string) {
+    const route = await import('@/app/api/patients/[id]/route');
+    const response = await route.PATCH(
+      jsonRequest(`/api/patients/${id}`, 'PATCH', { active: true }, admin()),
+      { params: Promise.resolve({ id }) },
+    );
+    return {
+      response,
+      json: (await response.json()) as Envelope<{
+        active: boolean;
+        anonymized: boolean;
+      }>,
+    };
+  }
+
+  it('Dado paciente anonimizado, Quando a equipe tenta reativar, Então 409 e o cadastro segue inativo', async () => {
+    const patient = await seedPatient(true);
+
+    const { response, json } = await setActive(patient.id);
+
+    expect(response.status).toBe(409);
+    expect(json.error).toBe(ANONYMIZED_PATIENT_REACTIVATION);
+    const { patients } = await getRepositories(clinicScope(CLINIC_A_ID));
+    const stored = await patients.findById(patient.id);
+    expect(stored?.isActive).toBe(false);
+    expect(stored?.isAnonymized).toBe(true);
+  });
+
+  it('Dado paciente desativado comum, Quando a equipe reativa, Então reativa (a regra só vale para anonimizado)', async () => {
+    const patient = await seedPatient(false);
+
+    const { response, json } = await setActive(patient.id);
+
+    expect(response.status).toBe(200);
+    expect(json.data).toMatchObject({ active: true, anonymized: false });
   });
 });

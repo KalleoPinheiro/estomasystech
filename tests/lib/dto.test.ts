@@ -64,6 +64,7 @@ describe('Feature: DTO de paciente', () => {
       notes: 'Alergia a látex',
       referredByPartnerId: 'partner-1',
       active: true,
+      anonymized: false,
       createdAt: patient.createdAt.toISOString(),
     });
   });

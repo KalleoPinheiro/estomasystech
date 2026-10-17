@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Patient } from '@/domain/patient/patient';
-import { ValidationError } from '@/domain/shared/errors';
+import {
+  ANONYMIZED_PATIENT_REACTIVATION,
+  Patient,
+} from '@/domain/patient/patient';
+import { ConflictError, ValidationError } from '@/domain/shared/errors';
 
 const validProps = {
   fullName: 'Maria da Silva',
@@ -103,6 +106,38 @@ describe('Feature: Cadastro de paciente', () => {
       expect(patient.id).toBe('abc-123');
       expect(patient.isActive).toBe(false);
       expect(patient.createdAt).toEqual(createdAt);
+    });
+  });
+
+  describe('Cenário: paciente anonimizado (ADR-017)', () => {
+    const restored = (anonymizedAt: Date | null) =>
+      Patient.restore({
+        id: 'pat-anon',
+        fullName: 'Paciente anonimizado',
+        email: 'anonimizado+pat-anon@anonimizado.invalid',
+        phone: '',
+        birthDate: null,
+        notes: null,
+        active: false,
+        createdAt: new Date('2006-01-01T00:00:00Z'),
+        anonymizedAt,
+      });
+
+    it('Dado paciente anonimizado, Quando reativar, Então recusa com erro claro', () => {
+      const patient = restored(new Date('2026-10-12T00:00:00Z'));
+
+      expect(patient.isAnonymized).toBe(true);
+      expect(() => patient.reactivate()).toThrow(
+        ANONYMIZED_PATIENT_REACTIVATION,
+      );
+      expect(() => patient.reactivate()).toThrow(ConflictError);
+    });
+
+    it('Dado paciente desativado comum, Quando reativar, Então reativa', () => {
+      const patient = restored(null);
+
+      expect(patient.isAnonymized).toBe(false);
+      expect(patient.reactivate().isActive).toBe(true);
     });
   });
 });

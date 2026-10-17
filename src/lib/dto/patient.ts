@@ -9,6 +9,7 @@ export interface PatientDto {
   notes: string | null;
   referredByPartnerId: string | null;
   active: boolean;
+  anonymized: boolean;
   createdAt: string;
 }
 
@@ -21,6 +22,7 @@ export const toPatientDto = (patient: Patient): PatientDto => ({
   notes: patient.notes,
   referredByPartnerId: patient.referredByPartnerId,
   active: patient.isActive,
+  anonymized: patient.isAnonymized,
   createdAt: patient.createdAt.toISOString(),
 });
 

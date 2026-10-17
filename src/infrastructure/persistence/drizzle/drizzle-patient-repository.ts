@@ -23,6 +23,7 @@ const toPatient = (row: PatientRow, cipher: FieldCipher): Patient =>
     referredByPartnerId: row.referredByPartnerId,
     active: row.active,
     createdAt: row.createdAt,
+    anonymizedAt: row.anonymizedAt,
   });
 
 export class DrizzlePatientRepository implements PatientRepository {

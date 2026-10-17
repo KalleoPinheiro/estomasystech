@@ -55,6 +55,7 @@ const patientFixture: PatientDto = {
   notes: null,
   referredByPartnerId: null,
   active: true,
+  anonymized: false,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -473,6 +474,21 @@ describe('Feature: PatientsPage', () => {
       renderWithToast(<PatientsPage />);
 
       expect(await screen.findByText('Reativar')).toBeInTheDocument();
+    });
+
+    it('Dado paciente anonimizado, Quando renderizado, Então não oferece reativar e explica o caminho', async () => {
+      mockFetch(
+        buildRouter({
+          patients: [{ ...inactivePatientFixture, anonymized: true }],
+        }),
+      );
+
+      renderWithToast(<PatientsPage />);
+
+      expect(
+        await screen.findByText(/Anonimizado: para voltar, cadastre/),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Reativar')).not.toBeInTheDocument();
     });
   });
 });

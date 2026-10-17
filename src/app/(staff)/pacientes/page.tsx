@@ -109,6 +109,10 @@ function PatientsTable({
                     variant="danger"
                     onConfirm={() => onToggleActive(patient)}
                   />
+                ) : patient.anonymized ? (
+                  <span className="text-ink-3 text-xs">
+                    Anonimizado: para voltar, cadastre a pessoa novamente.
+                  </span>
                 ) : (
                   <Button
                     type="button"
