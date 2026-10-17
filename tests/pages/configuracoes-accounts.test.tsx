@@ -58,8 +58,11 @@ function mockSettingsFetch(
         },
       );
     }
-    if (/^\/api\/accounts\/[^/]+\/(resend-invite|reset-link)$/.test(url)) {
+    if (
+      /^\/api\/accounts\/[^/]+\/(resend-invite|reset-link|reset-mfa)$/.test(url)
+    ) {
       posted.push(url);
+      if (url.endsWith('reset-mfa')) return ok({ mfaReset: true });
       return ok(options.linkResult ?? { delivered: true, inviteUrl: null });
     }
     if (url.startsWith('/api/settings/schedule/closures')) return ok([]);
@@ -274,5 +277,77 @@ describe('Feature: link manual quando o e-mail não sai (C2, #265)', () => {
     expect(await screen.findByLabelText('Link para ativa@x.com')).toHaveValue(
       LINK_URL,
     );
+  });
+  it('segundo fator: Redefinir segundo fator pede confirmação, só então chama reset-mfa; conta de portal não tem o botão', async () => {
+    const posted: unknown[] = [];
+    mockSettingsFetch(posted, {
+      accounts: [
+        ACTIVE,
+        { ...ACTIVE, id: 'acc-7', email: 'paciente@x.com', role: 'patient' },
+      ],
+    });
+    renderWithToast(<SettingsPage />);
+
+    const portalRow = (await screen.findByText('paciente@x.com')).closest(
+      'tr',
+    ) as HTMLElement;
+    expect(
+      within(portalRow).queryByRole('button', {
+        name: 'Redefinir segundo fator',
+      }),
+    ).toBeNull();
+    const activeRow = screen
+      .getByText('ativa@x.com')
+      .closest('tr') as HTMLElement;
+    fireEvent.click(
+      within(activeRow).getByRole('button', {
+        name: 'Redefinir segundo fator',
+      }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    expect(posted).toHaveLength(0);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Redefinir' }));
+
+    await waitFor(() =>
+      expect(posted).toEqual(['/api/accounts/acc-9/reset-mfa']),
+    );
+    expect(
+      await screen.findAllByText(
+        'Segundo fator de ativa@x.com redefinido. As sessões dela foram encerradas.',
+      ),
+    ).not.toHaveLength(0);
+  });
+
+  it('segundo fator: erro da API (conta sem fator) aparece na tela', async () => {
+    mockSettingsFetch([], { accounts: [ACTIVE] });
+    const base = vi.mocked(fetch);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) =>
+        url.endsWith('/reset-mfa')
+          ? {
+              ok: false,
+              status: 409,
+              json: async () => ({
+                success: false,
+                data: null,
+                error: 'Esta conta não tem segundo fator cadastrado',
+              }),
+            }
+          : base(url, init),
+      ),
+    );
+    renderWithToast(<SettingsPage />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Redefinir segundo fator' }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Redefinir' }));
+
+    expect(
+      await screen.findAllByText('Esta conta não tem segundo fator cadastrado'),
+    ).not.toHaveLength(0);
   });
 });

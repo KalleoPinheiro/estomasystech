@@ -1,4 +1,8 @@
-import { ProvisioningDeniedError, ValidationError } from '../shared/errors';
+import {
+  ConflictError,
+  ProvisioningDeniedError,
+  ValidationError,
+} from '../shared/errors';
 import { canProvision } from './role-hierarchy';
 import type { UserAccount } from './user-account';
 import type { UserRole } from './user-role';
@@ -28,10 +32,13 @@ export function assertCanManageAccount(
   }
 }
 
+export const LAST_ADMIN_MESSAGE =
+  'Não é possível desativar o último administrador ativo da empresa';
+
 /**
- * Bloqueia desativar a própria conta e o último `company_admin` ativo da
- * empresa — qualquer um dos dois trancaria a empresa fora do sistema.
- * `clinicAccounts` são as contas da empresa do alvo.
+ * Bloqueia desativar a própria conta (`400`) e o último `company_admin` ativo
+ * da empresa (`409`, #295) — qualquer um dos dois trancaria a empresa fora do
+ * sistema. `clinicAccounts` são as contas da empresa do alvo.
  */
 export function assertCanDeactivate(
   actor: AccountManager,
@@ -49,9 +56,7 @@ export function assertCanDeactivate(
       account.isActive,
   );
   if (otherActiveAdmins.length === 0) {
-    throw new ValidationError(
-      'Não é possível desativar o último administrador ativo da empresa',
-    );
+    throw new ConflictError(LAST_ADMIN_MESSAGE);
   }
 }
 
@@ -68,12 +73,9 @@ export function visibleAccounts(
 
 /** Resumo da alteração para o `detail` da auditoria; `null` se nada muda. */
 export function accountChangeDetail(change: {
-  password?: string;
   active?: boolean;
 }): string | null {
-  const parts: string[] = [];
-  if (change.password) parts.push('password');
-  if (change.active === false) parts.push('deactivate');
-  if (change.active === true) parts.push('reactivate');
-  return parts.length > 0 ? parts.join(', ') : null;
+  if (change.active === false) return 'deactivate';
+  if (change.active === true) return 'reactivate';
+  return null;
 }

@@ -83,6 +83,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/016-sessoes-do-admin-sem-2fa-e-senha-unica.md`](adr/016-sessoes-do-admin-sem-2fa-e-senha-unica.md) | sessões do Admin sem 2FA derrubadas pela migração 0052 e política de senha única (10 + lista) para equipe e portal |
 | [`adr/017-retencao-decisoes-complementares.md`](adr/017-retencao-decisoes-complementares.md) | completa o ADR-013: cadastro do parceiro guardado, paciente anonimizado não reativa, conta anonimizada não recebe senha nem convite |
 | [`adr/018-transferencia-internacional-ue.md`](adr/018-transferencia-internacional-ue.md) | dados na UE (Alemanha), adequação Brasil ↔ UE como base do art. 33, backup cifrado em outra localização da UE; texto jurídico pendente |
+| [`adr/019-gestao-de-contas-senha-propria-e-reset-de-2fa.md`](adr/019-gestao-de-contas-senha-propria-e-reset-de-2fa.md) | admin não define a senha de outra conta, "Minha conta", trava do último admin com 409 e reset de 2º fator auditado |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 

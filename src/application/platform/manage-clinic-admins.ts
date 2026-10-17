@@ -1,4 +1,5 @@
 import { CreateAccount } from '@/application/auth/create-account';
+import { resetAccountMfa } from '@/application/auth/reset-account-mfa';
 import {
   type AccessLinkResult,
   type InviteServices,
@@ -11,6 +12,7 @@ import {
   assertCanDeactivate,
   DEACTIVATED_ACCOUNT_MESSAGE,
 } from '@/domain/auth/account-management';
+import type { MfaRepository } from '@/domain/auth/mfa';
 import type {
   UserAccount,
   UserAccountRepository,
@@ -26,6 +28,7 @@ export const ADMIN_ACTIONS = [
   'deactivate',
   'reactivate',
   'reset-link',
+  'reset-mfa',
 ] as const;
 export type AdminAction = (typeof ADMIN_ACTIONS)[number];
 
@@ -46,6 +49,8 @@ export interface ManageClinicAdminsServices extends InviteServices {
    * auditoria desfaz a conta.
    */
   transactions: TransactionManager;
+  /** Segundo fator (sem escopo de clínica): o reset do admin que perdeu o celular (#295). */
+  mfa: MfaRepository;
 }
 
 /**
@@ -164,6 +169,9 @@ export class ManageClinicAdmins {
     if (action === 'deactivate') {
       return this.deactivate(account, audit);
     }
+    if (action === 'reset-mfa') {
+      return this.resetMfa(account, audit);
+    }
     await audit(this.services.auditEvents);
     const updated = account.reactivate();
     await this.services.userAccounts.save(updated);
@@ -198,6 +206,20 @@ export class ManageClinicAdmins {
         return { account: updated, delivered: null, inviteUrl: null };
       },
     );
+  }
+
+  /**
+   * O Super Admin remove o segundo fator do Admin de Empresa que perdeu o
+   * celular (#295); ele cadastra um novo no próximo login (ACE-RN-42).
+   */
+  private async resetMfa(
+    account: UserAccount,
+    audit: RecordAdminActionAudit,
+  ): Promise<AdminActionResult> {
+    await resetAccountMfa(this.services, account, () =>
+      audit(this.services.auditEvents),
+    );
+    return { account, delivered: null, inviteUrl: null };
   }
 
   /** Mesma regra de `POST /api/accounts/[id]/resend-invite` (#52). */

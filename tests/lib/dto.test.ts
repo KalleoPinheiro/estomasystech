@@ -779,6 +779,7 @@ describe('Feature: DTO de conta de usuário', () => {
     expect(dto).toEqual({
       id: account.id,
       email: 'ana@clinica.com',
+      role: 'company_admin',
       professionalId: 'prof-1',
       active: true,
       anonymized: false,

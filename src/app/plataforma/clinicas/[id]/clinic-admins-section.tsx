@@ -27,13 +27,19 @@ import { apiFetch } from '@/lib/client';
 import type { ClinicAdminDto, PlatformClinicDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 
-type AdminAction = 'resend-invite' | 'deactivate' | 'reactivate' | 'reset-link';
+type AdminAction =
+  | 'resend-invite'
+  | 'deactivate'
+  | 'reactivate'
+  | 'reset-link'
+  | 'reset-mfa';
 
 const ACTION_DONE: Record<AdminAction, string> = {
   'resend-invite': 'Convite reenviado',
   deactivate: 'Admin desativado',
   reactivate: 'Admin reativado',
   'reset-link': 'Link de redefinição enviado por e-mail',
+  'reset-mfa': 'Segundo fator redefinido',
 };
 
 /** Link que não saiu por e-mail, para o super admin repassar (C2, #265). */
@@ -237,6 +243,24 @@ function AdminActions({
           description={`Gerar um link de redefinição de senha para ${admin.email}? Links anteriores deixam de valer.`}
           confirmLabel="Gerar link"
           onConfirm={() => onAction('reset-link')}
+        />
+      )}
+      {admin.passwordSet && (
+        <ConfirmAction
+          trigger={
+            <Button
+              type="button"
+              variant="link"
+              className="mr-3 h-auto p-0 text-ink-3"
+            >
+              Redefinir segundo fator
+            </Button>
+          }
+          title="Redefinir o segundo fator?"
+          description={`Remove o autenticador e os códigos de recuperação de ${admin.email} e encerra as sessões dele. Ele cadastra um novo no próximo login.`}
+          confirmLabel="Redefinir"
+          variant="danger"
+          onConfirm={() => onAction('reset-mfa')}
         />
       )}
       <ConfirmAction

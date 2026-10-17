@@ -950,3 +950,17 @@ Decisões de @KalleoPinheiro de 2026-10-12 sobre as perguntas abertas da #303:
 - **Next step**: nenhum.
 - **Blockers**: nenhum.
 - **Ordem de deploy**: aplicar a migração 0054 antes de subir o código (o `SELECT` do repositório lê a coluna nova).
+
+## Issue #295 — contas: sem senha pelo PATCH, Minha conta, trava do último admin e reset de 2FA (2026-10-17) — ENCERRADO (#PR)
+
+Decisões de @KalleoPinheiro de 2026-10-11 e 2026-10-12 (AD-024) implementadas. Registro: ADR-019, ACE-RN-11/25 reescritas e ACE-RN-52 a 53 novas.
+- **PATCH sem senha:** `PATCH /api/accounts/[id]` aceita só `active` (`strict`): `password` ou campo extra dá `400`. O admin só gera o link de redefinição.
+- **Minha conta:** `/minha-conta` (clínica) e `/plataforma/minha-conta` (Super Admin). `POST /api/me/password` exige a senha atual (`400` se errada), aplica a política, audita antes (`password-change`), sobe a `session_version` e renova o cookie de quem trocou: só as outras sessões caem. 5 tentativas por minuto por conta.
+- **2º fator opcional:** Atendente/Profissional ligam em Minha conta (`/api/me/mfa/enroll` com senha atual, `/api/me/mfa/confirm`); 10 códigos de recuperação saem uma vez. Não existe "desligar" pela própria tela (sessão roubada não remove a defesa). Descoberta de teste: o `verify` do login responde `401` ao código errado, o que mandaria a tela de Minha conta ao login (`redirectToLoginOnExpiredSession`); por isso a confirmação tem rota própria e responde `400`.
+- **Trava do último admin:** `409` (era `400`), na clínica e na plataforma; a corrida de duas desativações dá `200` e `409`. Desativar a própria conta continua `400`.
+- **Reset do 2º fator (comentário de 2026-10-12):** `POST /api/accounts/[id]/reset-mfa` (Admin, matriz do ACE-RN-05, nunca a própria conta) e a ação `reset-mfa` da plataforma para o `company_admin`. Audita, derruba as sessões, apaga fator e códigos. Conta sem fator ou desativada: `409`.
+- **Decisões minhas, para conferir:** (1) o Admin pode redefinir o fator de **outro** Admin da clínica (a matriz já deixa um Admin desativar outro); a própria conta não, porque quem tem sessão usa os códigos de recuperação; (2) o Super Admin cobre a clínica com um admin só; (3) Atendente/Profissional voltam a entrar só com a senha depois do reset, e religam em Minha conta; (4) senha nova igual à atual é recusada.
+- **Gate:** o GitHub Actions está sem cota, então o gate rodou local sobre a branch: typecheck, lint, check:sv, check:docs, test:coverage, build de produção e Playwright. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Next step:** nenhum. A #250 (QR code no 2º fator do Super Admin) e a #297 já podem entrar.
+- **Blockers**: nenhum.
+- **Branch**: `claude/project-thread-l8wpq4`. PR #PR.

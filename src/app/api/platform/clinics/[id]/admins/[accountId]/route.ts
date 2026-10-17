@@ -19,7 +19,7 @@ type RouteContext = { params: Promise<{ id: string; accountId: string }> };
 const bodySchema = z.object({ action: z.enum(ADMIN_ACTIONS) });
 
 /**
- * Reenviar convite, gerar link de redefinição (C2, #265), desativar e reativar
+ * Reenviar convite, gerar link de redefinição (C2, #265), redefinir o segundo fator (#295), desativar e reativar
  * um Admin de Empresa pela plataforma (B4, Journey 4 e 5). Só conta `company_admin` da clínica é alvo; o resto é
  * `404`. Cada ação grava auditoria na clínica-alvo antes de mudar a conta.
  */
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         clinicId,
       }),
     );
-    if (action === 'deactivate') {
+    if (action === 'deactivate' || action === 'reset-mfa') {
       forgetSessionStatus(updated.email, updated.clinicId);
     }
     return { ...toClinicAdminDto(updated), delivered, inviteUrl };

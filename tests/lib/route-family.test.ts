@@ -85,6 +85,19 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
     );
   });
 
+  it('reset-mfa de conta é administrativo; /api/me é compartilhado por toda a equipe (#295)', () => {
+    expect(classifyRoute('/api/accounts/acc-1/reset-mfa')).toBe(
+      'administrative',
+    );
+    expect(classifyRoute('/api/accounts/acc-1/reset-mfa/x')).toBe(
+      'operational',
+    );
+    expect(classifyRoute('/api/me')).toBe('shared');
+    expect(classifyRoute('/api/me/password')).toBe('shared');
+    expect(classifyRoute('/api/me/mfa/enroll')).toBe('shared');
+    expect(classifyRoute('/api/mentions')).toBe('operational');
+  });
+
   it('email-channel: canal de e-mail da clínica é administrativo, inclusive o teste (C3, #266)', () => {
     expect(classifyRoute('/api/settings/email-channel')).toBe('administrative');
     expect(classifyRoute('/api/settings/email-channel/test')).toBe(

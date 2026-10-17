@@ -134,7 +134,7 @@ export async function resolvePendingLogin(
 /** Gera a chave nova; ela só vai ao banco quando a confirmação acertar o código. */
 export function beginEnrollment(
   deps: MfaDeps,
-  { account }: PendingLogin,
+  { account }: Pick<PendingLogin, 'account'>,
 ): { secret: string; otpauthUri: string; pendingToken: string } {
   const secret = generateTotpSecret();
   return {
