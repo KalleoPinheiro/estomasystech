@@ -91,7 +91,7 @@ export function verifyTotp(
   return null;
 }
 
-/** Link `otpauth://` que o app autenticador importa (Open 3: sem QR por ora). */
+/** Link `otpauth://` que o app autenticador importa (a tela gera o QR no navegador, #250). */
 export function otpauthUri(secretBase32: string, accountEmail: string): string {
   const label = `${TOTP_ISSUER}:${encodeURIComponent(accountEmail)}`;
   const params = new URLSearchParams({

@@ -4,6 +4,7 @@ import { Button, Input } from '@still-void/ui/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { OtpauthQr } from '@/components/otpauth-qr';
 import { apiFetch } from '@/lib/client';
 import { safeNextPath } from '@/lib/login-redirect';
 
@@ -154,7 +155,7 @@ interface Enrollment {
 
 /**
  * Cadastro obrigatório do autenticador (primeiro acesso ou depois de um código
- * de recuperação). Chave em texto e link `otpauth://`; sem QR (Open 3).
+ * de recuperação). QR (gerado no navegador, #250), chave em texto e link `otpauth://`.
  */
 export function MfaEnrollStep({ pendingToken, onStep }: CodeStepProps) {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -200,12 +201,13 @@ export function MfaEnrollStep({ pendingToken, onStep }: CodeStepProps) {
       <h2 className="font-semibold text-base">Cadastre o app autenticador</h2>
       <p className="mt-1 mb-4 text-ink-3 text-sm">
         Sua conta exige um segundo fator. No app autenticador (Google
-        Authenticator, Authy, 1Password…), adicione a chave abaixo ou abra o
-        link neste aparelho.
+        Authenticator, Authy, 1Password…), leia o QR code, adicione a chave
+        abaixo ou abra o link neste aparelho.
       </p>
       {error && <ErrorAlert message={error} />}
       {enrollment && (
         <div className="mb-4">
+          <OtpauthQr uri={enrollment.otpauthUri} />
           <p className="font-medium text-sm">Chave</p>
           <p
             className="mt-1 break-all font-mono text-sm"

@@ -3,6 +3,7 @@
 import { Button, Card, Input } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { OtpauthQr } from '@/components/otpauth-qr';
 import { MIN_PASSWORD_LENGTH } from '@/domain/auth/password-policy';
 import { apiFetch } from '@/lib/client';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -249,11 +250,12 @@ function EnableMfa({ onDone }: { onDone: () => void }) {
     return (
       <form onSubmit={confirm}>
         <p className="mt-1 mb-3 text-ink-3 text-sm">
-          No app autenticador (Google Authenticator, Authy, 1Password…),
-          adicione a chave abaixo ou abra o link neste aparelho. Depois digite o
-          código de 6 dígitos.
+          No app autenticador (Google Authenticator, Authy, 1Password…), leia o
+          QR code, adicione a chave abaixo ou abra o link neste aparelho. Depois
+          digite o código de 6 dígitos.
         </p>
         {error && <ErrorAlert message={error} />}
+        <OtpauthQr uri={enrollment.otpauthUri} />
         <p className="font-medium text-sm">Chave</p>
         <p
           className="mt-1 break-all font-mono text-sm"

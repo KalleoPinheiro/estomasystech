@@ -46,8 +46,8 @@ de build (`.specs/STATE.md`, decisão sobre fotos). Discovery:
   `POST /api/auth/mfa/verify` confere o código e emite a sessão. Nunca existe sessão de
   super_admin sem segundo fator.
 - **Cadastro obrigatório.** Sem fator, `POST /api/auth/mfa/enroll` devolve a chave em texto e o
-  link `otpauth://` (sem QR code por ora); a chave viaja cifrada no token de confirmação e só vai
-  ao banco quando o código dela for confirmado. A confirmação incrementa `session_version` (o
+  link `otpauth://` (o QR code veio depois, #250: gerado no navegador a partir do link, sem rota
+  nova); a chave viaja cifrada no token de confirmação e só vai ao banco quando o código dela for confirmado. A confirmação incrementa `session_version` (o
   token de cadastro vira uso único e toda sessão anterior cai) e devolve os códigos de recuperação.
 - **Códigos de recuperação.** 10 códigos de uso único (`xxxxx-xxxxx`), guardados como hash scrypt
   em `mfa_recovery_codes`, exibidos uma única vez. Usar um deles **não** abre sessão: leva ao

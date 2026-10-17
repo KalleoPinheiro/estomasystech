@@ -402,7 +402,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
     expect(await screen.findByLabelText('Senha')).toBeInTheDocument();
   });
 
-  it('Dado login sem fator, Quando cadastrar, Então o cadastro do segundo fator mostra chave e link sem QR, e os códigos uma vez', async () => {
+  it('Dado login sem fator, Quando cadastrar, Então o cadastro do segundo fator mostra QR, chave e link, e os códigos uma vez', async () => {
     const calls = mockMfa({
       '/api/auth/login': () =>
         jsonResponse(true, {
@@ -430,8 +430,10 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
       'href',
       'otpauth://totp/VittaFlow:dono%40vitta.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
     );
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(document.querySelector('canvas, svg[aria-label*="QR"]')).toBeNull();
+    const qr = await screen.findByRole('img', {
+      name: 'QR code para cadastrar o app autenticador',
+    });
+    expect(qr.getAttribute('src')).toMatch(/^data:image\/png;base64,/);
     fireEvent.change(screen.getByLabelText('Código do autenticador'), {
       target: { value: '654321' },
     });
