@@ -3,6 +3,7 @@ import {
   resolvePortalPartner,
   resolvePortalPatient,
 } from '@/application/portal/portal-identity';
+import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
@@ -20,7 +21,11 @@ describe('Feature: 404 do portal não leva o e-mail de login (issue #219)', () =
 
   it('Dado e-mail sem conta, Quando resolver o paciente, Então NotFound sem o e-mail', async () => {
     const error = await resolvePortalPatient(
-      { userAccounts, patients: {} as PatientRepository },
+      {
+        userAccounts,
+        patients: {} as PatientRepository,
+        auditEvents: {} as AuditEventRepository,
+      },
       { subject: email, role: 'patient' },
     ).catch((e: unknown) => e);
 

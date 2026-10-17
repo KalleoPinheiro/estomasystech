@@ -1,11 +1,12 @@
 import type { NextRequest } from 'next/server';
+import { getGuardianAccess } from '@/application/portal/get-guardian-access';
 import { GetPatientPortalData } from '@/application/portal/get-patient-portal-data';
 import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { cancellationPolicyOf } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 import {
   toConditionPhotoDto,
@@ -17,8 +18,20 @@ import {
   toPortalPatientProfileDto,
 } from '@/lib/dto';
 
+function toGuardianAccessDto(
+  access: Awaited<ReturnType<typeof getGuardianAccess>>,
+) {
+  return access
+    ? {
+        fullName: access.fullName,
+        relationshipLabel: access.relationshipLabel,
+        lastAccessAt: access.lastAccessAt?.toISOString() ?? null,
+      }
+    : null;
+}
+
 export async function GET(request: NextRequest) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -46,6 +59,7 @@ export async function GET(request: NextRequest) {
     ).execute({
       patientId: (await resolvePortalPatient(services, session)).id,
     });
+    const isGuardian = session.role === 'guardian';
 
     recordAudit(services.auditEvents, session, {
       action: 'read',
@@ -66,6 +80,14 @@ export async function GET(request: NextRequest) {
       invoices: data.invoices.map((i) => toInvoiceDto(i)),
       followUps: data.followUps.map((f) => toFollowUpDto(f)),
       // Antecedência mínima para cancelar/remarcar pelo portal (política da clínica).
+      // Evidência (ADR-026): o responsável vê em nome de quem age; o paciente
+      // vê quem pode agir em nome dele e quando foi o último acesso.
+      actingFor: isGuardian
+        ? { patientId: data.patient.id, fullName: data.patient.fullName }
+        : null,
+      guardianAccess: isGuardian
+        ? null
+        : toGuardianAccessDto(await getGuardianAccess(services, data.patient)),
       changeNoticeHours: cancellationPolicyOf(
         await services.scheduleConfig.get(),
       ).noticeHours,

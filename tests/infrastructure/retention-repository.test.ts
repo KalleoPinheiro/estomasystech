@@ -590,6 +590,51 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
     expect(await guardianRows()).toHaveLength(0);
   });
 
+  it('Dado responsável com conta de portal (ADR-026), Quando anonimiza o último paciente, Então a conta é anonimizada e o cadastro apagado', async () => {
+    const guardianId = nextId('grd');
+    await db.insert(schema.guardians).values({
+      id: guardianId,
+      clinicId: CLINIC,
+      fullName: 'Ana Responsável',
+      relationship: 'filho',
+      phone: '+5511999990000',
+      email: 'ana@x.com',
+      createdAt: OLD,
+    });
+    const accountId = nextId('acc');
+    await db.insert(schema.userAccounts).values({
+      id: accountId,
+      clinicId: CLINIC,
+      email: `${accountId}@x.com`,
+      passwordHash: 'scrypt$x',
+      role: 'guardian',
+      guardianId,
+      active: true,
+      createdAt: OLD,
+    });
+    const only = await insertPatient(CLINIC);
+    await db
+      .update(schema.patients)
+      .set({ guardianId })
+      .where(eq(schema.patients.id, only));
+
+    expect(await repo.anonymizePatient(only, NOW, CUTOFF_20)).toBe(1);
+
+    const [account] = await db
+      .select()
+      .from(schema.userAccounts)
+      .where(eq(schema.userAccounts.id, accountId));
+    expect(account.active).toBe(false);
+    expect(account.guardianId).toBeNull();
+    expect(account.anonymizedAt).not.toBeNull();
+    expect(
+      await db
+        .select()
+        .from(schema.guardians)
+        .where(eq(schema.guardians.id, guardianId)),
+    ).toHaveLength(0);
+  });
+
   it('Dado paciente com atividade nova depois da busca, Quando anonimiza, Então nada muda', async () => {
     const patientId = await insertPatient(CLINIC);
     await seedRecord(CLINIC, patientId);

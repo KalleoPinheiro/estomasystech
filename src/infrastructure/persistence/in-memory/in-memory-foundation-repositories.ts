@@ -61,6 +61,7 @@ function snapshot(account: UserAccount) {
     professionalId: account.professionalId,
     patientId: account.patientId,
     partnerId: account.partnerId,
+    guardianId: account.guardianId,
     active: account.isActive,
     createdAt: account.createdAt,
     sessionVersion: account.sessionVersion,
@@ -138,15 +139,17 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
   }
 
   async findByPortalLink(
-    link: { patientId: string } | { partnerId: string },
+    link:
+      | { patientId: string }
+      | { partnerId: string }
+      | { guardianId: string },
   ): Promise<UserAccount | null> {
-    return (
-      [...this.items.values()].find((a) =>
-        'patientId' in link
-          ? a.patientId === link.patientId
-          : a.partnerId === link.partnerId,
-      ) ?? null
-    );
+    const matches = (a: UserAccount) => {
+      if ('patientId' in link) return a.patientId === link.patientId;
+      if ('partnerId' in link) return a.partnerId === link.partnerId;
+      return a.guardianId === link.guardianId;
+    };
+    return [...this.items.values()].find(matches) ?? null;
   }
 
   async hasAnyAccount(): Promise<boolean> {

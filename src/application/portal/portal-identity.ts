@@ -1,16 +1,31 @@
-import type { UserAccountRepository } from '@/domain/auth/user-account';
+import { AuditEvent } from '@/domain/audit/audit-event';
+import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
+import type {
+  UserAccount,
+  UserAccountRepository,
+} from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
 import type { Partner } from '@/domain/partner/partner';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { Patient } from '@/domain/patient/patient';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
-import { NotFoundError } from '@/domain/shared/errors';
+import { ConflictError, NotFoundError } from '@/domain/shared/errors';
 
 /** O que o portal sabe de quem está logado: o e-mail de login e o papel. */
 export interface PortalSessionIdentity {
   subject: string;
   role: UserRole;
+  /** Empresa da sessão — a trilha do responsável (ADR-026) nasce nela. */
+  clinicId?: string | null;
+  /** Paciente que o responsável escolheu representar (cookie; revalidado aqui). */
+  actingPatientId?: string | null;
 }
+
+export const GUARDIAN_PICK_PATIENT_MESSAGE =
+  'Escolha o paciente que você está representando.';
+
+/** Recurso da trilha: cada requisição do responsável em nome de um paciente. */
+export const GUARDIAN_ACCESS_RESOURCE = 'guardian-access';
 
 /**
  * Titular do portal pelo vínculo da conta (#196), nunca pelo e-mail do
@@ -31,11 +46,75 @@ async function linkedAccount(
   return account;
 }
 
-export async function resolvePortalPatient(
+/**
+ * Pacientes ativos que a conta de responsável pode representar: os ligados ao
+ * cadastro dela (`patients.guardian_id`). Desvincular o paciente, inativá-lo ou
+ * desativar a conta encerra o acesso sem mais nenhum passo (ADR-026).
+ */
+export async function listRepresentablePatients(
   repos: { userAccounts: UserAccountRepository; patients: PatientRepository },
+  session: PortalSessionIdentity,
+): Promise<Patient[]> {
+  const account = await linkedAccount(repos.userAccounts, session);
+  if (account?.role !== 'guardian' || !account.guardianId) {
+    throw new NotFoundError('Responsável', account?.id ?? 'sem-conta');
+  }
+  const linked = await repos.patients.findByGuardian(account.guardianId);
+  return linked.filter((patient) => patient.isActive);
+}
+
+/**
+ * Responsável age em nome de um paciente: o escolhido (cookie), ou o único
+ * representado. Cada resolução grava `read`/`guardian-access` ANTES de seguir
+ * (write-ahead): sem trilha, o responsável não acessa nada. Ator = e-mail da
+ * conta do responsável; titular = paciente (`patientId`).
+ */
+async function resolveGuardianPatient(
+  repos: {
+    userAccounts: UserAccountRepository;
+    patients: PatientRepository;
+    auditEvents: AuditEventRepository;
+  },
+  session: PortalSessionIdentity,
+  account: UserAccount,
+): Promise<Patient> {
+  const represented = await listRepresentablePatients(repos, session);
+  const chosen =
+    represented.find((patient) => patient.id === session.actingPatientId) ??
+    (represented.length === 1 ? represented[0] : undefined);
+  if (!chosen) {
+    if (represented.length > 1) {
+      throw new ConflictError(GUARDIAN_PICK_PATIENT_MESSAGE);
+    }
+    throw new NotFoundError('Paciente', account.id);
+  }
+  await repos.auditEvents.save(
+    AuditEvent.create({
+      clinicId: session.clinicId ?? account.clinicId,
+      actorRole: 'guardian',
+      actorId: session.subject,
+      action: 'read',
+      resourceType: GUARDIAN_ACCESS_RESOURCE,
+      resourceId: chosen.id,
+      patientId: chosen.id,
+      detail: 'acesso do responsável em nome do paciente',
+    }),
+  );
+  return chosen;
+}
+
+export async function resolvePortalPatient(
+  repos: {
+    userAccounts: UserAccountRepository;
+    patients: PatientRepository;
+    auditEvents: AuditEventRepository;
+  },
   session: PortalSessionIdentity,
 ): Promise<Patient> {
   const account = await linkedAccount(repos.userAccounts, session);
+  if (account?.role === 'guardian') {
+    return resolveGuardianPatient(repos, session, account);
+  }
   const patient = account?.patientId
     ? await repos.patients.findById(account.patientId)
     : null;

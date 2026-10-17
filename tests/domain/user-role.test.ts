@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { USER_ROLES, type UserRole } from '@/domain/auth/user-role';
 
-describe('Feature: Catálogo de 6 papéis (RBAC-01)', () => {
-  it('Dado o catálogo de papéis, Quando listado, Então contém exatamente os 6 valores fixos', () => {
+describe('Feature: Catálogo de 7 papéis (RBAC-01, ADR-026)', () => {
+  it('Dado o catálogo de papéis, Quando listado, Então contém exatamente os 7 valores fixos', () => {
     expect(USER_ROLES).toEqual([
       'super_admin',
       'company_admin',
@@ -10,6 +10,7 @@ describe('Feature: Catálogo de 6 papéis (RBAC-01)', () => {
       'profissional',
       'patient',
       'partner',
+      'guardian',
     ]);
   });
 
@@ -20,6 +21,6 @@ describe('Feature: Catálogo de 6 papéis (RBAC-01)', () => {
 
   it('Dado cada valor do catálogo, Quando usado como UserRole, Então é aceito pelo tipo', () => {
     const sample: UserRole[] = [...USER_ROLES];
-    expect(sample).toHaveLength(6);
+    expect(sample).toHaveLength(7);
   });
 });

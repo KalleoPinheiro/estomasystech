@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 import { toProcedureDto } from '@/lib/dto';
 
@@ -10,7 +10,7 @@ import { toProcedureDto } from '@/lib/dto';
  * o RBAC do proxy é por prefixo e /api/procedures é exclusiva da equipe.
  */
 export async function GET(request: NextRequest) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
 
   return handleRequest(async () => {

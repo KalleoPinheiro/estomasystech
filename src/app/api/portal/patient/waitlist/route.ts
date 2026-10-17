@@ -5,7 +5,8 @@ import { AddToWaitlist } from '@/application/scheduling/waitlist';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { portalActorNoun } from '@/lib/auth/portal-actor';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { waitlistWithNames } from '@/lib/waitlist-names';
 
@@ -20,7 +21,7 @@ const joinSchema = z.object({
 
 /** Pedidos do próprio paciente ainda na fila. */
 export async function GET(request: NextRequest) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
 /** Paciente entra na lista de espera quando não acha horário (portal). */
 export async function POST(request: NextRequest) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       resourceType: 'waitlist-entry',
       resourceId: entry.id,
       patientId: entry.patientId,
-      detail: 'pelo portal do paciente',
+      detail: `pelo portal do ${portalActorNoun(session)}`,
     });
     const [dto] = await waitlistWithNames(services, [entry]);
     return dto;

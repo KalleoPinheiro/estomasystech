@@ -5,7 +5,8 @@ import { RescheduleOwnAppointment } from '@/application/portal/reschedule-own-ap
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { portalActorNoun } from '@/lib/auth/portal-actor';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toPortalAppointmentDto } from '@/lib/dto';
@@ -18,7 +19,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** Remarcação da própria consulta pelo paciente, com antecedência mínima. */
 export async function POST(request: NextRequest, context: RouteContext) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       resourceType: 'appointment',
       resourceId: rescheduled.id,
       patientId: rescheduled.patientId,
-      detail: `remarcada pelo paciente no portal para ${rescheduled.slot.start.toISOString()}`,
+      detail: `remarcada pelo ${portalActorNoun(session)} no portal para ${rescheduled.slot.start.toISOString()}`,
     });
     scheduleCalendarSync(services, (sync) => sync.rescheduled(rescheduled.id));
     return toPortalAppointmentDto(rescheduled);

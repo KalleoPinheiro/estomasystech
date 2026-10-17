@@ -1,3 +1,4 @@
+import type { UserAccountRepository } from '@/domain/auth/user-account';
 import { Guardian, type GuardianProps } from '@/domain/guardian/guardian';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { Patient } from '@/domain/patient/patient';
@@ -64,16 +65,23 @@ export class UpdateGuardian {
 export const GUARDIAN_IN_USE_MESSAGE =
   'Este responsável ainda está ligado a pacientes. Desvincule-os antes de excluir.';
 
+export const GUARDIAN_HAS_ACCOUNT_MESSAGE =
+  'Este responsável tem acesso ao portal. Desative a conta dele antes; o cadastro só pode ser apagado quando a conta for anonimizada.';
+
 export class DeleteGuardian {
   constructor(
     private readonly guardians: GuardianRepository,
     private readonly patients: PatientRepository,
+    private readonly accounts: UserAccountRepository,
   ) {}
 
   async execute(id: string): Promise<void> {
     await findGuardianOrThrow(this.guardians, id);
     if ((await this.patients.findByGuardian(id)).length > 0) {
       throw new ConflictError(GUARDIAN_IN_USE_MESSAGE);
+    }
+    if (await this.accounts.findByPortalLink({ guardianId: id })) {
+      throw new ConflictError(GUARDIAN_HAS_ACCOUNT_MESSAGE);
     }
     await this.guardians.delete(id);
   }

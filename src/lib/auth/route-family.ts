@@ -178,7 +178,7 @@ export function classifyRoute(pathname: string): RouteFamily {
  * acesso clínico nem operacional (ADR-007, emenda ao ADR-003).
  */
 const FAMILY_ALLOWED_ROLES: Record<RouteFamily, readonly UserRole[]> = {
-  shared: [...STAFF_ROLES, 'patient', 'partner'],
+  shared: [...STAFF_ROLES, 'patient', 'partner', 'guardian'],
   operational: CLINIC_STAFF_ROLES,
   clinical: ['company_admin', 'profissional'],
   administrative: ['company_admin'],

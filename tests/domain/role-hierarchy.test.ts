@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { canProvision } from '@/domain/auth/role-hierarchy';
 import { USER_ROLES, type UserRole } from '@/domain/auth/user-role';
 
-/** Matriz completa esperada (RBAC-07..RBAC-10, ADR-003) — 36 pares ator×alvo. */
+/** Matriz completa esperada (RBAC-07..RBAC-10, ADR-003) — 49 pares ator×alvo. */
 const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
   super_admin: {
     super_admin: false,
@@ -11,6 +11,7 @@ const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
     profissional: false,
     patient: false,
     partner: false,
+    guardian: false,
   },
   company_admin: {
     super_admin: false,
@@ -19,6 +20,7 @@ const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
     profissional: true,
     patient: true,
     partner: true,
+    guardian: true,
   },
   atendente: {
     super_admin: false,
@@ -27,6 +29,7 @@ const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
     profissional: false,
     patient: true,
     partner: true,
+    guardian: true,
   },
   profissional: {
     super_admin: false,
@@ -35,6 +38,7 @@ const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
     profissional: false,
     patient: true,
     partner: true,
+    guardian: false,
   },
   patient: {
     super_admin: false,
@@ -43,6 +47,7 @@ const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
     profissional: false,
     patient: false,
     partner: false,
+    guardian: false,
   },
   partner: {
     super_admin: false,
@@ -51,6 +56,16 @@ const EXPECTED: Record<UserRole, Record<UserRole, boolean>> = {
     profissional: false,
     patient: false,
     partner: false,
+    guardian: false,
+  },
+  guardian: {
+    super_admin: false,
+    company_admin: false,
+    atendente: false,
+    profissional: false,
+    patient: false,
+    partner: false,
+    guardian: false,
   },
 };
 

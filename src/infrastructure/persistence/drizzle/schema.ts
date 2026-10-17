@@ -160,13 +160,16 @@ export const userAccounts = pgTable(
     email: text('email').notNull(),
     // Formato scrypt$custo$salt$hash — nunca a senha em claro.
     passwordHash: text('password_hash').notNull(),
-    // Um dos 6 valores de UserRole (RBAC-01).
+    // Um dos 7 valores de UserRole (RBAC-01, ADR-026).
     role: text('role').notNull(),
     professionalId: text('professional_id').references(() => professionals.id),
     // Titular da conta de portal (#196): o portal resolve paciente/parceiro
     // por aqui, nunca pelo e-mail (mutável) do cadastro.
     patientId: text('patient_id').references(() => patients.id),
     partnerId: text('partner_id').references(() => partners.id),
+    // Responsável dono da conta de portal (ADR-026): acessa o portal em nome
+    // dos pacientes ligados a ele (patients.guardian_id).
+    guardianId: text('guardian_id').references(() => guardians.id),
     active: boolean('active').notNull().default(true),
     // Versão das sessões (#194, ADR-005): o token carrega `sv`; diferente
     // daqui = revogado. Só `revokeSessions`/`updatePasswordHash` incrementam.
@@ -193,6 +196,9 @@ export const userAccounts = pgTable(
     uniqueIndex('uq_user_accounts_clinic_partner')
       .on(table.clinicId, table.partnerId)
       .where(sql`${table.partnerId} IS NOT NULL`),
+    uniqueIndex('uq_user_accounts_clinic_guardian')
+      .on(table.clinicId, table.guardianId)
+      .where(sql`${table.guardianId} IS NOT NULL`),
     // E-mail de login único por empresa, não globalmente (MT-06, ADR-003).
     uniqueIndex('uq_user_accounts_clinic_email').on(
       table.clinicId,

@@ -9,6 +9,7 @@ import {
   STAFF_ONLY_MESSAGE,
   UNAUTHENTICATED_MESSAGE,
 } from './access-policy';
+import { ACTING_PATIENT_COOKIE } from './acting-patient';
 import { getRequestSession } from './request-session';
 import type { Session } from './session';
 import { isStaffRole } from './staff-roles';
@@ -43,6 +44,9 @@ const denied = (message: string, status: number): Guard<never> => ({
 const roleMessage = (roles: readonly UserRole[]): string => {
   if (roles.length === 1 && roles[0] === 'patient') {
     return 'Rota exclusiva do portal do paciente';
+  }
+  if (roles.includes('patient') && roles.includes('guardian')) {
+    return 'Rota exclusiva do portal do paciente ou do responsável';
   }
   if (roles.length === 1 && roles[0] === 'partner') {
     return 'Rota exclusiva do portal do parceiro';
@@ -106,4 +110,27 @@ export function requirePortalSession(
     return denied(roleMessage(allowed), 403);
   }
   return { ok: true, session };
+}
+
+/** Sessão do portal do paciente, com o paciente em nome de quem o responsável age. */
+export type PatientPortalSession = Session & {
+  actingPatientId: string | null;
+};
+
+/**
+ * Rotas do portal em que o paciente ou o responsável dele (ADR-026) podem
+ * entrar. Ato personalíssimo (consentimento, pedido LGPD, cópia dos dados)
+ * continua em `requirePortalSession(request, 'patient')`: o responsável recebe
+ * `403`. O paciente representado vem do cookie e é revalidado no caso de uso.
+ */
+export function requirePatientPortalSession(
+  request: NextRequest,
+): Guard<PatientPortalSession> {
+  const guard = requirePortalSession(request, ['patient', 'guardian']);
+  if (!guard.ok) return guard;
+  const acting =
+    guard.session.role === 'guardian'
+      ? (request.cookies.get(ACTING_PATIENT_COOKIE)?.value ?? null)
+      : null;
+  return { ok: true, session: { ...guard.session, actingPatientId: acting } };
 }

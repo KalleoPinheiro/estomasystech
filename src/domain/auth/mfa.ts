@@ -9,7 +9,7 @@ import type { UserRole } from './user-role';
  * Quem precisa do segundo fator (#291): obrigatório para o super_admin e o
  * company_admin — sem ele o login leva ao cadastro; opcional para atendente e
  * profissional — pedido no login só se a conta cadastrou; inexistente para
- * os portais.
+ * os portais (paciente, parceiro e responsável).
  */
 export type MfaPolicy = 'required' | 'optional' | 'none';
 
@@ -20,6 +20,7 @@ const MFA_POLICY: Record<UserRole, MfaPolicy> = {
   profissional: 'optional',
   patient: 'none',
   partner: 'none',
+  guardian: 'none',
 };
 
 export function mfaPolicy(role: UserRole): MfaPolicy {

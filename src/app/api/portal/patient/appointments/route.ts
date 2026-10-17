@@ -5,7 +5,8 @@ import { ScheduleOwnAppointment } from '@/application/portal/schedule-own-appoin
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { portalActorNoun } from '@/lib/auth/portal-actor';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toPortalAppointmentDto } from '@/lib/dto';
@@ -18,7 +19,7 @@ const scheduleSchema = z.object({
 
 /** Auto-agendamento de retorno pelo paciente (PORT4-04..08). */
 export async function POST(request: NextRequest) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       resourceType: 'appointment',
       resourceId: appointment.id,
       patientId: appointment.patientId,
-      detail: 'agendado pelo portal do paciente',
+      detail: `agendado pelo portal do ${portalActorNoun(session)}`,
     });
     scheduleCalendarSync(services, (sync) => sync.created(appointment.id));
     return toPortalAppointmentDto(appointment);

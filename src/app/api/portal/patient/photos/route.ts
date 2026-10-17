@@ -12,7 +12,8 @@ import {
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { portalActorNoun } from '@/lib/auth/portal-actor';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { CONSENT_TEXT } from '@/lib/consent-text';
 
@@ -22,7 +23,7 @@ import { CONSENT_TEXT } from '@/lib/consent-text';
  * triagem da equipe como origem "patient".
  */
 export async function POST(request: NextRequest) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
@@ -69,7 +70,9 @@ export async function POST(request: NextRequest) {
     const consents = await consentRecords.findByPatientId(patient.id);
     if (!ConsentRecord.resolveStatus(consents, CONSENT_TEXT).accepted) {
       throw new ConsentRequiredError(
-        'Consentimento pendente — aceite o termo de consentimento no portal antes de enviar fotos',
+        session.role === 'guardian'
+          ? 'Consentimento pendente — o próprio paciente precisa aceitar o termo no portal antes do envio de fotos'
+          : 'Consentimento pendente — aceite o termo de consentimento no portal antes de enviar fotos',
       );
     }
 
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
       resourceType: 'photo',
       resourceId: photo.id,
       patientId: patient.id,
-      detail: 'envio remoto do paciente',
+      detail: `envio remoto do ${portalActorNoun(session)}`,
     });
     return { id: photo.id, triageStatus: photo.triageStatus };
   });

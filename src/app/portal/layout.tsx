@@ -21,7 +21,7 @@ export default function PortalLayout({
           <div>
             <BrandLogo />
             <p className="text-ink-3 text-xs">
-              Portal do paciente e do parceiro
+              Portal do paciente, do responsável e do parceiro
             </p>
           </div>
         }

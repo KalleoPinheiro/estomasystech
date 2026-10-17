@@ -66,10 +66,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     assertCanManageGuardians(guard.session);
     const { id } = await context.params;
-    const { guardians, patients, auditEvents } = await getRepositories(
-      writeScope(guard.session),
-    );
-    await new DeleteGuardian(guardians, patients).execute(id);
+    const { guardians, patients, userAccounts, auditEvents } =
+      await getRepositories(writeScope(guard.session));
+    await new DeleteGuardian(guardians, patients, userAccounts).execute(id);
     await recordAuditNow(auditEvents, guard.session, {
       action: 'delete',
       resourceType: 'guardian',

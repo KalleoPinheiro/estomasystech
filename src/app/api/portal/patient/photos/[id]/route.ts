@@ -3,7 +3,7 @@ import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { fail } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -14,7 +14,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Como na rota do staff (#209): leitura auditada e sem cache no navegador.
  */
 export async function GET(request: NextRequest, context: RouteContext) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 

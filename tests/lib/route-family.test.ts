@@ -186,6 +186,14 @@ describe('Feature: Classificação de rota por família (RBAC-05)', () => {
         professional_self: false,
         platform: false,
       },
+      guardian: {
+        shared: true,
+        operational: false,
+        clinical: false,
+        administrative: false,
+        professional_self: false,
+        platform: false,
+      },
     };
 
     for (const role of USER_ROLES) {

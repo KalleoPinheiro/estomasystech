@@ -3,12 +3,12 @@ import { ListAvailableSlots } from '@/application/portal/list-available-slots';
 import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
-import { requirePortalSession } from '@/lib/auth/require-session';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 
 /** Horários livres para o paciente agendar um retorno ou remarcar (PORT4-01..03). */
 export async function GET(request: NextRequest) {
-  const guard = requirePortalSession(request, 'patient');
+  const guard = requirePatientPortalSession(request);
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
