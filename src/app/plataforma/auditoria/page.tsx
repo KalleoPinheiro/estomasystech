@@ -23,7 +23,7 @@ import {
   RESOURCE_LABELS,
 } from '@/lib/audit-labels';
 import type { PlatformAuditEventDto } from '@/lib/dto';
-import { usePagedQuery } from '@/lib/use-paged-query';
+import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 
 const PAGE_SIZE = 100;
 
@@ -55,7 +55,7 @@ export default function PlatformAuditPage() {
     error,
     isLoading,
     loadMore,
-  } = usePagedQuery<PlatformAuditEventDto>(
+  } = useCursorPagedQuery<PlatformAuditEventDto>(
     `/api/platform/audit${periodQuery(from, to)}`,
     PAGE_SIZE,
   );

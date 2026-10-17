@@ -153,7 +153,7 @@ describe('Feature: Persistência PostgreSQL — auditoria, pacotes, equipe e int
       expect(await repo.findAll({ to: future })).toHaveLength(1);
     });
 
-    it('Dado vários eventos, Quando paginar, Então respeita limit e offset', async () => {
+    it('Dado vários eventos, Quando paginar, Então respeita limit', async () => {
       const repo = auditRepo();
       for (let i = 0; i < 3; i += 1) {
         await repo.save(
@@ -169,7 +169,6 @@ describe('Feature: Persistência PostgreSQL — auditoria, pacotes, equipe e int
       }
 
       expect(await repo.findAll({}, { limit: 2 })).toHaveLength(2);
-      expect(await repo.findAll({}, { offset: 2 })).toHaveLength(1);
     });
   });
 

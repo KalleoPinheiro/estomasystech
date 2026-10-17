@@ -15,7 +15,12 @@ export interface AuditEventFilter {
 
 export interface AuditEventPage {
   limit?: number;
-  offset?: number;
+  /**
+   * Cursor opaco (#322): retoma estritamente depois do último evento da página
+   * anterior, na ordem (data, id) decrescente. Sem `offset`: o custo da página
+   * não cresce com a profundidade e evento novo não duplica nem pula linha.
+   */
+  cursor?: string;
 }
 
 /** Período da trilha de plataforma. */

@@ -22,7 +22,7 @@ import {
   RESOURCE_LABELS,
 } from '@/lib/audit-labels';
 import type { AuditEventDto } from '@/lib/dto';
-import { usePagedQuery } from '@/lib/use-paged-query';
+import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 
 const PAGE_SIZE = 100;
 
@@ -42,7 +42,7 @@ export default function AuditPage() {
     error,
     isLoading,
     loadMore,
-  } = usePagedQuery<AuditEventDto>(`/api/audit${query}`, PAGE_SIZE);
+  } = useCursorPagedQuery<AuditEventDto>(`/api/audit${query}`, PAGE_SIZE);
 
   return (
     <div>

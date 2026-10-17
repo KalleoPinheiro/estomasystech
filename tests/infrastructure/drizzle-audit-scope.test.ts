@@ -5,6 +5,7 @@ import { AuditEvent } from '@/domain/audit/audit-event';
 import type { AppDb } from '@/infrastructure/persistence/drizzle/db';
 import { DrizzleAuditEventRepository } from '@/infrastructure/persistence/drizzle/drizzle-audit-event-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { encodeAuditCursor } from '@/lib/audit-cursor';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const A = 'clinic-audit-a';
@@ -97,7 +98,12 @@ describe('Feature: Repositório de auditoria escopado por empresa (B6, AD-017)',
       ids(await repo(null).findPlatformTrail({ from: t(2), to: t(4) })),
     ).toEqual([superInA.id]);
     expect(
-      ids(await repo(null).findPlatformTrail({}, { limit: 1, offset: 1 })),
+      ids(
+        await repo(null).findPlatformTrail(
+          {},
+          { limit: 1, cursor: encodeAuditCursor(superNoClinic) },
+        ),
+      ),
     ).toEqual([superInA.id]);
     await expect(repo(A).findPlatformTrail()).rejects.toThrow(
       'Trilha de plataforma exige escopo de sistema',

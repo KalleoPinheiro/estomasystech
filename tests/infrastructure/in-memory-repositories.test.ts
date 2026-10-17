@@ -57,6 +57,7 @@ import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memor
 import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
 import { InMemoryReminderLogRepository } from '@/infrastructure/persistence/in-memory/in-memory-reminder-log-repository';
+import { encodeAuditCursor } from '@/lib/audit-cursor';
 import { encodeCursor } from '@/lib/pagination';
 import { buildAppointment } from '../support/builders';
 
@@ -766,14 +767,13 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       expect(found[0].patientId).toBe('patient-1');
     });
 
-    it('Dado eventos e paginação, Quando limit/offset, Então retorna a página correta', async () => {
+    it('Dado eventos e paginação, Quando limit, Então retorna a página correta', async () => {
       const repo = new InMemoryAuditEventRepository();
       await repo.save(makeEvent('patient-1', new Date()));
       await repo.save(makeEvent('patient-1', new Date()));
       await repo.save(makeEvent('patient-1', new Date()));
 
       expect(await repo.findAll({}, { limit: 2 })).toHaveLength(2);
-      expect(await repo.findAll({}, { offset: 2 })).toHaveLength(1);
     });
 
     it('Dado janela de datas, Quando filtrar por from/to, Então respeita os limites (from inclusivo, to exclusivo)', async () => {
@@ -844,7 +844,7 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       );
     });
 
-    it('Dados eventos em instantes distintos, Quando consultar a trilha de plataforma (auditoria escopada), Então mais recente primeiro, com período e offset como no Drizzle (C9)', async () => {
+    it('Dados eventos em instantes distintos, Quando consultar a trilha de plataforma (auditoria escopada), Então mais recente primeiro, com período e cursor como no Drizzle (C9)', async () => {
       const t = (min: number) => new Date(Date.UTC(2026, 8, 27, 12, min));
       const at = (
         id: string,
@@ -885,12 +885,16 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       expect(
         ids(await system.findPlatformTrail({ from: t(2), to: t(4) })),
       ).toEqual(['super-in-a']);
-      expect(ids(await system.findPlatformTrail({}, { offset: 1 }))).toEqual([
-        'super-in-a',
-        'anonymous',
-      ]);
+      const afterFirst = encodeAuditCursor(
+        at('super-no-clinic', null, 'super_admin', t(4)),
+      );
       expect(
-        ids(await system.findPlatformTrail({}, { limit: 1, offset: 1 })),
+        ids(await system.findPlatformTrail({}, { cursor: afterFirst })),
+      ).toEqual(['super-in-a', 'anonymous']);
+      expect(
+        ids(
+          await system.findPlatformTrail({}, { limit: 1, cursor: afterFirst }),
+        ),
       ).toEqual(['super-in-a']);
     });
   });

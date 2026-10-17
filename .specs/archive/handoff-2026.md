@@ -913,7 +913,7 @@ Decisões de @KalleoPinheiro de 2026-10-11 (AD-026 e AD-027):
 @KalleoPinheiro delegou as decisões (segurança, escalabilidade, performance, coerência com o negócio). Registro: ADR-017 (retenção, completa o ADR-013, que voltou ao texto original), ADR-018 (transferência para a UE) e AD-034 no STATE.
 - **Cadastro de `partners`:** guardado (indicação, consentimento e comissões dependem dele).
 - **Paciente anonimizado:** não reativa (`409`, PRO-RN-17). Único código novo.
-- **Conta anonimizada:** já não recebia senha nem convite (inativa, tokens apagados); ganhou teste (ACE-RN-50).
+- **Conta anonimizada:** já não recebia senha nem convite (inativa, tokens apagados); ganhou teste (ACE-RN-51).
 - **Storage Box:** outra localização da UE, backup `age`-cifrado, snapshots diários com 14 guardados.
 - **#306:** limiares 10/3, `delivered=false` só do provedor, sem erro do navegador, UptimeRobot, GlitchTip por túnel e 30 dias já constavam em AD-032; nova a regra de deploy **0050 antes da 0051** (runbook § 4).
 - **#300:** consentimento do parceiro é do par paciente × parceiro e não acompanha troca nem inativação (POR-RN-11).
@@ -924,3 +924,17 @@ Decisões de @KalleoPinheiro de 2026-10-11 (AD-026 e AD-027):
 - **Next step**: jurídico confere a Res. CD/ANPD nº 32/2026 na fonte primária, define o mecanismo para Resend/Google Agenda e entrega os textos (#216); ao receber o do consentimento do parceiro, trocar texto e versão juntos.
 - **Blockers**: nenhum para o código.
 - **Branch**: `claude/project-thread-kbdcsh`. PR #330.
+
+## Issue #322 — auditoria: índice composto e paginação por cursor (2026-10-17) — ENCERRADO
+
+`/auditoria` e a trilha de plataforma paginam por cursor (ACE-RN-51), sem `offset`.
+- **Migração `0053`**: troca `idx_audit_events_clinic` por `idx_audit_events_clinic_trail (clinic_id, occurred_at desc, id desc)` e cria o índice parcial `idx_audit_events_platform_trail` (mesmo predicado de `PLATFORM_EVENT`). Os índices usam `DESC NULLS FIRST` (o padrão do `ORDER BY ... DESC`), senão o planejador não evita o `Sort`.
+- **Keyset por comparação de linha** `(occurred_at, id) < (...)`: a forma `a < x OR (a = x AND b < y)` virava Bitmap Scan + Sort no `EXPLAIN`, então não serve para o índice.
+- **Contrato**: `limit` + `cursor` no lugar de `offset`; `meta.nextCursor` na resposta; telas usam `useCursorPagedQuery`. `offset` enviado por clientes antigos é ignorado (vem a 1ª página).
+- **Testes**: estabilidade com evento novo entre páginas (Drizzle e em memória), empate de data, cursor inválido e prova do índice por `EXPLAIN`.
+
+**Decisão delegada**: não foi criado ADR, pois segue o padrão de cursor da #75; o ADR-010 (congelado) cita `limit/offset` e o ACE-RN-51 o supera.
+
+- **Next step**: a umbrella #210 fecha quando seus filhos fecharem (#322 era um deles).
+- **Blockers**: nenhum.
+

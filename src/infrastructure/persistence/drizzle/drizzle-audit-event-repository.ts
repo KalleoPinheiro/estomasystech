@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lt, or, type SQL, sql } from 'drizzle-orm';
 import { type AuditAction, AuditEvent } from '@/domain/audit/audit-event';
 import {
   type AuditEventFilter,
@@ -8,6 +8,7 @@ import {
   PLATFORM_TRAIL_NEEDS_SYSTEM_SCOPE,
   type PlatformTrailFilter,
 } from '@/domain/audit/audit-event-repository';
+import { decodeAuditCursor } from '@/lib/audit-cursor';
 import { type AppDb, MAX_ROWS } from './db';
 import { auditEvents } from './schema';
 import { withTenant } from './tenant-scope';
@@ -37,6 +38,17 @@ const PLATFORM_EVENT = or(
 ) as SQL;
 
 type AuditRow = typeof auditEvents.$inferSelect;
+
+/**
+ * Keyset: retoma estritamente depois de (occurredAt, id) do cursor, ordem desc
+ * (#322). Comparação de linha, e não `a < x OR (a = x AND b < y)`: só ela vira
+ * condição do índice e dispensa o Sort.
+ */
+function cursorCondition(cursor?: string): SQL | undefined {
+  const decoded = decodeAuditCursor(cursor);
+  if (!decoded) return undefined;
+  return sql`(${auditEvents.occurredAt}, ${auditEvents.id}) < (${decoded.occurredAt.toISOString()}::timestamptz, ${decoded.id})`;
+}
 
 const toEvent = (row: AuditRow): AuditEvent =>
   AuditEvent.restore({ ...row, action: row.action as AuditAction });
@@ -96,10 +108,9 @@ export class DrizzleAuditEventRepository implements AuditEventRepository {
     const rows = await this.db
       .select()
       .from(auditEvents)
-      .where(where)
+      .where(and(where, cursorCondition(page.cursor)))
       .orderBy(desc(auditEvents.occurredAt), desc(auditEvents.id))
-      .limit(limit)
-      .offset(page.offset ?? 0);
+      .limit(limit);
     return rows.map(toEvent);
   }
 }

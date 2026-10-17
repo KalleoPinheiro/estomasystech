@@ -1,0 +1,3 @@
+DROP INDEX "idx_audit_events_clinic";--> statement-breakpoint
+CREATE INDEX "idx_audit_events_clinic_trail" ON "audit_events" USING btree ("clinic_id","occurred_at" DESC NULLS FIRST,"id" DESC NULLS FIRST);--> statement-breakpoint
+CREATE INDEX "idx_audit_events_platform_trail" ON "audit_events" USING btree ("occurred_at" DESC NULLS FIRST,"id" DESC NULLS FIRST) WHERE "audit_events"."clinic_id" is null or "audit_events"."actor_role" = 'super_admin';
