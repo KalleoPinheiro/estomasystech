@@ -143,4 +143,32 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
       }),
     );
   });
+
+  describe.each([
+    ['https://app.vitta.test/', 'https://app.vitta.test'],
+    ['http://localhost:3000', 'http://localhost:3000'],
+    ['ftp://app.vitta.test', null],
+    ['não é url', null],
+    [undefined, null],
+  ])('APP_URL=%s', (appUrl, expected) => {
+    it(`Então o link do evento usa ${expected ?? 'nada (sem link)'}`, async () => {
+      if (appUrl === undefined) {
+        vi.stubEnv('APP_URL', '');
+      } else {
+        vi.stubEnv('APP_URL', appUrl);
+      }
+      const gateway: CalendarGateway = {
+        createEvent: vi.fn().mockResolvedValue(null),
+        updateEvent: vi.fn().mockResolvedValue(undefined),
+        deleteEvent: vi.fn().mockResolvedValue(undefined),
+        purgeEvent: vi.fn().mockResolvedValue(undefined),
+      };
+      scheduleCalendarSync(buildServices(gateway), async (sync) => {
+        const base = (sync as unknown as { appUrl: string | null }).appUrl;
+        expect(base).toBe(expected);
+      });
+      await afterTasks[0]?.();
+      vi.unstubAllEnvs();
+    });
+  });
 });

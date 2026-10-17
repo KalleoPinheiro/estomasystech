@@ -12,6 +12,22 @@ type CalendarServices = Pick<
   'appointments' | 'patients' | 'calendar'
 >;
 
+/** `APP_URL` só se for http(s) válida; sem barra final. Inválida/ausente: sem link. */
+function publicAppUrl(): string | null {
+  const raw = process.env.APP_URL;
+  if (!raw) {
+    return null;
+  }
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' || url.protocol === 'http:'
+      ? url.origin
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Agenda a sincronização com o Google Calendar para depois da resposta (after()).
  * A API do Google fora do ar ou lenta não afeta a latência nem o resultado do request.
@@ -36,6 +52,7 @@ export function scheduleCalendarSync(
           services.appointments,
           services.patients,
           calendar,
+          publicAppUrl(),
         ),
       );
     } catch (error) {

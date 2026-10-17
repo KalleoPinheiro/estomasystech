@@ -3,7 +3,7 @@ title: "Integração: Google Calendar"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-12
+last_reviewed: 2026-10-17
 ---
 
 # Google Calendar
@@ -44,6 +44,31 @@ O refresh token do OAuth fica cifrado (AES-256-GCM, chave derivada de `AUTH_SECR
 - Calendário destino: `primary` da conta conectada; `GOOGLE_CALENDAR_ID` sobrescreve.
 - O id do evento é persistido em `appointments.google_event_id`.
 - A sincronização roda depois da resposta (`after()`), fora do caminho da requisição.
+
+## O que vai para o Google (#217, AGE-RN-18)
+
+O calendário é de terceiro (conta de quem conectou; pode ser pessoal ou sincronizada no celular) e o
+envio é transferência internacional ([ADR-018](../../adr/018-transferencia-internacional-ue.md)).
+Por **minimização de dado** (LGPD art. 6º III; o procedimento revela condição de saúde, art. 5º II / 11)
+o evento leva só:
+
+| Campo | Conteúdo |
+| --- | --- |
+| Título | `Consulta · J.S.` — iniciais do paciente (primeira e última, sem partículas); sem paciente, `Consulta` |
+| Horário | início e fim da consulta |
+| Descrição | `Abrir no VittaFlow: <APP_URL>/agenda?consulta=<id>&em=<início ISO>` (vazia se `APP_URL` ausente ou não for http/https) |
+
+**Nunca** vão nome completo, telefone, procedimento nem observações. Criação e remarcação usam o mesmo
+conteúdo (`eventContent` em `sync-appointment-calendar.ts`). O link só abre os detalhes para quem está
+logado na clínica; o Google guarda um identificador opaco, não dado clínico. Base legal: execução do
+contrato/procedimentos de saúde (art. 7º V / 11 II "f") com o dado reduzido ao mínimo para a equipe
+reconhecer a consulta.
+
+- **Eventos antigos:** os criados antes da #217 mantêm nome/telefone/procedimento no Google até a consulta
+  ser remarcada (que reescreve o evento) ou cancelada/anonimizada (que o apaga). Não há reescrita em lote.
+- **Conta conectada:** recomenda-se uma conta Google **da clínica** (Workspace), não pessoal. Não é
+  imposto em código (OAuth com `calendar.events` não lê o domínio da conta); com o conteúdo reduzido a
+  iniciais, o risco de uma conta pessoal é baixo ([ADR-020](../../adr/020-evento-do-google-agenda-so-com-iniciais.md)).
 
 ## Modos de falha
 

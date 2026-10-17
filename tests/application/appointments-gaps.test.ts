@@ -132,7 +132,7 @@ describe('Feature: Lacunas de cobertura — remarcação, série recorrente e si
       expect(calendar.created).toHaveLength(0);
     });
 
-    it('Dado paciente da consulta não encontrado, Quando sincronizar criação, Então usa rótulo com o id do paciente', async () => {
+    it('Dado paciente da consulta não encontrado, Quando sincronizar criação, Então o evento sai só com "Consulta", sem dado do paciente', async () => {
       const appointment = await schedule(
         '2026-07-20T09:00:00Z',
         '2026-07-20T10:00:00Z',
@@ -148,8 +148,8 @@ describe('Feature: Lacunas de cobertura — remarcação, série recorrente e si
       await syncWithoutPatient.created(appointment.id);
 
       expect(calendar.created).toHaveLength(1);
-      expect(calendar.created[0].title).toBe('Consulta: Paciente');
-      expect(calendar.created[0].description).toContain(appointment.patientId);
+      expect(calendar.created[0].title).toBe('Consulta');
+      expect(calendar.created[0].description).toBe('');
     });
 
     it('Dado id de consulta inexistente, Quando sincronizar remarcação, Então não chama o calendário', async () => {

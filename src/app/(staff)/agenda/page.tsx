@@ -8,7 +8,7 @@ import {
   NativeSelect,
 } from '@still-void/ui/react';
 import { useMediaQuery, useToast } from '@still-void/ui/react/client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
@@ -140,12 +140,27 @@ function readRecallParams() {
     : null;
 }
 
+/**
+ * Link do evento no Google Agenda (#217): `?consulta=<id>&em=<início ISO>` abre
+ * o mês da consulta e os detalhes dela. `em` inválido é ignorado.
+ */
+function readConsultationLink() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('consulta');
+  const startsAt = new Date(params.get('em') ?? '');
+  return id && !Number.isNaN(startsAt.getTime()) ? { id, startsAt } : null;
+}
+
 export default function AgendaPage() {
   // Abaixo de `md` a grade de 7 colunas com chips não cabe: vira mês compacto.
   const compact = useMediaQuery('(max-width: 767px)');
   const { toast } = useToast();
+  const [consultationLink] = useState(readConsultationLink);
   const [monthDate, setMonthDate] = useState(() => {
-    const now = new Date();
+    const now = consultationLink?.startsAt ?? new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [recall] = useState(readRecallParams);
@@ -159,6 +174,8 @@ export default function AgendaPage() {
   );
   const [waitlistVersion, setWaitlistVersion] = useState(0);
   const [professionalFilter, setProfessionalFilter] = useState('');
+
+  const [linkOpened, setLinkOpened] = useState(false);
 
   const appointmentsUrl = useMemo(() => {
     const from = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
@@ -174,6 +191,16 @@ export default function AgendaPage() {
     error,
     refresh,
   } = useApiQuery<AppointmentDto[]>(appointmentsUrl);
+  useEffect(() => {
+    if (!consultationLink || linkOpened || !appointments) {
+      return;
+    }
+    setLinkOpened(true);
+    const target = appointments.find((a) => a.id === consultationLink.id);
+    if (target) {
+      setSelected(target);
+    }
+  }, [appointments, consultationLink, linkOpened]);
   // Lista reduzida (#188): Atendente e Profissional também leem — sem comissão.
   const { data: professionals, error: professionalsError } = useApiQuery<
     ProfessionalOptionDto[]

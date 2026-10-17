@@ -1003,3 +1003,12 @@ Decisões de @KalleoPinheiro (2026-10-12): só o **Admin de Empresa e o Atendent
 - **Next step**: o texto jurídico final (#216) invalida consentimentos já registrados; planejar a recoleta.
 - **Blockers**: nenhum.
 - **Ordem de deploy**: aplicar a migração 0055 antes de subir o código (o `INSERT`/`SELECT` do repositório usa a coluna nova).
+## Issue #217 — Google Agenda sem dado de paciente além das iniciais (2026-10-17) — ENCERRADO
+
+Decisão de @KalleoPinheiro de 2026-10-11 implementada: o evento leva `Consulta · J.S.` + horário + link `/agenda?consulta=<id>&em=<início>`; sem nome completo, telefone, procedimento nem observações. Criação e remarcação usam o mesmo conteúdo (bug do título "Consulta remarcada" corrigido).
+- **Código:** `eventContent`/`consultationLink` em `sync-appointment-calendar.ts` (recebe `APP_URL` validado http/https por `scheduleCalendarSync`); `patientInitials` em `src/domain/patient/initials.ts`; a página `/agenda` abre o mês e os detalhes da consulta a partir do link.
+- **Decisão delegada (ADR-020):** conta Google restrita a Workspace fica só como recomendação documentada, sem trava em código.
+- **Docs:** AGE-RN-18, `docs/engineering/integrations/google-calendar.md` (o que é enviado + base legal + eventos antigos).
+- **Testes:** payload de criação e remarcação (idêntico, sem nome/telefone/procedimento), iniciais, `APP_URL`, E2E do link.
+- **Pendências para o Kalléo:** eventos criados antes da #217 mantêm o conteúdo antigo até remarcar (sem reescrita em lote; abrir issue se quiser). Docker/smoke não rodam no container (sem daemon). Nenhuma migração.
+- **Next step:** nenhum. **Blockers:** nenhum.

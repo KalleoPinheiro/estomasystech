@@ -326,3 +326,4 @@ See `src/` structure:
 - [ADR-015: Servidor sem cifra de disco](./docs/adr/015-servidor-sem-cifra-de-disco.md) — sem LUKS na VPS: fotos em claro no disco, risco aceito; ajusta o ADR-006.
 - [ADR-017: Retenção, decisões complementares](./docs/adr/017-retencao-decisoes-complementares.md) — completa o ADR-013: cadastro do parceiro guardado, paciente anonimizado não reativa, conta anonimizada não recebe senha nem convite.
 - [ADR-018: Transferência internacional (UE)](./docs/adr/018-transferencia-internacional-ue.md) — dados na Alemanha, adequação Brasil ↔ UE como base do art. 33, backup cifrado em outra localização da UE.
+- [ADR-020: Evento do Google Agenda só com iniciais](./docs/adr/020-evento-do-google-agenda-so-com-iniciais.md) — iniciais + horário + link, sem nome, telefone nem procedimento.
