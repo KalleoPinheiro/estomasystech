@@ -22,6 +22,8 @@ export interface PatientProps {
   notes?: string | null;
   /** Médico parceiro que indicou o paciente (estrutura de indicação). */
   referredByPartnerId?: string | null;
+  /** Responsável legal ou cuidador, compartilhável entre pacientes (#329). */
+  guardianId?: string | null;
 }
 
 export interface PatientState extends PatientProps {
@@ -65,6 +67,7 @@ export class Patient {
       birthDate: props.birthDate ?? null,
       notes: props.notes ?? null,
       referredByPartnerId: props.referredByPartnerId ?? null,
+      guardianId: props.guardianId ?? null,
     };
   }
 
@@ -87,6 +90,10 @@ export class Patient {
           changes.referredByPartnerId !== undefined
             ? changes.referredByPartnerId
             : this.state.referredByPartnerId,
+        guardianId:
+          changes.guardianId !== undefined
+            ? changes.guardianId
+            : this.state.guardianId,
       },
       phoneChanged,
     );
@@ -140,6 +147,10 @@ export class Patient {
 
   get referredByPartnerId(): string | null {
     return this.state.referredByPartnerId ?? null;
+  }
+
+  get guardianId(): string | null {
+    return this.state.guardianId ?? null;
   }
 
   get isActive(): boolean {

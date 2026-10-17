@@ -38,6 +38,7 @@ import { AnamnesisSection } from './anamnesis-section';
 import { CarePlansSection } from './care-plans-section';
 import { ConditionsSection } from './conditions-section';
 import { EvolutionsSection } from './evolutions-section';
+import { GuardianPanel } from './guardian-panel';
 import { PackagesSection } from './packages-section';
 import { PartnerConsentPanel } from './partner-consent-panel';
 
@@ -305,6 +306,7 @@ export default function PatientRecordPage({
     data: patient,
     error,
     errorStatus,
+    refresh: refreshPatient,
   } = useApiQuery<PatientDto>(`/api/patients/${id}`);
   const record = useClinicalRecord(id, can);
   const {
@@ -341,6 +343,7 @@ export default function PatientRecordPage({
     <div>
       <PatientHeader patient={patient} />
       <AllergyBanner allergies={anamnesis?.allergies} />
+      <GuardianPanel patient={patient} onChanged={refreshPatient} />
       {can('/api/patients/_/partner-consent') && (
         <PartnerConsentPanel patientId={id} />
       )}

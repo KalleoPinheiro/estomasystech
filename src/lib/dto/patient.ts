@@ -1,4 +1,6 @@
+import type { Guardian } from '@/domain/guardian/guardian';
 import type { Patient } from '@/domain/patient/patient';
+import { type GuardianDto, toGuardianDto } from './guardian';
 
 export interface PatientDto {
   id: string;
@@ -11,12 +13,18 @@ export interface PatientDto {
   birthDate: string | null;
   notes: string | null;
   referredByPartnerId: string | null;
+  guardianId: string | null;
+  /** Só nas respostas de detalhe (ficha, documentos); a listagem traz `guardianId`. */
+  guardian?: GuardianDto | null;
   active: boolean;
   anonymized: boolean;
   createdAt: string;
 }
 
-export const toPatientDto = (patient: Patient): PatientDto => ({
+export const toPatientDto = (
+  patient: Patient,
+  guardian?: Guardian | null,
+): PatientDto => ({
   id: patient.id,
   fullName: patient.fullName,
   email: patient.email,
@@ -25,6 +33,10 @@ export const toPatientDto = (patient: Patient): PatientDto => ({
   birthDate: patient.birthDate?.toISOString() ?? null,
   notes: patient.notes,
   referredByPartnerId: patient.referredByPartnerId,
+  guardianId: patient.guardianId,
+  ...(guardian !== undefined && {
+    guardian: guardian ? toGuardianDto(guardian) : null,
+  }),
   active: patient.isActive,
   anonymized: patient.isAnonymized,
   createdAt: patient.createdAt.toISOString(),

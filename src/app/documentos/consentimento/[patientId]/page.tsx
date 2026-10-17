@@ -69,6 +69,12 @@ export default function ConsentDocumentPage({
         name: patient.fullName,
         roleLabel: 'Paciente ou responsável legal',
         legalGuardianLine: true,
+        legalGuardian: patient.guardian
+          ? {
+              name: patient.guardian.fullName,
+              relationshipLabel: patient.guardian.relationshipLabel,
+            }
+          : undefined,
       }}
       footerNote={
         <>

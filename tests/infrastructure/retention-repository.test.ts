@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { UserAccount } from '@/domain/auth/user-account';
@@ -548,6 +548,46 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
     expect((await repo.findPendingPhotos(1000)).map((p) => p.id)).not.toContain(
       photoId,
     );
+  });
+
+  it('Dado responsável compartilhado (#329), Quando anonimiza um paciente, Então desvincula e o responsável fica; ao anonimizar o último, o cadastro é apagado', async () => {
+    const guardianId = nextId('grd');
+    await db.insert(schema.guardians).values({
+      id: guardianId,
+      clinicId: CLINIC,
+      fullName: 'Ana Responsável',
+      relationship: 'filho',
+      phone: '+5511999990000',
+      email: 'ana@x.com',
+      createdAt: OLD,
+    });
+    const first = await insertPatient(CLINIC);
+    const second = await insertPatient(CLINIC);
+    await db
+      .update(schema.patients)
+      .set({ guardianId })
+      .where(inArray(schema.patients.id, [first, second]));
+    const guardianRows = () =>
+      db
+        .select()
+        .from(schema.guardians)
+        .where(eq(schema.guardians.id, guardianId));
+    const linkOf = async (id: string) =>
+      (
+        await db
+          .select({ guardianId: schema.patients.guardianId })
+          .from(schema.patients)
+          .where(eq(schema.patients.id, id))
+      )[0].guardianId;
+
+    expect(await repo.anonymizePatient(first, NOW, CUTOFF_20)).toBe(1);
+    expect(await linkOf(first)).toBeNull();
+    expect(await linkOf(second)).toBe(guardianId);
+    expect(await guardianRows()).toHaveLength(1);
+
+    expect(await repo.anonymizePatient(second, NOW, CUTOFF_20)).toBe(1);
+    expect(await linkOf(second)).toBeNull();
+    expect(await guardianRows()).toHaveLength(0);
   });
 
   it('Dado paciente com atividade nova depois da busca, Quando anonimiza, Então nada muda', async () => {

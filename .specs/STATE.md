@@ -157,11 +157,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Date**: 2026-09-01
 - **Status**: active
 
-### AD-021
-- **Decision**: `eslint.config.mjs` usa `**/` na frente de todo padrão de `globalIgnores` (`**/.next/**`, `**/.next-open-mode/**`, etc.) e ignora `.claude/worktrees/**` explicitamente.
-- **Reason**: sem `**/`, o glob só bate na raiz do projeto. Checkouts de worktree aninhados em `.claude/worktrees/*/` (usados por sessões de agente em paralelo, ver `docs/agents/*`) escapavam do ignore, e o build Turbopack deles inundava `npx eslint .` com milhares de "erros" em bundles compilados do Next/React — isso, não um bug do ESLint ou de `npm run lint`, era a causa do ruído investigado nas issues #48/#49. `npm run lint`/`npx eslint .` sempre propagaram o exit code real; a suspeita registrada em AD anterior (ver handoff de `autenticacao-nativa`, linha ~171) de que um "wrapper `rtk`" mascarava o exit code não reproduziu nesta sessão — não teve como confirmar a causa raiz daquela observação, mas o sintoma descrito (`npm run lint` "sempre" exit 0 mesmo com erro) não bate com o comportamento atual, testado com erro proposital introduzido e revertido.
-- **Trade-off / Scope / Date / Status**: nenhum — só corrige o glob para o comportamento que o comentário original já pretendia · eslint.config.mjs · 2026-09-02 · active
-
 ### AD-024
 - **Decision**: Gestão de conta existente (`PATCH /api/accounts/[id]`, `POST /api/accounts/[id]/resend-invite`) usa a matriz `canProvision` do cadastro; negação → `403` (`ProvisioningDeniedError`, mesmo status do `POST`); `GET /api/accounts` lista só as contas que o papel pode gerir; desativar a própria conta ou o último `company_admin` ativo → `400`; senha/ativação/reenvio auditados write-ahead (`recordAuditNow` antes do `save`). Issue #184.
 - **Reason**: P0 da revisão pré-produção (#183): atendente/profissional trocavam a senha do Admin e o desativavam, sem trilha.
@@ -216,6 +211,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 
 ### AD-040
 - **Decision**: remarcação bloqueada para profissional inativo e revogação imediata no recadastro do 2º fator (#297), decididas por @KalleoPinheiro (2026-10-11). `RescheduleAppointment` recebe o repositório de profissionais (opcional, como em `ScheduleAppointment`) e reusa `assertActiveProfessional` com a mensagem "Profissional inativo: escolha outro profissional" (`400`); `POST /api/me/mfa/confirm` chama `forgetSessionStatus` como logout, set-password e PATCH de conta. Delegado: a remarcação **pelo portal** não passa o repositório (o paciente não escolhe o profissional e bloqueá-lo por algo que não controla é decisão de produto; fica como pergunta aberta: a consulta do paciente segue remarcável mesmo com o profissional inativo). Trade-off: a equipe resolve o impasse trocando de profissional ou reativando o cadastro. AGE-RN-20, ACE-RN-53 · 2026-10-17 · active
+
+### AD-041
+- **Decision**: responsável/cuidador do paciente (#329, delegado) como **entidade `Guardian` por empresa**, só de contato, ligada a `patients.guardian_id` (migração `0059`); um por paciente, reutilizável entre pacientes da família. Gerência do Admin e do Atendente; o Profissional vê embutido na ficha. Lembrete usa o e-mail do responsável quando o paciente não tem o próprio (sem portal); o termo imprime nome e parentesco; a retenção apaga o responsável com o último paciente; a exportação do titular o inclui. Trade-off: sem login do cuidador no portal e sem segundo responsável (novo ADR). ADR-024, PRO-RN-21, COM-RN-19, POR-RN-19 · 2026-10-17 · active
 
 ### Baseline de segurança medido em `fcd6110`
 

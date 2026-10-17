@@ -18,8 +18,13 @@
 **Patient** (paciente)
 
 - Individual receiving treatment. Owns records of clinical conditions, appointments, assessments, and photos.
-- Attributes: name, email, phone, birth date, referral source (partner), notes.
+- Attributes: name, email (optional), phone, birth date, referral source (partner), Guardian (optional), notes.
 - Has an **Anamnesis** (medical history): comorbidities, allergies, medications, surgical history.
+
+**Guardian** (responsável ou cuidador)
+
+- Person who answers for one or more Patients of the same Clinic (family member, legal representative or hired caregiver). Contact only: name, relationship (closed list), phone, optional e-mail. No login, no portal access ([ADR-024](./docs/adr/024-responsavel-do-paciente.md)).
+- A Patient has at most one Guardian; a Guardian can serve several Patients. Reminders use the Guardian's e-mail when the Patient has none; the consent form prints the Guardian's name and relationship.
 
 **Professional** (profissional)
 

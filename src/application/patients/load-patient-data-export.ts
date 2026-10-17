@@ -20,6 +20,8 @@ import type {
   ConsentRecord,
   ConsentRecordRepository,
 } from '@/domain/consent/consent-record';
+import type { Guardian } from '@/domain/guardian/guardian';
+import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { Patient } from '@/domain/patient/patient';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
@@ -34,10 +36,13 @@ export interface PatientDataExportRepos {
   invoices: InvoiceRepository;
   consentRecords: ConsentRecordRepository;
   sessionPackages: SessionPackageRepository;
+  guardians: GuardianRepository;
 }
 
 export interface PatientDataExport {
   patient: Patient;
+  /** Responsável ligado ao paciente (#329), quando há. */
+  guardian: Guardian | null;
   anamnesis: Anamnesis | null;
   evolutions: EvolutionNote[];
   conditions: ClinicalCondition[];
@@ -75,8 +80,12 @@ export async function loadPatientDataExport(
     repos.conditionPhotos.findByConditionIds(conditionIds),
     repos.sessionPackages.findByPatientId(id),
   ]);
+  const guardian = patient.guardianId
+    ? await repos.guardians.findById(patient.guardianId)
+    : null;
   return {
     patient,
+    guardian,
     anamnesis,
     evolutions,
     conditions,

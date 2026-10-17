@@ -5,6 +5,7 @@ import { ListPatients } from '@/application/patients/list-patients';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
+import { assertCanManageGuardians } from '@/lib/auth/guardian-access';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import type { PatientDto } from '@/lib/dto';
@@ -31,6 +32,7 @@ const createPatientSchema = z.object({
   birthDate: z.iso.datetime().nullish(),
   notes: z.string().max(5000).nullish(),
   referredByPartnerId: z.string().max(100).nullish(),
+  guardianId: z.string().max(100).nullish(),
 });
 
 export async function GET(request: NextRequest) {
@@ -83,15 +85,26 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = createPatientSchema.parse(await request.json());
-    const { patients, partners, professionalPatientLinks, auditEvents } =
-      await getRepositories(writeScope(guard.session));
-    const patient = await new CreatePatient(patients, partners).execute({
+    if (body.guardianId) assertCanManageGuardians(guard.session);
+    const {
+      patients,
+      partners,
+      guardians,
+      professionalPatientLinks,
+      auditEvents,
+    } = await getRepositories(writeScope(guard.session));
+    const patient = await new CreatePatient(
+      patients,
+      partners,
+      guardians,
+    ).execute({
       fullName: body.fullName,
       email: body.email,
       phone: body.phone,
       birthDate: body.birthDate ? new Date(body.birthDate) : null,
       notes: body.notes ?? null,
       referredByPartnerId: body.referredByPartnerId ?? null,
+      guardianId: body.guardianId ?? null,
     });
     // Profissional que cadastra um paciente ganha acesso imediato a ele,
     // mesmo antes de qualquer agendamento (RBAC-17/18).

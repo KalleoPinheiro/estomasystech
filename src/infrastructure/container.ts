@@ -48,6 +48,7 @@ import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/profes
 import type { ConsentRecordRepository } from '@/domain/consent/consent-record';
 import type { PartnerShareConsentRepository } from '@/domain/consent/partner-share-consent';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
+import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type {
   StockMovementRepository,
   SupplyBatchRepository,
@@ -118,6 +119,7 @@ import {
   DrizzleUserAccountRepository,
 } from './persistence/drizzle/drizzle-foundation-repositories';
 import { DrizzleGoogleAccountRepository } from './persistence/drizzle/drizzle-google-account-repository';
+import { DrizzleGuardianRepository } from './persistence/drizzle/drizzle-guardian-repository';
 import {
   DrizzleFollowUpRepository,
   DrizzleStockMovementRepository,
@@ -163,6 +165,7 @@ export interface Services {
   clinics: ClinicRepository;
   patients: PatientRepository;
   partners: PartnerRepository;
+  guardians: GuardianRepository;
   professionals: ProfessionalRepository;
   procedures: ProcedureRepository;
   procedureKits: ProcedureKitRepository;
@@ -411,6 +414,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     clinics: new DrizzleClinicRepository(db),
     patients: new DrizzlePatientRepository(db, tenant.clinicId, cipher),
     partners: new DrizzlePartnerRepository(db, tenant.clinicId),
+    guardians: new DrizzleGuardianRepository(db, tenant.clinicId),
     professionals: new DrizzleProfessionalRepository(db, tenant.clinicId),
     procedures: new DrizzleProcedureRepository(db, tenant.clinicId),
     procedureKits: new DrizzleProcedureKitRepository(db),

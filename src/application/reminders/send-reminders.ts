@@ -1,6 +1,7 @@
 import type { EmailGateway } from '@/application/ports/email-gateway';
 import type { ClinicStatus } from '@/domain/clinic/clinic';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
+import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import { dueRecallAttempt } from '@/domain/messaging/recall-cadence';
 import {
   firstNameOf,
@@ -13,6 +14,7 @@ import {
   ReminderLog,
   type ReminderLogRepository,
 } from '@/domain/messaging/reminder-log';
+import type { Patient } from '@/domain/patient/patient';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import { startOfZonedDay, zonedParts } from '@/domain/shared/time-zone';
@@ -49,6 +51,7 @@ export interface ClinicReminderServices {
   email: EmailGateway;
   appointments: AppointmentRepository;
   followUps: FollowUpRepository;
+  guardians: GuardianRepository;
   patients: PatientRepository;
   reminderLog: ReminderLogRepository;
 }
@@ -65,7 +68,18 @@ interface PendingReminder {
   referenceId: string;
   patientId: string;
   attempt: number;
-  content: (firstName: string) => ReminderContent;
+  content: (greeting: ReminderGreeting) => ReminderContent;
+}
+
+/** Quem recebe o e-mail e, quando é o responsável, de quem se fala (#329). */
+interface ReminderGreeting {
+  firstName: string;
+  onBehalfOf?: string;
+}
+
+interface ReminderRecipient {
+  email: string;
+  greeting: ReminderGreeting;
 }
 
 /**
@@ -154,15 +168,18 @@ class ClinicReminders {
     };
     for (const reminder of pending) {
       const patient = patientsById.get(reminder.patientId);
-      // Sem e-mail de contato (#325) não há para onde enviar: pula sem erro.
-      if (!patient?.isActive || !patient.email) {
+      const recipient = patient?.isActive
+        ? await this.recipientFor(patient)
+        : null;
+      // Sem e-mail do paciente nem do responsável (#325, #329): pula sem erro.
+      if (!recipient) {
         summary.skipped += 1;
         continue;
       }
-      const content = reminder.content(firstNameOf(patient.fullName));
+      const content = reminder.content(recipient.greeting);
       const outcome = await this.deliver(
         reminder,
-        patient.email,
+        recipient.email,
         content,
         now,
         channel,
@@ -170,6 +187,30 @@ class ClinicReminders {
       summary[outcome] += 1;
     }
     return summary;
+  }
+
+  /**
+   * O e-mail do paciente vale sempre; sem ele, o do responsável ligado a ele
+   * (#329), que recebe o aviso em nome do paciente.
+   */
+  private async recipientFor(
+    patient: Patient,
+  ): Promise<ReminderRecipient | null> {
+    const firstName = firstNameOf(patient.fullName);
+    if (patient.email) {
+      return { email: patient.email, greeting: { firstName } };
+    }
+    const guardian = patient.guardianId
+      ? await this.services.guardians.findById(patient.guardianId)
+      : null;
+    if (!guardian?.email) return null;
+    return {
+      email: guardian.email,
+      greeting: {
+        firstName: firstNameOf(guardian.fullName),
+        onBehalfOf: firstName,
+      },
+    };
   }
 
   private async deliver(
@@ -242,11 +283,11 @@ class ClinicReminders {
         referenceId: appointment.id,
         patientId: appointment.patientId,
         attempt: 1,
-        content: (firstName) =>
+        content: (greeting) =>
           reminderContent('confirmation', {
-            firstName,
+            ...greeting,
             clinicName: this.clinic.name,
-            portalUrl: this.portalUrl,
+            portalUrl: greeting.onBehalfOf ? null : this.portalUrl,
             startsAt: appointment.slot.start,
           }),
       });
@@ -276,11 +317,11 @@ class ClinicReminders {
         referenceId: followUp.id,
         patientId: followUp.patientId,
         attempt,
-        content: (firstName) =>
+        content: (greeting) =>
           reminderContent('recall', {
-            firstName,
+            ...greeting,
             clinicName: this.clinic.name,
-            portalUrl: this.portalUrl,
+            portalUrl: greeting.onBehalfOf ? null : this.portalUrl,
             dueDate: followUp.dueDate,
           }),
       });
