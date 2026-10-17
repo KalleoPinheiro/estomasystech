@@ -951,7 +951,7 @@ Decisões de @KalleoPinheiro de 2026-10-12 sobre as perguntas abertas da #303:
 - **Blockers**: nenhum.
 - **Ordem de deploy**: aplicar a migração 0054 antes de subir o código (o `SELECT` do repositório lê a coluna nova).
 
-## Issue #295 — contas: sem senha pelo PATCH, Minha conta, trava do último admin e reset de 2FA (2026-10-17) — ENCERRADO (#PR)
+## Issue #295 — contas: sem senha pelo PATCH, Minha conta, trava do último admin e reset de 2FA (2026-10-17) — ENCERRADO (#334)
 
 Decisões de @KalleoPinheiro de 2026-10-11 e 2026-10-12 (AD-024) implementadas. Registro: ADR-019, ACE-RN-11/25 reescritas e ACE-RN-52 a 53 novas.
 - **PATCH sem senha:** `PATCH /api/accounts/[id]` aceita só `active` (`strict`): `password` ou campo extra dá `400`. O admin só gera o link de redefinição.
@@ -963,4 +963,4 @@ Decisões de @KalleoPinheiro de 2026-10-11 e 2026-10-12 (AD-024) implementadas. 
 - **Gate:** o GitHub Actions está sem cota, então o gate rodou local sobre a branch: typecheck, lint, check:sv, check:docs, test:coverage, build de produção e Playwright. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Next step:** nenhum. A #250 (QR code no 2º fator do Super Admin) e a #297 já podem entrar.
 - **Blockers**: nenhum.
-- **Branch**: `claude/project-thread-l8wpq4`. PR #PR.
+- **Branch**: `claude/project-thread-l8wpq4`. PR #334.
