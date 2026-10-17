@@ -179,6 +179,11 @@ describe('Feature: Minha conta — segundo fator opcional (#295)', () => {
     expect(bodiesOf(fn, '/api/me/mfa/enroll')).toEqual([
       { currentPassword: 'senha-atual-1' },
     ]);
+    expect(
+      await screen.findByRole('img', {
+        name: 'QR code para cadastrar o app autenticador',
+      }),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Código do autenticador'), {
       target: { value: '123456' },

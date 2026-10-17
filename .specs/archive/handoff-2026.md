@@ -978,3 +978,14 @@ Paciente guarda telefone em E.164 BR (PRO-RN-18, AD-035), validado no domínio e
 - **Next step**: #326 (CPF no recibo) pode seguir; pacientes legados são corrigidos pela recepção na ficha.
 - **Blockers**: nenhum.
 
+
+
+## Issue #250 — QR code no cadastro do 2º fator (2026-10-17) — ENCERRADO
+
+Decisão de @KalleoPinheiro de 2026-10-11 implementada: o QR é gerado no navegador a partir do `otpauthUri`, sem ser gravado nem enviado; a chave em texto e o link continuam como alternativa.
+- **Componente:** `src/components/otpauth-qr.tsx` (`qrcode.toDataURL`, imagem `data:` PNG). Usado no cadastro do `/login` (super_admin, company_admin e recadastro após código de recuperação) e em Minha conta (2º fator opcional, #295). Nenhuma rota nova, nenhuma requisição leva o segredo; a CSP já permitia `img-src data:`. Se a geração falhar, nada aparece e a chave/link seguem valendo.
+- **Dependência:** `qrcode` 1.5.4 (aprovada na issue) e `@types/qrcode` em dev.
+- **Docs:** ACE-RN-19 deixa de dizer "sem QR"; nota no ADR-008. Sem regra nem ADR novos.
+- **Testes:** componente (o QR é gerado com exatamente o link recebido; falha silenciosa; muda o link, muda o QR), login e Minha conta.
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Next step:** nenhum. **Blockers:** nenhum.
