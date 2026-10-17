@@ -113,6 +113,13 @@ describe('Feature: Link wa.me', () => {
 
   it('Dado número já internacional, Quando normalizar, Então mantém', () => {
     expect(normalizeBrazilianPhone('+55 11 99999-0000')).toBe('5511999990000');
+    expect(normalizeBrazilianPhone('5511999990000')).toBe('5511999990000');
+  });
+
+  it('Dado número nacional ou curto, Quando normalizar, Então prefixa 55', () => {
+    expect(normalizeBrazilianPhone('11999990000')).toBe('5511999990000');
+    expect(normalizeBrazilianPhone('5599')).toBe('555599');
+    expect(normalizeBrazilianPhone('(11) 99999-0000')).toBe('5511999990000');
   });
 });
 

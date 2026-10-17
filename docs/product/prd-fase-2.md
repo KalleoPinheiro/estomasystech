@@ -165,7 +165,7 @@ A Fase 2 fecha essas lacunas e adiciona a fundação de compliance (auditoria) e
 
 **Problema:** confirmação (F2) e recall dependem de o paciente entrar no portal. Canal ativo reduz no-show e retorno perdido.
 
-**Solução:** port `MessagingGateway` com dois adapters — Meta WhatsApp Cloud API (configurado por env) e Null (default, desativado). Job de lembretes disparável por endpoint protegido (cron externo).
+**Solução (histórico — gateway removido na #328, RM-14 planejado):** port `MessagingGateway` com dois adapters — Meta WhatsApp Cloud API (configurado por env) e Null (default, desativado). Job de lembretes disparável por endpoint protegido (cron externo).
 
 **Escopo:**
 - Port em `application/ports/messaging-gateway.ts`; adapter Meta Cloud API (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, templates aprovados) e `NullMessagingGateway`.

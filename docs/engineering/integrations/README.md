@@ -17,7 +17,7 @@ Todo serviço externo entra por uma **porta** em `src/application/ports/` e um *
 | --- | --- | --- | --- | --- |
 | Resend (e-mail) | saída | não — chave por clínica + chave opcional da plataforma ([ADR-011](../../adr/011-canal-de-comunicacao-por-clinica.md)) | clínica sem canal não envia; dev: loga o link | [resend.md](resend.md) |
 | Google Calendar (OAuth ou service account) | saída | não | agenda funciona sem sync | [google-calendar.md](google-calendar.md) |
-| Meta WhatsApp Cloud API | saída | não | job de lembretes em dry-run | [whatsapp-meta.md](whatsapp-meta.md) |
+| Meta WhatsApp Cloud API | **planejada (RM-14, Later); código removido (#328)** | — | o WhatsApp de hoje é o botão `wa.me`, sem credencial | [whatsapp-meta.md](whatsapp-meta.md) |
 | S3 / R2 / MinIO (fotos) | saída | não | fotos em disco local | [s3-storage.md](s3-storage.md) |
 | Cron externo → `POST /api/reminders/run` | **entrada** | não | rota responde 503 | [cron.md](cron.md) |
 | Cron externo → `POST /api/retention/run` | **entrada** | sim em produção (LGPD) | rota responde 503 | [retencao.md](retencao.md) |

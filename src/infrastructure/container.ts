@@ -10,10 +10,6 @@ import {
   NullEmailGateway,
 } from '@/application/ports/email-gateway';
 import type { JobRunRepository } from '@/application/ports/job-run-repository';
-import {
-  type MessagingGateway,
-  NullMessagingGateway,
-} from '@/application/ports/messaging-gateway';
 import type { PhotoStorage } from '@/application/ports/photo-storage';
 import type { TransactionManager } from '@/application/ports/transaction-manager';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
@@ -82,10 +78,6 @@ import {
   EMAIL_PROVIDER_GATEWAYS,
   platformEmailGateway,
 } from './email/resend-email-gateway';
-import {
-  MetaWhatsAppGateway,
-  metaWhatsAppConfigFromEnv,
-} from './messaging/meta-whatsapp-gateway';
 import type { AppDb } from './persistence/drizzle/db';
 import { getDb } from './persistence/drizzle/db';
 import { DrizzleAppointmentRepository } from './persistence/drizzle/drizzle-appointment-repository';
@@ -213,7 +205,6 @@ export interface Services {
   /** Última execução dos jobs agendados (#212); de plataforma, sem empresa. */
   jobRuns: JobRunRepository;
   calendar: CalendarGateway;
-  messaging: MessagingGateway;
   /** Canal da clínica do escopo (ADR-011); lança no escopo de sistema. */
   clinicChannels: ClinicChannelRepository;
   /** E-mail do escopo: canal da clínica, ou o da plataforma sem clínica. */
@@ -391,11 +382,6 @@ export function buildPhotoStorage(clinicId: string): PhotoStorage {
   );
 }
 
-function buildMessagingGateway(): MessagingGateway {
-  const config = metaWhatsAppConfigFromEnv();
-  return config ? new MetaWhatsAppGateway(config) : new NullMessagingGateway();
-}
-
 /**
  * O escopo vem só das fábricas de `@/lib/auth/tenant-scope` (sessionScope,
  * writeScope, clinicScope, systemScope) — objeto literal não compila.
@@ -502,7 +488,6 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     retention: new DrizzleRetentionRepository(db, tenant.clinicId),
     jobRuns: new DrizzleJobRunRepository(db),
     calendar: calendarGatewayFor(db, tenant.clinicId),
-    messaging: buildMessagingGateway(),
     clinicChannels,
     email: emailGatewayFor(clinicChannels, tenant.clinicId),
     transactions: new DrizzleTransactionManager(db, tenant.clinicId, cipher),

@@ -4,7 +4,8 @@
   (cadência) e 3 (por empresa) cobertas pelo canal e-mail em
   [`.tasks/lembretes-custo-zero.md`](../../../.tasks/lembretes-custo-zero.md) (RM-19)
 - **Origem:** análise de negócio/arquitetura de 2026-09-22 (achados N1, N2, N3)
-- **Arquivos centrais:** `src/application/reminders/send-reminders.ts`,
+- **Nota (#328, 2026-10-17):** `meta-whatsapp-gateway.ts` e `messaging-gateway.ts` foram removidos por não terem consumidor; a Entrega 1 (RM-14) recria a porta e o adapter quando for priorizada. Referência em [`whatsapp-meta.md`](../../../docs/engineering/integrations/whatsapp-meta.md).
+- **Arquivos centrais (estado anterior à #328):** `src/application/reminders/send-reminders.ts`,
   `src/infrastructure/messaging/meta-whatsapp-gateway.ts`,
   `src/application/ports/messaging-gateway.ts`, `src/domain/messaging/reminder-log.ts`,
   `src/app/api/reminders/run/route.ts`

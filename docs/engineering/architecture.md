@@ -20,7 +20,7 @@ related:
 ```text
 src/
 ├── domain/          entidades, value objects, regras, contratos de repositório (sem I/O)
-├── application/     casos de uso (um por arquivo) + ports/ (e-mail, agenda, mensageria, fotos, transação)
+├── application/     casos de uso (um por arquivo) + ports/ (e-mail, agenda, fotos, transação)
 ├── infrastructure/  repositórios Drizzle e in-memory, gateways externos, container.ts (composição)
 ├── app/             páginas (staff em (staff)/, portal/, documentos/) e api/ (route handlers)
 ├── components/      UI sobre @still-void/ui

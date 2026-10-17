@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { NullCalendarGateway } from '@/application/ports/calendar-gateway';
-import { NullMessagingGateway } from '@/application/ports/messaging-gateway';
 import {
   NoTransactionManager,
   type TransactionScope,
@@ -15,31 +14,6 @@ describe('Feature: Gateways nulos (integrações desativadas)', () => {
     await expect(gateway.deleteEvent()).resolves.toBeUndefined();
     await expect(gateway.rewriteEvent()).resolves.toBeUndefined();
     await expect(gateway.purgeEvent()).resolves.toBeUndefined();
-  });
-
-  it('Dado NullMessagingGateway, Quando enabled, Então false e sendText não lança', async () => {
-    const gateway = new NullMessagingGateway();
-
-    expect(gateway.enabled).toBe(false);
-    await expect(
-      gateway.sendText('11999999999', 'oi'),
-    ).resolves.toBeUndefined();
-  });
-
-  it('Dado NullMessagingGateway, Quando sendText, Então loga telefone mascarado e nunca o corpo (CWE-532)', async () => {
-    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const body = 'Olá, Maria Silva! Sua consulta é em 10/10 às 14:00.';
-
-    await new NullMessagingGateway().sendText('+5511999997777', body);
-
-    expect(info).toHaveBeenCalledTimes(1);
-    const logged = String(info.mock.calls[0][0]);
-    expect(JSON.parse(logged).msg).toBe(
-      `[mensageria desativada] WhatsApp para +55******7777 (${body.length} caracteres)`,
-    );
-    expect(logged).not.toContain('5511999997777');
-    expect(logged).not.toContain('Maria');
-    info.mockRestore();
   });
 });
 

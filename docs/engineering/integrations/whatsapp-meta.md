@@ -1,57 +1,53 @@
 ---
-title: "Integração: WhatsApp (Meta Cloud API)"
+title: "Integração: WhatsApp (Meta Cloud API) — planejada"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-17
 ---
 
-# WhatsApp (Meta Cloud API)
+# WhatsApp (Meta Cloud API) — planejada, sem código
 
 ## Propósito
 
-**Fora do job de lembretes.** O cron envia por [e-mail](resend.md); o WhatsApp chega ao paciente
-pelo botão **Enviar WhatsApp** da recepção (`wa.me`, sem API nem credencial —
-[comunicação](../../domains/comunicacao/README.md)). O gateway da Meta segue no código para o
-RM-14 (templates *utility*, opt-in por clínica, em Later), que custa por mensagem entregue.
+**Não há código nem variável de ambiente desta integração.** O gateway da Meta
+(`MetaWhatsAppGateway`), a porta `MessagingGateway` e as variáveis `WHATSAPP_TOKEN` e
+`WHATSAPP_PHONE_NUMBER_ID` foram removidos na #328: nenhum caso de uso os consumia e o container
+montava um gateway a cada requisição sem necessidade. Remover custou menos que manter; religar
+quando o RM-14 for priorizado é aditivo.
+
+O cron envia por [e-mail](resend.md); o WhatsApp chega ao paciente pelo botão **Enviar WhatsApp**
+da recepção (`wa.me`, sem API nem credencial — [comunicação](../../domains/comunicacao/README.md)).
 
 | Campo | Valor |
 | --- | --- |
-| Direção | saída |
-| Obrigatória? | não — nenhum fluxo usa hoje |
-| Gateway | `src/infrastructure/messaging/meta-whatsapp-gateway.ts` |
-| Porta | `src/application/ports/messaging-gateway.ts` (`NullMessagingGateway` = dry-run) |
+| Status | planejada — RM-14 (*Later*), em [`docs/plano-evolucao-faseado.md`](../../plano-evolucao-faseado.md) |
+| Especificação | [`.specs/features/lembretes-whatsapp-templates-cadencia/`](../../../.specs/features/lembretes-whatsapp-templates-cadencia/spec.md) |
+| Obrigatória? | não |
 | Doc oficial | https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages |
 
 ## Credenciais
 
-| Credencial | Obrigatória | Onde obter |
-| --- | --- | --- |
-| `WHATSAPP_TOKEN` | para enviar | Business Manager → WhatsApp → API Setup (token permanente de system user em produção) |
-| `WHATSAPP_PHONE_NUMBER_ID` | para enviar | mesma tela, id do número remetente |
+Nenhuma hoje. No RM-14 serão **por clínica** (token de system user e id do número remetente),
+nunca variáveis globais de ambiente.
 
 ## Contrato
 
-```http
-POST https://graph.facebook.com/v20.0/$WHATSAPP_PHONE_NUMBER_ID/messages
-Authorization: Bearer $WHATSAPP_TOKEN
-Content-Type: application/json
+Referência para quem religar o RM-14:
 
-{ "messaging_product": "whatsapp", "to": "55DDDNUMERO", "type": "text", "text": { "body": "…" } }
-```
-
-- Telefone normalizado para E.164 Brasil (`55` + DDD + número) quando vier no formato nacional
-  (`normalizeBrazilianPhone`, em `src/domain/messaging/whatsapp-link.ts`, também usado no `wa.me`).
-- Timeout de 10 s; status fora de `2xx` lança erro.
-- **Limitação da Meta:** mensagem de texto livre só chega dentro da janela de 24 h de conversa;
-  fora dela a Meta exige template aprovado — hoje o gateway envia só texto.
+- Templates *utility* aprovados pela Meta, opt-in por clínica, com custo por mensagem entregue.
+- `POST https://graph.facebook.com/<versão>/<phone-number-id>/messages` com `Authorization: Bearer`,
+  timeout curto e erro em status fora de `2xx`.
+- Telefone em E.164 Brasil: reaproveitar `normalizeBrazilianPhone`
+  (`src/domain/messaging/whatsapp-link.ts`, já usado pelo `wa.me`).
+- **Limitação da Meta:** texto livre só chega dentro da janela de 24 h de conversa; fora dela,
+  só template aprovado.
 
 ## Modos de falha
 
-Sem uso no job, os modos de falha só voltam a valer com o RM-14: sem credenciais o gateway nulo
-loga só `[mensageria desativada] WhatsApp para +55******7777 (N caracteres)` — telefone
-mascarado, nunca o corpo (CWE-532); falha de API lança.
+Sem código, não há modo de falha hoje. Ao religar: dry-run sem credencial deve logar só metadados
+(telefone mascarado, nunca o corpo — CWE-532) e falha de API deve lançar.
 
 ## Teste local
 
-Nada a testar enquanto o RM-14 não religar o canal; o `wa.me` não precisa de credencial.
+Nada a testar: o `wa.me` não precisa de credencial e o RM-14 ainda não tem implementação.
