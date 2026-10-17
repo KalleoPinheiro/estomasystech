@@ -117,6 +117,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         appointments,
         services.scheduleConfig,
         services.scheduleAvailability,
+        services.professionals,
       ).execute({
         id,
         startsAt: new Date(body.startsAt),
