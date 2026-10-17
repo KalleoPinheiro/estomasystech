@@ -26,6 +26,7 @@ const patient = (guardian: GuardianDto | null): PatientDto => ({
   id: 'pat-1',
   fullName: 'José Silva',
   email: null,
+  cpfMasked: null,
   phone: '+5511988880000',
   phoneNeedsCorrection: false,
   birthDate: null,
