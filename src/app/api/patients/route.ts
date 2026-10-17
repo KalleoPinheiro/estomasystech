@@ -26,7 +26,7 @@ function nextPatientCursor(page: PatientDto[], limit: number): string | null {
 
 const createPatientSchema = z.object({
   fullName: z.string().min(1).max(200),
-  email: z.string().min(1).max(200),
+  email: z.string().max(200).nullish(),
   phone: z.string().min(1).max(50),
   birthDate: z.iso.datetime().nullish(),
   notes: z.string().max(5000).nullish(),

@@ -47,7 +47,7 @@ export async function linkAllPortalAccounts(): Promise<void> {
     INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, patient_id, active, created_at)
     SELECT gen_random_uuid()::text, p.clinic_id, lower(p.email), ${UNSET_PASSWORD_HASH}, 'patient', p.id, true, now()
     FROM patients p
-    WHERE NOT EXISTS (
+    WHERE p.email IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM user_accounts ua
       WHERE ua.clinic_id = p.clinic_id AND ua.email = lower(p.email)
     )`);

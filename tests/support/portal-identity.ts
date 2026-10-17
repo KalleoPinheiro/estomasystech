@@ -10,7 +10,8 @@ export const portalPatientId = async (
   patients: PatientRepository,
   email: string,
 ): Promise<string> =>
-  (await patients.findByEmail(email))?.id ?? `sem-cadastro:${email}`;
+  (await patients.findAll(email)).find((p) => p.email === email)?.id ??
+  `sem-cadastro:${email}`;
 
 export const portalPartnerId = async (
   partners: PartnerRepository,

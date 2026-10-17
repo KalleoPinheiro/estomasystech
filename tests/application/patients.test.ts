@@ -29,16 +29,32 @@ describe('Feature: Gestão de pacientes', () => {
       expect(stored?.fullName).toBe('Maria da Silva');
     });
 
-    it('Dado email já cadastrado, Quando cadastrar, Então lança ValidationError', async () => {
-      await createMaria();
+    it('Dado mesmo e-mail de um familiar, Quando cadastrar, Então aceita os dois (#325)', async () => {
+      const first = await createMaria();
 
-      await expect(
-        new CreatePatient(repo).execute({
-          fullName: 'Outra Maria',
-          email: 'MARIA@example.com',
-          phone: '11988880000',
-        }),
-      ).rejects.toThrow(ValidationError);
+      const second = await new CreatePatient(repo).execute({
+        fullName: 'Filho da Maria',
+        email: 'MARIA@example.com',
+        phone: '11988880000',
+      });
+
+      expect(second.id).not.toBe(first.id);
+      expect(second.email).toBe('maria@example.com');
+    });
+
+    it('Dado cadastro sem e-mail ou com e-mail em branco, Quando cadastrar, Então guarda null (#325)', async () => {
+      const without = await new CreatePatient(repo).execute({
+        fullName: 'Sem Email',
+        phone: '11988880000',
+      });
+      const blank = await new CreatePatient(repo).execute({
+        fullName: 'Email Branco',
+        email: '   ',
+        phone: '11988880001',
+      });
+
+      expect(without.email).toBeNull();
+      expect(blank.email).toBeNull();
     });
   });
 
@@ -53,6 +69,36 @@ describe('Feature: Gestão de pacientes', () => {
 
       const stored = await repo.findById(patient.id);
       expect(stored?.phone).toBe('+5511977770000');
+    });
+
+    it('Dado e-mail removido ou omitido, Quando atualizar, Então null limpa e omitir mantém (#325)', async () => {
+      const patient = await createMaria();
+
+      await new UpdatePatient(repo).execute({
+        id: patient.id,
+        phone: '11977770000',
+      });
+      expect((await repo.findById(patient.id))?.email).toBe(
+        'maria@example.com',
+      );
+
+      await new UpdatePatient(repo).execute({ id: patient.id, email: null });
+      expect((await repo.findById(patient.id))?.email).toBeNull();
+    });
+
+    it('Dado e-mail já usado por outro paciente, Quando atualizar, Então aceita (#325)', async () => {
+      await createMaria();
+      const other = await new CreatePatient(repo).execute({
+        fullName: 'João Souza',
+        phone: '11966660000',
+      });
+
+      const updated = await new UpdatePatient(repo).execute({
+        id: other.id,
+        email: 'maria@example.com',
+      });
+
+      expect(updated.email).toBe('maria@example.com');
     });
 
     it('Dado id inexistente, Quando atualizar, Então lança NotFoundError', async () => {

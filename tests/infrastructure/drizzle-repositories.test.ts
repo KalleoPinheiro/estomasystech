@@ -97,6 +97,29 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
   };
 
   describe('Cenário: paciente ida e volta (roundtrip)', () => {
+    it('Dado pacientes sem e-mail ou com o mesmo e-mail na empresa, Quando salvar, Então persiste e volta null (#325)', async () => {
+      const semEmail = Patient.create({
+        fullName: 'Sem Email',
+        phone: '11999990001',
+      });
+      const mae = Patient.create({
+        fullName: 'Mãe',
+        email: 'cuidador@example.com',
+        phone: '11999990002',
+      });
+      const filho = Patient.create({
+        fullName: 'Filho',
+        email: 'cuidador@example.com',
+        phone: '11999990003',
+      });
+      await patientRepo.save(semEmail);
+      await patientRepo.save(mae);
+      await patientRepo.save(filho);
+
+      expect((await patientRepo.findById(semEmail.id))?.email).toBeNull();
+      expect(await patientRepo.findAll('cuidador@')).toHaveLength(2);
+    });
+
     it('Dado paciente salvo, Quando buscar por id, Então todos os campos preservados', async () => {
       const patient = await savedPatient();
 
@@ -124,7 +147,7 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
     it('Dado busca por email e por termo, Quando consultar, Então encontra', async () => {
       await savedPatient();
 
-      expect(await patientRepo.findByEmail('maria@example.com')).not.toBeNull();
+      expect(await patientRepo.findAll('maria@example.com')).toHaveLength(1);
       expect(await patientRepo.findAll('mari')).toHaveLength(1);
       // Busca por telefone digitado com máscara acha o E.164 guardado (#324).
       expect(await patientRepo.findAll('(11) 99999')).toHaveLength(1);

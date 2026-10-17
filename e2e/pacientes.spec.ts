@@ -8,7 +8,7 @@ test.describe("pacientes", () => {
     await page.goto("/pacientes");
     await page.getByRole("button", { name: "+ Novo paciente" }).click();
     await page.getByLabel("Nome completo *").fill(name);
-    await page.getByLabel("Email *").fill(`${unique()}@e2e.vittaflow.test`);
+    await page.getByLabel("Email (opcional)").fill(`${unique()}@e2e.vittaflow.test`);
     await page.getByLabel("Telefone *").fill("11977776666");
     await page.getByRole("button", { name: "Salvar" }).click();
 
@@ -16,12 +16,28 @@ test.describe("pacientes", () => {
     await expect(page.getByRole("cell", { name })).toBeVisible();
   });
 
+  test("cria um paciente sem e-mail, e outro com o mesmo e-mail de contato (#325)", async ({ page }) => {
+    const shared = `${unique()}@e2e.vittaflow.test`;
+    const names = [`Sem Email UI ${unique()}`, `Familiar A UI ${unique()}`, `Familiar B UI ${unique()}`];
+    await page.goto("/pacientes");
+    for (const [index, name] of names.entries()) {
+      await page.getByRole("button", { name: "+ Novo paciente" }).click();
+      await page.getByLabel("Nome completo *").fill(name);
+      if (index > 0) {
+        await page.getByLabel("Email (opcional)").fill(shared);
+      }
+      await page.getByLabel("Telefone *").fill("11977776666");
+      await page.getByRole("button", { name: "Salvar" }).click();
+      await expect(page.getByRole("cell", { name })).toBeVisible();
+    }
+  });
+
   test("telefone sem DDD é recusado com motivo e com máscara é guardado formatado", async ({ page }) => {
     const name = `Paciente Telefone UI ${unique()}`;
     await page.goto("/pacientes");
     await page.getByRole("button", { name: "+ Novo paciente" }).click();
     await page.getByLabel("Nome completo *").fill(name);
-    await page.getByLabel("Email *").fill(`${unique()}@e2e.vittaflow.test`);
+    await page.getByLabel("Email (opcional)").fill(`${unique()}@e2e.vittaflow.test`);
     await page.getByLabel("Telefone *").fill("99999-0000");
     await page.getByRole("button", { name: "Salvar" }).click();
     await expect(page.getByText("Informe o DDD junto com o número")).toBeVisible();

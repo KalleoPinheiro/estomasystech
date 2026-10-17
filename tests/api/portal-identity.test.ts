@@ -109,6 +109,59 @@ describe('Feature: Portal resolve o titular pelo vínculo da conta (#196)', () =
     expect(JSON.stringify(body.data)).not.toContain('Bruna Outra Pessoa');
   });
 
+  it('contact email shared by relatives (#325): dois pacientes com o mesmo e-mail de contato não enxergam os dados um do outro', async () => {
+    await ensureTestClinics();
+    const caregiver = unique('cuidador');
+    const mother = await createPatient(caregiver, 'Marta Mãe');
+    const son = await createPatient(caregiver, 'Davi Filho');
+    expect(mother).not.toBe(son);
+    const motherLogin = unique('marta-login');
+    const sonLogin = unique('davi-login');
+    await createPortalAccount({
+      email: motherLogin,
+      role: 'patient',
+      patientId: mother,
+    });
+    await createPortalAccount({
+      email: sonLogin,
+      role: 'patient',
+      patientId: son,
+    });
+
+    const asMother = await patientPortal(motherLogin);
+    const asSon = await patientPortal(sonLogin);
+    expect(asMother.body.data.patient.id).toBe(mother);
+    expect(asSon.body.data.patient.id).toBe(son);
+    expect(JSON.stringify(asMother.body.data)).not.toContain('Davi Filho');
+    expect(JSON.stringify(asSon.body.data)).not.toContain('Marta Mãe');
+    // O e-mail de contato compartilhado não abre o portal de ninguém.
+    expect((await patientPortal(caregiver)).status).toBe(404);
+  });
+
+  it('patient without contact email (#325): cadastro sem e-mail abre o portal pela conta vinculada', async () => {
+    await ensureTestClinics();
+    const route = await import('@/app/api/patients/route');
+    const created = await route.POST(
+      jsonRequest('/api/patients', 'POST', {
+        fullName: 'Paciente Sem Email',
+        phone: '11911112222',
+      }),
+    );
+    expect(created.status).toBe(200);
+    const patientId = ((await created.json()) as Envelope<{ id: string }>).data
+      .id;
+    const loginEmail = unique('sem-email-login');
+    await createPortalAccount({
+      email: loginEmail,
+      role: 'patient',
+      patientId,
+    });
+
+    const { status, body } = await patientPortal(loginEmail);
+    expect(status).toBe(200);
+    expect(body.data.patient.id).toBe(patientId);
+  });
+
   it('email correction keeps access: corrigir o e-mail do cadastro não tira o acesso da conta', async () => {
     await ensureTestClinics();
     const loginEmail = unique('corrige');

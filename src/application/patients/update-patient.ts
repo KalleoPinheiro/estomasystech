@@ -1,13 +1,14 @@
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { Patient } from '@/domain/patient/patient';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
-import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import { NotFoundError } from '@/domain/shared/errors';
 import { assertValidReferrer } from './assert-valid-referrer';
 
 export interface UpdatePatientInput {
   id: string;
   fullName?: string;
-  email?: string;
+  /** `undefined` mantém; `null` ou vazio remove o e-mail de contato (#325). */
+  email?: string | null;
   phone?: string;
   birthDate?: Date | null;
   notes?: string | null;
@@ -24,14 +25,6 @@ export class UpdatePatient {
     const patient = await this.patients.findById(input.id);
     if (!patient) {
       throw new NotFoundError('Paciente', input.id);
-    }
-    if (input.email) {
-      const byEmail = await this.patients.findByEmail(input.email);
-      if (byEmail && byEmail.id !== patient.id) {
-        throw new ValidationError(
-          `Já existe paciente com o email ${input.email}`,
-        );
-      }
     }
     await assertValidReferrer(this.partners, input.referredByPartnerId);
     const updated = patient.update(input);

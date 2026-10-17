@@ -66,21 +66,6 @@ export class DrizzlePatientRepository implements PatientRepository {
     return rows[0] ? toPatient(rows[0], this.cipher) : null;
   }
 
-  async findByEmail(email: string): Promise<Patient | null> {
-    const rows = await this.db
-      .select()
-      .from(patients)
-      .where(
-        withTenant(
-          patients,
-          this.clinicId,
-          eq(patients.email, email.trim().toLowerCase()),
-        ),
-      )
-      .limit(1);
-    return rows[0] ? toPatient(rows[0], this.cipher) : null;
-  }
-
   async findByIds(ids: string[]): Promise<Patient[]> {
     const unique = [...new Set(ids)];
     if (unique.length === 0) {
@@ -100,14 +85,6 @@ export class DrizzlePatientRepository implements PatientRepository {
       .where(eq(patients.id, id))
       .limit(1);
     return rows[0]?.clinicId ?? null;
-  }
-
-  async countByEmail(email: string): Promise<number> {
-    const rows = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(patients)
-      .where(eq(patients.email, email.trim().toLowerCase()));
-    return rows[0]?.count ?? 0;
   }
 
   async findByReferrer(partnerId: string): Promise<Patient[]> {

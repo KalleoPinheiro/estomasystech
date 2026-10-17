@@ -13,7 +13,7 @@ import { toPatientDto } from '@/lib/dto';
 
 const updatePatientSchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
-  email: z.string().min(1).max(200).optional(),
+  email: z.string().max(200).nullish(),
   phone: z.string().min(1).max(50).optional(),
   birthDate: z.iso.datetime().nullish(),
   notes: z.string().max(5000).nullish(),

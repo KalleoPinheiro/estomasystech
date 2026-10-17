@@ -160,10 +160,7 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-021
 - **Decision**: `eslint.config.mjs` usa `**/` na frente de todo padrão de `globalIgnores` (`**/.next/**`, `**/.next-open-mode/**`, etc.) e ignora `.claude/worktrees/**` explicitamente.
 - **Reason**: sem `**/`, o glob só bate na raiz do projeto. Checkouts de worktree aninhados em `.claude/worktrees/*/` (usados por sessões de agente em paralelo, ver `docs/agents/*`) escapavam do ignore, e o build Turbopack deles inundava `npx eslint .` com milhares de "erros" em bundles compilados do Next/React — isso, não um bug do ESLint ou de `npm run lint`, era a causa do ruído investigado nas issues #48/#49. `npm run lint`/`npx eslint .` sempre propagaram o exit code real; a suspeita registrada em AD anterior (ver handoff de `autenticacao-nativa`, linha ~171) de que um "wrapper `rtk`" mascarava o exit code não reproduziu nesta sessão — não teve como confirmar a causa raiz daquela observação, mas o sintoma descrito (`npm run lint` "sempre" exit 0 mesmo com erro) não bate com o comportamento atual, testado com erro proposital introduzido e revertido.
-- **Trade-off**: nenhum — só corrige o glob para o comportamento que o comentário original já pretendia.
-- **Scope**: eslint.config.mjs
-- **Date**: 2026-09-02
-- **Status**: active
+- **Trade-off / Scope / Date / Status**: nenhum — só corrige o glob para o comportamento que o comentário original já pretendia · eslint.config.mjs · 2026-09-02 · active
 
 ### AD-024
 - **Decision**: Gestão de conta existente (`PATCH /api/accounts/[id]`, `POST /api/accounts/[id]/resend-invite`) usa a matriz `canProvision` do cadastro; negação → `403` (`ProvisioningDeniedError`, mesmo status do `POST`); `GET /api/accounts` lista só as contas que o papel pode gerir; desativar a própria conta ou o último `company_admin` ativo → `400`; senha/ativação/reenvio auditados write-ahead (`recordAuditNow` antes do `save`). Issue #184.
@@ -223,6 +220,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 
 ### AD-037
 - **Decision**: reescrita em lote dos eventos antigos do Google Agenda (#339) por **script manual** (`npm run calendar:minimize`), sem endpoint nem job no deploy (zero superfície de autenticação nova). Cobre **todas** as consultas com evento, não só as futuras: o critério da issue é nenhum evento com dado de saúde, e o passado também fica em calendário de terceiro; ordem do mais futuro ao mais antigo e teto de 500 por empresa por execução tratam volume e cota. Só `patch`, nunca `delete`; idempotência por `appointments.calendar_minimized_at` (migração `0056`), gravada só após o sucesso. Trade-off: a empresa precisa rodar o comando (`producao.md` § 7.2); o histórico de revisões do evento no Google não é alterável pela API. AGE-RN-19 · 2026-10-17 · active
+
+### AD-038
+- **Decision**: e-mail de contato do paciente **opcional e repetível** na empresa (#325, delegado, opção mais segura); o portal segue sem identificá-lo por ele (POR-RN-08) e o login é a conta de e-mail único criada por convite. Migração `0057` solta `NOT NULL` e o índice único, sem alterar dados; `findByEmail`/`countByEmail` saem do repositório de pacientes; lembrete sem e-mail é pulado. Trade-off: sem e-mail não há lembrete por e-mail (WhatsApp segue); reverter exige sanear duplicados. ADR-023, PRO-RN-20, POR-RN-18, COM-RN-18 · 2026-10-17 · active
 
 ### Baseline de segurança medido em `fcd6110`
 

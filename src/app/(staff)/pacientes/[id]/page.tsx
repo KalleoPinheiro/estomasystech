@@ -141,7 +141,7 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
             phone={patient.phone}
             needsCorrection={patient.phoneNeedsCorrection}
           />{' '}
-          · {patient.email}
+          {patient.email ? ` · ${patient.email}` : ''}
           {patient.birthDate ? ` · nasc. ${formatDate(patient.birthDate)}` : ''}
         </span>
       }

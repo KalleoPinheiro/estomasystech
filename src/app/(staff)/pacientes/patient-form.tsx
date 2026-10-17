@@ -34,7 +34,7 @@ const toFormValues = (initial?: PatientDto): PatientFormValues => {
   }
   return {
     fullName: initial.fullName,
-    email: initial.email,
+    email: initial.email ?? '',
     phone: initial.phone,
     birthDate: initial.birthDate ? initial.birthDate.slice(0, 10) : '',
     notes: initial.notes ?? '',
@@ -84,9 +84,8 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
         />
       </label>
       <label className="font-medium text-sm">
-        Email *
+        Email (opcional)
         <Input
-          required
           type="email"
           value={values.email}
           onChange={(e) => set('email')(e.target.value)}

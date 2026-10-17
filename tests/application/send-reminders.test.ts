@@ -241,6 +241,22 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
       expect(email.sent).toHaveLength(0);
     });
 
+    it('Dado paciente sem e-mail de contato (#325), Quando rodar, Então pula sem enviar nem registrar log', async () => {
+      const semEmail = await new CreatePatient(clinic.patients).execute({
+        fullName: 'Paciente Sem Email',
+        phone: '11988880000',
+      });
+      await scheduleAt(new Date('2026-07-17T09:30:00Z'), semEmail.id);
+      await scheduleTomorrow();
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(1);
+      expect(summary.skipped).toBe(1);
+      expect(summary.failed).toBe(0);
+      expect(email.sent.map((m) => m.to)).toEqual(['maria@example.com']);
+    });
+
     it('Dado consulta órfã (paciente removido), Quando rodar, Então pula sem enviar', async () => {
       await scheduleAt(new Date('2026-07-17T09:00:00Z'), 'paciente-removido');
 

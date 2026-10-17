@@ -3,7 +3,8 @@ import type { Patient } from '@/domain/patient/patient';
 export interface PatientDto {
   id: string;
   fullName: string;
-  email: string;
+  /** Contato opcional (#325); `null` quando não informado. */
+  email: string | null;
   phone: string;
   /** Telefone legado fora do E.164 BR: a tela pede correção (#324). */
   phoneNeedsCorrection: boolean;
@@ -38,7 +39,7 @@ export const toPatientDto = (patient: Patient): PatientDto => ({
 export interface PortalPatientProfileDto {
   id: string;
   fullName: string;
-  email: string;
+  email: string | null;
   phone: string;
 }
 

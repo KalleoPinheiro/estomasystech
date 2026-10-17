@@ -123,6 +123,14 @@ describe('Feature: Cadastro de paciente', () => {
       ).toThrow(ValidationError);
     });
 
+    it('Dado cadastro sem e-mail, Quando criar, Então email é null (#325)', () => {
+      const { email: _email, ...withoutEmail } = validProps;
+
+      expect(Patient.create(withoutEmail).email).toBeNull();
+      expect(Patient.create({ ...withoutEmail, email: null }).email).toBeNull();
+      expect(Patient.create({ ...withoutEmail, email: '  ' }).email).toBeNull();
+    });
+
     it('Dado telefone vazio, Quando criar, Então lança ValidationError', () => {
       expect(() => Patient.create({ ...validProps, phone: '' })).toThrow(
         ValidationError,
@@ -139,6 +147,15 @@ describe('Feature: Cadastro de paciente', () => {
       expect(updated.fullName).toBe('Maria Oliveira');
       expect(updated.id).toBe(patient.id);
       expect(patient.fullName).toBe('Maria da Silva');
+    });
+
+    it('Dado paciente com e-mail, Quando atualizar com null, Então remove; sem o campo, mantém (#325)', () => {
+      const patient = Patient.create(validProps);
+
+      expect(patient.update({ fullName: 'Maria Oliveira' }).email).toBe(
+        'maria@example.com',
+      );
+      expect(patient.update({ email: null }).email).toBeNull();
     });
 
     it('Dado atualização inválida, Quando atualizar, Então lança ValidationError', () => {

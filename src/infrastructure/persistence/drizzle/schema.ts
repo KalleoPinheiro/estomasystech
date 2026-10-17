@@ -332,7 +332,9 @@ export const patients = pgTable(
       .notNull()
       .references(() => clinics.id),
     fullName: text('full_name').notNull(),
-    email: text('email').notNull(),
+    // Contato opcional e repetível entre pacientes (#325); nunca identifica o
+    // titular no portal (ADR-023).
+    email: text('email'),
     phone: text('phone').notNull(),
     birthDate: timestamp('birth_date', { withTimezone: true, mode: 'date' }),
     notes: text('notes'),
@@ -368,8 +370,6 @@ export const patients = pgTable(
       table.phone.op('gin_trgm_ops'),
     ),
     index('idx_patients_clinic').on(table.clinicId),
-    // E-mail único por empresa, não globalmente (MT-06).
-    uniqueIndex('uq_patients_clinic_email').on(table.clinicId, table.email),
   ],
 );
 

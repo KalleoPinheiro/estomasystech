@@ -154,7 +154,8 @@ class ClinicReminders {
     };
     for (const reminder of pending) {
       const patient = patientsById.get(reminder.patientId);
-      if (!patient?.isActive) {
+      // Sem e-mail de contato (#325) não há para onde enviar: pula sem erro.
+      if (!patient?.isActive || !patient.email) {
         summary.skipped += 1;
         continue;
       }
