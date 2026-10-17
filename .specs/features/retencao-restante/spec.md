@@ -40,13 +40,13 @@ mudam código e só entram na doc.
 | Reativar bloqueia no domínio (`UserAccount.reactivate`) | Cobre o PATCH da equipe e a rota da plataforma de uma vez. |
 | Sem migração | Nenhuma coluna nova: reaproveita `anonymized_at`, `google_event_id` e `status` texto. Evita colisão com a #309. |
 
-## Perguntas abertas (registradas na PR; nada inventado)
+## Perguntas abertas (decididas em 2026-10-17, [ADR-017](../../../docs/adr/017-retencao-decisoes-complementares.md))
 
-| Pergunta | Opção conservadora adotada |
+| Pergunta | Opção adotada na PR → decisão final |
 | --- | --- |
-| O **cadastro** do parceiro (`partners`: nome, e-mail, telefone, CRM) também é anonimizado quando a conta é? A decisão fala só em conta. | Não processa: só a conta de login. |
-| O **cadastro do paciente** anonimizado pode ser reativado em `Pacientes`? A decisão fala em "conta". | Sem bloqueio nesta PR. |
-| Troca de senha, reenvio de convite e link de redefinição numa conta anonimizada também devem recusar? | Só a reativação (pedido da issue); a conta não tem e-mail real, então nada chega a ninguém. |
+| O **cadastro** do parceiro (`partners`: nome, e-mail, telefone, CRM) também é anonimizado quando a conta é? A decisão fala só em conta. | Não processa → **guardado** (ADR-017 B.2). |
+| O **cadastro do paciente** anonimizado pode ser reativado em `Pacientes`? A decisão fala em "conta". | Sem bloqueio → **bloqueado**, `409` (ADR-017 B.3, PRO-RN-17). |
+| Troca de senha, reenvio de convite e link de redefinição numa conta anonimizada também devem recusar? | Só a reativação → **recusa**, e já recusava: conta inativa, tokens apagados (ADR-017 B.4, ACE-RN-50). |
 | Eventos do Google Agenda de pacientes **não** anonimizados criados antes da #217 ainda levam nome completo. | Fora desta issue; segue na #217. |
 
 ## Fora do escopo

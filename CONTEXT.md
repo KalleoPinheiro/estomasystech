@@ -324,3 +324,5 @@ See `src/` structure:
 - [ADR-011: Canal de comunicação por clínica](./docs/adr/011-canal-de-comunicacao-por-clinica.md) — e-mail de cada clínica pela chave dela, sem fallback; chave da plataforma opcional; emenda o ADR-004.
 - [ADR-014: Observabilidade sem dado pessoal](./docs/adr/014-observabilidade-sem-pii.md) — logs JSON com request-id, GlitchTip self-hosted com evento montado pelo app, health/ready e alertas por e-mail ao operador; amplia o ADR-011.
 - [ADR-015: Servidor sem cifra de disco](./docs/adr/015-servidor-sem-cifra-de-disco.md) — sem LUKS na VPS: fotos em claro no disco, risco aceito; ajusta o ADR-006.
+- [ADR-017: Retenção, decisões complementares](./docs/adr/017-retencao-decisoes-complementares.md) — completa o ADR-013: cadastro do parceiro guardado, paciente anonimizado não reativa, conta anonimizada não recebe senha nem convite.
+- [ADR-018: Transferência internacional (UE)](./docs/adr/018-transferencia-internacional-ue.md) — dados na Alemanha, adequação Brasil ↔ UE como base do art. 33, backup cifrado em outra localização da UE.

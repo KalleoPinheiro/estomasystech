@@ -81,6 +81,8 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/014-observabilidade-sem-pii.md`](adr/014-observabilidade-sem-pii.md) | logs JSON com request-id, GlitchTip self-hosted por evento montado pelo app (sem PII), health/ready e alertas por e-mail ao operador |
 | [`adr/015-servidor-sem-cifra-de-disco.md`](adr/015-servidor-sem-cifra-de-disco.md) | servidor de produção sem LUKS: fotos em claro no disco da VPS, risco aceito; mitigações e como reabrir (cifrar na aplicação) |
 | [`adr/016-sessoes-do-admin-sem-2fa-e-senha-unica.md`](adr/016-sessoes-do-admin-sem-2fa-e-senha-unica.md) | sessões do Admin sem 2FA derrubadas pela migração 0052 e política de senha única (10 + lista) para equipe e portal |
+| [`adr/017-retencao-decisoes-complementares.md`](adr/017-retencao-decisoes-complementares.md) | completa o ADR-013: cadastro do parceiro guardado, paciente anonimizado não reativa, conta anonimizada não recebe senha nem convite |
+| [`adr/018-transferencia-internacional-ue.md`](adr/018-transferencia-internacional-ue.md) | dados na UE (Alemanha), adequação Brasil ↔ UE como base do art. 33, backup cifrado em outra localização da UE; texto jurídico pendente |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 
