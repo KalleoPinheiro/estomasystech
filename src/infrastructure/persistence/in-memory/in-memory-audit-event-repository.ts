@@ -7,6 +7,7 @@ import {
   PLATFORM_TRAIL_NEEDS_SYSTEM_SCOPE,
   type PlatformTrailFilter,
 } from '@/domain/audit/audit-event-repository';
+import { type AuditCursor, decodeAuditCursor } from '@/lib/audit-cursor';
 
 function outsidePeriod(
   event: AuditEvent,
@@ -32,14 +33,22 @@ function violatesFilter(event: AuditEvent, filter: AuditEventFilter): boolean {
 const isPlatformEvent = (event: AuditEvent): boolean =>
   event.clinicId === null || event.actorRole === 'super_admin';
 
+/** Mesma ordem do Drizzle: data desc, depois id desc (#322). */
+const newestFirst = (a: AuditEvent, b: AuditEvent): number =>
+  b.occurredAt.getTime() - a.occurredAt.getTime() || b.id.localeCompare(a.id);
+
+function isAfter(event: AuditEvent, cursor: AuditCursor): boolean {
+  const at = event.occurredAt.getTime();
+  const cursorAt = cursor.occurredAt.getTime();
+  if (at !== cursorAt) return at < cursorAt;
+  return event.id.localeCompare(cursor.id) < 0;
+}
+
 function paginate(events: AuditEvent[], page: AuditEventPage): AuditEvent[] {
-  const sorted = [...events].sort(
-    (a, b) => b.occurredAt.getTime() - a.occurredAt.getTime(),
-  );
-  const offset = page.offset ?? 0;
-  return page.limit != null
-    ? sorted.slice(offset, offset + page.limit)
-    : sorted.slice(offset);
+  const sorted = [...events].sort(newestFirst);
+  const cursor = decodeAuditCursor(page.cursor);
+  const after = cursor ? sorted.filter((e) => isAfter(e, cursor)) : sorted;
+  return page.limit != null ? after.slice(0, page.limit) : after;
 }
 
 /**

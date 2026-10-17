@@ -63,7 +63,7 @@ async function seedTitular(clinicId: string, tag: string): Promise<Titular> {
 
 async function auditOf(clinicId: string, patientId: string) {
   const { auditEvents } = await getRepositories(clinicScope(clinicId));
-  return auditEvents.findAll({ patientId }, { limit: 100, offset: 0 });
+  return auditEvents.findAll({ patientId }, { limit: 100 });
 }
 
 describe('Feature: Direitos do titular no portal (#293)', () => {

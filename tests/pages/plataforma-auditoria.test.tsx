@@ -16,10 +16,15 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/plataforma/auditoria',
 }));
 
-const envelope = (data: unknown) => ({
+const envelope = (data: unknown, nextCursor: string | null = null) => ({
   ok: true,
   status: 200,
-  json: async () => ({ success: true, data, error: null }),
+  json: async () => ({
+    success: true,
+    data,
+    error: null,
+    meta: { nextCursor },
+  }),
 });
 
 const row = (overrides: Record<string, unknown>) => ({
@@ -74,9 +79,7 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
       .closest('tr') as HTMLElement;
     expect(within(clinicRow).getByText('Criação')).toBeInTheDocument();
     expect(within(clinicRow).getByText('Dados da clínica')).toBeInTheDocument();
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      '/api/platform/audit?limit=100&offset=0',
-    );
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/platform/audit?limit=100');
   });
 
   it('Dada trilha vazia, Quando abrir a trilha da plataforma, Então mostra a mensagem de vazio', async () => {
@@ -160,13 +163,13 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
     ).toBeInTheDocument();
   });
 
-  it('Dada uma página cheia, Quando clicar em Carregar mais, Então busca a página seguinte pelo offset e some quando a página vem incompleta', async () => {
+  it('Dada uma página cheia, Quando clicar em Carregar mais, Então busca a página seguinte pelo cursor e some quando não há próximo cursor', async () => {
     const fullPage = Array.from({ length: 100 }, (_, i) =>
       row({ id: `p1-${i}`, detail: `primeira-${i}` }),
     );
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(envelope(fullPage))
+      .mockResolvedValueOnce(envelope(fullPage, 'cursor-1'))
       .mockResolvedValueOnce(
         envelope([row({ id: 'p2-0', detail: 'segunda-0' })]),
       );
@@ -179,7 +182,7 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
 
     expect(await screen.findByText('segunda-0')).toBeInTheDocument();
     expect(fetchMock.mock.calls[1][0]).toBe(
-      '/api/platform/audit?limit=100&offset=100',
+      '/api/platform/audit?limit=100&cursor=cursor-1',
     );
     expect(screen.getByText('primeira-0')).toBeInTheDocument();
     expect(screen.queryByText('Carregar mais')).not.toBeInTheDocument();

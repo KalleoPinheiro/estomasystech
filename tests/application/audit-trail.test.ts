@@ -45,12 +45,12 @@ describe('Feature: Trilha de auditoria de prontuário (LGPD art. 11)', () => {
     expect(events[0].patientId).toBe('patient-2');
   });
 
-  it('Dado muitos eventos, Quando paginar, Então respeita limit e offset', async () => {
+  it('Dado muitos eventos, Quando paginar, Então respeita limit', async () => {
     for (let i = 0; i < 5; i += 1) {
       await repo.save(record());
     }
 
-    const page = await repo.findAll({}, { limit: 2, offset: 2 });
+    const page = await repo.findAll({}, { limit: 2 });
     expect(page).toHaveLength(2);
   });
 

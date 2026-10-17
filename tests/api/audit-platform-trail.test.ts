@@ -21,6 +21,7 @@ interface Envelope<T> {
   success: boolean;
   data: T;
   error: string | null;
+  meta?: { nextCursor: string | null };
 }
 
 const OPERATOR = 'dono@vitta.app';
@@ -305,7 +306,7 @@ describe('Feature: Trilha de plataforma e trilha da clínica (B6, #210)', () => 
     expect(times).toEqual([...times].sort((a, b) => b - a));
   });
 
-  it('Dada a trilha de plataforma, Quando usar filtros e paginação, Então from/to filtram, limit/offset paginam e limite fora de 1..500 é 400', async () => {
+  it('Dada a trilha de plataforma, Quando usar filtros e paginação, Então from/to filtram, limit/cursor paginam e limite fora de 1..500 é 400', async () => {
     const { auditEvents } = await services(null);
     const at = (iso: string) =>
       AuditEvent.restore({
@@ -335,10 +336,21 @@ describe('Feature: Trilha de plataforma e trilha da clínica (B6, #210)', () => 
       'periodo-2020-01-02T10:00:00.000Z',
     ]);
     const old = '&to=2020-01-04T00:00:00.000Z';
-    const page = await platformTrail(`?limit=1&offset=1${old}`);
+    const first = await platformTrail(`?limit=1${old}`);
+    const cursor = first.json.meta?.nextCursor;
+    expect(first.json.data.map((e) => e.id)).toEqual([
+      'periodo-2020-01-03T10:00:00.000Z',
+    ]);
+    expect(cursor).toEqual(expect.any(String));
+    const page = await platformTrail(
+      `?limit=1&cursor=${encodeURIComponent(cursor as string)}${old}`,
+    );
     expect(page.json.data.map((e) => e.id)).toEqual([
       'periodo-2020-01-02T10:00:00.000Z',
     ]);
+    const last = await platformTrail(`?limit=10${old}`);
+    expect(last.json.data).toHaveLength(3);
+    expect(last.json.meta?.nextCursor).toBeNull();
     expect((await platformTrail('?limit=0')).response.status).toBe(400);
     expect((await platformTrail('?limit=501')).response.status).toBe(400);
   });

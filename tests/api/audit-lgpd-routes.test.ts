@@ -203,14 +203,31 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
       expect(body.data.length).toBeGreaterThan(0);
     });
 
-    it('Dado limit e offset, Quando GET /api/audit, Então respeita a paginação', async () => {
+    it('Dado limit, Quando GET /api/audit, Então respeita a paginação', async () => {
       const response = await auditRoute.GET(
-        jsonRequest('/api/audit?limit=1&offset=0', 'GET'),
+        jsonRequest('/api/audit?limit=1', 'GET'),
       );
       const body = (await response.json()) as Envelope<unknown[]>;
 
       expect(response.status).toBe(200);
       expect(body.data).toHaveLength(1);
+    });
+
+    it('Dado limit menor que a trilha, Quando seguir o nextCursor, Então a 2ª página não repete a 1ª e `offset` é ignorado', async () => {
+      const read = async (query: string) =>
+        (await (
+          await auditRoute.GET(jsonRequest(`/api/audit?${query}`, 'GET'))
+        ).json()) as Envelope<{ id: string }[]> & {
+          meta: { nextCursor: string | null };
+        };
+      const first = await read('limit=1');
+      expect(first.meta.nextCursor).toEqual(expect.any(String));
+      const second = await read(
+        `limit=1&offset=5&cursor=${encodeURIComponent(first.meta.nextCursor as string)}`,
+      );
+
+      expect(second.data).toHaveLength(1);
+      expect(second.data[0].id).not.toBe(first.data[0].id);
     });
 
     it('Dado limit inválido (acima do máximo), Quando GET /api/audit, Então retorna 400', async () => {

@@ -954,7 +954,21 @@ export const auditEvents = pgTable(
   (table) => [
     index('idx_audit_events_patient').on(table.patientId),
     index('idx_audit_events_occurred_at').on(table.occurredAt),
-    index('idx_audit_events_clinic').on(table.clinicId),
+    // Trilha da empresa (#322): clinic_id = ? ordenado por data desc, id desc,
+    // com cursor keyset — o índice entrega a página já na ordem, sem sort.
+    // Substitui idx_audit_events_clinic (o prefixo clinic_id dele cobre o antigo).
+    index('idx_audit_events_clinic_trail').on(
+      table.clinicId,
+      table.occurredAt.desc().nullsFirst(),
+      table.id.desc().nullsFirst(),
+    ),
+    // Trilha de plataforma (#322): o predicado é o mesmo de PLATFORM_EVENT no
+    // repositório; só indexa os eventos da plataforma, que são poucos.
+    index('idx_audit_events_platform_trail')
+      .on(table.occurredAt.desc().nullsFirst(), table.id.desc().nullsFirst())
+      .where(
+        sql`${table.clinicId} is null or ${table.actorRole} = 'super_admin'`,
+      ),
   ],
 );
 
