@@ -52,7 +52,9 @@ junto com `auth.spec.ts` (modo aberto). Scripts: `test:e2e:prod`, `test:e2e:dev`
 ## Consequências
 
 - O gate principal do E2E é o mesmo artefato que vai para produção, com CSP estrita.
-- O subconjunto em `next dev` é pequeno (26 testes) e ainda exposto ao Fast Refresh; um spec de
+- O subconjunto em `next dev` é pequeno (26 testes). O `global-setup` compila antes as telas e abas
+  que ele abre (`e2e/support/warm-up.ts`); com isso, 5 execuções em 2 CPUs passaram sem falha. Ele
+  segue exposto ao Fast Refresh; um spec de
   papel intermitente deve ser migrado para o build assim que as contas por papel puderem ser
   provisionadas sem o log do servidor.
 - Spec novo roda no build por padrão; só entra em `ROLE_ACCOUNT_SPECS` quem precisa de conta por papel.

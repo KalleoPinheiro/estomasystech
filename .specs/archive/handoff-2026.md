@@ -1097,5 +1097,6 @@ Decisões de @KalleoPinheiro de 2026-10-11 implementadas.
 
 **Validação local (2 CPUs):** suíte de produção, suíte `next dev` (26/26), `typecheck`, `lint`, `check:sv`, `check:docs`, `test:coverage`, `build`.
 
+- **Subconjunto em `next dev`:** o `global-setup` aquece as telas e abas dos specs de papel (`e2e/support/warm-up.ts`) e a asserção da aba Pacotes do Profissional tem 30 s (a API compilava depois dos 10 s); 2 execuções seguidas em 2 CPUs deram 26/26.
 - **Pendente:** o subconjunto em `next dev` segue exposto ao Fast Refresh; migrar para o build quando as contas por papel puderem ser criadas sem o log do servidor. O critério "10 execuções seguidas na `main`" fica para quando o Actions voltar (job manual ou cron).
 - **Branch:** `claude/project-thread-a0mssu`.
