@@ -875,3 +875,22 @@ Decisões de @KalleoPinheiro na #309 (2026-10-12) implementadas, mais a decisão
 - **Next step**: #295 (reset do 2º fator) e #250 seguem na fila.
 - **Blockers**: nenhum. Docker smoke não rodado: o ambiente não tem daemon Docker e nenhum arquivo de imagem mudou.
 - **Branch**: `feat/309-sessoes-2fa-senha-portal`. PR #317, squash-merged em `main`. Issue #309 fechada via `Closes #309`.
+## Issue #311 — retenção: pontos restantes da #294 (2026-10-12) — ENCERRADO (#318)
+
+Decisões de @KalleoPinheiro de 2026-10-12 aplicadas ao job `POST /api/retention/run` (ADR-013). **Sem migração.**
+1. **Lista de espera `waiting` vencida:** vira `expired` quando o período termina, e daí contam os 2 anos (AGE-RN-15).
+2. **Parceiro inativo:** anonimizado 2 anos após a desativação; o `partner_id` é solto (EQP-RN-07).
+3. **Textos livres de fatura:** anonimizados junto com o paciente; valores, datas e status ficam (FIN-RN-13).
+4. **Google Agenda:** os eventos do paciente anonimizado são **apagados** (AGE-RN-16). O `google_event_id` só é limpo depois de apagar, e a falha é tentada de novo na próxima execução.
+5. **Reativação de conta anonimizada:** bloqueada, com `409` (ACE-RN-47).
+6. **Cadastro do profissional:** guardado (EQP-RN-08). O ADR-013 ganhou uma seção datada, que inclui os backups de 30 dias.
+
+**Detalhes**: os 4 jobs de CI ficaram verdes e o Verifier deu PASS (RES-01..RES-09). Implementado pela sessão filha com o modelo Sonnet 5.5. Ficam **para decisão de @KalleoPinheiro**:
+1. o ADR-013 é `frozen`, mas ganhou a seção datada porque a issue pediu; vale manter ou abrir um ADR novo?
+2. anonimizar também o **cadastro** do parceiro (`partners`)?
+3. bloquear a reativação do **cadastro do paciente** anonimizado?
+4. a troca de senha e o reenvio de convite em conta anonimizada também devem ser recusados?
+
+- **Next step**: decisão do dono sobre os 4 pontos.
+- **Blockers**: nenhum.
+- **Branch**: `feat/311-retencao-restante`. PR #318, squash-merged em `main` (`4ad4219`). Issue #311 fechada via `Closes #311`.
