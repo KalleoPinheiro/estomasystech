@@ -32,6 +32,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       services.appointments,
       services.scheduleConfig,
       services.scheduleAvailability,
+      services.professionals,
     ).execute({
       patientId: (await resolvePortalPatient(services, session)).id,
       appointmentId: id,
