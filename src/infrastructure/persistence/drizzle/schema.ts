@@ -365,6 +365,8 @@ export const patients = pgTable(
     // titular no portal (ADR-023).
     email: text('email'),
     phone: text('phone').notNull(),
+    // CPF (11 dígitos) cifrado em repouso (ADR-025, #326); null = não informado.
+    cpf: text('cpf'),
     birthDate: timestamp('birth_date', { withTimezone: true, mode: 'date' }),
     notes: text('notes'),
     referredByPartnerId: text('referred_by_partner_id').references(
@@ -1127,6 +1129,9 @@ export const invoicePayments = pgTable(
       withTimezone: true,
       mode: 'date',
     }).notNull(),
+    // Pagador distinto do paciente (#326): CPF cifrado em repouso (ADR-025).
+    payerName: text('payer_name'),
+    payerCpf: text('payer_cpf'),
   },
   (table) => [index('idx_invoice_payments_invoice').on(table.invoiceId)],
 );

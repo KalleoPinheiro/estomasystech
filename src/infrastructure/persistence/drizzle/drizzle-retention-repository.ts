@@ -45,6 +45,7 @@ import {
   followUps,
   guardians,
   interventionRecords,
+  invoicePayments,
   invoices,
   mfaRecoveryCodes,
   outcomeEvaluations,
@@ -124,6 +125,7 @@ export class DrizzleRetentionRepository implements RetentionRepository {
           fullName: ANONYMIZED_PATIENT_NAME,
           email: anonymizedEmail(patientId),
           phone: '',
+          cpf: null,
           birthDate: sql`date_trunc('year', ${patients.birthDate} at time zone 'UTC') at time zone 'UTC'`,
           notes: null,
           active: false,
@@ -519,8 +521,31 @@ async function clearSchedulingText(
     .where(ofPatient(dataSubjectRequests));
 }
 
-/** Descrição e motivo do desconto das faturas; valores, datas e status ficam. */
+/**
+ * Descrição e motivo do desconto das faturas; valores, datas e status ficam.
+ * Nome e CPF de quem pagou no lugar do paciente saem dos recebimentos (ADR-025).
+ */
 async function clearBillingText(tx: Tx, clinicId: string, patientId: string) {
+  await tx
+    .update(invoicePayments)
+    .set({ payerName: null, payerCpf: null })
+    .where(
+      and(
+        eq(invoicePayments.clinicId, clinicId),
+        inArray(
+          invoicePayments.invoiceId,
+          tx
+            .select({ id: invoices.id })
+            .from(invoices)
+            .where(
+              and(
+                eq(invoices.clinicId, clinicId),
+                eq(invoices.patientId, patientId),
+              ),
+            ),
+        ),
+      ),
+    );
   await tx
     .update(invoices)
     .set({

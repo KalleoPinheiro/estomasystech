@@ -1,10 +1,16 @@
 'use client';
 
-import { Button, Input } from '@still-void/ui/react';
+import { Button, Checkbox, Input } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { normalizeCpf } from '@/domain/shared/cpf';
 import type { InvoiceDto } from '@/lib/dto';
 import { formatCurrency, PAYMENT_METHOD_LABELS } from '@/lib/format';
+
+export interface PayerValues {
+  name: string;
+  cpf: string;
+}
 
 const toReais = (cents: number) => (cents / 100).toFixed(2);
 const toCents = (reais: string) => Math.round(Number(reais) * 100);
@@ -18,17 +24,35 @@ export function PaymentForm({
   onPay,
 }: {
   invoice: InvoiceDto;
-  onPay: (amountCents: number, method: string) => Promise<void>;
+  onPay: (
+    amountCents: number,
+    method: string,
+    payer: PayerValues | null,
+  ) => Promise<void>;
 }) {
   const [amount, setAmount] = useState(toReais(invoice.balanceCents));
   const [busy, setBusy] = useState(false);
+  const [otherPayer, setOtherPayer] = useState(false);
+  const [payerName, setPayerName] = useState('');
+  const [payerCpf, setPayerCpf] = useState('');
+  const [payerError, setPayerError] = useState<string | null>(null);
   const cents = toCents(amount);
   const partial = cents > 0 && cents < invoice.balanceCents;
 
   const pay = async (method: string) => {
+    const payer = otherPayer ? { name: payerName, cpf: payerCpf } : null;
+    if (payer) {
+      try {
+        normalizeCpf(payer.cpf);
+      } catch (err) {
+        setPayerError(err instanceof Error ? err.message : 'CPF inválido');
+        return;
+      }
+    }
+    setPayerError(null);
     setBusy(true);
     try {
-      await onPay(cents, method);
+      await onPay(cents, method, payer);
     } finally {
       setBusy(false);
     }
@@ -59,6 +83,42 @@ export function PaymentForm({
           Pagamento parcial: fica faltando{' '}
           {formatCurrency(invoice.balanceCents - cents)}.
         </p>
+      )}
+      <label className="flex items-center gap-2 font-medium text-sm">
+        <Checkbox
+          checked={otherPayer}
+          onChange={(e) => setOtherPayer(e.target.checked)}
+        />
+        Quem pagou não é o paciente
+      </label>
+      {otherPayer && (
+        <>
+          {payerError && <ErrorAlert message={payerError} />}
+          <label className="font-medium text-sm">
+            Nome do pagador *
+            <Input
+              required
+              value={payerName}
+              onChange={(e) => setPayerName(e.target.value)}
+              className="mt-1"
+            />
+          </label>
+          <label className="font-medium text-sm">
+            CPF do pagador *
+            <Input
+              required
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="000.000.000-00"
+              value={payerCpf}
+              onChange={(e) => setPayerCpf(e.target.value)}
+              className="mt-1"
+            />
+          </label>
+          <p className="text-ink-3 text-xs">
+            O recibo sai no nome do pagador, para ele usar no IRPF.
+          </p>
+        </>
       )}
       <div className="grid grid-cols-2 gap-2">
         {Object.entries(PAYMENT_METHOD_LABELS).map(([method, label]) => (

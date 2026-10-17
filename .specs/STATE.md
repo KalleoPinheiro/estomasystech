@@ -221,6 +221,10 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-043
 - **Decision**: remover o gateway da Meta (#328, delegado): `MetaWhatsAppGateway`, a porta `MessagingGateway`/`NullMessagingGateway`, `container.messaging` e as variáveis `WHATSAPP_*` saem do código e dos exemplos. Nenhum caso de uso consumia o canal; os lembretes seguem por e-mail e pelo link `wa.me`. O RM-14 continua em Later e a especificação fica em `docs/engineering/integrations/whatsapp-meta.md`; reintroduzir é aditivo. Alternativa descartada: manter o código dormente (custo de manutenção e superfície de configuração sem uso). Reversível. · `src/infrastructure/container.ts`, `docs/engineering/integrations/` · 2026-10-17 · active
 
+### AD-044
+- **Decision**: CPF do paciente **opcional** e validado (dígito verificador), **cifrado** em repouso e **mascarado** (`***.***.247-**`) em toda API e tela da equipe; **obrigatório só para emitir recibo**, que traz o CPF de quem pagou e o CNPJ da empresa (FIN-RN-15, PRO-RN-20). Pagador diferente do paciente (nome + CPF) é informado ao registrar o pagamento. O CPF inteiro sai só no recibo (auditado sem o número) e na exportação do titular; nunca no portal, em log ou na trilha. Anonimização apaga o CPF e os pagadores. Delegado por @KalleoPinheiro na #218 (pergunta 2); detalhes e trade-offs no [ADR-021](../docs/adr/021-cpf-no-recibo-e-protecao.md).
+- **Trade-off** (o recibo só serve ao IRPF com esses documentos, e CPF é dado pessoal ligado a saúde, então fica o mais restrito possível): sem busca nem unicidade por CPF (cifra aleatória); reimpressão usa o CPF atual do cadastro; pagador do recebimento não é editável depois (recebimento imutável); a tela troca o CPF mas não o remove. Prestador é só a empresa (CNPJ): recibo de profissional autônomo PF fica fora. Escopo: PRO-RN-20, FIN-RN-15, migração 0056, `src/domain/shared/cpf.ts`, `src/domain/billing/receipt.ts` · 2026-10-17 · active
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
@@ -240,8 +244,4 @@ serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
 
 ## Handoff
 
-Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto.
-
-## Go-live — depois do bloco 1 (2026-10-12) — EM ANDAMENTO
-
-Bloco 1 encerrado (handoffs no arquivo). Seguem em aberto a #308 (E2E intermitente, em investigação) e a #216 (jurídico); o resto da fila segue pelo coordenador do projeto.
+Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto: #308 (E2E intermitente, em investigação) e #216 (jurídico); o resto da fila segue pelo coordenador do projeto.

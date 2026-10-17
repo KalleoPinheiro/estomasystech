@@ -18,6 +18,8 @@ const updatePatientSchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
   email: z.string().max(200).nullish(),
   phone: z.string().min(1).max(50).optional(),
+  // Ausente mantém; vazio ou null remove.
+  cpf: z.string().max(20).nullish(),
   birthDate: z.iso.datetime().nullish(),
   notes: z.string().max(5000).nullish(),
   referredByPartnerId: z.string().max(100).nullish(),
@@ -89,6 +91,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       fullName: body.fullName,
       email: body.email,
       phone: body.phone,
+      cpf: body.cpf,
       birthDate:
         body.birthDate === undefined
           ? undefined

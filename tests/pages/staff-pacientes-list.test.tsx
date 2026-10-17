@@ -52,6 +52,7 @@ const patientFixture: PatientDto = {
   email: 'maria@example.com',
   phone: '11988887777',
   phoneNeedsCorrection: false,
+  cpfMasked: null,
   birthDate: '1990-05-10T00:00:00.000Z',
   notes: null,
   referredByPartnerId: null,
@@ -68,6 +69,7 @@ const inactivePatientFixture: PatientDto = {
   email: 'joao.pereira@example.com',
   phone: '11966665555',
   phoneNeedsCorrection: false,
+  cpfMasked: null,
   birthDate: null,
   active: false,
 };
@@ -311,6 +313,96 @@ describe('Feature: PatientsPage', () => {
         expect(
           fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT'),
         ).toBe(true);
+      });
+    });
+  });
+
+  describe('Cenário: CPF do paciente (#326)', () => {
+    const fillRequired = () => {
+      fireEvent.change(screen.getByLabelText(/Nome completo/), {
+        target: { value: 'Ana Lima' },
+      });
+      fireEvent.change(screen.getByLabelText(/Email \(opcional\)/), {
+        target: { value: 'ana@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/Telefone \*/), {
+        target: { value: '11977776666' },
+      });
+    };
+
+    it('Dado CPF com dígito verificador errado, Quando salvar, Então mostra a mensagem e não chama a API', async () => {
+      const fetchMock = mockFetch(buildRouter({ patients: [] }));
+      renderWithToast(<PatientsPage />);
+      await screen.findByText('Nenhum paciente cadastrado.');
+      fireEvent.click(screen.getByText('+ Novo paciente'));
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/^CPF/), {
+        target: { value: '529.982.247-24' },
+      });
+      fireEvent.click(screen.getByText('Salvar'));
+
+      expect(await screen.findByText(/CPF inválido/)).toBeInTheDocument();
+      expect(
+        fetchMock.mock.calls.some(([, init]) => init?.method === 'POST'),
+      ).toBe(false);
+    });
+
+    it('Dado CPF válido, Quando salvar, Então envia o CPF no cadastro', async () => {
+      const fetchMock = mockFetch(
+        buildRouter({
+          patients: [],
+          extra: ({ url, init }) =>
+            url === '/api/patients' && init?.method === 'POST'
+              ? jsonResponse({ ...patientFixture, id: 'pat-4' })
+              : undefined,
+        }),
+      );
+      renderWithToast(<PatientsPage />);
+      await screen.findByText('Nenhum paciente cadastrado.');
+      fireEvent.click(screen.getByText('+ Novo paciente'));
+      fillRequired();
+      fireEvent.change(screen.getByLabelText(/^CPF/), {
+        target: { value: '529.982.247-25' },
+      });
+      fireEvent.click(screen.getByText('Salvar'));
+
+      await waitFor(() => {
+        const post = fetchMock.mock.calls.find(
+          ([, init]) => init?.method === 'POST',
+        );
+        expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+          cpf: '529.982.247-25',
+        });
+      });
+    });
+
+    it('Dado paciente com CPF cadastrado, Quando edita sem digitar o CPF, Então a ficha mostra só a máscara e o CPF não vai no PUT', async () => {
+      const fetchMock = mockFetch(
+        buildRouter({
+          patients: [{ ...patientFixture, cpfMasked: '***.***.247-**' }],
+          extra: ({ url, init }) =>
+            url === `/api/patients/${patientFixture.id}` &&
+            init?.method === 'PUT'
+              ? jsonResponse(patientFixture)
+              : undefined,
+        }),
+      );
+      renderWithToast(<PatientsPage />);
+      await screen.findByText('Maria Souza');
+
+      fireEvent.click(screen.getByText('Editar'));
+      expect(screen.getByLabelText(/^CPF/)).toHaveValue('');
+      expect(
+        screen.getByText(/CPF cadastrado: \*\*\*\.\*\*\*\.247-\*\*/),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Salvar'));
+
+      await waitFor(() => {
+        const put = fetchMock.mock.calls.find(
+          ([, init]) => init?.method === 'PUT',
+        );
+        expect(put).toBeDefined();
+        expect(JSON.parse(String(put?.[1]?.body))).not.toHaveProperty('cpf');
       });
     });
   });

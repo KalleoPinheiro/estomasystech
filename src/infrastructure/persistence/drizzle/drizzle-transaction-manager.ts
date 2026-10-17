@@ -31,7 +31,7 @@ export class DrizzleTransactionManager implements TransactionManager {
           this.clinicId,
           this.cipher,
         ),
-        invoices: new DrizzleInvoiceRepository(tx, this.clinicId),
+        invoices: new DrizzleInvoiceRepository(tx, this.clinicId, this.cipher),
         followUps: new DrizzleFollowUpRepository(tx, this.clinicId),
         sessionPackages: new DrizzleSessionPackageRepository(tx, this.clinicId),
         userAccounts: new DrizzleUserAccountRepository(tx, this.clinicId),

@@ -159,3 +159,53 @@ describe('Feature: Desconto em fatura', () => {
     ).toThrow(InvalidStatusTransitionError);
   });
 });
+
+describe('Feature: Pagador distinto do paciente no recebimento (#326)', () => {
+  const payer = { name: 'João Souza', cpf: '111.444.777-35' };
+
+  it('Dado pagamento sem pagador, Então o recebimento não traz pagador (o paciente pagou)', () => {
+    const paid = invoice().registerPayment({
+      amount: cents(5000),
+      method: 'pix',
+    });
+    expect(paid.payments[0].payer).toBeNull();
+  });
+
+  it('Dado pagador com nome e CPF, Quando receber, Então guarda o CPF só com dígitos e o nome aparado', () => {
+    const paid = invoice().registerPayment({
+      amount: cents(5000),
+      method: 'pix',
+      payer: { ...payer, name: '  João Souza ' },
+    });
+    expect(paid.payments[0].payer).toEqual({
+      name: 'João Souza',
+      cpf: '11144477735',
+    });
+  });
+
+  it('Dado CPF do pagador inválido, Quando receber, Então ValidationError e nada é registrado', () => {
+    expect(() =>
+      invoice().registerPayment({
+        amount: cents(5000),
+        method: 'pix',
+        payer: { name: 'João Souza', cpf: '123.456.789-00' },
+      }),
+    ).toThrow(ValidationError);
+  });
+
+  it('Dado nome do pagador curto, Quando receber, Então ValidationError', () => {
+    expect(() =>
+      invoice().registerPayment({
+        amount: cents(5000),
+        method: 'pix',
+        payer: { name: 'Jo', cpf: '11144477735' },
+      }),
+    ).toThrow(/Nome do pagador/);
+  });
+
+  it('Dado quitação com markPaid, Então o pagador acompanha o recebimento', () => {
+    const paid = invoice().markPaid('cash', day(1), payer);
+    expect(paid.status).toBe('paid');
+    expect(paid.payments[0].payer?.cpf).toBe('11144477735');
+  });
+});

@@ -80,6 +80,7 @@ export async function createPatient(
     fullName: string;
     email: string;
     phone: string;
+    cpf: string;
     referredByPartnerId: string | null;
   }> = {},
 ): Promise<PatientDto> {
@@ -88,6 +89,7 @@ export async function createPatient(
     fullName: overrides.fullName ?? `Paciente E2E ${id}`,
     email: overrides.email ?? `paciente.${id}@e2e.vittaflow.test`,
     phone: overrides.phone ?? "11999990000",
+    ...(overrides.cpf ? { cpf: overrides.cpf } : {}),
     referredByPartnerId: overrides.referredByPartnerId ?? null,
   });
 }
@@ -322,6 +324,7 @@ export interface InvoiceDto {
   amountCents: number;
   status: "pending" | "paid" | "cancelled";
   paymentMethod: string | null;
+  payments: Array<{ id: string }>;
 }
 
 export async function createInvoice(

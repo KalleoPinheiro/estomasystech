@@ -416,7 +416,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     waitlist: new DrizzleWaitlistRepository(db, tenant.clinicId, cipher),
     googleAccounts: new DrizzleGoogleAccountRepository(db, tenant.clinicId),
     appointments: new DrizzleAppointmentRepository(db, tenant.clinicId, cipher),
-    invoices: new DrizzleInvoiceRepository(db, tenant.clinicId),
+    invoices: new DrizzleInvoiceRepository(db, tenant.clinicId, cipher),
     producedSessions: new DrizzleProducedSessionRepository(db, tenant.clinicId),
     commissionPayouts: new DrizzleCommissionPayoutRepository(
       db,

@@ -16,6 +16,7 @@ export interface RegisterInvoicePaymentInput {
   amountCents: number;
   method: PaymentMethod;
   paidAt?: Date;
+  payer?: { name: string; cpf: string } | null;
 }
 
 /** Recebimento parcial (ou do saldo inteiro) de uma fatura pendente. */
@@ -28,6 +29,7 @@ export class RegisterInvoicePayment {
       amount: Money.fromCents(input.amountCents),
       method: input.method,
       paidAt: input.paidAt,
+      payer: input.payer,
     });
     await this.invoices.save(updated);
     return updated;

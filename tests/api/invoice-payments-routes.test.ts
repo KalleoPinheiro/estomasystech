@@ -263,11 +263,28 @@ describe('Feature: Pagamento parcial, desconto e recibo (rotas)', () => {
   });
 
   it('Dado recibo de um pagamento, Quando emitir duas vezes, Então o número REC- é o mesmo', async () => {
+    // Recibo só emite com CPF do paciente e CNPJ da empresa (#326).
+    const { completeClinicRegistration, CLINIC_A_ID } = await import(
+      '../support/clinics'
+    );
+    await completeClinicRegistration(CLINIC_A_ID);
+    const patientRoute = await import('@/app/api/patients/[id]/route');
+    await patientRoute.PUT(
+      jsonRequest(`/api/patients/${patientId}`, 'PUT', {
+        cpf: '529.982.247-25',
+      }),
+      { params: Promise.resolve({ id: patientId }) },
+    );
+    const id = await createInvoice();
+    const paid = await patch(id, { action: 'pay', method: 'pix' });
+    const paymentId = paid.body.data.payments[0].id;
+
     const issue = async () => {
       const response = await issueRoute.POST(
         jsonRequest('/api/documents/issue', 'POST', {
           documentType: 'recibo',
-          resourceId: 'pay-123',
+          resourceId: paymentId,
+          invoiceId: id,
         }),
       );
       return ((await response.json()) as Envelope<{ documentNumber: string }>)
@@ -309,6 +326,7 @@ describe('Feature: Pagamento parcial, desconto e recibo (rotas)', () => {
         amountCents: 12345,
         method: 'debit_card',
         paidAt: '2026-01-10T12:00:00.000Z',
+        payer: null,
       },
     ]);
     expect(read.body.data.paidCents).toBe(12345);

@@ -227,7 +227,7 @@ Fixed catalog of six; a Clinic's Admin de Empresa cannot invent new roles or per
 - An invoice with any payment cannot be cancelled (give a discount on the balance instead).
 - Billing totals: **received** = sum of payments (partials included); **to receive** = balance of pending invoices (net − received). Invoices paid before payments were recorded got one `legacy-<id>` payment in migration 0036.
 - **Commission is unchanged**: it is released only when the invoice is fully `paid` and is still computed on the session value — an invoice discount does not reduce the professional's commission (clinic's cost).
-- **Receipt** (`/documentos/recibo/:invoiceId/:paymentId`, number `REC-…`): one per payment — who paid, amount, method, date, invoice value, discount, received so far and remaining balance; Admin only (billing family). The patient portal shows paid and remaining amounts on partially paid invoices.
+- **Receipt** (`/documentos/recibo/:invoiceId/:paymentId`, number `REC-…`): one per payment — who paid (CPF of the patient or of the payer informed when receiving) and the clinic CNPJ as provider (blocked without them, FIN-RN-15), amount, method, date, invoice value, discount, received so far and remaining balance; Admin only (billing family). The patient portal shows paid and remaining amounts on partially paid invoices.
 
 **Commission** (repasse ao profissional — rule in `src/domain/billing/commission.ts`)
 
@@ -331,4 +331,4 @@ See `src/` structure:
 - [ADR-015: Servidor sem cifra de disco](./docs/adr/015-servidor-sem-cifra-de-disco.md) — sem LUKS na VPS: fotos em claro no disco, risco aceito; ajusta o ADR-006.
 - [ADR-017: Retenção, decisões complementares](./docs/adr/017-retencao-decisoes-complementares.md) — completa o ADR-013: cadastro do parceiro guardado, paciente anonimizado não reativa, conta anonimizada não recebe senha nem convite.
 - [ADR-018: Transferência internacional (UE)](./docs/adr/018-transferencia-internacional-ue.md) — dados na Alemanha, adequação Brasil ↔ UE como base do art. 33, backup cifrado em outra localização da UE.
-- [ADR-020: Evento do Google Agenda só com iniciais](./docs/adr/020-evento-do-google-agenda-so-com-iniciais.md) — iniciais + horário + link, sem nome, telefone nem procedimento.
+- [ADR-021: Evento do Google Agenda só com iniciais](./docs/adr/020-evento-do-google-agenda-so-com-iniciais.md) — iniciais + horário + link, sem nome, telefone nem procedimento.

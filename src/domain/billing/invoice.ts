@@ -1,3 +1,4 @@
+import { normalizeCpf } from '../shared/cpf';
 import {
   ConflictError,
   InvalidStatusTransitionError,
@@ -29,12 +30,21 @@ export interface InvoiceProps {
   dueDate?: Date | null;
 }
 
+/** Quem pagou, quando não é o paciente (#326): nome e CPF, para o recibo do IRPF. */
+export interface PaymentPayer {
+  name: string;
+  /** 11 dígitos. */
+  cpf: string;
+}
+
 /** Recebimento (total ou parcial) de uma fatura — imutável depois de gravado. */
 export interface InvoicePayment {
   id: string;
   amount: Money;
   method: PaymentMethod;
   paidAt: Date;
+  /** Ausente = o próprio paciente pagou. */
+  payer?: PaymentPayer | null;
 }
 
 export interface InvoiceDiscount {
@@ -58,6 +68,23 @@ export interface RegisterPaymentInput {
   amount: Money;
   method: PaymentMethod;
   paidAt?: Date;
+  payer?: { name: string; cpf: string } | null;
+}
+
+const MIN_PAYER_NAME_LENGTH = 3;
+
+/** Pagador distinto do paciente: nome e CPF válido, ou nada. */
+function normalizePayer(
+  payer: RegisterPaymentInput['payer'],
+): PaymentPayer | null {
+  if (!payer) return null;
+  const name = payer.name.trim();
+  if (name.length < MIN_PAYER_NAME_LENGTH) {
+    throw new ValidationError(
+      `Nome do pagador deve ter pelo menos ${MIN_PAYER_NAME_LENGTH} caracteres`,
+    );
+  }
+  return { name, cpf: normalizeCpf(payer.cpf) };
 }
 
 const MAX_DISCOUNT_REASON_LENGTH = 200;
@@ -105,9 +132,18 @@ export class Invoice {
   }
 
   /** Quita o saldo restante de uma vez (fluxo histórico "marcar como paga"). */
-  markPaid(method: PaymentMethod, paidAt: Date = new Date()): Invoice {
+  markPaid(
+    method: PaymentMethod,
+    paidAt: Date = new Date(),
+    payer?: RegisterPaymentInput['payer'],
+  ): Invoice {
     this.assertPending('pagar');
-    return this.registerPayment({ amount: this.balance, method, paidAt });
+    return this.registerPayment({
+      amount: this.balance,
+      method,
+      paidAt,
+      payer,
+    });
   }
 
   /**
@@ -127,7 +163,13 @@ export class Invoice {
     const paidAt = input.paidAt ?? new Date();
     const payments = [
       ...this.payments,
-      { id: newId(), amount: input.amount, method: input.method, paidAt },
+      {
+        id: newId(),
+        amount: input.amount,
+        method: input.method,
+        paidAt,
+        payer: normalizePayer(input.payer),
+      },
     ];
     const settled = input.amount.cents === this.balance.cents;
     return new Invoice({

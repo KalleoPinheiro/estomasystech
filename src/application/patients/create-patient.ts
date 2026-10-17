@@ -10,6 +10,7 @@ export interface CreatePatientInput {
   /** Opcional e repetível entre pacientes (#325). */
   email?: string | null;
   phone: string;
+  cpf?: string | null;
   birthDate?: Date | null;
   notes?: string | null;
   referredByPartnerId?: string | null;

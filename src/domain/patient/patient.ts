@@ -1,3 +1,4 @@
+import { maskCpf, normalizeOptionalCpf } from '../shared/cpf';
 import { ConflictError } from '../shared/errors';
 import { newId } from '../shared/id';
 import {
@@ -18,6 +19,8 @@ export interface PatientProps {
    */
   email?: string | null;
   phone: string;
+  /** CPF (11 dígitos), opcional no cadastro; obrigatório só para emitir recibo (#326). */
+  cpf?: string | null;
   birthDate?: Date | null;
   notes?: string | null;
   /** Médico parceiro que indicou o paciente (estrutura de indicação). */
@@ -64,6 +67,7 @@ export class Patient {
       phone: normalizePhone
         ? normalizeBrazilianPhoneOrThrow(contact.phone)
         : contact.phone,
+      cpf: normalizeOptionalCpf(props.cpf),
       birthDate: props.birthDate ?? null,
       notes: props.notes ?? null,
       referredByPartnerId: props.referredByPartnerId ?? null,
@@ -81,6 +85,7 @@ export class Patient {
         fullName: changes.fullName ?? this.state.fullName,
         email: changes.email !== undefined ? changes.email : this.state.email,
         phone: phoneChanged ? (changes.phone ?? '') : this.state.phone,
+        cpf: changes.cpf !== undefined ? changes.cpf : this.state.cpf,
         birthDate:
           changes.birthDate !== undefined
             ? changes.birthDate
@@ -135,6 +140,15 @@ export class Patient {
   get phoneNeedsCorrection(): boolean {
     // Anonimizado (PRO-RN-15) não tem telefone: nada a corrigir.
     return !this.isAnonymized && !isBrazilianE164(this.state.phone);
+  }
+
+  /** CPF completo: só para o recibo — telas e listas usam `cpfMasked`. */
+  get cpf(): string | null {
+    return this.state.cpf ?? null;
+  }
+
+  get cpfMasked(): string | null {
+    return this.state.cpf ? maskCpf(this.state.cpf) : null;
   }
 
   get birthDate(): Date | null {

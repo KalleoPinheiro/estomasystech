@@ -34,7 +34,11 @@ import {
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
-import { DiscountForm, PaymentForm } from './invoice-adjust-forms';
+import {
+  DiscountForm,
+  type PayerValues,
+  PaymentForm,
+} from './invoice-adjust-forms';
 import { InvoiceForm, type InvoiceFormValues } from './invoice-form';
 
 const STATUS_FILTERS = [
@@ -92,7 +96,8 @@ function PaymentsCell({ invoice }: { invoice: InvoiceDto }) {
         <li key={payment.id}>
           {formatCurrency(payment.amountCents)} via{' '}
           {PAYMENT_METHOD_LABELS[payment.method] ?? payment.method} em{' '}
-          {formatDate(payment.paidAt)} ·{' '}
+          {formatDate(payment.paidAt)}
+          {payment.payer ? ` · pago por ${payment.payer.name}` : ''} ·{' '}
           <a
             href={`/documentos/recibo/${invoice.id}/${payment.id}`}
             className="font-medium text-accent-ink hover:underline"
@@ -286,7 +291,11 @@ export default function BillingPage() {
     invoice: InvoiceDto,
     amountCents: number,
     method: string,
+    payer: PayerValues | null,
   ) => {
+    const payerFields = payer
+      ? { payerName: payer.name, payerCpf: payer.cpf }
+      : {};
     // Saldo inteiro = quitar (fluxo histórico); menos que isso = parcial.
     const partial = amountCents < invoice.balanceCents;
     try {
@@ -294,8 +303,8 @@ export default function BillingPage() {
         method: 'PATCH',
         body: JSON.stringify(
           partial
-            ? { action: 'pay_partial', amountCents, method }
-            : { action: 'pay', method },
+            ? { action: 'pay_partial', amountCents, method, ...payerFields }
+            : { action: 'pay', method, ...payerFields },
         ),
       });
       toast({
@@ -446,8 +455,8 @@ export default function BillingPage() {
         <Modal title="Registrar pagamento" onClose={() => setPaying(null)}>
           <PaymentForm
             invoice={paying}
-            onPay={(amountCents, method) =>
-              handlePay(paying, amountCents, method)
+            onPay={(amountCents, method, payer) =>
+              handlePay(paying, amountCents, method, payer)
             }
           />
         </Modal>

@@ -42,6 +42,7 @@ describe('Feature: recifra do dado clínico (#195, npm run data:reencrypt)', () 
         email: 'b@x.com',
         phone: '1',
         notes: previous.encrypt('Nota chave antiga'),
+        cpf: previous.encrypt('52998224725'),
         createdAt: new Date(),
       },
       // já na chave atual: não muda
@@ -64,6 +65,25 @@ describe('Feature: recifra do dado clínico (#195, npm run data:reencrypt)', () 
         createdAt: new Date(),
       },
     ]);
+    await db.insert(schema.invoices).values({
+      id: 'inv-cpf',
+      clinicId: 'legacy-clinic',
+      patientId: 'p-claro',
+      description: 'Curativo',
+      amountCents: 1000,
+      status: 'paid',
+      issuedAt: new Date(),
+    });
+    await db.insert(schema.invoicePayments).values({
+      id: 'pay-cpf',
+      clinicId: 'legacy-clinic',
+      invoiceId: 'inv-cpf',
+      amountCents: 1000,
+      method: 'pix',
+      paidAt: new Date(),
+      payerName: 'João Pagador',
+      payerCpf: '11144477735',
+    });
     await db.insert(schema.evolutionNotes).values({
       id: 'evo-legado',
       clinicId: 'legacy-clinic',
@@ -98,6 +118,10 @@ describe('Feature: recifra do dado clínico (#195, npm run data:reencrypt)', () 
     const counts = await reencryptClinicalData(db as unknown as AppDb, cipher);
 
     expect(counts.patients).toBe(2);
+    expect(counts.invoice_payments).toBe(1);
+    const [payment] = await db.select().from(schema.invoicePayments);
+    expect(cipher.isCurrent(payment.payerCpf as string)).toBe(true);
+    expect(cipher.decrypt(payment.payerCpf as string)).toBe('11144477735');
     expect(counts.evolution_notes).toBe(1);
     expect(counts.data_subject_requests).toBe(1);
     const [dsr] = await db.select().from(schema.dataSubjectRequests);
@@ -115,6 +139,10 @@ describe('Feature: recifra do dado clínico (#195, npm run data:reencrypt)', () 
       'Nota chave antiga',
     );
     expect(notes['p-atual']).toBe(before[0].notes);
+    const cpfs = Object.fromEntries(patients.map((p) => [p.id, p.cpf]));
+    expect(cipher.isCurrent(cpfs['p-antiga'] as string)).toBe(true);
+    expect(cipher.decrypt(cpfs['p-antiga'] as string)).toBe('52998224725');
+    expect(cpfs['p-claro']).toBeNull();
     expect(notes['p-nulo']).toBeNull();
 
     const [evo] = await db.select().from(schema.evolutionNotes);

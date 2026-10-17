@@ -3,6 +3,7 @@
 import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { normalizeOptionalCpf } from '@/domain/shared/cpf';
 import { parseBrazilianPhone } from '@/domain/shared/phone';
 import type { PartnerDto, PatientDto } from '@/lib/dto';
 
@@ -10,6 +11,8 @@ export interface PatientFormValues {
   fullName: string;
   email: string;
   phone: string;
+  /** Vazio na edição mantém o CPF guardado (a ficha só mostra a máscara). */
+  cpf: string;
   birthDate: string;
   notes: string;
   referredByPartnerId: string;
@@ -27,6 +30,7 @@ const toFormValues = (initial?: PatientDto): PatientFormValues => {
       fullName: '',
       email: '',
       phone: '',
+      cpf: '',
       birthDate: '',
       notes: '',
       referredByPartnerId: '',
@@ -36,6 +40,7 @@ const toFormValues = (initial?: PatientDto): PatientFormValues => {
     fullName: initial.fullName,
     email: initial.email ?? '',
     phone: initial.phone,
+    cpf: '',
     birthDate: initial.birthDate ? initial.birthDate.slice(0, 10) : '',
     notes: initial.notes ?? '',
     referredByPartnerId: initial.referredByPartnerId ?? '',
@@ -58,6 +63,12 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
     const phoneCheck = parseBrazilianPhone(values.phone);
     if (phoneChanged && !phoneCheck.ok) {
       setError(phoneCheck.reason);
+      return;
+    }
+    try {
+      normalizeOptionalCpf(values.cpf);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'CPF inválido');
       return;
     }
     setSaving(true);
@@ -108,6 +119,22 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
           {initial?.phoneNeedsCorrection
             ? 'Telefone fora do padrão: informe DDD + número para corrigir.'
             : 'DDD + número. Guardamos no formato internacional (+55).'}
+        </span>
+      </label>
+      <label className="font-medium text-sm">
+        CPF
+        <Input
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="000.000.000-00"
+          value={values.cpf}
+          onChange={(e) => set('cpf')(e.target.value)}
+          className="mt-1"
+        />
+        <span className="mt-1 block font-normal text-ink-3 text-xs">
+          {initial?.cpfMasked
+            ? `CPF cadastrado: ${initial.cpfMasked}. Deixe em branco para manter, ou digite outro para trocar.`
+            : 'Opcional. Necessário para emitir recibo (IRPF). Guardado cifrado.'}
         </span>
       </label>
       <label className="font-medium text-sm">

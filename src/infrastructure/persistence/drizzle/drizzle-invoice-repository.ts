@@ -23,6 +23,7 @@ import type {
   InvoiceSummary,
 } from '@/domain/billing/invoice-repository';
 import { Money } from '@/domain/shared/money';
+import type { FieldCipher } from '@/lib/data-cipher';
 import { decodeCursor } from '@/lib/pagination';
 import { type AppDb, MAX_ROWS } from './db';
 import { invoicePayments, invoices } from './schema';
@@ -31,14 +32,23 @@ import { withTenant } from './tenant-scope';
 type InvoiceRow = typeof invoices.$inferSelect;
 type PaymentRow = typeof invoicePayments.$inferSelect;
 
-const toPayment = (row: PaymentRow): InvoicePayment => ({
-  id: row.id,
-  amount: Money.fromCents(row.amountCents),
-  method: row.method as PaymentMethod,
-  paidAt: row.paidAt,
-});
+const toPayment = (row: PaymentRow, cipher: FieldCipher): InvoicePayment => {
+  const payerCpf = cipher.decryptNullable(row.payerCpf);
+  return {
+    id: row.id,
+    amount: Money.fromCents(row.amountCents),
+    method: row.method as PaymentMethod,
+    paidAt: row.paidAt,
+    payer:
+      row.payerName && payerCpf ? { name: row.payerName, cpf: payerCpf } : null,
+  };
+};
 
-const toInvoice = (row: InvoiceRow, payments: PaymentRow[] = []): Invoice =>
+const toInvoice = (
+  row: InvoiceRow,
+  payments: PaymentRow[],
+  cipher: FieldCipher,
+): Invoice =>
   Invoice.restore({
     id: row.id,
     patientId: row.patientId,
@@ -58,13 +68,14 @@ const toInvoice = (row: InvoiceRow, payments: PaymentRow[] = []): Invoice =>
             reason: row.discountReason ?? '',
           }
         : null,
-    payments: payments.map(toPayment),
+    payments: payments.map((payment) => toPayment(payment, cipher)),
   });
 
 export class DrizzleInvoiceRepository implements InvoiceRepository {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher,
   ) {}
 
   async save(invoice: Invoice): Promise<void> {
@@ -114,6 +125,8 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
             amountCents: payment.amount.cents,
             method: payment.method,
             paidAt: payment.paidAt,
+            payerName: payment.payer?.name ?? null,
+            payerCpf: this.cipher.encryptNullable(payment.payer?.cpf ?? null),
           })),
         )
         .onConflictDoNothing({ target: invoicePayments.id });
@@ -142,7 +155,9 @@ export class DrizzleInvoiceRepository implements InvoiceRepository {
         payment,
       ]);
     }
-    return rows.map((row) => toInvoice(row, byInvoice.get(row.id)));
+    return rows.map((row) =>
+      toInvoice(row, byInvoice.get(row.id) ?? [], this.cipher),
+    );
   }
 
   async findById(id: string): Promise<Invoice | null> {
