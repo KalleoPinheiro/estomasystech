@@ -1063,3 +1063,15 @@ Decisão delegada por @KalleoPinheiro (opção mais segura) implementada: o e-ma
 - **Docs:** ADR-023, PRO-RN-01/20, POR-RN-18, COM-RN-18, `docs/README.md`, AD-038.
 - **Pendências para o Kalléo:** deploy aplica a migração `0057` depois das anteriores. Docker/smoke não rodam no container (sem daemon).
 - **Next step:** #329 (depende de #325). **Blockers:** nenhum.
+
+## Issue #251 — Suspensão de clínica: registrar o motivo (2026-10-17) — ENCERRADO
+
+Decisão de @KalleoPinheiro de 2026-10-11 implementada: suspender pede um motivo da lista fechada (inadimplência, pedido da clínica, incidente de segurança, outro) e observação opcional; só a plataforma o vê; os `company_admin` recebem e-mail ao suspender e reativar, sem o motivo.
+- **Código:** `Clinic.suspend(by, at, { reason, note })` (`src/domain/clinic/clinic.ts`; reativar limpa), `SuspendClinic` e `notifyClinicStatusChange` (`src/application/platform/`), corpo validado em `POST .../suspend`, `statusReason`/`statusReasonNote` no `PlatformClinicDto`, modal de motivo em `clinic-status-section.tsx`.
+- **Migração `0058`:** `clinics.status_reason`, `clinics.status_reason_note` e check da lista (nulos; sem backfill).
+- **Decisões (AD-039):** motivo limpo na reativação (histórico na trilha), auditoria só com o código (`suspend:<motivo>`), aviso a todo `company_admin` ativo em melhor esforço, suspensas antigas ficam sem motivo.
+- **Docs:** ACE-RN-27, ACE-RN-28 e ACE-RN-55 em `docs/domains/acesso/README.md`.
+- **Testes:** domínio (lista, observação, limpeza), repositório pglite, rota (400 sem/fora da lista, auditoria sem observação, destinatários, falha do provedor, idempotência), tela (motivo obrigatório, corpo enviado, suspensa legada) e E2E de suspensão.
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Ordem de deploy:** aplicar a migração 0058 antes de subir o código (o `UPDATE` de estado usa as colunas novas). Para o aviso sair, a plataforma precisa de `RESEND_API_KEY` e `EMAIL_FROM`.
+- **Next step:** nenhum. **Blockers:** nenhum.

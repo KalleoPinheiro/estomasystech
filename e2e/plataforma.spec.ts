@@ -97,8 +97,12 @@ test.describe("área da plataforma", () => {
       await page.goto(`/plataforma/clinicas/${created.clinic.id}`);
       await expect(page.getByText("Clínica ativa.")).toBeVisible();
       await page.getByRole("button", { name: "Suspender clínica" }).click();
-      await page.getByRole("alertdialog").getByRole("button", { name: "Suspender" }).click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog.getByRole("button", { name: "Suspender" })).toBeDisabled();
+      await dialog.getByLabel("Motivo").selectOption("non_payment");
+      await dialog.getByRole("button", { name: "Suspender" }).click();
       await expect(page.getByText(/^Suspensa em .+ por /)).toBeVisible();
+      await expect(page.getByText("Inadimplência")).toBeVisible();
       await expect(page.getByRole("button", { name: "Convidar admin" })).toBeDisabled();
 
       // O voltar "Clínicas" do cabeçalho do detalhe (fora da navegação) continua levando à lista.

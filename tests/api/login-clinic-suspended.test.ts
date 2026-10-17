@@ -44,7 +44,7 @@ async function setSuspended(clinicId: string, suspended: boolean) {
   const clinic = (await clinics.findById(clinicId)) as Clinic;
   await clinics.saveStatus(
     suspended
-      ? clinic.suspend('dono@vitta.app', new Date())
+      ? clinic.suspend('dono@vitta.app', new Date(), { reason: 'other' })
       : clinic.reactivate('dono@vitta.app', new Date()),
   );
 }

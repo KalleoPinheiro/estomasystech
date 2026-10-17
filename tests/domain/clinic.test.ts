@@ -260,11 +260,16 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
     expect(clinic.statusChangedBy).toBeNull();
 
     const at = new Date('2026-09-27T12:00:00Z');
-    const suspended = clinic.suspend('root@vitta.com', at);
+    const suspended = clinic.suspend('root@vitta.com', at, {
+      reason: 'security_incident',
+      note: '  Acesso indevido  ',
+    });
     expect(suspended.status).toBe('suspended');
     expect(suspended.isSuspended).toBe(true);
     expect(suspended.statusChangedAt).toEqual(at);
     expect(suspended.statusChangedBy).toBe('root@vitta.com');
+    expect(suspended.statusReason).toBe('security_incident');
+    expect(suspended.statusReasonNote).toBe('Acesso indevido');
     expect(clinic.status).toBe('active');
 
     const edited = suspended.updateInfo({ name: 'Outro nome' });
@@ -277,6 +282,44 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
     expect(reactivated.isSuspended).toBe(false);
     expect(reactivated.statusChangedAt).toEqual(later);
     expect(reactivated.statusChangedBy).toBe('outro@vitta.com');
+    expect(reactivated.statusReason).toBeNull();
+    expect(reactivated.statusReasonNote).toBeNull();
+  });
+
+  it('Dado motivo ausente, fora da lista ou observação longa demais, Quando suspender, Então ValidationError e a clínica não muda', () => {
+    const clinic = Clinic.create(props);
+    const at = new Date();
+
+    expect(() =>
+      clinic.suspend('root@vitta.com', at, {
+        reason: undefined as unknown as 'other',
+      }),
+    ).toThrow('Motivo da suspensão é obrigatório');
+    expect(() =>
+      clinic.suspend('root@vitta.com', at, {
+        reason: 'por-que-sim' as unknown as 'other',
+      }),
+    ).toThrow('Motivo da suspensão é obrigatório');
+    expect(() =>
+      clinic.suspend('root@vitta.com', at, {
+        reason: 'other',
+        note: 'x'.repeat(501),
+      }),
+    ).toThrow('no máximo 500 caracteres');
+    expect(clinic.status).toBe('active');
+  });
+
+  it('Dada observação em branco, Quando suspender, Então a observação fica nula', () => {
+    const suspended = Clinic.create(props).suspend(
+      'root@vitta.com',
+      new Date(),
+      {
+        reason: 'clinic_request',
+        note: '   ',
+      },
+    );
+    expect(suspended.statusReason).toBe('clinic_request');
+    expect(suspended.statusReasonNote).toBeNull();
   });
 
   it('Dada clínica restaurada sem estado, Quando ler o estado da clínica, Então é active', () => {

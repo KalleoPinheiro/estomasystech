@@ -283,7 +283,7 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
         jsonRequest(
           `/api/platform/clinics/${clinicId}/${action}`,
           'POST',
-          undefined,
+          action === 'suspend' ? { reason: 'other' } : undefined,
           cookieHeaderFor('super_admin', 'dono@vitta.app', null),
         ),
         { params: Promise.resolve({ id: clinicId }) },
@@ -327,7 +327,9 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
       const { clinics } = await getRepositories(clinicScope(clinicId));
       const clinic = (await clinics.findById(clinicId)) as Clinic;
 
-      await clinics.saveStatus(clinic.suspend('dono@vitta.app', new Date()));
+      await clinics.saveStatus(
+        clinic.suspend('dono@vitta.app', new Date(), { reason: 'other' }),
+      );
       clearSessionRevocationCache();
       expect(await proxyStatus(cookie)).toBe(401);
       expect(await versionOf(staff.id, clinicId)).toBe(0);

@@ -1,5 +1,5 @@
 import { asc, eq } from 'drizzle-orm';
-import { Clinic } from '@/domain/clinic/clinic';
+import { Clinic, isClinicSuspensionReason } from '@/domain/clinic/clinic';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import type { AppDb } from './db';
 import { clinics } from './schema';
@@ -22,6 +22,10 @@ const toClinic = (row: ClinicRow): Clinic =>
     status: row.status === 'suspended' ? 'suspended' : 'active',
     statusChangedAt: row.statusChangedAt,
     statusChangedBy: row.statusChangedBy,
+    statusReason: isClinicSuspensionReason(row.statusReason)
+      ? row.statusReason
+      : null,
+    statusReasonNote: row.statusReasonNote,
   });
 
 /** Dados cadastrais gravados por `create` e `update`. */
@@ -41,6 +45,8 @@ const statusColumns = (clinic: Clinic) => ({
   status: clinic.status,
   statusChangedAt: clinic.statusChangedAt,
   statusChangedBy: clinic.statusChangedBy,
+  statusReason: clinic.statusReason,
+  statusReasonNote: clinic.statusReasonNote,
 });
 
 export class DrizzleClinicRepository implements ClinicRepository {

@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UserAccount } from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
@@ -69,10 +70,13 @@ const versionOf = async (clinicId: string, id: string) =>
   (await (await repositories(clinicId)).userAccounts.findById(id))
     ?.sessionVersion;
 
+const REASON = { reason: 'non_payment' } as const;
+
 const change = async (
   action: 'suspend' | 'reactivate',
   clinicId: string,
   cookie: Record<string, string> = SUPER_ADMIN,
+  body: unknown = action === 'suspend' ? REASON : undefined,
 ) => {
   const route =
     action === 'suspend'
@@ -82,7 +86,7 @@ const change = async (
     jsonRequest(
       `/api/platform/clinics/${clinicId}/${action}`,
       'POST',
-      undefined,
+      body,
       cookie,
     ),
     { params: Promise.resolve({ id: clinicId }) },
@@ -194,7 +198,7 @@ describe('Feature: Suspender e reativar clínica pela plataforma (B5, Journey 7 
 
     const events = await statusEvents(clinicId);
     expect(events).toHaveLength(2);
-    for (const detail of ['suspend', 'reactivate']) {
+    for (const detail of ['suspend:non_payment', 'reactivate']) {
       expect(events).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -209,6 +213,153 @@ describe('Feature: Suspender e reativar clínica pela plataforma (B5, Journey 7 
         ]),
       );
     }
+  });
+
+  it.each([
+    ['corpo nulo', null],
+    ['corpo vazio', {}],
+    ['motivo fora da lista', { reason: 'porque-sim' }],
+    ['observação longa demais', { reason: 'other', note: 'x'.repeat(501) }],
+  ])(
+    'Dado %s, Quando suspender, Então 400 e nada muda, nem versões, auditoria ou e-mail',
+    async (_name, body) => {
+      const clinicId = await freshClinic();
+      const admin = await seedAccount(clinicId);
+      const emails = spyOnSentEmails();
+
+      const { response, json } = await change(
+        'suspend',
+        clinicId,
+        SUPER_ADMIN,
+        body,
+      );
+
+      expect(response.status).toBe(400);
+      expect(json.error).toContain('Dados inválidos');
+      const { clinics } = await repositories(clinicId);
+      expect((await clinics.findById(clinicId))?.status).toBe('active');
+      expect(await versionOf(clinicId, admin.id)).toBe(0);
+      expect(await statusEvents(clinicId)).toHaveLength(0);
+      expect(emails.bodies).toHaveLength(0);
+    },
+  );
+
+  it('Dada requisição sem corpo algum, Quando suspender, Então 400 pedindo o motivo', async () => {
+    const clinicId = await freshClinic();
+    const route = await import('@/app/api/platform/clinics/[id]/suspend/route');
+
+    const response = await route.POST(
+      new NextRequest(
+        `http://localhost/api/platform/clinics/${clinicId}/suspend`,
+        {
+          method: 'POST',
+          headers: SUPER_ADMIN,
+        },
+      ),
+      { params: Promise.resolve({ id: clinicId }) },
+    );
+
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as Envelope<null>).error).toContain(
+      'Motivo da suspensão é obrigatório',
+    );
+    const { clinics } = await repositories(clinicId);
+    expect((await clinics.findById(clinicId))?.status).toBe('active');
+  });
+
+  it('Dado motivo e observação, Quando suspender e reativar, Então o motivo vai ao detalhe, a auditoria leva só o código e a reativação limpa o motivo', async () => {
+    const clinicId = await freshClinic();
+    const note = 'Maria Souza pediu o encerramento';
+
+    const suspended = await change('suspend', clinicId, SUPER_ADMIN, {
+      reason: 'clinic_request',
+      note,
+    });
+
+    expect(suspended.json.data).toMatchObject({
+      statusReason: 'clinic_request',
+      statusReasonNote: note,
+    });
+    const events = await statusEvents(clinicId);
+    expect(events.map((event) => event.detail)).toEqual([
+      'suspend:clinic_request',
+    ]);
+    expect(JSON.stringify(events)).not.toContain('Maria');
+
+    const reactivated = await change('reactivate', clinicId);
+    expect(reactivated.json.data).toMatchObject({
+      status: 'active',
+      statusReason: null,
+      statusReasonNote: null,
+    });
+    const { clinics } = await repositories(clinicId);
+    expect((await clinics.findById(clinicId))?.statusReason).toBeNull();
+  });
+
+  it('Dada clínica com admins, Quando suspender e reativar, Então só os company_admin ativos dela recebem o aviso, sem o motivo', async () => {
+    const clinicId = await freshClinic();
+    const otherClinicId = await freshClinic();
+    const admin = await seedAccount(clinicId);
+    const pending = await seedAccount(clinicId, 'company_admin', {
+      password: false,
+    });
+    const gone = await seedAccount(clinicId);
+    const { userAccounts } = await repositories(clinicId);
+    await userAccounts.save(gone.deactivate());
+    await seedAccount(clinicId, 'atendente');
+    await seedAccount(clinicId, 'patient');
+    await seedAccount(otherClinicId);
+    const emails = spyOnSentEmails();
+
+    await change('suspend', clinicId, SUPER_ADMIN, {
+      reason: 'security_incident',
+      note: 'Vazamento de senha',
+    });
+    const afterSuspend = [...emails.bodies];
+    await change('reactivate', clinicId);
+
+    const recipients = (bodies: string[]) =>
+      bodies.map((body) => body.split(' — ')[0]).sort();
+    expect(recipients(afterSuspend)).toEqual(
+      [admin.email, pending.email].sort(),
+    );
+    expect(afterSuspend[0]).toContain('foi suspenso');
+    expect(afterSuspend[0]).toContain('Clínica estado');
+    expect(recipients(emails.bodies.slice(2))).toEqual(
+      [admin.email, pending.email].sort(),
+    );
+    expect(emails.bodies[2]).toContain('foi reativado');
+    for (const body of emails.bodies) {
+      expect(body).not.toMatch(/segurança|security|Vazamento|incident/i);
+    }
+  });
+
+  it('Dada repetição ou falha, Quando o aviso não pode sair, Então repetir não reenvia e a falha do provedor não derruba a operação', async () => {
+    const clinicId = await freshClinic();
+    const admin = await seedAccount(clinicId);
+    const emails = spyOnSentEmails();
+
+    await change('suspend', clinicId);
+    await change('suspend', clinicId);
+    expect(emails.bodies).toHaveLength(1);
+
+    emails.restore();
+    const { NullEmailGateway } = await import(
+      '@/application/ports/email-gateway'
+    );
+    vi.spyOn(NullEmailGateway.prototype, 'send').mockRejectedValue(
+      new Error('provedor fora do ar'),
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const { response, json } = await change('reactivate', clinicId);
+
+    expect(response.status).toBe(200);
+    expect(json.data.status).toBe('active');
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(`Aviso de reactivate da clínica ${clinicId}`),
+    );
+    expect(warn.mock.calls.flat().join(' ')).not.toContain(admin.email);
   });
 
   it('Dada a auditoria falhou, Quando suspender ou reativar, Então 500 e estado e versões não mudam', async () => {
