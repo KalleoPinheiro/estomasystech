@@ -862,3 +862,16 @@ Decisões de @KalleoPinheiro de 2026-10-12 (AD-033) registradas na documentaçã
 - **Next step**: nenhum.
 - **Blockers**: nenhum. A base legal da transferência para a UE segue na #216.
 - **Branch**: `docs/313-runbook-adr-015`. PR #316, squash-merged em `main` (`c8aa07b`). A issue #313 foi fechada manualmente, porque a PR não tinha `Closes`.
+
+## Issue #309 — sessões do Admin sem 2FA e senha única no portal (2026-10-17) — ENCERRADO (#317)
+
+Decisões de @KalleoPinheiro na #309 (2026-10-12) implementadas, mais a decisão delegada de 2026-10-17 sobre contas inativas:
+- **Migração `0052`** soma 1 ao `session_version` de todo `company_admin` sem linha em `user_mfa`; o proxy revoga a sessão antiga em até 60 s e o Admin cai no cadastro do autenticador no próximo login (ACE-RN-49).
+- **Política de senha única** (mínimo de 10 e lista de senhas comuns) para equipe, paciente e parceiro, conferida antes de ler o token (ACE-RN-48). `assertPasswordPolicy` deixou de receber o papel.
+- **Contas inativas:** a migração não filtra por conta ativa. É a opção mais segura (conta reativada nunca volta com sessão anterior ao 2º fator) e sem custo, porque conta inativa não tem sessão usável. Registrado no ADR-016 e no ACE-RN-49.
+
+**Detalhes**: o CI do GitHub estava sem cota, então o gate rodou localmente: `typecheck`, `lint`, `check:sv`, `check:docs`, `test:coverage` (96,8% de linhas), `npm run build`, E2E de produção (37/37) e E2E completo (239/239). Revisão com a skill the-judge: nenhum achado (dois `as unknown as` só em teste). A PR é de contas existentes sem schema novo além do UPDATE de dados.
+
+- **Next step**: #295 (reset do 2º fator) e #250 seguem na fila.
+- **Blockers**: nenhum. Docker smoke não rodado: o ambiente não tem daemon Docker e nenhum arquivo de imagem mudou.
+- **Branch**: `feat/309-sessoes-2fa-senha-portal`. PR #317, squash-merged em `main`. Issue #309 fechada via `Closes #309`.

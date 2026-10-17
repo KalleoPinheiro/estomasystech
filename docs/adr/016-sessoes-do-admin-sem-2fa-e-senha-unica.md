@@ -19,7 +19,11 @@ last_reviewed: 2026-10-12
    `session_version` de todo `company_admin` sem linha em `user_mfa`. O proxy já compara a versão
    do token com a da conta (ADR-005), então a sessão antiga é revogada na próxima conferência
    (até 60 s por instância). No login seguinte, o Admin cai no cadastro do autenticador (ADR-012).
-   Quem já tinha fator não é tocado. Admin criado depois da migração nunca tem sessão sem fator,
+   Quem já tinha fator não é tocado. A migração **não filtra por conta ativa**: contas inativas de
+   Admin sem fator também têm a versão somada (decisão de 2026-10-17, delegada pelo dono do
+   produto). É a opção mais segura, porque uma conta reativada depois nunca volta com sessão
+   anterior à exigência do 2º fator, e o custo é nulo, já que conta inativa não tem sessão que
+   possa ser usada. Admin criado depois da migração nunca tem sessão sem fator,
    porque o login exige o cadastro antes de abrir a sessão.
 2. **Uma política de senha só.** Equipe, paciente e parceiro: mínimo de 10 caracteres e recusa da
    lista embutida de senhas comuns, com as mesmas mensagens. Vale ao definir (convite e
