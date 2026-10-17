@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableRow } from '@still-void/ui/react';
 import { type ReactNode, use } from 'react';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import type { ReceiptParties } from '@/domain/billing/receipt';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import type { InvoiceDto, InvoicePaymentDto } from '@/lib/dto';
 import {
@@ -17,16 +18,20 @@ import {
   useDocumentIssuance,
 } from '@/lib/use-document-issuance';
 
-/** Guardas de bloqueio/carregamento — mesma ordem dos demais documentos. */
+/**
+ * Guardas de bloqueio/carregamento — mesma ordem dos demais documentos. Sem
+ * CPF do pagador ou CNPJ do prestador o erro vem com a orientação (#326).
+ */
 function guardBlock(
   clinic: ClinicInfoDto | null,
   invoice: InvoiceDto | null,
   payment: InvoicePaymentDto | null,
   error: string | null,
+  parties: ReceiptParties | null,
   issuance: DocumentIssuance | null,
 ): ReactNode | null {
   if (error) return <ErrorAlert message={error} />;
-  if (!clinic || !invoice) return <LoadingIndicator />;
+  if (!clinic || !invoice || !parties) return <LoadingIndicator />;
   if (!payment) {
     return <ErrorAlert message="Pagamento não encontrado nesta fatura." />;
   }
@@ -100,9 +105,15 @@ export default function PaymentReceiptPage({
   const { data: invoice, error: invoiceError } = useApiQuery<InvoiceDto>(
     `/api/invoices/${invoiceId}`,
   );
+  // O CPF inteiro só vem deste endpoint, que também bloqueia a emissão sem os
+  // documentos exigidos; a emissão persistida só começa depois dele.
+  const { data: parties, error: partiesError } = useApiQuery<ReceiptParties>(
+    `/api/invoices/${invoiceId}/payments/${paymentId}/receipt`,
+  );
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'recibo',
-    paymentId,
+    parties ? paymentId : null,
+    invoiceId,
   );
   const payment = invoice?.payments.find((p) => p.id === paymentId) ?? null;
 
@@ -110,11 +121,12 @@ export default function PaymentReceiptPage({
     clinic,
     invoice,
     payment,
-    clinicError ?? invoiceError ?? issuanceError,
+    clinicError ?? invoiceError ?? partiesError ?? issuanceError,
+    parties,
     issuance,
   );
   if (guard) return guard;
-  if (!clinic || !invoice || !payment || !issuance) return null;
+  if (!clinic || !invoice || !payment || !parties || !issuance) return null;
 
   const settles = receivedUpTo(invoice, payment) >= invoice.netAmountCents;
   return (
@@ -130,13 +142,15 @@ export default function PaymentReceiptPage({
       }
     >
       <p className="mb-4">
-        {clinic.name} recebeu de <strong>{invoice.patientName}</strong> a
+        {parties.provider.name} (CNPJ {parties.provider.document}) recebeu de{' '}
+        <strong>{parties.payer.name}</strong> (CPF {parties.payer.document}) a
         quantia de <strong>{formatCurrency(payment.amountCents)}</strong>, em{' '}
         <strong>{formatDate(payment.paidAt)}</strong>, via{' '}
         <strong>
           {PAYMENT_METHOD_LABELS[payment.method] ?? payment.method}
         </strong>
-        , referente a <strong>{invoice.description}</strong>.
+        , referente a <strong>{invoice.description}</strong>
+        {parties.payerIsPatient ? '' : ` (paciente: ${invoice.patientName})`}.
       </p>
       <Summary invoice={invoice} payment={payment} />
     </DocumentFrame>

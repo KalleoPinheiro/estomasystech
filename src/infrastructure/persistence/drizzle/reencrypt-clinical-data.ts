@@ -12,6 +12,7 @@ import {
   dataSubjectRequests,
   evolutionNotes,
   interventionRecords,
+  invoicePayments,
   outcomeEvaluations,
   patients,
   waitlistEntries,
@@ -69,7 +70,7 @@ export const CIPHERED_TABLES: readonly CipheredTable[] = [
     name: 'patients',
     table: patients,
     key: patients.id,
-    columns: { notes: patients.notes },
+    columns: { notes: patients.notes, cpf: patients.cpf },
   },
   {
     name: 'appointments',
@@ -118,6 +119,12 @@ export const CIPHERED_TABLES: readonly CipheredTable[] = [
     table: interventionRecords,
     key: interventionRecords.id,
     columns: { notes: interventionRecords.notes },
+  },
+  {
+    name: 'invoice_payments',
+    table: invoicePayments,
+    key: invoicePayments.id,
+    columns: { payerCpf: invoicePayments.payerCpf },
   },
 ];
 

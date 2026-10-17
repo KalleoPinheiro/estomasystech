@@ -90,6 +90,7 @@ const invoicePaid: InvoiceDto = {
       amountCents: 20000,
       method: 'pix',
       paidAt: '2026-06-16T12:00:00.000Z',
+      payer: null,
     },
   ],
 };
@@ -100,6 +101,7 @@ const patientFixture: PatientDto = {
   email: 'maria@example.com',
   phone: '11999998888',
   phoneNeedsCorrection: false,
+  cpfMasked: null,
   birthDate: null,
   notes: null,
   referredByPartnerId: null,

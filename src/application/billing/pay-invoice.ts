@@ -6,6 +6,7 @@ export interface PayInvoiceInput {
   id: string;
   method: PaymentMethod;
   paidAt?: Date;
+  payer?: { name: string; cpf: string } | null;
 }
 
 export class PayInvoice {
@@ -16,7 +17,7 @@ export class PayInvoice {
     if (!invoice) {
       throw new NotFoundError('Fatura', input.id);
     }
-    const paid = invoice.markPaid(input.method, input.paidAt);
+    const paid = invoice.markPaid(input.method, input.paidAt, input.payer);
     await this.invoices.save(paid);
     return paid;
   }

@@ -140,6 +140,7 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
           />{' '}
           {patient.email ? ` · ${patient.email}` : ''}
           {patient.birthDate ? ` · nasc. ${formatDate(patient.birthDate)}` : ''}
+          {patient.cpfMasked ? ` · CPF ${patient.cpfMasked}` : ''}
         </span>
       }
       actions={

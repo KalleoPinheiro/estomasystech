@@ -29,6 +29,8 @@ export interface DocumentIssuanceResult {
 export function useDocumentIssuance(
   documentType: DocumentType,
   resourceId: string | null,
+  /** Recibo: fatura do recebimento, para a emissão checar CPF e CNPJ (#326). */
+  invoiceId?: string,
 ): DocumentIssuanceResult {
   const [issuance, setIssuance] = useState<DocumentIssuance | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function useDocumentIssuance(
     let cancelled = false;
     apiFetch<DocumentIssuance>('/api/documents/issue', {
       method: 'POST',
-      body: JSON.stringify({ documentType, resourceId }),
+      body: JSON.stringify({ documentType, resourceId, invoiceId }),
     })
       .then((result) => {
         if (!cancelled) setIssuance(result);
@@ -53,7 +55,7 @@ export function useDocumentIssuance(
     return () => {
       cancelled = true;
     };
-  }, [documentType, resourceId]);
+  }, [documentType, resourceId, invoiceId]);
 
   return { issuance, error };
 }

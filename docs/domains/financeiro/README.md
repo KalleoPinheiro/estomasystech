@@ -3,7 +3,7 @@ title: "Domínio: Financeiro"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-17
 domain: financeiro
 ---
 
@@ -35,13 +35,14 @@ em centavos inteiros.
 | FIN-RN-12 | Pagamento, desconto e cancelamento da mesma fatura são serializados (lock da linha na transação): duas ações simultâneas nunca gravam recebimento em dobro — a segunda vê o saldo atualizado e é recusada se exceder (#192) | `PATCH /api/invoices/:id`, `InvoiceRepository.findByIdForUpdate` |
 | FIN-RN-13 | Retenção das faturas (#311): ao anonimizar o paciente (20 anos), a descrição vira "Fatura anonimizada" e o motivo do desconto sai, em todas as faturas dele; valor, desconto, datas, status, forma de pagamento e vínculos ficam (prazo fiscal). O recebimento só guarda valor, forma e data: nada a limpar | [spec](../../../.specs/features/retencao-restante/spec.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
 | FIN-RN-14 | O Profissional vê, nos pacientes vinculados, o nome do pacote e o saldo de sessões, **sem preço** (AD-027, #296): `GET /api/patients/:id/packages` (família `clinical`, vínculo R4, DTO `PackageBalanceDto` sem campo monetário). Sem vínculo, `404`. `GET /api/packages`, com preço, segue `administrative` | `src/app/api/patients/[id]/packages/route.ts`, `src/lib/dto/package.ts` |
+| FIN-RN-15 | Recibo válido para o IRPF (#326, [ADR-025](../../adr/025-cpf-no-recibo-e-protecao.md)): traz o **CPF de quem pagou** (o paciente ou, se informado ao receber, o pagador com nome e CPF) e o **CNPJ da empresa** como prestador. Sem CPF ou sem CNPJ o recibo é bloqueado (`400`, com orientação) na tela e na emissão: `POST /api/documents/issue` de `recibo` exige `invoiceId` e faz a mesma checagem. O pagador é gravado no recebimento (imutável) e cifrado em repouso (CPF); o CPF inteiro só sai em `GET /api/invoices/:id/payments/:paymentId/receipt`, auditado sem o número. Reimpressão usa o CPF atual do cadastro; a anonimização do paciente apaga o CPF e os pagadores dos recebimentos dele (valores ficam) | `src/domain/billing/receipt.ts`, `src/application/billing/resolve-receipt.ts`, `src/app/api/invoices/[id]/payments/[paymentId]/receipt/`, `tests/api/receipt-cpf-routes.test.ts` |
 
 ## Funcionalidades
 
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
 | Faturas: filtro, fatura avulsa, receber (Pix, dinheiro, cartões, convênio, transferência), cancelar | entregue | `/faturamento` |
-| Pagamento parcial, desconto e recibo `REC-…` | entregue | `/faturamento`, `/documentos/recibo/…` |
+| Pagamento parcial, desconto e recibo `REC-…` (com CPF do pagador e CNPJ da empresa, FIN-RN-15) | entregue | `/faturamento`, `/documentos/recibo/…` |
 | Pacotes de sessões | entregue | `/faturamento` |
 | Repasses: fechamento, cancelamento, comprovante `REP-…`, extrato do profissional | entregue | `/repasses`, `/documentos/repasse/…` |
 | Monetização (PSP, cobrança recorrente) | backlog | [roadmap](../../plano-evolucao-faseado.md) — Fase 5 |

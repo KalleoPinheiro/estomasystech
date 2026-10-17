@@ -1064,9 +1064,39 @@ describe('Feature: Retenção restante (#311)', () => {
       amountCents: 14000,
       method: 'pix',
       paidAt: OLD,
+      payerName: 'João Pagador',
+      payerCpf: 'v1.cifrado',
     });
+    const foreignPayment = nextId('pay');
+    await db.insert(schema.invoicePayments).values({
+      id: foreignPayment,
+      clinicId: CLINIC,
+      invoiceId: foreign,
+      amountCents: 14000,
+      method: 'pix',
+      paidAt: OLD,
+      payerName: 'Outro Pagador',
+      payerCpf: 'v1.cifrado',
+    });
+    await db
+      .update(schema.patients)
+      .set({ cpf: 'v1.cifrado' })
+      .where(eq(schema.patients.id, patientId));
 
     expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(1);
+    const [anonymized] = await db
+      .select({ cpf: schema.patients.cpf })
+      .from(schema.patients)
+      .where(eq(schema.patients.id, patientId));
+    expect(anonymized.cpf).toBeNull();
+    const [kept] = await db
+      .select()
+      .from(schema.invoicePayments)
+      .where(eq(schema.invoicePayments.id, foreignPayment));
+    expect(kept).toMatchObject({
+      payerName: 'Outro Pagador',
+      payerCpf: 'v1.cifrado',
+    });
     expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(0);
 
     const get = invoiceRow;
@@ -1094,6 +1124,9 @@ describe('Feature: Retenção restante (#311)', () => {
       .where(eq(schema.invoicePayments.invoiceId, own));
     expect(payments).toHaveLength(1);
     expect(payments[0].amountCents).toBe(14000);
+    // Quem pagou no lugar do paciente sai junto com ele; o valor fica.
+    expect(payments[0].payerName).toBeNull();
+    expect(payments[0].payerCpf).toBeNull();
   });
 
   it('RES-05/09: eventos do Google Agenda de paciente anonimizado ficam pendentes até limpar o id; só da própria clínica', async () => {

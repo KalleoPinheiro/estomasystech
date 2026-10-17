@@ -1,6 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { ResolveReceipt } from '@/application/billing/resolve-receipt';
 import { AuditEvent } from '@/domain/audit/audit-event';
+import { ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -27,6 +29,8 @@ const NUMBER_PREFIX: Record<(typeof DOCUMENT_TYPES)[number], string> = {
 const issueSchema = z.object({
   documentType: z.enum(DOCUMENT_TYPES),
   resourceId: z.string().min(1).max(200),
+  /** Recibo: fatura do recebimento (`resourceId`), para checar CPF e CNPJ (#326). */
+  invoiceId: z.string().min(1).max(200).optional(),
 });
 
 /**
@@ -43,7 +47,22 @@ export async function POST(request: NextRequest) {
     const body = issueSchema.parse(await request.json());
     // Repositório escopado (B6, #210 item 4): a reemissão só acha o registro
     // da própria empresa.
-    const { auditEvents } = await getRepositories(writeScope(guard.session));
+    const { auditEvents, invoices, patients, clinics } = await getRepositories(
+      writeScope(guard.session),
+    );
+
+    // Sem CPF do pagador e CNPJ do prestador o recibo não vale para o IRPF:
+    // não se emite (FIN-RN-15), nem chamando a rota direto.
+    if (body.documentType === 'recibo') {
+      if (!body.invoiceId) {
+        throw new ValidationError('Informe a fatura do recibo');
+      }
+      await new ResolveReceipt(invoices, patients, clinics).execute({
+        invoiceId: body.invoiceId,
+        paymentId: body.resourceId,
+        clinicId: writeClinicId(guard.session),
+      });
+    }
 
     const existing = await auditEvents.findAll({
       resourceType: body.documentType,

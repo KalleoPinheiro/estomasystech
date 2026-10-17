@@ -1,4 +1,5 @@
 import type { Invoice } from '@/domain/billing/invoice';
+import { maskCpf } from '@/domain/shared/cpf';
 
 export interface InvoiceDto {
   id: string;
@@ -28,6 +29,8 @@ export interface InvoicePaymentDto {
   amountCents: number;
   method: string;
   paidAt: string;
+  /** Quem pagou, quando não é o paciente; CPF mascarado (#326). */
+  payer: { name: string; cpfMasked: string } | null;
 }
 
 export const toInvoiceDto = (
@@ -55,5 +58,8 @@ export const toInvoiceDto = (
     amountCents: payment.amount.cents,
     method: payment.method,
     paidAt: payment.paidAt.toISOString(),
+    payer: payment.payer
+      ? { name: payment.payer.name, cpfMasked: maskCpf(payment.payer.cpf) }
+      : null,
   })),
 });

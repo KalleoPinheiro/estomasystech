@@ -1139,3 +1139,16 @@ Pergunta aberta do AD-040 decidida pelo coordenador: o paciente também não rem
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke não rodam no container (sem daemon): pendente.
 - **Pendências para o Kalléo:** remover `WHATSAPP_*` do ambiente de produção, se definidas (agora sem efeito).
 - **Next step:** nenhum. **Blockers:** nenhum. Sem migração.
+
+## Issue #326 — CPF no recibo para o IRPF (2026-10-17) — ENCERRADO
+
+Recibo `REC-…` passa a trazer o **CPF de quem pagou** e o **CNPJ da empresa**; sem eles a emissão é bloqueada com orientação (FIN-RN-15, PRO-RN-22, AD-044, [ADR-025](../../docs/adr/025-cpf-no-recibo-e-protecao.md)).
+- **Domínio**: `src/domain/shared/cpf.ts` (dígito verificador, recusa sequências repetidas, forma de 11 dígitos, máscara `***.***.247-**`); `Patient.cpf` opcional; `InvoicePayment.payer` (nome + CPF) informado ao receber; `src/domain/billing/receipt.ts` decide pagador e prestador e lança `ValidationError` com a orientação.
+- **Bloqueio em dois lugares**: `ResolveReceipt` serve a tela (`GET /api/invoices/:id/payments/:paymentId/receipt`) e a emissão (`POST /api/documents/issue` de `recibo` agora exige `invoiceId`). Chamar a rota direto não emite recibo sem CPF/CNPJ.
+- **LGPD**: `patients.cpf` e `invoice_payments.payer_cpf` cifrados (ADR-006, `data:reencrypt` cobre); API e telas da equipe só recebem a máscara; o CPF inteiro sai no recibo (leitura auditada sem o número) e na exportação do titular; portal e parceiro não recebem; anonimização apaga o CPF e os pagadores dos recebimentos (valores ficam).
+- **Migração 0060** (3 colunas anuláveis: `patients.cpf`, `invoice_payments.payer_name`, `invoice_payments.payer_cpf`). Sem backfill.
+- **UI**: campo CPF no cadastro (em branco na edição mantém), "Quem pagou não é o paciente" no registro do pagamento, lista mostra "pago por …", recibo mostra os dois documentos.
+- **Decisões minhas (autonomia delegada), para conferir**: (1) máscara mais protetiva que a usual: só 3 dígitos do miolo; (2) prestador = só o CNPJ da empresa (sem CPF de profissional autônomo PF); (3) sem busca/unicidade por CPF, porque a cifra é aleatória; (4) pagador gravado no recebimento imutável, **sem tela para corrigir depois**; (5) reimpressão usa o CPF atual do cadastro; (6) a tela troca o CPF mas não remove (API aceita `cpf: ""`).
+- **Gate**: o GitHub Actions está sem cota, então o gate rodou local sobre a branch (ver comentário da PR). Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Next step**: se a clínica precisar corrigir pagador de recebimento já gravado, abrir ticket (ação `payer` no PATCH da fatura + tela). #326 não bloqueia mais ninguém.
+- **Blockers**: nenhum.

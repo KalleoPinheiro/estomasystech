@@ -236,3 +236,51 @@ describe('Feature: Cadastro de paciente', () => {
     });
   });
 });
+
+describe('Feature: CPF do paciente (#326)', () => {
+  it('Dado cadastro sem CPF, Quando criar, Então o CPF é opcional (null)', () => {
+    const patient = Patient.create(validProps);
+
+    expect(patient.cpf).toBeNull();
+    expect(patient.cpfMasked).toBeNull();
+  });
+
+  it('Dado CPF com máscara, Quando criar, Então guarda os 11 dígitos e expõe só a máscara', () => {
+    const patient = Patient.create({ ...validProps, cpf: '529.982.247-25' });
+
+    expect(patient.cpf).toBe('52998224725');
+    expect(patient.cpfMasked).toBe('***.***.247-**');
+  });
+
+  it('Dado CPF com dígito verificador errado, Quando criar, Então ValidationError', () => {
+    expect(() =>
+      Patient.create({ ...validProps, cpf: '529.982.247-24' }),
+    ).toThrow(ValidationError);
+  });
+
+  it('Dado CPF em branco, Quando criar, Então vira null', () => {
+    expect(Patient.create({ ...validProps, cpf: '  ' }).cpf).toBeNull();
+  });
+
+  describe('Cenário: atualizar', () => {
+    const withCpf = () => Patient.create({ ...validProps, cpf: '52998224725' });
+
+    it('Quando edita outro campo sem enviar o CPF, Então o CPF é mantido', () => {
+      expect(withCpf().update({ fullName: 'Maria Souza' }).cpf).toBe(
+        '52998224725',
+      );
+    });
+
+    it('Quando envia CPF novo, Então troca e valida', () => {
+      expect(withCpf().update({ cpf: '111.444.777-35' }).cpf).toBe(
+        '11144477735',
+      );
+      expect(() => withCpf().update({ cpf: '123' })).toThrow(ValidationError);
+    });
+
+    it('Quando envia null ou vazio, Então remove o CPF', () => {
+      expect(withCpf().update({ cpf: null }).cpf).toBeNull();
+      expect(withCpf().update({ cpf: '' }).cpf).toBeNull();
+    });
+  });
+});

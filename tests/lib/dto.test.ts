@@ -49,6 +49,7 @@ describe('Feature: DTO de paciente', () => {
       fullName: 'Maria Silva',
       email: 'maria@clinica.com',
       phone: '11999990000',
+      cpf: '529.982.247-25',
       birthDate: new Date('1990-05-20T00:00:00.000Z'),
       notes: 'Alergia a látex',
       referredByPartnerId: 'partner-1',
@@ -56,12 +57,14 @@ describe('Feature: DTO de paciente', () => {
 
     const dto = toPatientDto(patient);
 
+    expect(JSON.stringify(dto)).not.toContain('52998224725');
     expect(dto).toEqual({
       id: patient.id,
       fullName: 'Maria Silva',
       email: 'maria@clinica.com',
       phone: '+5511999990000',
       phoneNeedsCorrection: false,
+      cpfMasked: '***.***.247-**',
       birthDate: patient.birthDate?.toISOString(),
       notes: 'Alergia a látex',
       referredByPartnerId: 'partner-1',
@@ -301,6 +304,7 @@ describe('Feature: DTO de fatura', () => {
         amount: Money.fromCents(6000),
         method: 'pix',
         paidAt,
+        payer: { name: 'João Souza', cpf: '111.444.777-35' },
       });
 
     const dto = toInvoiceDto(invoice);
@@ -319,8 +323,10 @@ describe('Feature: DTO de fatura', () => {
         amountCents: 6000,
         method: 'pix',
         paidAt: paidAt.toISOString(),
+        payer: { name: 'João Souza', cpfMasked: '***.***.777-**' },
       },
     ]);
+    expect(JSON.stringify(dto)).not.toContain('11144477735');
   });
 
   it('Dado fatura paga, Quando toInvoiceDto, Então reflete status e método de pagamento', () => {

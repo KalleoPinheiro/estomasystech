@@ -10,6 +10,8 @@ export interface PatientDto {
   phone: string;
   /** Telefone legado fora do E.164 BR: a tela pede correção (#324). */
   phoneNeedsCorrection: boolean;
+  /** CPF mascarado (`***.***.789-**`); o número inteiro só sai no recibo (#326). */
+  cpfMasked: string | null;
   birthDate: string | null;
   notes: string | null;
   referredByPartnerId: string | null;
@@ -30,6 +32,7 @@ export const toPatientDto = (
   email: patient.email,
   phone: patient.phone,
   phoneNeedsCorrection: patient.phoneNeedsCorrection,
+  cpfMasked: patient.cpfMasked,
   birthDate: patient.birthDate?.toISOString() ?? null,
   notes: patient.notes,
   referredByPartnerId: patient.referredByPartnerId,

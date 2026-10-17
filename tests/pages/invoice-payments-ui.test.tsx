@@ -15,6 +15,7 @@ import {
 } from '@/app/(staff)/faturamento/invoice-adjust-forms';
 import BillingPage from '@/app/(staff)/faturamento/page';
 import PaymentReceiptPage from '@/app/documentos/recibo/[invoiceId]/[paymentId]/page';
+import type { ReceiptParties } from '@/domain/billing/receipt';
 import type { ClinicInfoDto, InvoiceDto } from '@/lib/dto';
 import { renderWithToast } from '../support/render-with-toast';
 
@@ -68,6 +69,7 @@ const partial: InvoiceDto = {
       amountCents: 5000,
       method: 'pix',
       paidAt: '2026-07-02T12:00:00.000Z',
+      payer: null,
     },
   ],
 };
@@ -126,7 +128,7 @@ describe('Feature: Recebimento e desconto (formulários)', () => {
     });
     expect(screen.getByText(/fica faltando R\$ 100,00/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
-    await waitFor(() => expect(onPay).toHaveBeenCalledWith(3000, 'pix'));
+    await waitFor(() => expect(onPay).toHaveBeenCalledWith(3000, 'pix', null));
   });
 
   it('Dado valor zerado, Então as formas de pagamento ficam desabilitadas', () => {
@@ -250,13 +252,23 @@ const CLINIC: ClinicInfoDto = {
   professionalRegistry: 'COREN-SP 1',
 };
 
+const PARTIES: ReceiptParties = {
+  payer: { name: 'Maria Souza', document: '529.982.247-25' },
+  provider: { name: 'Clínica VittaFlow', document: '12.345.678/0001-95' },
+  payerIsPatient: true,
+};
+
 const renderReceipt = async (
   invoice: InvoiceDto | null,
   paymentId: string,
   clinic: ClinicInfoDto = CLINIC,
+  receipt: FakeResponse = ok(PARTIES),
 ) => {
-  mockFetch((url) => {
+  const calls = mockFetch((url) => {
     if (url === '/api/clinic-info') return ok(clinic);
+    if (url === `/api/invoices/inv-1/payments/${paymentId}/receipt`) {
+      return receipt;
+    }
     if (url === '/api/documents/issue') {
       return ok({
         documentNumber: 'REC-ABCD1234',
@@ -275,6 +287,7 @@ const renderReceipt = async (
       />,
     );
   });
+  return calls;
 };
 
 describe('Feature: Recibo de pagamento', () => {
@@ -308,6 +321,7 @@ describe('Feature: Recibo de pagamento', () => {
             amountCents: 20000,
             method: 'cash',
             paidAt: '2026-07-02T12:00:00.000Z',
+            payer: null,
           },
         ],
       },
@@ -332,6 +346,7 @@ describe('Feature: Recibo de pagamento', () => {
             amountCents: 3000,
             method: 'cash',
             paidAt: '2026-07-05T12:00:00.000Z',
+            payer: null,
           },
         ],
       },
@@ -356,6 +371,56 @@ describe('Feature: Recibo de pagamento', () => {
   it('Dado clínica sem CNPJ, Então bloqueia a emissão', async () => {
     await renderReceipt(partial, 'pay-1', { ...CLINIC, cnpj: '' });
     expect(await screen.findByText(/Clínica sem CNPJ/)).toBeInTheDocument();
+  });
+
+  it('Dado paciente sem CPF, Quando abrir o recibo, Então bloqueia com a orientação e não emite', async () => {
+    const calls = mockFetch((url) => {
+      if (url === '/api/clinic-info') return ok(CLINIC);
+      if (url === '/api/invoices/inv-1') return ok(partial);
+      if (url === '/api/invoices/inv-1/payments/pay-1/receipt') {
+        return failure('O paciente não tem CPF cadastrado.');
+      }
+      return undefined;
+    });
+    await act(async () => {
+      renderWithToast(
+        <PaymentReceiptPage
+          params={Promise.resolve({ invoiceId: 'inv-1', paymentId: 'pay-1' })}
+        />,
+      );
+    });
+    expect(
+      await screen.findByText('O paciente não tem CPF cadastrado.'),
+    ).toBeInTheDocument();
+    expect(calls.some((c) => c.url === '/api/documents/issue')).toBe(false);
+  });
+
+  it('Dado CPF e CNPJ, Quando abrir o recibo, Então o texto traz os dois documentos e a emissão leva a fatura', async () => {
+    const calls = await renderReceipt(partial, 'pay-1');
+    expect(await screen.findByText(/CPF 529\.982\.247-25/)).toBeInTheDocument();
+    expect(screen.getByText(/CNPJ 12\.345\.678\/0001-95/)).toBeInTheDocument();
+    const issue = calls.find((c) => c.url === '/api/documents/issue');
+    expect(JSON.parse(issue?.body ?? '{}')).toEqual({
+      documentType: 'recibo',
+      resourceId: 'pay-1',
+      invoiceId: 'inv-1',
+    });
+  });
+
+  it('Dado pagador diferente do paciente, Então o recibo sai no nome do pagador e cita o paciente', async () => {
+    await renderReceipt(
+      partial,
+      'pay-1',
+      CLINIC,
+      ok({
+        ...PARTIES,
+        payer: { name: 'João Souza', document: '111.444.777-35' },
+        payerIsPatient: false,
+      }),
+    );
+    expect(await screen.findByText('João Souza')).toBeInTheDocument();
+    expect(screen.getByText(/CPF 111\.444\.777-35/)).toBeInTheDocument();
+    expect(screen.getByText(/paciente: Maria Souza/)).toBeInTheDocument();
   });
 
   it('Dado fatura inacessível, Então mostra o erro', async () => {
@@ -396,5 +461,93 @@ describe('Feature: Fatura parcial no portal do paciente', () => {
     expect(
       screen.getByText(/pago R\$ 50,00 · falta\s+R\$ 130,00/),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Feature: Pagador distinto do paciente no recebimento (#326)', () => {
+  const clickPix = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
+
+  it('Dado "quem pagou não é o paciente" com nome e CPF, Quando receber, Então envia o pagador junto', async () => {
+    const onPay = vi.fn(async () => {});
+    render(<PaymentForm invoice={partial} onPay={onPay} />);
+
+    fireEvent.click(screen.getByLabelText('Quem pagou não é o paciente'));
+    fireEvent.change(screen.getByLabelText('Nome do pagador *'), {
+      target: { value: 'João Souza' },
+    });
+    fireEvent.change(screen.getByLabelText('CPF do pagador *'), {
+      target: { value: '111.444.777-35' },
+    });
+    clickPix();
+
+    await waitFor(() =>
+      expect(onPay).toHaveBeenCalledWith(13000, 'pix', {
+        name: 'João Souza',
+        cpf: '111.444.777-35',
+      }),
+    );
+  });
+
+  it('Dado CPF do pagador inválido, Quando receber, Então avisa e não envia', async () => {
+    const onPay = vi.fn(async () => {});
+    render(<PaymentForm invoice={partial} onPay={onPay} />);
+
+    fireEvent.click(screen.getByLabelText('Quem pagou não é o paciente'));
+    fireEvent.change(screen.getByLabelText('Nome do pagador *'), {
+      target: { value: 'João Souza' },
+    });
+    fireEvent.change(screen.getByLabelText('CPF do pagador *'), {
+      target: { value: '123.456.789-00' },
+    });
+    clickPix();
+
+    expect(await screen.findByText(/CPF inválido/)).toBeInTheDocument();
+    expect(onPay).not.toHaveBeenCalled();
+  });
+
+  it('Dado a faturamento, Quando receber com pagador, Então o PATCH leva payerName e payerCpf', async () => {
+    const calls = mockFetch(billingRouter([base]));
+    renderWithToast(<BillingPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Receber' }));
+    fireEvent.click(
+      await screen.findByLabelText('Quem pagou não é o paciente'),
+    );
+    fireEvent.change(screen.getByLabelText('Nome do pagador *'), {
+      target: { value: 'João Souza' },
+    });
+    fireEvent.change(screen.getByLabelText('CPF do pagador *'), {
+      target: { value: '111.444.777-35' },
+    });
+    clickPix();
+
+    await screen.findByText('Pagamento registrado');
+    const patch = calls.find((c) => c.method === 'PATCH');
+    expect(JSON.parse(patch?.body ?? '{}')).toMatchObject({
+      action: 'pay',
+      method: 'pix',
+      payerName: 'João Souza',
+      payerCpf: '111.444.777-35',
+    });
+  });
+
+  it('Dado pagamento já feito por outra pessoa, Então a lista mostra quem pagou', async () => {
+    mockFetch(
+      billingRouter([
+        {
+          ...partial,
+          payments: [
+            {
+              ...partial.payments[0],
+              payer: { name: 'João Souza', cpfMasked: '***.***.777-**' },
+            },
+          ],
+        },
+      ]),
+    );
+    renderWithToast(<BillingPage />);
+
+    expect(await screen.findByText(/pago por João Souza/)).toBeInTheDocument();
   });
 });

@@ -175,6 +175,8 @@ export default function PatientsPage() {
       fullName: values.fullName,
       email: values.email.trim() || null,
       phone: values.phone,
+      // Em branco: novo cadastro sem CPF; edição mantém o que está guardado.
+      cpf: values.cpf.trim() || undefined,
       birthDate: values.birthDate
         ? new Date(values.birthDate).toISOString()
         : null,

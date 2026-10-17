@@ -12,6 +12,7 @@ export interface UpdatePatientInput {
   /** `undefined` mantém; `null` ou vazio remove o e-mail de contato (#325). */
   email?: string | null;
   phone?: string;
+  cpf?: string | null;
   birthDate?: Date | null;
   notes?: string | null;
   referredByPartnerId?: string | null;

@@ -35,7 +35,7 @@ describe('Feature: leitura da fatura com lock de linha (#192)', () => {
     await new DrizzlePatientRepository(db, 'legacy-clinic', TEST_CIPHER).save(
       patient,
     );
-    repo = new DrizzleInvoiceRepository(db, 'legacy-clinic');
+    repo = new DrizzleInvoiceRepository(db, 'legacy-clinic', TEST_CIPHER);
     const invoice = Invoice.create({
       patientId: patient.id,
       description: 'Curativo',
