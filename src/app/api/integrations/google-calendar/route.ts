@@ -42,10 +42,7 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(authUrl);
   // O cookie guarda também QUEM iniciou: o callback recusa se a sessão do
   // retorno for outra, em vez de gravar a credencial na conta errada.
-  const cookieValue = encodeCalendarOAuthState(
-    state,
-    guard.session?.subject ?? 'sessao-aberta',
-  );
+  const cookieValue = encodeCalendarOAuthState(state, guard.session.subject);
   response.cookies.set(CALENDAR_OAUTH_STATE_COOKIE, cookieValue, {
     httpOnly: true,
     sameSite: 'lax',

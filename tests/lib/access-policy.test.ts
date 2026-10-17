@@ -4,7 +4,6 @@ import {
   isPublicPath,
   isSharedPath,
   PUBLIC_PATHS,
-  resetAuthModeWarning,
   resolveAuthMode,
   SHARED_PATH_PREFIXES,
 } from '@/lib/auth/access-policy';
@@ -27,8 +26,6 @@ describe('Feature: Política de acesso compartilhada entre proxy e rotas', () =>
       saved[key] = process.env[key];
       delete process.env[key];
     }
-    resetAuthModeWarning();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -121,36 +118,20 @@ describe('Feature: Política de acesso compartilhada entre proxy e rotas', () =>
       expect(resolveAuthMode()).toBe('unconfigured');
     });
 
-    it("Dado produção COM VITTA_ALLOW_OPEN_MODE=true, Então ainda assim é 'unconfigured'", () => {
-      vi.stubEnv('NODE_ENV', 'production');
-      process.env.VITTA_ALLOW_OPEN_MODE = 'true';
-
-      expect(resolveAuthMode()).toBe('unconfigured');
-    });
-
-    it("Dado desenvolvimento sem autenticação e SEM o opt-in, Então é 'unconfigured' (fail-closed)", () => {
-      vi.stubEnv('NODE_ENV', 'development');
-
-      expect(resolveAuthMode()).toBe('unconfigured');
-    });
-
-    it.each(['1', 'sim', 'TRUE', ''])(
-      "Dado VITTA_ALLOW_OPEN_MODE=%j (diferente de 'true'), Então não libera",
-      (value) => {
-        vi.stubEnv('NODE_ENV', 'development');
-        process.env.VITTA_ALLOW_OPEN_MODE = value;
+    it.each(['production', 'development', 'test'])(
+      "Dado NODE_ENV=%s COM VITTA_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 'unconfigured'",
+      (nodeEnv) => {
+        vi.stubEnv('NODE_ENV', nodeEnv);
+        process.env.VITTA_ALLOW_OPEN_MODE = 'true';
 
         expect(resolveAuthMode()).toBe('unconfigured');
       },
     );
 
-    it("Dado desenvolvimento com o opt-in explícito, Então o modo é 'open' e avisa uma única vez", () => {
+    it("Dado desenvolvimento sem autenticação, Então é 'unconfigured' (fail-closed)", () => {
       vi.stubEnv('NODE_ENV', 'development');
-      process.env.VITTA_ALLOW_OPEN_MODE = 'true';
 
-      expect(resolveAuthMode()).toBe('open');
-      expect(resolveAuthMode()).toBe('open');
-      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(resolveAuthMode()).toBe('unconfigured');
     });
   });
 });

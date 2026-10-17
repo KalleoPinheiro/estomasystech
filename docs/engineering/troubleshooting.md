@@ -16,7 +16,7 @@ algo que não está aqui? Adicione a linha no mesmo PR.
 
 | Sintoma | Causa provável | Ação |
 | --- | --- | --- |
-| `503` em toda rota | sem `AUTH_SECRET` nem `VITTA_ALLOW_OPEN_MODE` | defina `AUTH_SECRET`, ou `VITTA_ALLOW_OPEN_MODE=true` fora de produção |
+| `503` em toda rota | sem `AUTH_SECRET` | defina `AUTH_SECRET` (não existe modo sem login) |
 | bootstrap responde `403` | já existe conta, ou `x-bootstrap-token` ≠ `VITTA_BOOTSTRAP_TOKEN` | instalação com contas: use "esqueci minha senha" |
 | convite/reset não chega | fora de produção sem `RESEND_API_KEY`/`EMAIL_FROM` o gateway é dry-run | o link está no log: `[e-mail desativado] Para fu***@x.com — …` (destinatário mascarado; o link só sai fora de produção) |
 | convite do bootstrap não chega em produção | sem `RESEND_API_KEY`/`EMAIL_FROM` o canal da plataforma fica desativado ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | use o `inviteUrl` da resposta do `POST /api/auth/bootstrap`, ou defina as duas e reinicie |

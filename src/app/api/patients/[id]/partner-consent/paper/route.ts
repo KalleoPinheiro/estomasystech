@@ -41,7 +41,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       services,
       patient,
       PARTNER_SHARE_CONSENT,
-      guard.session?.subject ?? 'anonymous',
+      guard.session.subject,
       clientIp(request),
     );
     if (created) {

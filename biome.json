@@ -5,7 +5,6 @@
       "**/src/**/*",
       "**/tests/**/*",
       "!**/.next",
-      "!**/.next-open-mode",
       "!**/out",
       "!**/build",
       "!**/coverage",

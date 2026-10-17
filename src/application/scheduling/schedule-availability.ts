@@ -50,10 +50,9 @@ export class CreateScheduleClosure {
     private readonly appointments: AppointmentRepository,
   ) {}
 
-  /** `actor` nulo = modo aberto (ver `canManageClosure`). */
   async execute(
     input: NewScheduleClosure,
-    actor: ClosureActor | null,
+    actor: ClosureActor,
   ): Promise<CreatedClosure> {
     // Antes de validar o profissional: quem não pode não descobre se ele existe.
     assertCanManageClosure(actor, input.professionalId ?? null);
@@ -84,10 +83,7 @@ export class CreateScheduleClosure {
 export class DeleteScheduleClosure {
   constructor(private readonly availability: ScheduleAvailabilityRepository) {}
 
-  async execute(
-    id: string,
-    actor: ClosureActor | null,
-  ): Promise<ScheduleClosure> {
+  async execute(id: string, actor: ClosureActor): Promise<ScheduleClosure> {
     const closure = await this.availability.findClosureById(id);
     if (!closure) {
       throw new NotFoundError('Bloqueio de agenda', id);

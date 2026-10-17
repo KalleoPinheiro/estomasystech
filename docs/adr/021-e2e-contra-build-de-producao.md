@@ -43,10 +43,10 @@ rotas antes da suíte foi tentado e descartado: não reduziu as falhas.
 ## Decisão
 
 Opção C. `playwright.prod.config.ts` roda todos os specs contra `npm run start`, sem retry,
-exceto o modo aberto e `ROLE_ACCOUNT_SPECS` (`e2e/support/constants.ts`). Esses specs
+exceto `ROLE_ACCOUNT_SPECS` (`e2e/support/constants.ts`). Esses specs
 (`papeis-*`, `sessao-expirada`, `feriados-ausencias-profissional`) dependem do convite no log do
 `NullEmailGateway`, que só aparece fora de produção; continuam em `playwright.config.ts` (`next dev`)
-junto com `auth.spec.ts` (modo aberto). Scripts: `test:e2e:prod`, `test:e2e:dev` e `test:e2e`
+junto com `auth.spec.ts`. O segundo servidor `next dev` (porta 3100, modo aberto) foi removido na #327. Scripts: `test:e2e:prod`, `test:e2e:dev` e `test:e2e`
 (build + os dois).
 
 ## Consequências

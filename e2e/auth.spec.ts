@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD, OPEN_MODE_BASE_URL } from "./support/constants";
+import { E2E_SUPER_ADMIN_EMAIL, E2E_SUPER_ADMIN_PASSWORD } from "./support/constants";
 import { sessionCookie } from "./support/session-token";
 import { nextTotpCode } from "./support/totp";
 
@@ -120,33 +120,5 @@ test.describe("login por e-mail e senha", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/portal/);
     await expect(page.getByText("restrito à equipe", { exact: false })).toHaveCount(0);
-  });
-});
-
-test.describe("modo aberto (AUTH_SECRET não configurado)", () => {
-  // Servidor isolado na porta 3100 (ver playwright.config.ts) — sem auth configurada,
-  // o proxy deixa passar direto (comportamento só permitido fora de produção).
-  test.use({ baseURL: OPEN_MODE_BASE_URL, storageState: { cookies: [], origins: [] } });
-
-  test("acessa o dashboard sem login quando a autenticação não está configurada", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    // timeout maior — primeiro acesso ao servidor "modo aberto" (porta isolada,
-    // distDir isolado) ainda pode estar compilando a rota/terminando a migração pglite.
-    //
-    // Repositórios clínicos cifrados exigem AUTH_SECRET incondicionalmente (fail-closed
-    // por design — não dá pra cifrar PHI sem chave), então widgets que dependem de dados
-    // (ex.: /api/summary) mostram erro em vez de carregar; a página degrada mostrando o
-    // alerta em vez do heading "Dashboard" (ver `if (error) return <ErrorAlert .../>` em
-    // src/app/(staff)/page.tsx). O que este teste prova é o bypass de sessão (sidebar/nav
-    // renderiza sem redirecionar para /login), não que dados clínicos carreguem sem chave.
-    await expect(page.getByRole("navigation")).toBeVisible({ timeout: 15_000 });
-    await expect(page).not.toHaveURL(/\/login/);
-  });
-
-  test("acessa a agenda diretamente, sem redirecionar para /login", async ({ page }) => {
-    await page.goto("/agenda");
-    await expect(page.getByRole("heading", { name: "Agenda" })).toBeVisible();
   });
 });

@@ -79,17 +79,6 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     });
   });
 
-  it('Dado modo aberto (account null), Quando carrega, Então mostra a clínica sem linha de conta', async () => {
-    mockIdentityFetch({ clinicLabel: 'Conta de sistema', account: null });
-
-    renderWithToast(<SidebarIdentity />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Conta de sistema')).toBeInTheDocument();
-    });
-    expect(screen.queryByText(/·/)).not.toBeInTheDocument();
-  });
-
   it('Não sobra nenhum texto fixo de "Clínica de Estomaterapia" no componente', async () => {
     mockIdentityFetch({
       clinicLabel: 'Clínica B (teste)',

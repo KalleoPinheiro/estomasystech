@@ -33,8 +33,6 @@ const AUTH_ENV_KEYS = [
  */
 async function loadProxy() {
   vi.resetModules();
-  const { resetAuthModeWarning } = await import('@/lib/auth/access-policy');
-  resetAuthModeWarning();
   return (await import('@/proxy')).proxy;
 }
 
@@ -224,14 +222,15 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       expect((await proxy(request('/agenda'))).status).toBe(503);
     });
 
-    it('Dado VITTA_ALLOW_OPEN_MODE=true fora de produção, Então libera (modo aberto)', async () => {
+    it('Dado VITTA_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 503 sem AUTH_SECRET', async () => {
       delete process.env.AUTH_SECRET;
       delete process.env.AUTH_PASSWORD;
       vi.stubEnv('NODE_ENV', 'development');
       process.env.VITTA_ALLOW_OPEN_MODE = 'true';
       const proxy = await loadProxy();
 
-      expect(isNext(await proxy(request('/api/patients')))).toBe(true);
+      expect((await proxy(request('/api/patients'))).status).toBe(503);
+      expect((await proxy(request('/agenda'))).status).toBe(503);
     });
   });
 

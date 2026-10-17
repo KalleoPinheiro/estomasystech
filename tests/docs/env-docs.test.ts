@@ -21,11 +21,7 @@ const listFiles = (dir: string): string[] =>
 const PLATFORM = new Set(['NODE_ENV', 'NEXT_RUNTIME', 'VERCEL', 'CI']);
 
 /** Internas das suítes: documentadas no onboarding, fora do `.env.example`. */
-const TEST_ONLY = new Set([
-  'NEXT_DIST_DIR',
-  'VITTA_DB_DRIVER',
-  'VITTA_PGLITE_TEMPLATE_PATH',
-]);
+const TEST_ONLY = new Set(['VITTA_DB_DRIVER', 'VITTA_PGLITE_TEMPLATE_PATH']);
 
 /** Código que lê variável: app, scripts, suíte E2E e configs. */
 const CODE_FILES = [

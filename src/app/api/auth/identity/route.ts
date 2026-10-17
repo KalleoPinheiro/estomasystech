@@ -14,12 +14,6 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   const session = guard.session;
-  if (!session) {
-    return ok<SidebarIdentityDto>({
-      clinicLabel: SYSTEM_ACCOUNT_LABEL,
-      account: null,
-    });
-  }
 
   const account = {
     email: session.subject,

@@ -215,6 +215,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-041
 - **Decision**: responsável/cuidador do paciente (#329, delegado) como **entidade `Guardian` por empresa**, só de contato, ligada a `patients.guardian_id` (migração `0059`); um por paciente, reutilizável entre pacientes da família. Gerência do Admin e do Atendente; o Profissional vê embutido na ficha. Lembrete usa o e-mail do responsável quando o paciente não tem o próprio (sem portal); o termo imprime nome e parentesco; a retenção apaga o responsável com o último paciente; a exportação do titular o inclui. Trade-off: sem login do cuidador no portal e sem segundo responsável (novo ADR). ADR-024, PRO-RN-21, COM-RN-19, POR-RN-19 · 2026-10-17 · active
 
+### AD-042
+- **Decision**: remover o **modo aberto** (#327, delegado ao coordenador como PO/arquiteto): `VITTA_ALLOW_OPEN_MODE` deixa de existir; sem `AUTH_SECRET` tudo responde 503 em qualquer ambiente (regra 2 do AGENTS.md). `AuthMode` perde `open`, `requireStaffSession` devolve sempre `Session` (sem `session: null`), a identidade da sidebar sempre tem `account`, e `canManageClosure`/`accountManager`/`assertCanManageGuardians` deixam de ter ramo permissivo para ator nulo (endurece: antes um ator nulo gerenciava tudo). O segundo servidor `next dev` (porta 3100) e `NEXT_DIST_DIR` saíram do E2E; os 2 specs do modo aberto foram removidos e o 503 sem `AUTH_SECRET` (mesmo com a variável antiga) é coberto por testes de unidade do proxy, da guarda e da política. Mantido de propósito: helpers genéricos que aceitam sessão nula (`sessionScope`, `recordAudit`, `writeClinicId`) servem a fluxos sem sessão (login, cron, bootstrap). Trade-off: não há mais navegação sem login em dev; use o bootstrap (`VITTA_BOOTSTRAP_TOKEN`). ADR-002, ACE-RN-01 · 2026-10-17 · active
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).

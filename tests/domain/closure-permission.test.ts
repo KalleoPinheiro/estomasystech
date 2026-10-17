@@ -39,10 +39,6 @@ describe('Feature: Quem gerencia feriados e ausências (#215, AGE-RN-13)', () =>
     ).toBe(false);
   });
 
-  it('Dado modo aberto (sem ator), Quando gerencia, Então não restringe', () => {
-    expect(canManageClosure(null, null)).toBe(true);
-  });
-
   it('Dado ator sem permissão, Quando assert, Então ForbiddenError; com permissão, passa', () => {
     expect(() => assertCanManageClosure(ana, null)).toThrow(ForbiddenError);
     expect(() => assertCanManageClosure(ana, 'prof-ana')).not.toThrow();

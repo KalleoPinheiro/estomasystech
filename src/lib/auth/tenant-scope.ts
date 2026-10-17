@@ -36,7 +36,7 @@ export function sessionScope(
 
 /**
  * Empresa de escrita: repositórios recusam `save` sem empresa, então papel de
- * sistema (ou modo aberto, sem sessão) grava na clínica legada. Única origem
+ * sistema (sem empresa) grava na clínica legada. Única origem
  * desse fallback — rotas que precisam do id (auditoria, findById) usam esta.
  */
 export function writeClinicId(session: ScopeSource | null | undefined): string {

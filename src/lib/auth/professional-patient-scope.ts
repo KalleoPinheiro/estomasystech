@@ -6,15 +6,15 @@ import type { Session } from './session';
  * Escopo dinâmico do Profissional (R4, RBAC-17/19): sem vínculo com o
  * paciente, o Profissional recebe 404 — nunca vazando se o paciente existe
  * (mesmo padrão 404-não-403 já usado no isolamento por empresa, M2/#23).
- * Papéis que não são "profissional" (ou sessão nula, modo aberto) passam
+ * Papéis que não são "profissional" passam
  * direto — a checagem é só do Profissional.
  */
 export async function assertPatientAccessibleToProfessional(
-  session: Session | null,
+  session: Session,
   patientId: string,
   links: ProfessionalPatientLinkRepository,
 ): Promise<void> {
-  if (session?.role !== 'profissional') {
+  if (session.role !== 'profissional') {
     return;
   }
   const hasLink =
@@ -31,11 +31,11 @@ export async function assertPatientAccessibleToProfessional(
  * um ato negado ao Profissional (403), não um paciente "inexistente".
  */
 export async function assertPatientLinkedForProfessionalWrite(
-  session: Session | null,
+  session: Session,
   patientId: string,
   links: ProfessionalPatientLinkRepository,
 ): Promise<void> {
-  if (session?.role !== 'profissional') {
+  if (session.role !== 'profissional') {
     return;
   }
   const hasLink =

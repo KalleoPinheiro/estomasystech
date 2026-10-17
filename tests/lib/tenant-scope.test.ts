@@ -80,13 +80,13 @@ describe('Feature: Escopo de empresa centralizado (tenant-scope)', () => {
       expect(sessionScope(systemSession).clinicId).toBeNull();
     });
 
-    it('Dado papel de sistema ou modo aberto, Quando writeScope, Então grava na clínica legada', () => {
+    it('Dado papel de sistema ou fluxo sem sessão, Quando writeScope, Então grava na clínica legada', () => {
       expect(writeScope(systemSession).clinicId).toBe(LEGACY_CLINIC_ID);
       expect(writeScope(null).clinicId).toBe(LEGACY_CLINIC_ID);
       expect(writeClinicId(undefined)).toBe(LEGACY_CLINIC_ID);
     });
 
-    it('Dado modo aberto (sem sessão), Quando sessionScope, Então visão de sistema', () => {
+    it('Dado fluxo sem sessão (login, cron), Quando sessionScope, Então visão de sistema', () => {
       expect(sessionScope(undefined).clinicId).toBeNull();
     });
 

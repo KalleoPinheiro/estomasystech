@@ -214,9 +214,6 @@ async function route(
   if (mode === 'unconfigured') {
     return authNotConfiguredResponse();
   }
-  if (mode === 'open') {
-    return nextWithCsp(request, requestId);
-  }
 
   const session = getRequestSession(request);
   if (!session) {

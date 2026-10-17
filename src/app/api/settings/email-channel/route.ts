@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest) {
     const { manage, services } = await channelContext(guard.session);
     const { channel, created } = await manage.save({
       ...body,
-      by: guard.session?.subject ?? 'anonymous',
+      by: guard.session.subject,
     });
     // Nunca a chave na trilha: só o id do canal.
     await recordAuditNow(services.auditEvents, guard.session, {

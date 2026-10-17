@@ -60,6 +60,14 @@ const EMPTY_DRAFT: ClosureDraft = {
  * Ator da sessão para a regra de bloqueios (#215). Sem provider ou sem conta
  * conhecida não restringe — a API continua sendo a barreira (ADR-003).
  */
+/** Sem identidade carregada a UI não restringe; a API é a barreira (ADR-003). */
+function canManage(
+  actor: ClosureActor | null,
+  closureProfessionalId: string | null,
+): boolean {
+  return actor === null || canManageClosure(actor, closureProfessionalId);
+}
+
 function useClosureActor(): ClosureActor | null {
   const account = useStaffIdentity()?.identity?.account;
   return account
@@ -150,9 +158,7 @@ export function ClosuresSection() {
           <ClosuresTable
             closures={data}
             professionalName={professionalName}
-            canRemove={(closure) =>
-              canManageClosure(actor, closure.professionalId)
-            }
+            canRemove={(closure) => canManage(actor, closure.professionalId)}
             onDeleted={refresh}
           />
         )}
@@ -174,11 +180,11 @@ function ClosureForm({
   // Profissional: o "Quem" é sempre ele — sem "Clínica toda" nem colegas.
   // Lido do ator a cada render: a identidade pode chegar depois da montagem.
   const ownProfessionalId =
-    actor !== null && !canManageClosure(actor, null)
+    actor !== null && !canManage(actor, null)
       ? (actor.professionalId ?? '')
       : null;
   const choices = professionals.filter(
-    (p) => p.active && canManageClosure(actor, p.id),
+    (p) => p.active && canManage(actor, p.id),
   );
   const [draft, setDraft] = useState<ClosureDraft>(EMPTY_DRAFT);
   const professionalId = ownProfessionalId ?? draft.professionalId;

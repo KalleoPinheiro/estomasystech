@@ -38,10 +38,6 @@ const nextConfig: NextConfig = {
   // intercepta cliques em elementos reais ali embaixo (ex.: botão "Sair" da
   // sidebar) — atrapalha o Playwright em modo dev sem existir em produção.
   devIndicators: false,
-  // Permite rodar mais de um `next dev` (portas distintas) no mesmo checkout sem
-  // colidir no lock de distDir do Next 16 — usado pelo Playwright (playwright.config.ts)
-  // para subir um segundo servidor "modo aberto" em paralelo ao principal.
-  distDir: process.env.NEXT_DIST_DIR || ".next",
   serverExternalPackages: ["pg", "@electric-sql/pglite", "googleapis"],
   async headers() {
     return [{ source: "/(.*)", headers: SECURITY_HEADERS }];

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       // Escopo dinâmico do Profissional (R4/RBAC-17): a listagem só mostra
       // pacientes com quem o profissional tem vínculo registrado.
       let allowedPatientIds: string[] | undefined;
-      if (guard.session?.role === 'profissional') {
+      if (guard.session.role === 'profissional') {
         allowedPatientIds = guard.session.professionalId
           ? await professionalPatientLinks.findLinkedPatientIds(
               guard.session.professionalId,
@@ -108,10 +108,7 @@ export async function POST(request: NextRequest) {
     });
     // Profissional que cadastra um paciente ganha acesso imediato a ele,
     // mesmo antes de qualquer agendamento (RBAC-17/18).
-    if (
-      guard.session?.role === 'profissional' &&
-      guard.session.professionalId
-    ) {
+    if (guard.session.role === 'profissional' && guard.session.professionalId) {
       await ensureLinkBestEffort(
         professionalPatientLinks,
         guard.session.professionalId,

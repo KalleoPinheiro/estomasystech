@@ -20,10 +20,6 @@ const CHANNEL_TEST_RATE_LIMIT = new SharedRateLimiter(
 export async function POST(request: NextRequest) {
   const guard = requireChannelAdmin(request);
   if (!guard.ok) return guard.response;
-  // Modo aberto (só dev) não tem conta, então não há para quem enviar.
-  if (!guard.session) {
-    return fail('Entre com uma conta para testar o canal', 409);
-  }
   const session = guard.session;
   if (!(await CHANNEL_TEST_RATE_LIMIT.allow(writeClinicId(session)))) {
     return fail('Muitas tentativas, aguarde um minuto', 429);

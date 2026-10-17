@@ -6,8 +6,6 @@ import {
   E2E_BOOTSTRAP_TOKEN,
   MAIN_BASE_URL,
   MAIN_SERVER_LOG_PATH,
-  OPEN_MODE_BASE_URL,
-  OPEN_MODE_PORT,
   ROLE_ACCOUNT_SPECS,
 } from "./e2e/support/constants";
 
@@ -23,15 +21,11 @@ import {
  * também criados pelo convite + login real (#204); specs de portal assinam um cookie de
  * sessão paciente/parceiro na hora (mesmo segredo); `auth.spec.ts` testa o fluxo de
  * login de verdade.
- *
- * Um segundo servidor (porta 3100), sem AUTH_SECRET, sobe só para o cenário de
- * "modo aberto" em `auth.spec.ts` — processo Next isolado, então tem seu próprio
- * PGlite em memória (não compartilha dados semeados com o servidor principal).
  */
 export default defineConfig({
   testDir: "./e2e",
   // Contra o `next dev` rodam só o que exige o servidor em desenvolvimento: as
-  // contas por papel (convite no log, #204) e o modo aberto de `auth.spec.ts`. O
+  // contas por papel (convite no log, #204) e o login de `auth.spec.ts`. O
   // dev compila rota sob demanda e refaz o Fast Refresh no meio do teste, o que
   // deixava a suíte inteira intermitente (#308); o resto roda em
   // `playwright.prod.config.ts`, contra `next start`.
@@ -90,25 +84,6 @@ export default defineConfig({
         APP_URL: MAIN_BASE_URL,
         // A suíte inteira roda no mesmo IP (loopback) contra um processo só —
         // o limite de produção (120/min) estoura fácil com o volume de setup via API.
-        API_RATE_LIMIT_MAX: "100000",
-      },
-    },
-    {
-      command: "npm run dev",
-      url: OPEN_MODE_BASE_URL,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-      env: {
-        VITTA_DB_DRIVER: "pglite",
-        TZ: "America/Sao_Paulo",
-        PORT: String(OPEN_MODE_PORT),
-        AUTH_SECRET: "",
-        // Sem auth configurada o app é fail-closed (503) — o modo aberto exige
-        // este opt-in explícito. Ver src/lib/auth/access-policy.ts.
-        VITTA_ALLOW_OPEN_MODE: "true",
-        // distDir isolado — dois `next dev` no mesmo checkout, mesmo diretório,
-        // travam no lock de distDir do Next 16 (experimental.lockDistDir, default true).
-        NEXT_DIST_DIR: ".next-open-mode",
         API_RATE_LIMIT_MAX: "100000",
       },
     },

@@ -79,7 +79,7 @@ async function deactivate(
   actor: AccountManager,
   existing: UserAccount,
   body: UpdateBody,
-  session: Session | null,
+  session: Session,
 ): Promise<UserAccount> {
   return transactions.run(async ({ userAccounts, auditEvents }) => {
     const clinicAdmins =
@@ -111,7 +111,7 @@ async function applyChange(
   auditEvents: AuditEventRepository,
   existing: UserAccount,
   body: UpdateBody,
-  session: Session | null,
+  session: Session,
 ): Promise<UserAccount> {
   const updated = body.active === true ? existing.reactivate() : existing;
 

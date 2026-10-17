@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       clinics,
       clinicProvisioning,
     ).execute(
-      { ...body, createdBy: guard.session?.subject ?? 'anonymous' },
+      { ...body, createdBy: guard.session.subject },
       async (auditEvents, createdClinic, createdAdmin) => {
         await recordAuditNow(auditEvents, guard.session, {
           action: 'create',

@@ -1,6 +1,5 @@
 node_modules
 .next
-.next-open-mode
 .git
 .claude
 coverage
