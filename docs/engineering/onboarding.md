@@ -140,7 +140,9 @@ npm run dev                   # http://localhost:3000
 npm test                 # domínio, aplicação, integração Postgres via PGlite, API
 npm run test:changed     # só o afetado pelo diff (loop local; não substitui o próximo)
 npm run test:coverage    # gate de CI: mínimo 90% (limiar em vitest.config.mts)
-npm run test:e2e         # Playwright; na 1ª vez ou após bump: npx playwright install
+npm run test:e2e         # build + Playwright contra `next start` e contra `next dev` (ADR-021); na 1ª vez ou após bump: npx playwright install
+npm run test:e2e:prod    # só a suíte principal, contra o build (precisa de `npm run build` antes)
+npm run test:e2e:dev     # só papéis e modo aberto, contra `next dev`
 ```
 
 A suíte E2E sobe os próprios servidores e gera as credenciais a cada execução. Só para
@@ -148,7 +150,7 @@ reaproveitar um `npm run dev` já no ar: `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN`
 `AUTH_SECRET`/`VITTA_BOOTSTRAP_TOKEN` (servidor) precisam ter os mesmos valores.
 Estilo e níveis de teste: [conventions.md](conventions.md#testes).
 
-**Artefato de produção (CI, #203):** além de `test:coverage` e `test:e2e` (contra `next dev`), o
+**Artefato de produção (CI, #203):** além de `test:coverage` e do E2E de papéis (`test:e2e:dev`, contra `next dev`), o
 CI roda:
 
 ```bash
@@ -157,7 +159,8 @@ docker compose build && bash scripts/docker-smoke.sh                # imagem + s
 bash scripts/backup-smoke.sh                                         # backup cifrado + restore (precisa de `age`)
 ```
 
-O E2E de produção cobre login, agenda, prontuário e portal com a CSP estrita (sem
+O E2E de produção é a suíte principal ([ADR-021](../adr/021-e2e-contra-build-de-producao.md)): todos os
+specs, menos modo aberto e contas por papel, com a CSP estrita (sem
 `'unsafe-eval'`/`'unsafe-inline'`) e falha em qualquer violação de CSP
 (`e2e/csp-producao.spec.ts`). Módulo que chega ao bundle do cliente não pode importar `node:*`:
 o polyfill do Node usa `Function(...)` e a CSP de produção bloqueia. O smoke sobe o

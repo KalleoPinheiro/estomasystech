@@ -87,6 +87,8 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/020-evento-do-google-agenda-so-com-iniciais.md`](adr/020-evento-do-google-agenda-so-com-iniciais.md) | evento do Google Agenda leva só iniciais, horário e link; conta Workspace é recomendação |
 | [`adr/023-email-de-contato-do-paciente-e-login-do-portal.md`](adr/023-email-de-contato-do-paciente-e-login-do-portal.md) | e-mail de contato do paciente opcional e repetível; login do portal em conta própria |
 
+| [`adr/021-e2e-contra-build-de-producao.md`](adr/021-e2e-contra-build-de-producao.md) | E2E principal contra `next start`; `next dev` só para contas por papel e modo aberto (causa raiz da #308) |
+
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).
 
 ## Auditorias (snapshots congelados)
