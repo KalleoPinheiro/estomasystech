@@ -104,6 +104,40 @@ export async function acceptPartnerShareConsent(
 }
 
 /**
+ * Consentimento dado em papel, lançado pela equipe na ficha (#310). Idempotente
+ * como o aceite pelo portal: com consentimento já ativo para o texto vigente
+ * (de qualquer origem), não grava outro registro.
+ */
+export async function registerPaperPartnerShareConsent(
+  deps: PartnerShareConsentDeps,
+  patient: Patient,
+  consent: PartnerShareConsentText,
+  recordedBy: string,
+  ipAddress: string | null,
+): Promise<{ record: PartnerShareConsent; created: boolean }> {
+  const partner = await requireReferringPartner(deps, patient);
+  const records = await deps.partnerShareConsents.findByPatientId(patient.id);
+  const status = PartnerShareConsent.resolveStatus(
+    records,
+    partner.id,
+    consent.text,
+  );
+  if (status.active && status.current) {
+    return { record: status.current, created: false };
+  }
+  const record = PartnerShareConsent.acceptOnPaper({
+    patientId: patient.id,
+    partnerId: partner.id,
+    consentText: consent.text,
+    textVersion: consent.version,
+    recordedBy,
+    ipAddress,
+  });
+  await deps.partnerShareConsents.save(record);
+  return { record, created: true };
+}
+
+/**
  * Revogação pelo paciente (portal) ou pela equipe (ficha). Grava um registro
  * novo; o aceite original fica no histórico.
  */
@@ -112,12 +146,14 @@ export async function revokePartnerShareConsent(
   patient: Patient,
   actor: PartnerShareConsentActor,
   ipAddress: string | null,
+  recordedBy: string | null = null,
 ): Promise<PartnerShareConsent> {
   const partner = await requireReferringPartner(deps, patient);
   const record = PartnerShareConsent.revoke({
     patientId: patient.id,
     partnerId: partner.id,
     actor,
+    recordedBy,
     ipAddress,
   });
   await deps.partnerShareConsents.save(record);

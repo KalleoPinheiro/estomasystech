@@ -1,0 +1,1 @@
+ALTER TABLE "partner_share_consents" ADD COLUMN "recorded_by" text;

@@ -44,7 +44,7 @@ Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
 | Camada | Caminho |
 | --- | --- |
 | domínio | `src/domain/{professional,partner}/` |
-| casos de uso | `src/application/partners/` (inclui o consentimento para o parceiro) |
+| casos de uso | `src/application/partners/` (inclui o consentimento para o parceiro, também em papel — POR-RN-16) |
 | API | `src/app/api/{professionals,partners}/` |
 | UI | `src/app/(staff)/{profissionais,parceiros}/` |
 | testes | `tests/domain/`, `e2e/equipe.spec.ts` |

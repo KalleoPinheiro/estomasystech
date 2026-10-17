@@ -12,6 +12,7 @@ import { PartnerConsentPanel } from '@/app/(staff)/pacientes/[id]/partner-consen
 import { PartnerConsentSection } from '@/app/portal/partner-consent-card';
 import type { PartnerShareConsentDto } from '@/lib/dto';
 import { renderWithToast } from '../support/render-with-toast';
+import { identityFor, WithStaffIdentity } from '../support/staff-identity';
 
 const base: PartnerShareConsentDto = {
   partnerName: 'Dra. Parceira',
@@ -21,6 +22,8 @@ const base: PartnerShareConsentDto = {
   revoked: false,
   acceptedAt: null,
   acceptedVersion: null,
+  acceptedSource: null,
+  acceptedBy: null,
   revokedAt: null,
   revokedBy: null,
 };
@@ -229,5 +232,122 @@ describe('Feature: Consentimento para o parceiro na ficha do paciente (#292)', (
     expect(
       (await screen.findAllByText('Falha ao registrar')).length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe('Feature: Consentimento em papel na ficha do paciente (#310)', () => {
+  const paperButton = { name: 'Registrar consentimento em papel' };
+
+  it('Dado não autorizado, Quando registrar em papel e confirmar, Então POST em /paper e mostra a origem', async () => {
+    const calls = mockConsentApi([
+      base,
+      {
+        ...active,
+        acceptedSource: 'paper',
+        acceptedBy: 'recepcao@clinica.com',
+      },
+    ]);
+
+    renderWithToast(<PartnerConsentPanel patientId="p1" />);
+
+    fireEvent.click(await screen.findByRole('button', paperButton));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(
+      within(dialog).getByText(/Texto provisório do consentimento/),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+    expect(
+      await screen.findByText(
+        /Autorizado em papel, registrado pela equipe por recepcao@clinica\.com em/,
+      ),
+    ).toBeInTheDocument();
+    expect(calls).toContainEqual({
+      url: '/api/patients/p1/partner-consent/paper',
+      method: 'POST',
+    });
+  });
+
+  it('Dado aceite em papel sem autor, Então descreve sem o nome', async () => {
+    mockConsentApi([{ ...active, acceptedSource: 'paper' }]);
+
+    renderWithToast(<PartnerConsentPanel patientId="p1" />);
+
+    expect(
+      await screen.findByText(
+        /^Autorizado em papel, registrado pela equipe em/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', paperButton)).not.toBeInTheDocument();
+  });
+
+  it('Dado falha ao registrar, Então mostra o erro', async () => {
+    mockConsentApi([base], false);
+
+    renderWithToast(<PartnerConsentPanel patientId="p1" />);
+
+    fireEvent.click(await screen.findByRole('button', paperButton));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar' }));
+
+    expect(
+      (await screen.findAllByText('Falha ao registrar')).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['profissional' as const, false],
+    ['atendente' as const, true],
+    ['company_admin' as const, true],
+    [null, true],
+  ])(
+    'Dado papel %s, Então botão em papel visível: %s',
+    async (role, visible) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = typeof input === 'string' ? input : input.toString();
+          if (url === '/api/auth/identity') {
+            return envelope(
+              role
+                ? identityFor(role)
+                : { clinicLabel: 'Clínica', account: null },
+            );
+          }
+          return envelope(base);
+        }),
+      );
+
+      renderWithToast(
+        <WithStaffIdentity>
+          <PartnerConsentPanel patientId="p1" />
+        </WithStaffIdentity>,
+      );
+
+      await screen.findByText('Não autorizado');
+      await waitFor(() =>
+        expect(!!screen.queryByRole('button', paperButton)).toBe(visible),
+      );
+    },
+  );
+
+  it('Dado identidade ainda carregando, Então esconde o botão em papel', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === '/api/auth/identity') return new Promise(() => {});
+        return envelope(base);
+      }),
+    );
+
+    renderWithToast(
+      <WithStaffIdentity>
+        <PartnerConsentPanel patientId="p1" />
+      </WithStaffIdentity>,
+    );
+
+    await screen.findByText('Não autorizado');
+    expect(screen.queryByRole('button', paperButton)).not.toBeInTheDocument();
   });
 });

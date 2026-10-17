@@ -19,6 +19,7 @@ const restore = (
     textHash: hashConsentText(TEXT),
     textVersion: 'v1',
     actor: 'patient',
+    recordedBy: null,
     ipAddress: null,
     recordedAt: new Date('2026-01-01T10:00:00Z'),
     ...overrides,
@@ -44,6 +45,50 @@ describe('Feature: Consentimento paciente × parceiro (#292)', () => {
       expect(record.patientId).toBe('pat-1');
       expect(record.partnerId).toBe('par-1');
       expect(record.recordedAt).toBeInstanceOf(Date);
+    });
+
+    it('Dado aceite em papel, Então guarda hash, ator equipe, origem papel e quem lançou', () => {
+      const record = PartnerShareConsent.acceptOnPaper({
+        patientId: 'pat-1',
+        partnerId: 'par-1',
+        consentText: TEXT,
+        textVersion: 'v1',
+        recordedBy: ' recepcao@clinica.com ',
+        ipAddress: '10.0.0.2',
+      });
+
+      expect(record.kind).toBe('accept');
+      expect(record.actor).toBe('staff');
+      expect(record.source).toBe('paper');
+      expect(record.recordedBy).toBe('recepcao@clinica.com');
+      expect(record.textHash).toBe(hashConsentText(TEXT));
+      expect(
+        PartnerShareConsent.resolveStatus([record], 'par-1', TEXT).active,
+      ).toBe(true);
+    });
+
+    it('Dado aceite pelo portal, Então a origem é portal e ninguém da equipe lançou', () => {
+      const record = PartnerShareConsent.accept({
+        patientId: 'pat-1',
+        partnerId: 'par-1',
+        consentText: TEXT,
+        textVersion: 'v1',
+      });
+
+      expect(record.source).toBe('portal');
+      expect(record.recordedBy).toBeNull();
+    });
+
+    it('Dado aceite em papel sem quem lançou, Então ValidationError', () => {
+      expect(() =>
+        PartnerShareConsent.acceptOnPaper({
+          patientId: 'pat-1',
+          partnerId: 'par-1',
+          consentText: TEXT,
+          textVersion: 'v1',
+          recordedBy: '  ',
+        }),
+      ).toThrow(ValidationError);
     });
 
     it('Dado revogação pela equipe, Então sem hash nem versão e ator equipe', () => {

@@ -3,6 +3,7 @@ import {
   acceptPartnerShareConsent,
   findPatientOrThrow,
   getPartnerShareConsent,
+  registerPaperPartnerShareConsent,
   revokePartnerShareConsent,
 } from '@/application/partners/partner-share-consent';
 import { GetPartnerPortalData } from '@/application/portal/get-partner-portal-data';
@@ -235,6 +236,37 @@ describe('Feature: Consentimento para o parceiro e janela de 24 meses (#292)', (
       expect(await consents.findByPatientId(patient.id)).toHaveLength(1);
     });
 
+    it('Dado consentimento em papel, Então libera como o aceite do portal e guarda origem e autor', async () => {
+      const { record, created } = await registerPaperPartnerShareConsent(
+        deps(),
+        patient,
+        CONSENT,
+        'recepcao@clinica.com',
+        null,
+      );
+
+      expect(created).toBe(true);
+      expect(record.source).toBe('paper');
+      expect(record.recordedBy).toBe('recepcao@clinica.com');
+      const view = await getPartnerShareConsent(deps(), patient, CONSENT);
+      expect(view?.status.active).toBe(true);
+    });
+
+    it('Dado consentimento já ativo, Quando registrar em papel, Então não grava outro', async () => {
+      const first = await grant();
+      const again = await registerPaperPartnerShareConsent(
+        deps(),
+        patient,
+        CONSENT,
+        'recepcao@clinica.com',
+        null,
+      );
+
+      expect(again.created).toBe(false);
+      expect(again.record.id).toBe(first.record.id);
+      expect(await consents.findByPatientId(patient.id)).toHaveLength(1);
+    });
+
     it('Dado revogação pela equipe, Então o registro guarda o ator', async () => {
       await grant();
       const record = await revokePartnerShareConsent(
@@ -262,6 +294,15 @@ describe('Feature: Consentimento para o parceiro e janela de 24 meses (#292)', (
       ).rejects.toThrow(NotFoundError);
       await expect(
         revokePartnerShareConsent(deps(), lone, 'staff', null),
+      ).rejects.toThrow(NotFoundError);
+      await expect(
+        registerPaperPartnerShareConsent(
+          deps(),
+          lone,
+          CONSENT,
+          'a@b.com',
+          null,
+        ),
       ).rejects.toThrow(NotFoundError);
     });
 

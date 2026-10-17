@@ -721,6 +721,8 @@ export const partnerShareConsents = pgTable(
     textHash: text('text_hash').notNull(),
     textVersion: text('text_version'),
     actor: text('actor').notNull(),
+    // Quem da equipe lançou (e-mail da conta); nulo quando o paciente agiu (#310).
+    recordedBy: text('recorded_by'),
     ipAddress: text('ip_address'),
     recordedAt: timestamp('recorded_at', {
       withTimezone: true,
