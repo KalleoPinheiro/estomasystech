@@ -3,6 +3,7 @@
 import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { parseBrazilianPhone } from '@/domain/shared/phone';
 import type { PartnerDto, PatientDto } from '@/lib/dto';
 
 export interface PatientFormValues {
@@ -53,6 +54,12 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    const phoneChanged = values.phone.trim() !== initial?.phone;
+    const phoneCheck = parseBrazilianPhone(values.phone);
+    if (phoneChanged && !phoneCheck.ok) {
+      setError(phoneCheck.reason);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -90,10 +97,19 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
         Telefone *
         <Input
           required
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="(11) 99999-0000"
           value={values.phone}
           onChange={(e) => set('phone')(e.target.value)}
           className="mt-1"
         />
+        <span className="mt-1 block font-normal text-ink-3 text-xs">
+          {initial?.phoneNeedsCorrection
+            ? 'Telefone fora do padrão: informe DDD + número para corrigir.'
+            : 'DDD + número. Guardamos no formato internacional (+55).'}
+        </span>
       </label>
       <label className="font-medium text-sm">
         Data de nascimento

@@ -73,7 +73,7 @@ describe('Feature: Fluxo completo da API (paciente → consulta → fatura → r
       jsonRequest('/api/patients', 'POST', {
         fullName: 'Maria Clone',
         email: 'maria@example.com',
-        phone: '11888880000',
+        phone: '11988880000',
       }),
     );
 

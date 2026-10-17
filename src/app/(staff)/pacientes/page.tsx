@@ -19,6 +19,7 @@ import { LoadMoreButton } from '@/components/load-more-button';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
 import { PagedList } from '@/components/paged-list';
+import { PatientPhone } from '@/components/patient-phone';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { PartnerDto, PatientDto } from '@/lib/dto';
@@ -70,7 +71,12 @@ function PatientsTable({
               </TableCell>
               <TableCell label="Contato" className="px-4 py-3 text-ink-2">
                 <div>{patient.email}</div>
-                <div className="text-ink-3 text-xs">{patient.phone}</div>
+                <div className="text-ink-3 text-xs">
+                  <PatientPhone
+                    phone={patient.phone}
+                    needsCorrection={patient.phoneNeedsCorrection}
+                  />
+                </div>
               </TableCell>
               <TableCell label="Nascimento" className="px-4 py-3 text-ink-2">
                 {patient.birthDate ? formatDate(patient.birthDate) : '—'}

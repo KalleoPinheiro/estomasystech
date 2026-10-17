@@ -5,6 +5,8 @@ export interface PatientDto {
   fullName: string;
   email: string;
   phone: string;
+  /** Telefone legado fora do E.164 BR: a tela pede correção (#324). */
+  phoneNeedsCorrection: boolean;
   birthDate: string | null;
   notes: string | null;
   referredByPartnerId: string | null;
@@ -18,6 +20,7 @@ export const toPatientDto = (patient: Patient): PatientDto => ({
   fullName: patient.fullName,
   email: patient.email,
   phone: patient.phone,
+  phoneNeedsCorrection: patient.phoneNeedsCorrection,
   birthDate: patient.birthDate?.toISOString() ?? null,
   notes: patient.notes,
   referredByPartnerId: patient.referredByPartnerId,

@@ -152,6 +152,8 @@ function buildPatientCursorFilter(cursor?: string) {
   );
 }
 
+const MIN_PHONE_SEARCH_DIGITS = 3;
+
 /**
  * Combina o filtro de busca textual (nome/e-mail/telefone) com o filtro de
  * ids da página, quando ambos existem. Extraída de `findAll` para manter a
@@ -161,11 +163,16 @@ function buildPatientFilter(
   search: string | undefined,
   ids: string[] | undefined,
 ) {
+  const searchDigits = search?.replace(/\D/g, '') ?? '';
   const searchFilter = search
     ? or(
         ilike(patients.fullName, `%${search}%`),
         ilike(patients.email, `%${search}%`),
         ilike(patients.phone, `%${search}%`),
+        // Telefone é guardado em E.164: "(11) 99999" também deve achar.
+        searchDigits.length >= MIN_PHONE_SEARCH_DIGITS
+          ? ilike(patients.phone, `%${searchDigits}%`)
+          : undefined,
       )
     : undefined;
   const idsFilter = ids ? inArray(patients.id, ids) : undefined;

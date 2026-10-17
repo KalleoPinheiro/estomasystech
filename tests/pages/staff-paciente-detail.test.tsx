@@ -95,6 +95,7 @@ const patientFixture: PatientDto = {
   fullName: 'Maria Souza',
   email: 'maria@example.com',
   phone: '11988887777',
+  phoneNeedsCorrection: false,
   birthDate: '1990-05-10T00:00:00.000Z',
   notes: null,
   referredByPartnerId: null,

@@ -57,12 +57,14 @@ export class InMemoryPatientRepository implements PatientRepository {
         a.fullName.localeCompare(b.fullName) || a.id.localeCompare(b.id),
     );
     const term = search?.toLowerCase();
+    const termDigits = search?.replace(/\D/g, '') ?? '';
     const byTerm = term
       ? all.filter(
           (p) =>
             p.fullName.toLowerCase().includes(term) ||
             p.email.toLowerCase().includes(term) ||
-            p.phone.includes(term),
+            p.phone.includes(term) ||
+            (termDigits.length >= 3 && p.phone.includes(termDigits)),
         )
       : all;
     const filtered = page.ids

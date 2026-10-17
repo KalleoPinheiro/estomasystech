@@ -79,7 +79,7 @@ describe('Feature: textos clínicos cifrados em repouso (#195)', () => {
     const patient = Patient.create({
       fullName: 'Paciente Cifra',
       email: 'cifra@x.com',
-      phone: '1',
+      phone: '11999990000',
       notes: SECRET_TEXT,
     });
     await patients.save(patient);

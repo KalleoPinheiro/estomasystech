@@ -113,11 +113,11 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
       const patient = await savedPatient();
 
       await patientRepo.save(
-        patient.update({ phone: '11700001111' }).deactivate(),
+        patient.update({ phone: '11970001111' }).deactivate(),
       );
 
       const stored = await patientRepo.findById(patient.id);
-      expect(stored?.phone).toBe('11700001111');
+      expect(stored?.phone).toBe('+5511970001111');
       expect(stored?.isActive).toBe(false);
     });
 
@@ -126,6 +126,8 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
 
       expect(await patientRepo.findByEmail('maria@example.com')).not.toBeNull();
       expect(await patientRepo.findAll('mari')).toHaveLength(1);
+      // Busca por telefone digitado com máscara acha o E.164 guardado (#324).
+      expect(await patientRepo.findAll('(11) 99999')).toHaveLength(1);
       expect(await patientRepo.findAll('inexistente')).toHaveLength(0);
     });
 

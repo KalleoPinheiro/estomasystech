@@ -307,6 +307,36 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
       });
     });
 
+    it('C21b telefone inválido não gera link nem conta como clique, e o motivo chega à recepção', async () => {
+      const legacy = Patient.restore({
+        id: 'legacy-phone-patient',
+        fullName: 'Lia Legado',
+        email: 'lia@example.com',
+        phone: '99999-0000',
+        active: true,
+        createdAt: new Date(),
+      });
+      await (await getRepositories(clinicScope(CLINIC_B_ID))).patients.save(
+        legacy,
+      );
+      const appointment = await seedAppointment(
+        CLINIC_B_ID,
+        legacy.id,
+        tomorrowAt(10),
+      );
+
+      const response = await postLink({
+        kind: 'confirmation',
+        referenceId: appointment.id,
+      });
+      const body = (await response.json()) as Envelope<null>;
+
+      expect(response.status).toBe(400);
+      expect(body.error).toMatch(/Informe o DDD/);
+      expect(body.error).toMatch(/Corrija o telefone/);
+      expect(await logs()).toHaveLength(0);
+    });
+
     it('C22 link de recall traz motivo, data, clínica e portal', async () => {
       const patient = await seedPatient(
         CLINIC_B_ID,

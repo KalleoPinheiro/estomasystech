@@ -11,6 +11,84 @@ const validProps = {
   phone: '11999990000',
 };
 
+describe('Feature: Telefone do paciente em E.164 (#324)', () => {
+  it('Dado telefone mascarado, Quando criar, Então guarda em E.164', () => {
+    const patient = Patient.create({
+      ...validProps,
+      phone: '(011) 99999-0000',
+    });
+
+    expect(patient.phone).toBe('+5511999990000');
+    expect(patient.phoneNeedsCorrection).toBe(false);
+  });
+
+  it.each(['99999-0000', '+1 415 555 2671', '(10) 99999-0000'])(
+    'Dado telefone inválido %s, Quando criar, Então ValidationError',
+    (phone) => {
+      expect(() => Patient.create({ ...validProps, phone })).toThrow(
+        ValidationError,
+      );
+    },
+  );
+
+  it('Dado telefone novo, Quando atualizar, Então normaliza e rejeita inválido', () => {
+    const patient = Patient.create(validProps);
+
+    expect(patient.update({ phone: '11 3333-4444' }).phone).toBe(
+      '+551133334444',
+    );
+    expect(() => patient.update({ phone: '3333-4444' })).toThrow(
+      ValidationError,
+    );
+  });
+
+  describe('Cenário: telefone legado (guardado antes da #324)', () => {
+    const legacy = () =>
+      Patient.restore({
+        ...validProps,
+        phone: '(11) 9999',
+        id: 'p1',
+        active: true,
+        createdAt: new Date(),
+      });
+
+    it('Então é sinalizado para correção', () => {
+      expect(legacy().phoneNeedsCorrection).toBe(true);
+    });
+
+    it('Quando anonimizado (sem telefone), Então não pede correção', () => {
+      const anonymized = Patient.restore({
+        ...validProps,
+        phone: '',
+        id: 'p2',
+        active: false,
+        createdAt: new Date(),
+        anonymizedAt: new Date(),
+      });
+
+      expect(anonymized.phoneNeedsCorrection).toBe(false);
+    });
+
+    it('Quando edita outro campo ou reenvia o mesmo telefone, Então não trava', () => {
+      expect(legacy().update({ fullName: 'Maria Souza' }).phone).toBe(
+        '(11) 9999',
+      );
+      expect(legacy().update({ phone: ' (11) 9999 ' }).phone).toBe('(11) 9999');
+    });
+
+    it('Quando troca por um telefone válido, Então normaliza e sai da lista', () => {
+      const fixed = legacy().update({ phone: '11 99999-0000' });
+
+      expect(fixed.phone).toBe('+5511999990000');
+      expect(fixed.phoneNeedsCorrection).toBe(false);
+    });
+
+    it('Quando troca por um telefone inválido, Então rejeita', () => {
+      expect(() => legacy().update({ phone: '123' })).toThrow(ValidationError);
+    });
+  });
+});
+
 describe('Feature: Cadastro de paciente', () => {
   describe('Cenário: criar paciente válido', () => {
     it('Dado dados válidos, Quando criar, Então paciente ativo com id gerado', () => {

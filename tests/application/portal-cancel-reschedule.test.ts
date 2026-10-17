@@ -51,7 +51,7 @@ describe('Feature: Paciente cancela e remarca a própria consulta (portal)', () 
     await new CreatePatient(patientRepo).execute({
       fullName: 'João Souza',
       email: 'joao@example.com',
-      phone: '11888880000',
+      phone: '11988880000',
     });
     appointment = await schedule(
       '2026-07-20T09:00:00Z',

@@ -964,3 +964,17 @@ Decisões de @KalleoPinheiro de 2026-10-11 e 2026-10-12 (AD-024) implementadas. 
 - **Next step:** nenhum. A #250 (QR code no 2º fator do Super Admin) e a #297 já podem entrar.
 - **Blockers**: nenhum.
 - **Branch**: `claude/project-thread-l8wpq4`. PR #334.
+## Issue #324 — telefone do paciente em E.164 (2026-10-17) — ENCERRADO
+
+Paciente guarda telefone em E.164 BR (PRO-RN-18, AD-035), validado no domínio e, portanto, na API e na tela de cadastro.
+- **Domínio**: `src/domain/shared/phone.ts` (`parseBrazilianPhone`) aceita máscara, `+55`/`0055`, zero de tronco, fixo e celular com 9; rejeita sem DDD, DDD inexistente, celular sem 9, tamanho errado e internacional, cada um com mensagem. DDD 55 (RS) não é confundido com DDI.
+- **Legado sem migração**: `Patient.update` só valida telefone **novo**; DTO ganhou `phoneNeedsCorrection` e lista/ficha mostram "Corrigir telefone". Anonimizado não é sinalizado.
+- **WhatsApp**: `whatsappLink` valida e lança `ValidationError` com o motivo (`400`); o clique só é registrado se o link nasce. `normalizeBrazilianPhone` ficou só para o gateway da Meta (some na #328).
+- **Busca**: telefone digitado com máscara acha o E.164 guardado (Drizzle e memória).
+- **Sem migração de banco**, então não disputa número com a 0053/0054.
+
+**Decisão delegada**: sem DDD é rejeitado, nunca adivinhado; internacional rejeitado; parceiro fica como estava.
+
+- **Next step**: #326 (CPF no recibo) pode seguir; pacientes legados são corrigidos pela recepção na ficha.
+- **Blockers**: nenhum.
+

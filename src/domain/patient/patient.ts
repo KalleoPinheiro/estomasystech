@@ -1,6 +1,10 @@
 import { ConflictError } from '../shared/errors';
 import { newId } from '../shared/id';
 import { validatePersonContact } from '../shared/person-validation';
+import {
+  isBrazilianE164,
+  normalizeBrazilianPhoneOrThrow,
+} from '../shared/phone';
 
 export interface PatientProps {
   fullName: string;
@@ -39,9 +43,16 @@ export class Patient {
     return new Patient({ ...state });
   }
 
-  private static validate(props: PatientProps): PatientProps {
+  private static validate(
+    props: PatientProps,
+    normalizePhone = true,
+  ): PatientProps {
+    const contact = validatePersonContact(props);
     return {
-      ...validatePersonContact(props),
+      ...contact,
+      phone: normalizePhone
+        ? normalizeBrazilianPhoneOrThrow(contact.phone)
+        : contact.phone,
       birthDate: props.birthDate ?? null,
       notes: props.notes ?? null,
       referredByPartnerId: props.referredByPartnerId ?? null,
@@ -49,20 +60,27 @@ export class Patient {
   }
 
   update(changes: Partial<PatientProps>): Patient {
-    const validated = Patient.validate({
-      fullName: changes.fullName ?? this.state.fullName,
-      email: changes.email ?? this.state.email,
-      phone: changes.phone ?? this.state.phone,
-      birthDate:
-        changes.birthDate !== undefined
-          ? changes.birthDate
-          : this.state.birthDate,
-      notes: changes.notes !== undefined ? changes.notes : this.state.notes,
-      referredByPartnerId:
-        changes.referredByPartnerId !== undefined
-          ? changes.referredByPartnerId
-          : this.state.referredByPartnerId,
-    });
+    // Telefone legado (fora do E.164) segue válido enquanto ninguém o altera:
+    // editar outro campo não pode travar o cadastro (#324).
+    const phoneChanged =
+      changes.phone !== undefined && changes.phone.trim() !== this.state.phone;
+    const validated = Patient.validate(
+      {
+        fullName: changes.fullName ?? this.state.fullName,
+        email: changes.email ?? this.state.email,
+        phone: phoneChanged ? (changes.phone ?? '') : this.state.phone,
+        birthDate:
+          changes.birthDate !== undefined
+            ? changes.birthDate
+            : this.state.birthDate,
+        notes: changes.notes !== undefined ? changes.notes : this.state.notes,
+        referredByPartnerId:
+          changes.referredByPartnerId !== undefined
+            ? changes.referredByPartnerId
+            : this.state.referredByPartnerId,
+      },
+      phoneChanged,
+    );
     return new Patient({ ...this.state, ...validated });
   }
 
@@ -95,6 +113,12 @@ export class Patient {
 
   get phone(): string {
     return this.state.phone;
+  }
+
+  /** Telefone guardado antes da #324 (fora do E.164 BR): sinalizar para correção. */
+  get phoneNeedsCorrection(): boolean {
+    // Anonimizado (PRO-RN-15) não tem telefone: nada a corrigir.
+    return !this.isAnonymized && !isBrazilianE164(this.state.phone);
   }
 
   get birthDate(): Date | null {

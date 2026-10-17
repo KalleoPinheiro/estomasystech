@@ -59,7 +59,8 @@ describe('Feature: DTO de paciente', () => {
       id: patient.id,
       fullName: 'Maria Silva',
       email: 'maria@clinica.com',
-      phone: '11999990000',
+      phone: '+5511999990000',
+      phoneNeedsCorrection: false,
       birthDate: patient.birthDate?.toISOString(),
       notes: 'Alergia a látex',
       referredByPartnerId: 'partner-1',
@@ -97,7 +98,7 @@ describe('Feature: DTO de paciente', () => {
       id: patient.id,
       fullName: 'Maria Silva',
       email: 'maria@clinica.com',
-      phone: '11999990000',
+      phone: '+5511999990000',
     });
     expect(dto).not.toHaveProperty('notes');
   });

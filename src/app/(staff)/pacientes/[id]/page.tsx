@@ -20,6 +20,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { use, useEffect, useRef, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
+import { PatientPhone } from '@/components/patient-phone';
 import { StatusBadge } from '@/components/status-badge';
 import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
 import type {
@@ -136,7 +137,11 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
       }
       description={
         <span className="break-words">
-          {patient.phone} · {patient.email}
+          <PatientPhone
+            phone={patient.phone}
+            needsCorrection={patient.phoneNeedsCorrection}
+          />{' '}
+          · {patient.email}
           {patient.birthDate ? ` · nasc. ${formatDate(patient.birthDate)}` : ''}
         </span>
       }
