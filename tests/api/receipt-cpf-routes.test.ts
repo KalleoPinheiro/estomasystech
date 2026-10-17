@@ -234,7 +234,7 @@ describe('Feature: CPF no recibo para o IRPF (#326, FIN-RN-15)', () => {
       expect(result.status).toBe(200);
       expect(result.body.data).toMatchObject({
         payer: { document: VALID_CPF },
-        provider: { document: '11.111.111/0001-11' },
+        provider: { document: '11.111.111/0001-91' },
         payerIsPatient: true,
       });
     });
