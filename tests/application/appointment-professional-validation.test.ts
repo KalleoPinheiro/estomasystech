@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { RescheduleAppointment } from '@/application/appointments/reschedule-appointment';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { ScheduleRecurringAppointments } from '@/application/appointments/schedule-recurring-appointments';
 import { CreatePatient } from '@/application/patients/create-patient';
@@ -136,6 +137,51 @@ describe('Feature: Profissional da consulta existe na empresa e está ativo (iss
           to: '2026-12-31',
         }),
       ).toEqual([]);
+    });
+  });
+
+  describe('Remarcação (#297)', () => {
+    const reschedule = (id: string, repo = professionals) =>
+      new RescheduleAppointment(
+        appointments,
+        undefined,
+        undefined,
+        repo,
+      ).execute({
+        id,
+        startsAt: new Date('2026-07-21T09:00:00Z'),
+        endsAt: new Date('2026-07-21T10:00:00Z'),
+      });
+
+    it('Dado profissional ativo, Quando remarcar, Então move a consulta', async () => {
+      const appointment = await scheduler().execute(input(ana.id));
+      const moved = await reschedule(appointment.id);
+      expect(moved.slot.start).toEqual(new Date('2026-07-21T09:00:00Z'));
+    });
+
+    it('Dado profissional inativado depois de marcar, Quando remarcar, Então bloqueia com a mensagem e mantém o horário', async () => {
+      const appointment = await scheduler().execute(input(ana.id));
+      await professionals.save(ana.deactivate());
+
+      await expect(reschedule(appointment.id)).rejects.toThrow(
+        new ValidationError('Profissional inativo: escolha outro profissional'),
+      );
+      expect((await appointments.findById(appointment.id))?.slot.start).toEqual(
+        new Date('2026-07-20T09:00:00Z'),
+      );
+    });
+
+    it('Dado consulta sem profissional, Quando remarcar, Então remarca normalmente', async () => {
+      const appointment = await scheduler().execute(input(null));
+      const moved = await reschedule(appointment.id);
+      expect(moved.slot.start).toEqual(new Date('2026-07-21T09:00:00Z'));
+    });
+
+    it('Dado profissional que sumiu do repositório, Quando remarcar, Então NotFound', async () => {
+      const appointment = await scheduler().execute(input(ana.id));
+      await expect(
+        reschedule(appointment.id, new InMemoryProfessionalRepository()),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 });

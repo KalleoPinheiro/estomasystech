@@ -8,6 +8,7 @@ import { fail, ok } from '@/lib/api-response';
 import { mfaContext } from '@/lib/auth/mfa-route';
 import { requireOwnAccount, withRenewedSession } from '@/lib/auth/own-account';
 import { SharedRateLimiter } from '@/lib/auth/rate-limit';
+import { forgetSessionStatus } from '@/lib/auth/staff-revocation';
 
 const RATE_LIMIT = new SharedRateLimiter('own-account-mfa-confirm', 5, 60_000);
 
@@ -58,6 +59,9 @@ export async function POST(request: NextRequest) {
       400,
     );
   }
+  // Sem isto o cookie anterior ainda passaria até 60 s pelo cache do proxy.
+  forgetSessionStatus(own.account.email, own.account.clinicId);
+
   return withRenewedSession(
     ok({ recoveryCodes: outcome.recoveryCodes ?? [] }),
     own.authSecret,

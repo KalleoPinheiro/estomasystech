@@ -1075,3 +1075,14 @@ Decisão de @KalleoPinheiro de 2026-10-11 implementada: suspender pede um motivo
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Ordem de deploy:** aplicar a migração 0058 antes de subir o código (o `UPDATE` de estado usa as colunas novas). Para o aviso sair, a plataforma precisa de `RESEND_API_KEY` e `EMAIL_FROM`.
 - **Next step:** nenhum. **Blockers:** nenhum.
+
+## Issue #297 — Remarcação com profissional inativo e revogação no recadastro do 2FA (2026-10-17) — ENCERRADO
+
+Decisões de @KalleoPinheiro de 2026-10-11 implementadas.
+- **Remarcação:** `RescheduleAppointment` valida o profissional da consulta (ativo e da empresa) antes do horário; inativo → `400` "Profissional inativo: escolha outro profissional", inexistente → `404`. A rota `PATCH /api/appointments/[id]` passa `services.professionals`.
+- **2FA:** `POST /api/me/mfa/confirm` chama `forgetSessionStatus`; o cookie anterior ao recadastro recebe `401` no proxy sem avançar o relógio além do TTL (o teste aquece o cache antes e falha sem a correção).
+- **Decisão (AD-040):** a remarcação pelo portal não valida o profissional (pergunta aberta: o paciente segue podendo remarcar consulta de profissional inativo).
+- **Docs:** AGE-RN-12/20 e ACE-RN-53; AD-040.
+- **Testes:** `appointment-professional-validation` (ativo, inativado, sem profissional, inexistente) e `session-revocation` (recadastro).
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Next step:** nenhum. **Blockers:** nenhum. Sem migração.

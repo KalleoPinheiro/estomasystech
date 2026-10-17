@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CreatePartner } from '@/application/partners/create-partner';
 import { CreatePatient } from '@/application/patients/create-patient';
+import { totpCode, totpStep } from '@/domain/auth/totp';
 import { UserAccount } from '@/domain/auth/user-account';
 import { Clinic } from '@/domain/clinic/clinic';
 import { getRepositories } from '@/infrastructure/container';
@@ -181,6 +182,43 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
     const renewed = `${SESSION_COOKIE}=${response.cookies.get(SESSION_COOKIE)?.value}`;
     expect(await proxyStatus(other)).toBe(401);
     expect(await proxyStatus(changer)).toBe(401);
+    expect(await proxyStatus(renewed)).not.toBe(401);
+  });
+
+  it('own MFA enrollment revokes the previous cookie: o cookie anterior cai na hora, sem esperar o TTL do cache (#297)', async () => {
+    const account = await seedAccount();
+    const before = await loginCookie(account.email);
+    // Aquece o cache do proxy com o cookie antigo: sem forgetSessionStatus ele valeria até o TTL.
+    expect(await proxyStatus(before)).toBe(200);
+    const enroll = await import('@/app/api/me/mfa/enroll/route');
+    const started = await enroll.POST(
+      jsonRequest(
+        '/api/me/mfa/enroll',
+        'POST',
+        { currentPassword: PASSWORD },
+        { cookie: before },
+      ),
+    );
+    const { data } = (await started.json()) as {
+      data: { secret: string; pendingToken: string };
+    };
+    const confirm = await import('@/app/api/me/mfa/confirm/route');
+
+    const confirmed = await confirm.POST(
+      jsonRequest(
+        '/api/me/mfa/confirm',
+        'POST',
+        {
+          pendingToken: data.pendingToken,
+          code: totpCode(data.secret, totpStep(Date.now())),
+        },
+        { cookie: before },
+      ),
+    );
+
+    expect(confirmed.status).toBe(200);
+    expect(await proxyStatus(before)).toBe(401);
+    const renewed = `${SESSION_COOKIE}=${confirmed.cookies.get(SESSION_COOKIE)?.value}`;
     expect(await proxyStatus(renewed)).not.toBe(401);
   });
 

@@ -9,12 +9,13 @@ import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 export async function assertActiveProfessional(
   professionals: ProfessionalRepository,
   professionalId: string,
+  inactiveMessage = 'Profissional inativo não pode ser escolhido',
 ): Promise<void> {
   const professional = await professionals.findById(professionalId);
   if (!professional) {
     throw new NotFoundError('Profissional', professionalId);
   }
   if (!professional.isActive) {
-    throw new ValidationError('Profissional inativo não pode ser escolhido');
+    throw new ValidationError(inactiveMessage);
   }
 }
