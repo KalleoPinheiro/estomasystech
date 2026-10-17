@@ -13,7 +13,7 @@ import type { AppointmentRepository } from '@/domain/scheduling/appointment-repo
  * nem procedimento — o calendário é de terceiro e pode ser pessoal/compartilhado.
  * Criação e remarcação usam o mesmo conteúdo.
  */
-function eventContent(
+export function eventContent(
   appointment: Appointment,
   initials: string | null,
   appUrl: string | null,
@@ -69,6 +69,10 @@ export class SyncAppointmentCalendar {
     );
     if (eventId) {
       await this.appointments.save(appointment.withGoogleEventId(eventId));
+      await this.appointments.markCalendarEventMinimized(
+        appointment.id,
+        new Date(),
+      );
     }
   }
 
@@ -85,6 +89,10 @@ export class SyncAppointmentCalendar {
         await this.initialsOf(appointment),
         this.appUrl,
       ),
+    );
+    await this.appointments.markCalendarEventMinimized(
+      appointment.id,
+      new Date(),
     );
   }
 

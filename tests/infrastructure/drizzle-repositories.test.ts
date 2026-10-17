@@ -179,6 +179,77 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
       expect(stored?.slot.start).toEqual(new Date('2026-07-20T09:00:00Z'));
     });
 
+    it('Dado eventos no Google, Quando buscar os a minimizar (#339), Então lista só os pendentes da empresa, do mais recente ao mais antigo, e a marca sobrevive a novo save', async () => {
+      const patient = await savedPatient();
+      const build = (start: string, end: string, eventId: string | null) => {
+        const appointment = Appointment.create({
+          patientId: patient.id,
+          slot: slot(start, end),
+          procedure: 'Troca de bolsa',
+          price: Money.fromCents(25000),
+        });
+        return eventId ? appointment.withGoogleEventId(eventId) : appointment;
+      };
+      const old = build(
+        '2026-01-05T09:00:00Z',
+        '2026-01-05T10:00:00Z',
+        'g-old',
+      );
+      const recent = build(
+        '2026-09-05T09:00:00Z',
+        '2026-09-05T10:00:00Z',
+        'g-new',
+      );
+      const noEvent = build(
+        '2026-09-06T09:00:00Z',
+        '2026-09-06T10:00:00Z',
+        null,
+      );
+      for (const appointment of [old, recent, noEvent]) {
+        await appointmentRepo.save(appointment);
+      }
+
+      const all = await appointmentRepo.findCalendarEventsToMinimize({
+        limit: 10,
+      });
+      expect(all.map((a) => a.id)).toEqual([recent.id, old.id]);
+      const windowed = await appointmentRepo.findCalendarEventsToMinimize({
+        limit: 10,
+        startsAfter: new Date('2026-06-01T00:00:00Z'),
+      });
+      expect(windowed.map((a) => a.id)).toEqual([recent.id]);
+      expect(
+        await appointmentRepo.findCalendarEventsToMinimize({ limit: 1 }),
+      ).toHaveLength(1);
+
+      await appointmentRepo.markCalendarEventMinimized(
+        recent.id,
+        new Date('2026-10-17T12:00:00Z'),
+      );
+      await appointmentRepo.save(recent.confirm());
+
+      const pending = await appointmentRepo.findCalendarEventsToMinimize({
+        limit: 10,
+      });
+      expect(pending.map((a) => a.id)).toEqual([old.id]);
+      const other = new DrizzleAppointmentRepository(
+        appDb,
+        'outra-clinica',
+        TEST_CIPHER,
+      );
+      expect(await other.findCalendarEventsToMinimize({ limit: 10 })).toEqual(
+        [],
+      );
+      await other.markCalendarEventMinimized(old.id, new Date());
+      expect(
+        await appointmentRepo.findCalendarEventsToMinimize({ limit: 10 }),
+      ).toHaveLength(1);
+      const system = new DrizzleAppointmentRepository(appDb, null, TEST_CIPHER);
+      await expect(
+        system.markCalendarEventMinimized(old.id, new Date()),
+      ).rejects.toThrow(/somente leitura/);
+    });
+
     it('Dado consultas no banco, Quando buscar conflito, Então respeita status e exclusão', async () => {
       const patient = await savedPatient();
       const appointment = Appointment.create({

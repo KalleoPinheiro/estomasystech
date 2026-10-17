@@ -338,6 +338,26 @@ Issue: [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294).
   veja `docker compose logs app`.
 - Contas inativas antes da migração `0049` contam os 2 anos a partir dela.
 
+### 7.2 Reescrita dos eventos antigos do Google Agenda (#339)
+
+Roda **uma vez por empresa com Google Agenda conectado**, depois do deploy da migração `0056`
+(coluna `appointments.calendar_minimized_at`). **Manual**: não está no cron nem no deploy. Regras e
+contrato: [`integrations/google-calendar.md`](integrations/google-calendar.md#reescrita-em-lote-dos-eventos-antigos-339-age-rn-19).
+
+1. Num checkout no host (a imagem standalone não tem `tsx`):
+   `DATABASE_URL=… APP_URL=https://… npm run calendar:minimize` — **simulação**, imprime
+   `pendentes=N` por empresa.
+2. `npm run calendar:minimize -- --confirmar` — reescreve até 500 consultas por empresa, das mais
+   futuras para as mais antigas. Saída `0` = lote sem falha; `1` = houve `falhas` ou a cota do Google
+   esgotou (`cota_esgotada=true`).
+3. Repita o passo 2 (se a cota esgotou, espere alguns minutos) até o passo 1 mostrar `pendentes=0`.
+   Reexecutar é seguro: o que já foi reescrito não é tocado.
+- `--empresa=<id>` limita a uma empresa; `--desde=AAAA-MM-DD` limita a consultas a partir da data.
+- Precisa das mesmas credenciais do app (`GOOGLE_*`, `AUTH_SECRET`); sem integração a empresa é
+  pulada. `APP_URL` define o link do evento; sem ela o evento fica sem link.
+- Verificação: *Configurações → Auditoria* mostra um evento `calendar-minimization` por execução;
+  no Google, o título passa a `Consulta · J.S.` e a descrição a só o link.
+
 ## 8. Primeiro acesso
 
 1. Configure todas as variáveis obrigatórias (`.env.example`), incluindo `VITTA_BOOTSTRAP_TOKEN`.

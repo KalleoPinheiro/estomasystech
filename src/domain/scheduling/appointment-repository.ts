@@ -17,6 +17,12 @@ export interface FindByPatientOptions {
   endsAfter?: Date;
 }
 
+export interface FindCalendarEventsOptions {
+  limit: number;
+  /** Só consultas que começam a partir desta data (janela da minimização). */
+  startsAfter?: Date;
+}
+
 export interface AppointmentRepository {
   save(appointment: Appointment): Promise<void>;
   findById(id: string): Promise<Appointment | null>;
@@ -46,4 +52,13 @@ export interface AppointmentRepository {
   ): Promise<Appointment[]>;
   /** Agregação no banco — contagens e receita corretas independentemente do volume. */
   getStatsInRange(start: Date, end: Date): Promise<AppointmentRangeStats>;
+  /**
+   * Consultas com evento no Google Agenda ainda não reescritas só com iniciais
+   * (#339), das mais recentes/futuras para as mais antigas.
+   */
+  findCalendarEventsToMinimize(
+    options: FindCalendarEventsOptions,
+  ): Promise<Appointment[]>;
+  /** Marca o evento como reescrito; a reexecução do job o ignora. */
+  markCalendarEventMinimized(appointmentId: string, at: Date): Promise<void>;
 }

@@ -393,6 +393,13 @@
       "when": 1792222198972,
       "tag": "0055_partner-consent-recorded-by",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1792240016434,
+      "tag": "0056_appointment-calendar-minimized",
+      "breakpoints": true
     }
   ]
 }

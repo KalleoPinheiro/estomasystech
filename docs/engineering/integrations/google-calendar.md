@@ -64,11 +64,28 @@ logado na clínica; o Google guarda um identificador opaco, não dado clínico. 
 contrato/procedimentos de saúde (art. 7º V / 11 II "f") com o dado reduzido ao mínimo para a equipe
 reconhecer a consulta.
 
-- **Eventos antigos:** os criados antes da #217 mantêm nome/telefone/procedimento no Google até a consulta
-  ser remarcada (que reescreve o evento) ou cancelada/anonimizada (que o apaga). Não há reescrita em lote.
+- **Eventos antigos:** reescritos em lote pelo script descrito em [Reescrita em lote](#reescrita-em-lote-dos-eventos-antigos-339-age-rn-19), ou na remarcação (que reescreve o evento) ou cancelamento/anonimização (que o apaga).
 - **Conta conectada:** recomenda-se uma conta Google **da clínica** (Workspace), não pessoal. Não é
   imposto em código (OAuth com `calendar.events` não lê o domínio da conta); com o conteúdo reduzido a
   iniciais, o risco de uma conta pessoal é baixo ([ADR-020](../../adr/020-evento-do-google-agenda-so-com-iniciais.md)).
+
+## Reescrita em lote dos eventos antigos (#339, AGE-RN-19)
+
+Os eventos criados antes da #217 levavam nome, telefone e procedimento. O script
+`npm run calendar:minimize -- [--confirmar] [--desde=AAAA-MM-DD] [--empresa=<id>]` reescreve cada um
+com o mesmo conteúdo mínimo da tabela acima (`eventContent`). Roteiro de execução:
+[`producao.md` § 7.2](../producao.md#72-reescrita-dos-eventos-antigos-do-google-agenda-339).
+
+| Ponto | Comportamento |
+| --- | --- |
+| Janela | **todas** as consultas com evento, sem corte (o dado velho num calendário de terceiro é o mesmo risco); ordem das mais futuras/recentes para as mais antigas. `--desde` restringe, se alguém precisar priorizar |
+| Operação | `events.patch` de título/descrição/horário via `CalendarGateway.rewriteEvent`; **nunca** `delete`. Evento que já não existe (404/410) conta como feito |
+| Idempotência | `appointments.calendar_minimized_at` (migração `0056`); só é gravado depois do `patch` ter dado certo. Eventos criados/remarcados desde a #338 também são marcados |
+| Falha parcial | erro de um evento é logado (só o id da consulta) e contado em `falhas`; o lote segue e o evento volta na próxima execução |
+| Cota do Google | rajadas de 10 eventos, 1 s entre rajadas; 429/403 `rateLimitExceeded` repete até 4 vezes com espera de 2, 4 e 8 s; persistindo, o lote para e o resto fica pendente |
+| Tamanho | até 500 consultas por empresa por execução; repita até `pendentes=0` |
+| Auditoria | um evento `calendar-minimization` por empresa e execução, só com `rewritten`, `failed`, `rateLimited` e `since` |
+| Escopo | uma empresa por vez (`clinicScope`), com o gateway/credencial da própria empresa. Paciente anonimizado ou ausente sai como `Consulta` (a retenção apaga o evento) |
 
 ## Modos de falha
 

@@ -6,27 +6,12 @@ import {
 } from '@/application/ports/calendar-gateway';
 import type { Services } from '@/infrastructure/container';
 import { logError } from '@/lib/log-error';
+import { publicAppUrl } from '@/lib/public-app-url';
 
 type CalendarServices = Pick<
   Services,
   'appointments' | 'patients' | 'calendar'
 >;
-
-/** `APP_URL` só se for http(s) válida; sem barra final. Inválida/ausente: sem link. */
-function publicAppUrl(): string | null {
-  const raw = process.env.APP_URL;
-  if (!raw) {
-    return null;
-  }
-  try {
-    const url = new URL(raw);
-    return url.protocol === 'https:' || url.protocol === 'http:'
-      ? url.origin
-      : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Agenda a sincronização com o Google Calendar para depois da resposta (after()).
