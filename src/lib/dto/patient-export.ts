@@ -16,7 +16,7 @@ import { toPatientDto } from './patient';
  */
 export const toPatientExportDto = (data: PatientDataExport) => ({
   exportedAt: new Date().toISOString(),
-  patient: toPatientDto(data.patient),
+  patient: toPatientDto(data.patient, data.guardian),
   anamnesis: data.anamnesis ? toAnamnesisDto(data.anamnesis) : null,
   evolutions: data.evolutions.map(toEvolutionNoteDto),
   conditions: data.conditions.map(toConditionDto),

@@ -9,6 +9,7 @@ import { ConditionAssessment } from '@/domain/clinical/condition-assessment';
 import { ConditionPhoto } from '@/domain/clinical/condition-photo';
 import { EvolutionNote } from '@/domain/clinical/evolution-note';
 import { FollowUp } from '@/domain/followup/follow-up';
+import { Guardian } from '@/domain/guardian/guardian';
 import { StockMovement } from '@/domain/inventory/stock-movement';
 import { Supply } from '@/domain/inventory/supply';
 import { Partner } from '@/domain/partner/partner';
@@ -64,10 +65,36 @@ describe('Feature: DTO de paciente', () => {
       birthDate: patient.birthDate?.toISOString(),
       notes: 'Alergia a látex',
       referredByPartnerId: 'partner-1',
+      guardianId: null,
       active: true,
       anonymized: false,
       createdAt: patient.createdAt.toISOString(),
     });
+  });
+
+  it('Dado paciente com responsável, Quando toPatientDto com o responsável, Então embute o responsável; sem o argumento, só o id; null explícito, null', () => {
+    const guardian = Guardian.create({
+      fullName: 'Ana Souza',
+      relationship: 'filho',
+      phone: '11999990000',
+    });
+    const patient = Patient.create({
+      fullName: 'José Silva',
+      phone: '11988887777',
+      guardianId: guardian.id,
+    });
+
+    expect(toPatientDto(patient, guardian).guardian).toEqual({
+      id: guardian.id,
+      fullName: 'Ana Souza',
+      relationship: 'filho',
+      relationshipLabel: 'Filho(a)',
+      phone: '+5511999990000',
+      email: null,
+    });
+    expect(toPatientDto(patient)).not.toHaveProperty('guardian');
+    expect(toPatientDto(patient).guardianId).toBe(guardian.id);
+    expect(toPatientDto(patient, null).guardian).toBeNull();
   });
 
   it('Dado paciente sem data de nascimento, Quando toPatientDto, Então birthDate é null', () => {

@@ -27,6 +27,12 @@ export class InMemoryPatientRepository implements PatientRepository {
     );
   }
 
+  async findByGuardian(guardianId: string): Promise<Patient[]> {
+    return [...this.patients.values()].filter(
+      (p) => p.guardianId === guardianId,
+    );
+  }
+
   async findByIds(ids: string[]): Promise<Patient[]> {
     const unique = [...new Set(ids)];
     return unique.flatMap((id) => {

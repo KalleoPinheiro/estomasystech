@@ -18,6 +18,11 @@ interface DocumentPatientSignature {
   roleLabel?: string;
   /** Linha em branco pra nome/CPF de quem assina por outra pessoa (#94, DOC-08). */
   legalGuardianLine?: boolean;
+  /**
+   * Responsável cadastrado na ficha (#329): o nome e o parentesco saem
+   * impressos no lugar da linha em branco; o CPF segue para preenchimento.
+   */
+  legalGuardian?: { name: string; relationshipLabel: string };
 }
 
 interface DocumentFrameProps {
@@ -52,11 +57,19 @@ function PatientSignatureBlock({
           {signature.roleLabel ?? 'Paciente'}
         </span>
       </div>
-      {signature.legalGuardianLine && (
+      {signature.legalGuardian ? (
         <p className="mt-2 text-xs">
-          Nome e CPF do responsável legal, se aplicável:
+          Responsável legal: {signature.legalGuardian.name} (
+          {signature.legalGuardian.relationshipLabel}). CPF do responsável:
           ________________________________
         </p>
+      ) : (
+        signature.legalGuardianLine && (
+          <p className="mt-2 text-xs">
+            Nome e CPF do responsável legal, se aplicável:
+            ________________________________
+          </p>
+        )
       )}
     </div>
   );

@@ -187,6 +187,7 @@ const patient: PatientDto = {
   active: true,
   anonymized: false,
   referredByPartnerId: null,
+  guardianId: null,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
@@ -591,6 +592,38 @@ describe('Feature: conteúdo dos documentos (#94)', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Versão do termo:/)).toBeInTheDocument();
     expect(screen.getByText(/duas vias/)).toBeInTheDocument();
+  });
+
+  it('Dado paciente com responsável cadastrado (#329), Quando abrir o consentimento, Então imprime o nome e o parentesco e deixa só o CPF em branco', async () => {
+    const withGuardian: PatientDto = {
+      ...patient,
+      guardianId: 'g-1',
+      guardian: {
+        id: 'g-1',
+        fullName: 'Ana Souza',
+        relationship: 'filho',
+        relationshipLabel: 'Filho(a)',
+        phone: '+5511999990000',
+        email: null,
+      },
+    };
+    mockFetch(({ url }) => {
+      if (url.includes('/api/documents/issue')) return issuance();
+      if (url.includes('/api/clinic-info'))
+        return jsonResponse(CLINIC_COMPLETE);
+      return jsonResponse(withGuardian);
+    });
+
+    await renderPage(
+      <ConsentDocumentPage params={Promise.resolve({ patientId: 'pat-1' })} />,
+    );
+
+    expect(
+      await screen.findByText(/Responsável legal: Ana Souza/),
+    ).toHaveTextContent('(Filho(a)). CPF do responsável: ____');
+    expect(
+      screen.queryByText(/Nome e CPF do responsável legal/),
+    ).not.toBeInTheDocument();
   });
 
   it('Dado plano de cuidados com profissional responsável, Então a assinatura usa o nome dele, não o genérico da clínica (DOC-11)', async () => {

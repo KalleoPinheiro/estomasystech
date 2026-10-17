@@ -11,6 +11,12 @@ interface CommonData {
   clinicName: string;
   /** `<APP_URL>/portal`, ou `null` sem URL http(s) válida. */
   portalUrl: string | null;
+  /**
+   * Primeiro nome do paciente quando o destinatário é o responsável dele
+   * (#329): o texto fala do paciente em terceira pessoa e não leva o portal,
+   * que é a conta do próprio paciente.
+   */
+  onBehalfOf?: string;
 }
 
 export interface ConfirmationData extends CommonData {
@@ -44,19 +50,25 @@ const formatTime = (date: Date): string =>
 
 function confirmation(data: ConfirmationData): ReminderContent {
   const what = data.procedure ? `consulta de ${data.procedure}` : 'consulta';
+  const whose = data.onBehalfOf
+    ? `a ${what} de ${data.onBehalfOf}`
+    : `sua ${what}`;
   const next = data.portalUrl
     ? `Confirme sua presença no portal: ${data.portalUrl}.`
     : 'Entre em contato com a clínica em caso de dúvida.';
   return {
     subject: `Lembrete de consulta — ${data.clinicName}`,
     text:
-      `Olá, ${data.firstName}! Lembrete da ${data.clinicName}: sua ${what} é em ` +
+      `Olá, ${data.firstName}! Lembrete da ${data.clinicName}: ${whose} é em ` +
       `${formatDay(data.startsAt)} às ${formatTime(data.startsAt)}. ${next} Até lá!`,
   };
 }
 
 function recall(data: RecallData): ReminderContent {
-  const what = data.reason ? `Seu retorno (${data.reason})` : 'Seu retorno';
+  const owner = data.onBehalfOf
+    ? `O retorno de ${data.onBehalfOf}`
+    : 'Seu retorno';
+  const what = data.reason ? `${owner} (${data.reason})` : owner;
   const next = data.portalUrl
     ? `Agende seu retorno no portal: ${data.portalUrl}.`
     : 'Entre em contato com a clínica para agendar.';

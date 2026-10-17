@@ -332,6 +332,27 @@ export const waitlistEntries = pgTable(
   ],
 );
 
+// Responsável legal ou cuidador (#329): contato reutilizável entre pacientes da
+// mesma empresa, sem conta nem acesso ao portal (ADR-024).
+export const guardians = pgTable(
+  'guardians',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    fullName: text('full_name').notNull(),
+    relationship: text('relationship').notNull(),
+    phone: text('phone').notNull(),
+    email: text('email'),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [index('idx_guardians_clinic').on(table.clinicId, table.fullName)],
+);
+
 export const patients = pgTable(
   'patients',
   {
@@ -349,6 +370,7 @@ export const patients = pgTable(
     referredByPartnerId: text('referred_by_partner_id').references(
       () => partners.id,
     ),
+    guardianId: text('guardian_id').references(() => guardians.id),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -362,6 +384,7 @@ export const patients = pgTable(
   },
   (table) => [
     index('idx_patients_referrer').on(table.referredByPartnerId),
+    index('idx_patients_guardian').on(table.guardianId),
     // Ordenação padrão das listagens.
     index('idx_patients_full_name').on(table.fullName),
     // Busca com ILIKE '%termo%' — GIN + pg_trgm evita full scan.

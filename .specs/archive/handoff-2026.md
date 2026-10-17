@@ -1074,6 +1074,20 @@ Decisão de @KalleoPinheiro de 2026-10-11 implementada: suspender pede um motivo
 - **Testes:** domínio (lista, observação, limpeza), repositório pglite, rota (400 sem/fora da lista, auditoria sem observação, destinatários, falha do provedor, idempotência), tela (motivo obrigatório, corpo enviado, suspensa legada) e E2E de suspensão.
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Ordem de deploy:** aplicar a migração 0058 antes de subir o código (o `UPDATE` de estado usa as colunas novas). Para o aviso sair, a plataforma precisa de `RESEND_API_KEY` e `EMAIL_FROM`.
+
+## Issue #329 — Paciente: responsável/cuidador com nome, parentesco e contato (2026-10-17) — ENCERRADO
+
+Responsável legal ou cuidador cadastrado como entidade própria da empresa, ligada a vários pacientes; os lembretes e o termo de consentimento usam o contato dele.
+- **Código:** `Guardian` (`src/domain/guardian/`), `DrizzleGuardianRepository`/`InMemoryGuardianRepository`, casos de uso em `src/application/guardians/`, rotas `/api/guardians` e `/api/guardians/[id]`, `guardianId` em `POST`/`PUT /api/patients`, `guardian` embutido em `GET /api/patients/:id` e na exportação do titular, `GuardianPanel` na ficha, `PatientRepository.findByGuardian`.
+- **Migração `0059`:** tabela `guardians` + `patients.guardian_id` (FK, índice). Nenhum dado alterado.
+- **Lembretes:** sem e-mail do paciente, vai ao do responsável (saudação a ele, texto em 3ª pessoa, sem portal); `ClinicReminderServices` ganhou `guardians`.
+- **Documento:** o termo de consentimento imprime "Responsável legal: nome (parentesco)", CPF em branco; sem responsável, a linha em branco antiga continua.
+- **Retenção:** `anonymizePatient` desfaz o vínculo e apaga o responsável sem outro paciente.
+- **Decisões (ADR-024, AD-041):** só contato (sem portal), um por paciente, parentesco em lista fechada, gerência do Admin e do Atendente (Profissional só vê), exclusão com paciente ligado = `409`, trilha sem contato.
+- **Testes:** domínio, casos de uso, rotas (CRUD, papéis, isolamento por empresa, auditoria, exportação), repositório Drizzle (pglite), retenção, lembretes, DTO, painel da ficha e documento (jsdom).
+- **Docs:** ADR-024, PRO-RN-21, COM-RN-19, POR-RN-19, CONTEXT.md, `api.md`, AD-041.
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Pendências para o Kalléo:** aplicar a migração `0059` antes do código. Decisão aberta de produto: se o cuidador deve ter acesso ao portal (hoje não; exige novo ADR).
 - **Next step:** nenhum. **Blockers:** nenhum.
 
 ## Issue #297 — Remarcação com profissional inativo e revogação no recadastro do 2FA (2026-10-17) — ENCERRADO

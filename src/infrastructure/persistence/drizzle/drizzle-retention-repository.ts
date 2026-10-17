@@ -43,6 +43,7 @@ import {
   dataSubjectRequests,
   evolutionNotes,
   followUps,
+  guardians,
   interventionRecords,
   invoices,
   mfaRecoveryCodes,
@@ -111,9 +112,15 @@ export class DrizzleRetentionRepository implements RetentionRepository {
   ): Promise<number> {
     const clinicId = this.clinic();
     return this.db.transaction(async (tx) => {
+      const [before] = await tx
+        .select({ guardianId: patients.guardianId })
+        .from(patients)
+        .where(and(eq(patients.id, patientId), eq(patients.clinicId, clinicId)))
+        .limit(1);
       const done = await tx
         .update(patients)
         .set({
+          guardianId: null,
           fullName: ANONYMIZED_PATIENT_NAME,
           email: anonymizedEmail(patientId),
           phone: '',
@@ -134,6 +141,7 @@ export class DrizzleRetentionRepository implements RetentionRepository {
         )
         .returning({ id: patients.id });
       if (done.length === 0) return 0;
+      await deleteOrphanGuardian(tx, clinicId, before?.guardianId ?? null);
       await clearClinicalText(tx, clinicId, patientId);
       await clearCarePlanText(tx, clinicId, patientId);
       await clearSchedulingText(tx, clinicId, patientId);
@@ -522,6 +530,27 @@ async function clearBillingText(tx: Tx, clinicId: string, patientId: string) {
     .where(
       and(eq(invoices.clinicId, clinicId), eq(invoices.patientId, patientId)),
     );
+}
+
+/**
+ * O responsável é dado de terceiro (#329): sai junto com o último paciente
+ * ligado a ele. Enquanto outro paciente da família o usa, ele fica.
+ */
+async function deleteOrphanGuardian(
+  tx: Tx,
+  clinicId: string,
+  guardianId: string | null,
+) {
+  if (guardianId === null) return;
+  const stillLinked = await tx
+    .select({ id: patients.id })
+    .from(patients)
+    .where(eq(patients.guardianId, guardianId))
+    .limit(1);
+  if (stillLinked.length > 0) return;
+  await tx
+    .delete(guardians)
+    .where(and(eq(guardians.id, guardianId), eq(guardians.clinicId, clinicId)));
 }
 
 /** Tira e-mail e senha, derruba sessões e apaga tokens e segundo fator. */

@@ -21,6 +21,7 @@ const toPatient = (row: PatientRow, cipher: FieldCipher): Patient =>
     birthDate: row.birthDate,
     notes: cipher.decryptNullable(row.notes),
     referredByPartnerId: row.referredByPartnerId,
+    guardianId: row.guardianId,
     active: row.active,
     createdAt: row.createdAt,
     anonymizedAt: row.anonymizedAt,
@@ -48,6 +49,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       birthDate: patient.birthDate,
       notes: this.cipher.encryptNullable(patient.notes),
       referredByPartnerId: patient.referredByPartnerId,
+      guardianId: patient.guardianId,
       active: patient.isActive,
       createdAt: patient.createdAt,
     };
@@ -98,6 +100,22 @@ export class DrizzlePatientRepository implements PatientRepository {
           eq(patients.referredByPartnerId, partnerId),
         ),
       )
+      .limit(MAX_ROWS);
+    return rows.map((row) => toPatient(row, this.cipher));
+  }
+
+  async findByGuardian(guardianId: string): Promise<Patient[]> {
+    const rows = await this.db
+      .select()
+      .from(patients)
+      .where(
+        withTenant(
+          patients,
+          this.clinicId,
+          eq(patients.guardianId, guardianId),
+        ),
+      )
+      .orderBy(asc(patients.fullName), asc(patients.id))
       .limit(MAX_ROWS);
     return rows.map((row) => toPatient(row, this.cipher));
   }

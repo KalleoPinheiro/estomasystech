@@ -17,7 +17,9 @@ last_reviewed: 2026-10-11
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | GET/POST | `/api/patients` | Listar (`?search=`) / cadastrar paciente |
-| GET/PUT/PATCH | `/api/patients/:id` | Buscar / atualizar / ativar-desativar |
+| GET/PUT/PATCH | `/api/patients/:id` | Buscar (com o `guardian` embutido) / atualizar (`guardianId`) / ativar-desativar |
+| GET/POST | `/api/guardians` | Listar (`?search=`) / cadastrar responsável (Admin e Atendente) |
+| GET/PUT/DELETE | `/api/guardians/:id` | Buscar (com pacientes ligados) / atualizar / excluir (`409` se há paciente ligado) |
 | GET/POST | `/api/appointments` | Listar por período (`?from=&to=`) / agendar |
 | PATCH | `/api/appointments/:id` | `{action: confirm\|cancel\|no_show\|complete\|reschedule}` |
 | GET/POST | `/api/invoices` | Listar (`?status=&from=&to=`) / emitir fatura |

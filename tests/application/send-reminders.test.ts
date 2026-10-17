@@ -10,12 +10,14 @@ import {
   SendReminders,
 } from '@/application/reminders/send-reminders';
 import { FollowUp } from '@/domain/followup/follow-up';
+import { Guardian } from '@/domain/guardian/guardian';
 import { ReminderLog } from '@/domain/messaging/reminder-log';
 import type { Patient } from '@/domain/patient/patient';
 import { Appointment } from '@/domain/scheduling/appointment';
 import { Money } from '@/domain/shared/money';
 import { TimeSlot } from '@/domain/shared/time-slot';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
+import { InMemoryGuardianRepository } from '@/infrastructure/persistence/in-memory/in-memory-guardian-repository';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 import { InMemoryReminderLogRepository } from '@/infrastructure/persistence/in-memory/in-memory-reminder-log-repository';
@@ -46,6 +48,7 @@ const newClinic = (email: EmailGateway): ClinicFixture => ({
   email,
   appointments: new InMemoryAppointmentRepository(),
   followUps: new InMemoryFollowUpRepository(),
+  guardians: new InMemoryGuardianRepository(),
   patients: new InMemoryPatientRepository(),
   reminderLog: new InMemoryReminderLogRepository(),
 });
@@ -158,6 +161,83 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
 
       expect(summary.sent).toBe(0);
       expect(email.sent).toHaveLength(0);
+    });
+  });
+
+  describe('Responsável como destinatário (#329)', () => {
+    const withGuardian = async (guardianEmail: string | null) => {
+      const guardian = Guardian.create({
+        fullName: 'Ana Souza',
+        relationship: 'filho',
+        phone: '11977770000',
+        email: guardianEmail,
+      });
+      await clinic.guardians.save(guardian);
+      const sem = await new CreatePatient(clinic.patients).execute({
+        fullName: 'José da Silva',
+        phone: '11999990001',
+        guardianId: guardian.id,
+      });
+      return sem;
+    };
+
+    it('Dado paciente sem e-mail e responsável com e-mail, Quando houver consulta amanhã, Então avisa o responsável sobre o paciente, sem portal', async () => {
+      const jose = await withGuardian('ana@example.com');
+      await scheduleAt(new Date('2026-07-17T09:30:00Z'), jose.id);
+
+      const summary = await run();
+
+      expect(summary.sent).toBe(1);
+      const [message] = email.sent;
+      expect(message.to).toBe('ana@example.com');
+      expect(message.text).toContain('Olá, Ana!');
+      expect(message.text).toContain('a consulta de José é em');
+      expect(message.text).not.toContain('José da Silva');
+      expect(message.text).not.toContain('portal');
+    });
+
+    it('Dado recall vencido, Quando o paciente não tem e-mail, Então o aviso vai ao responsável', async () => {
+      const jose = await withGuardian('ana@example.com');
+      await addFollowUp(new Date('2026-07-15T12:00:00Z'), jose.id);
+
+      await run();
+
+      expect(email.sent[0].to).toBe('ana@example.com');
+      expect(email.sent[0].text).toContain('O retorno de José');
+      expect(email.sent[0].text).not.toContain('portal');
+    });
+
+    it('Dado paciente com e-mail próprio, Quando tem responsável, Então o aviso vai ao paciente', async () => {
+      const guardian = Guardian.create({
+        fullName: 'Ana Souza',
+        relationship: 'filho',
+        phone: '11977770000',
+        email: 'ana@example.com',
+      });
+      await clinic.guardians.save(guardian);
+      await clinic.patients.save(maria.update({ guardianId: guardian.id }));
+      await scheduleTomorrow();
+
+      await run();
+
+      expect(email.sent.map((m) => m.to)).toEqual(['maria@example.com']);
+    });
+
+    it('Dado responsável sem e-mail ou sem responsável, Quando o paciente não tem e-mail, Então pula sem erro', async () => {
+      const jose = await withGuardian(null);
+      const sozinha = await new CreatePatient(clinic.patients).execute({
+        fullName: 'Rosa Lima',
+        phone: '11999990002',
+      });
+      await scheduleAt(new Date('2026-07-17T09:30:00Z'), jose.id);
+      await scheduleAt(new Date('2026-07-17T10:30:00Z'), sozinha.id);
+
+      const summary = await run();
+
+      expect(summary.skipped).toBe(2);
+      expect(summary.sent).toBe(0);
+      expect(email.sent).toHaveLength(0);
+      expect(clinic.reminderLog.items).toHaveLength(0);
     });
   });
 

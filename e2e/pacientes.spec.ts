@@ -32,6 +32,27 @@ test.describe("pacientes", () => {
     }
   });
 
+  test("cadastra o responsável na ficha e o termo de consentimento sai com o nome dele (#329)", async ({ page, request }) => {
+    const patient = await createPatient(request);
+    const guardianName = `Responsável E2E ${unique()}`;
+
+    await page.goto(`/pacientes/${patient.id}`);
+    await page.getByRole("button", { name: "Vincular responsável" }).click();
+    await page.getByRole("button", { name: "Cadastrar novo responsável" }).click();
+    await page.getByLabel("Nome completo *").fill(guardianName);
+    await page.getByLabel("Parentesco *").selectOption("filho");
+    await page.getByLabel("Telefone *").fill("(11) 97777-6666");
+    await page.getByRole("button", { name: "Salvar" }).click();
+
+    const panel = page.locator("[data-guardian-panel]");
+    await expect(panel).toContainText(guardianName);
+    await expect(panel).toContainText("Filho(a)");
+    await expect(panel).toContainText("(11) 97777-6666");
+
+    await page.goto(`/documentos/consentimento/${patient.id}`);
+    await expect(page.getByText(`Responsável legal: ${guardianName}`)).toBeVisible();
+  });
+
   test("telefone sem DDD é recusado com motivo e com máscara é guardado formatado", async ({ page }) => {
     const name = `Paciente Telefone UI ${unique()}`;
     await page.goto("/pacientes");

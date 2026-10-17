@@ -302,6 +302,9 @@ describe('Feature: Conformidade das guardas de rota', () => {
     const HANDLER_DENIED_ROLES: Record<string, readonly string[]> = {
       // #310: consentimento em papel é do Admin de Empresa e do Atendente.
       'api/patients/[id]/partner-consent/paper/route.ts': ['profissional'],
+      // #329: responsáveis são gerenciados pela recepção e pelo Admin.
+      'api/guardians/route.ts': ['profissional'],
+      'api/guardians/[id]/route.ts': ['profissional'],
     };
 
     /** O super_admin não tem clínica: a sessão dele nasce com `clinicId` nulo. */

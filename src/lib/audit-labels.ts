@@ -42,6 +42,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   intervention_record: 'Registro de intervenção',
   outcome_evaluation: 'Avaliação de desfecho',
   patient: 'Paciente',
+  guardian: 'Responsável do paciente',
   session: 'Sessão',
   taxonomy_catalog: 'Catálogo de taxonomia',
   professional: 'Profissional',
