@@ -52,7 +52,7 @@ test.describe("área da plataforma", () => {
     test("cria clínica pela tela e vê o admin aguardando primeiro acesso", async ({ page }) => {
       // CNPJ novo a cada execução: `uq_clinics_cnpj` recusa repetido (B4).
       const digits = String(Date.now()).slice(-12).padStart(12, "0");
-      const cnpj = `${digits}00`;
+      const cnpj = validCnpj(`${digits.slice(0, 11)}0`);
       const name = `Clínica E2E ${digits}`;
 
       await page.goto("/plataforma");
