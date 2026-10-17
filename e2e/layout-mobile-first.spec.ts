@@ -409,7 +409,10 @@ async function seedReceipt(request: APIRequestContext) {
     commissionType: "percentage",
     commissionPct: 30,
   });
-  const patient = await createPatient(request, { fullName: `Paciente Recibo ${unique()}` });
+  const patient = await createPatient(request, {
+    fullName: `Paciente Recibo ${unique()}`,
+    cpf: "529.982.247-25",
+  });
   const slot = slotForAttempt("layout-documentos-recibo", 30);
   const appointment = await createAppointment(request, {
     patientId: patient.id,

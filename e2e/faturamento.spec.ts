@@ -87,6 +87,29 @@ test.describe("faturamento", () => {
     await expect(paidRow.getByRole("link", { name: "Recibo" })).toHaveCount(2);
   });
 
+  test("recibo exige CPF do paciente e traz CPF e CNPJ quando há", async ({
+    page,
+    request,
+  }) => {
+    const pay = async (cpf?: string) => {
+      const patient = await createPatient(request, cpf ? { cpf } : {});
+      const invoice = await createInvoice(request, {
+        patientId: patient.id,
+        description: `Recibo CPF ${unique()}`,
+        amountCents: 9000,
+      });
+      const paid = await payInvoice(request, invoice.id, "pix");
+      return `/documentos/recibo/${paid.id}/${paid.payments[0].id}`;
+    };
+
+    await page.goto(await pay());
+    await expect(page.getByText(/não tem CPF cadastrado/)).toBeVisible();
+
+    await page.goto(await pay("529.982.247-25"));
+    await expect(page.getByText(/CPF 529\.982\.247-25/)).toBeVisible();
+    await expect(page.getByText(/CNPJ /)).toBeVisible();
+  });
+
   test("bloqueia cancelamento de fatura já paga", async ({ page, request }) => {
     const patient = await createPatient(request);
     const invoice = await createInvoice(request, {
