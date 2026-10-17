@@ -106,6 +106,7 @@ export const WEEKLY_SERIES_SESSIONS = 4;
 export const SLOT_SEEDS = [
   ...WEEKLY_SERIES_SEEDS,
   "agenda-conflict",
+  "agenda-deep-link",
   "agenda-happy-path",
   "agenda-outside-hours",
   "agenda-reschedule-original",

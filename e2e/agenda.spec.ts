@@ -30,6 +30,28 @@ test.describe("agenda", () => {
     ).toBeVisible();
   });
 
+  test("link do Google Agenda abre os detalhes da consulta no mês dela (#217)", async ({
+    page,
+    request,
+  }) => {
+    const patient = await createPatient(request, { fullName: `Paciente Link ${Date.now()}` });
+    const slot = slotForAttempt("agenda-deep-link");
+    const appointment = await createAppointment(request, {
+      patientId: patient.id,
+      startsAt: slot.startsAt,
+      endsAt: slot.endsAt,
+      procedure: "Curativo — link",
+      priceCents: 10000,
+    });
+
+    await page.goto(
+      `/agenda?consulta=${appointment.id}&em=${encodeURIComponent(slot.startsAt)}`,
+    );
+
+    await expect(page.getByRole("heading", { name: "Detalhes da consulta" })).toBeVisible();
+    await expect(page.getByText("Curativo — link")).toBeVisible();
+  });
+
   test("bloqueia conflito de horário (intervalo mínimo entre consultas)", async ({
     page,
     request,

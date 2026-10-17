@@ -168,7 +168,7 @@ describe('Feature: Regras de agendamento (horário comercial, intervalo de 15min
       await sync().created(appointment.id);
 
       expect(calendar.created).toHaveLength(1);
-      expect(calendar.created[0].title).toContain('Maria da Silva');
+      expect(calendar.created[0].title).toBe('Consulta · M.S.');
 
       const stored = await appointmentRepo.findById(appointment.id);
       expect(stored?.googleEventId).toBe('gcal-event-1');
@@ -218,6 +218,54 @@ describe('Feature: Regras de agendamento (horário comercial, intervalo de 15min
       expect(calendar.updated[0].input.startsAt).toEqual(
         new Date('2026-07-21T14:00:00Z'),
       );
+    });
+
+    it('Dado consulta remarcada, Quando sincronizar, Então título e descrição seguem iguais aos da criação (#217)', async () => {
+      const appointment = await schedule(
+        '2026-07-20T09:00:00Z',
+        '2026-07-20T10:00:00Z',
+      );
+      const withLink = () =>
+        new SyncAppointmentCalendar(
+          appointmentRepo,
+          patientRepo,
+          calendar,
+          'https://app.vitta.test',
+        );
+      await withLink().created(appointment.id);
+      await new RescheduleAppointment(appointmentRepo).execute({
+        id: appointment.id,
+        startsAt: new Date('2026-07-21T14:00:00Z'),
+        endsAt: new Date('2026-07-21T15:00:00Z'),
+      });
+      await withLink().rescheduled(appointment.id);
+
+      const [created] = calendar.created;
+      const [{ input: updated }] = calendar.updated;
+      expect(updated.title).toBe(created.title);
+      expect(updated.description).toBe(
+        `Abrir no VittaFlow: https://app.vitta.test/agenda?consulta=${appointment.id}&em=2026-07-21T14%3A00%3A00.000Z`,
+      );
+      expect(created.description).toContain(
+        `consulta=${appointment.id}&em=2026-07-20T09%3A00%3A00.000Z`,
+      );
+    });
+
+    it('Dado consulta com paciente, Quando criar e remarcar, Então nenhum evento leva nome completo, telefone nem procedimento (#217)', async () => {
+      const appointment = await schedule(
+        '2026-07-20T09:00:00Z',
+        '2026-07-20T10:00:00Z',
+      );
+      await sync().created(appointment.id);
+      await sync().rescheduled(appointment.id);
+
+      const sent = JSON.stringify([
+        calendar.created,
+        calendar.updated.map((u) => u.input),
+      ]);
+      expect(sent).not.toContain('Maria da Silva');
+      expect(sent).not.toContain('11999990000');
+      expect(sent).not.toContain('Troca de bolsa');
     });
 
     it('Dado consulta com evento, Quando cancelar e sincronizar, Então remove evento do calendário', async () => {
