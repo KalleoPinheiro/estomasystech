@@ -115,6 +115,7 @@
 
 - Patient's signed agreement to data use (photos, clinical records).
 - Timestamp and IP address recorded.
+- The text in force is `CONSENT_TEXT` `v1`; a draft revision (privacy notice, separate image consent) lives in `docs/legal/` and is not wired in ([ADR-026](./docs/adr/026-textos-lgpd-previa-nao-ligada.md)).
 
 **Partner Share Consent** (consentimento para o parceiro)
 

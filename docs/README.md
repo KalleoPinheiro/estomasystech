@@ -22,6 +22,7 @@ last_reviewed: 2026-10-11
 | [`product/prd-fase-2.md`](product/prd-fase-2.md) | frozen | PRD da fase 2 |
 | [`product/prd-fase-3.md`](product/prd-fase-3.md) | frozen | PRD da fase 3 |
 | [`product/prd-fase-6.md`](product/prd-fase-6.md) | living | PRD da plataforma (RBAC, multiempresa, auth) |
+| [`legal/textos-lgpd-previa.md`](legal/textos-lgpd-previa.md) | draft | **versão prévia** do aviso de privacidade, TCLE, termo de imagem e consentimento do parceiro; pendente de revisão jurídica (#216) |
 | [`plano-correcao-achados-auditoria-2026-09.md`](plano-correcao-achados-auditoria-2026-09.md) | frozen | plano dos achados de auditoria #57–#77 |
 
 ## Domínios de negócio
@@ -88,6 +89,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/023-email-de-contato-do-paciente-e-login-do-portal.md`](adr/023-email-de-contato-do-paciente-e-login-do-portal.md) | e-mail de contato do paciente opcional e repetível; login do portal em conta própria |
 | [`adr/021-e2e-contra-build-de-producao.md`](adr/021-e2e-contra-build-de-producao.md) | E2E principal contra `next start`; `next dev` só para contas por papel (causa raiz da #308) |
 | [`adr/024-responsavel-do-paciente.md`](adr/024-responsavel-do-paciente.md) | responsável ou cuidador do paciente: entidade própria, só de contato |
+| [`adr/026-textos-lgpd-previa-nao-ligada.md`](adr/026-textos-lgpd-previa-nao-ligada.md) | textos LGPD em versão prévia ficam em `docs/legal/`, fora do código, até a revisão jurídica; nenhum aceite cai |
 | [`adr/025-cpf-no-recibo-e-protecao.md`](adr/025-cpf-no-recibo-e-protecao.md) | CPF do paciente/pagador opcional, validado, cifrado e mascarado; exigido só no recibo do IRPF, com CNPJ do prestador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).

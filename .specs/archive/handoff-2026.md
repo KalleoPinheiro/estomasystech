@@ -1152,3 +1152,12 @@ Recibo `REC-…` passa a trazer o **CPF de quem pagou** e o **CNPJ da empresa**;
 - **Gate**: o GitHub Actions está sem cota, então o gate rodou local sobre a branch (ver comentário da PR). Docker/smoke de imagem não rodam no container (sem daemon): pendente.
 - **Next step**: se a clínica precisar corrigir pagador de recebimento já gravado, abrir ticket (ação `payer` no PATCH da fatura + tela). #326 não bloqueia mais ninguém.
 - **Blockers**: nenhum.
+
+## Issue #216 — Textos LGPD em versão prévia (2026-10-17) — PRÉVIA ENTREGUE; ISSUE CONTINUA ABERTA
+
+Kalléo pediu que a própria thread escrevesse uma versão prévia dos textos para ele ajustar depois. Entregue só como documento (sem código):
+- **`docs/legal/textos-lgpd-previa.md`** (`status: draft`, marcado em cada texto como pendente de revisão jurídica): aviso de privacidade, TCLE de tratamento, termo de imagem **separado** (+ termo opcional didático, *proposta não decidida*), consentimento do parceiro; variáveis `{{CLINICA_*}}`/`{{ENCARREGADO_*}}`; tabela de 10 pontos abertos (§ 7); procedimento de promoção ao código (§ 8). Premissas vêm das decisões de 2026-10-11/12/17 (#216, ADR-013/017/018/020).
+- **[ADR-026](../../docs/adr/026-textos-lgpd-previa-nao-ligada.md) / AD-045:** a prévia **não é ligada** ao sistema e **não dispara** a invalidação de aceites do #310; `CONSENT_TEXT` `v1` e `v0-placeholder` ficam como estão. Só a promoção do texto revisado troca texto e versão juntos.
+- **Docs:** índice `docs/README.md`, README de pacientes-prontuario, `CONTEXT.md` (Consent Record).
+- **Sem código, sem migração.** `check:docs` rodado local; o resto do gate não se aplica (nenhum `.ts` mudou).
+- **Pendências para o Kalléo:** (1) revisão jurídica; (2) decidir os pontos da § 7 (encarregado, uso didático de foto, mecanismo do art. 33 para Resend/Google Agenda, menores); (3) depois do texto fechado, abrir tickets: aceite de imagem separado (hoje o `ConsentRecord` tem um tipo só), colunas `encarregado_*`/`endereco` em `clinics`, páginas de aviso em login/portal/e-mail. **#216 não fechada; #323 segue bloqueada.**
