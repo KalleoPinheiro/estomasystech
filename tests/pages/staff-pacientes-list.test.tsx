@@ -322,7 +322,7 @@ describe('Feature: PatientsPage', () => {
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: 'Ana Lima' },
       });
-      fireEvent.change(screen.getByLabelText(/Email \*/), {
+      fireEvent.change(screen.getByLabelText(/Email \(opcional\)/), {
         target: { value: 'ana@example.com' },
       });
       fireEvent.change(screen.getByLabelText(/Telefone \*/), {
