@@ -1,7 +1,8 @@
 import { type calendar_v3, google } from 'googleapis';
-import type {
-  CalendarEventInput,
-  CalendarGateway,
+import {
+  type CalendarEventInput,
+  type CalendarGateway,
+  CalendarRateLimitedError,
 } from '@/application/ports/calendar-gateway';
 import { logError } from '@/lib/log-error';
 
@@ -109,6 +110,23 @@ export class GoogleCalendarGateway implements CalendarGateway {
     }
   }
 
+  async rewriteEvent(
+    eventId: string,
+    input: CalendarEventInput,
+  ): Promise<void> {
+    try {
+      await this.client.events.patch({
+        calendarId: this.calendarId,
+        eventId,
+        requestBody: this.toEventBody(input),
+      });
+    } catch (error) {
+      if (isGone(error)) return;
+      if (isRateLimited(error)) throw new CalendarRateLimitedError();
+      throw error;
+    }
+  }
+
   async purgeEvent(eventId: string): Promise<void> {
     try {
       await this.client.events.delete({ calendarId: this.calendarId, eventId });
@@ -122,4 +140,23 @@ export class GoogleCalendarGateway implements CalendarGateway {
 function isGone(error: unknown): boolean {
   const code = (error as { code?: number | string } | null)?.code;
   return code === 404 || code === 410 || code === '404' || code === '410';
+}
+
+const RATE_LIMIT_REASONS = new Set([
+  'rateLimitExceeded',
+  'userRateLimitExceeded',
+  'quotaExceeded',
+]);
+
+/** 429, ou 403 com motivo de cota (o Google usa 403 para limite por usuário). */
+function isRateLimited(error: unknown): boolean {
+  const failure = error as {
+    code?: number | string;
+    errors?: { reason?: string }[];
+    response?: { data?: { error?: { errors?: { reason?: string }[] } } };
+  } | null;
+  if (failure?.code === 429 || failure?.code === '429') return true;
+  if (failure?.code !== 403 && failure?.code !== '403') return false;
+  const reasons = failure.errors ?? failure.response?.data?.error?.errors ?? [];
+  return reasons.some((item) => RATE_LIMIT_REASONS.has(item.reason ?? ''));
 }

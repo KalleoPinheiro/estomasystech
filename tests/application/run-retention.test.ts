@@ -344,6 +344,7 @@ describe('Feature: Job de retenção (#294)', () => {
       createEvent: vi.fn(async () => null),
       updateEvent: vi.fn(async () => undefined),
       deleteEvent: vi.fn(async () => undefined),
+      rewriteEvent: vi.fn(async () => undefined),
       purgeEvent: vi.fn(purge),
     });
     const run = (

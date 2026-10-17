@@ -30,6 +30,8 @@ class FakeCalendarGateway implements CalendarGateway {
     this.updated = [...this.updated, { eventId, input }];
   }
 
+  async rewriteEvent(): Promise<void> {}
+
   async purgeEvent(): Promise<void> {}
 
   async deleteEvent(eventId: string): Promise<void> {
@@ -169,6 +171,29 @@ describe('Feature: Lacunas de cobertura — remarcação, série recorrente e si
       await sync().rescheduled(appointment.id);
 
       expect(calendar.updated).toHaveLength(0);
+    });
+    it('Dado evento criado ou remarcado já com o conteúdo mínimo, Quando buscar os a minimizar (#339), Então não há pendência', async () => {
+      const appointment = await schedule(
+        '2026-07-20T09:00:00Z',
+        '2026-07-20T10:00:00Z',
+      );
+      await sync().created(appointment.id);
+      const legacy = await schedule(
+        '2026-07-21T09:00:00Z',
+        '2026-07-21T10:00:00Z',
+      );
+      await appointmentRepo.save(legacy.withGoogleEventId('evt-legado'));
+      expect(
+        (await appointmentRepo.findCalendarEventsToMinimize({ limit: 10 })).map(
+          (a) => a.id,
+        ),
+      ).toEqual([legacy.id]);
+
+      await sync().rescheduled(legacy.id);
+
+      expect(
+        await appointmentRepo.findCalendarEventsToMinimize({ limit: 10 }),
+      ).toEqual([]);
     });
   });
 

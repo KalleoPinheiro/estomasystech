@@ -1035,3 +1035,18 @@ Decisão de @KalleoPinheiro de 2026-10-11 (opção b) implementada: `normalizeCn
 - **Docs:** ACE-RN-23 em `docs/domains/acesso/README.md`.
 - **Testes:** `tests/domain/cnpj.test.ts` (numérico, vetor alfanumérico `12.ABC.345/01DE-35`, DV errado, formato).
 - **Next step:** nenhum. **Blockers:** nenhum. Nenhuma migração.
+
+
+
+## Issue #339 — Google Agenda: reescrita em lote dos eventos antigos (2026-10-17) — ENCERRADO
+
+Eventos criados antes da #217 passam a ser reescritos só com iniciais, horário e link (AGE-RN-18) por um script manual; nenhum evento é apagado.
+- **Código:** `MinimizeCalendarEvents` (`src/application/appointments/minimize-calendar-events.ts`), `scripts/minimize-calendar-events.ts` (`npm run calendar:minimize`); `CalendarGateway.rewriteEvent` (propaga falha, `CalendarRateLimitedError`; 404/410 = feito); `AppointmentRepository.findCalendarEventsToMinimize`/`markCalendarEventMinimized`; `publicAppUrl` extraído para `src/lib/public-app-url.ts`. Criação e remarcação também marcam o evento.
+- **Migração `0056`:** coluna `appointments.calendar_minimized_at` (nula; sem backfill).
+- **Decisões (AD-037):** script manual, janela = todas as consultas (a issue pede nenhum evento com dado; o coordenador sugeriu janela — desvio documentado), ordem futuro→passado, 500 por empresa por execução, rajadas de 10 + pausa de 1 s, backoff 2/4/8 s, cota persistente encerra o lote. Sem ADR novo (ADR-021 está reservado pela #308).
+- **Docs:** AGE-RN-19, `integrations/google-calendar.md`, `producao.md` § 7.2.
+- **Testes:** lote com falha parcial e retomada, cota/backoff, reexecução idempotente, janela `--desde`, simulação, gateway nulo, auditoria sem PII, repositório Drizzle (pglite, isolamento por empresa).
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke de imagem não rodam no container (sem daemon): pendente.
+- **Pendências para o Kalléo:** rodar `npm run calendar:minimize -- --confirmar` em produção por empresa depois do deploy (runbook § 7.2). O histórico de revisões do evento no Google não é alterável pela API.
+- **Ordem de deploy:** aplicar a migração 0056 antes de subir o código (o `SELECT` de consultas usa a coluna nova).
+- **Next step:** nenhum. **Blockers:** nenhum.

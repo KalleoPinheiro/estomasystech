@@ -1,0 +1,1 @@
+ALTER TABLE "appointments" ADD COLUMN "calendar_minimized_at" timestamp with time zone;

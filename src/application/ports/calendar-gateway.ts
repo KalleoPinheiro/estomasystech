@@ -5,11 +5,26 @@ export interface CalendarEventInput {
   endsAt: Date;
 }
 
+/** A API do Google recusou por cota/taxa: quem chama espera e tenta de novo. */
+export class CalendarRateLimitedError extends Error {
+  constructor() {
+    super('Google Agenda: limite de requisições atingido');
+    this.name = 'CalendarRateLimitedError';
+  }
+}
+
 export interface CalendarGateway {
   /** Cria evento e retorna o id externo, ou null se indisponível/falhou. */
   createEvent(input: CalendarEventInput): Promise<string | null>;
   updateEvent(eventId: string, input: CalendarEventInput): Promise<void>;
   deleteEvent(eventId: string): Promise<void>;
+  /**
+   * Reescreve título, descrição e horário e **propaga a falha** (diferente de
+   * `updateEvent`, que a engole): a minimização em lote (#339) só marca o
+   * evento como feito depois. Cota esgotada lança `CalendarRateLimitedError`;
+   * evento já inexistente não é falha.
+   */
+  rewriteEvent(eventId: string, input: CalendarEventInput): Promise<void>;
   /**
    * Apaga o evento e **propaga a falha** (diferente de `deleteEvent`, que a
    * engole): quem precisa de certeza de que o evento sumiu — a retenção (#311)
@@ -26,6 +41,8 @@ export class NullCalendarGateway implements CalendarGateway {
   async updateEvent(): Promise<void> {}
 
   async deleteEvent(): Promise<void> {}
+
+  async rewriteEvent(): Promise<void> {}
 
   async purgeEvent(): Promise<void> {}
 }
@@ -58,6 +75,13 @@ export class LazyCalendarGateway implements CalendarGateway {
 
   async deleteEvent(eventId: string): Promise<void> {
     return (await this.resolve()).deleteEvent(eventId);
+  }
+
+  async rewriteEvent(
+    eventId: string,
+    input: CalendarEventInput,
+  ): Promise<void> {
+    return (await this.resolve()).rewriteEvent(eventId, input);
   }
 
   async purgeEvent(eventId: string): Promise<void> {

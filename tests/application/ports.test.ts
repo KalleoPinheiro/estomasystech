@@ -13,6 +13,7 @@ describe('Feature: Gateways nulos (integrações desativadas)', () => {
     await expect(gateway.createEvent()).resolves.toBeNull();
     await expect(gateway.updateEvent()).resolves.toBeUndefined();
     await expect(gateway.deleteEvent()).resolves.toBeUndefined();
+    await expect(gateway.rewriteEvent()).resolves.toBeUndefined();
     await expect(gateway.purgeEvent()).resolves.toBeUndefined();
   });
 

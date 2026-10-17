@@ -401,6 +401,11 @@ export const appointments = pgTable(
     notes: text('notes'),
     status: text('status').notNull(),
     googleEventId: text('google_event_id'),
+    // Quando o evento do Google Agenda foi reescrito só com iniciais (#339); null = ainda não.
+    calendarMinimizedAt: timestamp('calendar_minimized_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
     // Profissional responsável (F9) — nullable, retrocompatível.
     professionalId: text('professional_id').references(() => professionals.id),
     // Procedimento do catálogo (O1.1) — nullable, histórico intacto.

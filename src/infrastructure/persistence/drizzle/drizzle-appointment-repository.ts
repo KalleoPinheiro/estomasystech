@@ -6,6 +6,7 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lt,
   ne,
@@ -23,6 +24,7 @@ import type {
   AppointmentRangeStats,
   AppointmentRepository,
   FindByPatientOptions,
+  FindCalendarEventsOptions,
 } from '@/domain/scheduling/appointment-repository';
 import { SchedulingConflictError } from '@/domain/shared/errors';
 import { Money } from '@/domain/shared/money';
@@ -150,6 +152,46 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
         ),
       );
     return rows.map((row) => toAppointment(row, this.cipher));
+  }
+
+  async findCalendarEventsToMinimize(
+    options: FindCalendarEventsOptions,
+  ): Promise<Appointment[]> {
+    const conditions = [
+      isNotNull(appointments.googleEventId),
+      isNull(appointments.calendarMinimizedAt),
+    ];
+    if (options.startsAfter) {
+      conditions.push(gte(appointments.startsAt, options.startsAfter));
+    }
+    const rows = await this.db
+      .select()
+      .from(appointments)
+      .where(withTenant(appointments, this.clinicId, and(...conditions)))
+      .orderBy(desc(appointments.startsAt), asc(appointments.id))
+      .limit(options.limit);
+    return rows.map((row) => toAppointment(row, this.cipher));
+  }
+
+  async markCalendarEventMinimized(
+    appointmentId: string,
+    at: Date,
+  ): Promise<void> {
+    if (this.clinicId === null) {
+      throw new Error(
+        'Papel de sistema não pode alterar consulta (somente leitura cross-empresa)',
+      );
+    }
+    await this.db
+      .update(appointments)
+      .set({ calendarMinimizedAt: at })
+      .where(
+        withTenant(
+          appointments,
+          this.clinicId,
+          eq(appointments.id, appointmentId),
+        ),
+      );
   }
 
   private patientConditions(

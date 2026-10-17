@@ -7,12 +7,14 @@ import type {
   AppointmentRangeStats,
   AppointmentRepository,
   FindByPatientOptions,
+  FindCalendarEventsOptions,
   ProcedureRevenue,
 } from '@/domain/scheduling/appointment-repository';
 import type { TimeSlot } from '@/domain/shared/time-slot';
 
 export class InMemoryAppointmentRepository implements AppointmentRepository {
   private readonly appointments = new Map<string, Appointment>();
+  private readonly minimized = new Set<string>();
 
   async save(appointment: Appointment): Promise<void> {
     this.appointments.set(appointment.id, appointment);
@@ -38,6 +40,25 @@ export class InMemoryAppointmentRepository implements AppointmentRepository {
       !options?.endsAfter ||
       appointment.slot.end.getTime() >= options.endsAfter.getTime()
     );
+  }
+
+  async findCalendarEventsToMinimize(
+    options: FindCalendarEventsOptions,
+  ): Promise<Appointment[]> {
+    return [...this.appointments.values()]
+      .filter(
+        (a) =>
+          a.googleEventId !== null &&
+          !this.minimized.has(a.id) &&
+          (!options.startsAfter ||
+            a.slot.start.getTime() >= options.startsAfter.getTime()),
+      )
+      .sort((a, b) => b.slot.start.getTime() - a.slot.start.getTime())
+      .slice(0, options.limit);
+  }
+
+  async markCalendarEventMinimized(appointmentId: string): Promise<void> {
+    this.minimized.add(appointmentId);
   }
 
   async findByPatientId(
