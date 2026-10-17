@@ -583,10 +583,8 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
       expect(response.status).toBe(401);
     });
 
-    it('Dado header x-cron-secret correto e sem credenciais do WhatsApp, Quando POST reminders/run, Então roda em dry-run sem lançar', async () => {
+    it('Dado header x-cron-secret correto e sem canal de e-mail configurado, Quando POST reminders/run, Então roda em dry-run sem lançar', async () => {
       process.env.CRON_SECRET = 'cron-secreto';
-      delete process.env.WHATSAPP_TOKEN;
-      delete process.env.WHATSAPP_PHONE_NUMBER_ID;
 
       const response = await remindersRunRoute.POST(
         jsonRequest('/api/reminders/run', 'POST', undefined, {

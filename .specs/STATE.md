@@ -218,6 +218,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-042
 - **Decision**: remover o **modo aberto** (#327, delegado ao coordenador como PO/arquiteto): `VITTA_ALLOW_OPEN_MODE` deixa de existir; sem `AUTH_SECRET` tudo responde 503 em qualquer ambiente (regra 2 do AGENTS.md). `AuthMode` perde `open`, `requireStaffSession` devolve sempre `Session` (sem `session: null`), a identidade da sidebar sempre tem `account`, e `canManageClosure`/`accountManager`/`assertCanManageGuardians` deixam de ter ramo permissivo para ator nulo (endurece: antes um ator nulo gerenciava tudo). O segundo servidor `next dev` (porta 3100) e `NEXT_DIST_DIR` saíram do E2E; os 2 specs do modo aberto foram removidos e o 503 sem `AUTH_SECRET` (mesmo com a variável antiga) é coberto por testes de unidade do proxy, da guarda e da política. Mantido de propósito: helpers genéricos que aceitam sessão nula (`sessionScope`, `recordAudit`, `writeClinicId`) servem a fluxos sem sessão (login, cron, bootstrap). Trade-off: não há mais navegação sem login em dev; use o bootstrap (`VITTA_BOOTSTRAP_TOKEN`). ADR-002, ACE-RN-01 · 2026-10-17 · active
 
+### AD-043
+- **Decision**: remover o gateway da Meta (#328, delegado): `MetaWhatsAppGateway`, a porta `MessagingGateway`/`NullMessagingGateway`, `container.messaging` e as variáveis `WHATSAPP_*` saem do código e dos exemplos. Nenhum caso de uso consumia o canal; os lembretes seguem por e-mail e pelo link `wa.me`. O RM-14 continua em Later e a especificação fica em `docs/engineering/integrations/whatsapp-meta.md`; reintroduzir é aditivo. Alternativa descartada: manter o código dormente (custo de manutenção e superfície de configuração sem uso). Reversível. · `src/infrastructure/container.ts`, `docs/engineering/integrations/` · 2026-10-17 · active
+
 ### Baseline de segurança medido em `fcd6110`
 
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).

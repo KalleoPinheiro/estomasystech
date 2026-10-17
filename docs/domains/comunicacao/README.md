@@ -57,11 +57,11 @@ e-mails transacionais de acesso (convite e reset, detalhados em [acesso](../aces
 | casos de uso | `src/application/reminders/`, `src/application/clinic/manage-email-channel.ts` |
 | API | `src/app/api/reminders/run/`, `src/app/api/reminders/whatsapp-link/`, `src/app/api/settings/email-channel/` |
 | tela | `src/app/(staff)/configuracoes/email-channel-section.tsx` |
-| gateways | `src/infrastructure/messaging/`, `src/infrastructure/email/` |
+| gateways | `src/infrastructure/email/` (o gateway da Meta foi removido na #328; RM-14 segue planejado) |
 
 ## Decisões
 
-- Integrações: [Resend](../../engineering/integrations/resend.md), [cron](../../engineering/integrations/cron.md), [WhatsApp Meta](../../engineering/integrations/whatsapp-meta.md) (fora do job até o RM-14)
+- Integrações: [Resend](../../engineering/integrations/resend.md), [cron](../../engineering/integrations/cron.md), [WhatsApp Meta](../../engineering/integrations/whatsapp-meta.md) (RM-14 planejado; sem código nem variáveis desde a #328)
 - Custo zero de mensageria: [`.design/lembretes-custo-zero.md`](../../../.design/lembretes-custo-zero.md) e [`.tasks/lembretes-custo-zero.md`](../../../.tasks/lembretes-custo-zero.md)
 - Canal por clínica: [`.design/canal-por-clinica.md`](../../../.design/canal-por-clinica.md) e [`.tasks/c3-tela-canal-configuracoes.md`](../../../.tasks/c3-tela-canal-configuracoes.md) (em aberto, com default: limite do teste 5/min por clínica; última escrita vence)
 - Em aberto (defaults aplicados): opt-out do recall, remetente por clínica, `.ics`, clique suprimir e-mail, plano Resend — `.tasks/lembretes-custo-zero.md`, Unresolved

@@ -1130,3 +1130,12 @@ Pergunta aberta do AD-040 decidida pelo coordenador: o paciente também não rem
 - **Testes:** ativo remarca; inativado e sumido são recusados e o horário não muda.
 - **Gate:** Actions sem cota; gate rodado local. Docker/smoke não rodam (sem daemon).
 - **Next step:** nenhum. **Blockers:** nenhum. Sem migração.
+
+## Issue #328 — Remoção do gateway da Meta WhatsApp (2026-10-17) — ENCERRADO
+
+- **O que mudou:** removidos `MetaWhatsAppGateway`, `MessagingGateway`/`NullMessagingGateway` e `container.messaging` (nenhum caso de uso consumia). Variáveis `WHATSAPP_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID` saem do `.env.example` e do onboarding. Lembretes por e-mail e `wa.me` intactos.
+- **Mantido:** `normalizeBrazilianPhone` (domínio, usado pelo `wa.me`), com os casos de teste movidos para `reminder-content.test.ts`.
+- **Docs:** `whatsapp-meta.md` reescrito como especificação do RM-14 (planejado, sem código), integrações, comunicação, arquitetura, spec de templates, AD-043. RM-14 segue em Later no roadmap.
+- **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke não rodam no container (sem daemon): pendente.
+- **Pendências para o Kalléo:** remover `WHATSAPP_*` do ambiente de produção, se definidas (agora sem efeito).
+- **Next step:** nenhum. **Blockers:** nenhum. Sem migração.

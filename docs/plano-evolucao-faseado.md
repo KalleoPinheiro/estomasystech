@@ -163,7 +163,7 @@ Exige escolhas do negócio antes de executar:
   **Decisão pendente:** cadência do recall, templates aprovados e número por empresa (D1–D4).
 
 - **Pagamento online (Pix/cartão):** novo port `PaymentGateway` (mesmo padrão de
-  `MessagingGateway`), fatura pendente gera link/QR no portal e no lembrete. **Decisão pendente:**
+  `EmailGateway`), fatura pendente gera link/QR no portal e no lembrete. **Decisão pendente:**
   qual PSP (Mercado Pago, Stripe, Asaas) e credenciais.
 - **Relatório automático para o parceiro:** resumo periódico por marco clínico (ex.: queda de
   PUSH ≥ 3) enviado ao indicador. **Decisão pendente:** cadência e canal (email/WhatsApp).

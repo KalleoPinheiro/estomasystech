@@ -116,7 +116,6 @@ npm run dev                   # http://localhost:3000
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | sync de agenda via OAuth (nunca login) | [google-calendar.md](integrations/google-calendar.md) |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_CALENDAR_ID` | não | sync via service account (alternativa) | idem |
-| `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | não | opt-in futuro da Meta Cloud API (RM-14); os lembretes saem por e-mail e o WhatsApp de hoje é o botão `wa.me`, sem credencial | [whatsapp-meta.md](integrations/whatsapp-meta.md) |
 | `CRON_SECRET` | sim para os lembretes e a retenção | header `x-cron-secret` de `POST /api/reminders/run` e `POST /api/retention/run` (ou `Authorization: Bearer` do Vercel Cron em `GET`); sem ele, 503 | [cron.md](integrations/cron.md), [retencao.md](integrations/retencao.md) |
 | `DATA_REQUEST_ALERT_DAYS` | não | dias antes do vencimento (15 dias) em que o Admin é avisado de pedido do titular pendente; 1 a 14, padrão 3 | [cron.md](integrations/cron.md) |
 | `PHOTO_STORAGE` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` / `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE` / `S3_SSE` | não (sim com várias réplicas e na Vercel) | fotos em bucket S3-compatível | [s3-storage.md](integrations/s3-storage.md) |

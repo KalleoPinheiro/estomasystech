@@ -54,7 +54,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`engineering/integrations/README.md`](engineering/integrations/README.md) | índice das integrações externas |
 | [`engineering/integrations/resend.md`](engineering/integrations/resend.md) | e-mail transacional |
 | [`engineering/integrations/google-calendar.md`](engineering/integrations/google-calendar.md) | sincronização de agenda |
-| [`engineering/integrations/whatsapp-meta.md`](engineering/integrations/whatsapp-meta.md) | lembretes por WhatsApp |
+| [`engineering/integrations/whatsapp-meta.md`](engineering/integrations/whatsapp-meta.md) | WhatsApp pela Meta (RM-14, planejado; sem código) |
 | [`engineering/integrations/s3-storage.md`](engineering/integrations/s3-storage.md) | fotos em bucket S3-compatível |
 | [`engineering/integrations/cron.md`](engineering/integrations/cron.md) | disparo externo dos lembretes |
 | [`engineering/integrations/retencao.md`](engineering/integrations/retencao.md) | disparo externo da retenção e anonimização (#294) |
