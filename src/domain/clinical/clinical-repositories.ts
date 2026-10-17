@@ -36,6 +36,11 @@ export interface ConditionPhotoRepository {
   findByConditionIds(conditionIds: string[]): Promise<ConditionPhoto[]>;
   /** Fila de triagem: fotos de pacientes aguardando avaliação. */
   findPendingTriage(): Promise<ConditionPhoto[]>;
+  /** Fotos enviadas pelo paciente nessas condições desde `since` (cota diária, #213). */
+  countPatientUploadsSince(
+    conditionIds: string[],
+    since: Date,
+  ): Promise<number>;
   /** Exclusão restrita a correção de upload — sempre auditada na camada de API. */
   delete(id: string): Promise<void>;
 }

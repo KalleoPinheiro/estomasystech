@@ -141,6 +141,19 @@ export class InMemoryConditionPhotoRepository
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
+  async countPatientUploadsSince(
+    conditionIds: string[],
+    since: Date,
+  ): Promise<number> {
+    const ids = new Set(conditionIds);
+    return [...this.items.values()].filter(
+      (p) =>
+        ids.has(p.conditionId) &&
+        p.origin === 'patient' &&
+        p.createdAt.getTime() >= since.getTime(),
+    ).length;
+  }
+
   async findPendingTriage(): Promise<ConditionPhoto[]> {
     return [...this.items.values()]
       .filter((p) => p.triageStatus === 'pending')

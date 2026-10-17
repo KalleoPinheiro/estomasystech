@@ -10,6 +10,9 @@ export type PhotoContentType = (typeof PHOTO_CONTENT_TYPES)[number];
 
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
+/** Cota de fotos que o paciente envia pelo portal, em janela móvel de 24 h (#213). */
+export const PATIENT_MAX_PHOTOS_PER_DAY = 10;
+
 /** Origem da foto: equipe (prontuário) ou paciente (monitoramento remoto). */
 export const PHOTO_ORIGINS = ['staff', 'patient'] as const;
 export type PhotoOrigin = (typeof PHOTO_ORIGINS)[number];

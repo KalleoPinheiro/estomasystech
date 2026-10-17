@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray } from 'drizzle-orm';
 import { Anamnesis } from '@/domain/clinical/anamnesis';
 import {
   ClinicalCondition,
@@ -462,6 +462,31 @@ export class DrizzleConditionPhotoRepository
       )
       .orderBy(desc(conditionPhotos.createdAt), desc(conditionPhotos.id));
     return rows.map((row) => this.toEntity(row));
+  }
+
+  async countPatientUploadsSince(
+    conditionIds: string[],
+    since: Date,
+  ): Promise<number> {
+    const unique = [...new Set(conditionIds)];
+    if (unique.length === 0) {
+      return 0;
+    }
+    const [row] = await this.db
+      .select({ total: count() })
+      .from(conditionPhotos)
+      .where(
+        withTenant(
+          conditionPhotos,
+          this.clinicId,
+          and(
+            inArray(conditionPhotos.conditionId, unique),
+            eq(conditionPhotos.origin, 'patient'),
+            gte(conditionPhotos.createdAt, since),
+          ),
+        ),
+      );
+    return row?.total ?? 0;
   }
 
   async delete(id: string): Promise<void> {

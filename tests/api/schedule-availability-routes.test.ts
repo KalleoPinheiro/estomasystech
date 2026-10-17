@@ -1,5 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CLINIC_B_ID, ensureTestClinics } from '../support/clinics';
+import { pinClock, unpinClock } from '../support/clock';
 import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -57,6 +58,9 @@ describe('Feature: Agenda por profissional, almoço e feriados (rotas)', () => {
     );
 
   beforeAll(async () => {
+    // Relógio fixo: as datas do cenário são absolutas e o portal só agenda
+    // até 60 dias à frente (#213) — sem fixar, o teste apodreceria com o tempo.
+    pinClock('2027-02-20T12:00:00.000Z');
     closuresRoute = await import('@/app/api/settings/schedule/closures/route');
     closureByIdRoute = await import(
       '@/app/api/settings/schedule/closures/[id]/route'
@@ -95,6 +99,10 @@ describe('Feature: Agenda por profissional, almoço e feriados (rotas)', () => {
     );
     procedureId = ((await procedure.json()) as Envelope<{ id: string }>).data
       .id;
+  });
+
+  afterAll(() => {
+    unpinClock();
   });
 
   describe('Feriados e ausências', () => {
@@ -438,6 +446,8 @@ describe('Feature: Agenda por profissional, almoço e feriados (rotas)', () => {
         }),
       );
       expect(saved.status).toBe(200);
+      // 2027-05-04 fica a mais de 60 dias do relógio fixo do arquivo (#213).
+      pinClock('2027-04-20T12:00:00.000Z');
       try {
         const read = await scheduleRoute.GET(
           jsonRequest('/api/settings/schedule', 'GET'),
@@ -468,6 +478,7 @@ describe('Feature: Agenda por profissional, almoço e feriados (rotas)', () => {
         expect(starts).not.toContain('2027-05-04T12:00:00.000Z');
         expect(starts).toContain('2027-05-04T13:00:00.000Z');
       } finally {
+        pinClock('2027-02-20T12:00:00.000Z');
         await scheduleRoute.PUT(
           jsonRequest('/api/settings/schedule', 'PUT', {
             weekdays: [1, 2, 3, 4, 5],

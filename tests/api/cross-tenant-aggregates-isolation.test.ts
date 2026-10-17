@@ -352,12 +352,16 @@ describe('Feature: Isolamento por empresa em agregados, auditoria, kit e portal'
       const email = 'portal-slots-b@x.com';
       await createPatient(CLINIC_B_ID, email);
       const procedureB = await createProcedure(CLINIC_B_ID, 'Slots portal B');
+      // Dentro do horizonte de 60 dias do portal (#213), seja qual for o hoje.
+      const soonDay = new Date(Date.now() + 7 * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
       const route = await import('@/app/api/portal/patient/slots/route');
       await linkAllPortalAccounts();
       const slotsFor = (clinicId: string) =>
         route.GET(
           jsonRequest(
-            `/api/portal/patient/slots?procedureId=${procedureB}&date=2099-01-05`,
+            `/api/portal/patient/slots?procedureId=${procedureB}&date=${soonDay}`,
             'GET',
             undefined,
             patientPortalHeader(email, clinicId),

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { pinClock, unpinClock } from '../support/clock';
 import { linkAllPortalAccounts } from '../support/portal-account';
 import { cookieHeaderFor } from '../support/session';
 
@@ -113,6 +114,9 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
     );
 
   beforeAll(async () => {
+    // Relógio fixo: as datas do cenário são absolutas e o portal só agenda
+    // até 60 dias à frente (#213) — sem fixar, o teste apodreceria com o tempo.
+    pinClock('2027-01-20T12:00:00.000Z');
     cancelRoute = await import(
       '@/app/api/portal/patient/appointments/[id]/cancel/route'
     );
@@ -158,6 +162,10 @@ describe('Feature: Paciente cancela e remarca a própria consulta pelo portal', 
         staffCookie(),
       ),
     );
+  });
+
+  afterAll(() => {
+    unpinClock();
   });
 
   describe('POST /api/portal/patient/appointments/:id/cancel', () => {
