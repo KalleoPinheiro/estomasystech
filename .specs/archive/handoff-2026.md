@@ -875,6 +875,7 @@ Decisões de @KalleoPinheiro na #309 (2026-10-12) implementadas, mais a decisão
 - **Next step**: #295 (reset do 2º fator) e #250 seguem na fila.
 - **Blockers**: nenhum. Docker smoke não rodado: o ambiente não tem daemon Docker e nenhum arquivo de imagem mudou.
 - **Branch**: `feat/309-sessoes-2fa-senha-portal`. PR #317, squash-merged em `main`. Issue #309 fechada via `Closes #309`.
+
 ## Issue #311 — retenção: pontos restantes da #294 (2026-10-12) — ENCERRADO (#318)
 
 Decisões de @KalleoPinheiro de 2026-10-12 aplicadas ao job `POST /api/retention/run` (ADR-013). **Sem migração.**
@@ -964,6 +965,7 @@ Decisões de @KalleoPinheiro de 2026-10-11 e 2026-10-12 (AD-024) implementadas. 
 - **Next step:** nenhum. A #250 (QR code no 2º fator do Super Admin) e a #297 já podem entrar.
 - **Blockers**: nenhum.
 - **Branch**: `claude/project-thread-l8wpq4`. PR #334.
+
 ## Issue #324 — telefone do paciente em E.164 (2026-10-17) — ENCERRADO
 
 Paciente guarda telefone em E.164 BR (PRO-RN-18, AD-035), validado no domínio e, portanto, na API e na tela de cadastro.
