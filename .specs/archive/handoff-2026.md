@@ -1121,6 +1121,7 @@ Decisões de @KalleoPinheiro de 2026-10-11 implementadas.
 - **E2E:** removido o segundo `next dev` (porta 3100) e os 2 specs do modo aberto; `next dev` fica só com papéis e login (ADR-021 ajustado).
 - **Docs:** ADR-002, AD-042, CONTEXT.md, AGENTS.md, onboarding, troubleshooting, `.env.example`, ACE-RN-01/26.
 - **Gate:** o GitHub Actions está sem cota; gate rodado local. Docker/smoke não rodam no container (sem daemon): pendente.
+
 ## Issue #297 — complemento: portal bloqueia remarcação com profissional inativo (2026-10-17) — ENCERRADO
 
 Pergunta aberta do AD-040 decidida pelo coordenador: o paciente também não remarca consulta de profissional inativo.
