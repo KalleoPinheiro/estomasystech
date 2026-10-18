@@ -1266,3 +1266,12 @@ Achado no baseline de carga (PR #362). Sem migração, sem ADR (refatoração se
 - **Housekeeping**: arquivei AD-043 em `decisions-2026.md` para o `STATE.md` caber em 250 linhas.
 - **Gate**: local completo (ver PR); Docker/smoke não rodam (sem daemon); autorrevisão (sem `gh`).
 - **Next step**: #361 (job de lembretes). **Blockers**: nenhum.
+
+## Issue #371 — Aviso de revogação ao responsável (2026-10-18) — ENCERRADO
+
+Decisão de @KalleoPinheiro sobre a pergunta aberta do ADR-028. Sem migração (AD-054; adendo no ADR-028; POR-RN-24).
+- **Código**: `revokeGuardianAccess` agora recebe `guardians` e `email` e, depois de gravar a revogação, envia ao responsável um e-mail curto (nome do paciente, sem motivo nem dado clínico). Melhor esforço: sem e-mail no cadastro, canal desativado ou falha de envio/trilha não bloqueiam a revogação; o resultado (`enviado`/`não enviado`/`falha`) vai à trilha `guardian-access-revocation-notice`, sem o endereço; falha é logada com e-mail mascarado.
+- **Testes**: `tests/application/revoke-guardian-access-notice.test.ts` (envio, falha, sem e-mail, canal off, falha da trilha) e asserção na rota em `tests/api/guardian-portal.test.ts`.
+- **Gate**: ver PR; Actions sem cota, gate local; Docker/smoke não rodam (sem daemon); autorrevisão no lugar do the-judge.
+- **Next step**: nenhum. **Blockers**: nenhum.
+

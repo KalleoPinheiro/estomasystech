@@ -426,6 +426,10 @@ describe('Feature: Responsável acessa o portal em nome do paciente (ADR-027)', 
       action: 'update',
       resourceId: patientId,
     });
+    // O aviso ao responsável entra na trilha (sem canal de e-mail no teste: não enviado).
+    const notices = await trail(patientId, 'guardian-access-revocation-notice');
+    expect(notices).toHaveLength(1);
+    expect(notices[0].detail).toContain('não enviado');
     // Fecha o acesso para este paciente; o outro dele segue aberto.
     // Cookie do paciente revogado não o reabre: cai no único que sobrou.
     const stillOpen = await portal(guardianCookie(email, patientId));
