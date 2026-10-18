@@ -48,3 +48,13 @@ export function normalizeCnpj(raw: string): string {
   }
   return `${compact.slice(0, 2)}.${compact.slice(2, 5)}.${compact.slice(5, 8)}/${compact.slice(8, 12)}-${compact.slice(12)}`;
 }
+
+/** `true` quando `raw` é um CNPJ aceito por `normalizeCnpj` (formato e dígito verificador). */
+export function isValidCnpj(raw: string): boolean {
+  try {
+    normalizeCnpj(raw);
+    return true;
+  } catch {
+    return false;
+  }
+}

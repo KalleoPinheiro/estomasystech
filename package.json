@@ -15,6 +15,7 @@
     "db:portal-orphans": "tsx scripts/report-portal-orphans.ts",
     "data:reencrypt": "tsx scripts/reencrypt-clinical-data.ts",
     "admin:recover": "tsx scripts/recover-super-admin.ts",
+    "clinics:cnpj-review": "tsx scripts/flag-invalid-clinic-cnpjs.ts",
     "calendar:minimize": "tsx scripts/minimize-calendar-events.ts",
     "test": "vitest run",
     "test:watch": "vitest",

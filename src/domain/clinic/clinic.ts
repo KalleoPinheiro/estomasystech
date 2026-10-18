@@ -72,6 +72,8 @@ export interface ClinicState extends ClinicInfoFields {
   /** Motivo da suspensão vigente; `null` ativa, e nas suspensas antes da #251. */
   statusReason?: ClinicSuspensionReason | null;
   statusReasonNote?: string | null;
+  /** Desde quando o CNPJ gravado está marcado para correção (#355); `null` = sem pendência. */
+  cnpjReviewSince?: Date | null;
 }
 
 /**
@@ -203,6 +205,7 @@ export class Clinic {
       statusChangedBy: state.statusChangedBy ?? null,
       statusReason: state.statusReason ?? null,
       statusReasonNote: state.statusReasonNote ?? null,
+      cnpjReviewSince: state.cnpjReviewSince ?? null,
     });
   }
 
@@ -270,6 +273,10 @@ export class Clinic {
     return this.state.statusReasonNote ?? null;
   }
 
+  get cnpjReviewSince(): Date | null {
+    return this.state.cnpjReviewSince ?? null;
+  }
+
   get isSuspended(): boolean {
     return this.status === 'suspended';
   }
@@ -313,6 +320,15 @@ export class Clinic {
     });
   }
 
+  /**
+   * Marca o CNPJ gravado como pendente de correção (#355, ACE-RN-57) sem
+   * alterá-lo. Já marcado ou sem CNPJ: nada muda.
+   */
+  flagCnpjForReview(at: Date): Clinic {
+    if (!this.state.cnpj || this.cnpjReviewSince) return this;
+    return new Clinic({ ...this.state, cnpjReviewSince: at });
+  }
+
   /** Retorna uma nova instância com os campos cadastrais atualizados (imutável). */
   updateInfo(fields: ClinicInfoFields & { name?: string }): Clinic {
     if ('name' in fields && !fields.name?.trim()) {
@@ -322,6 +338,9 @@ export class Clinic {
       ...this.state,
       name: fields.name?.trim() ? fields.name.trim() : this.state.name,
       ...resolveInfoFields(this.state, fields),
+      // Um CNPJ reenviado passou pela conferência do dígito: a pendência acaba.
+      cnpjReviewSince:
+        'cnpj' in fields ? null : (this.state.cnpjReviewSince ?? null),
     });
   }
 

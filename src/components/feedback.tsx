@@ -101,3 +101,20 @@ export function DraftRecoveredAlert({ action }: { action: string }) {
     </Alert>
   );
 }
+
+/**
+ * CNPJ gravado antes da conferência do dígito verificador (#355, ACE-RN-57):
+ * o número segue valendo, mas a próxima gravação o recusa até ser corrigido.
+ */
+export function CnpjReviewAlert({ since }: { since: string | null }) {
+  if (!since) return null;
+  return (
+    <Alert variant="warning" className="mb-4" data-cnpj-review>
+      <AlertDescription>
+        O CNPJ cadastrado não passa na conferência do dígito verificador.
+        Confira o número no cartão CNPJ e salve o valor correto para tirar este
+        aviso.
+      </AlertDescription>
+    </Alert>
+  );
+}

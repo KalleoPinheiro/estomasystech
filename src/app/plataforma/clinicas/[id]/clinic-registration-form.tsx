@@ -8,7 +8,7 @@ import {
   ClinicFieldsGrid,
   REQUIRED_CLINIC_FIELDS,
 } from '@/components/clinic-fields';
-import { ErrorAlert } from '@/components/feedback';
+import { CnpjReviewAlert, ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 import type { PlatformClinicDto } from '@/lib/dto';
 
@@ -59,6 +59,7 @@ export function ClinicRegistrationForm({
         Admin de Empresa.
       </p>
       {error && <ErrorAlert message={error} />}
+      <CnpjReviewAlert since={clinic.cnpjReviewSince} />
       <ClinicFieldsGrid
         draft={draft}
         keys={ALL_CLINIC_FIELDS}

@@ -25,6 +25,7 @@ import {
 } from '@/components/clinic-fields';
 import { ConfirmAction } from '@/components/confirm-action';
 import {
+  CnpjReviewAlert,
   EmptyState,
   ErrorAlert,
   LoadingIndicator,
@@ -117,22 +118,29 @@ export default function SettingsPage() {
  * emissão é bloqueada (fail-closed) nas páginas de documento.
  */
 function ClinicInfoSection() {
-  const { data, error } = useApiQuery<{ info: ClinicRegistrationDto }>(
+  const { data, error, refresh } = useApiQuery<{ info: ClinicRegistrationDto }>(
     '/api/settings/clinic-info',
   );
 
   if (error) return <ErrorAlert message={error} />;
   if (!data) return <LoadingIndicator />;
 
-  return <ClinicInfoForm info={data.info} />;
+  return <ClinicInfoForm info={data.info} onSaved={refresh} />;
 }
 
-function ClinicInfoForm({ info }: { info: ClinicRegistrationDto }) {
+function ClinicInfoForm({
+  info,
+  onSaved,
+}: {
+  info: ClinicRegistrationDto;
+  onSaved: () => void;
+}) {
   const { draft, setDraft, saveError, save } = useSavableForm({
     endpoint: '/api/settings/clinic-info',
     initialValue: info,
     successMessage: 'Dados da clínica salvos',
     errorFallback: 'Erro ao salvar dados da clínica',
+    onSaved,
   });
 
   return (
@@ -144,6 +152,7 @@ function ClinicInfoForm({ info }: { info: ClinicRegistrationDto }) {
         e-mail de contato são por onde a plataforma fala com a clínica.
       </p>
       {saveError && <ErrorAlert message={saveError} />}
+      <CnpjReviewAlert since={info.cnpjReviewSince} />
 
       <ClinicFieldsGrid
         draft={draft}

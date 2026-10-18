@@ -226,6 +226,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-047
 - **Decision**: o paciente adulto **revoga sozinho**, pelo portal, o acesso do responsável (#354, [ADR-028](../docs/adr/028-paciente-encerra-acesso-do-responsavel.md)), por decisão de @KalleoPinheiro (2026-10-18). Marca **por paciente** (`patients.guardian_portal_revoked_at`, migração `0062`), não desativação da conta: o responsável pode representar outros pacientes e o contato dele (ADR-024) continua. Trilha `guardian-access-revocation` (ator = paciente) antes de gravar. Só a equipe concede de novo, desvinculando e vinculando o responsável. **Trade-off**: o responsável não é avisado; religar é ato manual da equipe. POR-RN-24 · 2026-10-18 · active
 
+### AD-048
+- **Decision**: CNPJ antigo com dígito verificador inválido (#355, follow-up da #248) é **marcado para correção**, nunca apagado, anulado nem "consertado" (o CNPJ é obrigatório e o erro pode estar em qualquer dígito). Coluna `clinics.cnpj_review_since` (migração `0063`), script manual `npm run clinics:cnpj-review -- [--confirmar]`, auditoria sem o CNPJ, aviso em Configurações e na plataforma; salvar CNPJ válido limpa. **Trade-off**: aviso, não bloqueio — recibo e documentos continuam saindo com o número errado até a clínica corrigir; sem job automático (script rodado uma vez no deploy). Pergunta aberta: bloquear recibo enquanto houver marca. Delegado por @KalleoPinheiro; [ADR-029](../docs/adr/028-cnpj-antigo-invalido-marcado-para-correcao.md), ACE-RN-57 · 2026-10-18 · active
+
 ### Baseline de segurança medido em `fcd6110`
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
 

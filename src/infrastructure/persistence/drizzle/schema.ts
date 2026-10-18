@@ -25,6 +25,12 @@ export const clinics = pgTable(
     // Dados cadastrais (issue #61) — usados no cabeçalho/rodapé de documentos
     // clínicos emitidos (issue #62). Nullable: nem toda instalação os preencheu ainda.
     cnpj: text('cnpj'),
+    // CNPJ gravado antes da conferência do dígito verificador (#248) e marcado
+    // para correção (#355). Nulo = sem pendência; salvar um CNPJ válido limpa.
+    cnpjReviewSince: timestamp('cnpj_review_since', {
+      withTimezone: true,
+      mode: 'date',
+    }),
     address: text('address'),
     city: text('city'),
     professionalName: text('professional_name'),

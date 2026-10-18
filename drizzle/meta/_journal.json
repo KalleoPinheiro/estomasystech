@@ -442,6 +442,13 @@
       "when": 1792299654816,
       "tag": "0062_guardian-portal-revoked",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792301735459,
+      "tag": "0063_clinic-cnpj-review",
+      "breakpoints": true
     }
   ]
 }

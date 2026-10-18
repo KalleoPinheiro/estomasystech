@@ -131,6 +131,7 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       id: expect.any(String),
       name: 'Clínica Nova',
       cnpj: '12.345.678/0001-95',
+      cnpjReviewSince: null,
       contactPhone: '11 3333-4444',
       contactEmail: 'contato@nova.com',
       address: null,

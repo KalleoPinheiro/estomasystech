@@ -358,6 +358,15 @@ contrato: [`integrations/google-calendar.md`](integrations/google-calendar.md#re
 - Verificação: *Configurações → Auditoria* mostra um evento `calendar-minimization` por execução;
   no Google, o título passa a `Consulta · J.S.` e a descrição a só o link.
 
+### 7.3 Marcar CNPJs antigos inválidos (#355)
+
+Roda **uma vez**, depois da migração `0063`. **Manual**. Regras: ACE-RN-57, [ADR-029](../adr/029-cnpj-antigo-invalido-marcado-para-correcao.md).
+
+1. Num checkout no host: `DATABASE_URL=… npm run clinics:cnpj-review` — **simulação**, lista
+   `id`, nome e CNPJ das empresas com dígito verificador inválido.
+2. `npm run clinics:cnpj-review -- --confirmar` — marca cada uma (o número não muda) e audita.
+   Reexecutar é seguro. Avise as clínicas listadas: o aviso aparece em *Configurações → Dados da clínica*.
+
 ## 8. Primeiro acesso
 
 1. Configure todas as variáveis obrigatórias (`.env.example`), incluindo `VITTA_BOOTSTRAP_TOKEN`.
