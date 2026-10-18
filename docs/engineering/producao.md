@@ -481,7 +481,7 @@ processo: [ADR-014](../adr/014-observabilidade-sem-pii.md).
 | `GET /api/health` | o processo responde (sem banco, sem rate limit) | `HEALTHCHECK` da imagem e do compose |
 | `GET /api/health/ready` | `select 1` e todas as migrações de `drizzle/` aplicadas; `503` senão, em até 3 s | verificador externo, alerta `readiness` |
 
-O corpo diz só `database` e `migrations` (`ok`/`fail`/`pending`/`unknown`). `docker compose ps`
+O corpo diz só `database` e `migrations` (`ok`/`fail`/`pending`/`unknown`). Banco recém-criado, nunca migrado (sem a tabela `drizzle.__drizzle_migrations`), responde `503` com `database: "ok"` e `migrations: "pending"`. `docker compose ps`
 mostra `unhealthy` quando a liveness falha; `restart: unless-stopped` reinicia o processo que
 morre, mas não o que fica `unhealthy`.
 
