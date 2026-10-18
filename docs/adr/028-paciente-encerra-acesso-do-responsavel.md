@@ -53,3 +53,12 @@ O acesso do responsável depende de a equipe atestar a autorização do paciente
 ## Relacionado
 
 - Issue #354, POR-RN-22, POR-RN-24, [ADR-027](027-responsavel-acessa-portal-em-nome-do-paciente.md), [ADR-024](024-responsavel-do-paciente.md), [ADR-014](014-observabilidade-sem-pii.md).
+
+## Adendo (2026-10-18, #371): aviso ao responsável
+
+@KalleoPinheiro decidiu avisar o responsável. Depois de gravar a revogação, ele recebe um e-mail curto
+dizendo que o acesso dele ao portal daquele paciente foi encerrado, sem motivo e sem dado clínico: evita
+que tente entrar e ache que o sistema quebrou, e deixa claro que o vínculo de tratamento terminou
+(LGPD). É melhor esforço: a revogação já vale, então falha de envio, responsável sem e-mail ou canal
+desativado são registrados na trilha (`guardian-access-revocation-notice`) e não a desfazem. Detalhe em
+POR-RN-24 e AD-054.
