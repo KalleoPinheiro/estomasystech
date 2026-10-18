@@ -43,3 +43,5 @@ ficaram em majors diferentes.
   banco: ao trocar a imagem, o cliente acompanha o servidor.
 - Restaurar um backup do Coolify (PG18) em um compose PG16 **não funciona** (dump de major maior);
   uma razão a mais para alinhar antes de qualquer ensaio de restauração fora do Coolify.
+
+**Nota de 2026-10-18 (depois do [ADR-040](040-backup-cifrado-no-coolify-para-o-r2-na-ue.md)):** o serviço `uploads-backup` saiu do `docker-compose.yml`; o alinhamento a 18 troca só a imagem do `db`, do GlitchTip e o volume do banco.
