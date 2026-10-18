@@ -43,16 +43,35 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
   return Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
 }
 
+/** SQLSTATE `undefined_table`: o Drizzle embrulha o erro do driver em `cause`. */
+function isUndefinedTable(error: unknown): boolean {
+  for (let e = error, depth = 0; e && depth < 4; depth++) {
+    const err = e as { code?: unknown; cause?: unknown };
+    if (err.code === '42P01') return true;
+    e = err.cause;
+  }
+  return false;
+}
+
+/** Banco nunca migrado: a tabela de controle ainda não existe, nada foi aplicado. */
+async function appliedMigrations(
+  db: Awaited<ReturnType<typeof getDb>>,
+): Promise<Set<number>> {
+  try {
+    const result = await db.execute(
+      sql`select created_at from drizzle.__drizzle_migrations`,
+    );
+    return new Set(rowsOf(result).map((row) => Number(row.created_at)));
+  } catch (error) {
+    if (isUndefinedTable(error)) return new Set();
+    throw error;
+  }
+}
+
 async function probe(): Promise<ReadinessReport> {
   const db = await getDb();
   await db.execute(sql`select 1`);
-  const applied = new Set(
-    rowsOf(
-      await db.execute(
-        sql`select created_at from drizzle.__drizzle_migrations`,
-      ),
-    ).map((row) => Number(row.created_at)),
-  );
+  const applied = await appliedMigrations(db);
   const expected = await expectedMigrations();
   const pending = expected.some((when) => !applied.has(when));
   return {

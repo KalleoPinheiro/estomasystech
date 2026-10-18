@@ -1340,3 +1340,11 @@ Pedido do Kalléo (via coordenação): o 1º deploy no Coolify estourou memória
 - **Deploy**: pode apagar a variável `NODE_OPTIONS` (Buildtime only) do Coolify após o merge.
 - **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Readiness em banco nunca migrado (2026-10-18) — ENCERRADO
+
+Achado no 1º deploy no Coolify: em banco sem migrações, a consulta a `drizzle.__drizzle_migrations` falhava com 42P01 e `/api/health/ready` dizia `database: "fail"` / `migrations: "unknown"`, em vez de `pending` (runbook § 4).
+- **Feito**: `readiness.ts` trata 42P01 (também em `cause`, como o Drizzle embrulha) como nada aplicado: `ready: false`, `database: "ok"`, `migrations: "pending"`. Outros erros continuam `fail`. Dois testes novos (PGlite sem a tabela; 42P01 embrulhado vs. outro erro); runbook § 9.1 atualizado.
+- **Pendência registrada na #381 (não implementada)**: o backup nativo do Coolify para o R2 não é cifrado com age como o ADR-018 exige; fechar antes de pacientes reais.
+- **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge.
+- **Next step**: nenhum. **Blockers**: nenhum.

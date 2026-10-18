@@ -50,6 +50,60 @@ describe('Feature: readiness do banco (#212, OBS-02)', () => {
     });
   });
 
+  it('Dado banco nunca migrado (sem a tabela de controle), Quando checa, Então pendente com a conexão ok', async () => {
+    const db = await warmDatabase();
+    await db.execute(sql`drop table drizzle.__drizzle_migrations`);
+    const { checkReadiness } = await import(
+      '@/infrastructure/persistence/drizzle/readiness'
+    );
+
+    expect(await checkReadiness()).toEqual({
+      ready: false,
+      database: 'ok',
+      migrations: 'pending',
+    });
+  });
+
+  it('Dado 42P01 embrulhado em cause pelo Drizzle, Quando checa, Então pendente; outro erro continua falha', async () => {
+    vi.resetModules();
+    const real = await vi.importActual<
+      typeof import('@/infrastructure/persistence/drizzle/db')
+    >('@/infrastructure/persistence/drizzle/db');
+    let failure: unknown = Object.assign(new Error('Failed query'), {
+      cause: Object.assign(new Error('relation does not exist'), {
+        code: '42P01',
+      }),
+    });
+    vi.doMock('@/infrastructure/persistence/drizzle/db', () => ({
+      MIGRATIONS_FOLDER: real.MIGRATIONS_FOLDER,
+      getDb: async () => ({
+        execute: async (query: unknown) => {
+          if (String(JSON.stringify(query)).includes('__drizzle_migrations')) {
+            throw failure;
+          }
+          return { rows: [] };
+        },
+      }),
+    }));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { checkReadiness } = await import(
+      '@/infrastructure/persistence/drizzle/readiness'
+    );
+
+    expect(await checkReadiness()).toEqual({
+      ready: false,
+      database: 'ok',
+      migrations: 'pending',
+    });
+
+    failure = Object.assign(new Error('permission denied'), { code: '42501' });
+    expect(await checkReadiness()).toEqual({
+      ready: false,
+      database: 'fail',
+      migrations: 'unknown',
+    });
+  });
+
   it('Dado banco que não conecta, Quando checa, Então falha sem vazar a mensagem', async () => {
     vi.resetModules();
     vi.doMock('@/infrastructure/persistence/drizzle/db', () => ({
