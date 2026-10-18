@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -217,17 +217,15 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
   });
 });
 
-describe('Feature: VPS com Caddy e backup cifrado (#206)', () => {
-  it('prod compose: Caddy termina TLS e o app não publica porta no host', () => {
+describe('Feature: VPS com Traefik do Coolify e backup cifrado (#206)', () => {
+  it('prod compose: o Traefik do Coolify é o único proxy e nada é publicado no host', () => {
     const prod = read('docker-compose.prod.yml');
     expect(prod).toMatch(/^ {2}app:\n(?: {4}#.*\n)* {4}ports: !reset \[\]$/m);
-    expect(prod).toMatch(/^ {4}image: caddy:2-alpine$/m);
-    expect(prod).toContain('./deploy/Caddyfile:/etc/caddy/Caddyfile:ro');
-    expect(prod).toContain('caddy_data:/data');
-    expect(prod).toContain('APP_DOMAIN: ${APP_DOMAIN:?');
-    expect(read('deploy/Caddyfile')).toMatch(
-      /^\{\$APP_DOMAIN\} \{[\s\S]*reverse_proxy app:3000/m,
-    );
+    expect(prod).toMatch(/^ {2}db:\n(?: {4}#.*\n)* {4}ports: !reset \[\]$/m);
+    expect(prod).toContain('SERVICE_FQDN_APP_3000');
+    expect(prod).toContain('rate-limit-app@file');
+    expect(prod).not.toMatch(/caddy/i);
+    expect(existsSync(path.join(root, 'deploy/Caddyfile'))).toBe(false);
   });
 
   it('backup: cifra com age por chave pública e exige cópia fora do servidor', () => {

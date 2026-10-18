@@ -1,9 +1,0 @@
-# Proxy reverso com TLS automático (Let's Encrypt) para a VPS (#206).
-# Usado por docker-compose.prod.yml; APP_DOMAIN vem do .env do host.
-# Sem `trusted_proxies` (opção global `servers`), o Caddy SUBSTITUI o x-forwarded-for pelo IP de quem
-# conectou: com ele como único proxy, TRUSTED_PROXY_HOPS=1. Com Cloudflare na
-# frente, ver docs/engineering/producao.md § 3 antes de usar 2.
-{$APP_DOMAIN} {
-	encode zstd gzip
-	reverse_proxy app:3000
-}

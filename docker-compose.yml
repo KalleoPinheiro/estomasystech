@@ -62,7 +62,7 @@ services:
       UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
       # Job de lembretes (POST /api/reminders/run): sem ele a rota responde 503.
       CRON_SECRET: ${CRON_SECRET:-}
-      # Proxies reversos confiáveis à frente do app (Nginx/Caddy = 1, Cloudflare + Nginx = 2).
+      # Proxies reversos confiáveis à frente do app (Nginx/Traefik = 1, Cloudflare + Nginx = 2).
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX:-}
       ESTOMASYSTECH_MIGRATE_ON_BOOT: ${ESTOMASYSTECH_MIGRATE_ON_BOOT:-}

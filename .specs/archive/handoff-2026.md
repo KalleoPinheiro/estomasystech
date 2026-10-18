@@ -1321,3 +1321,13 @@ Pedido do Kalléo (sem produção, pode quebrar): trocar também banco, rótulos
 - **Deploy**: renomear as variáveis `VITTA_*` no Coolify/`.env`; recriar bancos de desenvolvimento (`docker compose down -v`).
 - **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge (sem `gh`).
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Traefik do Coolify como único proxy de entrada (2026-10-18) — ENCERRADO
+
+Pedido do Kalléo: o porteiro é o Traefik do Coolify e o Caddy sai do repositório. Decisão: [ADR-036](../../docs/adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md).
+- **Removido**: serviço `caddy`, volumes `caddy_*`, `APP_DOMAIN`, `deploy/Caddyfile`; menções em runbook, onboarding, `.env.example`, compose base e spec.
+- **Novo**: `docker-compose.prod.yml` sem portas no app/banco, `SERVICE_FQDN_APP_3000` e label `coolify.traefik.middlewares`; runbook § 3 com `TRUSTED_PROXY_HOPS=1`, Dockerfile vs compose e middlewares `@file`.
+- **Intocado**: este arquivo (histórico) e o handoff do #206.
+- **Pergunta aberta**: Dockerfile ou compose no Coolify (recomendado: Dockerfile + Postgres do Coolify).
+- **Gate**: Actions sem cota; gate local. Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge.
+- **Next step**: criar o app no Coolify. **Blockers**: nenhum.

@@ -46,7 +46,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | Arquivo | Para quê |
 | --- | --- |
 | [`engineering/onboarding.md`](engineering/onboarding.md) | requisitos, Docker, Node local, **variáveis de ambiente**, testes, gates |
-| [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Caddy, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
+| [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Traefik do Coolify, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
@@ -100,6 +100,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/033-direitos-do-menor-pelo-representante-e-prazo-do-aceite.md`](adr/033-direitos-do-menor-pelo-representante-e-prazo-do-aceite.md) | representante do menor pede cópia e correção e cuida do parceiro no portal (eliminação na clínica); aceite dele vence 90 dias depois dos 18 |
 | [`adr/034-renomeacao-do-repositorio-para-estomasystech.md`](adr/034-renomeacao-do-repositorio-para-estomasystech.md) | repositório renomeado para estomasystech; troca só nome de repo e infra, mantém rótulos de chave, `ESTOMASYSTECH_*` e a marca "EstomaSysTech" |
 | [`adr/035-renomeacao-completa-para-estomasystech.md`](adr/035-renomeacao-completa-para-estomasystech.md) | troca total: banco, `ESTOMASYSTECH_*`, rótulos de chave, cookie e marca (sem produção, sem compatibilidade) |
+| [`adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md`](adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md) | Traefik do Coolify como único proxy de entrada; Caddy removido |
 | [`adr/025-cpf-no-recibo-e-protecao.md`](adr/025-cpf-no-recibo-e-protecao.md) | CPF do paciente/pagador opcional, validado, cifrado e mascarado; exigido só no recibo do IRPF, com CNPJ do prestador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).

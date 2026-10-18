@@ -1,32 +1,24 @@
-# Produção em VPS (#206): Caddy na frente do app, terminando TLS.
-# Use junto do docker-compose.yml, de preferência fixando no .env do host:
+# Produção em VPS (#206, ADR-036): o Traefik do Coolify é o único porteiro (80/443, TLS Let's
+# Encrypt). Use junto do docker-compose.yml. No Coolify, aponte o recurso para os dois arquivos
+# ("Docker Compose Location": docker-compose.yml:docker-compose.prod.yml) ou fixe no .env:
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
 # Roteiro: docs/engineering/producao.md.
 services:
   app:
-    # O app deixa de ser publicado no host: só o Caddy fala com ele, pela rede
-    # do compose. Exposto direto, o HTTP sem TLS e o x-forwarded-for forjado
-    # chegariam ao app (o rate limit confia no último salto, TRUSTED_PROXY_HOPS).
+    # Sem porta no host: só o Traefik fala com o app, pela rede do Docker. Exposto direto, o
+    # HTTP sem TLS e o x-forwarded-for forjado chegariam ao app (o rate limit confia no último
+    # salto, TRUSTED_PROXY_HOPS=1 atrás do Traefik).
     ports: !reset []
-
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on:
-      - app
+    expose:
+      - "3000"
     environment:
-      APP_DOMAIN: ${APP_DOMAIN:?defina APP_DOMAIN (ex. clinica.exemplo.com.br)}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      # Certificados e chaves do ACME: sem volume, cada recriação pede um
-      # certificado novo e esbarra no limite do Let's Encrypt.
-      - caddy_data:/data
-      - caddy_config:/config
+      # Variável mágica do Coolify: cria o domínio do app (porta 3000) e as labels do Traefik.
+      SERVICE_FQDN_APP_3000: ${SERVICE_FQDN_APP_3000:-}
+    # Middlewares compartilhados do Traefik do Coolify (shared-middlewares.yaml, provider file).
+    # A label coolify.traefik.middlewares é anexada às rotas que o Coolify gera para o domínio.
+    labels:
+      - coolify.traefik.middlewares=rate-limit-app@file,security-headers@file
 
-volumes:
-  caddy_data:
-  caddy_config:
+  db:
+    # Postgres só na rede interna do compose: nenhuma porta publicada no host.
+    ports: !reset []

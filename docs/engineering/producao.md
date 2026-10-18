@@ -10,7 +10,7 @@ last_reviewed: 2026-10-18
 
 Como colocar e manter no ar o EstomaSysTech com dado de saúde (LGPD). Alvo decidido pelo dono do
 produto ([#206](https://github.com/KalleoPinheiro/estomasystech/issues/206), 2026-10-11): **VPS
-Hetzner + `docker compose`** (app + Postgres), **uma réplica**, Caddy na frente terminando TLS,
+Hetzner + `docker compose`** (app + Postgres), **uma réplica**, Traefik do Coolify na frente terminando TLS,
 fotos em volume local. Desenvolvimento local fica em [`onboarding.md`](onboarding.md); erros
 conhecidos, em [`troubleshooting.md`](troubleshooting.md).
 
@@ -53,7 +53,7 @@ Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/estoma
 | --- | --- |
 | Servidor | Ubuntu 24.04 LTS. **4 GB de RAM** no mínimo: o build do Next usa até 4 GB de heap (`npm run build`), e cada login é um scrypt de ~128 MiB (#208), até 4 em paralelo |
 | App + banco | `docker compose up -d --build`; o Postgres só no loopback (`127.0.0.1:5432`) |
-| TLS | serviço `caddy` de [`docker-compose.prod.yml`](../../docker-compose.prod.yml) + [`deploy/Caddyfile`](../../deploy/Caddyfile): certificado Let's Encrypt automático; o app deixa de ser publicado no host |
+| TLS | Traefik do Coolify ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)): certificado Let's Encrypt automático; [`docker-compose.prod.yml`](../../docker-compose.prod.yml) tira app e banco das portas do host |
 | Região | Hetzner, Alemanha (UE) |
 | Fotos | volume `uploads` (uma réplica). Mais de uma réplica exige bucket (`PHOTO_STORAGE=s3`) |
 | Disco | **sem LUKS** ([ADR-015](../adr/015-servidor-sem-cifra-de-disco.md)): o servidor volta sozinho após um reboot; as fotos ficam em claro no volume, e o que protege são os backups `age`, os campos cifrados (ADR-006), o acesso SSH só por chave e o Cloud Firewall |
@@ -68,14 +68,13 @@ Provisionamento, uma vez:
 2. No host: usuário não-root com `sudo`, `PasswordAuthentication no` no SSH,
    `unattended-upgrades` ligado. Instale Docker Engine com o plugin compose (pela documentação
    oficial do Docker), `git`, `age` e `curl`.
-3. DNS: registro `A`/`AAAA` do domínio apontando para o servidor (o Caddy precisa dele para emitir
+3. DNS: registro `A`/`AAAA` do domínio apontando para o servidor (o Traefik precisa dele para emitir
    o certificado).
 4. `git clone` do repositório em `/opt/estomasystech` e, ali, um `.env` com `chmod 600`, a partir do
    `.env.example`, contendo pelo menos:
 
    ```bash
    COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
-   APP_DOMAIN=clinica.exemplo.com.br
    APP_URL=https://clinica.exemplo.com.br
    TRUSTED_PROXY_HOPS=1
    POSTGRES_PASSWORD=...      # openssl rand -hex 24
@@ -89,7 +88,8 @@ Provisionamento, uma vez:
    ```
 
    Com `COMPOSE_FILE` no `.env`, todo `docker compose` rodado em `/opt/estomasystech` (inclusive
-   pelos scripts de backup) já inclui o Caddy.
+   pelos scripts de backup) já usa o override de produção. No Coolify o domínio é configurado no
+   próprio recurso (§ 3); `APP_DOMAIN` não existe mais.
 5. `docker compose up -d --build` e confira:
    `curl -fsS https://clinica.exemplo.com.br/api/health/ready` (`200` com banco e migrações `ok`).
 6. Backup (§ 5), cron (§ 7), primeiro acesso (§ 8) e alertas (§ 9).
@@ -110,16 +110,50 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
 
 ## 3. TLS, URL pública e proxy
 
+- **Proxy de entrada: só o Traefik do Coolify** ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)).
+  Ele já ocupa 80/443 e emite o certificado; nenhum outro proxy sobe no repositório. Dois formatos:
+  - **Recomendado: Dockerfile + Postgres gerenciado.** No Coolify, recurso "Dockerfile" apontando
+    para o repositório (porta 3000, domínio `estomasystech.kalleopinheiro.com.br`) e um recurso
+    PostgreSQL 16 do próprio Coolify (sem porta pública) com a `DATABASE_URL` interna no app.
+  - **Compose** (`docker-compose.yml:docker-compose.prod.yml`): app e banco sem porta no host;
+    o domínio entra na variável mágica `SERVICE_FQDN_APP_3000` do recurso.
+- **Middlewares do Traefik** (arquivo `shared-middlewares.yaml` do proxy): `rate-limit-app`,
+  `rate-limit-strict` e `security-headers`. Referencie-os em "Custom Labels" do recurso (ou na
+  label `coolify.traefik.middlewares`, já posta no compose de produção) com o sufixo `@file`,
+  ex.: `coolify.traefik.middlewares=rate-limit-app@file,security-headers@file`. Use
+  `rate-limit-strict@file` numa rota própria para `/api/auth/*`, se for separada.
+  O rate limit do app (`TRUSTED_PROXY_HOPS`) continua valendo por conta.
+- **Checklist de deploy no Coolify (Dockerfile)** — verificado contra o código em 2026-10-18:
+  - *Imagem*: `Dockerfile` já roda como `nextjs` (não-root), `PORT=3000`, `HOSTNAME=0.0.0.0`,
+    `HEALTHCHECK` em `/api/health` (liveness, sem banco) e `TZ`/`APP_TIMEZONE=America/Sao_Paulo`.
+    No Coolify use a porta 3000 e, como verificação do recurso, `/api/health/ready`.
+  - *Variáveis* (marque como secreto no Coolify): `DATABASE_URL`, `AUTH_SECRET`,
+    `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `ESTOMASYSTECH_BOOTSTRAP_TOKEN`;
+    não secretas: `APP_URL=https://estomasystech.kalleopinheiro.com.br`, `EMAIL_FROM`,
+    `ALERT_EMAIL_TO`, `TRUSTED_PROXY_HOPS=1`. Sem `AUTH_SECRET` tudo responde 503.
+  - *Migrações*: com uma réplica, deixe o boot migrar (padrão, com advisory lock). A imagem
+    standalone **não** traz `tsx`/`drizzle-kit`: `calendar:minimize`, `clinics:cnpj-review` e
+    `db:portal-orphans` rodam de um checkout (`npm ci`) com `DATABASE_URL` alcançável. Como o
+    banco do Coolify não tem porta pública, rode-os num container descartável na rede do Docker
+    do Coolify (`docker run --rm --network <rede-do-banco> -v "$PWD":/w -w /w node:24-alpine
+    sh -c 'npm ci && npm run calendar:minimize -- --confirmar'`) ou por túnel SSH.
+  - *Cabeçalhos e CSP*: o app já envia HSTS, `X-Frame-Options`, `Referrer-Policy` etc.
+    (`next.config.ts`) e a **CSP com nonce por requisição** (`src/proxy.ts`). O middleware
+    `security-headers@file` não pode definir `Content-Security-Policy` (sobrescreveria o nonce e
+    quebraria a página); duplicar os demais cabeçalhos é inofensivo.
+  - *Cookies*: são `Secure` por `NODE_ENV=production`, independente de cabeçalho do proxy; basta
+    o acesso ser por HTTPS, que o Traefik garante.
+  - *Fotos*: sem bucket, monte um volume persistente do Coolify em `/app/uploads`.
 - O cookie de sessão é `Secure` em produção: **login não funciona por HTTP** fora de `localhost`.
 - `APP_URL` precisa ser `https://…` (compõe os links de convite/reset e o redirect da agenda).
 - O app lê o IP do cliente contando `TRUSTED_PROXY_HOPS` saltos a partir do fim do
-  `x-forwarded-for` (rate limit do login e da API). Sem `trusted_proxies`, o Caddy **substitui**
-  esse cabeçalho pelo IP de quem conectou, então a cadeia tem um item só:
-  - Caddy sozinho (o decidido): `TRUSTED_PROXY_HOPS=1`.
-  - Cloudflare (proxy laranja) na frente do Caddy: declare as faixas de IP da Cloudflare em
-    `trusted_proxies static …` dentro da opção global `servers { }` do `deploy/Caddyfile` (o Caddy passa a manter a cadeia e
-    acrescentar o IP da Cloudflare) e só então use `TRUSTED_PROXY_HOPS=2`. Com `2` e sem
-    `trusted_proxies`, todo mundo cai no mesmo balde `unknown`.
+  `x-forwarded-for` (rate limit do login e da API). O Traefik acrescenta o IP de quem conectou
+  ao fim da cadeia, então:
+  - Traefik sozinho (o decidido, sem Cloudflare): `TRUSTED_PROXY_HOPS=1`.
+  - Cloudflare (proxy laranja) na frente do Traefik: o Traefik precisa confiar nas faixas de IP
+    da Cloudflare (`forwardedHeaders.trustedIPs` no entrypoint, configuração do proxy do Coolify)
+    para manter a cadeia; só então use `TRUSTED_PROXY_HOPS=2`. Sem isso o Traefik descarta o
+    cabeçalho recebido e `2` junta todo mundo no mesmo balde `unknown`.
   - Valor maior que o número real de proxies deixa o cliente escolher o próprio IP; menor junta
     todo mundo no IP do proxy. O log `[config] Requisição sem x-forwarded-for` indica app exposto
     sem proxy.
@@ -255,7 +289,7 @@ novo. Apague a chave privada do servidor ao terminar.
 `--confirmar`. O RTO de 4 h cabe nisso só se o teste mensal mostrar que cabe.
 
 **Teste de restauração (mensal):** numa máquina descartável (outra VPS ou o notebook do operador,
-com o repositório e Docker), sem o Caddy e em portas que não colidem:
+com o repositório e Docker), sem o Traefik e em portas que não colidem:
 
 ```bash
 export COMPOSE_FILE=docker-compose.yml COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433
