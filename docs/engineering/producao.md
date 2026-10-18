@@ -504,7 +504,7 @@ falhar, abra issue com o rótulo `bug`.
 
 | Data | Backup de | Quem | Tempo até voltar | Resultado |
 | --- | --- | --- | --- | --- |
-| 2026-10-18 | `20261018T231224Z` (1º backup) | Kalléo (com Claude, no WSL) | poucos minutos com o build em cache (não cronometrado) | **parcial**: conferência e `--confirmar` ok (104 tabelas), `/api/health/ready` `200`, contagens iguais à produção (1 clínica, 1 conta, 5 eventos de auditoria). Produção ainda sem paciente nem foto, e o app subiu com `AUTH_SECRET`/`DATA_ENCRYPTION_KEY` descartáveis: a decifragem do dado clínico com a chave real fica para o próximo teste, com paciente cadastrado |
+| 2026-10-18 | `20261018T231224Z` (1º backup) | Kalléo (com Claude, no WSL) | **24 s** do `up` ao app no ar (sem o download, que é de segundos com 160 KB) | **ok**: `SHA256SUMS`, conferência e `--confirmar` (104 tabelas); app com `AUTH_SECRET` e `DATA_ENCRYPTION_KEY` de produção (do cofre), `/api/health/ready` `200`; contagens iguais à produção (1 clínica, 1 conta, 5 eventos de auditoria). Produção ainda sem paciente nem foto: repetir com dado clínico real para provar a decifragem e o volume |
 
 O CI repete o ciclo inteiro a cada PR com uma chave descartável
 ([`scripts/backup-smoke.sh`](../../scripts/backup-smoke.sh)): grava linha e foto, faz backup, apaga
@@ -516,14 +516,14 @@ Estado conferido na instalação de 2026-10-18. Revise junto com o teste mensal 
 
 | Item | Regra | Estado |
 | --- | --- | --- |
-| Chave privada `age` | só no cofre (Bitwarden) e num pendrive guardado; **nunca** no servidor nem em disco de máquina de uso diário. Para testar, traga do cofre e apague no fim (`shred -u`) | cofre + pendrive; cópia em claro no WSL do operador a apagar |
+| Chave privada `age` | só no cofre (Bitwarden) e num pendrive guardado; **nunca** no servidor nem em disco de máquina de uso diário. Para testar, traga do cofre e apague no fim (`shred -u`) | pendrive + cópia em claro no WSL do operador; **conferir se a nota do Bitwarden tem a chave** (no teste ela não veio do cofre) antes de apagar a cópia do WSL |
 | Token R2 do servidor | **Object Read & Write** só no bucket `estomasystech-backups-age`, com filtro de IP (IPv4 `/32` e IPv6 `/64` do servidor) | escopo ok; filtro de IP a recolocar |
 | Token R2 de restauração | **Object Read only**, só o bucket, TTL de 7 dias; apagar depois do teste | criado em 2026-10-18; apagar ou deixar expirar |
 | Trava de objeto | `prod/` com 30 dias: nem um servidor comprometido apaga os backups recentes | ativa |
 | Backup em claro do Coolify | envio para o S3 desligado, dumps e bucket `estomasystech-backups` apagados, token `coolify-backups` removido (§ 5.1 passo 8) | em curso |
 | Arquivos no servidor | `/etc/estomasystech/*` e `/etc/msmtprc` com `600 root`; scripts com `700 root` | ok |
 | Chave do Resend do servidor | só *Sending access*, nome `estomasystech-backup-alerta`, guardada no cofre | ok |
-| Bitwarden CLI | `bw lock` ao terminar; nunca mande print com `BW_SESSION` | — |
+| Bitwarden CLI | `bw lock` ao terminar; nunca mande print com `BW_SESSION` | travado depois do teste; `~/.bw_session` apagado |
 | Alerta de falha | `OnFailure` por e-mail, testado (§ 5.1 passo 6) | ok |
 
 **Se algo vazar:**

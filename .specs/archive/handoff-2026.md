@@ -1373,6 +1373,6 @@ Pedido do Kalléo (via coordenação, #381): o backup nativo do Coolify para o R
 
 Kalléo instalou no servidor, passo a passo, o backup do ADR-040. **Ativo**: chave `age` no Bitwarden + pendrive; bucket R2 `estomasystech-backups-age` (UE, trava 30 dias, ciclo 35 em `prod/`); scripts e units no host; `msmtp` pelo Resend; primeiro backup `20261018T231224Z` no R2; timer às 02:00 de São Paulo; alerta testado.
 - **Armadilhas registradas** (runbook § 5.1/§ 5.3 e o novo [`backup-passo-a-passo.md`](../../docs/engineering/backup-passo-a-passo.md)): `403` do R2 era dupla de chaves de outro token (criar outro); `rclone` do `apt` (1.60) dá `501` no R2, usar o pacote oficial 1.75+; `from` do `msmtp` só com o endereço (`from_full_name` para o nome); teste de restauração precisa de Postgres 18 local (compose ainda 16, #385); `read -rp` é de bash (Kalléo usa zsh).
-- **Teste de restauração** (2026-10-18, parcial): banco restaurado e conferido em Postgres 18 local (override com `pgdata:/var/lib/postgresql`); produção sem paciente e chave real não usada, a repetir com paciente.
+- **Teste de restauração** (2026-10-18, ok): Postgres 18 local (override com `pgdata:/var/lib/postgresql`), chaves reais do cofre, 104 tabelas, health 200, 24 s; produção ainda sem paciente, a repetir com dado clínico.
 - **Segurança**: checklist no runbook § 5.4.
 - **Next step**: o passo 8 (desligar o S3 do Coolify e apagar dumps em claro, irreversível, com o Kalléo). Filtro de IP do token do servidor a recolocar. **Blockers**: nenhum.
