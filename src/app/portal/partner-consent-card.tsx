@@ -14,7 +14,11 @@ const ENDPOINT = '/api/portal/patient/partner-consent';
 
 function statusLine(consent: PartnerShareConsentDto): string {
   if (consent.active && consent.acceptedAt) {
-    return `Autorizado em ${formatDateTime(consent.acceptedAt)}.`;
+    const by = consent.signedByRelationship ? ' pelo representante legal' : '';
+    return `Autorizado${by} em ${formatDateTime(consent.acceptedAt)}.`;
+  }
+  if (consent.representativeExpired) {
+    return 'A autorização dada pelo seu representante legal venceu 90 dias depois dos seus 18 anos. Autorize em seu nome para o médico continuar acompanhando.';
   }
   if (consent.revoked && consent.revokedAt) {
     return `Autorização revogada em ${formatDateTime(consent.revokedAt)}.`;
@@ -25,9 +29,15 @@ function statusLine(consent: PartnerShareConsentDto): string {
 /**
  * Consentimento para o médico que indicou o paciente ver condições e
  * avaliações no portal do parceiro (#292). Opcional: sem ele, o médico vê só
- * que o paciente foi atendido. Não aparece para quem não foi indicado.
+ * que o paciente foi atendido. Não aparece para quem não foi indicado. O
+ * representante legal decide pelo menor (#375); o paciente adulto pode
+ * confirmar em nome próprio o que o representante autorizou.
  */
-export function PartnerConsentSection() {
+export function PartnerConsentSection({
+  asRepresentative = false,
+}: {
+  asRepresentative?: boolean;
+}) {
   const { toast } = useToast();
   const { data: consent, refresh } = useApiQuery<PartnerShareConsentDto | null>(
     ENDPOINT,
@@ -62,6 +72,22 @@ export function PartnerConsentSection() {
       <Card className="flex flex-col gap-3 p-4">
         {error && <ErrorAlert message={error} />}
         <p className="text-ink-2 text-sm">{statusLine(consent)}</p>
+        {consent.active &&
+          consent.signedByRelationship &&
+          !asRepresentative && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              className="self-start"
+              onClick={() =>
+                void run(ENDPOINT, 'Autorização registrada em seu nome')
+              }
+            >
+              Autorizar em meu nome
+            </Button>
+          )}
         {consent.active ? (
           <ConfirmAction
             trigger={

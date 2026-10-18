@@ -1,4 +1,8 @@
 import { createHash } from 'node:crypto';
+import {
+  type ConsentHolder,
+  isRepresentativeConsentExpired,
+} from '../patient/majority';
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 
@@ -149,15 +153,23 @@ export class ConsentRecord {
    * último aceite" mesmo quando o status atual é revogado (AC-70-2): usar
    * `current.acceptedAt` nesse caso devolveria o horário da REVOGAÇÃO como se
    * fosse data de aceite.
+   *
+   * `holder` é o titular: o aceite assinado pelo representante legal só vale
+   * até 90 dias depois dos 18 anos dele (#375). Sem `holder`, o aceite do
+   * representante não vale (falha fechada).
    */
   static resolveStatus(
     allRecords: readonly ConsentRecord[],
     consentText: string,
     purpose: ConsentPurpose = 'treatment',
+    holder?: ConsentHolder,
+    now: Date = new Date(),
   ): {
     accepted: boolean;
     current: ConsentRecord | null;
     latestAccept: ConsentRecord | null;
+    /** O aceite vigente é do representante e venceu (90 dias após os 18; #375). */
+    representativeExpired?: boolean;
   } {
     const records = allRecords.filter((record) => record.purpose === purpose);
     const latestAccept =
@@ -178,10 +190,16 @@ export class ConsentRecord {
     if (latest.kind === 'revoke') {
       return { accepted: false, current: latest, latestAccept };
     }
+    // Aceite do representante vence 90 dias depois dos 18 (#375, ADR-033).
+    // Sem o titular informado não se pode provar o prazo: não vale.
+    const representativeExpired =
+      latest.signer !== null &&
+      (!holder || isRepresentativeConsentExpired(holder.birthDate, now));
     return {
-      accepted: latest.covers(consentText),
+      accepted: latest.covers(consentText) && !representativeExpired,
       current: latest,
       latestAccept,
+      representativeExpired,
     };
   }
 
@@ -240,4 +258,6 @@ export interface ConsentRecordRepository {
   findByPatientId(patientId: string): Promise<ConsentRecord[]>;
   /** Registro mais recente por `acceptedAt` (qualquer `kind`) — usado pra resolver status. */
   findLatestByPatientId(patientId: string): Promise<ConsentRecord | null>;
+  /** Pacientes com algum registro assinado pelo representante legal (#375): base do aviso de prazo. */
+  findPatientIdsSignedByRepresentative(): Promise<string[]>;
 }

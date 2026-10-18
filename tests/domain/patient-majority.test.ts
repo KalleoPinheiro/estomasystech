@@ -3,7 +3,13 @@ import {
   canRepresentMinor,
   GUARDIAN_RELATIONSHIPS,
 } from '@/domain/guardian/guardian';
-import { isMinorOn, majorityBirthCutoff } from '@/domain/patient/majority';
+import {
+  isMinorOn,
+  isRepresentativeConsentExpired,
+  majorityBirthCutoff,
+  majorityDate,
+  representativeConsentExpiresOn,
+} from '@/domain/patient/majority';
 import { Patient } from '@/domain/patient/patient';
 
 const TZ = 'America/Sao_Paulo';
@@ -67,5 +73,43 @@ describe('Feature: maioridade do paciente (#372)', () => {
     ).toBeNull();
     expect(patient.majorityReviewedAt).toBeNull();
     expect(reviewed.isMinorOn(now)).toBe(false);
+  });
+});
+
+describe('Feature: prazo do aceite do representante (#375, ADR-033)', () => {
+  it('vence 90 dias depois dos 18 anos; na véspera ainda vale', () => {
+    const birth = day('2008-01-01');
+    expect(majorityDate(birth)).toEqual(day('2026-01-01'));
+    expect(representativeConsentExpiresOn(birth)).toEqual(day('2026-04-01'));
+    expect(
+      isRepresentativeConsentExpired(birth, noonBrasilia('2026-03-31'), TZ),
+    ).toBe(false);
+    expect(
+      isRepresentativeConsentExpired(birth, noonBrasilia('2026-04-01'), TZ),
+    ).toBe(true);
+  });
+
+  it('usa o dia de Brasília: 22h da véspera ainda não venceu', () => {
+    const birth = day('2008-01-01');
+    // 01/04 01:00Z = 31/03 22:00 em Brasília.
+    expect(
+      isRepresentativeConsentExpired(
+        birth,
+        new Date('2026-04-01T01:00:00Z'),
+        TZ,
+      ),
+    ).toBe(false);
+  });
+
+  it('nascido em 29/02: maioridade em 01/03 e prazo contado dali', () => {
+    const birth = day('2008-02-29');
+    expect(majorityDate(birth)).toEqual(day('2026-03-01'));
+    expect(representativeConsentExpiresOn(birth)).toEqual(day('2026-05-30'));
+  });
+
+  it('sem data de nascimento, o aceite do representante não vale (falha fechada)', () => {
+    expect(
+      isRepresentativeConsentExpired(null, noonBrasilia('2026-01-01')),
+    ).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import {
   PartnerShareConsent,
   type PartnerShareConsentActor,
@@ -23,6 +23,8 @@ const toDomain = (row: Row): PartnerShareConsent =>
     recordedBy: row.recordedBy,
     ipAddress: row.ipAddress,
     recordedAt: row.recordedAt,
+    signerGuardianId: row.signerGuardianId,
+    signerRelationship: row.signerRelationship,
   });
 
 /** Consentimento paciente × parceiro (#292): só insere, nunca atualiza nem apaga. */
@@ -52,6 +54,8 @@ export class DrizzlePartnerShareConsentRepository
       recordedBy: record.recordedBy,
       ipAddress: record.ipAddress,
       recordedAt: record.recordedAt,
+      signerGuardianId: record.signer?.guardianId ?? null,
+      signerRelationship: record.signer?.relationship ?? null,
     });
   }
 
@@ -92,5 +96,19 @@ export class DrizzlePartnerShareConsentRepository
       )
       .orderBy(desc(partnerShareConsents.recordedAt));
     return rows.map(toDomain);
+  }
+
+  async findPatientIdsSignedByRepresentative(): Promise<string[]> {
+    const rows = await this.db
+      .selectDistinct({ patientId: partnerShareConsents.patientId })
+      .from(partnerShareConsents)
+      .where(
+        withTenant(
+          partnerShareConsents,
+          this.clinicId,
+          isNotNull(partnerShareConsents.signerGuardianId),
+        ),
+      );
+    return rows.map((row) => row.patientId);
   }
 }

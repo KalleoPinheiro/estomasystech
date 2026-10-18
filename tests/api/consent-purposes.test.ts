@@ -192,7 +192,7 @@ describe('Feature: Termos de tratamento e de imagem à parte (#216, ADR-030)', (
     }>;
 
     expect(ok.status).toBe(200);
-    expect(body.data.version).toBe('v2');
+    expect(body.data.version).toBe('v3');
     expect(body.data.text).toContain('AVISO DE PRIVACIDADE');
     expect(body.data.text).not.toMatch(/\{\{/);
     expect(body.data.text).toContain('CNPJ');

@@ -37,6 +37,10 @@ export interface PartnerShareConsentDto {
   acceptedBy: string | null;
   revokedAt: string | null;
   revokedBy: 'patient' | 'staff' | null;
+  /** Parentesco do representante que aceitou pelo menor (#375); nulo = o paciente ou a equipe. */
+  signedByRelationship?: string | null;
+  /** O aceite do representante venceu (90 dias após os 18): o parceiro não vê nada. */
+  representativeExpired?: boolean;
 }
 
 export const toPartnerShareConsentDto = (
@@ -60,5 +64,7 @@ export const toPartnerShareConsentDto = (
       : null,
     revokedAt: revoked ? (current?.recordedAt.toISOString() ?? null) : null,
     revokedBy: revoked ? (current?.actor ?? null) : null,
+    signedByRelationship: latestAccept?.signer?.relationship ?? null,
+    representativeExpired: view.status.representativeExpired,
   };
 };

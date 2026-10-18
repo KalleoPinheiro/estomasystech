@@ -1284,3 +1284,13 @@ Decisão de @KalleoPinheiro (2026-10-18, "Concordo" à proposta do coordenador):
 - **Perguntas abertas (no ADR-032)**: o representante do menor exerce no portal o art. 18 e o consentimento do parceiro? O aceite do representante vence algum tempo após os 18?
 - **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build + E2E). Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge (sem `gh`).
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Issue #375 — Direitos do menor pelo representante e prazo do aceite (2026-10-18) — ENCERRADO
+
+Decisão de @KalleoPinheiro (2026-10-18, "Ok" às propostas do coordenador para as perguntas abertas do ADR-032): pelo portal o representante do menor pede cópia e correção e autoriza ou revoga o parceiro indicador (eliminação só na clínica); o aceite do representante perde a validade 90 dias depois dos 18 anos se o paciente não aceitar em nome próprio, e a clínica é avisada. [ADR-033](../../docs/adr/033-direitos-do-menor-pelo-representante-e-prazo-do-aceite.md), que complementa o ADR-032.
+- **Código**: `resolveConsentSigner` agora também guarda `/export`, `/data-requests` (eliminação → `403`) e `/partner-consent` (+ `/revoke`); `PartnerShareConsent` grava `signer`; `majority.ts` ganha `representativeConsentExpiresOn`/`isRepresentativeConsentExpired` (sem data de nascimento = vencido); `ConsentRecord.resolveStatus` e `PartnerShareConsent.resolveStatus` recebem o titular e devolvem `representativeExpired` (TCLE, imagem, parceiro e portal do parceiro); `listMajorityReviews` também lista o adulto com aceite vigente do representante, com a data de vencimento; telas de "Meus dados", parceiro, termo e cartão da clínica ajustadas. Aviso de privacidade `v3` (item 9); termos sem mudança de texto.
+- **Migração `0066`**: `partner_share_consents.signer_guardian_id`/`signer_relationship` (sem FK). Só `ADD COLUMN`, nulos.
+- **Regras**: POR-RN-28 nova; POR-RN-11, 23, 26, 27 e PRO-RN-23 ajustadas; `docs/legal/textos-lgpd.md` § 1, § 3 item 7 e § 5 (perguntas do ADR-032 fechadas).
+- **Limite aceito**: curatela de adulto segue pela clínica (o portal só deixa o representante assinar por menor).
+- **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build + E2E). Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge (sem `gh`).
+- **Next step**: nenhum. **Blockers**: nenhum.
