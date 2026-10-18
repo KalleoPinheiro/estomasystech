@@ -3,7 +3,7 @@ title: "Integração: cron de retenção e anonimização"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-12
+last_reviewed: 2026-10-18
 ---
 
 # Cron de retenção (`POST /api/retention/run`)
@@ -63,10 +63,19 @@ envelope `{ success, data }`, só com contagens:
 Junto com o paciente (`clinicalRecords`) também saem a descrição e o motivo do desconto das
 faturas dele (FIN-RN-13).
 
+**Fronteira (#323, [ADR-031](../../adr/031-retencao-em-dias-inteiros-e-fonte-unica.md)):** o prazo
+conta em dias inteiros no `APP_TIMEZONE`. Na execução de 18/10/2026, um evento de 18/10/2021 (a
+qualquer hora) fica; sai na de 19/10/2026. Os prazos moram em `RETENTION_YEARS`
+(`src/domain/retention/retention-policy.ts`), que o aviso de privacidade lê; mudar um deles exige
+subir `PRIVACY_NOTICE_VERSION`.
+
 Uma entrada por empresa, inclusive suspensa (o prazo é legal). A trilha de plataforma (eventos sem
 empresa) vem em `platform`. Até 200 pacientes e 500 fotos por empresa a cada execução; o resto
 entra na próxima. Rodar de novo não muda nem conta nada (idempotente). Cada empresa que mudou
-algo ganha um evento de auditoria `update`/`retention` só com as contagens.
+algo ganha um evento de auditoria `update`/`retention` só com as contagens. A trilha de plataforma
+ganha um a **cada execução**, mesmo com tudo zero, com `clinics` (empresas processadas),
+`failedClinics` (quantas falharam, sem identificar) e `auditTrailCutoff` (o corte usado): é o
+registro de que o job rodou (#323).
 
 ## Modos de falha
 

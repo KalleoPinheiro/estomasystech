@@ -187,6 +187,12 @@ describe('Feature: Rota do job de retenção (#294, RET-01, RET-08)', () => {
       .select()
       .from(schema.auditEvents)
       .where(eq(schema.auditEvents.resourceType, 'retention'));
-    expect(runsAfter).toHaveLength(runs.length);
+    // A clínica não ganha evento novo; a plataforma registra a execução (#323).
+    expect(runsAfter.filter((run) => run.clinicId !== null)).toHaveLength(
+      runs.filter((run) => run.clinicId !== null).length,
+    );
+    expect(runsAfter.filter((run) => run.clinicId === null)).toHaveLength(
+      runs.filter((run) => run.clinicId === null).length + 1,
+    );
   });
 });

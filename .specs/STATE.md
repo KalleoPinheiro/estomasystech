@@ -2,7 +2,7 @@
 
 ## Decisions
 
-Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-024, AD-026, AD-027, AD-029, AD-030, AD-031, AD-025.
+Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-024, AD-026, AD-027, AD-029, AD-030, AD-031, AD-025, AD-045.
 
 ### AD-001
 - **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
@@ -229,6 +229,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-051
 - **Decision**: o teto de consultas futuras e a cota diária de fotos do portal (#363, follow-up da #213) são **atômicos por paciente**: contagem e gravação rodam na mesma transação, que tranca a linha do paciente (`SELECT … FOR UPDATE`). Escolhido, com a autonomia delegada por @KalleoPinheiro (2026-10-18), em vez de restrição no banco (o limite é janela móvel de 24 h e inclui consultas da equipe, que não cabem em `UNIQUE`/`CHECK`) e de lock distribuído (Postgres já basta). **Trade-off**: envios do mesmo paciente passam a ser em fila (só dele); a foto vai ao storage dentro da transação, então um commit que falhe deixa no máximo um arquivo órfão, nunca linha sem arquivo. POR-RN-17 · 2026-10-18 · active
 
+### AD-052
+- **Decision**: prazo de retenção contado em **dias inteiros** no `APP_TIMEZONE` (CC art. 132 § 3º): o último dia do prazo fica inteiro e o dado sai no dia seguinte; vale para todos os tipos (#323). Prazos numa **fonte única** (`RETENTION_YEARS`), lida pelo aviso de privacidade; mudar exige subir `PRIVACY_NOTICE_VERSION` (teste trava), sem variável de ambiente. A plataforma ganha um evento `retention` **a cada execução**, mesmo sem nada vencido. **Trade-off**: o dado sai até 1 dia depois do que saía; a trilha anonimizada continua ocupando espaço. Coordenador como PO; [ADR-031](../docs/adr/031-retencao-em-dias-inteiros-e-fonte-unica.md), ACE-RN-44 · 2026-10-18 · active
+
 ### Baseline de segurança medido em `fcd6110`
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
 
@@ -244,5 +247,4 @@ Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/eng
 Um scan GitGuard sobre `fcd6110` deve cair de 54 para ~9 findings: 2 `hardcoded_secrets` deduplicados, 1 `unsafe-formatstring` e os 6 TRIVY obsoletos, que só somem quando o serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
 
 ## Handoff
-
 Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto: #308 (E2E intermitente, em investigação) e #216 (jurídico); o resto da fila segue pelo coordenador do projeto.

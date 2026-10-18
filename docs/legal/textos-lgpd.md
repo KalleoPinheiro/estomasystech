@@ -77,8 +77,8 @@ O jurídico pode reabrir qualquer um.
 - **Sem revisão jurídica** (o motivo deste arquivo existir).
 - **Menores:** sem registro de aceite em papel do TCLE e da imagem. Abrir ticket se a clínica
   atender menores com foto pelo portal.
-- **Prazos do aviso** espelham a retenção (ADR-013, ADR-017); se mudarem lá, mudam em
-  `privacy-notice-text.ts`.
+- **Prazos do aviso** vêm de `RETENTION_YEARS` (ADR-013, ADR-017, ADR-031): o texto interpola os
+  números. Mudar um prazo exige subir `PRIVACY_NOTICE_VERSION` (o teste de `legal-text` trava).
 - **Conta anonimizada ou paciente com e-mail de terceiro:** o aviso por e-mail só chega a quem
   tem conta de portal (PRO-RN-20).
 - **Texto longo** em tela pequena: rolagem dentro do cartão.

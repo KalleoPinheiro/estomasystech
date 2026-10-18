@@ -1,6 +1,14 @@
+import {
+  appTimeZone,
+  startOfZonedDay,
+  zonedParts,
+} from '@/domain/shared/time-zone';
+
 /**
  * Prazos de retenção por tipo de dado (#294, decisão de 2026-10-11). Ao fim
- * do prazo o dado é anonimizado, nunca excluído.
+ * do prazo o dado é anonimizado, nunca excluído. Fonte única (#323): o aviso de
+ * privacidade lê estes números; mudar um deles exige subir a versão do aviso
+ * (`PRIVACY_NOTICE_VERSION`), e o teste do aviso falha até isso acontecer.
  */
 export const RETENTION_YEARS = {
   /** Prontuário e fotos, contados da última atividade clínica do paciente. */
@@ -32,28 +40,47 @@ export function anonymizedEmail(id: string): string {
 }
 
 /**
- * Corte de um prazo: a mesma data e hora `years` anos antes (calendário UTC).
- * 29/02 sem par no ano do corte vira 28/02 — o corte mais cedo, que anonimiza
- * menos. Só entra quem tem referência estritamente anterior ao corte.
+ * Corte de um prazo em dias inteiros, no fuso da aplicação (#323, ADR-031).
+ * O prazo em anos termina no dia de igual número do de início, ou no seguinte
+ * quando ele falta (Código Civil, art. 132, § 3º), e o último dia conta
+ * inteiro. Então, numa execução no dia `D`, só sai quem tem referência num dia
+ * cujo prazo terminou antes de `D`: o corte é a meia-noite local do dia seguinte
+ * a "ontem menos `years` anos" (29/02 sem par vira 28/02). Entra quem tem
+ * referência estritamente anterior ao corte.
  */
-export function retentionCutoff(now: Date, years: number): Date {
-  const cutoff = new Date(now.getTime());
-  const day = cutoff.getUTCDate();
-  cutoff.setUTCDate(1);
-  cutoff.setUTCFullYear(cutoff.getUTCFullYear() - years);
-  const lastDay = new Date(
-    Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  cutoff.setUTCDate(Math.min(day, lastDay));
-  return cutoff;
+export function retentionCutoff(
+  now: Date,
+  years: number,
+  timeZone: string = appTimeZone(),
+): Date {
+  const today = zonedParts(now, timeZone);
+  const yesterday = new Date(
+    Date.UTC(today.year, today.month - 1, today.day - 1),
+  );
+  const year = yesterday.getUTCFullYear() - years;
+  const month = yesterday.getUTCMonth();
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const day = Math.min(yesterday.getUTCDate(), lastDay);
+  return startOfZonedDay(year, month + 1, day + 1, timeZone);
 }
 
 /** Cortes de todos os tipos para uma execução. */
-export function retentionCutoffs(now: Date): Record<RetentionKind, Date> {
+export function retentionCutoffs(
+  now: Date,
+  timeZone: string = appTimeZone(),
+): Record<RetentionKind, Date> {
   return {
-    clinicalRecord: retentionCutoff(now, RETENTION_YEARS.clinicalRecord),
-    auditTrail: retentionCutoff(now, RETENTION_YEARS.auditTrail),
-    waitlist: retentionCutoff(now, RETENTION_YEARS.waitlist),
-    inactiveAccount: retentionCutoff(now, RETENTION_YEARS.inactiveAccount),
+    clinicalRecord: retentionCutoff(
+      now,
+      RETENTION_YEARS.clinicalRecord,
+      timeZone,
+    ),
+    auditTrail: retentionCutoff(now, RETENTION_YEARS.auditTrail, timeZone),
+    waitlist: retentionCutoff(now, RETENTION_YEARS.waitlist, timeZone),
+    inactiveAccount: retentionCutoff(
+      now,
+      RETENTION_YEARS.inactiveAccount,
+      timeZone,
+    ),
   };
 }
