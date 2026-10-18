@@ -165,16 +165,25 @@ export function PatientPortalView({
         <GuardianAccessNotice {...data.guardianAccess} onRevoked={refresh} />
       )}
 
-      {data.actingFor ? (
+      {data.actingFor && !consent?.canSign ? (
         <GuardianConsentNote status={consent} imageStatus={imageConsent} />
       ) : (
         <>
-          <PrivacyNoticeCard />
-          <ConsentCard status={consent} onAccepted={refreshConsent} />
+          {data.actingFor ? (
+            <MinorRepresentativeNote patientName={data.patient.fullName} />
+          ) : (
+            <PrivacyNoticeCard />
+          )}
+          <ConsentCard
+            status={consent}
+            onAccepted={refreshConsent}
+            asRepresentative={Boolean(data.actingFor)}
+          />
           <ConsentCard
             status={imageConsent}
             onAccepted={refreshImageConsent}
             purpose="image"
+            asRepresentative={Boolean(data.actingFor)}
           />
         </>
       )}
@@ -247,7 +256,9 @@ export function PatientPortalView({
                     consentPending={
                       imageConsent !== null && !imageConsent.accepted
                     }
-                    byGuardian={Boolean(data.actingFor)}
+                    byGuardian={
+                      Boolean(data.actingFor) && !imageConsent?.canSign
+                    }
                     onSent={refresh}
                   />
                 )}
@@ -448,7 +459,23 @@ function ActingForBanner({
   );
 }
 
-/** O responsável não aceita nem revoga termos: só informa o estado. */
+/**
+ * O representante legal assina os termos pelo paciente menor (#372, ADR-032):
+ * a tela diz em nome de quem e que o aceite fica registrado como dele.
+ */
+function MinorRepresentativeNote({ patientName }: { patientName: string }) {
+  return (
+    <Alert variant="info">
+      <AlertDescription>
+        {patientName} é menor de idade. Como representante legal, você lê e
+        aceita os termos em nome dele; o aceite fica registrado como seu. Aos 18
+        anos, a clínica passa o acesso ao próprio paciente.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** O responsável de paciente adulto não aceita nem revoga termos: só informa o estado. */
 function GuardianConsentNote({
   status,
   imageStatus,

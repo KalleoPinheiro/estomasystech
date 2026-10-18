@@ -96,6 +96,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/029-cnpj-antigo-invalido-marcado-para-correcao.md`](adr/029-cnpj-antigo-invalido-marcado-para-correcao.md) | CNPJ antigo com dígito verificador inválido é marcado para correção, sem apagar nem inventar |
 | [`adr/030-textos-lgpd-ligados-sem-revisao-juridica.md`](adr/030-textos-lgpd-ligados-sem-revisao-juridica.md) | textos LGPD ligados ao sistema com revisão jurídica pendente; termo de imagem à parte, encarregado por clínica, hash do texto-base |
 | [`adr/031-retencao-em-dias-inteiros-e-fonte-unica.md`](adr/031-retencao-em-dias-inteiros-e-fonte-unica.md) | retenção contada em dias inteiros (CC art. 132), prazos numa fonte só lida pelo aviso, evento de plataforma a cada execução do job |
+| [`adr/032-paciente-menor-no-portal-pelo-representante-legal.md`](adr/032-paciente-menor-no-portal-pelo-representante-legal.md) | menor sem conta própria no portal; mãe, pai ou tutor acessa e assina os termos; aviso à clínica aos 18 anos |
 | [`adr/025-cpf-no-recibo-e-protecao.md`](adr/025-cpf-no-recibo-e-protecao.md) | CPF do paciente/pagador opcional, validado, cifrado e mascarado; exigido só no recibo do IRPF, com CNPJ do prestador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).

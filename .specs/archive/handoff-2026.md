@@ -1275,3 +1275,12 @@ Decisão de @KalleoPinheiro sobre a pergunta aberta do ADR-028. Sem migração (
 - **Gate**: ver PR; Actions sem cota, gate local; Docker/smoke não rodam (sem daemon); autorrevisão no lugar do the-judge.
 - **Next step**: nenhum. **Blockers**: nenhum.
 
+## Issue #372 — Paciente menor no portal pelo representante legal (2026-10-18) — ENCERRADO
+
+Decisão de @KalleoPinheiro (2026-10-18, "Concordo" à proposta do coordenador): menor sem conta própria; o representante legal acessa com "Acessando em nome de X" e assina os termos no sistema; aos 18 anos a clínica é avisada. [ADR-032](../../docs/adr/032-paciente-menor-no-portal-pelo-representante-legal.md).
+- **Código**: `src/domain/patient/majority.ts` (menor = < 18 hoje no `APP_TIMEZONE`; 29/2 → 1º/3; sem data = adulto); `canRepresentMinor` (mãe, pai, `representante_legal`); `resolvePortalPatient` dá `403` à conta própria de menor; `listRepresentablePatients` esconde o menor de quem não é representante legal; `resolveConsentSigner`/`consentSignerFor` liberam aceite e revogação de TCLE e imagem só ao representante do menor; `POST /api/accounts` recusa conta `patient` de menor e conta `guardian` que só teria menores; aviso de maioridade em `GET /api/guardians/majority` + `POST …/:patientId/keep` e cartão no painel; "Aceitar em meu nome" para o paciente que fez 18. Aviso de privacidade `v2` (item 9); TCLE e imagem sem mudança de texto, então nenhum aceite caiu. Exportação do titular leva `signedByRelationship`.
+- **Migração `0065`**: `consent_records.signer_guardian_id`/`signer_relationship` (sem FK, para a evidência ficar) e `patients.majority_reviewed_at`. Só `ADD COLUMN`, nulos.
+- **Regras**: POR-RN-26, POR-RN-27, ACE-RN-59; POR-RN-23 e PRO-RN-23 ajustadas; `docs/legal/textos-lgpd.md` § 1, § 3 item 7 e § 5.
+- **Perguntas abertas (no ADR-032)**: o representante do menor exerce no portal o art. 18 e o consentimento do parceiro? O aceite do representante vence algum tempo após os 18?
+- **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build + E2E). Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge (sem `gh`).
+- **Next step**: nenhum. **Blockers**: nenhum.

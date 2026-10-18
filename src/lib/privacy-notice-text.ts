@@ -9,7 +9,7 @@ import { RETENTION_YEARS } from '@/domain/retention/retention-policy';
  *
  * Texto redigido sem revisão jurídica (`LEGAL_REVIEW_PENDING`).
  */
-export const PRIVACY_NOTICE_VERSION = 'v1';
+export const PRIVACY_NOTICE_VERSION = 'v2';
 
 export const PRIVACY_NOTICE_TEXT = `AVISO DE PRIVACIDADE (${PRIVACY_NOTICE_VERSION})
 
@@ -92,7 +92,9 @@ prontuário; cada clínica enxerga apenas os seus próprios dados.
 9. Crianças, adolescentes e pessoas sob cuidado
 Os dados de menores de 18 anos e de pessoas que não podem decidir por si são tratados no
 melhor interesse delas, com o consentimento de um dos pais ou do responsável legal quando for
-necessário.
+necessário. O paciente menor não tem acesso próprio ao portal: quem acessa é o pai, a mãe ou o
+responsável legal, em nome dele, e o aceite dos termos fica registrado em nome de quem assinou.
+Quando o paciente faz 18 anos, a clínica é avisada para passar o acesso a ele.
 
 10. Mudanças neste aviso
 Quando este aviso mudar de forma relevante, avisaremos pelo portal ou pelo e-mail que você

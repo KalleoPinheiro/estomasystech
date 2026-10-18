@@ -22,6 +22,15 @@ export interface PatientRepository {
   findByReferrer(partnerId: string): Promise<Patient[]>;
   /** Pacientes ligados a um responsável (#329); base da regra de exclusão. */
   findByGuardian(guardianId: string): Promise<Patient[]>;
+  /**
+   * Pacientes ativos ligados a estes responsáveis, nascidos até `birthCutoff`
+   * (já maiores de idade), sem o acesso encerrado e sem a clínica ter decidido
+   * mantê-lo (#372). Base do aviso de maioridade.
+   */
+  findAdultsAwaitingMajorityReview(
+    guardianIds: string[],
+    birthCutoff: Date,
+  ): Promise<Patient[]>;
   findAll(search?: string, page?: PatientPage): Promise<Patient[]>;
   /** Empresa dona do registro — usado pelo acesso cross-empresa do papel de sistema para auditar. */
   findClinicIdById(id: string): Promise<string | null>;

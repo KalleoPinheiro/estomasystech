@@ -56,6 +56,8 @@ function mockApi(role: UserRole) {
     if (url.startsWith('/api/appointments')) return ok([todayAppointment]);
     if (url.startsWith('/api/follow-ups')) return ok([followUp]);
     if (url.startsWith('/api/reminders/whatsapp-link')) return ok({});
+    // Aviso de maioridade (#372): só Admin e Atendente pedem.
+    if (url.startsWith('/api/guardians/majority')) return ok([]);
     throw new Error(`unexpected fetch: ${url}`);
   });
   vi.stubGlobal('fetch', fn);
@@ -92,6 +94,9 @@ describe('Feature: dashboard por papel (#199)', () => {
     expect(urls.some((u) => u.startsWith('/api/summary'))).toBe(false);
     expect(urls.some((u) => u.startsWith('/api/supplies'))).toBe(false);
     expect(urls.some((u) => u.startsWith('/api/photos/triage'))).toBe(false);
+    expect(urls.some((u) => u.startsWith('/api/guardians/majority'))).toBe(
+      true,
+    );
   });
 
   it('profissional vê a agenda do dia (sem resumo) e a fila de triagem', async () => {

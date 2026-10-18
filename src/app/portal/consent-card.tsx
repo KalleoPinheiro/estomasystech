@@ -25,6 +25,10 @@ export interface ConsentStatusDto {
   consentText: string;
   accepted: boolean;
   acceptedAt: string | null;
+  /** Quem está logado pode assinar (o representante legal só pelo menor; #372). */
+  canSign?: boolean;
+  /** Parentesco de quem assinou pelo menor; nulo quando foi o próprio paciente. */
+  signedByRelationship?: string | null;
 }
 
 const COPY: Record<
@@ -67,10 +71,13 @@ export function ConsentCard({
   status,
   onAccepted,
   purpose = 'treatment',
+  asRepresentative = false,
 }: {
   status: ConsentStatusDto | null;
   onAccepted: () => void;
   purpose?: ConsentPurposeDto;
+  /** Quem assina é o representante legal do menor (#372). */
+  asRepresentative?: boolean;
 }) {
   const copy = COPY[purpose];
   const { toast } = useToast();
@@ -103,11 +110,13 @@ export function ConsentCard({
       }
     };
 
+    const byRepresentative = Boolean(status.signedByRelationship);
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="success" icon={<Icon name="check-circle" />}>
           <AlertDescription>
             {copy.acceptedLabel}
+            {byRepresentative ? ' pelo representante legal' : ''}
             {status.acceptedAt
               ? ` em ${formatDateTime(status.acceptedAt)}`
               : ''}
@@ -115,6 +124,9 @@ export function ConsentCard({
           </AlertDescription>
         </Alert>
         {error && <ErrorAlert message={error} />}
+        {byRepresentative && status.canSign && !asRepresentative && (
+          <OwnNameAccept purpose={purpose} onAccepted={onAccepted} />
+        )}
         {/* PORT-04: endpoint de revogação já existia sem nenhuma UI que o
             chamasse — LGPD art. 8º/18 exige caminho de revogação, não só de
             aceite. */}
@@ -184,6 +196,52 @@ export function ConsentCard({
         {accepting ? 'Registrando…' : copy.acceptButton}
       </Button>
     </Card>
+  );
+}
+
+/**
+ * O paciente que já fez 18 anos confirma em nome próprio o termo que o
+ * representante aceitou por ele (#372, ADR-032). Só aparece ao próprio
+ * paciente: o representante vê o aceite dele e não precisa repetir.
+ */
+function OwnNameAccept({
+  purpose,
+  onAccepted,
+}: {
+  purpose: ConsentPurposeDto;
+  onAccepted: () => void;
+}) {
+  const { toast } = useToast();
+  const [sending, setSending] = useState(false);
+  const accept = async () => {
+    setSending(true);
+    try {
+      await apiFetch(`/api/portal/patient/consent?purpose=${purpose}`, {
+        method: 'POST',
+      });
+      toast({ description: 'Termo aceito em seu nome', variant: 'success' });
+      onAccepted();
+    } catch (err) {
+      toast({
+        description:
+          err instanceof Error ? err.message : 'Erro ao registrar aceite',
+        variant: 'danger',
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={sending}
+      className="self-start"
+      onClick={() => void accept()}
+    >
+      {sending ? 'Registrando…' : 'Aceitar em meu nome'}
+    </Button>
   );
 }
 

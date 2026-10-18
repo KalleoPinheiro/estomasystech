@@ -456,6 +456,13 @@
       "when": 1792303561092,
       "tag": "0064_lgpd-dpo-and-consent-purpose",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1792319271984,
+      "tag": "0065_majority-and-consent-signer",
+      "breakpoints": true
     }
   ]
 }

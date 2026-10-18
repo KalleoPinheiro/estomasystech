@@ -1,7 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CreateAccount } from '@/application/auth/create-account';
-import { assertCanGrantGuardianAccess } from '@/application/auth/grant-guardian-access';
+import {
+  assertCanGrantGuardianAccess,
+  MINOR_PATIENT_ACCOUNT_MESSAGE,
+} from '@/application/auth/grant-guardian-access';
 import { sendInvite } from '@/application/auth/send-invite';
 import { visibleAccounts } from '@/domain/auth/account-management';
 import { USER_ROLES } from '@/domain/auth/user-role';
@@ -87,8 +90,13 @@ export async function POST(request: NextRequest) {
     // Repositórios escopados à empresa-alvo: cadastro de outra empresa não é
     // encontrado — mesma resposta de um id inexistente.
     if (body.role === 'patient' && body.patientId) {
-      if (!(await patients.findById(body.patientId))) {
+      const patient = await patients.findById(body.patientId);
+      if (!patient) {
         throw new ValidationError('Paciente vinculado não encontrado');
+      }
+      // Menor não tem conta própria: quem acessa é o representante (#372).
+      if (patient.isMinorOn()) {
+        throw new ValidationError(MINOR_PATIENT_ACCOUNT_MESSAGE);
       }
     }
     if (body.role === 'partner' && body.partnerId) {

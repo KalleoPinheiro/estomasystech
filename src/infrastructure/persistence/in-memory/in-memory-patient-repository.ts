@@ -31,6 +31,24 @@ export class InMemoryPatientRepository implements PatientRepository {
     );
   }
 
+  async findAdultsAwaitingMajorityReview(
+    guardianIds: string[],
+    birthCutoff: Date,
+  ): Promise<Patient[]> {
+    return [...this.patients.values()]
+      .filter(
+        (p) =>
+          p.guardianId !== null &&
+          guardianIds.includes(p.guardianId) &&
+          p.isActive &&
+          p.birthDate !== null &&
+          p.birthDate.getTime() <= birthCutoff.getTime() &&
+          !p.guardianPortalRevokedAt &&
+          !p.majorityReviewedAt,
+      )
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
+  }
+
   async findByGuardian(guardianId: string): Promise<Patient[]> {
     return [...this.patients.values()].filter(
       (p) => p.guardianId === guardianId,

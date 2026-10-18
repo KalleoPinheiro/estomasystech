@@ -520,6 +520,8 @@ export class DrizzleConsentRecordRepository implements ConsentRecordRepository {
       textHash: record.textHash,
       textVersion: record.textVersion,
       controllerSnapshot: record.controllerSnapshot,
+      signerGuardianId: record.signer?.guardianId ?? null,
+      signerRelationship: record.signer?.relationship ?? null,
       ipAddress: record.ipAddress,
       acceptedAt: record.acceptedAt,
     });

@@ -38,6 +38,18 @@ export const GUARDIAN_RELATIONSHIP_LABELS: Record<
   cuidador: 'Cuidador(a) contratado(a)',
 };
 
+/**
+ * Parentescos que representam legalmente um menor (CC, arts. 1.634 e 1.740):
+ * mãe, pai e tutor. Avô, irmão ou cuidador só representam com tutela, e então
+ * a equipe cadastra como `representante_legal` (#372, ADR-032).
+ */
+export const MINOR_REPRESENTATIVE_RELATIONSHIPS: readonly GuardianRelationship[] =
+  ['mae', 'pai', 'representante_legal'];
+
+export const canRepresentMinor = (
+  relationship: GuardianRelationship,
+): boolean => MINOR_REPRESENTATIVE_RELATIONSHIPS.includes(relationship);
+
 export interface GuardianProps {
   fullName: string;
   relationship: GuardianRelationship;

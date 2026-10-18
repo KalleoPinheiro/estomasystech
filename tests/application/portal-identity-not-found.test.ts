@@ -5,6 +5,7 @@ import {
 } from '@/application/portal/portal-identity';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
+import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import { NotFoundError } from '@/domain/shared/errors';
@@ -24,6 +25,7 @@ describe('Feature: 404 do portal não leva o e-mail de login (issue #219)', () =
       {
         userAccounts,
         patients: {} as PatientRepository,
+        guardians: {} as GuardianRepository,
         auditEvents: {} as AuditEventRepository,
       },
       { subject: email, role: 'patient' },

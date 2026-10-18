@@ -1,4 +1,15 @@
-import { and, asc, eq, gt, ilike, inArray, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { Patient } from '@/domain/patient/patient';
 import type {
   PatientPage,
@@ -24,6 +35,7 @@ const toPatient = (row: PatientRow, cipher: FieldCipher): Patient =>
     referredByPartnerId: row.referredByPartnerId,
     guardianId: row.guardianId,
     guardianPortalRevokedAt: row.guardianPortalRevokedAt,
+    majorityReviewedAt: row.majorityReviewedAt,
     active: row.active,
     createdAt: row.createdAt,
     anonymizedAt: row.anonymizedAt,
@@ -54,6 +66,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       referredByPartnerId: patient.referredByPartnerId,
       guardianId: patient.guardianId,
       guardianPortalRevokedAt: patient.guardianPortalRevokedAt,
+      majorityReviewedAt: patient.majorityReviewedAt,
       active: patient.isActive,
       createdAt: patient.createdAt,
     };
@@ -114,6 +127,32 @@ export class DrizzlePatientRepository implements PatientRepository {
           eq(patients.referredByPartnerId, partnerId),
         ),
       )
+      .limit(MAX_ROWS);
+    return rows.map((row) => toPatient(row, this.cipher));
+  }
+
+  async findAdultsAwaitingMajorityReview(
+    guardianIds: string[],
+    birthCutoff: Date,
+  ): Promise<Patient[]> {
+    if (guardianIds.length === 0) return [];
+    const rows = await this.db
+      .select()
+      .from(patients)
+      .where(
+        withTenant(
+          patients,
+          this.clinicId,
+          and(
+            inArray(patients.guardianId, guardianIds),
+            eq(patients.active, true),
+            lte(patients.birthDate, birthCutoff),
+            isNull(patients.guardianPortalRevokedAt),
+            isNull(patients.majorityReviewedAt),
+          ),
+        ),
+      )
+      .orderBy(asc(patients.fullName), asc(patients.id))
       .limit(MAX_ROWS);
     return rows.map((row) => toPatient(row, this.cipher));
   }

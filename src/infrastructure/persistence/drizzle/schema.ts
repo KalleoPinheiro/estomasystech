@@ -393,6 +393,11 @@ export const patients = pgTable(
       withTimezone: true,
       mode: 'date',
     }),
+    // A clínica manteve o acesso com o responsável após os 18 anos (#372, ADR-032).
+    majorityReviewedAt: timestamp('majority_reviewed_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -753,6 +758,11 @@ export const consentRecords = pgTable(
     // Quem era o controlador e o encarregado quando o paciente leu (o hash é
     // do texto-base, sem os dados da clínica). Nulo em revogações e legados.
     controllerSnapshot: text('controller_snapshot'),
+    // Representante legal que assinou pelo menor no portal (#372, ADR-032).
+    // Sem FK: a evidência fica mesmo que o cadastro do responsável seja
+    // excluído depois. Nulos = o próprio paciente assinou (ou linha legada).
+    signerGuardianId: text('signer_guardian_id'),
+    signerRelationship: text('signer_relationship'),
     ipAddress: text('ip_address'),
     acceptedAt: timestamp('accepted_at', {
       withTimezone: true,
