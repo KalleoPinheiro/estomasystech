@@ -264,6 +264,8 @@ Só depois da etapa 7 aprovada:
 2. R2 → bucket antigo (`estomasystech-backups`) → apague os dumps em claro.
 3. R2 → API Tokens → apague o token que o Coolify usava.
 
+Depois, passe pelo [checklist de segurança](producao.md#54-segurança-do-backup-checklist): apague o token de restauração, recoloque o filtro de IP no token do servidor e tire a chave privada do disco.
+
 ## Se algo der errado
 
 | Sintoma | Causa provável | O que fazer |

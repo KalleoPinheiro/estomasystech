@@ -510,6 +510,30 @@ O CI repete o ciclo inteiro a cada PR com uma chave descartável
 ([`scripts/backup-smoke.sh`](../../scripts/backup-smoke.sh)): grava linha e foto, faz backup, apaga
 tudo, restaura com o app parado e confere.
 
+### 5.4 Segurança do backup (checklist)
+
+Estado conferido na instalação de 2026-10-18. Revise junto com o teste mensal (§ 5.3).
+
+| Item | Regra | Estado |
+| --- | --- | --- |
+| Chave privada `age` | só no cofre (Bitwarden) e num pendrive guardado; **nunca** no servidor nem em disco de máquina de uso diário. Para testar, traga do cofre e apague no fim (`shred -u`) | cofre + pendrive; cópia em claro no WSL do operador a apagar |
+| Token R2 do servidor | **Object Read & Write** só no bucket `estomasystech-backups-age`, com filtro de IP (IPv4 `/32` e IPv6 `/64` do servidor) | escopo ok; filtro de IP a recolocar |
+| Token R2 de restauração | **Object Read only**, só o bucket, TTL de 7 dias; apagar depois do teste | criado em 2026-10-18; apagar ou deixar expirar |
+| Trava de objeto | `prod/` com 30 dias: nem um servidor comprometido apaga os backups recentes | ativa |
+| Backup em claro do Coolify | envio para o S3 desligado, dumps e bucket `estomasystech-backups` apagados, token `coolify-backups` removido (§ 5.1 passo 8) | em curso |
+| Arquivos no servidor | `/etc/estomasystech/*` e `/etc/msmtprc` com `600 root`; scripts com `700 root` | ok |
+| Chave do Resend do servidor | só *Sending access*, nome `estomasystech-backup-alerta`, guardada no cofre | ok |
+| Bitwarden CLI | `bw lock` ao terminar; nunca mande print com `BW_SESSION` | — |
+| Alerta de falha | `OnFailure` por e-mail, testado (§ 5.1 passo 6) | ok |
+
+**Se algo vazar:**
+
+| Vazou | Faça |
+| --- | --- |
+| Token R2 do servidor | R2 → API Tokens → *Roll* (ou apague e crie outro) e regrave `/etc/estomasystech/rclone.conf` ([roteiro, 4.4](backup-passo-a-passo.md#44-rcloneconf-pede-as-chaves-do-token-da-etapa-2)) |
+| Chave do Resend | apague no Resend, crie outra e regrave `/etc/msmtprc` |
+| Chave privada `age` | gere outra (§ 5.1 passo 1), troque `/etc/estomasystech/backup.pub` e rode um backup. Os backups antigos continuam abertos pela chave vazada até saírem do R2 (35 dias): trate como incidente LGPD (art. 48) |
+
 ## 6. Segredos e rotação
 
 Gere com `openssl rand -hex 32` (ou `-hex 24` onde indicado no `.env.example`). Em produção os
