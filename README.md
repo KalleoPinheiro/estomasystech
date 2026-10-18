@@ -56,7 +56,7 @@ as integrações opcionais: [onboarding](docs/engineering/onboarding.md). Deu er
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · TypeScript estrito · PostgreSQL 16 + Drizzle ORM (PGlite nos
+Next.js 16 (App Router) · React 19 · TypeScript estrito · PostgreSQL (18 em produção) + Drizzle ORM (PGlite nos
 testes) · Tailwind CSS 4 + [`@still-void/ui`](docs/still-void-gaps.md) · Zod · Vitest + Playwright ·
 Biome · Docker Compose.
 

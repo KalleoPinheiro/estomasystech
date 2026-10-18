@@ -1331,3 +1331,12 @@ Pedido do Kalléo: o porteiro é o Traefik do Coolify e o Caddy sai do repositó
 - **Pergunta aberta**: Dockerfile ou compose no Coolify (recomendado: Dockerfile + Postgres do Coolify).
 - **Gate**: Actions sem cota; gate local. Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge.
 - **Next step**: criar o app no Coolify. **Blockers**: nenhum.
+
+## OOM do build no Coolify e Postgres 18 na doc (2026-10-18) — ENCERRADO
+
+Pedido do Kalléo (via coordenação): o 1º deploy no Coolify estourou memória em "Running TypeScript"; o `--max-old-space-size` do script `build` não chega ao processo filho do Next.
+- **Feito**: `ENV NODE_OPTIONS=--max-old-space-size=4096` só no estágio `builder` do `Dockerfile`; runbook § 3 com a nota; Postgres 16 → 18 em `producao.md` § 3 e no README (produção usa `postgres:18-alpine`).
+- **Intocado**: compose, CI e testes (continuam em Postgres 16), ADRs e este arquivo (histórico).
+- **Deploy**: pode apagar a variável `NODE_OPTIONS` (Buildtime only) do Coolify após o merge.
+- **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge.
+- **Next step**: nenhum. **Blockers**: nenhum.
