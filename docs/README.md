@@ -98,6 +98,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/031-retencao-em-dias-inteiros-e-fonte-unica.md`](adr/031-retencao-em-dias-inteiros-e-fonte-unica.md) | retenção contada em dias inteiros (CC art. 132), prazos numa fonte só lida pelo aviso, evento de plataforma a cada execução do job |
 | [`adr/032-paciente-menor-no-portal-pelo-representante-legal.md`](adr/032-paciente-menor-no-portal-pelo-representante-legal.md) | menor sem conta própria no portal; mãe, pai ou tutor acessa e assina os termos; aviso à clínica aos 18 anos |
 | [`adr/033-direitos-do-menor-pelo-representante-e-prazo-do-aceite.md`](adr/033-direitos-do-menor-pelo-representante-e-prazo-do-aceite.md) | representante do menor pede cópia e correção e cuida do parceiro no portal (eliminação na clínica); aceite dele vence 90 dias depois dos 18 |
+| [`adr/034-renomeacao-do-repositorio-para-estomasystech.md`](adr/034-renomeacao-do-repositorio-para-estomasystech.md) | repositório renomeado para estomasystech; troca só nome de repo e infra, mantém rótulos de chave, `VITTA_*` e a marca "VittaFlow" |
 | [`adr/025-cpf-no-recibo-e-protecao.md`](adr/025-cpf-no-recibo-e-protecao.md) | CPF do paciente/pagador opcional, validado, cifrado e mascarado; exigido só no recibo do IRPF, com CNPJ do prestador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).

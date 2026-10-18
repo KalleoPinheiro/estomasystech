@@ -1,7 +1,7 @@
 # Portal responsivo em viewport mobile - checks
 
 Profile: light
-Source: [issue #127](https://github.com/KalleoPinheiro/vitta-flow/issues/127)
+Source: [issue #127](https://github.com/KalleoPinheiro/estomasystech/issues/127)
 
 ## Intent
 

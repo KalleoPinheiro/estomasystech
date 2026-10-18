@@ -7,7 +7,7 @@ Sources:
 - [`.design/portal-super-admin.md`](../.design/portal-super-admin.md) - fonte única (não há `.tasks/` do B4). Settle: Decisions "Alcance do super_admin", "Dados obrigatórios na criação", "Clínica do go-live (`legacy-clinic`)"; Shape › Adds (colunas de contato, `uq_clinics_cnpj`, rotas `GET/POST /api/platform/clinics`, `GET/PATCH /api/platform/clinics/[id]`, `GET /api/platform/clinics/[id]/admins`, `PATCH /api/platform/clinics/[id]/admins/[accountId]`, casos de uso `CreateClinic`/`UpdateClinicInfo`/`ManageClinicAdmins`, telas); Shape › Changes (`POST /api/accounts` sem `clinicId`, `PUT /api/settings/clinic-info` com contato); Journey 3–6; Open 1 e 5 como decididos
 - Pedido do dono (@KalleoPinheiro) para este bloco, 2026-09-27 - o gate "cadastro completo antes do convite" foi adiado do B1 para cá e vale também para `POST /api/platform/clinics/[id]/admins`; ação do super_admin numa clínica grava auditoria com o `clinic_id` da clínica-alvo
 - [`.tasks/b1-contencao-super-admin.md`](../.tasks/b1-contencao-super-admin.md) e [`.checks/b1-contencao-super-admin.md`](b1-contencao-super-admin.md) - contrato do convite (critérios 13–19), família `platform`, sessão padrão do E2E
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) - issue mãe (`Refs #214`, não fecha)
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) - issue mãe (`Refs #214`, não fecha)
 - Sem design de tela vinculante: o design só lista as telas; layout e textos decididos aqui (Landing)
 
 ## Out of scope

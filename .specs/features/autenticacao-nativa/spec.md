@@ -1,6 +1,6 @@
 # Autenticação Nativa: convite e reset por e-mail, remoção do login Google — Specification
 
-Issue: [#21](https://github.com/KalleoPinheiro/vitta-flow/issues/21). Sub-issues (ordem cronológica obrigatória): [#32](https://github.com/KalleoPinheiro/vitta-flow/issues/32) (A1 — convite), [#34](https://github.com/KalleoPinheiro/vitta-flow/issues/34) (A2 — reset), [#33](https://github.com/KalleoPinheiro/vitta-flow/issues/33) (A3 — Calendar desacoplado), [#35](https://github.com/KalleoPinheiro/vitta-flow/issues/35) (A4 — remoção + bootstrap). Executa [ADR-004](../../../docs/adr/004-remocao-google-oauth-autenticacao.md). Depende de #20/#29 (RBAC, já mergeada).
+Issue: [#21](https://github.com/KalleoPinheiro/estomasystech/issues/21). Sub-issues (ordem cronológica obrigatória): [#32](https://github.com/KalleoPinheiro/estomasystech/issues/32) (A1 — convite), [#34](https://github.com/KalleoPinheiro/estomasystech/issues/34) (A2 — reset), [#33](https://github.com/KalleoPinheiro/estomasystech/issues/33) (A3 — Calendar desacoplado), [#35](https://github.com/KalleoPinheiro/estomasystech/issues/35) (A4 — remoção + bootstrap). Executa [ADR-004](../../../docs/adr/004-remocao-google-oauth-autenticacao.md). Depende de #20/#29 (RBAC, já mergeada).
 
 ## Problem Statement
 

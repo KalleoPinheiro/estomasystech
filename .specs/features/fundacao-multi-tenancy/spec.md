@@ -1,6 +1,6 @@
 # Fundação de Multi-Tenancy Specification
 
-**Issue:** [#19](https://github.com/KalleoPinheiro/vitta-flow/issues/19) (épico) + sub-issues [#22](https://github.com/KalleoPinheiro/vitta-flow/issues/22) (M1), [#23](https://github.com/KalleoPinheiro/vitta-flow/issues/23) (M2), [#24](https://github.com/KalleoPinheiro/vitta-flow/issues/24) (M3), [#25](https://github.com/KalleoPinheiro/vitta-flow/issues/25) (M4), [#26](https://github.com/KalleoPinheiro/vitta-flow/issues/26) (M5), [#27](https://github.com/KalleoPinheiro/vitta-flow/issues/27) (M6)
+**Issue:** [#19](https://github.com/KalleoPinheiro/estomasystech/issues/19) (épico) + sub-issues [#22](https://github.com/KalleoPinheiro/estomasystech/issues/22) (M1), [#23](https://github.com/KalleoPinheiro/estomasystech/issues/23) (M2), [#24](https://github.com/KalleoPinheiro/estomasystech/issues/24) (M3), [#25](https://github.com/KalleoPinheiro/estomasystech/issues/25) (M4), [#26](https://github.com/KalleoPinheiro/estomasystech/issues/26) (M5), [#27](https://github.com/KalleoPinheiro/estomasystech/issues/27) (M6)
 **ADRs:** [ADR-001](../../../docs/adr/001-multi-tenancy.md) (decisão de arquitetura), [ADR-003](../../../docs/adr/003-modelo-de-papeis-multi-empresa.md) (papel de sistema, próxima issue)
 
 ## Problem Statement

@@ -2,7 +2,7 @@
 
 Sources:
 
-- [KalleoPinheiro/vitta-flow#266](https://github.com/KalleoPinheiro/vitta-flow/issues/266) — a issue; aponta para a task
+- [KalleoPinheiro/estomasystech#266](https://github.com/KalleoPinheiro/estomasystech/issues/266) — a issue; aponta para a task
 - `.tasks/c3-tela-canal-configuracoes.md` — critérios 1–12, Decided (contrato), Unresolved 1–2 (defaults adotados)
 - `.design/canal-por-clinica.md` — Decisions: Quem configura o canal, Teste do canal, Segredo, `last_error`, Auditoria; Open 1 (destinatário do teste) e 3 (rate limit)
 

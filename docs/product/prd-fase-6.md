@@ -54,8 +54,8 @@ todo acesso cross-empresa auditado.
 - Acesso cross-empresa do papel de sistema gera evento de auditoria com a empresa acessada.
 - Migração faz backfill de 100% das linhas existentes sem linha órfã.
 
-**Execução:** spec [#19](https://github.com/KalleoPinheiro/vitta-flow/issues/19); tickets
-[#22–#27](https://github.com/KalleoPinheiro/vitta-flow/issues/22) (M1–M6).
+**Execução:** spec [#19](https://github.com/KalleoPinheiro/estomasystech/issues/19); tickets
+[#22–#27](https://github.com/KalleoPinheiro/estomasystech/issues/22) (M1–M6).
 
 ## P6.2 — Modelo de papéis (RBAC)
 
@@ -81,8 +81,8 @@ vira admin".
 - Profissional só acessa paciente com quem tem vínculo (cadastro, agendamento ou nota de evolução);
   transferência de caso entre profissionais preserva o histórico de acesso de cada um.
 
-**Execução:** spec [#20](https://github.com/KalleoPinheiro/vitta-flow/issues/20); tickets
-[#28–#31](https://github.com/KalleoPinheiro/vitta-flow/issues/28) (R1–R4).
+**Execução:** spec [#20](https://github.com/KalleoPinheiro/estomasystech/issues/20); tickets
+[#28–#31](https://github.com/KalleoPinheiro/estomasystech/issues/28) (R1–R4).
 
 ## P6.3 — Autenticação nativa (remoção do login via Google)
 
@@ -106,8 +106,8 @@ bootstrap dedicado. Realiza também o "sunset da senha master" que a Fase 1 já 
 - Sincronização com Google Calendar continua funcionando, através de um fluxo de conexão
   independente do login.
 
-**Execução:** spec [#21](https://github.com/KalleoPinheiro/vitta-flow/issues/21); tickets
-[#32–#35](https://github.com/KalleoPinheiro/vitta-flow/issues/32) (A1–A4).
+**Execução:** spec [#21](https://github.com/KalleoPinheiro/estomasystech/issues/21); tickets
+[#32–#35](https://github.com/KalleoPinheiro/estomasystech/issues/32) (A1–A4).
 
 ---
 

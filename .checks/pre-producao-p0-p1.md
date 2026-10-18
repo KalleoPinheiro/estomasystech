@@ -5,19 +5,19 @@ agente só; recuperação por releitura deste arquivo + diff após compactação
 
 Sources:
 
-- [#187](https://github.com/KalleoPinheiro/vitta-flow/issues/187) - P0 constraint anti-double-booking sem `clinic_id`
-- [#191](https://github.com/KalleoPinheiro/vitta-flow/issues/191) - P0 compose/Dockerfile inseguros
-- [#192](https://github.com/KalleoPinheiro/vitta-flow/issues/192) - P1 pagamento em dobro + lost update de estoque
-- [#193](https://github.com/KalleoPinheiro/vitta-flow/issues/193) - P1 `getDb` cacheia Promise rejeitada
-- [#197](https://github.com/KalleoPinheiro/vitta-flow/issues/197) - P1 seletores de paciente limitados a 100
-- [#198](https://github.com/KalleoPinheiro/vitta-flow/issues/198) - P1 abas do prontuário se sobrepõem no celular
-- [#199](https://github.com/KalleoPinheiro/vitta-flow/issues/199) - P1 navegação/dashboard ignoram o papel
-- [#200](https://github.com/KalleoPinheiro/vitta-flow/issues/200) - P1 autoria forjável no plano de cuidados
-- [#201](https://github.com/KalleoPinheiro/vitta-flow/issues/201) - P1 rate limit só por IP
-- [#202](https://github.com/KalleoPinheiro/vitta-flow/issues/202) - P1 logs com dado pessoal (DrizzleQueryError)
-- [#203](https://github.com/KalleoPinheiro/vitta-flow/issues/203) - P1 CI sem build de produção nem Docker
-- [#205](https://github.com/KalleoPinheiro/vitta-flow/issues/205) - P1 fuso horário implícito (fatia mínima)
-- Mapa pai: [#183](https://github.com/KalleoPinheiro/vitta-flow/issues/183)
+- [#187](https://github.com/KalleoPinheiro/estomasystech/issues/187) - P0 constraint anti-double-booking sem `clinic_id`
+- [#191](https://github.com/KalleoPinheiro/estomasystech/issues/191) - P0 compose/Dockerfile inseguros
+- [#192](https://github.com/KalleoPinheiro/estomasystech/issues/192) - P1 pagamento em dobro + lost update de estoque
+- [#193](https://github.com/KalleoPinheiro/estomasystech/issues/193) - P1 `getDb` cacheia Promise rejeitada
+- [#197](https://github.com/KalleoPinheiro/estomasystech/issues/197) - P1 seletores de paciente limitados a 100
+- [#198](https://github.com/KalleoPinheiro/estomasystech/issues/198) - P1 abas do prontuário se sobrepõem no celular
+- [#199](https://github.com/KalleoPinheiro/estomasystech/issues/199) - P1 navegação/dashboard ignoram o papel
+- [#200](https://github.com/KalleoPinheiro/estomasystech/issues/200) - P1 autoria forjável no plano de cuidados
+- [#201](https://github.com/KalleoPinheiro/estomasystech/issues/201) - P1 rate limit só por IP
+- [#202](https://github.com/KalleoPinheiro/estomasystech/issues/202) - P1 logs com dado pessoal (DrizzleQueryError)
+- [#203](https://github.com/KalleoPinheiro/estomasystech/issues/203) - P1 CI sem build de produção nem Docker
+- [#205](https://github.com/KalleoPinheiro/estomasystech/issues/205) - P1 fuso horário implícito (fatia mínima)
+- Mapa pai: [#183](https://github.com/KalleoPinheiro/estomasystech/issues/183)
 - Sem design de tela vinculante: #197/#198/#199 ajustam telas existentes
 
 ## Out of scope

@@ -35,12 +35,12 @@ ela o bootstrap devolve o link de convite em `inviteUrl`. Domínio: [acesso](../
 
 Qual chave sai: o e-mail de uma clínica sai **só** pela chave dela (`clinic_channels`, lida no primeiro
 envio do request); sem canal, não sai. O escopo de sistema usa `RESEND_API_KEY`/`EMAIL_FROM`.
-Desde a C2 ([#265](https://github.com/KalleoPinheiro/vitta-flow/issues/265)), o job de lembretes e o
+Desde a C2 ([#265](https://github.com/KalleoPinheiro/estomasystech/issues/265)), o job de lembretes e o
 "esqueci a senha" também saem pelo canal da clínica de cada envio.
 
 Cadastro e rotação: a da plataforma, troque a variável e reinicie o app. A da clínica, o
 `company_admin` informa remetente e chave em `/configuracoes` → **Canal de e-mail** (C3,
-[#266](https://github.com/KalleoPinheiro/vitta-flow/issues/266)), usa **Enviar e-mail de teste** para
+[#266](https://github.com/KalleoPinheiro/estomasystech/issues/266)), usa **Enviar e-mail de teste** para
 conferir chave e domínio (vai para o e-mail dele; o erro do provedor aparece na tela) e salva uma chave
 nova por cima para rotacionar. A chave não é lida de volta — a tela mostra só os 4 últimos caracteres.
 

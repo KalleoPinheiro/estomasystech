@@ -1,4 +1,4 @@
-# Configuração do GitLeaks para o vitta-flow.
+# Configuração do GitLeaks para o estomasystech.
 #
 # Contexto: o scan de 2026-08-23 (GitGuard) reportou 7 findings HIGH de
 # `generic-api-key`. Todos são fixtures das suítes de teste — nenhuma credencial real

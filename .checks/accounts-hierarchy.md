@@ -4,7 +4,7 @@ Profile: `standard` · handoff: `on` (verificação independente pela sessão or
 
 Sources:
 
-- [Issue #184](https://github.com/KalleoPinheiro/vitta-flow/issues/184) - critérios de aceite 1–6, "Relacionados" (fora de escopo)
+- [Issue #184](https://github.com/KalleoPinheiro/estomasystech/issues/184) - critérios de aceite 1–6, "Relacionados" (fora de escopo)
 - [`docs/domains/acesso/README.md`](../docs/domains/acesso/README.md), [ADR-001](../docs/adr/001-multi-tenancy.md), [ADR-002](../docs/adr/002-autorizacao-em-duas-camadas.md)
 - Matriz `PROVISIONING_MATRIX` em `src/domain/auth/role-hierarchy.ts` (reusada, não alterada)
 

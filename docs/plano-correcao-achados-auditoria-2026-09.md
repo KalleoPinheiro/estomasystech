@@ -43,11 +43,11 @@ last_reviewed: 2026-09-23
 
 | Fase | Nome | Issues | Status |
 |------|------|--------|--------|
-| A | Padrões estruturais (causa-raiz) | [#57](https://github.com/KalleoPinheiro/vitta-flow/issues/57)–[#60](https://github.com/KalleoPinheiro/vitta-flow/issues/60) | Backlog |
-| B | Clínico/legal crítico | [#61](https://github.com/KalleoPinheiro/vitta-flow/issues/61)–[#68](https://github.com/KalleoPinheiro/vitta-flow/issues/68) | Backlog |
-| C | LGPD / segurança de dado | [#69](https://github.com/KalleoPinheiro/vitta-flow/issues/69)–[#72](https://github.com/KalleoPinheiro/vitta-flow/issues/72) | Backlog |
-| D | Precisão financeira | [#73](https://github.com/KalleoPinheiro/vitta-flow/issues/73) | Backlog |
-| E | Infra / escala | [#74](https://github.com/KalleoPinheiro/vitta-flow/issues/74)–[#77](https://github.com/KalleoPinheiro/vitta-flow/issues/77) | Backlog |
+| A | Padrões estruturais (causa-raiz) | [#57](https://github.com/KalleoPinheiro/estomasystech/issues/57)–[#60](https://github.com/KalleoPinheiro/estomasystech/issues/60) | Backlog |
+| B | Clínico/legal crítico | [#61](https://github.com/KalleoPinheiro/estomasystech/issues/61)–[#68](https://github.com/KalleoPinheiro/estomasystech/issues/68) | Backlog |
+| C | LGPD / segurança de dado | [#69](https://github.com/KalleoPinheiro/estomasystech/issues/69)–[#72](https://github.com/KalleoPinheiro/estomasystech/issues/72) | Backlog |
+| D | Precisão financeira | [#73](https://github.com/KalleoPinheiro/estomasystech/issues/73) | Backlog |
+| E | Infra / escala | [#74](https://github.com/KalleoPinheiro/estomasystech/issues/74)–[#77](https://github.com/KalleoPinheiro/estomasystech/issues/77) | Backlog |
 
 ---
 
@@ -55,10 +55,10 @@ last_reviewed: 2026-09-23
 
 | Issue | Item | Origem | Label |
 |------|------|--------|-------|
-| [#57](https://github.com/KalleoPinheiro/vitta-flow/issues/57) | Contrato de erro de 3 estados do `useApiQuery` em todas as páginas | `auditoria-ux-2026-08.md` (padrão 3); `LESSONS.md` L-008 | needs-triage |
-| [#58](https://github.com/KalleoPinheiro/vitta-flow/issues/58) | Shell responsivo mobile (sidebar off-canvas) | `auditoria-ux-2026-08.md` (padrão 1); `auditoria-design-system-2026-08.md` gap #1 | needs-triage |
-| [#59](https://github.com/KalleoPinheiro/vitta-flow/issues/59) | `AlertDialog` em toda ação destrutiva/irreversível | `auditoria-ux-2026-08.md` (padrão 2); adoção pendente do `@still-void/ui` | needs-triage |
-| [#60](https://github.com/KalleoPinheiro/vitta-flow/issues/60) | Feedback de sucesso (toast/inline) após toda escrita | `auditoria-ux-2026-08.md` (padrão 4) | needs-triage |
+| [#57](https://github.com/KalleoPinheiro/estomasystech/issues/57) | Contrato de erro de 3 estados do `useApiQuery` em todas as páginas | `auditoria-ux-2026-08.md` (padrão 3); `LESSONS.md` L-008 | needs-triage |
+| [#58](https://github.com/KalleoPinheiro/estomasystech/issues/58) | Shell responsivo mobile (sidebar off-canvas) | `auditoria-ux-2026-08.md` (padrão 1); `auditoria-design-system-2026-08.md` gap #1 | needs-triage |
+| [#59](https://github.com/KalleoPinheiro/estomasystech/issues/59) | `AlertDialog` em toda ação destrutiva/irreversível | `auditoria-ux-2026-08.md` (padrão 2); adoção pendente do `@still-void/ui` | needs-triage |
+| [#60](https://github.com/KalleoPinheiro/estomasystech/issues/60) | Feedback de sucesso (toast/inline) após toda escrita | `auditoria-ux-2026-08.md` (padrão 4) | needs-triage |
 
 **Por que primeiro:** a auditoria recomenda explicitamente resolver esses 4 padrões antes de triar
 os achados P1–P3 pontuais por tela — a maioria decorre diretamente daqui.
@@ -67,38 +67,38 @@ os achados P1–P3 pontuais por tela — a maioria decorre diretamente daqui.
 
 | Issue | Item | Origem | Label |
 |------|------|--------|-------|
-| [#61](https://github.com/KalleoPinheiro/vitta-flow/issues/61) | UI de configuração de dados da clínica (nome, CNPJ, responsável técnico) | `auditoria-ux-2026-08.md` §Configurações (P0-10) | ready-for-agent |
-| [#62](https://github.com/KalleoPinheiro/vitta-flow/issues/62) | Documentos clínicos emitidos sem responsável técnico/CNPJ | idem, §Documentos — depende de #61 | ready-for-agent |
-| [#63](https://github.com/KalleoPinheiro/vitta-flow/issues/63) | Atestado imprime "compareceu" para consulta cancelada/falta | §Documentos | ready-for-agent |
-| [#64](https://github.com/KalleoPinheiro/vitta-flow/issues/64) | Seletor de profissional permite assinar nota em nome de outrem | §Prontuário (P1-R12) | ready-for-agent |
-| [#65](https://github.com/KalleoPinheiro/vitta-flow/issues/65) | Prontuário: erro de API renderiza como "sem dado clínico" | §Prontuário (P0-R1) — depende de #57 | needs-triage |
-| [#66](https://github.com/KalleoPinheiro/vitta-flow/issues/66) | Prontuário: trocar de aba descarta SOAP/anamnese não salvos | §Prontuário (P0-R2) | ready-for-agent |
-| [#67](https://github.com/KalleoPinheiro/vitta-flow/issues/67) | Prontuário: complicações de estomia gravadas nunca exibidas | §Prontuário (P0-R3) | ready-for-agent |
-| [#68](https://github.com/KalleoPinheiro/vitta-flow/issues/68) | Login barra paciente/parceiro com subtítulo "restrito à equipe" | §Login (P0) | ready-for-agent |
+| [#61](https://github.com/KalleoPinheiro/estomasystech/issues/61) | UI de configuração de dados da clínica (nome, CNPJ, responsável técnico) | `auditoria-ux-2026-08.md` §Configurações (P0-10) | ready-for-agent |
+| [#62](https://github.com/KalleoPinheiro/estomasystech/issues/62) | Documentos clínicos emitidos sem responsável técnico/CNPJ | idem, §Documentos — depende de #61 | ready-for-agent |
+| [#63](https://github.com/KalleoPinheiro/estomasystech/issues/63) | Atestado imprime "compareceu" para consulta cancelada/falta | §Documentos | ready-for-agent |
+| [#64](https://github.com/KalleoPinheiro/estomasystech/issues/64) | Seletor de profissional permite assinar nota em nome de outrem | §Prontuário (P1-R12) | ready-for-agent |
+| [#65](https://github.com/KalleoPinheiro/estomasystech/issues/65) | Prontuário: erro de API renderiza como "sem dado clínico" | §Prontuário (P0-R1) — depende de #57 | needs-triage |
+| [#66](https://github.com/KalleoPinheiro/estomasystech/issues/66) | Prontuário: trocar de aba descarta SOAP/anamnese não salvos | §Prontuário (P0-R2) | ready-for-agent |
+| [#67](https://github.com/KalleoPinheiro/estomasystech/issues/67) | Prontuário: complicações de estomia gravadas nunca exibidas | §Prontuário (P0-R3) | ready-for-agent |
+| [#68](https://github.com/KalleoPinheiro/estomasystech/issues/68) | Login barra paciente/parceiro com subtítulo "restrito à equipe" | §Login (P0) | ready-for-agent |
 
 ## Fase C — LGPD / segurança de dado
 
 | Issue | Item | Origem | Label |
 |------|------|--------|-------|
-| [#69](https://github.com/KalleoPinheiro/vitta-flow/issues/69) | Portal vaza notas clínicas internas | `auditoria-ux-2026-08.md` §Portal | ready-for-agent |
-| [#70](https://github.com/KalleoPinheiro/vitta-flow/issues/70) | Consentimento LGPD no portal ilegível, sem versão, sem revogação | §Portal — art. 8º LGPD | needs-triage |
-| [#71](https://github.com/KalleoPinheiro/vitta-flow/issues/71) | Trilha de auditoria: buracos de cobertura (login, criar paciente, config) | §Admin; `analise-seguranca-escalabilidade.md` §1.7 — art. 11 LGPD | needs-triage |
-| [#72](https://github.com/KalleoPinheiro/vitta-flow/issues/72) | Criptografia em repouso para campos clínicos sensíveis | `analise-seguranca-escalabilidade.md` §1.7 | needs-triage |
+| [#69](https://github.com/KalleoPinheiro/estomasystech/issues/69) | Portal vaza notas clínicas internas | `auditoria-ux-2026-08.md` §Portal | ready-for-agent |
+| [#70](https://github.com/KalleoPinheiro/estomasystech/issues/70) | Consentimento LGPD no portal ilegível, sem versão, sem revogação | §Portal — art. 8º LGPD | needs-triage |
+| [#71](https://github.com/KalleoPinheiro/estomasystech/issues/71) | Trilha de auditoria: buracos de cobertura (login, criar paciente, config) | §Admin; `analise-seguranca-escalabilidade.md` §1.7 — art. 11 LGPD | needs-triage |
+| [#72](https://github.com/KalleoPinheiro/estomasystech/issues/72) | Criptografia em repouso para campos clínicos sensíveis | `analise-seguranca-escalabilidade.md` §1.7 | needs-triage |
 
 ## Fase D — Precisão financeira
 
 | Issue | Item | Origem | Label |
 |------|------|--------|-------|
-| [#73](https://github.com/KalleoPinheiro/vitta-flow/issues/73) | KPIs de faturamento somados no cliente sobre página filtrada | `auditoria-ux-2026-08.md` §Financeiro | ready-for-agent |
+| [#73](https://github.com/KalleoPinheiro/estomasystech/issues/73) | KPIs de faturamento somados no cliente sobre página filtrada | `auditoria-ux-2026-08.md` §Financeiro | ready-for-agent |
 
 ## Fase E — Infra / escala
 
 | Issue | Item | Origem | Label |
 |------|------|--------|-------|
-| [#74](https://github.com/KalleoPinheiro/vitta-flow/issues/74) | `google_accounts` sem `clinic_id` — última conexão vence para todas as empresas | `.specs/STATE.md`, handoff `autenticacao-nativa` | needs-triage |
-| [#75](https://github.com/KalleoPinheiro/vitta-flow/issues/75) | Paginação por cursor nas listagens (API + UI) | `analise-seguranca-escalabilidade.md` §2.4; `plano-evolucao-faseado.md` Fase 6 | needs-triage |
-| [#76](https://github.com/KalleoPinheiro/vitta-flow/issues/76) | CSP estrita com nonce | `analise-seguranca-escalabilidade.md` §1.5/1.7 | ready-for-agent |
-| [#77](https://github.com/KalleoPinheiro/vitta-flow/issues/77) | Rate limit distribuído (Redis) para múltiplas réplicas | ADR-002 §Consequências; `analise-seguranca-escalabilidade.md` §1.7/2.4 | needs-triage |
+| [#74](https://github.com/KalleoPinheiro/estomasystech/issues/74) | `google_accounts` sem `clinic_id` — última conexão vence para todas as empresas | `.specs/STATE.md`, handoff `autenticacao-nativa` | needs-triage |
+| [#75](https://github.com/KalleoPinheiro/estomasystech/issues/75) | Paginação por cursor nas listagens (API + UI) | `analise-seguranca-escalabilidade.md` §2.4; `plano-evolucao-faseado.md` Fase 6 | needs-triage |
+| [#76](https://github.com/KalleoPinheiro/estomasystech/issues/76) | CSP estrita com nonce | `analise-seguranca-escalabilidade.md` §1.5/1.7 | ready-for-agent |
+| [#77](https://github.com/KalleoPinheiro/estomasystech/issues/77) | Rate limit distribuído (Redis) para múltiplas réplicas | ADR-002 §Consequências; `analise-seguranca-escalabilidade.md` §1.7/2.4 | needs-triage |
 
 ---
 

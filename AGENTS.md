@@ -95,7 +95,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 | Skill / fluxo | Guia |
 | --- | --- |
-| Issues (GitHub, `KalleoPinheiro/vitta-flow`) | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
+| Issues (GitHub, `KalleoPinheiro/estomasystech`) | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
 | Triagem (labels canônicos) | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | Glossário e ADRs | [`docs/agents/domain.md`](docs/agents/domain.md) |
 | Planejamento (PRD vs `.specs/`, dois logs de decisão) | [`docs/agents/planning.md`](docs/agents/planning.md) |

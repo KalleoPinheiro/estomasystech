@@ -1304,3 +1304,11 @@ Pedido do Kalléo ("revise e atualize as documentações"): conferir os docs con
 - **Fora do repositório**: `fila/issues.md` do projeto reescrito (única issue aberta: #376).
 - **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build). Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge (sem `gh`).
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Renomeação do repositório para estomasystech (2026-10-18) — ENCERRADO
+
+Pedido do Kalléo: o repositório virou `KalleoPinheiro/estomasystech` e as referências ao nome antigo devem acompanhar (a VPS/Coolify aponta para o repo novo). Decisão e lista do que ficou: [ADR-034](../../docs/adr/034-renomeacao-do-repositorio-para-estomasystech.md).
+- **Trocado**: URLs do repositório (docs, specs, design, checks, tasks, AGENTS.md), `name` do pacote, `/opt/estomasystech` no runbook, ponte `.cursor/rules/00-estomasystech.mdc`. Sem workflow, Dockerfile ou compose com o nome antigo (nada a mudar).
+- **Mantido de propósito**: rótulos de chave criptográfica, ADRs aceitos e arquivo histórico, `vitta` (banco/usuário), `VITTA_*`, `vitta_session`, marca "VittaFlow".
+- **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge (sem `gh`).
+- **Next step**: Kalléo decide se a marca "VittaFlow" muda. **Blockers**: nenhum.

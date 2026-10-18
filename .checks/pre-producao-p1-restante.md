@@ -4,11 +4,11 @@ Profile: `light` (AGENTS.md não declara `tlc-implement`) · handoff: `on`, lote
 
 Sources:
 
-- [#194](https://github.com/KalleoPinheiro/vitta-flow/issues/194) - sessão não revogável; decisão do dono (2026-09-26): **`session_version`** em `user_accounts`, incrementado em logout, troca/reset de senha, mudança de papel e desativação, comparado no check de 60 s do proxy, vale para portal, cache por `(subject, clinicId)`, **sem** renovação deslizante
-- [#195](https://github.com/KalleoPinheiro/vitta-flow/issues/195) - cifra acoplada ao `AUTH_SECRET`; decisão: **chave dedicada + tudo** — `DATA_ENCRYPTION_KEY` versionada, leitura do legado, cifra de anamnese e de todos os textos clínicos livres, migração idempotente executável em produção, SSE obrigatório no S3
-- [#196](https://github.com/KalleoPinheiro/vitta-flow/issues/196) - portal por e-mail mutável; decisão: **FK, login não muda** — `user_accounts.patient_id/partner_id`, portal resolve pela FK, trocar o e-mail do cadastro não altera a conta, migração vincula pelo e-mail atual e lista órfãs
-- [#206](https://github.com/KalleoPinheiro/vitta-flow/issues/206) - runbook; decisão: **Vercel + Supabase**, deixando preparado também **VPS + docker compose**
-- Mapa pai: [#183](https://github.com/KalleoPinheiro/vitta-flow/issues/183) · sem design de tela vinculante
+- [#194](https://github.com/KalleoPinheiro/estomasystech/issues/194) - sessão não revogável; decisão do dono (2026-09-26): **`session_version`** em `user_accounts`, incrementado em logout, troca/reset de senha, mudança de papel e desativação, comparado no check de 60 s do proxy, vale para portal, cache por `(subject, clinicId)`, **sem** renovação deslizante
+- [#195](https://github.com/KalleoPinheiro/estomasystech/issues/195) - cifra acoplada ao `AUTH_SECRET`; decisão: **chave dedicada + tudo** — `DATA_ENCRYPTION_KEY` versionada, leitura do legado, cifra de anamnese e de todos os textos clínicos livres, migração idempotente executável em produção, SSE obrigatório no S3
+- [#196](https://github.com/KalleoPinheiro/estomasystech/issues/196) - portal por e-mail mutável; decisão: **FK, login não muda** — `user_accounts.patient_id/partner_id`, portal resolve pela FK, trocar o e-mail do cadastro não altera a conta, migração vincula pelo e-mail atual e lista órfãs
+- [#206](https://github.com/KalleoPinheiro/estomasystech/issues/206) - runbook; decisão: **Vercel + Supabase**, deixando preparado também **VPS + docker compose**
+- Mapa pai: [#183](https://github.com/KalleoPinheiro/estomasystech/issues/183) · sem design de tela vinculante
 
 ## Out of scope
 

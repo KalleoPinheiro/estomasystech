@@ -9,7 +9,7 @@ describe('Feature: Storage local de fotos (disco)', () => {
   let storage: LocalPhotoStorage;
 
   beforeEach(async () => {
-    tmpDir = await mkdtemp(path.join(tmpdir(), 'vitta-flow-photos-'));
+    tmpDir = await mkdtemp(path.join(tmpdir(), 'estomasystech-photos-'));
     storage = new LocalPhotoStorage(tmpDir);
   });
 

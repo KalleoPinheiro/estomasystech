@@ -12,7 +12,7 @@ last_reviewed: 2026-10-12
 
 Todo erro inesperado que passa por `logError` (e todo erro não tratado que o Next entrega ao
 `onRequestError`) vira um evento no GlitchTip da própria VPS, com o `requestId` para achar as
-linhas do mesmo request no log. Decisão do dono na [#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212);
+linhas do mesmo request no log. Decisão do dono na [#212](https://github.com/KalleoPinheiro/estomasystech/issues/212);
 desenho em [ADR-014](../../adr/014-observabilidade-sem-pii.md).
 
 | Campo | Valor |
@@ -47,7 +47,7 @@ Lista do que **pode** sair (`buildEvent`), não do que não pode:
 
 Nunca: `request` (URL, cabeçalhos, cookies, corpo), `user`, `breadcrumbs`, `extra`, `contexts`,
 `server_name`. O `beforeSend` (`scrubEvent`) apaga esses campos e limpa o texto de novo, se
-alguma versão do SDK os preencher. O erro do navegador **não é capturado por ora** (decisão do dono, [#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313)).
+alguma versão do SDK os preencher. O erro do navegador **não é capturado por ora** (decisão do dono, [#313](https://github.com/KalleoPinheiro/estomasystech/issues/313)).
 
 ## Modos de falha
 

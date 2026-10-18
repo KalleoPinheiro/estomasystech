@@ -8,7 +8,7 @@ status: active
 
 ## Problem Statement
 
-A [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294) (PR #302, [ADR-013](../../../docs/adr/013-retencao-por-anonimizacao.md))
+A [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294) (PR #302, [ADR-013](../../../docs/adr/013-retencao-por-anonimizacao.md))
 deixou seis perguntas abertas, que o dono do produto decidiu em 2026-10-12 (AD-032). Esta spec cobre
 os cinco itens que exigem código; "cadastro do profissional: guardar" e "backups: 30 dias" não
 mudam código e só entram na doc.

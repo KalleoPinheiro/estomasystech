@@ -4,9 +4,9 @@ Profile: `light` (AGENTS.md não declara `tlc-implement`) · handoff: `on`, lote
 
 Sources:
 
-- [#211](https://github.com/KalleoPinheiro/vitta-flow/issues/211) (corpo de 2026-09-27) - problema e os três critérios de aceite: migração troca a constraint global por índice único `(clinic_id, email)`; criação/edição tratam a violação com "Já existe parceiro com este e-mail" (nunca 500, nunca citando outra empresa); teste com duas empresas (ambas 200) e duplicado na mesma (409). `Closes #211`
+- [#211](https://github.com/KalleoPinheiro/estomasystech/issues/211) (corpo de 2026-09-27) - problema e os três critérios de aceite: migração troca a constraint global por índice único `(clinic_id, email)`; criação/edição tratam a violação com "Já existe parceiro com este e-mail" (nunca 500, nunca citando outra empresa); teste com duas empresas (ambas 200) e duplicado na mesma (409). `Closes #211`
 - [`.design/portal-super-admin.md`](../.design/portal-super-admin.md) § Decisions, linha "Parceiro por empresa" - índice `(clinic_id, email)` + mensagem literal; reversible
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) - issue mãe (`Refs #214`); item B7 da checklist marcado depois do merge
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) - issue mãe (`Refs #214`); item B7 da checklist marcado depois do merge
 - Sem tela nova: a UI de `/parceiros` já exibe o `error` da API (`ErrorAlert`)
 
 ## Out of scope

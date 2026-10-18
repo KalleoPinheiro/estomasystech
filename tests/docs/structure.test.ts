@@ -140,7 +140,7 @@ describe('S1 — AGENTS.md como roteador L0', () => {
 
   it.each([
     '.github/copilot-instructions.md',
-    '.cursor/rules/00-vitta-flow.mdc',
+    '.cursor/rules/00-estomasystech.mdc',
   ])('pontes apontam para AGENTS.md (%s)', (file) => {
     const text = read(file);
     expect(lineCount(text)).toBeLessThanOrEqual(15);

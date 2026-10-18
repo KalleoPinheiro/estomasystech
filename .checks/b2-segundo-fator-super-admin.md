@@ -6,7 +6,7 @@ Sources:
 
 - [`.design/portal-super-admin.md`](../.design/portal-super-admin.md) - bloco B2: Decisions "Segundo fator", "Login com segundo fator", "Códigos de recuperação"; Shape › Adds (`user_mfa`, `mfa_recovery_codes`, `src/domain/auth/totp.ts`, rotas `/api/auth/mfa/{enroll,verify}`, token pendente) e Changes (`POST /api/auth/login`); Journey 1, 2, 11; Open 3 (chave em texto + `otpauth://`, sem QR)
 - [`.tasks/b1-contencao-super-admin.md`](../.tasks/b1-contencao-super-admin.md) - o que o B1 já entregou (família `platform`, `/plataforma`, E2E com `company_admin`)
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) - issue mãe (`Refs #214`)
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) - issue mãe (`Refs #214`)
 - Conversa com @KalleoPinheiro, 2026-09-27 - código de recuperação leva a **recadastro obrigatório** antes da sessão (recomendação aceita)
 - Sem design de tela vinculante: textos e arranjo das etapas decididos aqui (Landing)
 
