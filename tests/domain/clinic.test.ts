@@ -333,3 +333,55 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
     expect(clinic.statusChangedAt).toBeNull();
   });
 });
+
+describe('Feature: CNPJ antigo marcado para correção (#355, ACE-RN-57)', () => {
+  const INVALID = '12.345.678/0001-96';
+  const at = new Date('2026-10-18T10:00:00.000Z');
+  const legacy = () =>
+    Clinic.restore({
+      id: 'c1',
+      name: 'Antiga',
+      createdBy: 'system',
+      createdAt: at,
+      cnpj: INVALID,
+    });
+
+  it('Dado CNPJ gravado, Quando marcar, Então o número fica intacto e a marca é idempotente', () => {
+    const flagged = legacy().flagCnpjForReview(at);
+
+    expect(flagged.cnpj).toBe(INVALID);
+    expect(flagged.cnpjReviewSince).toEqual(at);
+    expect(flagged.flagCnpjForReview(new Date())).toBe(flagged);
+  });
+
+  it('Dado clínica sem CNPJ, Quando marcar, Então nada muda', () => {
+    const bare = Clinic.restore({
+      id: 'c2',
+      name: 'Sem CNPJ',
+      createdBy: 'system',
+      createdAt: at,
+    });
+
+    expect(bare.flagCnpjForReview(at)).toBe(bare);
+    expect(bare.cnpjReviewSince).toBeNull();
+  });
+
+  it('Dado marca, Quando editar outro campo, Então a marca permanece', () => {
+    const edited = legacy()
+      .flagCnpjForReview(at)
+      .updateInfo({ city: 'Recife' });
+
+    expect(edited.cnpjReviewSince).toEqual(at);
+  });
+
+  it('Dado marca, Quando reenviar o CNPJ inválido, Então recusa; com CNPJ válido a marca cai', () => {
+    const flagged = legacy().flagCnpjForReview(at);
+
+    expect(() => flagged.updateInfo({ cnpj: INVALID })).toThrow(
+      'dígito verificador',
+    );
+    const fixed = flagged.updateInfo({ cnpj: '12.345.678/0001-95' });
+    expect(fixed.cnpj).toBe('12.345.678/0001-95');
+    expect(fixed.cnpjReviewSince).toBeNull();
+  });
+});

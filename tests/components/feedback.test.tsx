@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  CnpjReviewAlert,
   EmptyState,
   ErrorAlert,
   LoadingIndicator,
@@ -116,6 +117,18 @@ describe('Feature: Componentes de feedback', () => {
 
       const link = screen.getByRole('link', { name: 'Ver agenda' });
       expect(link).toHaveAttribute('href', '/agenda');
+    });
+  });
+
+  describe('Cenário: CNPJ antigo marcado para correção (#355)', () => {
+    it('Dada a marca, Quando renderizar, Então avisa; sem marca não renderiza nada', () => {
+      const { container, rerender } = render(
+        <CnpjReviewAlert since="2026-10-18T12:00:00.000Z" />,
+      );
+      expect(container).toHaveTextContent('dígito verificador');
+
+      rerender(<CnpjReviewAlert since={null} />);
+      expect(container).toBeEmptyDOMElement();
     });
   });
 });

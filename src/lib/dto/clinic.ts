@@ -39,6 +39,8 @@ export const toClinicInfoDto = (clinic: Clinic): ClinicInfoDto => ({
 export interface ClinicRegistrationDto extends ClinicInfoDto {
   contactPhone: string | null;
   contactEmail: string | null;
+  /** CNPJ antigo marcado para correção (#355); ISO ou `null`. */
+  cnpjReviewSince: string | null;
 }
 
 export const toClinicRegistrationDto = (
@@ -47,6 +49,7 @@ export const toClinicRegistrationDto = (
   ...toClinicInfoDto(clinic),
   contactPhone: clinic.contactPhone,
   contactEmail: clinic.contactEmail,
+  cnpjReviewSince: clinic.cnpjReviewSince?.toISOString() ?? null,
 });
 
 /**

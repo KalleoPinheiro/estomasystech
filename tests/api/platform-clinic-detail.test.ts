@@ -81,6 +81,7 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
       id: clinic.id,
       name: clinic.name,
       cnpj: '11.000.000/0001-08',
+      cnpjReviewSince: null,
       contactPhone: '11 3333-4444',
       contactEmail: 'contato@x.com',
       address: null,

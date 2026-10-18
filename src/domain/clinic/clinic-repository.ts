@@ -14,4 +14,6 @@ export interface ClinicRepository {
    * uma edição de cadastro concorrente não regrava o estado lido antes dela.
    */
   saveStatus(clinic: Clinic): Promise<void>;
+  /** Grava só a marca de CNPJ pendente de correção (#355), sem regravar o cadastro. */
+  saveCnpjReview(clinic: Clinic): Promise<void>;
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "clinics" ADD COLUMN "cnpj_review_since" timestamp with time zone;

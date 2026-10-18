@@ -26,12 +26,14 @@ const toClinic = (row: ClinicRow): Clinic =>
       ? row.statusReason
       : null,
     statusReasonNote: row.statusReasonNote,
+    cnpjReviewSince: row.cnpjReviewSince,
   });
 
 /** Dados cadastrais gravados por `create` e `update`. */
 const infoColumns = (clinic: Clinic) => ({
   name: clinic.name,
   cnpj: clinic.cnpj,
+  cnpjReviewSince: clinic.cnpjReviewSince,
   address: clinic.address,
   city: clinic.city,
   professionalName: clinic.professionalName,
@@ -99,6 +101,13 @@ export class DrizzleClinicRepository implements ClinicRepository {
     await this.db
       .update(clinics)
       .set(statusColumns(clinic))
+      .where(eq(clinics.id, clinic.id));
+  }
+
+  async saveCnpjReview(clinic: Clinic): Promise<void> {
+    await this.db
+      .update(clinics)
+      .set({ cnpjReviewSince: clinic.cnpjReviewSince })
       .where(eq(clinics.id, clinic.id));
   }
 }

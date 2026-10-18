@@ -1181,3 +1181,13 @@ Decisão de @KalleoPinheiro: o paciente adulto revoga o responsável pelo portal
 - **Por paciente, não por conta**: o responsável pode representar outros pacientes; desativar a conta cortaria quem não pediu.
 - **Perguntas abertas**: avisar o responsável por e-mail ao ser revogado; tratamento específico para paciente menor (hoje decide a clínica com o representante legal).
 - **Next step**: nenhum. **Blockers**: nenhum. Deploy: aplicar a migração 0062 antes do código.
+
+## Issue #355 — Sanear CNPJs antigos inválidos (2026-10-18) — ENCERRADO
+
+Follow-up da #248: empresas gravadas antes da conferência do dígito verificador ficavam inválidas sem aviso ([ADR-029](../../docs/adr/028-cnpj-antigo-invalido-marcado-para-correcao.md), AD-048, ACE-RN-57).
+- **Código**: `clinics.cnpj_review_since` (**migração 0063**); `Clinic.flagCnpjForReview`, `isValidCnpj`; caso de uso `FlagInvalidClinicCnpjs` + script `npm run clinics:cnpj-review -- [--confirmar]` (lista sem a flag; marca e audita com ela; idempotente). `updateInfo` com `cnpj` limpa a marca. Aviso em Configurações e na ficha da plataforma.
+- **Decisão**: marcar, não apagar nem anular (CNPJ é obrigatório) nem corrigir (inventaria dado). Aviso, não bloqueio.
+- **Gate**: Actions sem cota; gate local. Docker/smoke não rodam (sem daemon). the-judge não posta (sem `gh`): autorrevisão.
+- **Pergunta aberta**: bloquear o recibo enquanto a empresa tiver a marca?
+- **Deploy**: migração 0063 antes do código; depois rodar o script (producao.md §7.3), primeiro sem `--confirmar`.
+- **Next step**: nenhum. **Blockers**: nenhum.
