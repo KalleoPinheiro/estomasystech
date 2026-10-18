@@ -1209,3 +1209,15 @@ Fecha a pergunta aberta da #355 por decisão do coordenador (PO): recibo com CNP
 - **Código**: `resolveReceiptParties` lança `CNPJ_UNDER_REVIEW_MESSAGE` quando `cnpjReviewSince` está preenchida (depois da checagem de CNPJ ausente); vale para a tela do recibo e para `POST /api/documents/issue`. A página do recibo mostra o link "Corrigir o CNPJ nas Configurações". Recibos já emitidos (registro de emissão) não mudam; documentos clínicos não são bloqueados.
 - **Sem migração.** **Gate**: local completo; Docker/smoke não rodam (sem daemon); autorrevisão.
 - **Next step**: nenhum. **Blockers**: nenhum.
+## Issue #216 — Textos LGPD finais ligados ao sistema (2026-10-18) — ENTREGUE; REVISÃO JURÍDICA PENDENTE
+
+Pedido de @KalleoPinheiro: "cubra todas as informações necessárias e feche essa etapa, a revisão será feita por profissional da área depois". Supersede a prévia ([ADR-026](../../docs/adr/026-textos-lgpd-previa-nao-ligada.md)) pelo [ADR-030](../../docs/adr/030-textos-lgpd-ligados-sem-revisao-juridica.md) / AD-050.
+- **Textos** (`src/lib/`): TCLE de tratamento `v2`, termo de imagem `v1` (novo, à parte), consentimento do parceiro `v1`, aviso de privacidade `v1`, direitos do titular. `LEGAL_REVIEW_PENDING = true` aparece em Configurações. Guia de troca pós-revisão: [`docs/legal/textos-lgpd.md`](../../docs/legal/textos-lgpd.md) (os 9 pontos do § 7 estão fechados na § 3).
+- **Código**: `purpose` em `consent_records` e `controller_snapshot` (hash do texto-base com `{{marcadores}}`); encarregado por clínica (`clinics.dpo_name/dpo_contact`, **migração 0064**); `?purpose=` nas rotas de consentimento; foto exige o termo de imagem; `/api/portal/privacy-notice`, `/api/clinic-info/legal-controller`, página pública `/privacidade`; rodapé de privacidade nos e-mails; termos impressos com clínica e encarregado.
+- **Regras**: PRO-RN-23, POR-RN-25, ACE-RN-58, COM-RN-20.
+- **Numeração**: a main tomou 0062, 0063 e os ADR-028 e 029 (#354, #355) durante o trabalho; renumerei para migração 0064, ADR-030, AD-050, ACE-RN-58 após rebase.
+- **Efeito no deploy**: aceites antigos viram `treatment` e o hash do `v2` difere, então o paciente reaceita o TCLE e aceita o de imagem. Aplicar a migração 0064 antes do código.
+- **#323** (retenção da auditoria): o texto final existe, então pode sair de `needs-info`. A revisão jurídica não bloqueia a implementação técnica.
+- **Pendências humanas antes de paciente real**: revisão jurídica dos cinco textos; mecanismo do art. 33 para Resend/Google; ato do ANPD/encarregado formal.
+- **Limite**: menor de idade não aceita no portal; assinatura do representante segue em papel, sem registro no sistema.
+- **Next step**: nenhum técnico. **Blockers**: revisão jurídica (externa).

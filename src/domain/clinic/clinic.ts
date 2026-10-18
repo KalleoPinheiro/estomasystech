@@ -74,7 +74,18 @@ export interface ClinicState extends ClinicInfoFields {
   statusReasonNote?: string | null;
   /** Desde quando o CNPJ gravado está marcado para correção (#355); `null` = sem pendência. */
   cnpjReviewSince?: Date | null;
+  /**
+   * Encarregado pelos dados (LGPD, art. 41; #216, ADR-030): nome e canal que
+   * o titular vê nos termos e no aviso de privacidade. Opcionais: sem eles
+   * vale o contato da clínica.
+   */
+  dpoName?: string | null;
+  dpoContact?: string | null;
 }
+
+/** Limites do cadastro do encarregado. */
+export const DPO_NAME_MAX = 200;
+export const DPO_CONTACT_MAX = 200;
 
 /**
  * `true` só quando os 3 campos com relevância jurídica direta na assinatura de
@@ -206,6 +217,8 @@ export class Clinic {
       statusReason: state.statusReason ?? null,
       statusReasonNote: state.statusReasonNote ?? null,
       cnpjReviewSince: state.cnpjReviewSince ?? null,
+      dpoName: state.dpoName ?? null,
+      dpoContact: state.dpoContact ?? null,
     });
   }
 
@@ -251,6 +264,14 @@ export class Clinic {
 
   get contactEmail(): string | null {
     return this.state.contactEmail ?? null;
+  }
+
+  get dpoName(): string | null {
+    return this.state.dpoName ?? null;
+  }
+
+  get dpoContact(): string | null {
+    return this.state.dpoContact ?? null;
   }
 
   get status(): ClinicStatus {
@@ -342,6 +363,35 @@ export class Clinic {
       cnpjReviewSince:
         'cnpj' in fields ? null : (this.state.cnpjReviewSince ?? null),
     });
+  }
+
+  /**
+   * Encarregado pelos dados (#216, ADR-030): nome e canal (e-mail ou telefone).
+   * Vazio apaga e a clínica volta a valer como canal. Imutável: devolve outra
+   * instância.
+   */
+  updatePrivacyContact(fields: {
+    dpoName?: string | null;
+    dpoContact?: string | null;
+  }): Clinic {
+    const dpoName = trimToNull(fields.dpoName);
+    const dpoContact = trimToNull(fields.dpoContact);
+    if (dpoName && dpoName.length > DPO_NAME_MAX) {
+      throw new ValidationError(
+        `Nome do encarregado: no máximo ${DPO_NAME_MAX} caracteres`,
+      );
+    }
+    if (dpoContact && dpoContact.length > DPO_CONTACT_MAX) {
+      throw new ValidationError(
+        `Contato do encarregado: no máximo ${DPO_CONTACT_MAX} caracteres`,
+      );
+    }
+    if (dpoName && !dpoContact) {
+      throw new ValidationError(
+        'Informe o e-mail ou telefone do encarregado junto com o nome',
+      );
+    }
+    return new Clinic({ ...this.state, dpoName, dpoContact });
   }
 
   isCompleteForDocumentEmission(): boolean {

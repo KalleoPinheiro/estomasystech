@@ -44,6 +44,7 @@ import {
 } from './consent-card';
 import { DataRights } from './data-rights';
 import { PartnerConsentSection } from './partner-consent-card';
+import { PrivacyNoticeCard } from './privacy-notice-card';
 import { ScheduleReturn } from './schedule-return';
 import { MyWaitlist } from './waitlist';
 
@@ -86,6 +87,9 @@ export function PatientPortalView({
   // porque useApiQuery guarda estado por componente, sem cache compartilhado.
   const { data: consent, refresh: refreshConsent } =
     useApiQuery<ConsentStatusDto>('/api/portal/patient/consent');
+  // Autorização de imagem (#216): termo à parte; é ela que libera o envio de foto.
+  const { data: imageConsent, refresh: refreshImageConsent } =
+    useApiQuery<ConsentStatusDto>('/api/portal/patient/consent?purpose=image');
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [waitlistVersion, setWaitlistVersion] = useState(0);
 
@@ -162,9 +166,17 @@ export function PatientPortalView({
       )}
 
       {data.actingFor ? (
-        <GuardianConsentNote status={consent} />
+        <GuardianConsentNote status={consent} imageStatus={imageConsent} />
       ) : (
-        <ConsentCard status={consent} onAccepted={refreshConsent} />
+        <>
+          <PrivacyNoticeCard />
+          <ConsentCard status={consent} onAccepted={refreshConsent} />
+          <ConsentCard
+            status={imageConsent}
+            onAccepted={refreshImageConsent}
+            purpose="image"
+          />
+        </>
       )}
 
       <CancelledAppointmentsAlert appointments={cancelledUpcoming} />
@@ -232,7 +244,9 @@ export function PatientPortalView({
                 {entry.condition.status === 'active' && (
                   <PatientPhotoUpload
                     conditionId={entry.condition.id}
-                    consentPending={consent !== null && !consent.accepted}
+                    consentPending={
+                      imageConsent !== null && !imageConsent.accepted
+                    }
                     byGuardian={Boolean(data.actingFor)}
                     onSent={refresh}
                   />
@@ -435,13 +449,21 @@ function ActingForBanner({
 }
 
 /** O responsável não aceita nem revoga termos: só informa o estado. */
-function GuardianConsentNote({ status }: { status: ConsentStatusDto | null }) {
-  if (!status || status.accepted) return null;
+function GuardianConsentNote({
+  status,
+  imageStatus,
+}: {
+  status: ConsentStatusDto | null;
+  imageStatus: ConsentStatusDto | null;
+}) {
+  const pending = [status, imageStatus].some((item) => item && !item.accepted);
+  if (!pending) return null;
   return (
     <Alert variant="warning">
       <AlertDescription>
-        O termo de consentimento ainda não foi aceito. Ele é aceito pelo próprio
-        paciente; fale com a clínica se precisar de ajuda.
+        Os termos de consentimento (tratamento e imagem) ainda não foram
+        aceitos. Eles são aceitos pelo próprio paciente; fale com a clínica se
+        precisar de ajuda.
       </AlertDescription>
     </Alert>
   );

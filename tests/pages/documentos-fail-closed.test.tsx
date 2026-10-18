@@ -69,6 +69,15 @@ const CLINIC_COMPLETE: ClinicInfoDto = {
   professionalRegistry: 'COREN-SP 123456',
 };
 
+const CONTROLLER = {
+  name: 'Clínica VittaFlow',
+  cnpj: '12.345.678/0001-95',
+  address: 'Rua das Flores, 100, São Paulo',
+  technicalLead: 'Enf. Ana',
+  dpoName: 'Beatriz Lima',
+  dpoContact: 'privacidade@vittaflow.test',
+};
+
 const appointment = (status: string): AppointmentDto => ({
   id: 'apt-1',
   patientId: 'pat-1',
@@ -413,6 +422,8 @@ describe('Feature: bloqueio fail-closed de documentos sem dados cadastrais (#62)
   it('Dado clínica incompleta, Quando abrir o consentimento, Então bloqueia', async () => {
     mockFetch(({ url }) => {
       if (url.includes('/api/documents/issue')) return issuance();
+      if (url.includes('/api/clinic-info/legal-controller'))
+        return jsonResponse(CONTROLLER);
       if (url.includes('/api/clinic-info'))
         return jsonResponse(CLINIC_INCOMPLETE);
       return jsonResponse(patient);
@@ -437,6 +448,8 @@ describe('Feature: bloqueio fail-closed de documentos sem dados cadastrais (#62)
   it('Dado clínica completa, Quando abrir o consentimento, Então renderiza normalmente', async () => {
     mockFetch(({ url }) => {
       if (url.includes('/api/documents/issue')) return issuance();
+      if (url.includes('/api/clinic-info/legal-controller'))
+        return jsonResponse(CONTROLLER);
       if (url.includes('/api/clinic-info'))
         return jsonResponse(CLINIC_COMPLETE);
       return jsonResponse(patient);
@@ -530,6 +543,8 @@ describe('Feature: conteúdo dos documentos (#94)', () => {
   it('Dado consentimento renderizado, Então a data vem antes das duas assinaturas (DOC-03)', async () => {
     mockFetch(({ url }) => {
       if (url.includes('/api/documents/issue')) return issuance();
+      if (url.includes('/api/clinic-info/legal-controller'))
+        return jsonResponse(CONTROLLER);
       if (url.includes('/api/clinic-info'))
         return jsonResponse(CLINIC_COMPLETE);
       return jsonResponse(patient);
@@ -567,6 +582,8 @@ describe('Feature: conteúdo dos documentos (#94)', () => {
   it('Dado consentimento renderizado, Então tem linha de responsável legal, autorização de imagem separada, versão e duas vias (DOC-08/09/10)', async () => {
     mockFetch(({ url }) => {
       if (url.includes('/api/documents/issue')) return issuance();
+      if (url.includes('/api/clinic-info/legal-controller'))
+        return jsonResponse(CONTROLLER);
       if (url.includes('/api/clinic-info'))
         return jsonResponse(CLINIC_COMPLETE);
       return jsonResponse(patient);
@@ -590,9 +607,11 @@ describe('Feature: conteúdo dos documentos (#94)', () => {
       screen.getByText('Autorização de uso de imagem'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/independente do consentimento acima/),
+      screen.getByText(/TERMO DE AUTORIZAÇÃO DE IMAGEM/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Versão do termo:/)).toBeInTheDocument();
+    // Clínica e encarregado entram nos termos (#216).
+    expect(screen.getAllByText(/Beatriz Lima/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Versões dos termos:/)).toBeInTheDocument();
     expect(screen.getByText(/duas vias/)).toBeInTheDocument();
   });
 
@@ -611,6 +630,8 @@ describe('Feature: conteúdo dos documentos (#94)', () => {
     };
     mockFetch(({ url }) => {
       if (url.includes('/api/documents/issue')) return issuance();
+      if (url.includes('/api/clinic-info/legal-controller'))
+        return jsonResponse(CONTROLLER);
       if (url.includes('/api/clinic-info'))
         return jsonResponse(CLINIC_COMPLETE);
       return jsonResponse(withGuardian);

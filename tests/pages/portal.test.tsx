@@ -795,19 +795,29 @@ describe('Feature: Visão do paciente no portal', () => {
       mockFetch([
         {
           method: 'POST',
-          path: '/api/portal/patient/consent',
+          path: '/api/portal/patient/consent?purpose=image',
           respond: () => {
             accepted = true;
             return jsonResponse(true, { accepted: true });
           },
         },
         {
-          path: '/api/portal/patient/consent',
+          path: '/api/portal/patient/consent?purpose=image',
           respond: () =>
             jsonResponse(true, {
               consentText: 'Termo',
               accepted,
               acceptedAt: accepted ? '2026-02-01T09:00:00.000Z' : null,
+            }),
+        },
+        {
+          // TCLE de tratamento já aceito: só o termo de imagem fica pendente.
+          path: '/api/portal/patient/consent',
+          respond: () =>
+            jsonResponse(true, {
+              consentText: 'Termo',
+              accepted: true,
+              acceptedAt: '2026-01-20T09:00:00.000Z',
             }),
         },
         {
@@ -823,19 +833,19 @@ describe('Feature: Visão do paciente no portal', () => {
       renderWithToast(<PatientPortalView />);
 
       expect(
-        await screen.findByText('Termo de consentimento pendente'),
+        await screen.findByText('Termo de autorização de imagem pendente'),
       ).toBeInTheDocument();
       const warning = screen.getByRole('alert');
       expect(warning).toHaveTextContent(
-        'Aceite o termo de consentimento acima para enviar fotos à equipe.',
+        'Aceite o termo de imagem acima para enviar fotos à equipe.',
       );
       expect(document.querySelector('input[type="file"]')).toBeNull();
 
-      fireEvent.click(screen.getByText('Li e aceito o termo'));
+      fireEvent.click(screen.getByText('Li e aceito o termo de imagem'));
 
       expect(
         await screen.findByText(
-          `Termo de consentimento aceito em ${formatDateTime('2026-02-01T09:00:00.000Z')}.`,
+          `Termo de autorização de imagem aceito em ${formatDateTime('2026-02-01T09:00:00.000Z')}.`,
         ),
       ).toBeInTheDocument();
       expect(
@@ -846,7 +856,7 @@ describe('Feature: Visão do paciente no portal', () => {
       expect(document.querySelector('input[type="file"]')).not.toBeNull();
       expect(
         screen.queryByText(
-          'Aceite o termo de consentimento acima para enviar fotos à equipe.',
+          'Aceite o termo de imagem acima para enviar fotos à equipe.',
         ),
       ).not.toBeInTheDocument();
     });
@@ -860,11 +870,11 @@ describe('Feature: Visão do paciente no portal', () => {
       mockFetch([
         {
           method: 'POST',
-          path: '/api/portal/patient/consent',
+          path: '/api/portal/patient/consent?purpose=image',
           respond: () => jsonResponse(true, { accepted: true }),
         },
         {
-          path: '/api/portal/patient/consent',
+          path: '/api/portal/patient/consent?purpose=image',
           respond: () => {
             consentReads += 1;
             return consentReads === 1
@@ -877,6 +887,15 @@ describe('Feature: Visão do paciente no portal', () => {
           },
         },
         {
+          path: '/api/portal/patient/consent',
+          respond: () =>
+            jsonResponse(true, {
+              consentText: 'Termo',
+              accepted: true,
+              acceptedAt: '2026-01-20T09:00:00.000Z',
+            }),
+        },
+        {
           path: '/api/portal/patient',
           respond: () => jsonResponse(true, emptyPatientBundle),
         },
@@ -884,15 +903,17 @@ describe('Feature: Visão do paciente no portal', () => {
 
       renderWithToast(<PatientPortalView />);
 
-      const button = await screen.findByText('Li e aceito o termo');
+      const button = await screen.findByText('Li e aceito o termo de imagem');
       fireEvent.click(button);
 
       await waitFor(() => expect(consentReads).toBe(2));
       await waitFor(() => {
-        expect(screen.getByText('Li e aceito o termo')).toBeInTheDocument();
+        expect(
+          screen.getByText('Li e aceito o termo de imagem'),
+        ).toBeInTheDocument();
       });
       expect(
-        screen.getByText('Li e aceito o termo').closest('button'),
+        screen.getByText('Li e aceito o termo de imagem').closest('button'),
       ).not.toBeDisabled();
       expect(screen.queryByText('Registrando…')).not.toBeInTheDocument();
     });
@@ -926,7 +947,7 @@ describe('Feature: Visão do paciente no portal', () => {
       await screen.findByText('Ferida perna E');
       expect(
         screen.queryByText(
-          'Aceite o termo de consentimento acima para enviar fotos à equipe.',
+          'Aceite o termo de imagem acima para enviar fotos à equipe.',
         ),
       ).not.toBeInTheDocument();
       expect(screen.getByLabelText('Enviar foto')).toBeInTheDocument();
@@ -1227,9 +1248,11 @@ describe('Feature: Cartão de consentimento', () => {
       renderWithToast(<ConsentCard status={null} onAccepted={vi.fn()} />);
 
       expect(screen.queryByText(TERMO)).not.toBeInTheDocument();
-      expect(screen.queryByText('Li e aceito o termo')).not.toBeInTheDocument();
       expect(
-        screen.queryByText(/Termo de consentimento/),
+        screen.queryByText('Li e aceito o termo de tratamento'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Termo de consentimento do tratamento/),
       ).not.toBeInTheDocument();
     });
   });
@@ -1249,7 +1272,7 @@ describe('Feature: Cartão de consentimento', () => {
 
       const alert = screen.getByRole('status');
       expect(alert).toHaveTextContent(
-        `Termo de consentimento aceito em ${formatDateTime('2026-01-10T14:30:00.000Z')}.`,
+        `Termo de consentimento do tratamento aceito em ${formatDateTime('2026-01-10T14:30:00.000Z')}.`,
       );
     });
   });
@@ -1273,17 +1296,17 @@ describe('Feature: Cartão de consentimento', () => {
       );
 
       expect(
-        screen.getByText('Termo de consentimento pendente'),
+        screen.getByText('Termo de consentimento do tratamento pendente'),
       ).toBeInTheDocument();
       expect(screen.getByText(TERMO)).toBeInTheDocument();
 
-      fireEvent.click(screen.getByText('Li e aceito o termo'));
+      fireEvent.click(screen.getByText('Li e aceito o termo de tratamento'));
 
       await waitFor(() => {
         expect(onAccepted).toHaveBeenCalledTimes(1);
       });
       expect(
-        await screen.findByText('Termo de consentimento aceito'),
+        await screen.findByText('Termo de consentimento do tratamento aceito'),
       ).toBeInTheDocument();
     });
 
@@ -1305,7 +1328,7 @@ describe('Feature: Cartão de consentimento', () => {
         />,
       );
 
-      fireEvent.click(screen.getByText('Li e aceito o termo'));
+      fireEvent.click(screen.getByText('Li e aceito o termo de tratamento'));
 
       await waitFor(() => {
         expect(
@@ -1313,7 +1336,7 @@ describe('Feature: Cartão de consentimento', () => {
         ).toBeGreaterThanOrEqual(2);
       });
       const enabledButton = screen.getByText(
-        'Li e aceito o termo',
+        'Li e aceito o termo de tratamento',
       ) as HTMLButtonElement;
       expect(enabledButton.disabled).toBe(false);
       expect(onAccepted).not.toHaveBeenCalled();
@@ -1409,7 +1432,7 @@ describe('Feature: Envio de foto pelo paciente', () => {
 
       expect(
         screen.getByText(
-          'Aceite o termo de consentimento acima para enviar fotos à equipe.',
+          'Aceite o termo de imagem acima para enviar fotos à equipe.',
         ),
       ).toBeInTheDocument();
       expect(document.querySelector('input[type="file"]')).toBeNull();

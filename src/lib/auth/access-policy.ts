@@ -23,6 +23,8 @@ import { getAuthConfig } from './session';
 /** Caminhos liberados sem sessão — comparação exata, nunca por prefixo. */
 export const PUBLIC_PATHS = [
   '/login',
+  // Aviso de privacidade (LGPD, art. 9º; #216): informação ao titular, lida antes de entrar.
+  '/privacidade',
   // Fluxos de primeiro acesso e recuperação: quem os usa, por definição, não tem sessão.
   '/definir-senha',
   '/esqueci-senha',

@@ -20,7 +20,8 @@ async function uploadPatientPhoto(
   // Tratamento de imagem clínica exige base legal registrada (COMP3-01): sem
   // aceite vigente do termo, a rota de envio rejeita — o paciente do portal faz
   // esse aceite na tela, aqui vai pela mesma API.
-  const consent = await page.request.post("/api/portal/patient/consent");
+  // O envio de foto exige o termo de imagem (#216).
+  const consent = await page.request.post("/api/portal/patient/consent?purpose=image");
   expect(consent.ok(), `aceite do termo falhou: ${consent.status()}`).toBe(true);
   const response = await page.request.post("/api/portal/patient/photos", {
     multipart: {

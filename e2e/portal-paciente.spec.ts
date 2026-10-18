@@ -41,9 +41,13 @@ test.describe("portal do paciente", () => {
     ).toBeVisible();
 
     // Consentimento digital (LGPD).
-    await expect(page.getByRole("heading", { name: "Termo de consentimento pendente" })).toBeVisible();
-    await page.getByRole("button", { name: "Li e aceito o termo" }).click();
-    await expectToast(page, "Termo de consentimento aceito");
+    await expect(page.getByRole("heading", { name: "Termo de consentimento do tratamento pendente" })).toBeVisible();
+    await page.getByRole("button", { name: "Li e aceito o termo de tratamento" }).click();
+    await expectToast(page, "Termo de consentimento do tratamento aceito");
+    // Termo de imagem à parte: sem ele não há envio de foto (#216).
+    await expect(page.getByRole("heading", { name: "Termo de autorização de imagem pendente" })).toBeVisible();
+    await page.getByRole("button", { name: "Li e aceito o termo de imagem" }).click();
+    await expectToast(page, "Termo de autorização de imagem aceito");
 
     // Confirmação de presença.
     const appointmentItem = page.locator("li", { hasText: procedure });

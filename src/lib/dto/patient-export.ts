@@ -32,6 +32,10 @@ export const toPatientExportDto = (data: PatientDataExport) => ({
   invoices: data.invoices.map((invoice) => toInvoiceDto(invoice)),
   consents: data.consents.map((consent) => ({
     id: consent.id,
+    kind: consent.kind,
+    purpose: consent.purpose,
+    textVersion: consent.textVersion,
+    controllerSnapshot: consent.controllerSnapshot,
     textHash: consent.textHash,
     acceptedAt: consent.acceptedAt.toISOString(),
   })),

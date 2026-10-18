@@ -27,6 +27,8 @@ const toClinic = (row: ClinicRow): Clinic =>
       : null,
     statusReasonNote: row.statusReasonNote,
     cnpjReviewSince: row.cnpjReviewSince,
+    dpoName: row.dpoName,
+    dpoContact: row.dpoContact,
   });
 
 /** Dados cadastrais gravados por `create` e `update`. */
@@ -40,6 +42,8 @@ const infoColumns = (clinic: Clinic) => ({
   professionalRegistry: clinic.professionalRegistry,
   contactPhone: clinic.contactPhone,
   contactEmail: clinic.contactEmail,
+  dpoName: clinic.dpoName,
+  dpoContact: clinic.dpoContact,
 });
 
 /** Estado da clínica (B5) — gravado por `create` e `saveStatus`. */

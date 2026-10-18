@@ -14,4 +14,7 @@ export const clinicInfoChangesSchema = z.object({
   professionalRegistry: z.string().max(60).nullish(),
   contactPhone: z.string().max(50).nullish(),
   contactEmail: z.string().max(200).nullish(),
+  // Encarregado pelos dados (#216, ADR-030); a regra de tamanho é do domínio.
+  dpoName: z.string().max(1000).nullish(),
+  dpoContact: z.string().max(1000).nullish(),
 });

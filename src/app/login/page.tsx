@@ -186,6 +186,11 @@ function PasswordForm({
           Esqueci minha senha
         </Link>
       </p>
+      <p className="mt-2 text-center text-sm">
+        <Link href="/privacidade" className="text-accent-ink hover:underline">
+          Aviso de privacidade
+        </Link>
+      </p>
     </form>
   );
 }

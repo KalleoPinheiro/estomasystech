@@ -25,6 +25,7 @@ import {
 } from '@/domain/clinical/condition-photo';
 import { EvolutionNote } from '@/domain/clinical/evolution-note';
 import {
+  type ConsentPurpose,
   ConsentRecord,
   type ConsentRecordKind,
   type ConsentRecordRepository,
@@ -515,8 +516,10 @@ export class DrizzleConsentRecordRepository implements ConsentRecordRepository {
       clinicId: this.clinicId,
       patientId: record.patientId,
       kind: record.kind,
+      purpose: record.purpose,
       textHash: record.textHash,
       textVersion: record.textVersion,
+      controllerSnapshot: record.controllerSnapshot,
       ipAddress: record.ipAddress,
       acceptedAt: record.acceptedAt,
     });
@@ -535,7 +538,11 @@ export class DrizzleConsentRecordRepository implements ConsentRecordRepository {
       )
       .orderBy(desc(consentRecords.acceptedAt));
     return rows.map((row) =>
-      ConsentRecord.restore({ ...row, kind: row.kind as ConsentRecordKind }),
+      ConsentRecord.restore({
+        ...row,
+        kind: row.kind as ConsentRecordKind,
+        purpose: row.purpose as ConsentPurpose,
+      }),
     );
   }
 
@@ -555,7 +562,11 @@ export class DrizzleConsentRecordRepository implements ConsentRecordRepository {
       .orderBy(desc(consentRecords.acceptedAt))
       .limit(1);
     return row
-      ? ConsentRecord.restore({ ...row, kind: row.kind as ConsentRecordKind })
+      ? ConsentRecord.restore({
+          ...row,
+          kind: row.kind as ConsentRecordKind,
+          purpose: row.purpose as ConsentPurpose,
+        })
       : null;
   }
 }

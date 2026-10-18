@@ -21,7 +21,7 @@ test.describe("portal do paciente — direitos do titular (#293)", () => {
 
     const section = page.locator("[data-data-rights]");
     await expect(section.getByRole("heading", { name: "Meus dados (LGPD)" })).toBeVisible();
-    await expect(section.getByText(/Aviso provisório/)).toBeVisible();
+    await expect(section.getByText(/A clínica analisa os pedidos/)).toBeVisible();
 
     // Cópia dos próprios dados: o JSON é do titular da sessão.
     const downloadPromise = page.waitForEvent("download");

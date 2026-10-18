@@ -240,7 +240,8 @@ describe('Feature: Consentimento do paciente para o parceiro (#292)', () => {
         revoked: false,
         acceptedAt: null,
       });
-      expect(status?.consentText).toContain('Texto provisório');
+      expect(status?.consentText).toContain('CONSENTIMENTO PARA COMPARTILHAR');
+      expect(status?.consentText).not.toContain('Texto provisório');
 
       const entry = await partnerView();
       expect(entry).toMatchObject({
@@ -280,12 +281,12 @@ describe('Feature: Consentimento do paciente para o parceiro (#292)', () => {
         partnerId,
         kind: 'accept',
         actor: 'patient',
-        textVersion: 'v0-placeholder',
+        textVersion: 'v1',
       });
 
       expect(await portalStatus()).toMatchObject({
         active: true,
-        acceptedVersion: 'v0-placeholder',
+        acceptedVersion: 'v1',
       });
       const entry = await partnerView();
       expect(entry.sharing).toBe(true);

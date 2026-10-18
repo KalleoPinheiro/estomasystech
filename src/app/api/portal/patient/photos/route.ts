@@ -15,7 +15,7 @@ import { recordAudit } from '@/lib/audit';
 import { portalActorNoun } from '@/lib/auth/portal-actor';
 import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
-import { CONSENT_TEXT } from '@/lib/consent-text';
+import { IMAGE_CONSENT_TEXT } from '@/lib/image-consent-text';
 
 /**
  * Monitoramento remoto (O4.2): paciente envia foto da própria condição ativa.
@@ -65,14 +65,17 @@ export async function POST(request: NextRequest) {
       throw new ValidationError('Condição já resolvida — fale com a clínica');
     }
 
-    // Gate de consentimento (COMP3-01): tratamento de imagem exige base legal
-    // registrada — sem aceite vigente do termo atual, nada é gravado.
+    // Gate de consentimento (COMP3-01): tratamento de imagem exige o termo de
+    // imagem aceito (à parte do TCLE, #216) — sem aceite vigente, nada é gravado.
     const consents = await consentRecords.findByPatientId(patient.id);
-    if (!ConsentRecord.resolveStatus(consents, CONSENT_TEXT).accepted) {
+    if (
+      !ConsentRecord.resolveStatus(consents, IMAGE_CONSENT_TEXT, 'image')
+        .accepted
+    ) {
       throw new ConsentRequiredError(
         session.role === 'guardian'
-          ? 'Consentimento pendente — o próprio paciente precisa aceitar o termo no portal antes do envio de fotos'
-          : 'Consentimento pendente — aceite o termo de consentimento no portal antes de enviar fotos',
+          ? 'Consentimento pendente — o próprio paciente precisa aceitar o termo de imagem no portal antes do envio de fotos'
+          : 'Consentimento pendente — aceite o termo de imagem no portal antes de enviar fotos',
       );
     }
 

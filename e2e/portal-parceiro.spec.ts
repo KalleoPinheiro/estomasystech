@@ -64,7 +64,7 @@ test.describe("portal do parceiro", () => {
     await expect(
       patientPortal.page.getByRole("heading", { name: `Compartilhar com ${partner.fullName}` }),
     ).toBeVisible();
-    await expect(patientPortal.page.getByText(/Texto provisório/)).toBeVisible();
+    await expect(patientPortal.page.getByText(/CONSENTIMENTO PARA COMPARTILHAR DADOS CLÍNICOS/)).toBeVisible();
     await patientPortal.page.getByRole("button", { name: "Li e autorizo" }).click();
     await expect(patientPortal.page.getByText(/Autorizado em/)).toBeVisible();
 

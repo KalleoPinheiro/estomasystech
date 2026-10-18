@@ -50,6 +50,7 @@ import { ClosuresSection } from './closures-section';
 import { EmailChannelSection } from './email-channel-section';
 import { LunchBreakFields } from './lunch-break-fields';
 import { PortalLinkField } from './portal-link-field';
+import { PrivacyContactSection } from './privacy-contact-section';
 
 // Papéis que uma conta Admin de Empresa pode cadastrar (PROVISIONING_MATRIX.company_admin,
 // src/domain/auth/role-hierarchy.ts) — super_admin fica fora desta tela por design.
@@ -100,6 +101,7 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-8">
       <PageHeader title="Configurações" />
       {can('/api/settings/clinic-info') && <ClinicInfoSection />}
+      {can('/api/settings/clinic-info') && <PrivacyContactSection />}
       {can('/api/settings/schedule') && <ScheduleSection />}
       <ClosuresSection />
       {can('/api/integrations/google-calendar') && (

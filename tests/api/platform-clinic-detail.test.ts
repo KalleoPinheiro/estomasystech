@@ -84,6 +84,8 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
       cnpjReviewSince: null,
       contactPhone: '11 3333-4444',
       contactEmail: 'contato@x.com',
+      dpoName: null,
+      dpoContact: null,
       address: null,
       city: null,
       professionalName: null,

@@ -57,7 +57,7 @@ afterEach(() => {
 });
 
 describe('Portal: Meus dados (LGPD) (#293)', () => {
-  it('mostra o aviso provisório, a resposta da clínica e envia um pedido de correção', async () => {
+  it('mostra o aviso dos direitos, a resposta da clínica e envia um pedido de correção', async () => {
     const calls = mockFetch((url, init) => {
       if (
         url === '/api/portal/patient/data-requests' &&
@@ -81,7 +81,11 @@ describe('Portal: Meus dados (LGPD) (#293)', () => {
     });
     renderWithToast(<DataRights />);
 
-    expect(screen.getByText(/Aviso provisório/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        /A clínica analisa os pedidos e responde em até 15 dias/,
+      ),
+    ).toBeTruthy();
     expect(await screen.findByText(/Guarda legal de 20 anos/)).toBeTruthy();
     expect(screen.getByText('Recusado')).toBeTruthy();
 

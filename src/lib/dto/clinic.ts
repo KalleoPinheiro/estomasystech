@@ -41,6 +41,9 @@ export interface ClinicRegistrationDto extends ClinicInfoDto {
   contactEmail: string | null;
   /** CNPJ antigo marcado para correção (#355); ISO ou `null`. */
   cnpjReviewSince: string | null;
+  /** Encarregado pelos dados (#216): nulos valem o contato da clínica nos termos. */
+  dpoName: string | null;
+  dpoContact: string | null;
 }
 
 export const toClinicRegistrationDto = (
@@ -50,6 +53,8 @@ export const toClinicRegistrationDto = (
   contactPhone: clinic.contactPhone,
   contactEmail: clinic.contactEmail,
   cnpjReviewSince: clinic.cnpjReviewSince?.toISOString() ?? null,
+  dpoName: clinic.dpoName,
+  dpoContact: clinic.dpoContact,
 });
 
 /**
