@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CNPJ_UNDER_REVIEW_MESSAGE,
   MISSING_PATIENT_CPF_MESSAGE,
   MISSING_PROVIDER_DOCUMENT_MESSAGE,
   resolveReceiptParties,
@@ -55,6 +56,26 @@ describe('Feature: Recibo válido para o IRPF (#326, FIN-RN-15)', () => {
       resolveReceiptParties({
         clinic: { name: 'X', cnpj: null },
         patient: { fullName: 'M', cpf: null },
+      }),
+    ).toThrow(MISSING_PROVIDER_DOCUMENT_MESSAGE);
+  });
+
+  it('Dado CNPJ marcado para correção (#358), Quando resolver, Então bloqueia; sem marca emite; sem CNPJ cobra o CNPJ primeiro', () => {
+    const marked = { ...clinic, cnpjReviewSince: new Date() };
+
+    expect(() => resolveReceiptParties({ clinic: marked, patient })).toThrow(
+      CNPJ_UNDER_REVIEW_MESSAGE,
+    );
+    expect(() =>
+      resolveReceiptParties({
+        clinic: { ...clinic, cnpjReviewSince: null },
+        patient,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      resolveReceiptParties({
+        clinic: { name: 'X', cnpj: null, cnpjReviewSince: new Date() },
+        patient,
       }),
     ).toThrow(MISSING_PROVIDER_DOCUMENT_MESSAGE);
   });

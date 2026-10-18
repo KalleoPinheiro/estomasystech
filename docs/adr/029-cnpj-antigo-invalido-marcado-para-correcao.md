@@ -33,11 +33,11 @@ A #248 passou a recusar CNPJ com dígito verificador inválido ao salvar (ACE-RN
 - Script manual `npm run clinics:cnpj-review -- [--confirmar]`: sem a flag só lista; com ela marca e grava `update/clinic-cnpj-review` na auditoria da empresa, com ator `system`/`cnpj-review-job` e **sem o CNPJ** no `detail`. Idempotente.
 - A marca aparece como aviso em Configurações > Dados da clínica (Admin de Empresa) e no cadastro da clínica na plataforma.
 - Salvar um CNPJ **válido** (a validação da #248 continua valendo) limpa a marca; editar outro campo não a limpa.
-- Nada muda na emissão de documentos e recibos: a marca é aviso, não bloqueio.
+- Documentos clínicos não mudam: a marca é aviso. O recibo é bloqueado (ver Consequências).
 
 ## Consequências
 
-- O CNPJ errado segue em documentos até a clínica corrigir. **Pergunta aberta ao dono:** bloquear a emissão de recibo enquanto houver marca? Não foi decidido; hoje não bloqueia.
+- O CNPJ errado segue em documentos clínicos até a clínica corrigir. **Atualização (#358, decisão do coordenador como PO):** o **recibo** passa a ser bloqueado enquanto houver marca, pois com CNPJ errado não vale como documento fiscal; a mensagem manda corrigir em Configurações, e recibos já emitidos não mudam.
 - Sem job automático: a marca só aparece depois de rodar o script uma vez após o deploy (producao.md §7.3). Clínicas novas não precisam dele (a validação barra na entrada).
 - CNPJ repetido continua tratado por `uq_clinics_cnpj`; este ADR não toca nisso.
 

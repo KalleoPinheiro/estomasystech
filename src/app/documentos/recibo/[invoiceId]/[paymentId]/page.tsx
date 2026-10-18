@@ -1,10 +1,14 @@
 'use client';
 
 import { Table, TableBody, TableCell, TableRow } from '@still-void/ui/react';
+import Link from 'next/link';
 import { type ReactNode, use } from 'react';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
-import type { ReceiptParties } from '@/domain/billing/receipt';
+import {
+  CNPJ_UNDER_REVIEW_MESSAGE,
+  type ReceiptParties,
+} from '@/domain/billing/receipt';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import type { InvoiceDto, InvoicePaymentDto } from '@/lib/dto';
 import {
@@ -30,7 +34,21 @@ function guardBlock(
   parties: ReceiptParties | null,
   issuance: DocumentIssuance | null,
 ): ReactNode | null {
-  if (error) return <ErrorAlert message={error} />;
+  if (error) {
+    return (
+      <>
+        <ErrorAlert message={error} />
+        {error === CNPJ_UNDER_REVIEW_MESSAGE && (
+          <Link
+            href="/configuracoes"
+            className="text-accent-ink text-sm hover:underline"
+          >
+            Corrigir o CNPJ nas Configurações
+          </Link>
+        )}
+      </>
+    );
+  }
   if (!clinic || !invoice || !parties) return <LoadingIndicator />;
   if (!payment) {
     return <ErrorAlert message="Pagamento não encontrado nesta fatura." />;

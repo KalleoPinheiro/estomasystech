@@ -15,7 +15,7 @@ export interface ResolveReceiptInput {
 
 /**
  * Reúne quem paga e quem presta o serviço para o recibo de um recebimento
- * (#326). Lança `ValidationError` com orientação quando falta CPF ou CNPJ: é
+ * (#326). Lança `ValidationError` com orientação quando falta CPF ou CNPJ, ou o CNPJ está marcado para correção (#358): é
  * a mesma checagem da tela e da emissão persistida, então não há como emitir
  * recibo sem os documentos exigidos para o IRPF.
  */
@@ -38,7 +38,11 @@ export class ResolveReceipt {
     if (!patient) throw new NotFoundError('Paciente', invoice.patientId);
     if (!clinic) throw new NotFoundError('Empresa', input.clinicId);
     return resolveReceiptParties({
-      clinic: { name: clinic.name, cnpj: clinic.cnpj },
+      clinic: {
+        name: clinic.name,
+        cnpj: clinic.cnpj,
+        cnpjReviewSince: clinic.cnpjReviewSince,
+      },
       patient: { fullName: patient.fullName, cpf: patient.cpf },
       payer: payment.payer ?? null,
     });

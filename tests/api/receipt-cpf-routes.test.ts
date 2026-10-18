@@ -354,6 +354,34 @@ describe('Feature: CPF no recibo para o IRPF (#326, FIN-RN-15)', () => {
       expect(result.body.error).toMatch(/não tem CNPJ cadastrado/);
     });
 
+    it('Dado CNPJ marcado para correção (#358), Quando abrir ou emitir o recibo, Então 400 com orientação; corrigido, volta a emitir', async () => {
+      const { body: patient } = await createPatient(VALID_CPF);
+      const { body: invoice } = await paidInvoice(patient.data.id);
+      const paymentId = invoice.data.payments[0].id;
+      const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+      const db = await getDb();
+      await db.execute(
+        sql`update clinics set cnpj_review_since = now() where id = ${CLINIC_A_ID}`,
+      );
+
+      try {
+        const blocked = await receipt(invoice.data.id, paymentId);
+        expect(blocked.status).toBe(400);
+        expect(blocked.body.error).toMatch(/Corrija o CNPJ em Configurações/);
+        const direct = await issue({
+          documentType: 'recibo',
+          resourceId: paymentId,
+          invoiceId: invoice.data.id,
+        });
+        expect(direct.status).toBe(400);
+      } finally {
+        await db.execute(
+          sql`update clinics set cnpj_review_since = null where id = ${CLINIC_A_ID}`,
+        );
+      }
+      expect((await receipt(invoice.data.id, paymentId)).status).toBe(200);
+    });
+
     it('Dado recibo de outra empresa, Quando abrir, Então 404 (isolamento por empresa)', async () => {
       const { body: patient } = await createPatient(VALID_CPF);
       const { body: invoice } = await paidInvoice(patient.data.id);
