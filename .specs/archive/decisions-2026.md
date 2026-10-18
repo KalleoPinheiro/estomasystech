@@ -77,3 +77,9 @@ Movidas de `.specs/STATE.md` § Decisions sem edição de conteúdo, para manter
 - **Scope**: src/domain/auth/account-management.ts, src/lib/auth/account-manager.ts, src/app/api/accounts/**
 - **Date**: 2026-09-26
 - **Status**: resolved — perguntas respondidas por @KalleoPinheiro em 2026-10-11 (o PATCH perde `password`, "Minha conta" troca a própria senha, trava com 409 no último admin) e 2026-10-12 (Admin remove o 2º fator de quem perdeu o celular). Implementado na #295; ver ADR-019 e ACE-RN-11, ACE-RN-52 a ACE-RN-54. **Resolvida.**
+
+### AD-025
+- **Decision**: `GET /api/patients/:id/export` (exportação LGPD, art. 18) é família `clinical` e aplica o vínculo R4: Atendente recebe 403, Profissional sem vínculo recebe 404. Toda sub-rota de `/api/patients/:id/*` passa a ser clínica por padrão; a exceção é uma allowlist explícita (`NON_CLINICAL_PATIENT_SUBROUTES` em `src/lib/auth/route-family.ts`, hoje vazia).
+- **Reason**: o export devolve anamnese, SOAP, condições e fotos; qualquer subrota nova nascia `operational` e aberta ao Atendente porque a regra antiga listava só as clínicas e casava com `pathname.includes`.
+- **Trade-off**: a recepção não gera a portabilidade sozinha. **Pergunta aberta** (issue #185): o Atendente deve poder gerar uma exportação **sem** dado clínico? Até o usuário decidir, padrão seguro: negar.
+- **Scope / Date / Status**: lib/auth/route-family, api/patients/[id]/export, (staff)/pacientes/[id] · 2026-09-26 · active — issue #185. **Resposta (2026-10-12):** manter negado. O paciente baixa a própria cópia pelo portal (#293)

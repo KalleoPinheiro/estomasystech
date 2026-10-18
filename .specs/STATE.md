@@ -2,7 +2,7 @@
 
 ## Decisions
 
-Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-024, AD-026, AD-027, AD-029, AD-030, AD-031.
+Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-024, AD-026, AD-027, AD-029, AD-030, AD-031, AD-025.
 
 ### AD-001
 - **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
@@ -157,12 +157,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Date**: 2026-09-01
 - **Status**: active
 
-### AD-025
-- **Decision**: `GET /api/patients/:id/export` (exportação LGPD, art. 18) é família `clinical` e aplica o vínculo R4: Atendente recebe 403, Profissional sem vínculo recebe 404. Toda sub-rota de `/api/patients/:id/*` passa a ser clínica por padrão; a exceção é uma allowlist explícita (`NON_CLINICAL_PATIENT_SUBROUTES` em `src/lib/auth/route-family.ts`, hoje vazia).
-- **Reason**: o export devolve anamnese, SOAP, condições e fotos; qualquer subrota nova nascia `operational` e aberta ao Atendente porque a regra antiga listava só as clínicas e casava com `pathname.includes`.
-- **Trade-off**: a recepção não gera a portabilidade sozinha. **Pergunta aberta** (issue #185): o Atendente deve poder gerar uma exportação **sem** dado clínico? Até o usuário decidir, padrão seguro: negar.
-- **Scope / Date / Status**: lib/auth/route-family, api/patients/[id]/export, (staff)/pacientes/[id] · 2026-09-26 · active — issue #185. **Resposta (2026-10-12):** manter negado. O paciente baixa a própria cópia pelo portal (#293)
-
 ### AD-028
 - **Decision**: Gateways nulos (`NullEmailGateway`, `NullMessagingGateway`) logam só metadados: canal, assunto (e-mail) ou tamanho do texto (WhatsApp) e destinatário mascarado por `src/lib/redact.ts` (`fu***@x.com`, `+55******7777`) — nunca o corpo. Exceção decidida por @KalleoPinheiro: com `NODE_ENV !== 'production'` o e-mail nulo também loga o link `/definir-senha?token=…`, porque o dev e o `e2e/global-setup.ts` definem senha por ele.
 - **Reason**: mesma classe de vazamento da #202 (CWE-532, LGPD art. 46) — o corpo leva nome do paciente e data da consulta, e o link de convite/reset é credencial.
@@ -228,6 +222,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 
 ### AD-048
 - **Decision**: CNPJ antigo com dígito verificador inválido (#355, follow-up da #248) é **marcado para correção**, nunca apagado, anulado nem "consertado" (o CNPJ é obrigatório e o erro pode estar em qualquer dígito). Coluna `clinics.cnpj_review_since` (migração `0063`), script manual `npm run clinics:cnpj-review -- [--confirmar]`, auditoria sem o CNPJ, aviso em Configurações e na plataforma; salvar CNPJ válido limpa. **Trade-off**: aviso, não bloqueio — recibo e documentos continuam saindo com o número errado até a clínica corrigir; sem job automático (script rodado uma vez no deploy). Pergunta aberta: bloquear recibo enquanto houver marca. Delegado por @KalleoPinheiro; [ADR-029](../docs/adr/028-cnpj-antigo-invalido-marcado-para-correcao.md), ACE-RN-57 · 2026-10-18 · active
+
+### AD-049
+- **Decision**: orçamento de latência do go-live (#222), adotado pelo coordenador com a autonomia delegada por @KalleoPinheiro (2026-10-18): em uso realista (30 usuários simultâneos, pausa de 2 s, ≈ 15 req/s) toda rota de leitura fica com **p95 ≤ 300 ms**, o `/api/portal/patient/slots` com **p95 ≤ 500 ms**, e **0 erro** em qualquer cenário. Baseline medido em build de produção (`node .next/standalone/server.js`, Postgres 16, 4 vCPU): todas as rotas cumprem, com p95 ≤ 100 ms exceto `/slots` (460 ms com 20 profissionais e 100 mil consultas); teto de ≈ 165 req/s (típica) e ≈ 82 req/s (100 mil consultas) com 1 processo. **Índices compostos da #222 item 1: não construir**: com 20 empresas, 400 mil consultas e 2 milhões de eventos as rotas ficam em p95 ≤ 25 ms; revisar acima de ≈ 1 milhão de consultas por empresa. **Trade-off**: medição só de leitura, em loopback e com `fsync=off`; escrita, job de lembretes e navegador ficam fora (ver § 7 do doc). Método, tabelas e como reproduzir em [`docs/engineering/performance-baseline.md`](../docs/engineering/performance-baseline.md), scripts em `scripts/load/` · 2026-10-18 · active
 
 ### Baseline de segurança medido em `fcd6110`
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).

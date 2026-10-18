@@ -1191,3 +1191,14 @@ Follow-up da #248: empresas gravadas antes da conferência do dígito verificado
 - **Pergunta aberta**: bloquear o recibo enquanto a empresa tiver a marca?
 - **Deploy**: migração 0063 antes do código; depois rodar o script (producao.md §7.3), primeiro sem `--confirmar`.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Issue #222 — Baseline de carga (2026-10-18) — ENCERRADO
+
+Medição de carga antes do go-live, sem mudar código da aplicação ([`docs/engineering/performance-baseline.md`](../../docs/engineering/performance-baseline.md), AD-049).
+- **Scripts** `scripts/load/{profiles,seed,run}.ts`: seed por `generate_series` direto no Postgres (3 perfis: `tipica`, `multi` com 20 empresas, `issue` com 100 mil consultas e 1 milhão de eventos de auditoria; recusa host não local) e gerador de carga em TypeScript puro (sem dependência nova), 15 rotas de leitura, p50/p95/p99 em Markdown.
+- **Resultado**: uso realista (30 usuários, pausa 2 s, ≈ 15 req/s) com p95 ≤ 100 ms em tudo, exceto `/api/portal/patient/slots` (460 ms com 20 profissionais; orçamento 500 ms). Zero erro. Teto com 1 processo: ≈ 165 req/s (típica) e ≈ 82 req/s (`issue`); o `next-server` satura um núcleo, o Postgres fica a ≈ 20 %.
+- **Decisões minhas (autonomia delegada), para conferir**: (1) orçamento p95 ≤ 300 ms (≤ 500 ms no `/slots`) e 0 erro; (2) **não construir** os índices compostos do item 1, pois com 400 mil consultas e 2 milhões de eventos as rotas ficam em p95 ≤ 25 ms; (3) uma réplica basta para o go-live.
+- **Tickets**: #360 (`/slots` com consulta por candidato) e #361 (job de lembretes, ainda não medido). O bundle caiu de 428 KB para 229 KB no maior chunk (sem tabela por página).
+- **Limites**: só leitura, loopback e `fsync=off`; sem navegador, sem escrita, sem o job de lembretes (doc § 7). Repetir `tipica` na VPS definitiva.
+- **Gate**: Actions sem cota; local: typecheck, lint, check:sv, check:docs, test:coverage (5 266 testes), build de produção. Nenhum arquivo de `src/` mudou, então o E2E não foi repetido. the-judge não posta (sem `gh`): autorrevisão.
+- **Next step**: #360, #361. **Blockers**: nenhum. Também arquivei AD-025 (pergunta respondida em 2026-10-12) para o `STATE.md` caber em 250 linhas.
