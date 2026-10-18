@@ -18,7 +18,7 @@ Não havia script de backup nem de restore versionado.
 
 ## Goals
 
-- [ ] Runbook com provisionamento, TLS (Caddy), `TRUSTED_PROXY_HOPS`, segredos e rotação,
+- [ ] Runbook com provisionamento, TLS (Traefik do Coolify, ADR-036), `TRUSTED_PROXY_HOPS`, segredos e rotação,
       migrações, cron (lembretes, backup e retenção #294, que entrou na `main` pelo PR #302), primeiro acesso, backup/restore e
       monitoramento (#212), apontando a #216.
 - [ ] `scripts/backup.sh`: dump do Postgres e tar do volume `uploads`, cifrados com `age`
@@ -26,7 +26,7 @@ Não havia script de backup nem de restore versionado.
       comando configurável, retenção local de 30 dias, códigos de saída distintos.
 - [ ] `scripts/restore.sh`: confere sem alterar; `--confirmar` substitui banco e fotos e sobe o app.
 - [ ] `scripts/backup-smoke.sh` prova o ciclo backup → apagar → restore contra o compose, no CI.
-- [ ] `docker-compose.prod.yml` + `deploy/Caddyfile`: Caddy terminando TLS e app sem porta no host.
+- [ ] `docker-compose.prod.yml`: Traefik do Coolify terminando TLS; app e banco sem porta no host (Caddy removido, ADR-036).
 
 ## Out of Scope
 
@@ -44,6 +44,6 @@ Não havia script de backup nem de restore versionado.
 | `age` em vez de `gpg` | Chave pública simples no servidor, privada fora; sem keyring nem trust model |
 | Dois arquivos cifrados por backup (`db.dump.age`, `uploads.tar.age`) em vez de um tar único | Cada dump sai do container direto para o `age`: o dado em claro nunca é gravado no disco |
 | Destino fora do servidor como comando (`BACKUP_OFFSITE_CMD`) | Provedor não decidido; não inventar credencial nem provedor |
-| Caddy num override (`docker-compose.prod.yml`), não no `docker-compose.yml` | O compose base continua servindo o dev e o smoke do CI sem domínio nem TLS |
+| Override de produção (`docker-compose.prod.yml`), não no `docker-compose.yml` | O compose base continua servindo o dev e o smoke do CI sem domínio nem TLS |
 | `ports: !reset []` no app em produção | App exposto direto aceitaria HTTP e `x-forwarded-for` forjado (rate limit por IP) |
 | Restore apaga e recria o banco (`DROP DATABASE … WITH (FORCE)`) | `pg_restore --clean` deixaria objetos criados depois do backup |

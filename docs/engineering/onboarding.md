@@ -120,7 +120,7 @@ npm run dev                   # http://localhost:3000
 | `DATA_REQUEST_ALERT_DAYS` | não | dias antes do vencimento (15 dias) em que o Admin é avisado de pedido do titular pendente; 1 a 14, padrão 3 | [cron.md](integrations/cron.md) |
 | `PHOTO_STORAGE` / `S3_BUCKET` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `S3_REGION` / `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE` / `S3_SSE` | não (sim com várias réplicas e na Vercel) | fotos em bucket S3-compatível | [s3-storage.md](integrations/s3-storage.md) |
 | `UPLOADS_DIR` | não | diretório das fotos no disco local | padrão `./uploads`; no compose, `/app/uploads` (volume `uploads`) |
-| `TRUSTED_PROXY_HOPS` | não | quantos proxies reversos confiáveis ficam à frente do app (define o IP do cliente no `x-forwarded-for`) | padrão `1`; Nginx/Caddy = `1`, Cloudflare + Nginx = `2` |
+| `TRUSTED_PROXY_HOPS` | não | quantos proxies reversos confiáveis ficam à frente do app (define o IP do cliente no `x-forwarded-for`) | padrão `1`; Nginx/Traefik = `1`, Cloudflare + Nginx = `2` |
 | `API_RATE_LIMIT_MAX` | não | req/min em `/api/*`, somado entre réplicas: **por conta** quando autenticado (empresa + e-mail), por IP quando anônimo | padrão `120` — cada tela faz de 2 a 8 chamadas ao abrir (Agenda 7, Configurações 8, Dashboard 5, Ficha 6), ou seja ~15 trocas de tela por minuto por pessoa |
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | não | tuning do pool Postgres | — |
 | `GLITCHTIP_DSN` / `APP_RELEASE` | não | error tracking no GlitchTip self-hosted ([ADR-014](../adr/014-observabilidade-sem-pii.md)) e a versão marcada em cada evento | vazio = no-op; [glitchtip.md](integrations/glitchtip.md) |
