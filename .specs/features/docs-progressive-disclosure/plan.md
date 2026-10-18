@@ -8,7 +8,7 @@ Sources:
 
 ## Problem
 
-O Vitta Flow já tem as peças certas (glossário em `CONTEXT.md`, 4 ADRs, PRDs por fase, roadmap
+O EstomaSysTech já tem as peças certas (glossário em `CONTEXT.md`, 4 ADRs, PRDs por fase, roadmap
 faseado, `.specs/` por feature), mas elas não estão arranjadas para leitura progressiva, e quem
 paga é quem chega sem contexto — dev novo ou LLM:
 
@@ -70,7 +70,7 @@ integração ou o ADR — cada fato em um lugar só, com o CI provando que os li
 
 1. The `AGENTS.md` SHALL have at most 150 lines and contain these H2 sections, in this order: `Produto`, `Comandos`, `Regras invioláveis`, `Mapa de contexto`, `Agent skills`
 2. The `Mapa de contexto` section SHALL be a table with columns `Se vai mexer em`, `Leia primeiro`, `Depois, se precisar`, with one row per domain in `docs/domains/`
-3. The files `.github/copilot-instructions.md` and `.cursor/rules/00-vitta-flow.mdc` SHALL each have at most 15 lines and contain no rule that is not also in `AGENTS.md`
+3. The files `.github/copilot-instructions.md` and `.cursor/rules/00-estomasystech.mdc` SHALL each have at most 15 lines and contain no rule that is not also in `AGENTS.md`
 4. The `README.md` SHALL have at most 120 lines and SHALL NOT contain the environment variable table
 
 **Independent test:** abrir só o `AGENTS.md` e chegar ao doc de domínio da agenda em um clique.
@@ -190,7 +190,7 @@ None - nothing consumed outside; `npm run check:docs` é interno ao repo e não 
 
 | One-way door | Literal shape | Alternative rejected |
 | --- | --- | --- |
-| 1. `AGENTS.md` é o SSOT e roteador | 5 seções fixas (AC 1); pontes finas em `.github/copilot-instructions.md` e `.cursor/rules/00-vitta-flow.mdc` que só apontam para ele | `PROJECT_CONTEXT.md` separado - nenhuma ferramenta o carrega sozinha, e coexistir com `AGENTS.md` cria duas verdades |
+| 1. `AGENTS.md` é o SSOT e roteador | 5 seções fixas (AC 1); pontes finas em `.github/copilot-instructions.md` e `.cursor/rules/00-estomasystech.mdc` que só apontam para ele | `PROJECT_CONTEXT.md` separado - nenhuma ferramenta o carrega sozinha, e coexistir com `AGENTS.md` cria duas verdades |
 | 2. Árvore de `docs/` | `docs/{domains/<slug>/{README.md,features/},engineering/{integrations/},product/,adr/,audits/,agents/,templates/}` | pastas por tipo de artefato no topo (`specs/`, `guides/`) - o leitor chega com um domínio na cabeça, não com um tipo; caminhos viram links em issues/PRs e deixam de ser baratos de mudar |
 | 3. Schema de frontmatter | `title`, `status` ∈ {`living`,`frozen`,`draft`,`superseded`}, `audience` ∈ {`dev`,`po`,`stakeholder`,`agent`} (lista), `owner`, `last_reviewed` (`YYYY-MM-DD`); opcionais `domain`, `related` | sem metadados - LLM não distingue snapshot congelado de verdade viva; tags livres - não validáveis |
 | 4. Gate `check:docs` | `tsx scripts/check-docs.ts`, sem dependência nova, só links relativos | `lychee`/`markdown-link-check` - dependência nova e checagem de URL externa é instável em CI |

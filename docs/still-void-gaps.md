@@ -11,22 +11,22 @@ last_reviewed: 2026-09-26
 - **Status:** Aberto — seções abertas: `touch-target-size`, `combobox` (só relato)
 - **Data:** 2026-08-26
 - **Versão verificada:** `@still-void/ui@3.2.0`
-- **Origem:** migração 2.0 → 3.1 do VittaFlow (`.specs/features/still-void-v3-migration/`); as
+- **Origem:** migração 2.0 → 3.1 do EstomaSysTech (`.specs/features/still-void-v3-migration/`); as
   6 lacunas levantadas ali foram fechadas pela migração 3.1 → 3.2
   (`.specs/features/still-void-v3.2-migration/`) — ver histórico no fim deste documento.
 
-Componentes que o VittaFlow precisa e a `3.1.0` **não** exporta, mais os defeitos
+Componentes que o EstomaSysTech precisa e a `3.1.0` **não** exporta, mais os defeitos
 encontrados no que ela exporta. Cada entrada é candidata a issue no repositório
 [still-void](https://github.com/KalleoPinheiro/still-void).
 
 ## Como ler
 
-Cada lacuna tem um `slug`. O mesmo `slug` aparece no código do VittaFlow como
+Cada lacuna tem um `slug`. O mesmo `slug` aparece no código do EstomaSysTech como
 comentário `sv-gap: <slug>`, na linha acima do workaround. `npm run check:sv`
 mantém os dois lados em sincronia nos dois sentidos: marcação sem seção aqui, ou
 seção aqui sem marcação no código, falham o gate. A exceção é uma seção anotada
 com `<!-- sv-gap-doc-only -->`, para a lacuna que não tem workaround local — é
-relato sobre a lib, não dívida no VittaFlow.
+relato sobre a lib, não dívida no EstomaSysTech.
 
 **Prova de ausência:** cada nome abaixo foi conferido contra a *export line* de
 `dist/react/index.d.ts` e `dist/react/client/index.d.ts` da `3.1.0` — o artefato

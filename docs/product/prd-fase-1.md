@@ -1,12 +1,12 @@
 ---
-title: "PRD — VittaFlow: Módulo Clínico para Estomaterapia"
+title: "PRD — EstomaSysTech: Módulo Clínico para Estomaterapia"
 status: frozen
 audience: [po, stakeholder, dev]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-09-23
 ---
 
-# PRD — VittaFlow: Módulo Clínico para Estomaterapia
+# PRD — EstomaSysTech: Módulo Clínico para Estomaterapia
 
 - **Versão:** 1.0
 - **Data:** 2026-07-16
@@ -18,7 +18,7 @@ last_reviewed: 2026-09-23
 
 A estomaterapia é uma especialidade de enfermagem focada em três grandes áreas: **estomias** (colostomia, ileostomia, urostomia), **feridas complexas** (úlceras por pressão, úlceras venosas/arteriais, pé diabético, deiscências) e **incontinências**. O cuidado é **longitudinal**: o mesmo paciente retorna dezenas de vezes ao longo de meses, e o valor clínico está em **medir a evolução** entre visitas.
 
-O VittaFlow hoje resolve bem a camada administrativa — cadastro de pacientes, agenda com regras de horário, faturamento e integração com Google Calendar — mas não registra **nada do que acontece dentro da consulta**. Isso gera três dores reais em clínicas do setor:
+O EstomaSysTech hoje resolve bem a camada administrativa — cadastro de pacientes, agenda com regras de horário, faturamento e integração com Google Calendar — mas não registra **nada do que acontece dentro da consulta**. Isso gera três dores reais em clínicas do setor:
 
 1. **Sem prontuário, não há continuidade nem respaldo.** A evolução de enfermagem é exigência do COFEN (Resolução 429/2012 — registro obrigatório no prontuário) e a principal defesa legal do profissional.
 2. **Sem medição seriada, não há prova de resultado.** Ferida que não é medida (comprimento × largura × profundidade, tecido, exsudato, dor) não demonstra cicatrização — e demonstrar resultado é o que sustenta o preço da consulta particular e a relação com convênios.
@@ -33,7 +33,7 @@ Além disso, **paciente de estomaterapia que não retorna é risco clínico** (d
 
 ## 3. Objetivo da Fase 1
 
-Transformar o VittaFlow de agenda+faturamento em **sistema de gestão clínica completo** para estomaterapia: prontuário eletrônico com evolução SOAP, acompanhamento mensurável de estomias e feridas, controle de estoque de insumos com alerta, recall de retornos e relatório gerencial.
+Transformar o EstomaSysTech de agenda+faturamento em **sistema de gestão clínica completo** para estomaterapia: prontuário eletrônico com evolução SOAP, acompanhamento mensurável de estomias e feridas, controle de estoque de insumos com alerta, recall de retornos e relatório gerencial.
 
 ## 4. Features da Fase 1 (implementar agora)
 

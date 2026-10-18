@@ -9,7 +9,7 @@ import {
 import { jsonRequest, multipartRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const pngBytes = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00,
@@ -131,7 +131,7 @@ describe('Feature: Leitura do binário da foto clínica (#209)', () => {
 
     const response = await getPhoto(
       photoId,
-      cookieHeaderFor('super_admin', 'operador@vitta.com', null),
+      cookieHeaderFor('super_admin', 'operador@estomasystech.com', null),
     );
 
     expect(response.status).toBe(403);

@@ -3,7 +3,7 @@ import { classifyRoute, isFamilyAllowedForRole } from './route-family';
 import { getAuthConfig } from './session';
 
 /**
- * Política de acesso do VittaFlow — fonte única consumida pelas DUAS camadas de
+ * Política de acesso do EstomaSysTech — fonte única consumida pelas DUAS camadas de
  * autorização:
  *
  *  1. `src/proxy.ts` (borda): checagem otimista antes de a requisição chegar à
@@ -37,7 +37,7 @@ export const PUBLIC_PATHS = [
   '/api/auth/mfa/enroll',
   '/api/auth/mfa/verify',
   // Bootstrap do primeiro Super Admin: por definição não há sessão nem conta.
-  // A própria rota exige o segredo `VITTA_BOOTSTRAP_TOKEN` e só funciona
+  // A própria rota exige o segredo `ESTOMASYSTECH_BOOTSTRAP_TOKEN` e só funciona
   // enquanto a instalação está vazia.
   '/api/auth/bootstrap',
   // Cron externo — a própria rota exige o header x-cron-secret (CRON_SECRET).

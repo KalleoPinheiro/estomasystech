@@ -36,7 +36,7 @@
 
 ### P1: Escopo por clínica na tabela e no repositório ⭐ MVP
 
-**User Story**: Como responsável técnico do VittaFlow, quero que `google_accounts` tenha `clinic_id` e que as queries do repositório sejam filtradas por empresa, para que a credencial do Google Agenda de uma clínica nunca seja usada por outra.
+**User Story**: Como responsável técnico do EstomaSysTech, quero que `google_accounts` tenha `clinic_id` e que as queries do repositório sejam filtradas por empresa, para que a credencial do Google Agenda de uma clínica nunca seja usada por outra.
 
 **Why P1**: É a causa raiz do bug relatado na issue #74.
 
@@ -57,7 +57,7 @@
 
 **User Story**: Como responsável técnico, quero que o gateway de Calendar em `container.ts` seja cacheado por clínica, para que o processo Node não reaproveite a credencial OAuth de uma empresa para outra.
 
-**Why P1**: Sem isso, mesmo com a query corrigida, o cache global (`globalForServices.vittaCalendar`, uma única entrada) ainda serve a última credencial resolvida para qualquer clínica que peça um gateway em seguida — é a segunda metade do mesmo bug.
+**Why P1**: Sem isso, mesmo com a query corrigida, o cache global (`globalForServices.estomasystechCalendar`, uma única entrada) ainda serve a última credencial resolvida para qualquer clínica que peça um gateway em seguida — é a segunda metade do mesmo bug.
 
 **Acceptance Criteria**:
 

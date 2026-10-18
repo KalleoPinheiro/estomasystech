@@ -20,8 +20,8 @@ import {
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 const PASSWORD = 'senha-forte-123';
 let counter = 0;
@@ -322,7 +322,7 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
           `/api/platform/clinics/${clinicId}/${action}`,
           'POST',
           action === 'suspend' ? { reason: 'other' } : undefined,
-          cookieHeaderFor('super_admin', 'dono@vitta.app', null),
+          cookieHeaderFor('super_admin', 'dono@estomasystech.app', null),
         ),
         { params: Promise.resolve({ id: clinicId }) },
       );
@@ -366,13 +366,17 @@ describe('Feature: Revogação de sessão por versão (#194, ADR-005)', () => {
       const clinic = (await clinics.findById(clinicId)) as Clinic;
 
       await clinics.saveStatus(
-        clinic.suspend('dono@vitta.app', new Date(), { reason: 'other' }),
+        clinic.suspend('dono@estomasystech.app', new Date(), {
+          reason: 'other',
+        }),
       );
       clearSessionRevocationCache();
       expect(await proxyStatus(cookie)).toBe(401);
       expect(await versionOf(staff.id, clinicId)).toBe(0);
 
-      await clinics.saveStatus(clinic.reactivate('dono@vitta.app', new Date()));
+      await clinics.saveStatus(
+        clinic.reactivate('dono@estomasystech.app', new Date()),
+      );
       clearSessionRevocationCache();
       expect(await proxyStatus(cookie)).toBe(200);
     });

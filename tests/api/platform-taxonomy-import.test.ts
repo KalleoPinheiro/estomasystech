@@ -12,7 +12,7 @@ import { CLINIC_A_ID } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -56,7 +56,11 @@ const catalogSize = async (): Promise<ImportCounts> => {
   };
 };
 
-const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+const SUPER_ADMIN = cookieHeaderFor(
+  'super_admin',
+  'dono@estomasystech.app',
+  null,
+);
 
 describe('Feature: Importação do catálogo de taxonomias é ato de plataforma (B1)', () => {
   it('Dado company_admin, Quando importar, Então company_admin recebe 403 e o catálogo não muda', async () => {

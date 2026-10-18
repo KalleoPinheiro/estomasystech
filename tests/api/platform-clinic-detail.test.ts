@@ -5,7 +5,7 @@ import { validCnpj } from '../support/cnpj';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -27,7 +27,11 @@ interface ClinicDto {
   createdAt: string;
 }
 
-const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+const SUPER_ADMIN = cookieHeaderFor(
+  'super_admin',
+  'dono@estomasystech.app',
+  null,
+);
 
 const repositories = async (clinicId: string) => {
   const { getRepositories } = await import('@/infrastructure/container');
@@ -222,7 +226,7 @@ describe('Feature: Detalhe e edição do cadastro pela plataforma (B4, Journey 6
             resourceType: 'clinic-info',
             resourceId: clinic.id,
             actorRole: 'super_admin',
-            actorId: 'dono@vitta.app',
+            actorId: 'dono@estomasystech.app',
             clinicId: clinic.id,
           }),
         ]),

@@ -12,7 +12,7 @@ import { runRecoverSuperAdminCli } from "@/infrastructure/persistence/drizzle/re
  * Sem --confirmar só simula. Saída: 0 ok, 2 uso/pré-condição, 1 falha (nada gravado).
  * Roteiro completo: docs/engineering/producao.md § 10.
  */
-process.env.VITTA_MIGRATE_ON_BOOT ??= "false";
+process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
 
 runRecoverSuperAdminCli(process.argv.slice(2), {
   env: process.env,

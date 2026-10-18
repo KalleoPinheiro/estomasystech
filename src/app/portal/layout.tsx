@@ -5,7 +5,7 @@ import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
 
 export const metadata: Metadata = {
-  title: 'Portal — VittaFlow',
+  title: 'Portal — EstomaSysTech',
 };
 
 export default function PortalLayout({

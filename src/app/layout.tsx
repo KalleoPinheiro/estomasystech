@@ -28,7 +28,7 @@ const jetbrainsMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'VittaFlow — Clínica de Estomaterapia',
+  title: 'EstomaSysTech — Clínica de Estomaterapia',
   description:
     'Gestão de pacientes, agenda e faturamento para clínica de estomaterapia',
 };

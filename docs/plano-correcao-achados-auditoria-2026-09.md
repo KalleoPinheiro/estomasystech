@@ -112,9 +112,9 @@ os achados P1–P3 pontuais por tela — a maioria decorre diretamente daqui.
 | Monetização (Fase 5), TISS/convênios (Fase 6) | Decisão de negócio pendente, já registrada em `plano-evolucao-faseado.md` |
 | 2FA (TOTP), assinatura digital ICP-Brasil | P2 sem pressão de compliance imediata / feature grande, precisa PRD próprio |
 | Outbox/fila para eventos de calendário, cache HTTP/ETag em relatórios, unit-of-work entre agregados | P2, sem bug ativo hoje |
-| `migrate` como job de deploy | Já resolvido — configurável via `VITTA_MIGRATE_ON_BOOT` |
+| `migrate` como job de deploy | Já resolvido — configurável via `ESTOMASYSTECH_MIGRATE_ON_BOOT` |
 | Dark mode, `CardSkeleton` flexível | Feature de produto / sem caso concreto reportado |
-| 13 gaps de componente do `@still-void/ui` (design-system audit) | Pertencem ao repositório `still-void`, não ao `vitta-flow` |
+| 13 gaps de componente do `@still-void/ui` (design-system audit) | Pertencem ao repositório `still-void`, não ao `estomasystech` |
 | Adoção de `Tabs`/`Tooltip`/`DropdownMenu`/`Prose`/`ThemeToggle` | Baixo risco, sem urgência clínica ou de compliance |
 | Dezenas de achados P1–P3 pontuais da auditoria UX | Ficam registrados no próprio `auditoria-ux-2026-08.md`, a triar depois que a Fase A fechar (recomendação da própria auditoria) |
 

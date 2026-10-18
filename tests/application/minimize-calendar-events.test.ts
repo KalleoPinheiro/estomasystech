@@ -119,7 +119,7 @@ describe('Feature: Minimização em lote dos eventos antigos do Google Agenda (#
     expect(eventId).toBe('evt-a1');
     expect(input.title).toBe('Consulta · M.S.');
     expect(input.description).toBe(
-      `Abrir no VittaFlow: ${APP_URL}/agenda?consulta=a1&em=2026-10-20T12%3A00%3A00.000Z`,
+      `Abrir no EstomaSysTech: ${APP_URL}/agenda?consulta=a1&em=2026-10-20T12%3A00%3A00.000Z`,
     );
     expect(input.startsAt).toEqual(new Date('2026-10-20T12:00:00Z'));
     const serialized = JSON.stringify(input);

@@ -6,7 +6,7 @@ import {
 import { ConflictError, ValidationError } from '@/domain/shared/errors';
 
 const validProps = {
-  email: 'equipe@vittaflow.com',
+  email: 'equipe@estomasystech.com',
   passwordHash: 'scrypt$16384$abc123$def456',
   role: 'company_admin' as const,
   clinicId: 'legacy-clinic',
@@ -18,7 +18,7 @@ describe('Feature: Conta de acesso da equipe (UserAccount)', () => {
       const account = UserAccount.create(validProps);
 
       expect(account.id).toBeTruthy();
-      expect(account.email).toBe('equipe@vittaflow.com');
+      expect(account.email).toBe('equipe@estomasystech.com');
       expect(account.isActive).toBe(true);
       expect(account.createdAt).toBeInstanceOf(Date);
       expect(account.professionalId).toBeNull();
@@ -28,10 +28,10 @@ describe('Feature: Conta de acesso da equipe (UserAccount)', () => {
     it('Dado email com espaços e maiúsculas, Quando criar, Então email normalizado', () => {
       const account = UserAccount.create({
         ...validProps,
-        email: '  Equipe@VittaFlow.com  ',
+        email: '  Equipe@EstomaSysTech.com  ',
       });
 
-      expect(account.email).toBe('equipe@vittaflow.com');
+      expect(account.email).toBe('equipe@estomasystech.com');
     });
 
     it('Dado professionalId, Quando criar, Então vincula ao profissional', () => {

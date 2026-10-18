@@ -36,7 +36,9 @@ describe('Feature: Header do portal (SV3-03)', () => {
       </PortalLayout>,
     );
 
-    expect(screen.getByRole('link', { name: /VittaFlow/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /EstomaSysTech/ }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('Portal do paciente, do responsável e do parceiro'),
     ).toBeInTheDocument();

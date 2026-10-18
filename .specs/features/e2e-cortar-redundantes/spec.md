@@ -86,9 +86,9 @@ execução) — fica registrado para eventual issue própria.
      em vez do `NullEmailGateway` — a suíte inteira depende do dry-run via `console.info`. Sem
      isso, toda rota que envia e-mail batia no rate-limit de sandbox do Resend (403) e nenhum
      e-mail chegava ao spy. Corrigido forçando as duas vars vazias em `vitest.config.mts` (mesmo
-     padrão já usado para `AUTH_SECRET`/`VITTA_ALLOW_OPEN_MODE`).
+     padrão já usado para `AUTH_SECRET`/`ESTOMASYSTECH_ALLOW_OPEN_MODE`).
    Verificado com o vazamento simulado (`RESEND_API_KEY=fake EMAIL_FROM=fake@x.com
-   VITTA_ALLOW_OPEN_MODE=true npm run test`) → 2750/2750 limpo.
+   ESTOMASYSTECH_ALLOW_OPEN_MODE=true npm run test`) → 2750/2750 limpo.
 
 ## Requirement Traceability
 

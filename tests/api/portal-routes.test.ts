@@ -17,7 +17,7 @@ import { pinClock, unpinClock } from '../support/clock';
 import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 process.env.AUTH_SECRET = 'test-secret-e2e';
 
 /**
@@ -279,7 +279,7 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
   });
 
   const cookieHeader = (token: string) => ({
-    cookie: `vitta_session=${token}`,
+    cookie: `estomasystech_session=${token}`,
   });
 
   describe('GET /api/portal/me', () => {

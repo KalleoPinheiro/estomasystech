@@ -4,7 +4,7 @@ import { pinClock, unpinClock } from '../support/clock';
 import { linkAllPortalAccounts } from '../support/portal-account';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;

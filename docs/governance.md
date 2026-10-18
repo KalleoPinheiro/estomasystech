@@ -54,7 +54,7 @@ alguém analisou" (`frozen`). Sem ele, uma auditoria antiga vale tanto quanto a 
 
 ## 2. Docs-as-Code
 
-| Prática | Mecanismo no Vitta Flow |
+| Prática | Mecanismo no EstomaSysTech |
 | --- | --- |
 | Doc vive no repo, revisado em PR | `docs/`, `CONTEXT.md`, `AGENTS.md` — nada de wiki paralela como fonte |
 | Gate automático | `npm run check:docs` no CI: links relativos resolvem, frontmatter válido, aviso para doc `living` com `last_reviewed` > 90 dias |

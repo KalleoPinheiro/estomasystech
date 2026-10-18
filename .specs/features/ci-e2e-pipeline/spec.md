@@ -27,7 +27,7 @@
 | Job roda em paralelo ao job de CI existente, não sequencial | Job novo separado (`e2e`) no mesmo workflow, sem `needs:` do job `ci` | Minimiza tempo total de pipeline (wall-clock da PR); typecheck/lint/test:coverage e e2e são independentes | y |
 | Job de e2e bloqueia merge (obrigatório) ou é informativo | Obrigatório (bloqueia merge), igual aos demais checks | Critério de aceite da issue não pede "informativo"; suíte já é confiável localmente (retries:1 absorve cold-compile do Turbopack) | y |
 | Instalação do browser Chromium no runner | `npx playwright install --with-deps chromium` (só chromium, único project configurado) | `playwright.config.ts` define só `projects: [chromium]` — instalar todos os browsers seria desperdício | y |
-| Variáveis de ambiente do job | Nenhuma extra além do que `playwright.config.ts` já injeta via `webServer.env` (AUTH_SECRET/VITTA_BOOTSTRAP_TOKEN ficam nos env do `webServer`, não no shell do CI) | Config já é auto-contida (PGlite em memória, sem serviço externo) — evita duplicar segredos em dois lugares | y |
+| Variáveis de ambiente do job | Nenhuma extra além do que `playwright.config.ts` já injeta via `webServer.env` (AUTH_SECRET/ESTOMASYSTECH_BOOTSTRAP_TOKEN ficam nos env do `webServer`, não no shell do CI) | Config já é auto-contida (PGlite em memória, sem serviço externo) — evita duplicar segredos em dois lugares | y |
 | Node version do job de e2e | Mesma do job `ci` (`node-version: "24"`) | Consistência entre jobs do mesmo workflow | y |
 
 **Open questions:** nenhuma — todas resolvidas acima.

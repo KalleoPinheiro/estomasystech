@@ -6,7 +6,7 @@ import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { type ClinicInfoDto, toClinicInfoDto } from '@/lib/dto';
 
 /** Neutro, usado só quando a clínica não tem `name` gravado (nunca deveria faltar — defensivo). */
-const DEFAULT_NAME = 'VittaFlow — Clínica de Estomaterapia';
+const DEFAULT_NAME = 'EstomaSysTech — Clínica de Estomaterapia';
 
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);

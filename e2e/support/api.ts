@@ -88,7 +88,7 @@ export async function createPatient(
   const id = unique();
   return apiPost<PatientDto>(request, "/api/patients", {
     fullName: overrides.fullName ?? `Paciente E2E ${id}`,
-    email: overrides.email ?? `paciente.${id}@e2e.vittaflow.test`,
+    email: overrides.email ?? `paciente.${id}@e2e.estomasystech.test`,
     phone: overrides.phone ?? "11999990000",
     ...(overrides.cpf ? { cpf: overrides.cpf } : {}),
     referredByPartnerId: overrides.referredByPartnerId ?? null,
@@ -113,7 +113,7 @@ export async function createPartner(
   const id = unique();
   return apiPost<PartnerDto>(request, "/api/partners", {
     fullName: overrides.fullName ?? `Dr. Parceiro E2E ${id}`,
-    email: overrides.email ?? `parceiro.${id}@e2e.vittaflow.test`,
+    email: overrides.email ?? `parceiro.${id}@e2e.estomasystech.test`,
     phone: overrides.phone ?? "11988880000",
     crm: "CRM-SP 000000",
     specialty: "Cirurgia vascular",

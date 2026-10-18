@@ -1,4 +1,4 @@
-# VittaFlow
+# EstomaSysTech
 
 Sistema de gestão clínica para **estomaterapia**: prontuário eletrônico (anamnese, evolução SOAP,
 acompanhamento seriado de estomias e feridas com fotos), agenda com regras de horário e lista de
@@ -24,14 +24,14 @@ Pré-requisito: Docker + Docker Compose.
 
 ```bash
 cp .env.example .env
-# preencha no mínimo AUTH_SECRET e VITTA_BOOTSTRAP_TOKEN (RESEND_API_KEY e EMAIL_FROM: opcionais em dev, necessárias em produção)
+# preencha no mínimo AUTH_SECRET e ESTOMASYSTECH_BOOTSTRAP_TOKEN (RESEND_API_KEY e EMAIL_FROM: opcionais em dev, necessárias em produção)
 docker compose up -d --build
 
 until curl -sf http://localhost:3000/api/auth/providers >/dev/null; do sleep 2; done
 set -a; . ./.env; set +a
 curl -sX POST http://localhost:3000/api/auth/bootstrap \
   -H "Content-Type: application/json" \
-  -H "x-bootstrap-token: $VITTA_BOOTSTRAP_TOKEN" \
+  -H "x-bootstrap-token: $ESTOMASYSTECH_BOOTSTRAP_TOKEN" \
   -d '{"email":"voce@suaclinica.com"}'
 # abra o link do convite (ou o `inviteUrl` da resposta, se `delivered` vier false)
 ```

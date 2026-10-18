@@ -343,7 +343,7 @@ const CALENDAR_ERROR_MESSAGES: Record<string, string> = {
   fluxo_invalido:
     'Não foi possível concluir a conexão — o fluxo expirou ou é inválido. Tente novamente.',
   sem_credencial:
-    'O Google não devolveu credencial de longa duração — revogue o acesso do VittaFlow na sua conta Google e conecte de novo.',
+    'O Google não devolveu credencial de longa duração — revogue o acesso do EstomaSysTech na sua conta Google e conecte de novo.',
   falha_conexao: 'Falha ao conectar o Google Agenda. Tente novamente.',
 };
 const GENERIC_CALENDAR_ERROR =

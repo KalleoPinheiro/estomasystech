@@ -75,12 +75,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: {
-        VITTA_DB_DRIVER: "pglite",
+        ESTOMASYSTECH_DB_DRIVER: "pglite",
         TZ: "America/Sao_Paulo",
         AUTH_SECRET: E2E_AUTH_SECRET,
         // Libera POST /api/auth/bootstrap, o caminho que o global-setup usa
         // para criar o Super Admin da instalação limpa da suíte.
-        VITTA_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
+        ESTOMASYSTECH_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
         APP_URL: MAIN_BASE_URL,
         // A suíte inteira roda no mesmo IP (loopback) contra um processo só —
         // o limite de produção (120/min) estoura fácil com o volume de setup via API.

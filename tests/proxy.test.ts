@@ -11,7 +11,7 @@ vi.mock('@/lib/auth/staff-revocation', () => ({
 }));
 
 // O limite de /api é contado no Postgres (issue #77) — PGlite na suíte.
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const SECRET = 'segredo-do-proxy-em-teste';
 
@@ -23,7 +23,7 @@ const AUTH_ENV_KEYS = [
   'APP_URL',
   'GOOGLE_ALLOWED_EMAILS',
   'API_RATE_LIMIT_MAX',
-  'VITTA_ALLOW_OPEN_MODE',
+  'ESTOMASYSTECH_ALLOW_OPEN_MODE',
 ] as const;
 
 /**
@@ -45,7 +45,7 @@ const request = (path: string, cookie?: string, ip = '10.0.0.1'): NextRequest =>
   });
 
 const sessionCookie = (role: UserRole, subject = 'maria@clinica.com'): string =>
-  `vitta_session=${createSessionToken(SECRET, Date.now() + 3_600_000, subject, role)}`;
+  `estomasystech_session=${createSessionToken(SECRET, Date.now() + 3_600_000, subject, role)}`;
 
 const isNext = (response: NextResponse): boolean =>
   response.headers.get('x-middleware-next') === '1';
@@ -222,11 +222,11 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       expect((await proxy(request('/agenda'))).status).toBe(503);
     });
 
-    it('Dado VITTA_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 503 sem AUTH_SECRET', async () => {
+    it('Dado ESTOMASYSTECH_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 503 sem AUTH_SECRET', async () => {
       delete process.env.AUTH_SECRET;
       delete process.env.AUTH_PASSWORD;
       vi.stubEnv('NODE_ENV', 'development');
-      process.env.VITTA_ALLOW_OPEN_MODE = 'true';
+      process.env.ESTOMASYSTECH_ALLOW_OPEN_MODE = 'true';
       const proxy = await loadProxy();
 
       expect((await proxy(request('/api/patients'))).status).toBe(503);
@@ -246,14 +246,14 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
 
     it('Dada rota de API com cookie assinado por outro segredo, Então responde 401', async () => {
       const proxy = await loadProxy();
-      const forjado = `vitta_session=${createSessionToken('outro-segredo', Date.now() + 3_600_000)}`;
+      const forjado = `estomasystech_session=${createSessionToken('outro-segredo', Date.now() + 3_600_000)}`;
 
       expect((await proxy(request('/api/patients', forjado))).status).toBe(401);
     });
 
     it('Dada rota de API com sessão expirada, Então responde 401', async () => {
       const proxy = await loadProxy();
-      const expirado = `vitta_session=${createSessionToken(SECRET, Date.now() - 1_000)}`;
+      const expirado = `estomasystech_session=${createSessionToken(SECRET, Date.now() - 1_000)}`;
 
       expect((await proxy(request('/api/patients', expirado))).status).toBe(
         401,
@@ -273,7 +273,7 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
 
     it('Dada uma página com cookie expirado, Então redireciona para /login com session_expired e a rota com query em next (#207)', async () => {
       const proxy = await loadProxy();
-      const expirado = `vitta_session=${createSessionToken(SECRET, Date.now() - 1_000)}`;
+      const expirado = `estomasystech_session=${createSessionToken(SECRET, Date.now() - 1_000)}`;
 
       const response = await proxy(
         request('/pacientes/p-1?aba=evolucoes', expirado),
@@ -394,7 +394,7 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
     const ROLE_DENIED = 'Seu papel não tem acesso a este recurso';
 
     it('Dado super_admin, Quando chama rotas da clínica, Então super_admin recebe 403 nas rotas da clínica', async () => {
-      const cookie = sessionCookie('super_admin', 'dono@vitta.app');
+      const cookie = sessionCookie('super_admin', 'dono@estomasystech.app');
       const attempts: Array<[string, string]> = [
         ['GET', '/api/patients'],
         ['GET', '/api/audit'],
@@ -430,7 +430,7 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
           requestAs(
             'GET',
             path,
-            sessionCookie('super_admin', 'dono@vitta.app'),
+            sessionCookie('super_admin', 'dono@estomasystech.app'),
           ),
         );
 
@@ -450,7 +450,7 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
           requestAs(
             'GET',
             path,
-            sessionCookie('super_admin', 'dono@vitta.app'),
+            sessionCookie('super_admin', 'dono@estomasystech.app'),
           ),
         );
 
@@ -538,7 +538,11 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       expect(anonymous.status).toBe(401);
 
       const operator = await (await loadProxy())(
-        requestAs('POST', path, sessionCookie('super_admin', 'dono@vitta.app')),
+        requestAs(
+          'POST',
+          path,
+          sessionCookie('super_admin', 'dono@estomasystech.app'),
+        ),
       );
       expect(operator.status).toBe(403);
 

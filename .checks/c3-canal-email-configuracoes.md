@@ -71,7 +71,7 @@ Proof: `npx vitest run tests/api/email-channel-settings.test.ts -t "GET"`
 
 ### S2 — Testar · 5 files · ~25 KB · ~6k
 
-**C10** — `POST /api/settings/email-channel/test` envia pelo canal da clínica (`Bearer <chave da clínica>`) para o e-mail da sessão, assunto `VittaFlow — teste do canal de e-mail`, e responde `200` `{ lastStatus: 'ok', lastStatusAt: <agora>, lastError: null }`; o `GET` seguinte traz `lastStatus: 'ok'`
+**C10** — `POST /api/settings/email-channel/test` envia pelo canal da clínica (`Bearer <chave da clínica>`) para o e-mail da sessão, assunto `EstomaSysTech — teste do canal de e-mail`, e responde `200` `{ lastStatus: 'ok', lastStatusAt: <agora>, lastError: null }`; o `GET` seguinte traz `lastStatus: 'ok'`
 Proof: `npx vitest run tests/api/email-channel-test.test.ts -t "teste ok"`
 
 **C11** — a tela mostra "Teste enviado para <e-mail> em <data e hora>" após o teste ok

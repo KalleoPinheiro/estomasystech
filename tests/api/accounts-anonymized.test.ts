@@ -16,7 +16,7 @@ import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface AccountDto {
   id: string;

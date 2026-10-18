@@ -117,7 +117,7 @@ back before the post-commit invite step ever ran.
 
 ## D. Real gate results
 
-Run from `/home/kalleopinheiro/projects/vitta-flow/.claude/worktrees/agent-a77ed516786d90a8f`
+Run from `/home/kalleopinheiro/projects/estomasystech/.claude/worktrees/agent-a77ed516786d90a8f`
 (no mutations in place; clean tree matching `HEAD`).
 
 | Check | Result |

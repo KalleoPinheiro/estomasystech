@@ -15,7 +15,7 @@ import { validCnpj } from '../support/cnpj';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 process.env.AUTH_SECRET = 'segredo-do-teste-da-trilha-de-plataforma';
 
 interface Envelope<T> {
@@ -25,7 +25,7 @@ interface Envelope<T> {
   meta?: { nextCursor: string | null };
 }
 
-const OPERATOR = 'dono@vitta.app';
+const OPERATOR = 'dono@estomasystech.app';
 const OPERATOR_PASSWORD = 'senha-do-operador';
 const SUPER_ADMIN = cookieHeaderFor('super_admin', OPERATOR, null);
 

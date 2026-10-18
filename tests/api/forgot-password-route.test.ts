@@ -21,8 +21,8 @@ import {
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -89,7 +89,7 @@ describe('Feature: POST /api/auth/forgot-password', () => {
     expect(emails.bodies).toHaveLength(1);
     expect(emails.bodies[0]).toContain('reset-ok@x.com');
     expect(emails.bodies[0]).toContain(
-      'https://app.vitta.test/definir-senha?token=',
+      'https://app.estomasystech.test/definir-senha?token=',
     );
     expect(emails.bodies[0]).toContain('1 hora');
     emails.restore();
@@ -273,7 +273,7 @@ describe('Feature: POST /api/auth/forgot-password', () => {
       const [existing] = await userAccounts.findByRole('super_admin');
       if (existing) return existing.email;
       const created = UserAccount.create({
-        email: 'dono-reset@vitta.app',
+        email: 'dono-reset@estomasystech.app',
         passwordHash: 'scrypt$1$abc$def',
         role: 'super_admin',
         clinicId: null,
@@ -287,7 +287,10 @@ describe('Feature: POST /api/auth/forgot-password', () => {
       vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
       vi.stubEnv('RESEND_API_KEY', 're_chave_plataforma');
-      vi.stubEnv('EMAIL_FROM', 'Vitta <nao-responda@vitta.app>');
+      vi.stubEnv(
+        'EMAIL_FROM',
+        'EstomaSysTech <nao-responda@estomasystech.app>',
+      );
       const withPlatform = stubProviderFetch(200);
       const first = await forgot(email);
       await vi.waitFor(() => expect(withPlatform).toHaveBeenCalled());

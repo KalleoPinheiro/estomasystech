@@ -6,7 +6,7 @@ import { PUBLIC_PATHS } from '@/lib/auth/access-policy';
 import { classifyRoute } from '@/lib/auth/route-family';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 /**
  * Rede de proteção contra a lacuna descrita na Issue #4: "é fácil esquecer uma

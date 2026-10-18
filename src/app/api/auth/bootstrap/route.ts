@@ -24,7 +24,7 @@ const schema = z.object({
 });
 
 function hasValidBootstrapToken(request: NextRequest): boolean {
-  const expected = process.env.VITTA_BOOTSTRAP_TOKEN;
+  const expected = process.env.ESTOMASYSTECH_BOOTSTRAP_TOKEN;
   const provided = request.headers.get(BOOTSTRAP_TOKEN_HEADER);
   // `passwordMatches` é a comparação em tempo constante do projeto — o nome vem
   // do primeiro uso (senha), mas o contrato é "compara dois segredos".
@@ -39,7 +39,7 @@ function hasValidBootstrapToken(request: NextRequest): boolean {
  * sem senha mestre, é o único caminho de primeiro acesso — e por isso tem duas
  * guardas independentes:
  *
- *  1. `VITTA_BOOTSTRAP_TOKEN` (header `x-bootstrap-token`) — segredo de deploy;
+ *  1. `ESTOMASYSTECH_BOOTSTRAP_TOKEN` (header `x-bootstrap-token`) — segredo de deploy;
  *     ausente ou incorreto, a rota não faz nada. Fail-closed.
  *  2. Zero contas na instalação — depois da primeira conta a rota deixa de
  *     funcionar para sempre, mesmo com o segredo correto.

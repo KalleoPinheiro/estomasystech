@@ -14,7 +14,7 @@ const block = async (email: string, token: string): Promise<string> => {
   try {
     await new NullEmailGateway().send({
       to: email,
-      subject: 'Convite para o VittaFlow',
+      subject: 'Convite para o EstomaSysTech',
       text:
         `Olá! Defina sua senha em http://localhost:3000/definir-senha?token=${token}\n` +
         'O link expira em 24 horas.',
@@ -28,39 +28,41 @@ const block = async (email: string, token: string): Promise<string> => {
 describe('Feature: link do convite no log do servidor E2E', () => {
   it('Dado blocos de vários e-mails, Então devolve o link do e-mail pedido', async () => {
     const log =
-      (await block('a@vitta.test', 'tok-a')) +
+      (await block('a@estomasystech.test', 'tok-a')) +
       'GET /api/patients 200\n' +
-      (await block('bruno@vitta.test', 'tok_b'));
+      (await block('bruno@estomasystech.test', 'tok_b'));
 
-    expect(findInviteUrl(log, 'bruno@vitta.test')).toBe(
+    expect(findInviteUrl(log, 'bruno@estomasystech.test')).toBe(
       'http://localhost:3000/definir-senha?token=tok_b',
     );
   });
 
   it('Dado dois convites do mesmo e-mail, Então devolve o último', async () => {
     const log =
-      (await block('a@vitta.test', 'velho')) +
-      (await block('a@vitta.test', 'novo'));
+      (await block('a@estomasystech.test', 'velho')) +
+      (await block('a@estomasystech.test', 'novo'));
 
-    expect(findInviteUrl(log, 'a@vitta.test')).toBe(
+    expect(findInviteUrl(log, 'a@estomasystech.test')).toBe(
       'http://localhost:3000/definir-senha?token=novo',
     );
   });
 
   it('Dado e-mail de outro domínio com a mesma máscara local, Então não confunde as contas', async () => {
-    const log = await block('a@vitta.test.br', 'outro');
+    const log = await block('a@estomasystech.test.br', 'outro');
 
-    expect(findInviteUrl(log, 'a@vitta.test')).toBeNull();
+    expect(findInviteUrl(log, 'a@estomasystech.test')).toBeNull();
   });
 
   it('Dado log sem convite do e-mail, Então devolve null', () => {
-    expect(findInviteUrl('servidor pronto\n', 'a@vitta.test')).toBeNull();
+    expect(
+      findInviteUrl('servidor pronto\n', 'a@estomasystech.test'),
+    ).toBeNull();
   });
 
   it('Dado o bloco do gateway nulo, Então o e-mail completo e o corpo não aparecem no log', async () => {
-    const log = await block('e2e-atendente@vitta.test', 'tok');
+    const log = await block('e2e-atendente@estomasystech.test', 'tok');
 
-    expect(log).not.toContain('e2e-atendente@vitta.test');
+    expect(log).not.toContain('e2e-atendente@estomasystech.test');
     expect(log).not.toContain('expira');
   });
 });

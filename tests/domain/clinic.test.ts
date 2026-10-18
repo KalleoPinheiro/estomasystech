@@ -6,7 +6,7 @@ const bareClinic = (): Clinic =>
   Clinic.restore({
     id: 'clinic-alfa',
     name: 'Clínica Alfa',
-    createdBy: 'admin@vitta.com',
+    createdBy: 'admin@estomasystech.com',
     createdAt: new Date('2026-01-01T00:00:00Z'),
   });
 
@@ -145,7 +145,7 @@ const VALID_REGISTRATION = {
   cnpj: '12.345.678/0001-95',
   contactPhone: '11 99999-0000',
   contactEmail: 'contato@beta.com',
-  createdBy: 'dono@vitta.app',
+  createdBy: 'dono@estomasystech.app',
 };
 
 describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
@@ -249,7 +249,7 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
     cnpj: '12.345.678/0001-95',
     contactPhone: '11 3333-4444',
     contactEmail: 'contato@estado.com',
-    createdBy: 'root@vitta.com',
+    createdBy: 'root@estomasystech.com',
   };
 
   it('Dada clínica nova, Quando suspender e reativar, Então o estado da clínica segue as transições e updateInfo o preserva', () => {
@@ -260,14 +260,14 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
     expect(clinic.statusChangedBy).toBeNull();
 
     const at = new Date('2026-09-27T12:00:00Z');
-    const suspended = clinic.suspend('root@vitta.com', at, {
+    const suspended = clinic.suspend('root@estomasystech.com', at, {
       reason: 'security_incident',
       note: '  Acesso indevido  ',
     });
     expect(suspended.status).toBe('suspended');
     expect(suspended.isSuspended).toBe(true);
     expect(suspended.statusChangedAt).toEqual(at);
-    expect(suspended.statusChangedBy).toBe('root@vitta.com');
+    expect(suspended.statusChangedBy).toBe('root@estomasystech.com');
     expect(suspended.statusReason).toBe('security_incident');
     expect(suspended.statusReasonNote).toBe('Acesso indevido');
     expect(clinic.status).toBe('active');
@@ -277,11 +277,11 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
     expect(edited.statusChangedAt).toEqual(at);
 
     const later = new Date('2026-09-28T12:00:00Z');
-    const reactivated = suspended.reactivate('outro@vitta.com', later);
+    const reactivated = suspended.reactivate('outro@estomasystech.com', later);
     expect(reactivated.status).toBe('active');
     expect(reactivated.isSuspended).toBe(false);
     expect(reactivated.statusChangedAt).toEqual(later);
-    expect(reactivated.statusChangedBy).toBe('outro@vitta.com');
+    expect(reactivated.statusChangedBy).toBe('outro@estomasystech.com');
     expect(reactivated.statusReason).toBeNull();
     expect(reactivated.statusReasonNote).toBeNull();
   });
@@ -291,17 +291,17 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
     const at = new Date();
 
     expect(() =>
-      clinic.suspend('root@vitta.com', at, {
+      clinic.suspend('root@estomasystech.com', at, {
         reason: undefined as unknown as 'other',
       }),
     ).toThrow('Motivo da suspensão é obrigatório');
     expect(() =>
-      clinic.suspend('root@vitta.com', at, {
+      clinic.suspend('root@estomasystech.com', at, {
         reason: 'por-que-sim' as unknown as 'other',
       }),
     ).toThrow('Motivo da suspensão é obrigatório');
     expect(() =>
-      clinic.suspend('root@vitta.com', at, {
+      clinic.suspend('root@estomasystech.com', at, {
         reason: 'other',
         note: 'x'.repeat(501),
       }),
@@ -311,7 +311,7 @@ describe('Feature: Estado da clínica (B5, #214)', () => {
 
   it('Dada observação em branco, Quando suspender, Então a observação fica nula', () => {
     const suspended = Clinic.create(props).suspend(
-      'root@vitta.com',
+      'root@estomasystech.com',
       new Date(),
       {
         reason: 'clinic_request',

@@ -26,8 +26,8 @@ mudarsenha trocarsenha trocar1234 alterar123 acesso1234 acesso12345
 entrar1234 brasil1234 brasil12345 brasil2024 brasil2025 brasil2026
 flamengo123 flamengo1234 corinthians palmeiras123 saopaulo123 vasco12345
 gremio12345 cruzeiro123 internacional fluminense botafogo123 santos12345
-clinica123 clinica1234 clinica12345 vittaflow vittaflow1 vittaflow123 estomasystech estomasystech1 estomasystech123
-vitta12345 estomaterapia enfermagem enfermeira123 enfermeiro123
+clinica123 clinica1234 clinica12345 estomasystech estomasystech1 estomasystech123
+estomasystech12345 estomaterapia enfermagem enfermeira123 enfermeiro123
 atendimento recepcao123 recepcao1234 consultorio consultorio1 paciente123
 saude12345 jesuscristo jesus12345 deusefiel deuseamor deusefiel1
 deuseamor1 amorzinho1 teamo12345 eusouforte familia123 felicidade

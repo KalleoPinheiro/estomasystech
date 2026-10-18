@@ -166,7 +166,8 @@ describe('Feature: conta de portal vinculada ao cadastro (#196)', () => {
 });
 
 describe('Feature: link manual quando o e-mail não sai (C2, #265)', () => {
-  const LINK_URL = 'https://app.vitta.test/definir-senha?token=segredo-7';
+  const LINK_URL =
+    'https://app.estomasystech.test/definir-senha?token=segredo-7';
   const NOTICE = 'E-mail desativado nesta clínica — envie o link manualmente.';
   const ACTIVE = {
     id: 'acc-9',

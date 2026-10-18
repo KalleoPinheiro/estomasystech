@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 /**
  * Abre o PGlite do registro de módulos atual antes da checagem: carregar o
@@ -56,7 +56,7 @@ describe('Feature: readiness do banco (#212, OBS-02)', () => {
       MIGRATIONS_FOLDER: '/nao/existe',
       getDb: () =>
         Promise.reject(
-          new Error('connect ECONNREFUSED postgres://vitta:senha@db'),
+          new Error('connect ECONNREFUSED postgres://estomasystech:senha@db'),
         ),
     }));
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});

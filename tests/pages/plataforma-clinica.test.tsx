@@ -47,7 +47,7 @@ const SUSPENDED_CLINIC = {
   ...CLINIC,
   status: 'suspended',
   statusChangedAt: '2026-09-27T15:30:00.000Z',
-  statusChangedBy: 'dono@vitta.app',
+  statusChangedBy: 'dono@estomasystech.app',
   statusReason: 'non_payment',
   statusReasonNote: 'Três faturas em atraso',
 };
@@ -311,7 +311,9 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
       SUSPENDED_CLINIC.statusChangedAt,
     ).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
     expect(
-      await screen.findByText(`Suspensa em ${since} por dono@vitta.app.`),
+      await screen.findByText(
+        `Suspensa em ${since} por dono@estomasystech.app.`,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText('Inadimplência')).toBeInTheDocument();
     expect(screen.getByText('Três faturas em atraso')).toBeInTheDocument();
@@ -348,7 +350,8 @@ describe('Feature: Suspender e reativar no detalhe da clínica (B5, Journey 7 e 
   });
 
   describe('C2/#265 link manual', () => {
-    const LINK_URL = 'https://app.vitta.test/definir-senha?token=segredo-9';
+    const LINK_URL =
+      'https://app.estomasystech.test/definir-senha?token=segredo-9';
 
     it('link manual: reenvio que volta delivered false mostra o link com Copiar link', async () => {
       mockApi(envelope(CLINIC), { delivered: false, inviteUrl: LINK_URL });

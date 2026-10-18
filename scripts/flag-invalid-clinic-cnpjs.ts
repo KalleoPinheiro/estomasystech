@@ -12,7 +12,7 @@ import { clinicScope, systemScope } from "@/lib/auth/tenant-scope";
  *
  * Sem --confirmar só lista. Saída: 0 ok, 1 se alguma empresa falhou.
  */
-process.env.VITTA_MIGRATE_ON_BOOT ??= "false";
+process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
 
 async function main(): Promise<number> {
   const apply = process.argv.includes("--confirmar");

@@ -14,18 +14,18 @@ export interface ClinicStatusNotifyServices {
 const MESSAGES = {
   suspend: {
     subject: (clinic: string) =>
-      `Vitta Flow: o acesso da clínica ${clinic} foi suspenso`,
+      `EstomaSysTech: o acesso da clínica ${clinic} foi suspenso`,
     text: (clinic: string) =>
-      `O acesso da clínica ${clinic} ao Vitta Flow foi suspenso pela plataforma.\n\n` +
+      `O acesso da clínica ${clinic} ao EstomaSysTech foi suspenso pela plataforma.\n\n` +
       'Equipe, pacientes e parceiros não conseguem entrar e os lembretes automáticos ' +
       'estão pausados. Nenhum dado foi apagado.\n\n' +
       'Para regularizar o acesso, fale com o responsável pela plataforma.',
   },
   reactivate: {
     subject: (clinic: string) =>
-      `Vitta Flow: o acesso da clínica ${clinic} foi reativado`,
+      `EstomaSysTech: o acesso da clínica ${clinic} foi reativado`,
     text: (clinic: string) =>
-      `O acesso da clínica ${clinic} ao Vitta Flow foi reativado.\n\n` +
+      `O acesso da clínica ${clinic} ao EstomaSysTech foi reativado.\n\n` +
       'As contas voltam a entrar com e-mail e senha; as sessões anteriores à ' +
       'suspensão não voltam, então cada pessoa precisa entrar de novo. Os lembretes ' +
       'automáticos retomam no próximo disparo.',

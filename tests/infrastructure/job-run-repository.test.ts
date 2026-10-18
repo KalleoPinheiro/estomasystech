@@ -4,7 +4,7 @@ import { getDb } from '@/infrastructure/persistence/drizzle/db';
 import { jobRuns as jobRunsTable } from '@/infrastructure/persistence/drizzle/schema';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 describe('Feature: última execução dos jobs (#212, OBS-10)', () => {
   it('Dado a migração 0051, Quando lê os lembretes, Então já existe a linha da migração', async () => {

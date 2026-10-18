@@ -5,7 +5,7 @@ vi.mock('@/lib/auth/staff-revocation', () => ({
   isSessionRevoked: vi.fn().mockResolvedValue(false),
 }));
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 

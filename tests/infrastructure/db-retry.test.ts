@@ -12,44 +12,45 @@ import { loggedLines } from '../support/log-lines';
  * banco no primeiro acesso deixava a instância em 500 até reiniciar.
  */
 const globalForDb = globalThis as unknown as {
-  vittaDbPromise?: Promise<unknown>;
+  estomasystechDbPromise?: Promise<unknown>;
 };
 
 describe('Feature: getDb se recupera de falha na inicialização (#193)', () => {
   const saved = {
-    driver: process.env.VITTA_DB_DRIVER,
+    driver: process.env.ESTOMASYSTECH_DB_DRIVER,
     url: process.env.DATABASE_URL,
-    migrateOnBoot: process.env.VITTA_MIGRATE_ON_BOOT,
-    promise: globalForDb.vittaDbPromise,
+    migrateOnBoot: process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT,
+    promise: globalForDb.estomasystechDbPromise,
   };
 
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    globalForDb.vittaDbPromise = undefined;
+    globalForDb.estomasystechDbPromise = undefined;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    process.env.VITTA_DB_DRIVER = saved.driver;
+    process.env.ESTOMASYSTECH_DB_DRIVER = saved.driver;
     process.env.DATABASE_URL = saved.url;
     if (saved.migrateOnBoot === undefined) {
-      delete process.env.VITTA_MIGRATE_ON_BOOT;
+      delete process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT;
     } else {
-      process.env.VITTA_MIGRATE_ON_BOOT = saved.migrateOnBoot;
+      process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT = saved.migrateOnBoot;
     }
-    globalForDb.vittaDbPromise = saved.promise;
+    globalForDb.estomasystechDbPromise = saved.promise;
   });
 
   it('C11 falha na primeira conexão não fica em cache', async () => {
     // Porta 1 no loopback: conexão recusada na hora (ECONNREFUSED).
-    process.env.VITTA_DB_DRIVER = 'postgres';
-    process.env.DATABASE_URL = 'postgres://vitta:x@127.0.0.1:1/vitta';
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'postgres';
+    process.env.DATABASE_URL =
+      'postgres://estomasystech:x@127.0.0.1:1/estomasystech';
 
     await expect(getDb()).rejects.toThrow();
-    expect(globalForDb.vittaDbPromise).toBeUndefined();
+    expect(globalForDb.estomasystechDbPromise).toBeUndefined();
 
     // Banco "volta": a próxima chamada tenta de novo e conecta.
-    process.env.VITTA_DB_DRIVER = 'pglite';
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
     const db = await getDb();
 
     expect(db).toBeDefined();
@@ -62,7 +63,7 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
   });
 
   it('C12 chamadas concorrentes compartilham a mesma tentativa', async () => {
-    process.env.VITTA_DB_DRIVER = 'pglite';
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
     const first = getDb();
     const second = getDb();
@@ -91,32 +92,33 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
 
   // #212: o HEALTHCHECK (liveness) não toca o banco; a migração no boot vem daqui.
   it('C14 warm-up no boot conecta e migra sem esperar a primeira requisição', async () => {
-    process.env.VITTA_DB_DRIVER = 'pglite';
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
     process.env.DATABASE_URL = 'postgres://ignorado-pelo-pglite';
-    delete process.env.VITTA_MIGRATE_ON_BOOT;
+    delete process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT;
 
     await warmUpDatabase();
 
-    expect(globalForDb.vittaDbPromise).toBeDefined();
+    expect(globalForDb.estomasystechDbPromise).toBeDefined();
   });
 
   it('C15 warm-up com banco fora do ar não lança (getDb loga e tenta de novo depois)', async () => {
-    process.env.VITTA_DB_DRIVER = 'postgres';
-    process.env.DATABASE_URL = 'postgres://vitta:x@127.0.0.1:1/vitta';
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'postgres';
+    process.env.DATABASE_URL =
+      'postgres://estomasystech:x@127.0.0.1:1/estomasystech';
 
     await expect(warmUpDatabase()).resolves.toBeUndefined();
-    expect(globalForDb.vittaDbPromise).toBeUndefined();
+    expect(globalForDb.estomasystechDbPromise).toBeUndefined();
   });
 
-  it('C16 warm-up desligado sem DATABASE_URL ou com VITTA_MIGRATE_ON_BOOT=false', async () => {
-    process.env.VITTA_DB_DRIVER = 'pglite';
+  it('C16 warm-up desligado sem DATABASE_URL ou com ESTOMASYSTECH_MIGRATE_ON_BOOT=false', async () => {
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
     delete process.env.DATABASE_URL;
     await warmUpDatabase();
-    expect(globalForDb.vittaDbPromise).toBeUndefined();
+    expect(globalForDb.estomasystechDbPromise).toBeUndefined();
 
     process.env.DATABASE_URL = 'postgres://ignorado-pelo-pglite';
-    process.env.VITTA_MIGRATE_ON_BOOT = 'false';
+    process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT = 'false';
     await warmUpDatabase();
-    expect(globalForDb.vittaDbPromise).toBeUndefined();
+    expect(globalForDb.estomasystechDbPromise).toBeUndefined();
   });
 });

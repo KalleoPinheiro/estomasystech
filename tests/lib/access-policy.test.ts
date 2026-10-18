@@ -15,7 +15,7 @@ const AUTH_ENV_KEYS = [
   'GOOGLE_CLIENT_SECRET',
   'APP_URL',
   'GOOGLE_ALLOWED_EMAILS',
-  'VITTA_ALLOW_OPEN_MODE',
+  'ESTOMASYSTECH_ALLOW_OPEN_MODE',
 ] as const;
 
 describe('Feature: Política de acesso compartilhada entre proxy e rotas', () => {
@@ -119,10 +119,10 @@ describe('Feature: Política de acesso compartilhada entre proxy e rotas', () =>
     });
 
     it.each(['production', 'development', 'test'])(
-      "Dado NODE_ENV=%s COM VITTA_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 'unconfigured'",
+      "Dado NODE_ENV=%s COM ESTOMASYSTECH_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 'unconfigured'",
       (nodeEnv) => {
         vi.stubEnv('NODE_ENV', nodeEnv);
-        process.env.VITTA_ALLOW_OPEN_MODE = 'true';
+        process.env.ESTOMASYSTECH_ALLOW_OPEN_MODE = 'true';
 
         expect(resolveAuthMode()).toBe('unconfigured');
       },

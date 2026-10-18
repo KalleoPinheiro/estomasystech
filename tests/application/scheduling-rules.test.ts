@@ -232,7 +232,7 @@ describe('Feature: Regras de agendamento (horário comercial, intervalo de 15min
           appointmentRepo,
           patientRepo,
           calendar,
-          'https://app.vitta.test',
+          'https://app.estomasystech.test',
         );
       await withLink().created(appointment.id);
       await new RescheduleAppointment(appointmentRepo).execute({
@@ -246,7 +246,7 @@ describe('Feature: Regras de agendamento (horário comercial, intervalo de 15min
       const [{ input: updated }] = calendar.updated;
       expect(updated.title).toBe(created.title);
       expect(updated.description).toBe(
-        `Abrir no VittaFlow: https://app.vitta.test/agenda?consulta=${appointment.id}&em=2026-07-21T14%3A00%3A00.000Z`,
+        `Abrir no EstomaSysTech: https://app.estomasystech.test/agenda?consulta=${appointment.id}&em=2026-07-21T14%3A00%3A00.000Z`,
       );
       expect(created.description).toContain(
         `consulta=${appointment.id}&em=2026-07-20T09%3A00%3A00.000Z`,

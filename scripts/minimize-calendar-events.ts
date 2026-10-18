@@ -17,7 +17,7 @@ import { publicAppUrl } from "@/lib/public-app-url";
  * Saída: 0 ok, 2 uso inválido, 1 se algum evento falhou ou a cota do Google
  * esgotou (rode de novo mais tarde).
  */
-process.env.VITTA_MIGRATE_ON_BOOT ??= "false";
+process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
 
 function arg(name: string): string | undefined {
   const prefix = `--${name}=`;

@@ -55,7 +55,7 @@ function LoginCard() {
   if (step.kind !== 'password') {
     return (
       <AuthCard>
-        <h1 className="sv-display mb-4 font-bold text-xl">VittaFlow</h1>
+        <h1 className="sv-display mb-4 font-bold text-xl">EstomaSysTech</h1>
         <SecondFactor step={step} onStep={setStep} />
       </AuthCard>
     );
@@ -63,7 +63,7 @@ function LoginCard() {
 
   return (
     <AuthCard>
-      <h1 className="sv-display font-bold text-xl">VittaFlow</h1>
+      <h1 className="sv-display font-bold text-xl">EstomaSysTech</h1>
       <p className="mt-1 mb-6 text-ink-3 text-sm">
         Entre com seu e-mail e sua senha
       </p>

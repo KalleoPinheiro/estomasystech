@@ -26,7 +26,7 @@ import { clearEmailChannels, saveEmailChannel } from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -144,7 +144,7 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
     await db.delete(schema.followUps);
     await db.delete(schema.appointments);
     vi.stubEnv('CRON_SECRET', 'cron-secreto');
-    vi.stubEnv('APP_URL', 'https://vitta.example.com');
+    vi.stubEnv('APP_URL', 'https://estomasystech.example.com');
   });
 
   afterEach(async () => {
@@ -360,7 +360,7 @@ describe('Feature: Rotas de lembretes — job por e-mail e botão Enviar WhatsAp
       expect(text).toContain('Retorno: Curativo de lesão sacral');
       expect(text).toContain('01/09/2026');
       expect(text).toContain('Clínica B (teste)');
-      expect(text).toContain('https://vitta.example.com/portal');
+      expect(text).toContain('https://estomasystech.example.com/portal');
       const saved = await logs();
       expect(saved).toHaveLength(1);
       expect(saved[0]).toMatchObject({

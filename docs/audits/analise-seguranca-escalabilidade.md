@@ -1,12 +1,12 @@
 ---
-title: "Análise de Segurança, Escalabilidade e Performance — VittaFlow"
+title: "Análise de Segurança, Escalabilidade e Performance — EstomaSysTech"
 status: frozen
 audience: [dev, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-09-23
 ---
 
-# Análise de Segurança, Escalabilidade e Performance — VittaFlow
+# Análise de Segurança, Escalabilidade e Performance — EstomaSysTech
 
 - **Data:** 2026-07-16
 - **Escopo:** todo o código até o commit `225f084` (módulo clínico)
@@ -27,7 +27,7 @@ Toda a API e todas as páginas eram públicas: qualquer pessoa com acesso à URL
 - `src/proxy.ts` protege **todas** as rotas e páginas (deny-by-default; allowlist declarada em `PUBLIC_PATHS` de `src/lib/auth/access-policy.ts`: `/login`, os endpoints de login/OAuth em `/api/auth/*` e `/api/reminders/run`, que autentica por `x-cron-secret`). No Next.js 16 o `middleware.ts` passou a se chamar `proxy.ts` — o arquivo sempre existiu, só mudou de nome.
 - **Segunda camada (✅, Issue #4):** guarda dentro de cada route handler (`requireStaffSession`/`requirePortalSession`), porque a doc do Next 16 é explícita que o proxy é uma checagem otimista de borda e não deve ser a única barreira. Política única em `src/lib/auth/access-policy.ts`, consumida pelas duas camadas. Ver [ADR 002](../adr/002-autorizacao-em-duas-camadas.md).
 - **Conformidade automática:** `tests/api/route-guard-conformance.test.ts` varre `src/app/api/**/route.ts` e quebra o build se um handler novo nascer sem guarda.
-- **Fail-closed em produção e em desenvolvimento**: sem `AUTH_PASSWORD`/`AUTH_SECRET` configurados o app responde 503 em todas as rotas. Rodar sem autenticação exige o opt-in explícito `VITTA_ALLOW_OPEN_MODE=true`, ignorado quando `NODE_ENV=production` (antes bastava não estar em produção para liberar tudo).
+- **Fail-closed em produção e em desenvolvimento**: sem `AUTH_PASSWORD`/`AUTH_SECRET` configurados o app responde 503 em todas as rotas. Rodar sem autenticação exige o opt-in explícito `ESTOMASYSTECH_ALLOW_OPEN_MODE=true`, ignorado quando `NODE_ENV=production` (antes bastava não estar em produção para liberar tudo).
 - Rate limit no login (5 tentativas/min/IP) — mitiga força bruta (A07).
 - Logout limpa o cookie.
 

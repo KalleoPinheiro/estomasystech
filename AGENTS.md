@@ -1,4 +1,4 @@
-# AGENTS.md — Vitta Flow
+# AGENTS.md — EstomaSysTech
 
 > **L0 · Fonte única da verdade (SSOT) para humanos e LLMs.** Este arquivo diz *o que é*, *o que
 > nunca fazer* e *onde procurar*. Detalhe mora nos arquivos linkados — leia só o que a tarefa

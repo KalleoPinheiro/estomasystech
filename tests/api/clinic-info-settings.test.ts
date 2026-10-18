@@ -10,7 +10,7 @@ import {
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -79,7 +79,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
       jsonRequest(
         '/api/settings/clinic-info',
         'PUT',
-        { name: 'Clínica VittaFlow Ltda' },
+        { name: 'Clínica EstomaSysTech Ltda' },
         adminCookieHeader(CLINIC_A_ID),
       ),
     );
@@ -93,7 +93,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
     );
     const body = (await response.json()) as Envelope<{ info: ClinicInfoDto }>;
 
-    expect(body.data?.info.name).toBe('Clínica VittaFlow Ltda');
+    expect(body.data?.info.name).toBe('Clínica EstomaSysTech Ltda');
   });
 
   it('Dado Admin de Empresa, Quando salvar dados cadastrais, Então registra evento de auditoria (#71)', async () => {
@@ -204,7 +204,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
         '/api/settings/clinic-info',
         'PUT',
         { name: 'Invadida pelo operador', cnpj: '99.999.999/0001-91' },
-        cookieHeaderFor('super_admin', 'dono@vitta.app', null),
+        cookieHeaderFor('super_admin', 'dono@estomasystech.app', null),
       ),
     );
     const body = (await response.json()) as Envelope<never>;
@@ -289,7 +289,7 @@ describe('Feature: Dados cadastrais da clínica (issue #61)', () => {
           `/api/platform/clinics/${CLINIC_B_ID}`,
           'GET',
           undefined,
-          cookieHeaderFor('super_admin', 'dono@vitta.app', null),
+          cookieHeaderFor('super_admin', 'dono@estomasystech.app', null),
         ),
         { params: Promise.resolve({ id: CLINIC_B_ID }) },
       );

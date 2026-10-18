@@ -1,12 +1,12 @@
 ---
-title: "PRD — VittaFlow Fase 3: De Sistema de Clínica a Plataforma de Estomaterapia"
+title: "PRD — EstomaSysTech Fase 3: De Sistema de Clínica a Plataforma de Estomaterapia"
 status: frozen
 audience: [po, stakeholder, dev]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-09-23
 ---
 
-# PRD — VittaFlow Fase 3: De Sistema de Clínica a Plataforma de Estomaterapia
+# PRD — EstomaSysTech Fase 3: De Sistema de Clínica a Plataforma de Estomaterapia
 
 - **Versão:** 1.0
 - **Data:** 2026-07-18
@@ -17,10 +17,10 @@ last_reviewed: 2026-09-23
 
 ## 1. Visão
 
-Tornar o VittaFlow **a referência de gestão para estomaterapia**. A tese: nenhum ERP
+Tornar o EstomaSysTech **a referência de gestão para estomaterapia**. A tese: nenhum ERP
 genérico entende a especialidade (scores de cicatrização, pele periestomal, recall
 clínico, consumo de coberturas), e nenhum concorrente terá o dado longitudinal que o
-VittaFlow acumula. As 4 ondas atacam, nesta ordem: **fundação de dados**, **profundidade
+EstomaSysTech acumula. As 4 ondas atacam, nesta ordem: **fundação de dados**, **profundidade
 clínica**, **operação multi-profissional** e **virada de plataforma**.
 
 Regra de execução: uma onda = uma branch a partir da `main` atualizada = um commit

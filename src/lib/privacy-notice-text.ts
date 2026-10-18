@@ -15,7 +15,7 @@ export const PRIVACY_NOTICE_TEXT = `AVISO DE PRIVACIDADE (${PRIVACY_NOTICE_VERSI
 
 1. Quem cuida dos seus dados
 {{CLINICA_NOME}}, CNPJ {{CLINICA_CNPJ}}, com endereço em {{CLINICA_ENDERECO}}, é a controladora
-dos seus dados pessoais: ela decide por que e como eles são usados. O sistema VittaFlow, que a
+dos seus dados pessoais: ela decide por que e como eles são usados. O sistema EstomaSysTech, que a
 clínica usa para agenda e prontuário, atua como operador: trata os dados apenas para a clínica
 e segundo as instruções dela.
 

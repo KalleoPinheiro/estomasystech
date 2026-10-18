@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Entrar — VittaFlow',
+  title: 'Entrar — EstomaSysTech',
 };
 
 export default function LoginLayout({

@@ -6,7 +6,7 @@ import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 process.env.AUTH_SECRET = 'test-secret-audit-lgpd';
 
 interface Envelope<T> {
@@ -41,7 +41,7 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
   let photoId: string;
 
   const cookieHeader = (token: string) => ({
-    cookie: `vitta_session=${token}`,
+    cookie: `estomasystech_session=${token}`,
   });
 
   const pngBytes = new Uint8Array([

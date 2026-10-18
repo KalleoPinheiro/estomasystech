@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { recordSignal, resetSignals } from '@/lib/observability/signals';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Body {
   success: boolean;
@@ -59,7 +59,7 @@ describe('Feature: rota do cron de alertas (#212, OBS-11, OBS-13)', () => {
 
   it('Dado 5xx acima do limiar e sem canal da plataforma, Quando roda, Então responde o resumo com canal none', async () => {
     vi.stubEnv('CRON_SECRET', 'segredo-do-cron-123');
-    vi.stubEnv('ALERT_EMAIL_TO', 'operador@vitta.test');
+    vi.stubEnv('ALERT_EMAIL_TO', 'operador@estomasystech.test');
     vi.stubEnv('ALERT_5XX_THRESHOLD', '2');
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
     recordSignal('server-error');

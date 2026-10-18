@@ -15,7 +15,7 @@ last_reviewed: 2026-09-23
   [still-void-gaps.md](still-void-gaps.md).
 - **Data:** 2026-07-30
 - **Contexto:** PR #2 (`claude/still-void-design-system-3h4su8`) — adoção do
-  `@still-void/ui` 1.1.0 como design system do VittaFlow.
+  `@still-void/ui` 1.1.0 como design system do EstomaSysTech.
 
 Achados de escopo durante a adoção do design system que **não** foram corrigidos
 nessa PR — ou porque exigiam decisão do time, ou porque tocavam código muito além

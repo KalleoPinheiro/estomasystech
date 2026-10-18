@@ -9,7 +9,7 @@ import {
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -119,7 +119,7 @@ describe('Feature: Status da conexão do Google Agenda (issue #124)', () => {
         '/api/settings/calendar-integration',
         'GET',
         undefined,
-        cookieHeaderFor('super_admin', 'root@vitta.com', null),
+        cookieHeaderFor('super_admin', 'root@estomasystech.com', null),
       ),
     );
 

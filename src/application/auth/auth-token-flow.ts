@@ -25,15 +25,15 @@ export const INVALID_TOKEN_MESSAGE =
   'Link inválido ou expirado — solicite um novo';
 
 const SUBJECT_BY_PURPOSE: Record<AuthTokenPurpose, string> = {
-  invite: 'VittaFlow — defina sua senha de acesso',
-  reset: 'VittaFlow — redefinição de senha',
+  invite: 'EstomaSysTech — defina sua senha de acesso',
+  reset: 'EstomaSysTech — redefinição de senha',
 };
 
 const INTRO_BY_PURPOSE: Record<AuthTokenPurpose, string> = {
   invite:
-    'Sua conta no VittaFlow foi criada. Use o link abaixo para definir sua senha e acessar o sistema pela primeira vez.',
+    'Sua conta no EstomaSysTech foi criada. Use o link abaixo para definir sua senha e acessar o sistema pela primeira vez.',
   reset:
-    'Recebemos um pedido de redefinição de senha para sua conta no VittaFlow. Use o link abaixo para definir uma nova senha.',
+    'Recebemos um pedido de redefinição de senha para sua conta no EstomaSysTech. Use o link abaixo para definir uma nova senha.',
 };
 
 const VALIDITY_BY_PURPOSE: Record<AuthTokenPurpose, string> = {

@@ -29,14 +29,17 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
 
   describe('Cenário: clínica ida e volta (roundtrip)', () => {
     it('Dado uma clínica criada, Quando buscar por id, Então retorna os campos salvos', async () => {
-      const clinic = bareClinic('Clínica Alfa', 'super-admin@vitta.com');
+      const clinic = bareClinic(
+        'Clínica Alfa',
+        'super-admin@estomasystech.com',
+      );
 
       await clinicRepo.create(clinic);
       const stored = await clinicRepo.findById(clinic.id);
 
       expect(stored?.id).toBe(clinic.id);
       expect(stored?.name).toBe('Clínica Alfa');
-      expect(stored?.createdBy).toBe('super-admin@vitta.com');
+      expect(stored?.createdBy).toBe('super-admin@estomasystech.com');
       expect(stored?.createdAt).toEqual(clinic.createdAt);
     });
 
@@ -51,7 +54,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
 
   describe('Cenário: update de dados cadastrais (issue #61)', () => {
     it('Dada uma clínica criada, Quando atualizar os dados cadastrais, Então findById reflete os novos valores', async () => {
-      const clinic = bareClinic('Clínica Beta', 'admin@vitta.com');
+      const clinic = bareClinic('Clínica Beta', 'admin@estomasystech.com');
       await clinicRepo.create(clinic);
 
       const updated = clinic.updateInfo({
@@ -70,11 +73,11 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       expect(stored?.professionalName).toBe('Enf. Ana');
       expect(stored?.professionalRegistry).toBe('COREN-SP 123456');
       expect(stored?.name).toBe('Clínica Beta');
-      expect(stored?.createdBy).toBe('admin@vitta.com');
+      expect(stored?.createdBy).toBe('admin@estomasystech.com');
     });
 
     it('Dada uma clínica criada, Quando atualizar a razão social, Então findById reflete o novo nome', async () => {
-      const clinic = bareClinic('Clínica Delta', 'admin3@vitta.com');
+      const clinic = bareClinic('Clínica Delta', 'admin3@estomasystech.com');
       await clinicRepo.create(clinic);
 
       await clinicRepo.update(
@@ -86,7 +89,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
     });
 
     it('Dado update parcial, Quando buscar por id, Então name/createdBy/createdAt permanecem intactos', async () => {
-      const clinic = bareClinic('Clínica Gama', 'admin2@vitta.com');
+      const clinic = bareClinic('Clínica Gama', 'admin2@estomasystech.com');
       await clinicRepo.create(clinic);
 
       await clinicRepo.update(
@@ -100,13 +103,13 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       expect(stored?.professionalName).toBeNull();
       expect(stored?.professionalRegistry).toBeNull();
       expect(stored?.name).toBe('Clínica Gama');
-      expect(stored?.createdBy).toBe('admin2@vitta.com');
+      expect(stored?.createdBy).toBe('admin2@estomasystech.com');
       expect(stored?.createdAt).toEqual(clinic.createdAt);
     });
 
     it('Dadas duas clínicas, Quando atualizar uma, Então a outra permanece sem dados cadastrais', async () => {
-      const clinicA = bareClinic('Clínica A', 'a@vitta.com');
-      const clinicB = bareClinic('Clínica B', 'b@vitta.com');
+      const clinicA = bareClinic('Clínica A', 'a@estomasystech.com');
+      const clinicB = bareClinic('Clínica B', 'b@estomasystech.com');
       await clinicRepo.create(clinicA);
       await clinicRepo.create(clinicB);
 
@@ -126,7 +129,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
         cnpj: '12345678000195',
         contactPhone: '11 3333-4444',
         contactEmail: 'Contato@Clinica.com',
-        createdBy: 'dono@vitta.app',
+        createdBy: 'dono@estomasystech.app',
       });
       await clinicRepo.create(clinic);
 
@@ -153,12 +156,12 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
 
   describe('Cenário: estado da clínica (B5, #214)', () => {
     it('Dada clínica suspensa por saveStatus, Quando um update de cadastro usa a instância antiga, Então o estado persiste e findById/findAll o devolvem', async () => {
-      const clinic = bareClinic('Clínica Estado', 'root@vitta.com');
+      const clinic = bareClinic('Clínica Estado', 'root@estomasystech.com');
       await clinicRepo.create(clinic);
       const at = new Date('2026-09-27T12:00:00.000Z');
 
       await clinicRepo.saveStatus(
-        clinic.suspend('root@vitta.com', at, {
+        clinic.suspend('root@estomasystech.com', at, {
           reason: 'non_payment',
           note: 'Três faturas em atraso',
         }),
@@ -169,7 +172,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       const stored = await clinicRepo.findById(clinic.id);
       expect(stored?.status).toBe('suspended');
       expect(stored?.statusChangedAt).toEqual(at);
-      expect(stored?.statusChangedBy).toBe('root@vitta.com');
+      expect(stored?.statusChangedBy).toBe('root@estomasystech.com');
       expect(stored?.statusReason).toBe('non_payment');
       expect(stored?.statusReasonNote).toBe('Três faturas em atraso');
       expect(stored?.city).toBe('Recife');
@@ -179,7 +182,7 @@ describe('Feature: Persistência de Clinic (Drizzle)', () => {
       expect(listed?.status).toBe('suspended');
 
       await clinicRepo.saveStatus(
-        (stored as Clinic).reactivate('root@vitta.com', new Date()),
+        (stored as Clinic).reactivate('root@estomasystech.com', new Date()),
       );
       const reactivated = await clinicRepo.findById(clinic.id);
       expect(reactivated?.status).toBe('active');

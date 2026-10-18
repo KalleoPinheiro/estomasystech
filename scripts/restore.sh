@@ -5,7 +5,7 @@
 #   scripts/restore.sh <diretório do backup> --confirmar  SUBSTITUI banco e fotos
 #
 # Conferência: somas SHA256, decifra o dump e lista o conteúdo (pg_restore --list)
-# e o tar das fotos. Com --confirmar: para o app, recria o banco `vitta`, restaura
+# e o tar das fotos. Com --confirmar: para o app, recria o banco `estomasystech`, restaura
 # o dump, troca o conteúdo do volume de fotos e sobe o app de novo (migrações do
 # boot alinham o schema se o backup for de uma versão anterior).
 # Roda contra o projeto compose do diretório do repositório; para um teste isolado,
@@ -71,11 +71,11 @@ if [ "$confirm" != true ]; then
 fi
 
 docker compose stop app
-docker compose exec -T db psql -U vitta -d postgres -v ON_ERROR_STOP=1 -q \
-  -c 'DROP DATABASE IF EXISTS vitta WITH (FORCE);' \
-  -c 'CREATE DATABASE vitta OWNER vitta;'
+docker compose exec -T db psql -U estomasystech -d postgres -v ON_ERROR_STOP=1 -q \
+  -c 'DROP DATABASE IF EXISTS estomasystech WITH (FORCE);' \
+  -c 'CREATE DATABASE estomasystech OWNER estomasystech;'
 decrypt db.dump.age \
-  | docker compose exec -T db pg_restore -U vitta -d vitta --no-owner --exit-on-error
+  | docker compose exec -T db pg_restore -U estomasystech -d estomasystech --no-owner --exit-on-error
 decrypt uploads.tar.age \
   | docker compose run --rm --no-deps -T --entrypoint sh app \
     -c 'find /app/uploads -mindepth 1 -delete && tar -C /app/uploads -xf -'

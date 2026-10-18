@@ -19,7 +19,7 @@ describe('Feature: Configuração de OAuth do Google Agenda', () => {
   const setCredentials = () => {
     process.env.GOOGLE_CLIENT_ID = 'client-abc';
     process.env.GOOGLE_CLIENT_SECRET = 'secret-xyz';
-    process.env.APP_URL = 'https://app.vitta.test';
+    process.env.APP_URL = 'https://app.estomasystech.test';
   };
 
   it('Dado o escopo declarado, Quando ler, Então é exatamente o de eventos de calendário (sem identidade)', () => {
@@ -34,16 +34,16 @@ describe('Feature: Configuração de OAuth do Google Agenda', () => {
     expect(googleCalendarOAuthConfigFromEnv()).toEqual({
       clientId: 'client-abc',
       clientSecret: 'secret-xyz',
-      redirectUri: `https://app.vitta.test${CALENDAR_CALLBACK_PATH}`,
+      redirectUri: `https://app.estomasystech.test${CALENDAR_CALLBACK_PATH}`,
     });
   });
 
   it('Dado APP_URL com barra final, Quando ler do ambiente, Então o redirect não duplica a barra', () => {
     setCredentials();
-    process.env.APP_URL = 'https://app.vitta.test/';
+    process.env.APP_URL = 'https://app.estomasystech.test/';
 
     expect(googleCalendarOAuthConfigFromEnv()?.redirectUri).toBe(
-      `https://app.vitta.test${CALENDAR_CALLBACK_PATH}`,
+      `https://app.estomasystech.test${CALENDAR_CALLBACK_PATH}`,
     );
   });
 

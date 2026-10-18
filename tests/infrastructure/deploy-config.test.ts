@@ -38,9 +38,9 @@ describe('Feature: compose e Dockerfile seguros para produção (#191)', () => {
     const app = serviceBlock('app');
 
     expect(db).toMatch(/POSTGRES_PASSWORD: \$\{POSTGRES_PASSWORD:\?/);
-    expect(db).not.toMatch(/POSTGRES_PASSWORD: vitta\b/);
+    expect(db).not.toMatch(/POSTGRES_PASSWORD: estomasystech\b/);
     expect(app).toMatch(
-      /DATABASE_URL: postgres:\/\/vitta:\$\{POSTGRES_PASSWORD:\?[^}]*\}@db:5432\/vitta/,
+      /DATABASE_URL: postgres:\/\/estomasystech:\$\{POSTGRES_PASSWORD:\?[^}]*\}@db:5432\/estomasystech/,
     );
   });
 

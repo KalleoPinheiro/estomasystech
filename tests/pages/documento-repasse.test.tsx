@@ -20,7 +20,7 @@ const jsonResponse = (data: unknown, ok = true) => ({
 });
 
 const CLINIC: ClinicInfoDto = {
-  name: 'Clínica VittaFlow',
+  name: 'Clínica EstomaSysTech',
   cnpj: '12.345.678/0001-95',
   address: 'Rua das Flores, 100',
   city: 'São Paulo',

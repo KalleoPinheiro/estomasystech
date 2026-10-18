@@ -10,7 +10,7 @@ related:
 
 # Visão de produto
 
-> **Em uma frase:** o VittaFlow é o sistema de gestão clínica de quem trata estomias e feridas
+> **Em uma frase:** o EstomaSysTech é o sistema de gestão clínica de quem trata estomias e feridas
 > complexas — prontuário que prova a evolução do paciente, agenda que traz o paciente de volta e
 > um financeiro que fecha as contas da clínica e do profissional.
 

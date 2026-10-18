@@ -26,7 +26,10 @@ const REQUEST_TIMEOUT_MS = 5_000;
 
 const globalForTracker = globalThis as unknown as {
   /** `client` nulo = DSN malformado (lembrado para não recriar a cada erro). */
-  vittaErrorTracker?: { dsn: string; client: ServerRuntimeClient | null };
+  estomasystechErrorTracker?: {
+    dsn: string;
+    client: ServerRuntimeClient | null;
+  };
 };
 
 function fetchTransport(
@@ -111,18 +114,18 @@ function currentClient(): ServerRuntimeClient | null {
   if (!dsn) {
     return null;
   }
-  const cached = globalForTracker.vittaErrorTracker;
+  const cached = globalForTracker.estomasystechErrorTracker;
   if (cached?.dsn === dsn) {
     return cached.client;
   }
   // DSN malformado: o SDK não lança, só fica sem destino. O app segue sem
   // error tracking, nunca cai por isso.
   const client = createClient(dsn);
-  globalForTracker.vittaErrorTracker = {
+  globalForTracker.estomasystechErrorTracker = {
     dsn,
     client: client.getDsn() ? client : null,
   };
-  return globalForTracker.vittaErrorTracker.client;
+  return globalForTracker.estomasystechErrorTracker.client;
 }
 
 export function isErrorTrackingEnabled(): boolean {
@@ -176,5 +179,5 @@ export function captureError(captured: CapturedError): void {
 
 /** Para o teste: esquece o cliente em cache. */
 export function resetErrorTracker(): void {
-  globalForTracker.vittaErrorTracker = undefined;
+  globalForTracker.estomasystechErrorTracker = undefined;
 }

@@ -1,12 +1,12 @@
 ---
-title: "PRD — VittaFlow Fase 6: Plataforma (RBAC multi-empresa e autenticação nativa)"
+title: "PRD — EstomaSysTech Fase 6: Plataforma (RBAC multi-empresa e autenticação nativa)"
 status: living
 audience: [po, stakeholder, dev]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-09-23
 ---
 
-# PRD — VittaFlow Fase 6: Plataforma (RBAC multi-empresa e autenticação nativa)
+# PRD — EstomaSysTech Fase 6: Plataforma (RBAC multi-empresa e autenticação nativa)
 
 - **Versão:** 1.0
 - **Data:** 2026-08-30
@@ -20,7 +20,7 @@ last_reviewed: 2026-09-23
 
 ## Visão
 
-Fecha a "decisão pendente" que travava a Fase 6 desde a PRD-FASE-3: o VittaFlow tinha só 3 papéis
+Fecha a "decisão pendente" que travava a Fase 6 desde a PRD-FASE-3: o EstomaSysTech tinha só 3 papéis
 (`admin`/`partner`/`patient`), com `admin` monolítico dando acesso total a qualquer conta de
 equipe, e nenhuma entidade "empresa" no banco. Esta fase decide e especifica a matriz de papéis, o
 modelo de multi-empresa e a substituição do login por Google por autenticação nativa. As decisões
@@ -36,7 +36,7 @@ tracer-bullet tickets — ver seção "Execução" de cada item abaixo.
 
 ## P6.1 — Fundação de multi-tenancy
 
-**Problema:** O VittaFlow é single-tenant — um deploy, uma clínica, nenhuma tabela `clinics`, nem
+**Problema:** O EstomaSysTech é single-tenant — um deploy, uma clínica, nenhuma tabela `clinics`, nem
 forma de isolar dado entre empresas clientes diferentes. Sem isso, "Admin de Empresa" seria a
 mesma coisa que "acesso total" (P6.2 não teria o que delimitar).
 

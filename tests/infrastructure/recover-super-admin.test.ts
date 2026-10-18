@@ -22,7 +22,7 @@ import {
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const APP_URL = 'https://clinica.exemplo.com.br';
-const OLD_EMAIL = 'dono@vitta.test';
+const OLD_EMAIL = 'dono@estomasystech.test';
 const OLD_PASSWORD = 'senha-antiga-do-dono';
 const SA_ID = 'sa-1';
 const NOW = Date.UTC(2026, 8, 27, 12, 0, 0);
@@ -176,15 +176,17 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
 
     it('Dado --novo-email, Quando recuperar, Então troca o e-mail (normalizado); sem ele, mantém', async () => {
       await seed();
-      const result = await recover({ newEmail: '  Novo.Dono@Vitta.TEST ' });
-      expect((await superAdmin()).email).toBe('novo.dono@vitta.test');
-      expect(result.plan.newEmail).toBe('novo.dono@vitta.test');
+      const result = await recover({
+        newEmail: '  Novo.Dono@EstomaSysTech.TEST ',
+      });
+      expect((await superAdmin()).email).toBe('novo.dono@estomasystech.test');
+      expect(result.plan.newEmail).toBe('novo.dono@estomasystech.test');
 
       await recover();
-      expect((await superAdmin()).email).toBe('novo.dono@vitta.test');
+      expect((await superAdmin()).email).toBe('novo.dono@estomasystech.test');
 
       // Igual ao atual: não é troca.
-      const same = await recover({ newEmail: 'NOVO.dono@vitta.test' });
+      const same = await recover({ newEmail: 'NOVO.dono@estomasystech.test' });
       expect(same.plan.newEmail).toBeNull();
     });
 
@@ -222,7 +224,7 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
     it('Dado a recuperação, Quando auditar, Então audita pelo caminho do login como evento de plataforma (clinic_id nulo, B6), sem o e-mail', async () => {
       await seed();
       await recover();
-      await recover({ newEmail: 'novo@vitta.test' });
+      await recover({ newEmail: 'novo@estomasystech.test' });
       const events = await auditRows();
       expect(events).toHaveLength(2);
       for (const event of events) {
@@ -234,7 +236,7 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
           resourceId: SA_ID,
           patientId: null,
         });
-        expect(JSON.stringify(event)).not.toContain('vitta.test');
+        expect(JSON.stringify(event)).not.toContain('estomasystech.test');
       }
       expect(events.map((e) => e.detail).sort()).toEqual([
         'super_admin_recovered',
@@ -272,7 +274,7 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
         recoverSuperAdmin(db, {
           appUrl: APP_URL,
           confirm: true,
-          newEmail: 'outro@vitta.test',
+          newEmail: 'outro@estomasystech.test',
           nowMs: NOW,
           auditEventsFor: () => failingAudit,
         }),
@@ -292,14 +294,14 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
       const before = await snapshot();
       const result = await recover({
         confirm: false,
-        newEmail: 'n@vitta.test',
+        newEmail: 'n@estomasystech.test',
       });
       expect(result).toEqual({
         applied: false,
         plan: {
           accountId: SA_ID,
           currentEmail: OLD_EMAIL,
-          newEmail: 'n@vitta.test',
+          newEmail: 'n@estomasystech.test',
           hadFactor: true,
           wasInactive: false,
         },
@@ -337,15 +339,20 @@ describe('Feature: recuperação de emergência do super_admin (B3)', () => {
 
     it('Dado --confirmar, Quando rodar, Então a cli aplica com --confirmar: imprime o link de 1 hora e sai 0', async () => {
       await seed();
-      const result = await run(['--confirmar', '--novo-email=novo@vitta.test']);
+      const result = await run([
+        '--confirmar',
+        '--novo-email=novo@estomasystech.test',
+      ]);
       expect(result.code).toBe(0);
       expect(result.out).toContain('vale 1 hora');
       expect(result.out).toMatch(
         /https:\/\/clinica\.exemplo\.com\.br\/definir-senha\?token=[\w-]{20,}/,
       );
-      expect(result.out).toContain('E-mail passa a ser: novo@vitta.test');
+      expect(result.out).toContain(
+        'E-mail passa a ser: novo@estomasystech.test',
+      );
       expect(result.err).toBe('');
-      expect((await superAdmin()).email).toBe('novo@vitta.test');
+      expect((await superAdmin()).email).toBe('novo@estomasystech.test');
     });
 
     it('Dado sem --confirmar, Quando rodar, Então a cli simula sem --confirmar e sai 0', async () => {

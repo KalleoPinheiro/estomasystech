@@ -223,7 +223,7 @@ export class EvaluateAlerts {
     try {
       await this.email.send({
         to: this.config.recipient,
-        subject: `[Vitta Flow] Alerta: ${TITLES[evaluation.key]}`,
+        subject: `[EstomaSysTech] Alerta: ${TITLES[evaluation.key]}`,
         text: this.body(evaluation, now),
       });
     } catch (error) {

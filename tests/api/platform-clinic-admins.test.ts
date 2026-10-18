@@ -10,8 +10,8 @@ import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -31,7 +31,11 @@ interface AdminDto {
   inviteUrl: string | null;
 }
 
-const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+const SUPER_ADMIN = cookieHeaderFor(
+  'super_admin',
+  'dono@estomasystech.app',
+  null,
+);
 
 /** Clínica B com o cadastro que o convite exige (B4). */
 const ensureRegisteredClinicB = async () => {
@@ -86,7 +90,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
       // Sem canal de e-mail na clínica (ADR-011): o link volta ao operador.
       delivered: false,
       inviteUrl: expect.stringMatching(
-        /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+        /^https:\/\/app\.estomasystech\.test\/definir-senha\?token=[\w-]+$/,
       ),
     });
     const [stored] = await accountsWithEmail(
@@ -149,7 +153,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
     expect(response.status).toBe(200);
     expect(json.data.delivered).toBe(false);
     expect(json.data.inviteUrl).toMatch(
-      /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+      /^https:\/\/app\.estomasystech\.test\/definir-senha\?token=[\w-]+$/,
     );
   });
 
@@ -305,7 +309,7 @@ describe('Feature: Convite do primeiro Admin de Empresa pela plataforma (B1)', (
       resourceType: 'account',
       resourceId: json.data.id,
       actorRole: 'super_admin',
-      actorId: 'dono@vitta.app',
+      actorId: 'dono@estomasystech.app',
       clinicId: CLINIC_B_ID,
     });
   });

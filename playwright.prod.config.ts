@@ -33,20 +33,20 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
-        VITTA_DB_DRIVER: "pglite",
+        ESTOMASYSTECH_DB_DRIVER: "pglite",
         TZ: "America/Sao_Paulo",
         APP_TIMEZONE: "America/Sao_Paulo",
         AUTH_SECRET: E2E_AUTH_SECRET,
         // Produção exige a chave do dado clínico (#195, ADR-006).
         DATA_ENCRYPTION_KEY: E2E_DATA_ENCRYPTION_KEY,
-        VITTA_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
+        ESTOMASYSTECH_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
         APP_URL: MAIN_BASE_URL,
         API_RATE_LIMIT_MAX: "100000",
         // Exercita o gateway Resend da plataforma (opcional, ADR-011). Chave de
         // mentira: o envio falha (401) e o bootstrap devolve o link do convite
         // na resposta, como já faz quando a entrega não acontece.
         RESEND_API_KEY: "re_e2e_invalid_key",
-        EMAIL_FROM: "VittaFlow E2E <e2e@vitta.test>",
+        EMAIL_FROM: "EstomaSysTech E2E <e2e@estomasystech.test>",
       },
     },
   ],

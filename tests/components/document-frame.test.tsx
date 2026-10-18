@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 
 const fullClinic: ClinicInfoDto = {
-  name: 'Clínica Vitta',
+  name: 'Clínica EstomaSysTech',
   cnpj: '12.345.678/0001-95',
   address: 'Rua das Flores, 100',
   professionalName: 'Dra. Ana Souza',
@@ -14,7 +14,7 @@ const fullClinic: ClinicInfoDto = {
 };
 
 const minimalClinic: ClinicInfoDto = {
-  name: 'Clínica Vitta',
+  name: 'Clínica EstomaSysTech',
   cnpj: null,
   address: null,
   professionalName: null,
@@ -44,7 +44,7 @@ describe('Feature: Moldura de documento', () => {
         </DocumentFrame>,
       );
 
-      expect(screen.getByText('Clínica Vitta')).toBeInTheDocument();
+      expect(screen.getByText('Clínica EstomaSysTech')).toBeInTheDocument();
       expect(screen.getByText('CNPJ: 12.345.678/0001-95')).toBeInTheDocument();
       expect(screen.getByText('Rua das Flores, 100')).toBeInTheDocument();
     });

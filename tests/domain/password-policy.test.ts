@@ -43,7 +43,7 @@ describe('Feature: Política de senha (#291, #309)', () => {
       expect(entry.length).toBeGreaterThanOrEqual(10);
       expect(entry).toBe(entry.toLowerCase());
     }
-    expect(isCommonPassword('vittaflow123')).toBe(true);
+    expect(isCommonPassword('estomasystech123')).toBe(true);
     expect(isCommonPassword('xk7#pq2vzm')).toBe(false);
   });
 

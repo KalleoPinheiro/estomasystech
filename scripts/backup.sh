@@ -14,7 +14,7 @@
 #                               (a chave privada fica FORA do servidor)
 #   BACKUP_OFFSITE_CMD          obrigatória: comando (sh) que leva o backup para fora do
 #                               servidor; recebe BACKUP_PATH (backup novo) e BACKUP_DIR
-#   BACKUP_DIR                  padrão /var/backups/vitta
+#   BACKUP_DIR                  padrão /var/backups/estomasystech
 #   BACKUP_KEEP_DAYS            padrão 30
 #
 # Saída: 0 ok; 2 configuração (nada foi gerado); 3 backup local feito, mas a cópia
@@ -30,7 +30,7 @@ fail() {
 }
 
 recipients="${BACKUP_AGE_RECIPIENTS_FILE:-}"
-backup_dir="${BACKUP_DIR:-/var/backups/vitta}"
+backup_dir="${BACKUP_DIR:-/var/backups/estomasystech}"
 keep_days="${BACKUP_KEEP_DAYS:-30}"
 offsite_cmd="${BACKUP_OFFSITE_CMD:-}"
 
@@ -50,7 +50,7 @@ target="$backup_dir/$stamp"
 trap 'rm -rf "$partial"' EXIT
 mkdir "$partial"
 
-docker compose exec -T db pg_dump -U vitta -d vitta -Fc \
+docker compose exec -T db pg_dump -U estomasystech -d estomasystech -Fc \
   | age -R "$recipients" -o "$partial/db.dump.age"
 
 # Serviço sem log (docker-compose.yml): o stdout do `run` não vai para o json-file.

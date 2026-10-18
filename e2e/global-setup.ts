@@ -27,7 +27,7 @@ import { saveTotpState, SUPER_ADMIN_TOTP_PATH, totpCode, totpStatePath, totpStep
  * Playwright só chama `globalSetup` após a checagem de `url` do webServer passar).
  *
  * 1. Faz o bootstrap do primeiro Super Admin (`POST /api/auth/bootstrap`, guardado
- *    por `VITTA_BOOTSTRAP_TOKEN`), consome o convite para definir a senha e loga —
+ *    por `ESTOMASYSTECH_BOOTSTRAP_TOKEN`), consome o convite para definir a senha e loga —
  *    o mesmo caminho que uma instalação nova percorre, agora que não existe mais
  *    senha mestre (issue #21 / ADR-004), cadastrando o segundo fator no primeiro
  *    login (ADR-008). O Super Admin é o operador da plataforma
@@ -96,7 +96,7 @@ async function bootstrapSuperAdmin(): Promise<string> {
   if (!response.ok || !body.success || !body.data?.inviteUrl) {
     throw new Error(
       `Bootstrap do Super Admin falhou no global-setup (${response.status}): ${body.error ?? "?"}. ` +
-        "Verifique se AUTH_SECRET/VITTA_BOOTSTRAP_TOKEN do webServer principal batem com e2e/support/constants.ts.",
+        "Verifique se AUTH_SECRET/ESTOMASYSTECH_BOOTSTRAP_TOKEN do webServer principal batem com e2e/support/constants.ts.",
     );
   }
   return body.data.inviteUrl;
@@ -133,7 +133,7 @@ async function login(email: string, password: string, who: string, clientIp?: st
   return sessionCookieFrom("/api/auth/login", { email, password }, who, clientIp);
 }
 
-/** POST que termina numa sessão: devolve o par `vitta_session=…` do Set-Cookie. */
+/** POST que termina numa sessão: devolve o par `estomasystech_session=…` do Set-Cookie. */
 async function sessionCookieFrom(
   url: string,
   data: unknown,
@@ -158,7 +158,7 @@ async function sessionCookieFrom(
   if (!setCookie) {
     throw new Error(`Login de ${who} não retornou Set-Cookie`);
   }
-  // Formato: "vitta_session=xxx; Path=/; HttpOnly; SameSite=Lax" — só o par nome=valor interessa.
+  // Formato: "estomasystech_session=xxx; Path=/; HttpOnly; SameSite=Lax" — só o par nome=valor interessa.
   const pair = setCookie.split(";")[0];
   if (!pair.startsWith(`${SESSION_COOKIE_NAME}=`)) {
     throw new Error(`Cookie de sessão inesperado: ${pair}`);
@@ -290,7 +290,7 @@ async function seedLinkedPatient(cookie: string, professionalId: string): Promis
   const fullName = "Paciente Vinculado E2E";
   const patient = await post<{ id: string }>(cookie, "/api/patients", {
     fullName,
-    email: "paciente-vinculado-e2e@vitta.test",
+    email: "paciente-vinculado-e2e@estomasystech.test",
     phone: "11990000204",
   });
   const slot = slotFromSeed("papeis-vinculo-profissional");

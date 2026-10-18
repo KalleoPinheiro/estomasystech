@@ -6,7 +6,7 @@ import { GENERIC_CONTROLLER, renderLegalText } from '@/lib/legal-text';
 import { PRIVACY_NOTICE_TEXT } from '@/lib/privacy-notice-text';
 
 export const metadata: Metadata = {
-  title: 'Aviso de privacidade — VittaFlow',
+  title: 'Aviso de privacidade — EstomaSysTech',
 };
 
 /**

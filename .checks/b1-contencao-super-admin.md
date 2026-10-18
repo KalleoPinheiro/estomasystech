@@ -34,7 +34,7 @@ Reaproveita `requireStaffSession` (a família `platform` já decide o papel), `C
 | Rota da importação | `POST /api/platform/taxonomy/import`; `src/app/api/admin/taxonomy/import` removida sem alias | alias - continuaria `administrative`, aberta ao `company_admin` |
 | Guarda das rotas de plataforma | `requireStaffSession` (família `platform` só admite `super_admin`); sem guarda nova | `requirePlatformSession` nova - duplicaria a mesma decisão, que já mora na matriz de famílias |
 | Rota removida responde pela família antes do roteamento (C24) | `/api/admin/**` sem prefixo próprio cai em `operational`: sem sessão 401, super_admin 403, equipe da clínica 404 do Next | proxy com exceção para devolver 404 a qualquer um - abriria um caminho sem família na política só para uma rota que não existe; o critério 21 fala de quem a chamava (equipe da clínica). **Aceito pelo dono em 2026-09-27**; critério 21 reescrito na tarefa (Unresolved 5) |
-| Sessão padrão do E2E | `ADMIN_STORAGE_STATE_PATH` = `company_admin` `e2e-admin@vitta.test` da `legacy-clinic`, convidado pelo super_admin pela rota nova; na suíte de produção (sem link de convite) é cookie assinado de `company_admin` sem conta | manter super_admin - perde acesso a toda rota da clínica |
+| Sessão padrão do E2E | `ADMIN_STORAGE_STATE_PATH` = `company_admin` `e2e-admin@estomasystech.test` da `legacy-clinic`, convidado pelo super_admin pela rota nova; na suíte de produção (sem link de convite) é cookie assinado de `company_admin` sem conta | manter super_admin - perde acesso a toda rota da clínica |
 
 - Nada mais aqui é difícil de reverter
 

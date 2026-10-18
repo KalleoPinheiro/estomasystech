@@ -53,7 +53,7 @@ test.describe("login por e-mail e senha", () => {
     // Sessão própria, nunca a da suíte: logout revoga TODAS as sessões
     // da conta (#194), inclusive o storageState que os demais specs usam em
     // paralelo. A revogação em si é provada em tests/api/session-revocation.
-    await context.addCookies([sessionCookie("logout-e2e@vitta.test", "company_admin")]);
+    await context.addCookies([sessionCookie("logout-e2e@estomasystech.test", "company_admin")]);
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
@@ -72,7 +72,7 @@ test.describe("login por e-mail e senha", () => {
     await page.getByRole("link", { name: "Esqueci minha senha" }).click();
     await expect(page).toHaveURL(/\/esqueci-senha/);
 
-    await page.getByLabel("E-mail", { exact: true }).fill("nao-existe@vitta.test");
+    await page.getByLabel("E-mail", { exact: true }).fill("nao-existe@estomasystech.test");
     await page.getByRole("button", { name: "Enviar link" }).click();
 
     await expect(
@@ -106,7 +106,7 @@ test.describe("login por e-mail e senha", () => {
     page,
     context,
   }) => {
-    await context.addCookies([sessionCookie("paciente-e2e-login@vitta.test", "patient")]);
+    await context.addCookies([sessionCookie("paciente-e2e-login@estomasystech.test", "patient")]);
     await page.goto("/");
     await expect(page).toHaveURL(/\/portal/);
     await expect(page.getByText("restrito à equipe", { exact: false })).toHaveCount(0);
@@ -116,7 +116,7 @@ test.describe("login por e-mail e senha", () => {
     page,
     context,
   }) => {
-    await context.addCookies([sessionCookie("parceiro-e2e-login@vitta.test", "partner")]);
+    await context.addCookies([sessionCookie("parceiro-e2e-login@estomasystech.test", "partner")]);
     await page.goto("/");
     await expect(page).toHaveURL(/\/portal/);
     await expect(page.getByText("restrito à equipe", { exact: false })).toHaveCount(0);

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export const SESSION_COOKIE = 'vitta_session';
+export const SESSION_COOKIE = 'estomasystech_session';
 export const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 /** Atributos padrão do cookie de sessão (única fonte para login por senha e OAuth). */

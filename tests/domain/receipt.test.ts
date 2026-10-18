@@ -7,13 +7,16 @@ import {
 } from '@/domain/billing/receipt';
 import { ValidationError } from '@/domain/shared/errors';
 
-const clinic = { name: 'Clínica Vitta', cnpj: '12.345.678/0001-95' };
+const clinic = { name: 'Clínica EstomaSysTech', cnpj: '12.345.678/0001-95' };
 const patient = { fullName: 'Maria Souza', cpf: '52998224725' };
 
 describe('Feature: Recibo válido para o IRPF (#326, FIN-RN-15)', () => {
   it('Dado paciente com CPF e empresa com CNPJ, Quando resolver, Então o pagador é o paciente', () => {
     expect(resolveReceiptParties({ clinic, patient })).toEqual({
-      provider: { name: 'Clínica Vitta', document: '12.345.678/0001-95' },
+      provider: {
+        name: 'Clínica EstomaSysTech',
+        document: '12.345.678/0001-95',
+      },
       payer: { name: 'Maria Souza', document: '529.982.247-25' },
       payerIsPatient: true,
     });

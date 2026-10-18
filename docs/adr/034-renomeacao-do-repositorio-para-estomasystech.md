@@ -4,7 +4,7 @@ status: frozen
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-18
-related: [docs/engineering/producao.md]
+related: [docs/engineering/producao.md, docs/adr/035-renomeacao-completa-para-estomasystech.md]
 ---
 
 # ADR 034 — Repositório renomeado para estomasystech; o que muda e o que fica com o nome antigo
