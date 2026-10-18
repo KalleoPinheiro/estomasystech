@@ -262,26 +262,66 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
   });
 
   describe('Cenário: InMemoryReminderLogRepository', () => {
-    it('Dado lembrete nunca enviado, Quando wasSent, Então retorna false', async () => {
+    it('Dado lembrete nunca enviado, Quando sentReferences, Então retorna false', async () => {
       const repo = new InMemoryReminderLogRepository();
 
       expect(
-        await repo.wasSent('confirmation', 'appt-1', 'email', '2026-07-19'),
+        (
+          await repo.sentReferences(
+            'confirmation',
+            'email',
+            ['appt-1'],
+            '2026-07-19',
+          )
+        ).has('appt-1'),
       ).toBe(false);
     });
 
-    it('Dado lembrete salvo, Quando wasSent no mesmo dia, Então retorna true', async () => {
+    it('Dado lembrete salvo, Quando sentReferences no mesmo dia, Então retorna true', async () => {
       const repo = new InMemoryReminderLogRepository();
       const sentAt = new Date('2026-07-19T10:00:00Z');
 
       await repo.save(ReminderLog.create('confirmation', 'appt-1', sentAt));
 
       expect(
-        await repo.wasSent('confirmation', 'appt-1', 'email', '2026-07-19'),
+        (
+          await repo.sentReferences(
+            'confirmation',
+            'email',
+            ['appt-1'],
+            '2026-07-19',
+          )
+        ).has('appt-1'),
       ).toBe(true);
       expect(
-        await repo.wasSent('recall', 'appt-1', 'email', '2026-07-19'),
+        (
+          await repo.sentReferences('recall', 'email', ['appt-1'], '2026-07-19')
+        ).has('appt-1'),
       ).toBe(false);
+    });
+
+    it('Dado vários registros, Quando ler em lote, Então devolve o conjunto e o maior número de tentativa por retorno', async () => {
+      const repo = new InMemoryReminderLogRepository();
+      const day = new Date('2026-07-19T10:00:00Z');
+      await repo.save(ReminderLog.create('confirmation', 'a-1', day));
+      await repo.save(
+        ReminderLog.create('recall', 'fu-1', day, { attempt: 1 }),
+      );
+      await repo.save(
+        ReminderLog.create('recall', 'fu-1', day, { attempt: 2 }),
+      );
+
+      expect(
+        await repo.sentReferences(
+          'confirmation',
+          'email',
+          ['a-1', 'a-2'],
+          '2026-07-19',
+        ),
+      ).toEqual(new Set(['a-1']));
+      expect(await repo.lastRecallAttempts(['fu-1', 'fu-2'])).toEqual(
+        new Map([['fu-1', 2]]),
+      );
     });
 
     it('Dado lembrete já registrado, Quando salvar de novo (mesma chave), Então é idempotente e não lança', async () => {
@@ -292,7 +332,14 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       await repo.save(ReminderLog.create('recall', 'followup-1', sentAt));
 
       expect(
-        await repo.wasSent('recall', 'followup-1', 'email', '2026-07-19'),
+        (
+          await repo.sentReferences(
+            'recall',
+            'email',
+            ['followup-1'],
+            '2026-07-19',
+          )
+        ).has('followup-1'),
       ).toBe(true);
       expect(repo.items).toHaveLength(1);
     });
@@ -316,8 +363,12 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
         }),
       );
 
-      expect(await repo.lastRecallAttempt('fu-1')).toBe(3);
-      expect(await repo.lastRecallAttempt('fu-2')).toBe(0);
+      expect((await repo.lastRecallAttempts(['fu-1'])).get('fu-1') ?? 0).toBe(
+        3,
+      );
+      expect((await repo.lastRecallAttempts(['fu-2'])).get('fu-2') ?? 0).toBe(
+        0,
+      );
       expect(await repo.exhaustedRecalls(['fu-1', 'fu-2'])).toEqual(
         new Set(['fu-1']),
       );

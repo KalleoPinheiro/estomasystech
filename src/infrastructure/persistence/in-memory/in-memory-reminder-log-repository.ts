@@ -28,25 +28,38 @@ export class InMemoryReminderLogRepository implements ReminderLogRepository {
     this.items.push(log);
   }
 
-  async wasSent(
+  async sentReferences(
     kind: ReminderKind,
-    referenceId: string,
     channel: ReminderChannel,
+    referenceIds: readonly string[],
     onDay: string,
-  ): Promise<boolean> {
-    return this.items.some(
-      (log) =>
-        log.kind === kind &&
-        log.referenceId === referenceId &&
-        log.channel === channel &&
-        log.sentOn === onDay,
+  ): Promise<Set<string>> {
+    return new Set(
+      this.items
+        .filter(
+          (log) =>
+            log.kind === kind &&
+            log.channel === channel &&
+            log.sentOn === onDay &&
+            referenceIds.includes(log.referenceId),
+        )
+        .map((log) => log.referenceId),
     );
   }
 
-  async lastRecallAttempt(referenceId: string): Promise<number> {
-    return this.items
-      .filter((log) => isEmailRecall(log) && log.referenceId === referenceId)
-      .reduce((last, log) => Math.max(last, log.attempt), 0);
+  async lastRecallAttempts(
+    referenceIds: readonly string[],
+  ): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    for (const log of this.items) {
+      if (isEmailRecall(log) && referenceIds.includes(log.referenceId)) {
+        result.set(
+          log.referenceId,
+          Math.max(result.get(log.referenceId) ?? 0, log.attempt),
+        );
+      }
+    }
+    return result;
   }
 
   async firstSentAt(

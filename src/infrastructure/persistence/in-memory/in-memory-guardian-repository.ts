@@ -12,6 +12,13 @@ export class InMemoryGuardianRepository implements GuardianRepository {
     return this.guardians.get(id) ?? null;
   }
 
+  async findByIds(ids: readonly string[]): Promise<Guardian[]> {
+    return ids.flatMap((id) => {
+      const guardian = this.guardians.get(id);
+      return guardian ? [guardian] : [];
+    });
+  }
+
   async findAll(search?: string): Promise<Guardian[]> {
     const term = search?.toLowerCase();
     return [...this.guardians.values()]

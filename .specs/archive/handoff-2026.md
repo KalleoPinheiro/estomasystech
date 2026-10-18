@@ -1247,3 +1247,12 @@ Fatia da #210 item 2, destravada pela #216 (prazo final no aviso: registros de a
 - **Teste de suspensão (#251)**: não reproduzi a falha. 14 rodadas dos 12 arquivos de suspensão com 8 processos saturando a CPU, 6 rodadas com ordem embaralhada, suíte inteira (5258) duas vezes sob carga e `coverage`, e os 2 E2E de suspensão: tudo verde. Sem log da falha original (Actions sem cota), não há causa raiz a corrigir; nada foi alterado ali. Para fechar: colar o erro da próxima ocorrência (arquivo, asserção, `Expected/Received`). Observado de passagem: uma rodada de `test:coverage` falhou uma vez em `tests/pages/configuracoes-email-channel.test.tsx` (carregando/falha) e não repetiu em 4 rodadas sob carga nem na suíte inteira seguinte; sem a mensagem do erro, nada a corrigir ainda.
 - **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage 5329 testes, 96,89% de linhas). Sem mudança em `src/`, então sem E2E novo. Autorrevisão no lugar do the-judge.
 - **Next step**: nenhum. **Blockers**: nenhum. Sem migração.
+
+## Issue #361 — Job de lembretes sem consulta por item (2026-10-18) — ENCERRADO
+
+Achado no baseline de carga (PR #362). Sem migração, sem ADR (refatoração sem mudança de comportamento; regra COM-RN-21).
+- **Medição** (leituras de repositório por execução, 4 e 40 pacientes com consulta amanhã, retorno vencido e metade com responsável): antes 14 e 122 (`wasSent` por consulta, `lastRecallAttempt` por retorno, `guardians.findById` por paciente sem e-mail); depois 6 e 6.
+- **Código**: `ReminderLogRepository.wasSent`/`lastRecallAttempt` viraram `sentReferences`/`lastRecallAttempts` (uma consulta por lote, `IN` + `GROUP BY`, no escopo da empresa); `GuardianRepository.findByIds`; `send-reminders.ts` carrega tudo antes do laço. Destinatário (paciente, senão responsável, ADR-024) e idempotência iguais.
+- **Testes**: `send-reminders-queries.test.ts` (leituras iguais com 4 e 40 pacientes, destinatários corretos), mais lote nos repositórios Drizzle e in-memory, com isolamento por empresa e canal.
+- **Gate**: Actions sem cota; gate local. Docker/smoke não rodam (sem daemon); autorrevisão no lugar do the-judge.
+- **Next step**: nenhum. **Blockers**: nenhum.

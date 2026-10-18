@@ -43,14 +43,17 @@ export class DrizzleReminderLogRepository implements ReminderLogRepository {
       .onConflictDoNothing();
   }
 
-  async wasSent(
+  async sentReferences(
     kind: ReminderKind,
-    referenceId: string,
     channel: ReminderChannel,
+    referenceIds: readonly string[],
     onDay: string,
-  ): Promise<boolean> {
+  ): Promise<Set<string>> {
+    if (referenceIds.length === 0) {
+      return new Set();
+    }
     const rows = await this.db
-      .select({ id: reminderLogs.id })
+      .selectDistinct({ referenceId: reminderLogs.referenceId })
       .from(reminderLogs)
       .where(
         withTenant(
@@ -58,19 +61,26 @@ export class DrizzleReminderLogRepository implements ReminderLogRepository {
           this.clinicId,
           and(
             eq(reminderLogs.kind, kind),
-            eq(reminderLogs.referenceId, referenceId),
             eq(reminderLogs.channel, channel),
             eq(reminderLogs.sentOn, onDay),
+            inArray(reminderLogs.referenceId, [...referenceIds]),
           ),
         ),
-      )
-      .limit(1);
-    return rows.length > 0;
+      );
+    return new Set(rows.map((row) => row.referenceId));
   }
 
-  async lastRecallAttempt(referenceId: string): Promise<number> {
+  async lastRecallAttempts(
+    referenceIds: readonly string[],
+  ): Promise<Map<string, number>> {
+    if (referenceIds.length === 0) {
+      return new Map();
+    }
     const rows = await this.db
-      .select({ last: max(reminderLogs.attempt) })
+      .select({
+        referenceId: reminderLogs.referenceId,
+        last: max(reminderLogs.attempt),
+      })
       .from(reminderLogs)
       .where(
         withTenant(
@@ -79,11 +89,12 @@ export class DrizzleReminderLogRepository implements ReminderLogRepository {
           and(
             eq(reminderLogs.kind, 'recall'),
             eq(reminderLogs.channel, 'email'),
-            eq(reminderLogs.referenceId, referenceId),
+            inArray(reminderLogs.referenceId, [...referenceIds]),
           ),
         ),
-      );
-    return rows[0]?.last ?? 0;
+      )
+      .groupBy(reminderLogs.referenceId);
+    return new Map(rows.map((row) => [row.referenceId, row.last ?? 0]));
   }
 
   async firstSentAt(

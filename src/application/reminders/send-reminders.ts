@@ -1,6 +1,7 @@
 import type { EmailGateway } from '@/application/ports/email-gateway';
 import type { ClinicStatus } from '@/domain/clinic/clinic';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
+import type { Guardian } from '@/domain/guardian/guardian';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import { dueRecallAttempt } from '@/domain/messaging/recall-cadence';
 import {
@@ -138,6 +139,31 @@ export class SendReminders {
   }
 }
 
+/**
+ * O e-mail do paciente vale sempre; sem ele, o do responsável ligado a ele
+ * (#329), que recebe o aviso em nome do paciente.
+ */
+const recipientFor = (
+  patient: Patient,
+  guardiansById: ReadonlyMap<string, Guardian>,
+): ReminderRecipient | null => {
+  const firstName = firstNameOf(patient.fullName);
+  if (patient.email) {
+    return { email: patient.email, greeting: { firstName } };
+  }
+  const guardian = patient.guardianId
+    ? guardiansById.get(patient.guardianId)
+    : undefined;
+  if (!guardian?.email) return null;
+  return {
+    email: guardian.email,
+    greeting: {
+      firstName: firstNameOf(guardian.fullName),
+      onBehalfOf: firstName,
+    },
+  };
+};
+
 class ClinicReminders {
   private readonly portalUrl = portalUrlFromEnv();
 
@@ -158,6 +184,7 @@ class ClinicReminders {
         await this.services.patients.findByIds(pending.map((r) => r.patientId))
       ).map((p) => [p.id, p]),
     );
+    const guardiansById = await this.loadGuardians([...patientsById.values()]);
 
     const summary: ClinicReminderSummary = {
       clinicId: this.clinic.id,
@@ -169,7 +196,7 @@ class ClinicReminders {
     for (const reminder of pending) {
       const patient = patientsById.get(reminder.patientId);
       const recipient = patient?.isActive
-        ? await this.recipientFor(patient)
+        ? recipientFor(patient, guardiansById)
         : null;
       // Sem e-mail do paciente nem do responsável (#325, #329): pula sem erro.
       if (!recipient) {
@@ -189,28 +216,15 @@ class ClinicReminders {
     return summary;
   }
 
-  /**
-   * O e-mail do paciente vale sempre; sem ele, o do responsável ligado a ele
-   * (#329), que recebe o aviso em nome do paciente.
-   */
-  private async recipientFor(
-    patient: Patient,
-  ): Promise<ReminderRecipient | null> {
-    const firstName = firstNameOf(patient.fullName);
-    if (patient.email) {
-      return { email: patient.email, greeting: { firstName } };
-    }
-    const guardian = patient.guardianId
-      ? await this.services.guardians.findById(patient.guardianId)
-      : null;
-    if (!guardian?.email) return null;
-    return {
-      email: guardian.email,
-      greeting: {
-        firstName: firstNameOf(guardian.fullName),
-        onBehalfOf: firstName,
-      },
-    };
+  /** Responsáveis dos pacientes sem e-mail próprio, em uma só consulta. */
+  private async loadGuardians(
+    patients: readonly Patient[],
+  ): Promise<Map<string, Guardian>> {
+    const ids = patients
+      .filter((p) => p.isActive && !p.email && p.guardianId)
+      .map((p) => p.guardianId as string);
+    const guardians = await this.services.guardians.findByIds(ids);
+    return new Map(guardians.map((g) => [g.id, g]));
   }
 
   private async deliver(
@@ -263,21 +277,17 @@ class ClinicReminders {
       startOfTomorrow,
       endOfTomorrow,
     );
-    const todayKey = dateKey(now);
+    const scheduled = appointments.filter((a) => a.status === 'scheduled');
+    const alreadySent = await this.services.reminderLog.sentReferences(
+      'confirmation',
+      'email',
+      scheduled.map((a) => a.id),
+      dateKey(now),
+    );
 
     const reminders: PendingReminder[] = [];
-    for (const appointment of appointments) {
-      if (appointment.status !== 'scheduled') continue;
-      if (
-        await this.services.reminderLog.wasSent(
-          'confirmation',
-          appointment.id,
-          'email',
-          todayKey,
-        )
-      ) {
-        continue;
-      }
+    for (const appointment of scheduled) {
+      if (alreadySent.has(appointment.id)) continue;
       reminders.push({
         kind: 'confirmation',
         referenceId: appointment.id,
@@ -304,12 +314,16 @@ class ClinicReminders {
     const overdue =
       await this.services.followUps.findPendingDueBefore(startOfToday);
 
+    const lastAttempts = await this.services.reminderLog.lastRecallAttempts(
+      overdue.map((f) => f.id),
+    );
+
     const reminders: PendingReminder[] = [];
     for (const followUp of overdue) {
       const attempt = dueRecallAttempt(
         followUp.dueDate,
         now,
-        await this.services.reminderLog.lastRecallAttempt(followUp.id),
+        lastAttempts.get(followUp.id) ?? 0,
       );
       if (attempt === null) continue;
       reminders.push({
