@@ -143,6 +143,30 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
   geradas em branches paralelas: confira a ordem de `when` em `drizzle/meta/_journal.json`.
 - **Rollback:** as migrações não têm `down`. Reverter é restaurar o backup tirado antes do deploy
   (§ 5) ou escrever uma migração nova que desfaça a mudança.
+- **Atualizando de uma versão anterior à `0053`**: aplique **todas** as migrações `0053` a `0066`, em ordem,
+  pelo commit completo da `main`; o boot as aplica sozinho (acima). Resumo do que cada uma faz e
+  onde está a regra:
+
+  | Migração | Muda | Regra |
+  | --- | --- | --- |
+  | `0053`, `0054` | índices da trilha de auditoria; alerta do prazo dos direitos do titular | [Acesso](../domains/acesso/README.md), [Portal](../domains/portal/README.md) |
+  | `0055` | quem registrou o consentimento em papel do parceiro | [Portal](../domains/portal/README.md) |
+  | `0056` | `appointments.calendar_minimized_at` | § 7.2 |
+  | `0057`, `0059` | e-mail de contato opcional (sem `NOT NULL` nem unicidade); responsável do paciente | [ADR-023](../adr/023-email-de-contato-do-paciente-e-login-do-portal.md), [ADR-024](../adr/024-responsavel-do-paciente.md) |
+  | `0058` | motivo da suspensão da clínica | [Acesso](../domains/acesso/README.md) |
+  | `0060` | CPF do paciente e do pagador (cifrado) | [ADR-025](../adr/025-cpf-no-recibo-e-protecao.md) |
+  | `0061`, `0062` | conta de responsável no portal; revogação pelo paciente | [ADR-027](../adr/027-responsavel-acessa-portal-em-nome-do-paciente.md), [ADR-028](../adr/028-paciente-encerra-acesso-do-responsavel.md) |
+  | `0063` | marca de CNPJ para correção | § 7.3, [ADR-029](../adr/029-cnpj-antigo-invalido-marcado-para-correcao.md) |
+  | `0064` | encarregado por clínica e finalidade do consentimento | [ADR-030](../adr/030-textos-lgpd-ligados-sem-revisao-juridica.md) |
+  | `0065`, `0066` | maioridade e quem assinou os termos (paciente e parceiro) | [ADR-032](../adr/032-paciente-menor-no-portal-pelo-representante-legal.md), [ADR-033](../adr/033-direitos-do-menor-pelo-representante-e-prazo-do-aceite.md) |
+
+  Nenhuma apaga dado: quase todas só adicionam colunas, tabelas ou índices; a `0053` troca um
+  índice e a `0057` deixa de exigir o e-mail do paciente (e a unicidade dele). Sem `down`: faça o
+  backup (§ 5) antes. Depois
+  do deploy, na ordem: `npm run db:portal-orphans`, `npm run data:reencrypt` (abaixo),
+  `npm run calendar:minimize` (§ 7.2) e `npm run clinics:cnpj-review` (§ 7.3), cada um primeiro
+  em simulação e depois com `--confirmar`. Pacientes e parceiros reaceitam o termo da versão
+  nova e aceitam o de imagem no primeiro acesso ao portal.
 - **Depois das migrações deste lote:**
   1. `npm run db:portal-orphans` — lista contas de portal que a migração `0040` não conseguiu
      vincular ao cadastro pelo e-mail ([#196](https://github.com/KalleoPinheiro/vitta-flow/issues/196));

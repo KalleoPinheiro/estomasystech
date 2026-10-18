@@ -1294,3 +1294,13 @@ Decisão de @KalleoPinheiro (2026-10-18, "Ok" às propostas do coordenador para 
 - **Limite aceito**: curatela de adulto segue pela clínica (o portal só deixa o representante assinar por menor).
 - **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build + E2E). Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge (sem `gh`).
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Revisão geral da documentação (2026-10-18) — ENCERRADO
+
+Pedido do Kalléo ("revise e atualize as documentações"): conferir os docs contra a `main` depois das PRs #356, #357, #362, #364 a #370, #373, #374 e #377. Sem mudança de código nem de comportamento; sem ADR novo (nenhum ADR aceito foi editado).
+- **Conferido sem divergência**: variáveis de ambiente do código contra `.env.example` e `onboarding.md`/`producao.md`; `WHATSAPP_*` e `VITTA_ALLOW_OPEN_MODE` só aparecem como removidas; índice de ADRs (001–033, o 022 nunca existiu); scripts `calendar:minimize` (§ 7.2) e `clinics:cnpj-review` (§ 7.3); numeração (migração 0066, ADR-033, AD-054, ACE-RN-59, POR-RN-28).
+- **Corrigido**: `plano-evolucao-faseado.md` ganhou RM-26 a RM-30 (LGPD go-live, responsável e menor no portal, recibo/CNPJ, baseline de carga, fim do modo aberto e do gateway Meta) que faltavam desde o RM-25; `producao.md` § 4 ganhou o resumo das migrações 0053→0066 e a ordem dos passos pós-deploy; `README.md` deixou de listar `RESEND_API_KEY`/`EMAIL_FROM` como mínimo do quick start (o código os trata como opcionais; ADR-011); `last_reviewed` de `docs/README.md`, `onboarding.md` e do plano atualizado.
+- **Specs as-built** criadas em `.specs/features/` (lgpd-go-live, responsavel-e-menor-no-portal, recibo-irpf-e-cnpj, baseline-de-carga, sem-modo-aberto-e-sem-meta) porque `tests/docs/structure.test.ts` exige que todo RM entregue linke uma pasta de spec.
+- **Fora do repositório**: `fila/issues.md` do projeto reescrito (única issue aberta: #376).
+- **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build). Docker/smoke não rodam (sem daemon). Autorrevisão no lugar do the-judge (sem `gh`).
+- **Next step**: nenhum. **Blockers**: nenhum.
