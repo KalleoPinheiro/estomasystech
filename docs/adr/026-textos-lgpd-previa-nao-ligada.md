@@ -1,10 +1,11 @@
 ---
 title: "ADR 026 — Textos LGPD em versão prévia ficam fora do sistema até a revisão jurídica"
-status: frozen
+status: superseded
+superseded_by: docs/adr/030-textos-lgpd-ligados-sem-revisao-juridica.md
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-17
-related: [docs/legal/textos-lgpd-previa.md, docs/adr/018-transferencia-internacional-ue.md, docs/adr/017-retencao-decisoes-complementares.md]
+related: [docs/legal/textos-lgpd.md, docs/adr/018-transferencia-internacional-ue.md, docs/adr/017-retencao-decisoes-complementares.md]
 ---
 
 # ADR 026 — Textos LGPD em versão prévia ficam fora do sistema até a revisão jurídica
@@ -31,7 +32,7 @@ invalida todos os aceites, inclusive os de papel lançados pela equipe (#310). O
 
 ## Decisão
 
-**Opção B.** A versão prévia mora em [`docs/legal/textos-lgpd-previa.md`](../legal/textos-lgpd-previa.md)
+**Opção B.** A versão prévia mora em [`docs/legal/textos-lgpd-previa.md`](../legal/textos-lgpd.md)
 (`status: draft`), marcada em cada texto como pendente de revisão jurídica. **Nenhuma constante
 muda**: `CONSENT_TEXT` (`v1`) e `PARTNER_SHARE_CONSENT_TEXT` (`v0-placeholder`) seguem vigentes e
 **nenhum aceite existente perde a validade** por causa desta entrega.

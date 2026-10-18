@@ -96,6 +96,7 @@ describe('Feature: Portal do responsável (ADR-027)', () => {
         actingFor: { patientId: 'pat-1', fullName: 'Luiza Filha' },
       }),
       'GET /api/portal/patient/consent': () => consentPending,
+      'GET /api/portal/patient/consent?purpose=image': () => consentPending,
     });
 
     renderWithToast(<GuardianPortalView />);
@@ -116,7 +117,7 @@ describe('Feature: Portal do responsável (ADR-027)', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Meus dados (LGPD)')).not.toBeInTheDocument();
     expect(
-      screen.getByText(/O termo de consentimento ainda não foi aceito/),
+      screen.getByText(/Os termos de consentimento \(tratamento e imagem\)/),
     ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/portal/guardian/acting-for',
@@ -143,6 +144,10 @@ describe('Feature: Portal do responsável (ADR-027)', () => {
         actingFor: { patientId: 'pat-1', fullName: 'Luiza Filha' },
       }),
       'GET /api/portal/patient/consent': () => ({
+        ...consentPending,
+        accepted: true,
+      }),
+      'GET /api/portal/patient/consent?purpose=image': () => ({
         ...consentPending,
         accepted: true,
       }),
@@ -193,6 +198,10 @@ describe('Feature: Paciente vê quem acessa em nome dele (ADR-027)', () => {
           guardianAccess: { ...access, lastAccessAt },
         }),
         'GET /api/portal/patient/consent': () => ({
+          ...consentPending,
+          accepted: true,
+        }),
+        'GET /api/portal/patient/consent?purpose=image': () => ({
           ...consentPending,
           accepted: true,
         }),

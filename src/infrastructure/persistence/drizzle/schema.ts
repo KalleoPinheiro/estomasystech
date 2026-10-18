@@ -51,6 +51,9 @@ export const clinics = pgTable(
     // ativa e nas suspensas antes da #251; a reativação limpa os dois.
     statusReason: text('status_reason'),
     statusReasonNote: text('status_reason_note'),
+    // Encarregado pelos dados (#216, ADR-030): nulos valem o contato da clínica.
+    dpoName: text('dpo_name'),
+    dpoContact: text('dpo_contact'),
   },
   (table) => [
     check(
@@ -745,6 +748,11 @@ export const consentRecords = pgTable(
     kind: text('kind').notNull().default('accept'),
     textHash: text('text_hash').notNull(),
     textVersion: text('text_version'),
+    // Finalidade do termo (#216, ADR-030): 'treatment' (TCLE) ou 'image' (fotos).
+    purpose: text('purpose').notNull().default('treatment'),
+    // Quem era o controlador e o encarregado quando o paciente leu (o hash é
+    // do texto-base, sem os dados da clínica). Nulo em revogações e legados.
+    controllerSnapshot: text('controller_snapshot'),
     ipAddress: text('ip_address'),
     acceptedAt: timestamp('accepted_at', {
       withTimezone: true,
@@ -754,6 +762,10 @@ export const consentRecords = pgTable(
   (table) => [
     index('idx_consent_records_patient').on(table.patientId),
     index('idx_consent_records_clinic').on(table.clinicId),
+    check(
+      'consent_records_purpose_check',
+      sql`${table.purpose} IN ('treatment', 'image')`,
+    ),
   ],
 );
 

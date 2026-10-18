@@ -29,7 +29,7 @@ base técnica está decidida no [ADR-018](../adr/018-transferencia-internacional
 UE, adequação recíproca Brasil ↔ UE como base e cláusulas-padrão da ANPD como reserva; o backup
 sai cifrado (`age`) e a Storage Box fica em outra localização **da UE**. **Pendência jurídica
 (bloqueia cadastrar paciente real):** a conferência da adequação na fonte primária, o mecanismo
-para Resend e Google Agenda (fora da UE) e os textos do aviso e do TCLE, na
+para Resend e Google Agenda (fora da UE) e a revisão jurídica dos cinco textos (aviso, TCLE, imagem, parceiro, direitos do titular; hoje `LEGAL_REVIEW_PENDING`, [ADR-030](../adr/030-textos-lgpd-ligados-sem-revisao-juridica.md)) e a ato da ANPD, na
 [#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216).
 
 Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313),

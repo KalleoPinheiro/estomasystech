@@ -134,6 +134,8 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       cnpjReviewSince: null,
       contactPhone: '11 3333-4444',
       contactEmail: 'contato@nova.com',
+      dpoName: null,
+      dpoContact: null,
       address: null,
       city: null,
       professionalName: 'Enf. Ana',

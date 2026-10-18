@@ -5,18 +5,25 @@ import {
   PARTNER_SHARE_CONSENT_TEXT_VERSION,
 } from '@/lib/partner-share-consent-text';
 
-describe('Feature: Texto do consentimento para o parceiro (#292)', () => {
-  it('Dado o texto provisório, Então a versão marca placeholder até o texto do jurídico (#216)', () => {
-    expect(PARTNER_SHARE_CONSENT_TEXT_VERSION).toBe('v0-placeholder');
+describe('Feature: Texto do consentimento para o parceiro (#292, #216)', () => {
+  it('Dado o texto vigente, Então a versão é v1, sem aviso de texto provisório', () => {
+    expect(PARTNER_SHARE_CONSENT_TEXT_VERSION).toBe('v1');
     expect(PARTNER_SHARE_CONSENT_TEXT).toContain(
       `(${PARTNER_SHARE_CONSENT_TEXT_VERSION})`,
     );
-    expect(PARTNER_SHARE_CONSENT_TEXT).toContain('Texto provisório');
+    expect(PARTNER_SHARE_CONSENT_TEXT).not.toContain('provisório');
   });
 
-  it('Dado o texto, Então cita a janela de 24 meses e a revogação', () => {
+  it('Dado o texto, Então cita a janela de 24 meses, a revogação e o que o parceiro vê sem autorização', () => {
     expect(PARTNER_SHARE_CONSENT_TEXT).toContain('24 meses');
-    expect(PARTNER_SHARE_CONSENT_TEXT).toContain('revogá-la');
+    expect(PARTNER_SHARE_CONSENT_TEXT).toContain(
+      'Posso retirar esta autorização',
+    );
+    expect(PARTNER_SHARE_CONSENT_TEXT).toContain('apenas que fui atendido(a)');
+  });
+
+  it('Dado o texto, Então é fixo: sem marcadores da clínica nem do parceiro', () => {
+    expect(PARTNER_SHARE_CONSENT_TEXT).not.toMatch(/\{\{[A-Z_]+\}\}/);
   });
 
   it('Dado o par exportado, Então texto e versão são os vigentes', () => {

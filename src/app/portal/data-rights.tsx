@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
-import { DATA_RIGHTS_PLACEHOLDER_NOTICE } from '@/lib/data-rights-text';
+import { DATA_RIGHTS_NOTICE } from '@/lib/data-rights-text';
 import {
   DATA_REQUEST_KIND_LABELS,
   DATA_REQUEST_STATUS_LABELS,
@@ -62,8 +62,8 @@ export function DataRights() {
     <section data-data-rights>
       <h2 className="mb-3 font-semibold text-lg">Meus dados (LGPD)</h2>
       <Card className="flex flex-col gap-4 p-4">
-        <p className="text-ink-3 text-sm" data-legal-placeholder>
-          {DATA_RIGHTS_PLACEHOLDER_NOTICE}
+        <p className="text-ink-3 text-sm" data-legal-notice>
+          {DATA_RIGHTS_NOTICE}
         </p>
         <Button
           type="button"

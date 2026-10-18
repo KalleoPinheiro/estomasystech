@@ -12,6 +12,7 @@ import {
   PARTNER_SHARE_CONSENT_TEXT,
   PARTNER_SHARE_CONSENT_TEXT_VERSION,
 } from '@/lib/partner-share-consent-text';
+import { CLINIC_A_ID, completeClinicRegistration } from '../support/clinics';
 import { pinClock, unpinClock } from '../support/clock';
 import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
@@ -86,6 +87,7 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
     // Relógio fixo: as datas do cenário são absolutas e o portal só agenda
     // até 60 dias à frente (#213) — sem fixar, o teste apodreceria com o tempo.
     pinClock('2027-02-15T12:00:00.000Z');
+    await completeClinicRegistration(CLINIC_A_ID);
     meRoute = await import('@/app/api/portal/me/route');
     patientPortalRoute = await import('@/app/api/portal/patient/route');
     partnerPortalRoute = await import('@/app/api/portal/partner/route');
@@ -776,6 +778,19 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
     ]);
 
+    // O envio de foto exige o termo de imagem aceito (#216, ADR-030), à parte do TCLE.
+    beforeAll(async () => {
+      const accepted = await consentRoute.POST(
+        jsonRequest(
+          '/api/portal/patient/consent?purpose=image',
+          'POST',
+          undefined,
+          cookieHeader(patientCookieToken),
+        ),
+      );
+      expect(accepted.status).toBe(200);
+    });
+
     const multipartRequest = (
       url: string,
       fields: { file?: File; conditionId?: string; note?: string },
@@ -944,7 +959,7 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
     it('Dado consentimento revogado (mesmo com aceite antigo do mesmo texto no histórico), Quando POST photos, Então bloqueia com ConsentRequiredError', async () => {
       const revokeResponse = await consentRevokeRoute.POST(
         jsonRequest(
-          '/api/portal/patient/consent/revoke',
+          '/api/portal/patient/consent/revoke?purpose=image',
           'POST',
           undefined,
           cookieHeader(patientCookieToken),
@@ -971,7 +986,7 @@ describe('Feature: Rotas do portal (paciente e parceiro)', () => {
     it('Dado aceite vigente após novo aceite pós-revogação, Quando POST photos, Então volta a subir normalmente', async () => {
       const acceptResponse = await consentRoute.POST(
         jsonRequest(
-          '/api/portal/patient/consent',
+          '/api/portal/patient/consent?purpose=image',
           'POST',
           undefined,
           cookieHeader(patientCookieToken),

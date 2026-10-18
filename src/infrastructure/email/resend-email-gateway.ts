@@ -3,6 +3,7 @@ import {
   type EmailMessage,
   NullEmailGateway,
 } from '@/application/ports/email-gateway';
+import { appUrlFromEnv } from '@/application/reminders/portal-url';
 import type { EmailProvider } from '@/domain/clinic/clinic-channel';
 
 export interface ResendConfig {
@@ -13,6 +14,17 @@ export interface ResendConfig {
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const REQUEST_TIMEOUT_MS = 10_000;
+
+/**
+ * Rodapé de todo e-mail com o link do aviso de privacidade (LGPD, art. 9º;
+ * #216). Sem `APP_URL` absoluta não há link, e a mensagem sai como está.
+ */
+export function withPrivacyFooter(text: string): string {
+  const base = appUrlFromEnv();
+  return base
+    ? `${text}\n\n--\nAviso de privacidade: ${base}/privacidade`
+    : text;
+}
 
 /**
  * E-mail transacional via API HTTP do Resend (convite e reset de senha).
@@ -36,7 +48,7 @@ export class ResendEmailGateway implements EmailGateway {
         from: this.config.from,
         to: [message.to],
         subject: message.subject,
-        text: message.text,
+        text: withPrivacyFooter(message.text),
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });

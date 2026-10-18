@@ -4,7 +4,11 @@ import { getRepositories } from '@/infrastructure/container';
 import { ACTING_PATIENT_COOKIE } from '@/lib/auth/acting-patient';
 import { SESSION_COOKIE } from '@/lib/auth/session';
 import { clinicScope } from '@/lib/auth/tenant-scope';
-import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
+import {
+  CLINIC_A_ID,
+  completeClinicRegistration,
+  ensureTestClinics,
+} from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor, sessionToken } from '../support/session';
 
@@ -63,6 +67,7 @@ describe('Feature: Responsável acessa o portal em nome do paciente (ADR-027)', 
 
   beforeAll(async () => {
     await ensureTestClinics();
+    await completeClinicRegistration(CLINIC_A_ID);
     guardiansRoute = await import('@/app/api/guardians/route');
     guardianByIdRoute = await import('@/app/api/guardians/[id]/route');
     patientsRoute = await import('@/app/api/patients/route');

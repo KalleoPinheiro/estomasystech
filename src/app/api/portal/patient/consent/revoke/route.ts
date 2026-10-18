@@ -7,6 +7,7 @@ import { recordAudit } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { requirePortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
+import { consentPurposeFrom } from '@/lib/consent-documents';
 
 /**
  * Revogação self-service do consentimento LGPD (art. 8º/18): registra evento
@@ -24,8 +25,10 @@ export async function POST(request: NextRequest) {
     const { consentRecords, auditEvents } = services;
     const patient = await resolvePortalPatient(services, auth.session);
 
+    const purpose = consentPurposeFrom(request.nextUrl);
     const record = ConsentRecord.revoke({
       patientId: patient.id,
+      purpose,
       ipAddress: clientIp(request),
     });
     await consentRecords.save(record);
@@ -35,7 +38,7 @@ export async function POST(request: NextRequest) {
       resourceType: 'consent',
       resourceId: record.id,
       patientId: patient.id,
-      detail: 'revogação de consentimento',
+      detail: `revogação de consentimento (${purpose})`,
     });
     return {
       accepted: false,

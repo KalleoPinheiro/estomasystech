@@ -2,6 +2,18 @@ import { createHash } from 'node:crypto';
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 
+/**
+ * Finalidade do termo (#216, ADR-030): 'treatment' é o TCLE de tratamento e
+ * 'image' a autorização de fotos clínicas, aceitas e revogadas à parte.
+ */
+export type ConsentPurpose = 'treatment' | 'image';
+export const CONSENT_PURPOSES: readonly ConsentPurpose[] = [
+  'treatment',
+  'image',
+];
+export const isConsentPurpose = (value: unknown): value is ConsentPurpose =>
+  CONSENT_PURPOSES.includes(value as ConsentPurpose);
+
 /** "accept": aceite do termo. "revoke": revogação — nunca apaga o aceite original (append-only). */
 export type ConsentRecordKind = 'accept' | 'revoke';
 
@@ -9,10 +21,13 @@ export interface ConsentRecordState {
   id: string;
   patientId: string;
   kind: ConsentRecordKind;
-  /** SHA-256 do texto exato exibido no aceite — mudou o texto, novo aceite. Vazio em revogações. */
+  purpose: ConsentPurpose;
+  /** SHA-256 do texto-base exibido no aceite (sem os dados da clínica) — mudou o texto, novo aceite. Vazio em revogações. */
   textHash: string;
   /** Versão do termo (`CONSENT_TEXT_VERSION`) vigente no momento do aceite. Nula em revogações e em linhas legadas pré-#70. */
   textVersion: string | null;
+  /** Controlador e encarregado exibidos no aceite (evidência). Nulo em revogações e legados. */
+  controllerSnapshot: string | null;
   /** IP de origem do aceite (evidência). */
   ipAddress: string | null;
   acceptedAt: Date;
@@ -21,9 +36,14 @@ export interface ConsentRecordState {
 /** Estado de linha legada (pré-#70): sem `kind`/`textVersion` gravados. */
 type LegacyConsentRecordState = Omit<
   ConsentRecordState,
-  'kind' | 'textVersion'
+  'kind' | 'textVersion' | 'purpose' | 'controllerSnapshot'
 > &
-  Partial<Pick<ConsentRecordState, 'kind' | 'textVersion'>>;
+  Partial<
+    Pick<
+      ConsentRecordState,
+      'kind' | 'textVersion' | 'purpose' | 'controllerSnapshot'
+    >
+  >;
 
 export const hashConsentText = (text: string): string =>
   createHash('sha256').update(text, 'utf8').digest('hex');
@@ -36,6 +56,8 @@ export class ConsentRecord {
     patientId: string;
     consentText: string;
     textVersion: string;
+    purpose?: ConsentPurpose;
+    controllerSnapshot?: string | null;
     ipAddress?: string | null;
   }): ConsentRecord {
     if (!input.patientId.trim()) {
@@ -51,8 +73,10 @@ export class ConsentRecord {
       id: newId(),
       patientId: input.patientId,
       kind: 'accept',
+      purpose: input.purpose ?? 'treatment',
       textHash: hashConsentText(input.consentText),
       textVersion: input.textVersion,
+      controllerSnapshot: input.controllerSnapshot?.trim() || null,
       ipAddress: input.ipAddress?.trim() || null,
       acceptedAt: new Date(),
     });
@@ -61,6 +85,7 @@ export class ConsentRecord {
   /** Registra revogação — não apaga o aceite original, cria um novo registro append-only. */
   static revoke(input: {
     patientId: string;
+    purpose?: ConsentPurpose;
     ipAddress?: string | null;
   }): ConsentRecord {
     if (!input.patientId.trim()) {
@@ -70,8 +95,10 @@ export class ConsentRecord {
       id: newId(),
       patientId: input.patientId,
       kind: 'revoke',
+      purpose: input.purpose ?? 'treatment',
       textHash: '',
       textVersion: null,
+      controllerSnapshot: null,
       ipAddress: input.ipAddress?.trim() || null,
       acceptedAt: new Date(),
     });
@@ -81,13 +108,16 @@ export class ConsentRecord {
     return new ConsentRecord({
       ...state,
       kind: state.kind ?? 'accept',
+      purpose: state.purpose ?? 'treatment',
       textVersion: state.textVersion ?? null,
+      controllerSnapshot: state.controllerSnapshot ?? null,
     });
   }
 
   /**
-   * Resolve o status atual de consentimento a partir do histórico completo
-   * (qualquer ordem): olha só o registro mais recente por `acceptedAt`
+   * Resolve o status atual de consentimento de **uma finalidade** a partir do
+   * histórico completo (qualquer ordem; os registros de outra finalidade são
+   * ignorados, então revogar a imagem não revoga o tratamento): olha só o registro mais recente por `acceptedAt`
    * (empate resolvido a favor da revogação — o desfecho mais restritivo — já
    * que `acceptedAt` tem resolução de milissegundo e duas chamadas em rápida
    * sucessão podem colidir).
@@ -102,13 +132,15 @@ export class ConsentRecord {
    * fosse data de aceite.
    */
   static resolveStatus(
-    records: readonly ConsentRecord[],
+    allRecords: readonly ConsentRecord[],
     consentText: string,
+    purpose: ConsentPurpose = 'treatment',
   ): {
     accepted: boolean;
     current: ConsentRecord | null;
     latestAccept: ConsentRecord | null;
   } {
+    const records = allRecords.filter((record) => record.purpose === purpose);
     const latestAccept =
       records
         .filter((record) => record.kind === 'accept')
@@ -149,6 +181,14 @@ export class ConsentRecord {
 
   get kind(): ConsentRecordKind {
     return this.state.kind;
+  }
+
+  get purpose(): ConsentPurpose {
+    return this.state.purpose;
+  }
+
+  get controllerSnapshot(): string | null {
+    return this.state.controllerSnapshot;
   }
 
   get textHash(): string {

@@ -173,7 +173,7 @@ for (const viewport of VIEWPORTS) {
 
       await page.goto("/portal");
       await expect(page.getByRole("heading", { name: `Olá, ${seeded.firstName}!` })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Termo de consentimento pendente" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Termo de consentimento do tratamento pendente" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Lista de espera" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Agendar retorno" })).toBeVisible();
       await expect(page.getByLabel("Gráfico de evolução da condição")).toBeVisible();
@@ -199,9 +199,12 @@ for (const viewport of VIEWPORTS) {
       await expectMobileFriendly(page, viewport.width, "agendar retorno");
 
       // Consentimento aceito: revogação + envio de foto com prévia.
-      await page.getByRole("button", { name: "Li e aceito o termo" }).click();
-      await expect(page.getByRole("button", { name: "Revogar consentimento" })).toBeVisible();
-      await waitToastGone(page, "Termo de consentimento aceito");
+      await page.getByRole("button", { name: "Li e aceito o termo de tratamento" }).click();
+      await expect(page.getByRole("button", { name: "Revogar consentimento do tratamento" })).toBeVisible();
+      await waitToastGone(page, "Termo de consentimento do tratamento aceito");
+      await page.getByRole("button", { name: "Li e aceito o termo de imagem" }).click();
+      await expect(page.getByRole("button", { name: "Revogar autorização de imagem" })).toBeVisible();
+      await waitToastGone(page, "Termo de autorização de imagem aceito");
       await expectMobileFriendly(page, viewport.width, "consentimento aceito");
 
       await page.locator('input[type="file"]').setInputFiles({

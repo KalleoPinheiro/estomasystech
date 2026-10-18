@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { clinicScope } from '@/lib/auth/tenant-scope';
+import { CLINIC_A_ID, completeClinicRegistration } from '../support/clinics';
 import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader } from '../support/session';
@@ -83,6 +84,7 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
   };
 
   beforeAll(async () => {
+    await completeClinicRegistration(CLINIC_A_ID);
     patientsRoute = await import('@/app/api/patients/route');
     anamnesisRoute = await import('@/app/api/patients/[id]/anamnesis/route');
     conditionsRoute = await import('@/app/api/patients/[id]/conditions/route');
@@ -127,10 +129,13 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
     // Gate de consentimento (COMP3-01): envio remoto de foto exige aceite vigente.
     const consentRoute = await import('@/app/api/portal/patient/consent/route');
     await consentRoute.POST(
-      new NextRequest('http://localhost/api/portal/patient/consent', {
-        method: 'POST',
-        headers: cookieHeader(patientCookieToken),
-      }),
+      new NextRequest(
+        'http://localhost/api/portal/patient/consent?purpose=image',
+        {
+          method: 'POST',
+          headers: cookieHeader(patientCookieToken),
+        },
+      ),
     );
 
     await anamnesisRoute.PUT(

@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, Header, Layout } from '@still-void/ui/react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
 
@@ -42,6 +43,14 @@ export default function PortalLayout({
             </AlertDescription>
           </Alert>
           {children}
+          <p className="text-center text-sm">
+            <Link
+              href="/privacidade"
+              className="text-accent-ink hover:underline"
+            >
+              Aviso de privacidade
+            </Link>
+          </p>
         </main>
       </Layout>
     </div>

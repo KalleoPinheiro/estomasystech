@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { clinicScope } from '@/lib/auth/tenant-scope';
+import { CLINIC_A_ID, completeClinicRegistration } from '../support/clinics';
 import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 
@@ -83,6 +84,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
 
   beforeAll(async () => {
     process.env.AUTH_SECRET = 'test-secret-gaps';
+    await completeClinicRegistration(CLINIC_A_ID);
 
     loginRoute = await import('@/app/api/auth/login/route');
 
@@ -359,6 +361,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
           patientId: consentPatientId,
           consentText: 'Versão anterior do termo de consentimento da clínica.',
           textVersion: 'v1',
+          purpose: 'image',
         }),
       );
 
@@ -398,7 +401,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       const token = sessionFor(patientEmail, 'patient');
       await consentRoute.POST(
         jsonRequest(
-          '/api/portal/patient/consent',
+          '/api/portal/patient/consent?purpose=image',
           'POST',
           undefined,
           cookieHeader(token),
@@ -492,7 +495,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       // Gate de consentimento (COMP3-01): envio remoto exige aceite vigente.
       await consentRoute.POST(
         jsonRequest(
-          '/api/portal/patient/consent',
+          '/api/portal/patient/consent?purpose=image',
           'POST',
           undefined,
           cookieHeader(patientToken),
@@ -699,7 +702,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
       await linkAllPortalAccounts();
       const response = await consentRoute.POST(
         jsonRequest(
-          '/api/portal/patient/consent',
+          '/api/portal/patient/consent?purpose=image',
           'POST',
           undefined,
           cookieHeader(sessionFor(patientEmail, 'patient')),

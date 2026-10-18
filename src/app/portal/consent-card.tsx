@@ -18,11 +18,45 @@ import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 import { formatDateTime } from '@/lib/format';
 
+/** Finalidade do termo (#216): TCLE de tratamento ou autorização de imagem. */
+export type ConsentPurposeDto = 'treatment' | 'image';
+
 export interface ConsentStatusDto {
   consentText: string;
   accepted: boolean;
   acceptedAt: string | null;
 }
+
+const COPY: Record<
+  ConsentPurposeDto,
+  {
+    acceptedLabel: string;
+    pendingTitle: string;
+    acceptButton: string;
+    revokeButton: string;
+    revokeTitle: string;
+    revokeDescription: string;
+  }
+> = {
+  treatment: {
+    acceptedLabel: 'Termo de consentimento do tratamento aceito',
+    pendingTitle: 'Termo de consentimento do tratamento pendente',
+    acceptButton: 'Li e aceito o termo de tratamento',
+    revokeButton: 'Revogar consentimento do tratamento',
+    revokeTitle: 'Revogar consentimento do tratamento',
+    revokeDescription:
+      'Ao revogar, você retira a autorização para a clínica tratar seus dados de saúde daqui em diante. O prontuário já registrado continua guardado, porque a lei obriga. Confirma a revogação?',
+  },
+  image: {
+    acceptedLabel: 'Termo de autorização de imagem aceito',
+    pendingTitle: 'Termo de autorização de imagem pendente',
+    acceptButton: 'Li e aceito o termo de imagem',
+    revokeButton: 'Revogar autorização de imagem',
+    revokeTitle: 'Revogar autorização de imagem',
+    revokeDescription:
+      'Ao revogar, o envio de novas fotos fica bloqueado até você aceitar o termo de imagem de novo. As fotos já registradas continuam no prontuário. Confirma a revogação?',
+  },
+};
 
 /**
  * Consentimento digital (O4.1): paciente lê o termo vigente e aceita no portal.
@@ -32,10 +66,13 @@ export interface ConsentStatusDto {
 export function ConsentCard({
   status,
   onAccepted,
+  purpose = 'treatment',
 }: {
   status: ConsentStatusDto | null;
   onAccepted: () => void;
+  purpose?: ConsentPurposeDto;
 }) {
+  const copy = COPY[purpose];
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
@@ -48,9 +85,12 @@ export function ConsentCard({
       setRevoking(true);
       setError(null);
       try {
-        await apiFetch('/api/portal/patient/consent/revoke', {
-          method: 'POST',
-        });
+        await apiFetch(
+          `/api/portal/patient/consent/revoke?purpose=${purpose}`,
+          {
+            method: 'POST',
+          },
+        );
         toast({ description: 'Consentimento revogado', variant: 'success' });
         onAccepted();
       } catch (err) {
@@ -67,7 +107,7 @@ export function ConsentCard({
       <div className="flex flex-col gap-2">
         <Alert variant="success" icon={<Icon name="check-circle" />}>
           <AlertDescription>
-            Termo de consentimento aceito
+            {copy.acceptedLabel}
             {status.acceptedAt
               ? ` em ${formatDateTime(status.acceptedAt)}`
               : ''}
@@ -87,11 +127,11 @@ export function ConsentCard({
               disabled={revoking}
               className="self-start"
             >
-              {revoking ? 'Revogando…' : 'Revogar consentimento'}
+              {revoking ? 'Revogando…' : copy.revokeButton}
             </Button>
           }
-          title="Revogar consentimento"
-          description="Ao revogar, o envio de novas fotos fica bloqueado até você aceitar o termo de novo. Confirma a revogação?"
+          title={copy.revokeTitle}
+          description={copy.revokeDescription}
           confirmLabel="Revogar"
           variant="danger"
           onConfirm={() => void revoke()}
@@ -104,11 +144,10 @@ export function ConsentCard({
     setAccepting(true);
     setError(null);
     try {
-      await apiFetch('/api/portal/patient/consent', { method: 'POST' });
-      toast({
-        description: 'Termo de consentimento aceito',
-        variant: 'success',
+      await apiFetch(`/api/portal/patient/consent?purpose=${purpose}`, {
+        method: 'POST',
       });
+      toast({ description: copy.acceptedLabel, variant: 'success' });
       onAccepted();
     } catch (err) {
       const message =
@@ -130,7 +169,7 @@ export function ConsentCard({
   return (
     <Card as="section" className="border-warning bg-warning-soft p-4">
       <h2 className="mb-2 font-bold text-sm text-warning">
-        Termo de consentimento pendente
+        {copy.pendingTitle}
       </h2>
       {error && <ErrorAlert message={error} />}
       <Prose className="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-warning-soft bg-sv-surface p-3 text-sm">
@@ -142,7 +181,7 @@ export function ConsentCard({
         onClick={() => void accept()}
         variant="accent"
       >
-        {accepting ? 'Registrando…' : 'Li e aceito o termo'}
+        {accepting ? 'Registrando…' : copy.acceptButton}
       </Button>
     </Card>
   );
@@ -224,8 +263,8 @@ export function PatientPhotoUpload({
       <Alert variant="warning" className="mt-2">
         <AlertDescription>
           {byGuardian
-            ? 'O termo de consentimento é aceito pelo próprio paciente. Enquanto isso não acontece, não é possível enviar fotos.'
-            : 'Aceite o termo de consentimento acima para enviar fotos à equipe.'}
+            ? 'O termo de imagem é aceito pelo próprio paciente. Enquanto isso não acontece, não é possível enviar fotos.'
+            : 'Aceite o termo de imagem acima para enviar fotos à equipe.'}
         </AlertDescription>
       </Alert>
     );
