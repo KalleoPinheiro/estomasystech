@@ -3,10 +3,14 @@ title: "Integração: GlitchTip (error tracking)"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-12
+last_reviewed: 2026-10-18
 ---
 
 # GlitchTip (error tracking self-hosted)
+
+> **Desligado em produção (2026-10-18).** O app roda como Dockerfile no Coolify, sem o
+> `docker-compose.glitchtip.yml`; sem `GLITCHTIP_DSN` o app funciona igual. Ligar exige subir o
+> GlitchTip à parte (runbook § 9.5).
 
 ## Propósito
 

@@ -3,14 +3,14 @@ title: "Integração: cron de alertas ao operador"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-12
+last_reviewed: 2026-10-18
 ---
 
 # Cron de alertas (`POST /api/alerts/run`)
 
 ## Propósito
 
-O cron do host chama a rota a cada 5 minutos; ela avalia quatro sinais e manda um e-mail por
+A Scheduled Task do Coolify (no formato compose, o cron do host) chama a rota a cada 5 minutos; ela avalia quatro sinais e manda um e-mail por
 alerta ativo ao operador da plataforma, pelo canal da plataforma
 ([ADR-011](../../adr/011-canal-de-comunicacao-por-clinica.md), [ADR-014](../../adr/014-observabilidade-sem-pii.md)).
 O canal não depende do banco: banco fora do ar ainda vira alerta. Decisão do dono na
@@ -78,7 +78,7 @@ paciente, conta ou clínica.
 | header ausente ou diferente | `401` |
 | sem `ALERT_EMAIL_TO` ou sem canal da plataforma | `200` com `channel: "none"`; cada alerta ativo vira linha `error` no log (e evento no GlitchTip) |
 | envio do e-mail falhou | `200`, `notified: false`; tenta de novo na próxima execução |
-| app fora do ar | o `curl -f` do cron falha e o `MAILTO` do host avisa ([runbook](../producao.md) § 7); com o servidor inteiro fora, o UptimeRobot em `/api/health/ready` avisa por e-mail (§ 9.3) |
+| app fora do ar | a execução da tarefa falha no Coolify ([runbook](../producao.md) § 7, § 9.3); com o servidor inteiro fora, o UptimeRobot em `/api/health/ready` avisa por e-mail (§ 9.3) |
 
 ## Teste local
 

@@ -1348,3 +1348,13 @@ Achado no 1º deploy no Coolify: em banco sem migrações, a consulta a `drizzle
 - **Pendência registrada na #381 (não implementada)**: o backup nativo do Coolify para o R2 não é cifrado com age como o ADR-018 exige; fechar antes de pacientes reais.
 - **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Varredura pós-produção: runbook, ADRs 037 a 039 e docs (2026-10-18) — ENCERRADO
+
+Pedido do Kalléo (via coordenação): com o sistema no ar, varrer docs, definições e operação e revalidar as entregas futuras contra o cenário real.
+- **Feito**: `producao.md` ganhou § 0 (estado real), § 3.1 (release e rollback com deploy manual), § 7 reescrito para Scheduled Tasks, § 8 (bootstrap via `bash -c` por causa do zsh), § 9 ajustado ao Coolify e § 9.6 (fumaça pós-deploy somente leitura); formato compose marcado como alternativa. ADR-037 (PG18 em produção, dev a alinhar), ADR-038 (Scheduled Tasks), ADR-039 (deploy manual; rollback sem `down`). AGENTS.md, README, onboarding, architecture, integrações (cron, alertas, GlitchTip), `fix-audit-issues.md` (passo 11), roadmap (RM-31) e spec do runbook atualizados.
+- **Intocado**: § 5 e docs de backup (thread "Backup cifrado e fotos"), compose, CI e código.
+- **Não verificado**: a fumaça contra produção não rodou (a rede da sessão bloqueia o host); os itens de § 9.6 que dependem do Traefik ficam para o Kalléo ou uma sessão com acesso. O texto exato das tarefas agendadas veio do relato do deploy, não de leitura do painel.
+- **Rollback deste lote**: só docs; reverter o commit.
+- **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge.
+- **Next step**: PR de alinhamento PG18 em compose/CI (com daemon Docker); PR de `npm audit fix`. **Blockers**: nenhum.

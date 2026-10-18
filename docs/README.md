@@ -101,6 +101,9 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/034-renomeacao-do-repositorio-para-estomasystech.md`](adr/034-renomeacao-do-repositorio-para-estomasystech.md) | repositório renomeado para estomasystech; troca só nome de repo e infra, mantém rótulos de chave, `ESTOMASYSTECH_*` e a marca "EstomaSysTech" |
 | [`adr/035-renomeacao-completa-para-estomasystech.md`](adr/035-renomeacao-completa-para-estomasystech.md) | troca total: banco, `ESTOMASYSTECH_*`, rótulos de chave, cookie e marca (sem produção, sem compatibilidade) |
 | [`adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md`](adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md) | Traefik do Coolify como único proxy de entrada; Caddy removido |
+| [`adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md`](adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) | produção em PostgreSQL 18 (Dockerfile + banco do Coolify); compose e CI em 16 até um PR com Docker alinhar |
+| [`adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md`](adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md) | alertas, lembretes e retenção como Scheduled Tasks do Coolify, com `wget` e `CRON_SECRET` do ambiente |
+| [`adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md`](adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md) | deploy manual depois do backup; rollback por redeploy ou restauração |
 | [`adr/025-cpf-no-recibo-e-protecao.md`](adr/025-cpf-no-recibo-e-protecao.md) | CPF do paciente/pagador opcional, validado, cifrado e mascarado; exigido só no recibo do IRPF, com CNPJ do prestador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).

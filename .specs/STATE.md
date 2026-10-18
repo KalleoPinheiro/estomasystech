@@ -247,4 +247,4 @@ Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/eng
 Um scan GitGuard sobre `fcd6110` deve cair de 54 para ~9 findings: 2 `hardcoded_secrets` deduplicados, 1 `unsafe-formatstring` e os 6 TRIVY obsoletos, que só somem quando o serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
 
 ## Handoff
-Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto: #308 (E2E intermitente, em investigação) e #216 (jurídico); o resto da fila segue pelo coordenador do projeto.
+Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto: #308 (E2E intermitente, em investigação), #376 (jurídico, art. 33) e #381 (operação em produção: backup cifrado, uploads, UptimeRobot); o resto da fila segue pelo coordenador do projeto. Produção está no ar desde 2026-10-18: [`producao.md`](../docs/engineering/producao.md) § 0.

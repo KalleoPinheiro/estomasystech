@@ -40,6 +40,11 @@ App em http://localhost:3000. Desenvolvimento com hot reload, todas as variávei
 as integrações opcionais: [onboarding](docs/engineering/onboarding.md). Deu erro?
 [Troubleshooting](docs/engineering/troubleshooting.md).
 
+## Produção
+
+No ar na Hetzner via Coolify (Dockerfile + PostgreSQL 18, Traefik, deploy manual). Estado atual,
+release, rollback e fumaça pós-deploy: [runbook de produção](docs/engineering/producao.md).
+
 ## Domínios
 
 | Domínio | O que cobre |
