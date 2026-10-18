@@ -1376,4 +1376,4 @@ Kalléo instalou no servidor, passo a passo, o backup do ADR-040. **Ativo**: cha
 - **Teste de restauração** (2026-10-18, ok): Postgres 18 local (override com `pgdata:/var/lib/postgresql`), chaves reais do cofre, 104 tabelas, health 200, 24 s; produção ainda sem paciente, a repetir com dado clínico.
 - **Segurança**: checklist no runbook § 5.4.
 - **Passo 8 feito** (decisão do Kalléo): backup do Coolify desligado, bucket e token antigos e dumps do app no disco apagados; filtro de IP recolocado.
-- **Next step**: apagar a chave age em claro do WSL do operador depois de conferir o Bitwarden; teste mensal com paciente real. **Blockers**: nenhum.
+- **Next step**: teste mensal com paciente real (roteiro na "Rotina do Super Admin"). **Blockers**: nenhum.

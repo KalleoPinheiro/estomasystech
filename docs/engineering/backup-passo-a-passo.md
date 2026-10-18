@@ -30,6 +30,33 @@ manda para um bucket R2 da Cloudflare **na União Europeia**. Só quem tem a cha
 | Agenda | servidor, `systemd` (`estomasystech-backup.timer`) |
 | Cópias | servidor (7 dias) e R2 `estomasystech-backups-age/prod/` (30 dias travados, apagadas com 35) |
 
+## Palavras que aparecem aqui
+
+| Palavra | O que é |
+| --- | --- |
+| Servidor, VPS | o computador alugado na Hetzner onde o app roda. Você entra nele com `ssh vps` |
+| SSH | o jeito de abrir um terminal no servidor a partir da sua máquina |
+| Coolify | o painel que sobe o app e o banco no servidor |
+| R2, bucket | o "HD na nuvem" da Cloudflare; o bucket é a pasta onde as cópias ficam |
+| Token (R2, Resend) | uma senha de serviço, com permissão limitada, que um programa usa no seu lugar |
+| Chave `age` pública / privada | um par: a pública só **tranca** (fica no servidor); a privada **destranca** (fica só no cofre) |
+| Cofre (Bitwarden) | onde ficam todas as senhas e chaves. Nada sensível fica fora dele |
+| `systemd` timer | o "despertador" do servidor que roda o backup todo dia |
+
+## Quem faz o quê
+
+O **Super Admin** do EstomaSysTech é quem opera a plataforma: tem o cofre, o SSH do servidor e
+os painéis (Coolify, Cloudflare, Resend). O papel *Super Admin* **dentro do app** não dá acesso a
+nada disso: são acessos separados, e cada um tem a própria senha ou chave no cofre.
+
+| Tarefa | Quando | Seção |
+| --- | --- | --- |
+| Montar tudo do zero | uma vez (ou num servidor novo) | Etapas 1 a 8 |
+| Ler o e-mail "backup falhou" e agir | quando chegar | [Rotina § Chegou o alerta](#chegou-o-e-mail-backup-falhou) |
+| Teste de restauração | todo mês | [Rotina § Teste mensal](#todo-mês-teste-de-restauração) |
+| Revisar o checklist de segurança | todo mês, junto do teste | [runbook § 5.4](producao.md#54-segurança-do-backup-checklist) |
+| Trocar uma chave ou token | se vazar, se alguém sair da equipe, ou uma vez por ano | [Rotina § Trocar uma chave](#trocar-uma-chave-ou-token) |
+
 ## Antes de começar
 
 | Precisa de | Para quê |
@@ -40,9 +67,22 @@ manda para um bucket R2 da Cloudflare **na União Europeia**. Só quem tem a cha
 | Conta no Resend com o domínio do app verificado | mandar o e-mail de alerta |
 | Cofre de senhas (Bitwarden) | guardar chave e tokens |
 
-**Regras de ouro:** nenhum segredo vai para chat, print ou repositório. Segredo se digita com
-`read -rs` (não aparece na tela). ⚠️ Se o seu terminal for **zsh**, digite `bash` antes de colar
-os comandos deste guia: os `read -rp`/`-rsp` são de bash.
+**Regras de ouro (segurança):**
+
+1. Nenhum segredo (senha, token, chave privada, `BW_SESSION`) vai para chat, e-mail, print,
+   documento ou repositório. Antes de mandar um print, confira que nenhum aparece nele.
+2. Segredo se digita com `read -rs` (não aparece na tela) ou vem do cofre direto para uma
+   variável, nunca colado como texto num comando.
+3. A chave privada `age` **nunca** fica no servidor e nunca fica guardada em claro no seu PC: traga
+   do cofre para um teste e apague no fim (`shred -u`).
+4. Cada token tem o **mínimo** de permissão: só o bucket do backup; o de teste, só leitura e com
+   validade curta. Token que não se usa mais, apague.
+5. Apagar backup, bucket ou chave **não tem volta**: confira duas vezes e só depois de um teste de
+   restauração aprovado.
+6. Terminou de usar o cofre pelo terminal: `bw lock`.
+
+⚠️ Se o seu terminal for **zsh**, digite `bash` antes de colar os comandos deste guia: os
+`read -rp`/`-rsp` são de bash.
 
 Cada etapa abaixo diz **onde** rodar: 💻 na sua máquina, 🖥️ no servidor, 🌐 no navegador.
 
@@ -271,6 +311,82 @@ Só depois da etapa 7 aprovada:
    ```
 
 Depois, passe pelo [checklist de segurança](producao.md#54-segurança-do-backup-checklist): apague o token de restauração, recoloque o filtro de IP no token do servidor e tire a chave privada do disco.
+
+## Rotina do Super Admin
+
+### Conferir que o backup rodou 🖥️
+
+```bash
+systemctl list-timers estomasystech-backup.timer                  # LAST = última execução
+sudo journalctl -u estomasystech-backup -n 5 --no-pager             # termina em "cópia fora do servidor ok"
+sudo rclone --config /etc/estomasystech/rclone.conf lsd r2:estomasystech-backups-age/prod/ | tail -3
+```
+
+Deve haver uma pasta por dia (data em UTC).
+
+### Chegou o e-mail "backup falhou"
+
+O e-mail traz as últimas linhas do log (sem dado de paciente). Procure a palavra depois de
+`backup:` e siga a tabela [Se algo der errado](#se-algo-der-errado). Depois de corrigir, rode de
+novo à mão e confira:
+
+```bash
+sudo systemctl start estomasystech-backup
+sudo journalctl -u estomasystech-backup -n 10 --no-pager
+```
+
+Um dia sem backup não é perda de dado (os anteriores continuam no R2), mas corrija no mesmo dia:
+o objetivo é perder no máximo 24 h (RPO).
+
+### Todo mês: teste de restauração
+
+Siga a [Etapa 7](#etapa-7--teste-de-restauração-) e o [runbook § 5.3](producao.md#53-teste-de-restauração-mensal),
+com a pasta mais recente do R2. Para pegar os segredos do cofre **sem mostrar na tela**, use o
+Bitwarden CLI (`npm install -g @bitwarden/cli`), em bash:
+
+```bash
+bw login --check || bw login                 # pede e-mail, senha mestra e o código 2FA
+export BW_SESSION="$(bw unlock --raw)"       # guarda a sessão numa variável, sem imprimir
+mkdir -p ~/restore-teste && chmod 700 ~/restore-teste
+(umask 077; bw get notes "<nome da nota da chave age>" > ~/restore-teste/estomasystech-backup.key)
+age-keygen -y ~/restore-teste/estomasystech-backup.key   # tem que mostrar a chave pública do servidor
+export DATA_ENCRYPTION_KEY="$(bw get item '<item do app>' | jq -r '.fields[] | select(.name=="DATA_ENCRYPTION_KEY") | .value')"
+export AUTH_SECRET="$(bw get item '<item do app>' | jq -r '.fields[] | select(.name=="AUTH_SECRET") | .value')"
+echo "${#DATA_ENCRYPTION_KEY} ${#AUTH_SECRET}"   # só o tamanho (64 64), nunca o valor
+```
+
+Troque `<…>` pelos nomes dos itens no seu cofre (liste só os nomes com
+`bw list items --search estomasystech | jq -r '.[].name'`). Se o `bw login` imprimir uma linha
+`export BW_SESSION=…`, **não** mande print dela. Ao terminar o teste:
+
+```bash
+cd ~/projects/estomasystech && docker compose down -v
+shred -u ~/restore-teste/estomasystech-backup.key; rm -rf ~/restore-teste /tmp/compose.restore-pg18.yml
+unset AUTH_SECRET DATA_ENCRYPTION_KEY POSTGRES_PASSWORD COMPOSE_FILE COMPOSE_PROJECT_NAME
+bw lock; unset BW_SESSION
+```
+
+Apague no R2 o token de leitura do teste. Registre a linha na tabela do
+[runbook § 5.3](producao.md#53-teste-de-restauração-mensal) e revise o
+[checklist § 5.4](producao.md#54-segurança-do-backup-checklist).
+
+### Trocar uma chave ou token
+
+| O quê | Como | Depois |
+| --- | --- | --- |
+| Token R2 do servidor | R2 → API Tokens → crie um novo igual ao da Etapa 2 → regrave com a [4.4](#44-rcloneconf-pede-as-chaves-do-token-da-etapa-2) → `R2 OK` | apague o token antigo |
+| Chave do Resend | Resend → crie outra *Sending access* → regrave com a [4.5](#45-e-mail-de-alerta-msmtp-pelo-resend) → `ENVIADO` | apague a chave antiga |
+| Chave `age` | Etapa 1 (chave nova) → Etapa 4.1 (troca a pública) → Etapa 5 (backup) | guarde a privada **antiga** até o último backup feito com ela sair do R2 (35 dias); depois apague. Se ela **vazou**, é incidente LGPD: [runbook § 5.4](producao.md#54-segurança-do-backup-checklist) |
+| Alguém com acesso saiu da equipe | troque todos os tokens acima e a senha do Bitwarden compartilhado; tire o acesso dela ao SSH, ao Coolify e à Cloudflare | registre a troca no runbook |
+
+### Onde está cada coisa (sem valores)
+
+| Coisa | Onde |
+| --- | --- |
+| Chave privada `age`, tokens R2 e Resend, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` | Bitwarden (notas e itens com nome `estomasystech…`) |
+| Cópia offline da chave privada | pendrive guardado em local físico seguro |
+| Configuração do backup | servidor, `/etc/estomasystech/` (só `root` lê) |
+| Cópias cifradas | R2, bucket `estomasystech-backups-age`, pasta `prod/` |
 
 ## Se algo der errado
 
