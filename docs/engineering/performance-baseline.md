@@ -13,7 +13,7 @@ related:
 
 # Baseline de carga
 
-> **TL;DR:** com 30 usuários simultâneos (≈15 req/s, pausa de 2 s entre cliques) numa VPS de 4 vCPU, toda leitura da equipe e do portal fica com **p95 ≤ 100 ms**, inclusive com 100 mil consultas e 1 milhão de eventos de auditoria; só o autoagendamento do portal (`/slots`) chega a 460 ms nesse volume. Zero erro em todas as medições. O ponto fraco é o laço por candidato do `/slots`; sob saturação o limite é o processo Node (um núcleo a 110 %, Postgres a 20 %), não o banco. Issue [#222](https://github.com/KalleoPinheiro/vitta-flow/issues/222); decisão AD-049 em [`STATE.md`](../../.specs/STATE.md).
+> **TL;DR:** com 30 usuários simultâneos (≈15 req/s, pausa de 2 s entre cliques) numa VPS de 4 vCPU, toda leitura da equipe e do portal fica com **p95 ≤ 100 ms**, inclusive com 100 mil consultas e 1 milhão de eventos de auditoria; só o autoagendamento do portal (`/slots`) chegava a 460 ms nesse volume — corrigido na [#360](https://github.com/KalleoPinheiro/vitta-flow/issues/360) (§ 8: 79 ms). Zero erro em todas as medições. O ponto fraco era o laço por candidato do `/slots` (hoje em lote); sob saturação o limite é o processo Node (um núcleo a 110 %, Postgres a 20 %), não o banco. Issue [#222](https://github.com/KalleoPinheiro/vitta-flow/issues/222); decisão AD-049 em [`STATE.md`](../../.specs/STATE.md).
 
 ## 1. Perfis medidos
 
@@ -119,12 +119,12 @@ Decisão registrada em AD-049 (a #222 pedia um orçamento; ficou o mais conserva
 | Qualquer cenário | **0 erro** |
 | Saturação | só diagnóstico, sem meta; serve para dimensionar (§ 6) |
 
-Resultado: **todas as rotas cumprem**; o `/slots` com 20 profissionais e 100 mil consultas está a 40 ms do teto (460 ms).
+Resultado: **todas as rotas cumprem**; o `/slots` com 20 profissionais e 100 mil consultas estava a 40 ms do teto (460 ms) até a #360 (§ 8).
 
 ## 6. Leitura e consequências
 
 - **Dimensionamento:** 30 usuários pedem ≈ 15 req/s e a máquina entrega 80 a 165; há folga de 5× a 10× numa VPS de 4 vCPU. A segunda réplica não é necessária para o go-live.
-- **`/slots` do portal** é a única rota que escala com o número de profissionais (29 ms com 5, 233 ms com 20; 1,1 s e 2,4 s sob saturação): `ListAvailableSlots` faz `await isFree(...)` por candidato (`src/application/portal/list-available-slots.ts`). Ticket [#360](https://github.com/KalleoPinheiro/vitta-flow/issues/360).
+- **`/slots` do portal** é a única rota que escala com o número de profissionais (29 ms com 5, 233 ms com 20; 1,1 s e 2,4 s sob saturação): `ListAvailableSlots` fazia `await isFree(...)`, com uma consulta de conflito, por candidato (`src/application/portal/list-available-slots.ts`). Resolvido pela [#360](https://github.com/KalleoPinheiro/vitta-flow/issues/360) (§ 8).
 - **Portal `/api/portal/patient`** custa ≈ 400 ms sob saturação (cerca de 3× a ficha de paciente da equipe, 140 ms); no uso realista fica em 11 ms de mediana. Sem ticket.
 - **Índices compostos da #222 (item 1): não construir agora.** No `multi` (400 mil consultas, 2 milhões de eventos, 20 empresas) as rotas de agenda, faturas, follow-ups e auditoria ficam em p95 ≤ 25 ms; a trilha de auditoria já tem o índice `(clinic_id, occurred_at desc, id desc)` (#322). Revisar se uma empresa passar de ≈ 1 milhão de consultas ou se o p95 realista de qualquer rota passar de 300 ms.
 - **Bundle (item 4):** na build desta medição o maior chunk tem 229 KB (72 KB gzip), contra 428 KB (131 KB gzip) em 2026-09-26. Não foi refeita a tabela por página.
@@ -138,3 +138,16 @@ Resultado: **todas as rotas cumprem**; o `/slots` com 20 profissionais e 100 mil
 | Navegador (LCP, hidratação) | não houve browser nesta rodada | rodar Lighthouse na Hetzner depois do go-live |
 | Rede e disco reais | tudo em loopback, `fsync=off` | repetir `tipica` na VPS definitiva (§ 3 funciona igual) |
 | `getRepositories` (item 5) | custo por requisição já aparece nos p50 de 4 a 6 ms das rotas leves; [#220](https://github.com/KalleoPinheiro/vitta-flow/issues/220) segue aberta | nenhum |
+
+## 8. `/slots` em lote (#360, AD-053)
+
+`ListAvailableSlots` passou a ler as consultas do dia **uma vez** e a conferir os candidatos em memória (`assertSlotAvailableAmong`); a regra de disponibilidade é a mesma do agendamento da equipe. Medição com o perfil `issue` (20 profissionais, 100 mil consultas), antes e depois **na mesma máquina e no mesmo banco** (build de produção, 1 processo; esta máquina deu números mais altos que os da § 4, então compare as colunas entre si):
+
+| Cenário | Antes p50 / p95 | Depois p50 / p95 |
+| --- | ---: | ---: |
+| `/slots`, uso realista (30 usuários, pausa 2 s) | 403 / 593 ms | **50 / 79 ms** |
+| `/slots`, saturação (sem pausa) | 4 172 / 4 920 ms | **1 622 / 2 169 ms** |
+| `/slots` sequencial (1 cliente, 14 dias × 4 repetições) | 344 / 406 ms | **44 / 61 ms** |
+| Total das rotas, uso realista | 40 / 147 ms | 35 / 113 ms |
+
+Zero erro em todas as rodadas. O orçamento (p95 ≤ 500 ms) passa a ter folga de 6×. Sob saturação o `/slots` continua a rota mais cara porque cada requisição ainda lê e decifra as consultas do dia de todos os profissionais (a regra global sem profissional atribuído); só vale otimizar se o p95 realista voltar a passar de 300 ms.

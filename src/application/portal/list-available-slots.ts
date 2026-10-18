@@ -1,6 +1,7 @@
-import { assertSlotAvailable } from '@/application/appointments/assert-slot-available';
+import { assertSlotAvailableAmong } from '@/application/appointments/assert-slot-available';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
+import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import {
   PORTAL_HORIZON_MESSAGE,
@@ -49,8 +50,10 @@ const MINUTE_MS = 60_000;
 /**
  * Horários livres de um dia para o paciente agendar seu retorno (PORT4-01).
  * Cada candidato passa pela MESMA regra do agendamento da equipe
- * (`assertSlotAvailable`: grade configurada, folga mínima e conflitos) — a
- * disponibilidade nunca diverge do que o agendamento aceitaria.
+ * (`assertSlotAvailable`: grade configurada, folga mínima e conflitos; aqui
+ * `assertSlotAvailableAmong`, que só troca a consulta por candidato por uma
+ * leitura em lote) — a disponibilidade nunca diverge do que o agendamento
+ * aceitaria (#360).
  */
 export class ListAvailableSlots {
   constructor(
@@ -95,9 +98,23 @@ export class ListAvailableSlots {
         slot.startsAt.getTime() <= horizon.getTime(),
     );
 
+    if (candidates.length === 0) {
+      return [];
+    }
+    // Uma leitura só das consultas que tocam o dia (com a folga mínima nas
+    // pontas); cada candidato é conferido em memória contra esse conjunto.
+    const pool = await this.appointments.findConflicting(
+      TimeSlot.create(
+        candidates[0].startsAt,
+        candidates[candidates.length - 1].endsAt,
+      ).expand(config.minGapMinutes),
+      request.excludeId,
+      request.professionalId,
+    );
+
     const slots: AvailableSlot[] = [];
     for (const candidate of candidates) {
-      if (await this.isFree(candidate, request, config)) {
+      if (await this.isFree(candidate, request, config, pool)) {
         slots.push(candidate);
       }
     }
@@ -152,12 +169,12 @@ export class ListAvailableSlots {
     candidate: AvailableSlot,
     request: SlotRequest,
     config: typeof DEFAULT_SCHEDULE_CONFIG,
+    pool: readonly Appointment[],
   ): Promise<boolean> {
     try {
-      await assertSlotAvailable(
-        this.appointments,
+      await assertSlotAvailableAmong(
+        pool,
         TimeSlot.create(candidate.startsAt, candidate.endsAt),
-        request.excludeId,
         config,
         request.professionalId,
         this.availability,
