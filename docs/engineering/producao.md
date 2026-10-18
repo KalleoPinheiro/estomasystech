@@ -8,21 +8,48 @@ last_reviewed: 2026-10-18
 
 # Runbook de produção
 
-Como colocar e manter no ar o EstomaSysTech com dado de saúde (LGPD). Alvo decidido pelo dono do
+Como manter no ar o EstomaSysTech com dado de saúde (LGPD). Alvo decidido pelo dono do
 produto ([#206](https://github.com/KalleoPinheiro/estomasystech/issues/206), 2026-10-11): **VPS
-Hetzner + `docker compose`** (app + Postgres), **uma réplica**, Traefik do Coolify na frente terminando TLS,
-fotos em volume local. Desenvolvimento local fica em [`onboarding.md`](onboarding.md); erros
-conhecidos, em [`troubleshooting.md`](troubleshooting.md).
+Hetzner**, **uma réplica**, Traefik do Coolify na frente terminando TLS, fotos em volume local.
+**No ar desde 2026-10-18**, no formato Dockerfile + Postgres gerenciado pelo Coolify (§ 0).
+Desenvolvimento local fica em [`onboarding.md`](onboarding.md); erros conhecidos, em
+[`troubleshooting.md`](troubleshooting.md).
+
+## 0. Estado atual da produção (2026-10-18)
+
+Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e operar. O formato
+`docker compose` das seções 2 e 5 continua suportado no repositório, mas **não é o que roda**.
+
+| Peça | Como está |
+| --- | --- |
+| URL | `https://estomasystech.kalleopinheiro.com.br` (DNS no Registro.br, sem curinga) |
+| Servidor | Hetzner `ubuntu-8gb-fsn1-1` (Alemanha), Ubuntu 26.04 LTS, 8 GB de RAM, 4 GB de swap; acesso por `ssh vps` |
+| Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup diário do próprio Coolify no R2 |
+| Proxy | Traefik do Coolify, único na borda ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)); middlewares `rate-limit-app`, `rate-limit-strict` e `security-headers` (`@file`, sem CSP: o app usa nonce) |
+| App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
+| Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública), backup diário às 03:00 para o R2. O CI e os testes seguem em Postgres 16 |
+| Variáveis | 9 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`. `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
+| Fotos | volume do Coolify em `/app/uploads` (uma réplica) |
+| Migrações | aplicadas no boot, com advisory lock; `/api/health/ready` responde `200` ([#384](https://github.com/KalleoPinheiro/estomasystech/pull/384)) |
+| Jobs | Scheduled Tasks do Coolify, não crontab do host (§ 7) |
+| Monitoramento | UptimeRobot em `/api/health/ready`, no painel do Coolify e no SSH; alertas do app por e-mail (§ 9) |
+| Dados | Super Admin criado pelo bootstrap; existe só a "Clínica legada" da migração, a renomear quando a clínica real for cadastrada |
+| Não existe em produção | GlitchTip (§ 9.5), `msmtp`, `/etc/cron.d`, `/opt/estomasystech`, Caddy, `docker-compose.prod.yml` |
+
+Pendências de go-live: [#381](https://github.com/KalleoPinheiro/estomasystech/issues/381) (operação e
+backup cifrado) e [#376](https://github.com/KalleoPinheiro/estomasystech/issues/376) (jurídico,
+art. 33). **Paciente real só depois de** backup cifrado (ADR-018), backup do volume `uploads` e do
+art. 33 para Resend e Google.
 
 ## 1. Decisões
 
 | Decidido (#206) | Valor |
 | --- | --- |
-| Hospedagem | VPS Hetzner, `docker-compose.yml` + `docker-compose.prod.yml`, 1 réplica |
+| Hospedagem | VPS Hetzner com Coolify, 1 réplica. Decidido em #206 como `docker compose`; em produção virou Dockerfile + Postgres do Coolify (§ 0, ADR-036) |
 | Fotos | volume `uploads` no servidor (`PHOTO_STORAGE` vazio) |
-| RPO / RTO | 24 h / 4 h: backup diário cifrado do banco e das fotos, 30 dias fora do servidor, teste de restauração mensal (§ 5) |
+| RPO / RTO | 24 h / 4 h: backup diário cifrado do banco e das fotos, 30 dias fora do servidor, teste de restauração mensal (§ 5). **Hoje** só o banco tem backup diário (Coolify → R2), ainda sem a cifra `age` do ADR-018 (#381) |
 | Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/estomasystech/issues/212)) |
-| Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, GlitchTip self-hosted no compose ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
+| Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, alertas por e-mail; GlitchTip opcional, hoje desligado ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
 
 **Transferência internacional (LGPD art. 33):** o servidor fica fora do Brasil (Alemanha, UE). A
 base técnica está decidida no [ADR-018](../adr/018-transferencia-internacional-ue.md): destino na
@@ -49,9 +76,13 @@ Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/estoma
 
 ## 2. Topologia e provisionamento
 
+> **Formato `docker compose` (suportado, não é o que roda).** Esta seção e o § 5 descrevem a VPS
+> montada à mão (`/opt/estomasystech`, `/etc/cron.d`, `msmtp`). A produção real usa Coolify (§ 0 e
+> § 3). Os scripts de backup e restore do § 5 dependem deste formato.
+
 | Peça | Configuração |
 | --- | --- |
-| Servidor | Ubuntu 24.04 LTS. **4 GB de RAM** no mínimo: o build do Next usa até 4 GB de heap (`npm run build`), e cada login é um scrypt de ~128 MiB (#208), até 4 em paralelo |
+| Servidor | Ubuntu LTS (produção: 26.04, 8 GB). **4 GB de RAM** no mínimo: o build do Next usa até 4 GB de heap (`npm run build`), e cada login é um scrypt de ~128 MiB (#208), até 4 em paralelo |
 | App + banco | `docker compose up -d --build`; o Postgres só no loopback (`127.0.0.1:5432`) |
 | TLS | Traefik do Coolify ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)): certificado Let's Encrypt automático; [`docker-compose.prod.yml`](../../docker-compose.prod.yml) tira app e banco das portas do host |
 | Região | Hetzner, Alemanha (UE) |
@@ -149,6 +180,18 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
   - *Cookies*: são `Secure` por `NODE_ENV=production`, independente de cabeçalho do proxy; basta
     o acesso ser por HTTPS, que o Traefik garante.
   - *Fotos*: sem bucket, monte um volume persistente do Coolify em `/app/uploads`.
+  - *Healthcheck*: vale o `HEALTHCHECK` do `Dockerfile` (liveness em `/api/health`, sem banco); o
+    healthcheck próprio do Coolify fica **desligado**. Quem checa o banco e as migrações é o
+    `/api/health/ready`, pelo UptimeRobot e pelo alerta por e-mail (§ 9).
+  - *Variável nova no Coolify*: nasce marcada como *Buildtime* por padrão. As do app são só
+    *Runtime*; desmarque *Buildtime* ao criar (o build não precisa delas, e as marcadas assim entram como argumento de build).
+  - *Campo de domínio*: o campo **Domains** do recurso mistura o seletor de protocolo e o host;
+    confira que ficou `https://estomasystech.kalleopinheiro.com.br` (sem barra no fim, sem porta).
+  - *Git*: o repositório não usa Git LFS nem submódulos; em *Configuration → Source*, deixe
+    desligados "Use Git LFS" e "Include Git Submodules" (menos superfície no clone do deploy).
+  - *Rótulo dos middlewares*: confira em *Configuration → General → Custom Labels* (ou na aba
+    *Advanced*) que existe `traefik.http.routers.<router>.middlewares=rate-limit-app@file,security-headers@file`
+    (o Coolify também aceita `coolify.traefik.middlewares`). Prova pela resposta, § 9.6.
 - O cookie de sessão é `Secure` em produção: **login não funciona por HTTP** fora de `localhost`.
 - `APP_URL` precisa ser `https://…` (compõe os links de convite/reset e o redirect da agenda).
 - O app lê o IP do cliente contando `TRUSTED_PROXY_HOPS` saltos a partir do fim do
@@ -165,25 +208,51 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
 - Não publique a porta do app no host: o `docker-compose.prod.yml` faz `ports: !reset []` no
   `app` (exige Docker Compose 2.24 ou mais novo).
 
+### 3.1 Release e rollback com deploy manual
+
+O deploy é **manual** (botão *Deploy* no Coolify): nada sobe sozinho por um push na `main`. Isso é
+proposital enquanto não há staging e as migrações não têm `down`
+([ADR-039](../adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md)).
+
+1. **Antes:** a `main` com o CI verde (ou o gate local, enquanto o Actions estiver sem cota) e o
+   `.specs/archive/handoff-2026.md` do lote escrito. Anote o commit em produção (*Deployments* do
+   recurso mostra o SHA) e as migrações novas do lote (`drizzle/*.sql`, ordem do § 4).
+2. **Backup:** *Backups → Backup now* no recurso do banco (e confira *Available* no R2). Sem backup
+   do mesmo dia, não deploye migração.
+3. **Deploy:** *Deploy* no recurso do app. O container novo migra no boot (advisory lock) e o
+   `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois.
+4. **Verificar:** `curl -fsS https://estomasystech.kalleopinheiro.com.br/api/health/ready` (`200`,
+   `database` e `migrations` `ok`) e a fumaça do § 9.6. Se o lote traz script manual (§ 4, § 7.2,
+   § 7.3), rode-o agora, primeiro em simulação.
+5. **Rollback sem migração nova:** *Deployments* → *Redeploy* do commit anterior. Rápido e seguro.
+6. **Rollback com migração nova:** redeploy do commit anterior **não** desfaz o esquema; só serve se
+   a migração for aditiva (coluna, tabela ou índice novo, o caso quase sempre) e o código antigo
+   ignorar o que foi adicionado. Do contrário, restaure o backup do passo 2 (perde o que foi escrito
+   depois dele) ou escreva uma migração nova que desfaça a mudança. Decida **antes** do deploy qual
+   dos dois vale para o lote.
+7. **Depois:** apague do Coolify variável de contorno que sobrou e registre o commit no handoff.
+
 ## 4. Migrações
 
-- Padrão na VPS: o app migra no boot com advisory lock (`ESTOMASYSTECH_MIGRATE_ON_BOOT` vazio). Uma
-  réplica, então o deploy é: backup, `docker compose up -d --build`, o container novo migra e sobe.
-- Para migrar como passo separado: `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e, de um checkout no host,
-  `DATABASE_URL=postgres://estomasystech:…@127.0.0.1:5432/estomasystech npm run db:migrate` (a imagem standalone
-  não tem `drizzle-kit`).
+- Padrão em produção: o app migra no boot com advisory lock (`ESTOMASYSTECH_MIGRATE_ON_BOOT` vazio;
+  a variável foi removida do Coolify). Uma réplica, então o deploy é: backup, *Deploy* no Coolify
+  (§ 3.1), o container novo migra e sobe. No formato compose: backup e `docker compose up -d --build`.
+- Para migrar como passo separado: `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e rodar
+  `npm run db:migrate` de um checkout com `DATABASE_URL` alcançável. No Coolify o banco não tem
+  porta pública: use o container descartável do § 3 (a imagem standalone não tem `drizzle-kit`).
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
   última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`
   (#303). Por isso **nunca deploye um commit que tenha a 0051 sem a 0050**: se a 0051 rodar antes,
   o migrador pula a 0050 para sempre. Na `main` as duas já vêm juntas e na ordem certa, então o
   deploy normal (`main` inteira) está seguro; o risco é cherry-pick ou deploy de branch. Se
   acontecer, `/api/health/ready` responde `503` com `migrations: "pending"`; restaure o backup
-  (§ 5) e refaça o deploy pelo commit completo. Mesma regra para qualquer par de migrações
+  (§ 3.1 e § 5) e refaça o deploy pelo commit completo. Mesma regra para qualquer par de migrações
   geradas em branches paralelas: confira a ordem de `when` em `drizzle/meta/_journal.json`.
 - **Rollback:** as migrações não têm `down`. Reverter é restaurar o backup tirado antes do deploy
   (§ 5) ou escrever uma migração nova que desfaça a mudança.
 - **Atualizando de uma versão anterior à `0053`**: aplique **todas** as migrações `0053` a `0066`, em ordem,
-  pelo commit completo da `main`; o boot as aplica sozinho (acima). Resumo do que cada uma faz e
+  pelo commit completo da `main`; o boot as aplica sozinho (acima). Em produção isso já aconteceu
+  no primeiro deploy (2026-10-18), então vale só para outra instalação ou para restaurar backup antigo. Resumo do que cada uma faz e
   onde está a regra:
 
   | Migração | Muda | Regra |
@@ -318,19 +387,21 @@ tudo, restaura e confere.
 
 ## 6. Segredos e rotação
 
-Gere com `openssl rand -hex 32` (ou `-hex 24` onde indicado no `.env.example`). Na VPS, `.env`
-com permissão `600`, fora do controle de versão (o `.gitignore` o ignora), e uma cópia no cofre de segredos do operador (o `.env`
-**não** entra no backup).
+Gere com `openssl rand -hex 32` (ou `-hex 24` onde indicado no `.env.example`). Em produção os
+segredos moram nas variáveis *Runtime* do recurso no Coolify (marcadas como secretas), com uma cópia
+no cofre de segredos do operador; no formato compose, no `.env` com permissão `600`, fora do
+controle de versão. Nenhum dos dois entra no backup. Trocar uma variável no Coolify exige novo
+*Deploy* (ou *Restart*) do app.
 
 | Segredo | Rotação | Efeito |
 | --- | --- | --- |
 | `AUTH_SECRET` | incidente ou troca de pessoal | derruba **todas** as sessões (todos logam de novo). Não afeta o dado clínico ([ADR-006](../adr/006-chave-de-dados-clinicos.md)); mantenha o valor antigo só se ainda houver dado no formato legado (antes de rodar a recifra) |
 | `DATA_ENCRYPTION_KEY` | anual ou incidente | 1) valor atual → `DATA_ENCRYPTION_KEY_PREVIOUS`; 2) novo valor em `DATA_ENCRYPTION_KEY`; 3) deploy; 4) `npm run data:reencrypt`; 5) quando o script reportar 0 pendências, remova o antigo de `_PREVIOUS`. Guarde a chave antiga no cofre enquanto houver backup (30 dias) cifrado com ela |
-| `POSTGRES_PASSWORD` | incidente | `ALTER ROLE estomasystech PASSWORD '…'` no `db`, novo valor no `.env`, `docker compose up -d` |
+| Senha do Postgres | incidente | no Coolify a senha é do recurso do banco: troque lá e atualize a `DATABASE_URL` do app, depois *Deploy*. No compose: `ALTER ROLE estomasystech PASSWORD '…'` no `db`, novo valor no `.env`, `docker compose up -d` |
 | Chave `age` do backup | incidente ou troca de operador | gere outra, troque `/etc/estomasystech/backup.pub`; guarde a privada antiga enquanto houver backup (30 dias) cifrado com ela |
-| `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **remova** depois do primeiro acesso (§ 8) |
-| `CRON_SECRET` | incidente | atualize junto em `/etc/estomasystech/cron.headers` (§ 7) |
-| `RESEND_API_KEY`, credenciais Google | conforme o provedor | troque no provedor e no `.env` |
+| `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **removido** da produção depois do primeiro acesso (§ 8) |
+| `CRON_SECRET` | incidente | troque a variável no Coolify e faça *Deploy*; as Scheduled Tasks leem o valor do ambiente do container (§ 7), então nada mais muda. No compose, atualize também `/etc/estomasystech/cron.headers` |
+| `RESEND_API_KEY`, credenciais Google | conforme o provedor | troque no provedor e na variável do Coolify (ou `.env`) |
 | `GLITCHTIP_SECRET_KEY`, `GLITCHTIP_DB_PASSWORD` | incidente | troca derruba as sessões da interface do GlitchTip; a senha do banco dele segue o roteiro da `POSTGRES_PASSWORD` no serviço `glitchtip-db` |
 | `GLITCHTIP_DSN` | incidente | gere outra chave no projeto do GlitchTip, troque no `.env`, `docker compose up -d app` e revogue a antiga |
 
@@ -341,42 +412,46 @@ idempotente: pode ser interrompido e rodado de novo.
 
 ## 7. Cron (lembretes, backup, retenção, alertas)
 
-O host fica em UTC; São Paulo é UTC−3 o ano todo. Guarde o segredo do cron num arquivo, não na
-linha do crontab (`/etc/estomasystech/cron.headers`, `chmod 600`, com a linha
-`x-cron-secret: <CRON_SECRET>`). Em `/etc/cron.d/estomasystech`:
+Em produção os jobs são **Scheduled Tasks do Coolify** no recurso do app
+([ADR-038](../adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md)), não crontab do host. Cada
+tarefa roda dentro do container do app, que já tem `CRON_SECRET` e `APP_URL` no ambiente: o segredo
+não aparece na linha do comando nem em arquivo. A imagem é `node:alpine`, então o cliente é o
+`wget` do busybox. O Coolify roda no fuso de São Paulo, e é esse fuso que vale para as expressões:
 
-```text
-MAILTO=operador@exemplo.com.br
-# Backup diário às 02:00 de São Paulo. Silencioso quando dá certo; a falha vai por e-mail.
-0 5 * * * root . /etc/estomasystech/backup.env && /opt/estomasystech/scripts/backup.sh >> /var/log/estomasystech-backup.log 2>&1 || echo "backup falhou: /var/log/estomasystech-backup.log"
-# Lembretes às 08:00 de São Paulo (decidido em 2026-10-12, #313).
-0 11 * * * root curl -fsS -o /dev/null -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/reminders/run
-# Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1). O flock espera o backup
-# terminar: apagar uma foto enquanto o tar lê o volume faria o backup falhar.
-0 6 * * * root flock -w 3600 /var/backups/estomasystech/.lock curl -fsS -o /dev/null -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/retention/run
-# Alertas ao operador a cada 5 min (§ 9). O e-mail sai do app; se o app não responder, o
-# curl falha e o MAILTO avisa.
-*/5 * * * * root curl -fsS -o /dev/null -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/alerts/run
-```
+| Tarefa | Expressão | Comando (no container do app) |
+| --- | --- | --- |
+| alertas | `*/5 * * * *` | `wget -q -O /dev/null --post-data='' --header="x-cron-secret: $CRON_SECRET" "$APP_URL/api/alerts/run"` |
+| lembretes | `0 8 * * *` | o mesmo, com `/api/reminders/run` |
+| retenção | `30 3 * * *` | o mesmo, com `/api/retention/run` |
 
-`/etc/estomasystech/backup.env` (`chmod 600`) exporta a configuração do § 5:
-`export BACKUP_AGE_RECIPIENTS_FILE=/etc/estomasystech/backup.pub` e `export BACKUP_OFFSITE_CMD='…'`.
-O `cron` manda por e-mail ao `MAILTO` tudo que o comando escrever; as quatro linhas só escrevem
-quando falham. Precisa de um relay de e-mail no host (`msmtp`, § 9.3).
+- `wget` sai com código diferente de zero em resposta não-2xx; o Coolify guarda a execução (status e
+  saída) em *Scheduled Tasks → Executions* e avisa por e-mail se a notificação de falha de tarefa
+  agendada estiver ligada em *Notifications* (confira uma vez).
+- **Não há backup nem `flock` aqui.** O backup do banco é o agendamento nativo do Coolify (03:00,
+  para o R2); a retenção roda às 03:30 para ficar depois dele. O `pg_dump` é consistente, então não
+  há corrida com a retenção. A corrida da retenção apagando foto com um `tar` do volume `uploads`
+  lendo ao mesmo tempo é do backup das fotos, que é do § 5 e ainda não está ligado em produção.
+- Formato compose (alternativa): crontab do host em `/etc/cron.d/estomasystech`, com
+  `curl -fsS -X POST -H @/etc/estomasystech/cron.headers …` e o `scripts/backup.sh` do § 5. O
+  host fica em UTC, então as horas ali são as de São Paulo + 3 (backup `0 5`, lembretes `0 11`,
+  retenção `0 6` atrás de `flock -w 3600 /var/backups/estomasystech/.lock`, alertas `*/5`), com
+  `MAILTO` e `msmtp` (§ 9.3) para a falha chegar por e-mail.
 
-- Sem `CRON_SECRET` as rotas de lembretes e de retenção respondem 503 (job desligado). Falha do job: resposta
-  não-2xx (o `curl -f` escreve o erro) e `docker compose logs app`.
+- Sem `CRON_SECRET` as rotas de lembretes, retenção e alertas respondem 503 (job desligado). Falha do job: resposta
+  não-2xx (a execução da tarefa fica com erro no Coolify) e os logs do app (§ 9.4).
 - **Antes do primeiro disparo real:**
   - Nome da empresa em */configuracoes*: a empresa criada pela migração se chama "Clínica
-    legada" e o nome vai no texto do e-mail e do `wa.me`.
+    legada" (é a única que existe hoje) e o nome vai no texto do e-mail e do `wa.me`. Renomeie
+    quando a clínica real for cadastrada.
   - Retornos `pending` antigos: na primeira execução, cada retorno vencido há 30 dias ou mais
     recebe de uma vez a 3ª tentativa (só a mais alta cabível — COM-RN-06). Conclua ou cancele
     os que não devem gerar e-mail. Contagem:
     `SELECT clinic_id, count(*) FROM follow_ups WHERE status = 'pending' AND due_date < now() GROUP BY 1;`
   - Teto do Resend Free: 100 e-mails/dia. Acima disso o envio conta `failed` no resumo, sem
     alarme, e é tentado de novo no dia seguinte.
-- **Teste de fumaça:** paciente de teste com o seu e-mail e consulta `scheduled` amanhã; dispare
-  o job manualmente e espere `channel: "configured"` e `sent: 1` na entrada da clínica, e nenhuma entrada com `error`.
+- **Teste de fumaça** (escreve dado: só com paciente de teste, nunca com dado real): paciente de
+  teste com o seu e-mail e consulta `scheduled` amanhã; dispare o job manualmente (*Execute Now* da
+  tarefa no Coolify) e espere `channel: "configured"` e `sent: 1` na entrada da clínica, e nenhuma entrada com `error`.
   Disparar de novo no mesmo dia deve devolver `sent: 0`. Na agenda, **Enviar WhatsApp** abre o
   `wa.me` e passa a mostrar "enviado hoje às HH:MM".
 
@@ -390,8 +465,8 @@ da foto é apagado do volume `uploads`. Contrato e regras:
 Issues: [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294),
 [#323](https://github.com/KalleoPinheiro/estomasystech/issues/323).
 
-- **Agendamento:** linha do `/etc/cron.d/estomasystech` no § 7, uma vez por dia às 03:00 de São Paulo,
-  depois do backup, com o mesmo `CRON_SECRET` dos lembretes. Na alternativa Vercel, o
+- **Agendamento:** Scheduled Task do § 7, uma vez por dia às 03:30 de São Paulo, depois do backup
+  do banco das 03:00, com o mesmo `CRON_SECRET` dos lembretes. Na alternativa Vercel, o
   `vercel.json` agenda `GET /api/retention/run` às 06:00 UTC.
 - **Prazo e fronteira:** conta em dias inteiros no `APP_TIMEZONE`. O último dia do prazo fica
   inteiro: um evento de auditoria de 18/10/2021 sai na execução de 19/10/2026, não antes. Nenhum
@@ -400,21 +475,22 @@ Issues: [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294),
   (`src/domain/retention/retention-policy.ts`) e suba `PRIVACY_NOTICE_VERSION` no mesmo PR: o aviso
   de privacidade lê os números de lá, e o teste de `legal-text` falha se só um dos dois mudar.
 - **Primeira execução:** a trilha de auditoria pode ter muitos eventos com mais de 5 anos e a
-  atualização é uma só por empresa; rode fora do horário de uso. Contagem prévia (aproximada: o
+  atualização é uma só por empresa; rode fora do horário de uso. (Em produção a primeira execução
+  não tem nada a anonimizar: o banco nasceu em 2026-10-18.) Contagem prévia (aproximada: o
   job usa o dia em São Paulo):
   `SELECT clinic_id, count(*) FROM audit_events WHERE occurred_at < date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo' - interval '5 years') AT TIME ZONE 'America/Sao_Paulo' AND actor_id <> 'anonimizado' GROUP BY 1;`
-- **Rodar à mão** (depois de restaurar backup, ou para conferir): no host,
-  `curl -fsS -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/retention/run`.
-  É idempotente; a segunda execução no mesmo dia devolve tudo `0`. Use o mesmo `flock` da linha
-  do cron se o backup estiver rodando.
+- **Rodar à mão** (depois de restaurar backup, ou para conferir): *Execute Now* na tarefa de
+  retenção do Coolify, ou, no terminal do container do app, o mesmo `wget` do § 7 (sem `-O
+  /dev/null`, para ver o resumo). É idempotente; a segunda execução no mesmo dia devolve tudo `0`.
+  No formato compose, use o mesmo `flock` da linha do cron se o backup estiver rodando.
 - **Conferir que rodou:** *Plataforma → Auditoria* (Super Admin) mostra um evento `retention` do
   ator `retention-job` **por execução**, mesmo sem nada vencido. O detalhe traz as contagens da
   trilha de plataforma, `clinics` (empresas processadas), `failedClinics` (quantas falharam) e
   `auditTrailCutoff` (o corte usado). A trilha de cada clínica (*Configurações → Auditoria*) só
   ganha o evento quando algo foi anonimizado nela, com as contagens por tipo. Pelo banco:
   `SELECT occurred_at, detail FROM audit_events WHERE resource_type = 'retention' AND clinic_id IS NULL ORDER BY occurred_at DESC LIMIT 5;`
-- **Sem evento de hoje** depois das 03:00: o cron não chamou ou o app não respondeu. Veja o
-  e-mail do `MAILTO` e `docker compose logs app`, e rode à mão.
+- **Sem evento de hoje** depois das 03:30: a tarefa não rodou ou o app não respondeu. Veja
+  *Scheduled Tasks → Executions* no Coolify e os logs do app, e rode à mão.
 - **`failedClinics` acima de zero** ou entrada com `error` na resposta: a empresa que falhou está
   no log (`Retenção da empresa <id>: falha`); as outras seguiram, e o que já tinha sido feito na
   empresa com falha está contado na trilha dela. Corrija a causa e rode à mão; o job retoma de onde
@@ -429,12 +505,12 @@ Issues: [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294),
 
 ### 7.2 Reescrita dos eventos antigos do Google Agenda (#339)
 
-Roda **uma vez por empresa com Google Agenda conectado**, depois do deploy da migração `0056`
+Roda **uma vez por empresa com Google Agenda conectado**, depois do deploy da migração `0056` (em produção, nenhuma empresa tem Google conectado ainda: só será preciso se houver evento antigo)
 (coluna `appointments.calendar_minimized_at`). **Manual**: não está no cron nem no deploy. Regras e
 contrato: [`integrations/google-calendar.md`](integrations/google-calendar.md#reescrita-em-lote-dos-eventos-antigos-339-age-rn-19).
 
-1. Num checkout no host (a imagem standalone não tem `tsx`):
-   `DATABASE_URL=… APP_URL=https://… npm run calendar:minimize` — **simulação**, imprime
+1. De um checkout com `DATABASE_URL` alcançável (a imagem standalone não tem `tsx`; no Coolify use o
+   container descartável do § 3): `DATABASE_URL=… APP_URL=https://… npm run calendar:minimize` — **simulação**, imprime
    `pendentes=N` por empresa.
 2. `npm run calendar:minimize -- --confirmar` — reescreve até 500 consultas por empresa, das mais
    futuras para as mais antigas. Saída `0` = lote sem falha; `1` = houve `falhas` ou a cota do Google
@@ -451,21 +527,34 @@ contrato: [`integrations/google-calendar.md`](integrations/google-calendar.md#re
 
 Roda **uma vez**, depois da migração `0063`. **Manual**. Regras: ACE-RN-57, [ADR-029](../adr/029-cnpj-antigo-invalido-marcado-para-correcao.md).
 
-1. Num checkout no host: `DATABASE_URL=… npm run clinics:cnpj-review` — **simulação**, lista
+1. De um checkout (ou do container descartável do § 3): `DATABASE_URL=… npm run clinics:cnpj-review` — **simulação**, lista
    `id`, nome e CNPJ das empresas com dígito verificador inválido.
 2. `npm run clinics:cnpj-review -- --confirmar` — marca cada uma (o número não muda) e audita.
    Reexecutar é seguro. Avise as clínicas listadas: o aviso aparece em *Configurações → Dados da clínica*.
 
 ## 8. Primeiro acesso
 
-1. Configure todas as variáveis obrigatórias (`.env.example`), incluindo `ESTOMASYSTECH_BOOTSTRAP_TOKEN`.
-2. `curl -sX POST "$APP_URL/api/auth/bootstrap" -H "Content-Type: application/json" -H "x-bootstrap-token: $ESTOMASYSTECH_BOOTSTRAP_TOKEN" -d '{"email":"responsavel@clinica.com.br"}'` — cria o Super Admin e envia o convite.
-3. Defina a senha pelo link do convite e entre. Com `RESEND_API_KEY`/`EMAIL_FROM` (opcionais,
-   [ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) ele chega por e-mail; sem elas, ou se o
+Já feito em produção (2026-10-18): o Super Admin foi criado e o token removido. O roteiro vale para
+uma instalação nova ou para recriar o banco.
+
+1. Configure as variáveis obrigatórias (`.env.example`), incluindo `ESTOMASYSTECH_BOOTSTRAP_TOKEN`
+   (no Coolify, como *Runtime*), e faça o deploy.
+2. Chame o bootstrap **sem colocar o token na linha de comando nem no histórico do shell**. O shell do
+   operador é o zsh, onde `read -p` não é o prompt (lê de um coprocesso) e o comando falha; por isso
+   o `bash -c`:
+
+   ```bash
+   bash -c 'read -rs -p "Token: " T; echo; curl -sX POST "https://estomasystech.kalleopinheiro.com.br/api/auth/bootstrap" -H "Content-Type: application/json" -H "x-bootstrap-token: $T" -d "{\"email\":\"responsavel@clinica.com.br\"}"'
+   ```
+
+   Cria o Super Admin e envia o convite. A rota só responde enquanto não existe nenhuma conta.
+3. Defina a senha pelo link do convite e entre. Com `RESEND_API_KEY`/`EMAIL_FROM`
+   ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) ele chega por e-mail; sem elas, ou se o
    envio falhar, vem no campo `inviteUrl` da resposta do passo 2.
-4. Remova `ESTOMASYSTECH_BOOTSTRAP_TOKEN` do `.env` e `docker compose up -d`.
-5. Cadastre a clínica e convide o administrador dela; em */configuracoes* da clínica: dados (CNPJ,
-   responsável técnico), canal de e-mail, grade de horários, profissionais, contas da equipe.
+4. **Remova `ESTOMASYSTECH_BOOTSTRAP_TOKEN`** do Coolify (ou do `.env`) e faça o deploy.
+5. Cadastre a clínica (a "Clínica legada" da migração pode ser renomeada) e convide o administrador
+   dela; em */configuracoes* da clínica: dados (CNPJ, responsável técnico), canal de e-mail, grade
+   de horários, profissionais, contas da equipe.
 6. Contas de portal: crie a partir do paciente/parceiro já cadastrado (o vínculo é obrigatório).
 
 ## 9. Monitoramento e alertas
@@ -487,8 +576,8 @@ morre, mas não o que fica `unhealthy`.
 
 ### 9.2 Alertas por e-mail
 
-`*/5` no `/etc/cron.d/estomasystech` (§ 7) chama `POST /api/alerts/run`. Precisa de `ALERT_EMAIL_TO` e
-do canal da plataforma (`RESEND_API_KEY`/`EMAIL_FROM`) no `.env`. Contrato e detalhes:
+A Scheduled Task `*/5` (§ 7) chama `POST /api/alerts/run`. Precisa de `ALERT_EMAIL_TO` e
+do canal da plataforma (`RESEND_API_KEY`/`EMAIL_FROM`) nas variáveis do app. Contrato e detalhes:
 [`integrations/alertas.md`](integrations/alertas.md).
 
 | Alerta | Ativo quando |
@@ -501,19 +590,22 @@ do canal da plataforma (`RESEND_API_KEY`/`EMAIL_FROM`) no `.env`. Contrato e det
 Mesmo alerta ativo volta no máximo a cada 60 min. Os contadores ficam em memória: reiniciar o
 app os zera (uma réplica). Sem destinatário ou sem canal, o alerta vira linha `error` no log.
 
-**Teste de fumaça:** com o app no ar, `docker compose stop db`; em até 5 min chega "aplicação
-não está pronta". `docker compose start db` em seguida.
+**Teste de fumaça** (derruba o banco: só fora do horário de uso): com o app no ar, pare o recurso do
+banco no Coolify; em até 5 min chega "aplicação não está pronta". Inicie o banco em seguida. No
+compose: `docker compose stop db` / `start db`.
 
 ### 9.3 Outros sinais
 
 | Sinal | Como |
 | --- | --- |
-| App fora do ar | o `curl -f` do cron de alertas falha e o `MAILTO` avisa; com o servidor inteiro fora, só o verificador externo avisa (UptimeRobot, abaixo) |
-| Backup, lembretes ou retenção falharam | `MAILTO` do cron (§ 7) |
-| Disco | linha no `/etc/cron.d/estomasystech`: `0 * * * * root df --output=pcent / /var/lib/docker \| awk 'NR>1 && $1+0 > 85 {print "disco em " $1}'` |
-| Backup que não rodou | o `MAILTO` não pega cron parado; o verificador de "último backup" segue fora desta entrega |
+| App fora do ar | o UptimeRobot (abaixo) avisa por e-mail; a tarefa de alertas também falha no Coolify |
+| Lembretes ou retenção falharam | execução com erro em *Scheduled Tasks → Executions* (e e-mail do Coolify, se ligado); o alerta "job de lembretes sem rodar" (26 h) cobre os lembretes |
+| Backup do banco | notificação do Coolify e *Backups → Executions* (*Available* no R2). No compose, `MAILTO` do cron (§ 7) |
+| Disco e atualizações do host | Coolify (alerta de disco do servidor) e a rotina mensal do 1º sábado (#381). No compose: linha no `cron.d` com `df` |
+| Backup que não rodou | o verificador de "último backup" segue fora desta entrega |
 
-**E-mail do host (`msmtp`).** O `MAILTO` do cron precisa de um relay no host: a Hetzner bloqueia a
+**E-mail do host (`msmtp`) — só no formato compose; não existe na produção atual** (os avisos saem do
+Coolify e do app, ambos pelo Resend). O `MAILTO` do cron precisa de um relay no host: a Hetzner bloqueia a
 porta 25 de saída, então o decidido é o `msmtp` na **porta 587** com o SMTP do Resend (o mesmo
 provedor do canal da plataforma). Uma vez, no servidor:
 
@@ -544,22 +636,23 @@ provedor do canal da plataforma). Uma vez, no servidor:
    chegar, veja `/var/log/msmtp.log`.
 
 **Uptime externo (UptimeRobot).** Fica fora do servidor, então avisa também quando a VPS inteira
-cai. Cadastro, uma vez:
+cai. Em produção já monitora `/api/health/ready`, o painel do Coolify e o SSH. Cadastro, uma vez:
 
 1. Crie o monitor do tipo **HTTP(s)** com a URL `https://<domínio>/api/health/ready`.
 2. Intervalo de **5 min**.
 3. Contato de alerta: o **e-mail** do operador.
-4. Confira derrubando o banco (`docker compose stop db`; `/api/health/ready` passa a responder
-   `503`) e religue depois (`docker compose start db`).
+4. Confira derrubando o banco (pare o recurso no Coolify; `/api/health/ready` passa a responder
+   `503`) e religue depois.
 
 ### 9.4 Logs
 
-`docker compose logs app` traz uma linha JSON por evento: `time`, `level`, `msg`, `requestId` e
-campos. O `x-request-id` volta em toda resposta; com ele, ache todas as linhas do request:
+Os logs do app (aba *Logs* do recurso no Coolify, ou `docker logs <container>` no servidor; no
+compose, `docker compose logs app`) trazem uma linha JSON por evento: `time`, `level`, `msg`,
+`requestId` e campos. O `x-request-id` volta em toda resposta; com ele, ache todas as linhas do request:
 
 ```bash
-docker compose logs --no-log-prefix app | grep '"requestId":"<id>"' | jq .
-docker compose logs --no-log-prefix app | jq -c 'select(.level == "error")'
+docker logs <container-do-app> 2>&1 | grep '"requestId":"<id>"' | jq .
+docker logs <container-do-app> 2>&1 | jq -c 'select(.level == "error")'
 ```
 
 Os logs não carregam dado pessoal (`logError`,
@@ -569,7 +662,9 @@ mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
 ### 9.5 GlitchTip (error tracking)
 
-Opcional: sem `GLITCHTIP_DSN` o app funciona igual. Configurar, uma vez:
+Opcional: sem `GLITCHTIP_DSN` o app funciona igual. **Em produção está desligado** (decisão de
+2026-10-18: o app roda como Dockerfile no Coolify, sem o compose do GlitchTip; os 5xx chegam pelo
+alerta por e-mail e pelos logs). O roteiro abaixo vale para o formato compose. Configurar, uma vez:
 
 1. No `.env`: `GLITCHTIP_DB_PASSWORD` (`openssl rand -hex 24`), `GLITCHTIP_SECRET_KEY`
    (`openssl rand -hex 32`) e `docker-compose.glitchtip.yml` no fim do `COMPOSE_FILE`.
@@ -588,6 +683,27 @@ A interface só abre por túnel SSH (passo 3), sem porta pública. Retenção de
 entra no backup (§ 5): não guarda dado de paciente e perdê-lo só perde o histórico de erros.
 O erro do navegador **não é capturado por ora**: só o servidor envia eventos. RAM: o GlitchTip `all_in_one` usa cerca de 512 MB a mais; com 4 GB, acompanhe no primeiro
 build com ele no ar.
+
+### 9.6 Fumaça pós-deploy (somente leitura)
+
+Roda depois de todo deploy e em qualquer revisão de produção. Não escreve nada, não usa login nem
+dado de paciente. Substitua `U=https://estomasystech.kalleopinheiro.com.br`.
+
+| Confere | Comando | Esperado |
+| --- | --- | --- |
+| liveness | `curl -s -o /dev/null -w '%{http_code}' $U/api/health` | `200` |
+| readiness | `curl -s $U/api/health/ready` | `200`; corpo só com `database` e `migrations`, ambos `ok` |
+| TLS e HSTS | `curl -sI $U/login` | `200`; `strict-transport-security` presente; HTTP em `http://…` redireciona para HTTPS |
+| CSP única com nonce | `curl -sI $U/login \| grep -ic '^content-security-policy'` | `1`, com `nonce-` na política |
+| demais cabeçalhos | `curl -sI $U/login` | `x-frame-options`, `x-content-type-options`, `referrer-policy`, `cross-origin-opener-policy` e `cross-origin-resource-policy` presentes, sem duplicar a CSP |
+| rotas de job fechadas | `curl -s -o /dev/null -w '%{http_code}' -X POST $U/api/alerts/run` (sem `x-cron-secret`) | `401` (`503` significa `CRON_SECRET` ausente; `200` seria falha grave) |
+| cookies | DevTools → Application → Cookies, depois de um login | cookie de sessão com `Secure`, `HttpOnly` e `SameSite` (exige login: não faz parte da fumaça sem conta) |
+| rate limit | leia o limite de `rate-limit-app` em `shared-middlewares.yaml` do proxy e exceda-o com `GET` em `/api/health` | `429` ao passar do limite; se nunca vier, o rótulo do § 3 não está aplicado ao recurso |
+| imagem | *Deployments* do Coolify | SHA igual ao esperado e `healthy` |
+
+Sem o login, os itens que dependem de sessão (lembretes, evento `retention` na auditoria) se
+verificam no painel: *Plataforma → Auditoria* mostra o evento `retention` do dia depois das 03:30
+(§ 7.1), e as tarefas de lembretes e alertas mostram execução sem erro no Coolify.
 
 ## 10. Recuperação de emergência do Super Admin
 

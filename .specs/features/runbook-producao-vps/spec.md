@@ -1,11 +1,16 @@
 ---
 title: Runbook de produção na VPS Hetzner + backup/restore cifrado (#206)
-status: draft
+status: done
 issue: 206
 audience: [agent, dev, ops]
 ---
 
 # Runbook de produção na VPS Hetzner — Specification
+
+> **Atualização de 2026-10-18:** a produção subiu no Coolify (Dockerfile + PostgreSQL 18 gerenciado,
+> Scheduled Tasks, deploy manual; ADR-036 a ADR-039). O formato `docker compose` e os scripts de
+> backup deste spec seguem no repositório como alternativa, mas não são o que roda. O estado real
+> está em `docs/engineering/producao.md` § 0.
 
 ## Problem Statement
 

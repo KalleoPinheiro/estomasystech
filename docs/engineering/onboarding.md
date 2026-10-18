@@ -12,6 +12,11 @@ related:
 
 # Onboarding técnico e setup
 
+> **Este documento é de desenvolvimento local.** Produção roda no Coolify (Dockerfile + PostgreSQL 18
+> gerenciado, deploy manual): estado atual, release e rollback em
+> [`producao.md`](producao.md) § 0 e § 3.1. Localmente o compose ainda sobe Postgres 16
+> ([ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) decide alinhar a 18).
+
 > **TL;DR (5 min):** `cp .env.example .env` → preencha `POSTGRES_PASSWORD`, `AUTH_SECRET`,
 > `DATA_ENCRYPTION_KEY`, `ESTOMASYSTECH_BOOTSTRAP_TOKEN` → `docker compose up -d --build` → `POST /api/auth/bootstrap` → abra o
 > link de convite (vem no `inviteUrl` da resposta; por e-mail só com `RESEND_API_KEY`/`EMAIL_FROM`,

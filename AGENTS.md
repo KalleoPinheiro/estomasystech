@@ -15,7 +15,7 @@ estoque de insumos, portal do paciente e lembretes por WhatsApp. Dado de saúde 
 - Visão, objetivos e personas: [`docs/product/visao-produto.md`](docs/product/visao-produto.md)
 - Roadmap (o que está entregue/especificado/backlog): [`docs/plano-evolucao-faseado.md`](docs/plano-evolucao-faseado.md)
 
-**Stack:** Next.js 16 (App Router) · React 19 · TypeScript 5 · Drizzle ORM + Postgres 16 ·
+**Stack:** Next.js 16 (App Router) · React 19 · TypeScript 5 · Drizzle ORM + Postgres (18 em produção, 16 no compose/CI até o ADR-037) ·
 Tailwind v4 · `@still-void/ui` · Vitest + Playwright · Biome · npm (sem workspaces).
 Arquitetura em camadas `app → application → domain ← infrastructure`:
 [`docs/engineering/architecture.md`](docs/engineering/architecture.md).
@@ -32,10 +32,12 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run check:sv` | toca JSX | adoção de `@still-void/ui` |
 | `npm run check:docs` | toca `.md` | links e frontmatter |
 | `npm run db:migrate` | schema mudou | drizzle-kit |
-| `npm run build` | — | **não remova** `--max-old-space-size=4096` |
+| `npm run build` | — | **não remova** `--max-old-space-size=4096` (e o `ENV NODE_OPTIONS` do estágio `builder` do `Dockerfile`) |
 
 Setup, variáveis de ambiente e Docker: [`docs/engineering/onboarding.md`](docs/engineering/onboarding.md).
 Deploy, backup, segredos e rotação em produção: [`docs/engineering/producao.md`](docs/engineering/producao.md).
+**Produção está no ar** (Coolify + Dockerfile, deploy manual): estado real em `producao.md` § 0, release e
+rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `main` não é deploy.
 
 ## Regras invioláveis
 

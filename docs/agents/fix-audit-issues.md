@@ -78,6 +78,14 @@ especificar → implementar → documentar → PR → merge → fechar issue.
     `.specs/STATE.md` guarda só o que está em aberto: não acrescente seção
     `CONCLUÍDA` nele nem no arquivo — `tests/docs/structure.test.ts` recusa
     as duas coisas. Rode `npx vitest run tests/docs` antes do push.
+11. **Produção está no ar: merge não é deploy.** Se o lote muda código que roda em produção, diga no
+    handoff e no comentário da issue: (a) as migrações novas e se são aditivas; (b) qual rollback vale
+    (redeploy do commit anterior ou restauração do backup, [`producao.md`](../engineering/producao.md)
+    § 3.1); (c) se há script manual a rodar depois. Quem faz o deploy é o dono, depois do backup do
+    banco; a fumaça somente leitura do `producao.md` § 9.6 confirma. Mudança que só toca docs,
+    testes ou tipos não pede deploy.
+    Além do gate local, a imagem precisa construir: `docker build` (ou o `Dockerfile` no Coolify)
+    quando o lote toca `Dockerfile`, `next.config.ts`, `package.json`/lockfile ou o que o build lê.
 
 ## O que NÃO fazer
 

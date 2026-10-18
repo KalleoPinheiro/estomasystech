@@ -12,7 +12,7 @@ related:
 # Arquitetura
 
 > **TL;DR:** monólito Next.js 16 (App Router) em DDD por camadas, dependências apontando para
-> dentro. Postgres 16 via Drizzle; isolamento multiempresa na aplicação (`clinic_id` + escopo
+> dentro. Postgres via Drizzle (18 em produção, 16 no compose de desenvolvimento, PGlite nos testes); isolamento multiempresa na aplicação (`clinic_id` + escopo
 > tipado); autorização em duas camadas que falha fechado. Integrações externas entram por portas.
 
 ## Camadas

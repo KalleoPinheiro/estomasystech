@@ -3,14 +3,14 @@ title: "Integração: cron de lembretes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-12
+last_reviewed: 2026-10-18
 ---
 
 # Cron de lembretes (`POST /api/reminders/run`)
 
 ## Propósito
 
-Um agendador externo (cron do host, Vercel Cron, GitHub Actions…) chama a rota uma vez por dia
+Um agendador externo (Scheduled Task do Coolify, cron do host, Vercel Cron, GitHub Actions…) chama a rota uma vez por dia
 para enviar os lembretes por [e-mail](resend.md), empresa a empresa. Domínio: [comunicação](../../domains/comunicacao/README.md).
 
 | Campo | Valor |
@@ -33,7 +33,7 @@ POST /api/reminders/run
 x-cron-secret: $CRON_SECRET
 ```
 
-Na produção (VPS), o `/etc/cron.d/estomasystech` do host chama a forma acima ([runbook](../producao.md) § 7).
+Na produção (Coolify), uma Scheduled Task dentro do container chama a forma acima com `wget`, lendo `CRON_SECRET` e `APP_URL` do ambiente ([runbook](../producao.md) § 7, [ADR-038](../../adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md)). No formato compose, o `/etc/cron.d/estomasystech` do host faz o mesmo com `curl`.
 Ou, no formato do Vercel Cron (`vercel.json`, alternativa não adotada — runbook § 2):
 
 ```http
