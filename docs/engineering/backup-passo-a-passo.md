@@ -260,9 +260,15 @@ tabela do § 5.3.
 
 Só depois da etapa 7 aprovada:
 
-1. Coolify → `estomasystech-db` → **Backups** → desligue o envio para o S3 do backup das 03:00.
+1. Coolify → `estomasystech-db` → **Automation → Backups** → desabilite o backup agendado (o botão passa a mostrar *Enable Backup*).
 2. R2 → bucket antigo (`estomasystech-backups`) → apague os dumps em claro.
 3. R2 → API Tokens → apague o token que o Coolify usava.
+4. 🖥️ Apague os dumps em claro do app que o Coolify deixou no disco (o dump do banco interno do
+   Coolify, em `/data/coolify/backups/coolify`, fica: é a recuperação do painel):
+
+   ```bash
+   sudo find /data/coolify/backups/databases -type f -name 'pg-dump-estomasystech-*.dmp' -exec shred -u {} \;
+   ```
 
 Depois, passe pelo [checklist de segurança](producao.md#54-segurança-do-backup-checklist): apague o token de restauração, recoloque o filtro de IP no token do servidor e tire a chave privada do disco.
 

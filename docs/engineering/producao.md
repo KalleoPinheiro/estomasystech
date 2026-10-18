@@ -24,10 +24,10 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | --- | --- |
 | URL | `https://estomasystech.kalleopinheiro.com.br` (DNS no Registro.br, sem curinga) |
 | Servidor | Hetzner `ubuntu-8gb-fsn1-1` (Alemanha), Ubuntu 26.04 LTS, 8 GB de RAM, 4 GB de swap; acesso por `ssh vps` |
-| Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup diário do próprio Coolify no R2 (em claro, a desligar: § 5.1 passo 8) |
+| Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup agendado do banco pelo Coolify **desligado** em 2026-10-18 (era em claro; o cifrado do § 5 o substitui) |
 | Proxy | Traefik do Coolify, único na borda ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)); middlewares `rate-limit-app`, `rate-limit-strict` e `security-headers` (`@file`, sem CSP: o app usa nonce) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
-| Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18), além do backup do Coolify às 03:00. O CI e os testes seguem em Postgres 16 |
+| Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18). O CI e os testes seguem em Postgres 16 |
 | Variáveis | 9 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`. `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
 | Fotos | volume do Coolify em `/app/uploads` (uma réplica) |
 | Migrações | aplicadas no boot, com advisory lock; `/api/health/ready` responde `200` ([#384](https://github.com/KalleoPinheiro/estomasystech/pull/384)) |
@@ -517,10 +517,10 @@ Estado conferido na instalação de 2026-10-18. Revise junto com o teste mensal 
 | Item | Regra | Estado |
 | --- | --- | --- |
 | Chave privada `age` | só no cofre (Bitwarden) e num pendrive guardado; **nunca** no servidor nem em disco de máquina de uso diário. Para testar, traga do cofre e apague no fim (`shred -u`) | pendrive + cópia em claro no WSL do operador; **conferir se a nota do Bitwarden tem a chave** (no teste ela não veio do cofre) antes de apagar a cópia do WSL |
-| Token R2 do servidor | **Object Read & Write** só no bucket `estomasystech-backups-age`, com filtro de IP (IPv4 `/32` e IPv6 `/64` do servidor) | escopo ok; filtro de IP a recolocar |
-| Token R2 de restauração | **Object Read only**, só o bucket, TTL de 7 dias; apagar depois do teste | criado em 2026-10-18; apagar ou deixar expirar |
+| Token R2 do servidor | **Object Read & Write** só no bucket `estomasystech-backups-age`, com filtro de IP (IPv4 `/32` e IPv6 `/64` do servidor) | escopo ok; filtro de IP recolocado e `R2 OK` em 2026-10-18 (confira no painel na revisão mensal) |
+| Token R2 de restauração | **Object Read only**, só o bucket, TTL de 7 dias; apagar depois do teste | o de 2026-10-18 foi criado com escrita por engano e apagado após o teste; nos próximos, marque *Object Read only* |
 | Trava de objeto | `prod/` com 30 dias: nem um servidor comprometido apaga os backups recentes | ativa |
-| Backup em claro do Coolify | envio para o S3 desligado, dumps e bucket `estomasystech-backups` apagados, token `coolify-backups` removido (§ 5.1 passo 8) | em curso |
+| Backup em claro do Coolify | backup agendado desligado, bucket `estomasystech-backups` e token `coolify-backups` apagados, dumps do app em `/data/coolify/backups/databases` apagados (§ 5.1 passo 8). O dump do banco interno do Coolify (`/data/coolify/backups/coolify`) fica: é a recuperação do painel, sem dado de paciente | feito em 2026-10-18 |
 | Arquivos no servidor | `/etc/estomasystech/*` e `/etc/msmtprc` com `600 root`; scripts com `700 root` | ok |
 | Chave do Resend do servidor | só *Sending access*, nome `estomasystech-backup-alerta`, guardada no cofre | ok |
 | Bitwarden CLI | `bw lock` ao terminar; nunca mande print com `BW_SESSION` | travado depois do teste; `~/.bw_session` apagado |
