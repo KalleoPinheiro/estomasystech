@@ -134,7 +134,7 @@ Resultado: **todas as rotas cumprem**; o `/slots` com 20 profissionais e 100 mil
 | Lacuna | Por quê | Próximo passo |
 | --- | --- | --- |
 | Escritas (agendar, pagar, baixa de estoque) | script só lê; escrita concorrente pede cenário próprio | medir se o p95 de escrita preocupar em produção |
-| Job de lembretes (item 3) | exige canal de e-mail configurado para enviar; o N+1 está no código (`wasSent`/`lastRecallAttempt` dentro de laço, `send-reminders.ts`) | [#361](https://github.com/KalleoPinheiro/vitta-flow/issues/361), com a medição como primeiro passo |
+| Job de lembretes (item 3) | **Resolvido na [#361](https://github.com/KalleoPinheiro/vitta-flow/issues/361).** Medido contando as leituras de repositório por execução (4 e 40 pacientes, cada um com consulta amanhã e retorno vencido, metade com responsável): antes 14 e 122 (cerca de 3 por lembrete); depois 6 e 6, fixas (COM-RN-21). O teste `tests/application/send-reminders-queries.test.ts` falha se uma leitura voltar a crescer com o lote. Latência em tempo real não medida: exige canal de e-mail e o custo era de idas ao banco | nenhum |
 | Navegador (LCP, hidratação) | não houve browser nesta rodada | rodar Lighthouse na Hetzner depois do go-live |
 | Rede e disco reais | tudo em loopback, `fsync=off` | repetir `tipica` na VPS definitiva (§ 3 funciona igual) |
 | `getRepositories` (item 5) | custo por requisição já aparece nos p50 de 4 a 6 ms das rotas leves; [#220](https://github.com/KalleoPinheiro/vitta-flow/issues/220) segue aberta | nenhum |

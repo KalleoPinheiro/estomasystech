@@ -115,17 +115,26 @@ describe('Feature: reminder_logs por canal e tentativa (PostgreSQL)', () => {
     expect(count('confirmation', 'email')).toBe(2);
     expect(count('recall', 'whatsapp_link')).toBe(2);
     expect(count('recall', 'email')).toBe(2);
-    expect(await repo.lastRecallAttempt('fu-1')).toBe(2);
+    expect((await repo.lastRecallAttempts(['fu-1'])).get('fu-1') ?? 0).toBe(2);
     expect(
-      await repo.wasSent('confirmation', 'appt-1', 'email', '2026-07-20'),
+      (
+        await repo.sentReferences(
+          'confirmation',
+          'email',
+          ['appt-1'],
+          '2026-07-20',
+        )
+      ).has('appt-1'),
     ).toBe(true);
     expect(
-      await repo.wasSent(
-        'confirmation',
-        'appt-1',
-        'whatsapp_link',
-        '2026-07-20',
-      ),
+      (
+        await repo.sentReferences(
+          'confirmation',
+          'whatsapp_link',
+          ['appt-1'],
+          '2026-07-20',
+        )
+      ).has('appt-1'),
     ).toBe(false);
   });
 
@@ -160,7 +169,53 @@ describe('Feature: reminder_logs por canal e tentativa (PostgreSQL)', () => {
     expect(
       await repoA().firstSentAt('recall', 'whatsapp_link', [], '2026-07-16'),
     ).toEqual(new Map());
-    expect(await repoB().lastRecallAttempt('fu-2')).toBe(0);
+    expect((await repoB().lastRecallAttempts(['fu-2'])).get('fu-2') ?? 0).toBe(
+      0,
+    );
+  });
+
+  it('Dado vários retornos e consultas, Quando ler em lote, Então devolve só os da empresa e do canal pedidos', async () => {
+    const day = new Date('2026-07-16T09:00:00Z');
+    await repoA().save(ReminderLog.create('confirmation', 'a-1', day));
+    await repoA().save(
+      ReminderLog.create('confirmation', 'a-2', day, {
+        channel: 'whatsapp_link',
+      }),
+    );
+    await repoB().save(ReminderLog.create('confirmation', 'a-3', day));
+    await repoA().save(
+      ReminderLog.create('recall', 'fu-1', day, { attempt: 1 }),
+    );
+    await repoA().save(
+      ReminderLog.create('recall', 'fu-1', day, { attempt: 2 }),
+    );
+    await repoA().save(
+      ReminderLog.create('recall', 'fu-2', day, { attempt: 1 }),
+    );
+    await repoB().save(
+      ReminderLog.create('recall', 'fu-3', day, { attempt: 3 }),
+    );
+
+    expect(
+      await repoA().sentReferences(
+        'confirmation',
+        'email',
+        ['a-1', 'a-2', 'a-3', 'a-4'],
+        '2026-07-16',
+      ),
+    ).toEqual(new Set(['a-1']));
+    expect(
+      await repoA().sentReferences('confirmation', 'email', [], '2026-07-16'),
+    ).toEqual(new Set());
+    expect(
+      await repoA().lastRecallAttempts(['fu-1', 'fu-2', 'fu-3', 'fu-4']),
+    ).toEqual(
+      new Map([
+        ['fu-1', 2],
+        ['fu-2', 1],
+      ]),
+    );
+    expect(await repoA().lastRecallAttempts([])).toEqual(new Map());
   });
 
   it('C18 backfill numera tentativas do recall existente', async () => {

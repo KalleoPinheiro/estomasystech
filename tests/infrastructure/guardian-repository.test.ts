@@ -72,6 +72,20 @@ describe('Feature: Responsável no banco (#329, migração 0059)', () => {
     expect((await otherRepo.findAll()).map((g) => g.id)).toEqual([theirs.id]);
   });
 
+  it('Dado vários ids, Quando buscar em lote, Então traz só os da empresa, sem duplicar, e vazio não consulta', async () => {
+    const a = newGuardian('Ana Lote', 'ana@x.com');
+    const b = newGuardian('Bia Lote');
+    const theirs = newGuardian('Cida Outra');
+    await repo.save(a);
+    await repo.save(b);
+    await otherRepo.save(theirs);
+
+    const found = await repo.findByIds([a.id, b.id, a.id, theirs.id, 'sem-id']);
+
+    expect(found.map((g) => g.id).sort()).toEqual([a.id, b.id].sort());
+    expect(await repo.findByIds([])).toEqual([]);
+  });
+
   it('Dado escopo de sistema, Quando salvar ou excluir, Então recusa; ler vê todas as empresas', async () => {
     const system = new DrizzleGuardianRepository(appDb, null);
     const guardian = newGuardian('Eva Eventual');

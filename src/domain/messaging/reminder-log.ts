@@ -88,14 +88,17 @@ export class ReminderLog {
 
 export interface ReminderLogRepository {
   save(log: ReminderLog): Promise<void>;
-  wasSent(
+  /** Referências que já têm registro do dia no canal (uma consulta para o lote). */
+  sentReferences(
     kind: ReminderKind,
-    referenceId: string,
     channel: ReminderChannel,
+    referenceIds: readonly string[],
     onDay: string,
-  ): Promise<boolean>;
-  /** Maior tentativa de recall por e-mail já gravada; 0 sem nenhuma. */
-  lastRecallAttempt(referenceId: string): Promise<number>;
+  ): Promise<Set<string>>;
+  /** Maior tentativa de recall por e-mail por retorno; ausente = nenhuma. */
+  lastRecallAttempts(
+    referenceIds: readonly string[],
+  ): Promise<Map<string, number>>;
   /** Horário do primeiro registro do dia por referência (só as que têm registro). */
   firstSentAt(
     kind: ReminderKind,

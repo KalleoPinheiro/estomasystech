@@ -1,4 +1,4 @@
-import { asc, eq, ilike, or } from 'drizzle-orm';
+import { asc, eq, ilike, inArray, or } from 'drizzle-orm';
 import {
   Guardian,
   type GuardianRelationship,
@@ -48,6 +48,20 @@ export class DrizzleGuardianRepository implements GuardianRepository {
       .where(withTenant(guardians, this.clinicId, eq(guardians.id, id)))
       .limit(1);
     return rows[0] ? toGuardian(rows[0]) : null;
+  }
+
+  async findByIds(ids: readonly string[]): Promise<Guardian[]> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) {
+      return [];
+    }
+    const rows = await this.db
+      .select()
+      .from(guardians)
+      .where(
+        withTenant(guardians, this.clinicId, inArray(guardians.id, unique)),
+      );
+    return rows.map(toGuardian);
   }
 
   async findAll(search?: string): Promise<Guardian[]> {
