@@ -24,17 +24,18 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | --- | --- |
 | URL | `https://estomasystech.kalleopinheiro.com.br` (DNS no Registro.br, sem curinga) |
 | Servidor | Hetzner `ubuntu-8gb-fsn1-1` (Alemanha), Ubuntu 26.04 LTS, 8 GB de RAM, 4 GB de swap; acesso por `ssh vps` |
-| Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup diário do próprio Coolify no R2 |
+| Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup diário do próprio Coolify no R2 (em claro, a desligar: § 5.1 passo 8) |
 | Proxy | Traefik do Coolify, único na borda ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)); middlewares `rate-limit-app`, `rate-limit-strict` e `security-headers` (`@file`, sem CSP: o app usa nonce) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
-| Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública), backup diário às 03:00 para o R2. O CI e os testes seguem em Postgres 16 |
+| Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18), além do backup do Coolify às 03:00. O CI e os testes seguem em Postgres 16 |
 | Variáveis | 9 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`. `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
 | Fotos | volume do Coolify em `/app/uploads` (uma réplica) |
 | Migrações | aplicadas no boot, com advisory lock; `/api/health/ready` responde `200` ([#384](https://github.com/KalleoPinheiro/estomasystech/pull/384)) |
 | Jobs | Scheduled Tasks do Coolify, não crontab do host (§ 7) |
 | Monitoramento | UptimeRobot em `/api/health/ready`, no painel do Coolify e no SSH; alertas do app por e-mail (§ 9) |
 | Dados | Super Admin criado pelo bootstrap; existe só a "Clínica legada" da migração, a renomear quando a clínica real for cadastrada |
-| Não existe em produção | GlitchTip (§ 9.5), `msmtp`, `/etc/cron.d`, `/opt/estomasystech`, Caddy, `docker-compose.prod.yml` |
+| Backup cifrado | `systemd` timer do host (`estomasystech-backup.timer`), scripts em `/opt/estomasystech-backup`, configuração em `/etc/estomasystech`, alerta de falha por `msmtp` (Resend). Roteiro: [`backup-passo-a-passo.md`](backup-passo-a-passo.md) |
+| Não existe em produção | GlitchTip (§ 9.5), `/etc/cron.d`, `/opt/estomasystech`, Caddy, `docker-compose.prod.yml` |
 
 Pendências de go-live: [#381](https://github.com/KalleoPinheiro/estomasystech/issues/381) (operação e
 backup cifrado) e [#376](https://github.com/KalleoPinheiro/estomasystech/issues/376) (jurídico,
@@ -314,7 +315,8 @@ Sem a chave privada `age`, nenhum backup serve.
 
 Os comandos do servidor rodam por `ssh vps`; os da máquina do operador, no WSL. **Nenhum segredo
 vai para o chat nem para o repositório.** No zsh, para digitar um segredo sem eco, use
-`bash -c 'read -rs V; ...'`.
+`bash -c 'read -rs V; ...'`. Roteiro para leigo, com cada comando e as armadilhas da instalação
+real: [`backup-passo-a-passo.md`](backup-passo-a-passo.md).
 
 1. **Chave `age`, na máquina do operador** (nunca no servidor):
 
@@ -330,15 +332,22 @@ vai para o chat nem para o repositório.** No zsh, para digitar um segredo sem e
      Union (`eu`)**. A jurisdição não muda depois de criado.
    - No bucket, *Settings → Bucket lock rules → Add rule*: prefixo `prod/`, retenção **30 dias**.
    - *Settings → Object lifecycle rules → Add rule*: prefixo `prod/`, apagar objetos com **35 dias**.
-   - *Manage API tokens → Create API token*: permissão **Object Read & Write**, só esse bucket.
-     Anote o Access Key ID e o Secret (vão direto para o servidor no passo 4).
+   - *Manage API tokens → Create Account API token*: permissão **Object Read & Write**, só esse
+     bucket. Anote o Access Key ID (32 caracteres) e o Secret (64) da tela de sucesso, não o
+     "Token value" (vão direto para o servidor no passo 4). `403 AccessDenied` no passo 4 com
+     escopo certo = dupla de chaves de outro token: crie outro.
 
 3. **Pacotes e arquivos no servidor:**
 
    ```bash
-   sudo DEBIAN_FRONTEND=noninteractive apt install -y age rclone msmtp
+   sudo DEBIAN_FRONTEND=noninteractive apt install -y age msmtp
+   cd /tmp && curl -fsSLO https://downloads.rclone.org/rclone-current-linux-amd64.deb \
+     && sudo apt install -y ./rclone-current-linux-amd64.deb && rm rclone-current-linux-amd64.deb
    sudo install -d -m 700 /etc/estomasystech /opt/estomasystech-backup
    ```
+
+   O `rclone` do `apt` do Ubuntu (1.60) falha no R2 com `501 NotImplemented`; o pacote oficial
+   (1.75+) funciona.
 
    Da máquina do operador, num checkout atualizado do repositório:
 
@@ -363,6 +372,7 @@ vai para o chat nem para o repositório.** No zsh, para digitar um segredo sem e
      type = s3
      provider = Cloudflare
      endpoint = https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com
+     region = auto
      access_key_id = <Access Key ID do passo 2>
      secret_access_key = <Secret do passo 2>
      no_check_bucket = true
@@ -389,14 +399,19 @@ vai para o chat nem para o repositório.** No zsh, para digitar um segredo sem e
      defaults
      auth on
      tls on
+     tls_starttls on
      tls_trust_file /etc/ssl/certs/ca-certificates.crt
-     account default
+     account resend
      host smtp.resend.com
      port 587
      user resend
      password <API key do Resend>
-     from <remetente de um domínio verificado no Resend>
+     from <só o endereço, de um domínio verificado no Resend>
+     from_full_name EstomaSysTech
+     account default : resend
      ```
+
+     `from` com nome ou `< >` faz o Resend responder `501 Bad sender address syntax`.
 
 5. **Primeiro backup, à mão:**
 
@@ -457,13 +472,24 @@ que cabe.
 
 ### 5.3 Teste de restauração (mensal)
 
-Numa máquina descartável (o WSL do operador, com o repositório e Docker), sem tocar a produção:
+Numa máquina descartável (o WSL do operador, com o repositório e Docker), sem tocar a produção.
+O banco do teste sobe em **Postgres 18**, o mesmo da produção: o `docker-compose.yml` ainda é 16
+([#385](https://github.com/KalleoPinheiro/estomasystech/issues/385)) e o `pg_restore` 16 não lê
+dump do 18. Os `read` são de bash (no zsh, rode `bash` antes). O download usa um token R2 **só de
+leitura** (não o do servidor), passado por variáveis de ambiente, sem arquivo:
 
 ```bash
-export COMPOSE_FILE=docker-compose.yml COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433
-# POSTGRES_PASSWORD qualquer; AUTH_SECRET e DATA_ENCRYPTION_KEY de produção (do cofre) no ambiente
+printf 'services:\n  db:\n    image: postgres:18-alpine\n' > /tmp/compose.restore-pg18.yml
+export COMPOSE_FILE=docker-compose.yml:/tmp/compose.restore-pg18.yml COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433 APP_URL=http://localhost:3100
+export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+read -rsp "AUTH_SECRET: " AUTH_SECRET; echo; export AUTH_SECRET                       # de produção
+read -rsp "DATA_ENCRYPTION_KEY: " DATA_ENCRYPTION_KEY; echo; export DATA_ENCRYPTION_KEY   # de produção
 docker compose up -d --build --wait
-rclone copy r2:estomasystech-backups-age/prod/<data UTC> ./<data UTC>   # rclone local com um token de leitura
+read -rp "Access Key ID: " AK; read -rsp "Secret: " SK; echo
+RCLONE_CONFIG_R2RO_TYPE=s3 RCLONE_CONFIG_R2RO_PROVIDER=Cloudflare RCLONE_CONFIG_R2RO_REGION=auto \
+RCLONE_CONFIG_R2RO_ENDPOINT=https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com \
+RCLONE_CONFIG_R2RO_ACCESS_KEY_ID="$AK" RCLONE_CONFIG_R2RO_SECRET_ACCESS_KEY="$SK" \
+  rclone copy r2ro:estomasystech-backups-age/prod/<data UTC> ./<data UTC>; unset AK SK
 docker compose stop app
 BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh ./<data UTC> --confirmar
 docker compose up -d --wait app
@@ -472,7 +498,7 @@ docker compose up -d --wait app
 Sem `BACKUP_DB_CONTAINER`, o script usa o `db` e o volume `uploads` desse projeto compose.
 Abra `http://localhost:3100`, entre e confira a ficha de um paciente com evolução, anamnese e
 foto. Cronometre do início do download até a ficha abrir (é o RTO real). Depois,
-`docker compose down -v` e apague a chave e o backup da máquina. Registre abaixo; se algo
+`docker compose down -v`, apague a chave, o backup e `/tmp/compose.restore-pg18.yml` da máquina. Registre abaixo; se algo
 falhar, abra issue com o rótulo `bug`.
 
 | Data | Backup de | Quem | Tempo até voltar | Resultado |

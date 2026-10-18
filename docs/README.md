@@ -47,6 +47,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | --- | --- |
 | [`engineering/onboarding.md`](engineering/onboarding.md) | requisitos, Docker, Node local, **variáveis de ambiente**, testes, gates |
 | [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Traefik do Coolify, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
+| [`engineering/backup-passo-a-passo.md`](engineering/backup-passo-a-passo.md) | **backup cifrado do zero**, para leigo: chave `age`, R2 na UE, scripts, alerta por e-mail, primeiro backup e teste de restauração, com as armadilhas da instalação real |
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
