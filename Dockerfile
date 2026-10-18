@@ -8,6 +8,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Heap do build (Coolify): o `--max-old-space-size` do script `build` não chega ao processo filho
+# do "Running TypeScript" do Next, que estoura memória; NODE_OPTIONS vale para toda a árvore.
+# Fica só no estágio builder: não vaza para o runner.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
 
 FROM node:24-alpine AS runner

@@ -114,7 +114,7 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
   Ele já ocupa 80/443 e emite o certificado; nenhum outro proxy sobe no repositório. Dois formatos:
   - **Recomendado: Dockerfile + Postgres gerenciado.** No Coolify, recurso "Dockerfile" apontando
     para o repositório (porta 3000, domínio `estomasystech.kalleopinheiro.com.br`) e um recurso
-    PostgreSQL 16 do próprio Coolify (sem porta pública) com a `DATABASE_URL` interna no app.
+    PostgreSQL 18 (`postgres:18-alpine`) do próprio Coolify (sem porta pública) com a `DATABASE_URL` interna no app.
   - **Compose** (`docker-compose.yml:docker-compose.prod.yml`): app e banco sem porta no host;
     o domínio entra na variável mágica `SERVICE_FQDN_APP_3000` do recurso.
 - **Middlewares do Traefik** (arquivo `shared-middlewares.yaml` do proxy): `rate-limit-app`,
@@ -127,6 +127,11 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
   - *Imagem*: `Dockerfile` já roda como `nextjs` (não-root), `PORT=3000`, `HOSTNAME=0.0.0.0`,
     `HEALTHCHECK` em `/api/health` (liveness, sem banco) e `TZ`/`APP_TIMEZONE=America/Sao_Paulo`.
     No Coolify use a porta 3000 e, como verificação do recurso, `/api/health/ready`.
+  - *Memória do build*: o `Dockerfile` define `ENV NODE_OPTIONS=--max-old-space-size=4096` no
+    estágio `builder` (só nele; o `runner` não herda). O `--max-old-space-size` do script
+    `npm run build` não alcança o processo filho do "Running TypeScript" do Next, que estourava
+    memória (OOM) no primeiro deploy. Não é preciso variável de build no Coolify; se você criou
+    `NODE_OPTIONS` como *Buildtime only* de contorno, pode apagá-la.
   - *Variáveis* (marque como secreto no Coolify): `DATABASE_URL`, `AUTH_SECRET`,
     `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `ESTOMASYSTECH_BOOTSTRAP_TOKEN`;
     não secretas: `APP_URL=https://estomasystech.kalleopinheiro.com.br`, `EMAIL_FROM`,
