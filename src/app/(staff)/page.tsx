@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { SummaryCard } from '@/components/summary-card';
 import { TriagePhotoList } from '@/components/triage-photo-list';
 import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
+import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
 import {
@@ -20,9 +21,10 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/format';
-import { useStaffAccess } from '@/lib/staff-access';
+import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useTriageQueue } from '@/lib/use-triage-queue';
+import { MajorityReviewCard } from './majority-review-card';
 
 interface SummaryData {
   billing: BillingSummary;
@@ -48,6 +50,9 @@ export default function DashboardPage() {
   const showFinance = can('/api/summary');
   const showStock = can('/api/supplies');
   const showTriage = can('/api/photos/triage');
+  // Aviso de maioridade (#372): só quem gerencia responsáveis decide.
+  const role = useStaffIdentity()?.role ?? null;
+  const showMajority = role !== null && GUARDIAN_MANAGER_ROLES.includes(role);
   const summaryQuery = useApiQuery<SummaryData>(
     showFinance ? '/api/summary' : null,
   );
@@ -96,6 +101,8 @@ export default function DashboardPage() {
       )}
 
       {showTriage && <TriageQueue />}
+
+      {showMajority && <MajorityReviewCard />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TodayAppointmentsCard

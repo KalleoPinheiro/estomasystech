@@ -31,6 +31,16 @@ export interface ConsentRecordState {
   /** IP de origem do aceite (evidência). */
   ipAddress: string | null;
   acceptedAt: Date;
+  /** Representante legal que assinou pelo menor (#372, ADR-032). Nulo = o próprio paciente. */
+  signerGuardianId?: string | null;
+  /** Parentesco do representante no momento da assinatura. */
+  signerRelationship?: string | null;
+}
+
+/** Quem assinou em nome do paciente menor: o cadastro do responsável e o parentesco. */
+export interface ConsentSigner {
+  guardianId: string;
+  relationship: string;
 }
 
 /** Estado de linha legada (pré-#70): sem `kind`/`textVersion` gravados. */
@@ -44,6 +54,11 @@ type LegacyConsentRecordState = Omit<
       'kind' | 'textVersion' | 'purpose' | 'controllerSnapshot'
     >
   >;
+
+const signerState = (signer: ConsentSigner | null | undefined) => ({
+  signerGuardianId: signer?.guardianId ?? null,
+  signerRelationship: signer?.relationship ?? null,
+});
 
 export const hashConsentText = (text: string): string =>
   createHash('sha256').update(text, 'utf8').digest('hex');
@@ -59,6 +74,7 @@ export class ConsentRecord {
     purpose?: ConsentPurpose;
     controllerSnapshot?: string | null;
     ipAddress?: string | null;
+    signer?: ConsentSigner | null;
   }): ConsentRecord {
     if (!input.patientId.trim()) {
       throw new ValidationError('Paciente é obrigatório');
@@ -79,6 +95,7 @@ export class ConsentRecord {
       controllerSnapshot: input.controllerSnapshot?.trim() || null,
       ipAddress: input.ipAddress?.trim() || null,
       acceptedAt: new Date(),
+      ...signerState(input.signer),
     });
   }
 
@@ -87,6 +104,7 @@ export class ConsentRecord {
     patientId: string;
     purpose?: ConsentPurpose;
     ipAddress?: string | null;
+    signer?: ConsentSigner | null;
   }): ConsentRecord {
     if (!input.patientId.trim()) {
       throw new ValidationError('Paciente é obrigatório');
@@ -101,6 +119,7 @@ export class ConsentRecord {
       controllerSnapshot: null,
       ipAddress: input.ipAddress?.trim() || null,
       acceptedAt: new Date(),
+      ...signerState(input.signer),
     });
   }
 
@@ -197,6 +216,14 @@ export class ConsentRecord {
 
   get textVersion(): string | null {
     return this.state.textVersion;
+  }
+
+  /** Representante que assinou pelo menor, ou `null` quando foi o próprio paciente. */
+  get signer(): ConsentSigner | null {
+    const { signerGuardianId, signerRelationship } = this.state;
+    return signerGuardianId
+      ? { guardianId: signerGuardianId, relationship: signerRelationship ?? '' }
+      : null;
   }
 
   get ipAddress(): string | null {

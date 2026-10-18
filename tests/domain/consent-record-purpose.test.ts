@@ -114,3 +114,39 @@ describe('Feature: Finalidade do consentimento (#216, ADR-030)', () => {
     expect(isConsentPurpose(null)).toBe(false);
   });
 });
+
+describe('Feature: quem assinou pelo menor (#372)', () => {
+  it('Dado o representante, Quando aceitar e revogar, Então o registro guarda o cadastro e o parentesco', () => {
+    const signer = { guardianId: 'g-1', relationship: 'mae' };
+    const accept = ConsentRecord.create({
+      patientId: 'p-1',
+      consentText: 'texto',
+      textVersion: 'v2',
+      signer,
+    });
+    const revoke = ConsentRecord.revoke({ patientId: 'p-1', signer });
+    expect(accept.signer).toEqual(signer);
+    expect(revoke.signer).toEqual(signer);
+  });
+
+  it('Dado o próprio paciente ou linha legada, Então não há representante', () => {
+    expect(
+      ConsentRecord.create({
+        patientId: 'p-1',
+        consentText: 'texto',
+        textVersion: 'v2',
+      }).signer,
+    ).toBeNull();
+    expect(
+      ConsentRecord.restore({
+        id: 'c-1',
+        patientId: 'p-1',
+        textHash: 'h',
+        ipAddress: null,
+        acceptedAt: new Date(),
+        signerGuardianId: 'g-1',
+        signerRelationship: null,
+      }).signer,
+    ).toEqual({ guardianId: 'g-1', relationship: '' });
+  });
+});

@@ -36,6 +36,8 @@ export const toPatientExportDto = (data: PatientDataExport) => ({
     purpose: consent.purpose,
     textVersion: consent.textVersion,
     controllerSnapshot: consent.controllerSnapshot,
+    // Parentesco do representante que assinou pelo menor (#372); nulo = o titular.
+    signedByRelationship: consent.signer?.relationship ?? null,
     textHash: consent.textHash,
     acceptedAt: consent.acceptedAt.toISOString(),
   })),

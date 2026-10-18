@@ -1,16 +1,17 @@
 import type { NextRequest } from 'next/server';
-import { resolvePortalPatient } from '@/application/portal/portal-identity';
+import {
+  consentSignerFor,
+  resolveConsentSigner,
+  resolvePortalPatient,
+} from '@/application/portal/portal-identity';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import { ConsentRecord } from '@/domain/consent/consent-record';
-import { NotFoundError } from '@/domain/shared/errors';
+import { ForbiddenError, NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
-import {
-  requirePatientPortalSession,
-  requirePortalSession,
-} from '@/lib/auth/require-session';
+import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import {
   sessionScope,
   writeClinicId,
@@ -39,6 +40,7 @@ function toConsentStatusDto(
   status: ReturnType<typeof ConsentRecord.resolveStatus>,
   purpose: string,
   consentText: string,
+  canSign: boolean,
 ) {
   const revoked = status.current?.kind === 'revoke';
   return {
@@ -46,8 +48,12 @@ function toConsentStatusDto(
     consentText,
     accepted: status.accepted,
     revoked,
+    // Quem está logado pode assinar este termo (o representante só pelo menor; #372).
+    canSign,
     acceptedAt: status.latestAccept?.acceptedAt.toISOString() ?? null,
     textVersion: status.latestAccept?.textVersion ?? null,
+    // Parentesco de quem assinou pelo menor; nulo quando foi o próprio paciente.
+    signedByRelationship: status.latestAccept?.signer?.relationship ?? null,
     revokedAt: revoked
       ? (status.current?.acceptedAt.toISOString() ?? null)
       : null,
@@ -71,18 +77,29 @@ export async function GET(request: NextRequest) {
       document.template,
       purpose,
     );
+    const canSign = await consentSignerFor(services, auth.session, patient)
+      .then(() => true)
+      .catch((error: unknown) => {
+        if (error instanceof ForbiddenError) return false;
+        throw error;
+      });
     const controller = await controllerOf(clinics, writeClinicId(auth.session));
     return toConsentStatusDto(
       status,
       purpose,
       renderLegalText(document.template, controller),
+      canSign,
     );
   });
 }
 
-/** Aceite digital: grava hash do texto-base + clínica e encarregado exibidos + data + IP (evidência LGPD). */
+/**
+ * Aceite digital: grava hash do texto-base + clínica e encarregado exibidos +
+ * data + IP (evidência LGPD). O representante legal assina pelo menor e o
+ * registro guarda o cadastro e o parentesco dele (#372, ADR-032).
+ */
 export async function POST(request: NextRequest) {
-  const auth = requirePortalSession(request, 'patient');
+  const auth = requirePatientPortalSession(request);
   if (!auth.ok) return auth.response;
 
   return handleRequest(async () => {
@@ -90,7 +107,10 @@ export async function POST(request: NextRequest) {
     const document = CONSENT_DOCUMENTS[purpose];
     const services = await getRepositories(writeScope(auth.session));
     const { consentRecords, auditEvents, clinics } = services;
-    const patient = await resolvePortalPatient(services, auth.session);
+    const { patient, signer } = await resolveConsentSigner(
+      services,
+      auth.session,
+    );
 
     const existing = await consentRecords.findByPatientId(patient.id);
     const status = ConsentRecord.resolveStatus(
@@ -98,7 +118,10 @@ export async function POST(request: NextRequest) {
       document.template,
       purpose,
     );
-    if (status.accepted && status.current) {
+    // Já aceito: só grava de novo quando o paciente, já adulto, assina em
+    // nome próprio o que o representante aceitou por ele.
+    const resignsOwnName = signer === null && !!status.current?.signer;
+    if (status.accepted && status.current && !resignsOwnName) {
       return {
         accepted: true,
         acceptedAt: status.current.acceptedAt.toISOString(),
@@ -116,6 +139,7 @@ export async function POST(request: NextRequest) {
       controllerSnapshot: controllerSnapshot(controller),
       // Evidência do aceite: mesma derivação confiável usada no rate limit (SEC1-10..13).
       ipAddress: clientIp(request),
+      signer,
     });
     await consentRecords.save(record);
 
@@ -124,7 +148,7 @@ export async function POST(request: NextRequest) {
       resourceType: 'consent',
       resourceId: record.id,
       patientId: patient.id,
-      detail: `${purpose} · hash ${record.textHash.slice(0, 12)}…`,
+      detail: `${purpose} · hash ${record.textHash.slice(0, 12)}…${signer ? ' · pelo representante legal' : ''}`,
     });
     return { accepted: true, acceptedAt: record.acceptedAt.toISOString() };
   });

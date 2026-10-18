@@ -116,6 +116,7 @@
 - Patient's signed agreement to data use (photos, clinical records).
 - Timestamp and IP address recorded.
 - Two terms, each with its own `purpose`: `treatment` (TCLE, `CONSENT_TEXT` `v2`) and `image` (clinical photos, `IMAGE_CONSENT_TEXT` `v1`). Both are wired in, with legal review still pending ([ADR-030](./docs/adr/030-textos-lgpd-ligados-sem-revisao-juridica.md)).
+- For a **Minor** (under 18), the legal representative (mother, father or guardian/tutor) accepts and revokes both terms in the portal; the record keeps who signed (`signer_guardian_id`, relationship) ([ADR-032](./docs/adr/032-paciente-menor-no-portal-pelo-representante-legal.md)).
 
 **Partner Share Consent** (consentimento para o parceiro)
 
@@ -160,7 +161,7 @@ Fixed catalog of seven; a Clinic's Admin de Empresa cannot invent new roles or p
 - **Profissional** (equipe): clinical access, but scoped dynamically — sees only patients it has at least one appointment or evolution note with. Not a fixed "ownership": a patient can accumulate access for several professionals over time (coverage, transfer, return). Creates Patient and Partner accounts.
 - **Patient** (paciente): own portal, can read own records and submit photos. Never self-registers — always created by staff.
 - **Partner** (parceiro): own portal, referral tracking. Never self-registers, and creates no one.
-- **Guardian** (responsável): own portal login that acts **on behalf of** the linked Patient(s) — sees and schedules for them, never accepts consents or files LGPD requests for them. Created by Admin de Empresa or Atendente, who attest the Patient's authorization; every request is written to the audit trail with the Guardian as actor and the Patient as data subject ([ADR-027](./docs/adr/027-responsavel-acessa-portal-em-nome-do-paciente.md)).
+- **Guardian** (responsável): own portal login that acts **on behalf of** the linked Patient(s) — sees and schedules for them, never accepts consents or files LGPD requests for them, except that the legal representative (mother, father, tutor) of a **Minor** accepts and revokes the treatment and image terms. A Minor has no own portal login; at 18 the clinic is told to hand the access over ([ADR-032](./docs/adr/032-paciente-menor-no-portal-pelo-representante-legal.md)). Created by Admin de Empresa or Atendente, who attest the Patient's authorization; every request is written to the audit trail with the Guardian as actor and the Patient as data subject ([ADR-027](./docs/adr/027-responsavel-acessa-portal-em-nome-do-paciente.md)).
 
 **Account provisioning** (cadastro de contas)
 
@@ -333,4 +334,5 @@ See `src/` structure:
 - [ADR-015: Servidor sem cifra de disco](./docs/adr/015-servidor-sem-cifra-de-disco.md) — sem LUKS na VPS: fotos em claro no disco, risco aceito; ajusta o ADR-006.
 - [ADR-017: Retenção, decisões complementares](./docs/adr/017-retencao-decisoes-complementares.md) — completa o ADR-013: cadastro do parceiro guardado, paciente anonimizado não reativa, conta anonimizada não recebe senha nem convite.
 - [ADR-018: Transferência internacional (UE)](./docs/adr/018-transferencia-internacional-ue.md) — dados na Alemanha, adequação Brasil ↔ UE como base do art. 33, backup cifrado em outra localização da UE.
+- [ADR-032: Paciente menor no portal pelo representante legal](./docs/adr/032-paciente-menor-no-portal-pelo-representante-legal.md) — menor sem conta própria; mãe, pai ou tutor acessa e assina os termos no portal; aviso à clínica aos 18 anos.
 - [ADR-021: Evento do Google Agenda só com iniciais](./docs/adr/020-evento-do-google-agenda-so-com-iniciais.md) — iniciais + horário + link, sem nome, telefone nem procedimento.

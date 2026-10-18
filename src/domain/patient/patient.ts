@@ -9,6 +9,7 @@ import {
   isBrazilianE164,
   normalizeBrazilianPhoneOrThrow,
 } from '../shared/phone';
+import { isMinorOn } from './majority';
 
 export interface PatientProps {
   fullName: string;
@@ -37,6 +38,11 @@ export interface PatientState extends PatientProps {
   anonymizedAt?: Date | null;
   /** O paciente encerrou o acesso do responsável ao portal (#354, ADR-028). */
   guardianPortalRevokedAt?: Date | null;
+  /**
+   * A clínica viu que o paciente fez 18 anos e decidiu manter o acesso com o
+   * responsável (ex.: curatela) em vez de transferir (#372, ADR-032).
+   */
+  majorityReviewedAt?: Date | null;
 }
 
 export const ANONYMIZED_PATIENT_REACTIVATION =
@@ -110,8 +116,21 @@ export class Patient {
     return new Patient({
       ...this.state,
       ...validated,
-      ...(guardianChanged && { guardianPortalRevokedAt: null }),
+      ...(guardianChanged && {
+        guardianPortalRevokedAt: null,
+        majorityReviewedAt: null,
+      }),
     });
+  }
+
+  /** A clínica mantém o acesso com o responsável depois dos 18 anos (ADR-032). */
+  markMajorityReviewed(now: Date = new Date()): Patient {
+    return new Patient({ ...this.state, majorityReviewedAt: now });
+  }
+
+  /** Menor de idade em `now` (sem data de nascimento, vale como adulto). */
+  isMinorOn(now: Date = new Date()): boolean {
+    return isMinorOn(this.state.birthDate, now);
   }
 
   /** O próprio paciente encerra o acesso do responsável ao portal (ADR-028). */
@@ -183,6 +202,10 @@ export class Patient {
 
   get guardianPortalRevokedAt(): Date | null {
     return this.state.guardianPortalRevokedAt ?? null;
+  }
+
+  get majorityReviewedAt(): Date | null {
+    return this.state.majorityReviewedAt ?? null;
   }
 
   get isActive(): boolean {

@@ -137,7 +137,7 @@ describe('Feature: Prazos do aviso vêm da retenção (#323, ADR-031)', () => {
       version: PRIVACY_NOTICE_VERSION,
       years: RETENTION_YEARS,
     }).toEqual({
-      version: 'v1',
+      version: 'v2',
       years: {
         clinicalRecord: 20,
         auditTrail: 5,

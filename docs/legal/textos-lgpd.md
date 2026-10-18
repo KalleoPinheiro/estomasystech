@@ -22,10 +22,10 @@ que decidimos e como trocá-los depois da revisão; não os repete (um fato em u
 
 | Texto | Arquivo | Versão | Quem aceita | Hash e invalidação |
 | --- | --- | --- | --- | --- |
-| TCLE de tratamento | [`src/lib/consent-text.ts`](../../src/lib/consent-text.ts) | `v2` | paciente, no portal (ou em papel impresso) | hash do texto-base; trocar o texto pede novo aceite |
-| Autorização de imagem (fotos clínicas) | [`src/lib/image-consent-text.ts`](../../src/lib/image-consent-text.ts) | `v1` | paciente, no portal; libera o envio de foto | idem, **aceite e revogação à parte** do tratamento |
+| TCLE de tratamento | [`src/lib/consent-text.ts`](../../src/lib/consent-text.ts) | `v2` | paciente, no portal (ou em papel impresso); pelo menor, o representante legal no portal (ADR-032) | hash do texto-base; trocar o texto pede novo aceite |
+| Autorização de imagem (fotos clínicas) | [`src/lib/image-consent-text.ts`](../../src/lib/image-consent-text.ts) | `v1` | paciente, no portal; pelo menor, o representante legal; libera o envio de foto | idem, **aceite e revogação à parte** do tratamento |
 | Consentimento para o parceiro indicador | [`src/lib/partner-share-consent-text.ts`](../../src/lib/partner-share-consent-text.ts) | `v1` | paciente (portal) ou equipe, em papel (#310) | idem; texto fixo, sem dados da clínica |
-| Aviso de privacidade | [`src/lib/privacy-notice-text.ts`](../../src/lib/privacy-notice-text.ts) | `v1` | ninguém aceita (informativo) | sem hash |
+| Aviso de privacidade | [`src/lib/privacy-notice-text.ts`](../../src/lib/privacy-notice-text.ts) | `v2` | ninguém aceita (informativo) | sem hash |
 | Aviso dos direitos do titular ("Meus dados") | [`src/lib/data-rights-text.ts`](../../src/lib/data-rights-text.ts) | n/a | informativo | resume o item 7 do aviso |
 
 Os marcadores `{{CLINICA_NOME}}`, `{{CLINICA_CNPJ}}`, `{{CLINICA_ENDERECO}}`,
@@ -57,7 +57,7 @@ O jurídico pode reabrir qualquer um.
 | 4 | Uso de foto fora do tratamento | **Não há**. O termo de imagem exclui aula, congresso e divulgação; qualquer uso futuro pede termo novo |
 | 5 | Art. 33 para Resend e Google Agenda | O aviso diz que só se usam prestadores com mecanismo do art. 33. **Condição de go-live:** o jurídico confirma o mecanismo de cada um (runbook § 1) |
 | 6 | Número do ato da ANPD sobre a adequação UE | O aviso cita o art. 33, I sem número; o jurídico confere no Diário Oficial (ADR-018) |
-| 7 | Menores de 18 anos | O responsável legal assina o termo (item 6 de cada termo). O **portal** não aceita termos em nome do paciente (ADR-027); a assinatura é em papel, e a equipe **não tem como registrar o aceite em papel** do TCLE/imagem (só o do parceiro). Limite aceito, ver § 5 |
+| 7 | Menores de 18 anos | O responsável legal assina o termo (item 6 de cada termo). Desde a #372 ([ADR-032](../adr/032-paciente-menor-no-portal-pelo-representante-legal.md)) o menor **não tem conta própria**: o pai, a mãe ou o tutor acessa o portal em nome dele e **aceita e revoga** o TCLE e o termo de imagem ali, com o cadastro e o parentesco de quem assinou gravados no aceite. O texto dos termos não mudou (nenhum aceite caiu); o aviso de privacidade foi para `v2` explicando o fluxo. Aos 18 anos, a clínica é avisada para passar o acesso ao paciente, que pode aceitar em nome próprio |
 | 8 | O que o parceiro vê | O texto lista consultas, condições e avaliações dos últimos 24 meses, igual ao `GetPartnerPortalData`; não promete nada além disso |
 | 9 | Texto longo no celular | Texto completo; resumo em camadas fica para depois da revisão |
 
@@ -75,8 +75,9 @@ O jurídico pode reabrir qualquer um.
 ## 5. Limites conhecidos desta versão
 
 - **Sem revisão jurídica** (o motivo deste arquivo existir).
-- **Menores:** sem registro de aceite em papel do TCLE e da imagem. Abrir ticket se a clínica
-  atender menores com foto pelo portal.
+- **Menores:** o sistema não confere guarda nem tutela; vale o parentesco que a equipe cadastrou
+  e atestou (ADR-032). Paciente sem data de nascimento é tratado como adulto. Para o jurídico
+  revisar: se o aceite do representante deve vencer algum tempo depois dos 18 anos.
 - **Prazos do aviso** vêm de `RETENTION_YEARS` (ADR-013, ADR-017, ADR-031): o texto interpola os
   números. Mudar um prazo exige subir `PRIVACY_NOTICE_VERSION` (o teste de `legal-text` trava).
 - **Conta anonimizada ou paciente com e-mail de terceiro:** o aviso por e-mail só chega a quem

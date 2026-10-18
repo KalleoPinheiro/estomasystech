@@ -305,6 +305,9 @@ describe('Feature: Conformidade das guardas de rota', () => {
       // #329: responsáveis são gerenciados pela recepção e pelo Admin.
       'api/guardians/route.ts': ['profissional'],
       'api/guardians/[id]/route.ts': ['profissional'],
+      // #372: o aviso de maioridade é de quem gerencia responsáveis.
+      'api/guardians/majority/route.ts': ['profissional'],
+      'api/guardians/majority/[patientId]/keep/route.ts': ['profissional'],
     };
 
     /** O super_admin não tem clínica: a sessão dele nasce com `clinicId` nulo. */

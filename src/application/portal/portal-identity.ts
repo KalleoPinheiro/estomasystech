@@ -5,11 +5,18 @@ import type {
   UserAccountRepository,
 } from '@/domain/auth/user-account';
 import type { UserRole } from '@/domain/auth/user-role';
+import type { ConsentSigner } from '@/domain/consent/consent-record';
+import { canRepresentMinor } from '@/domain/guardian/guardian';
+import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { Partner } from '@/domain/partner/partner';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { Patient } from '@/domain/patient/patient';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
-import { ConflictError, NotFoundError } from '@/domain/shared/errors';
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+} from '@/domain/shared/errors';
 
 /** O que o portal sabe de quem está logado: o e-mail de login e o papel. */
 export interface PortalSessionIdentity {
@@ -23,6 +30,20 @@ export interface PortalSessionIdentity {
 
 export const GUARDIAN_PICK_PATIENT_MESSAGE =
   'Escolha o paciente que você está representando.';
+
+/** Conta própria de paciente menor não entra no portal (#372, ADR-032). */
+export const MINOR_PATIENT_PORTAL_MESSAGE =
+  'Paciente menor de 18 anos não tem acesso próprio ao portal: quem acessa é o representante legal. Fale com a clínica.';
+
+/** Aceite e revogação dos termos de adulto são só do próprio paciente (ADR-027). */
+export const ADULT_CONSENT_ONLY_MESSAGE =
+  'O aceite dos termos é do próprio paciente. Como responsável, você só assina pelo paciente menor de idade.';
+
+type PortalRepos = {
+  userAccounts: UserAccountRepository;
+  patients: PatientRepository;
+  guardians: GuardianRepository;
+};
 
 /** Recurso da trilha: cada requisição do responsável em nome de um paciente. */
 export const GUARDIAN_ACCESS_RESOURCE = 'guardian-access';
@@ -50,19 +71,30 @@ async function linkedAccount(
  * Pacientes ativos que a conta de responsável pode representar: os ligados ao
  * cadastro dela (`patients.guardian_id`). Desvincular o paciente, inativá-lo,
  * desativar a conta ou o paciente encerrar o acesso (ADR-028) tira o paciente
- * da lista sem mais nenhum passo (ADR-027).
+ * da lista sem mais nenhum passo (ADR-027). Paciente menor só é representado
+ * por mãe, pai ou representante legal (#372, ADR-032): avô ou cuidador sem
+ * tutela não vê o menor, mesmo vinculado.
  */
 export async function listRepresentablePatients(
-  repos: { userAccounts: UserAccountRepository; patients: PatientRepository },
+  repos: PortalRepos,
   session: PortalSessionIdentity,
 ): Promise<Patient[]> {
   const account = await linkedAccount(repos.userAccounts, session);
   if (account?.role !== 'guardian' || !account.guardianId) {
     throw new NotFoundError('Responsável', account?.id ?? 'sem-conta');
   }
-  const linked = await repos.patients.findByGuardian(account.guardianId);
+  const [linked, guardian] = await Promise.all([
+    repos.patients.findByGuardian(account.guardianId),
+    repos.guardians.findById(account.guardianId),
+  ]);
+  const representsMinors =
+    !!guardian && canRepresentMinor(guardian.relationship);
+  const now = new Date();
   return linked.filter(
-    (patient) => patient.isActive && !patient.guardianPortalRevokedAt,
+    (patient) =>
+      patient.isActive &&
+      !patient.guardianPortalRevokedAt &&
+      (representsMinors || !patient.isMinorOn(now)),
   );
 }
 
@@ -73,11 +105,7 @@ export async function listRepresentablePatients(
  * conta do responsável; titular = paciente (`patientId`).
  */
 async function resolveGuardianPatient(
-  repos: {
-    userAccounts: UserAccountRepository;
-    patients: PatientRepository;
-    auditEvents: AuditEventRepository;
-  },
+  repos: PortalRepos & { auditEvents: AuditEventRepository },
   session: PortalSessionIdentity,
   account: UserAccount,
 ): Promise<Patient> {
@@ -107,11 +135,7 @@ async function resolveGuardianPatient(
 }
 
 export async function resolvePortalPatient(
-  repos: {
-    userAccounts: UserAccountRepository;
-    patients: PatientRepository;
-    auditEvents: AuditEventRepository;
-  },
+  repos: PortalRepos & { auditEvents: AuditEventRepository },
   session: PortalSessionIdentity,
 ): Promise<Patient> {
   const account = await linkedAccount(repos.userAccounts, session);
@@ -125,7 +149,46 @@ export async function resolvePortalPatient(
     // `subject` é o e-mail de login: não vai para o log (#219).
     throw new NotFoundError('Paciente', account?.id ?? 'sem-conta');
   }
+  if (patient.isMinorOn()) {
+    // Conta criada antes da #372 ou data de nascimento corrigida depois: o
+    // menor não acessa sozinho (LGPD, art. 14).
+    throw new ForbiddenError(MINOR_PATIENT_PORTAL_MESSAGE);
+  }
   return patient;
+}
+
+/**
+ * Titular e quem assina os termos (TCLE e imagem, #372, ADR-032): o paciente
+ * adulto assina por si (`signer` nulo); o representante legal assina pelo
+ * menor, com o cadastro e o parentesco gravados no registro. Responsável de
+ * paciente adulto recebe `403`: o aceite continua personalíssimo (ADR-027).
+ */
+export async function resolveConsentSigner(
+  repos: PortalRepos & { auditEvents: AuditEventRepository },
+  session: PortalSessionIdentity,
+): Promise<{ patient: Patient; signer: ConsentSigner | null }> {
+  const patient = await resolvePortalPatient(repos, session);
+  return { patient, signer: await consentSignerFor(repos, session, patient) };
+}
+
+/** Quem assina por `patient` já resolvido; `403` para o responsável de adulto. */
+export async function consentSignerFor(
+  repos: Pick<PortalRepos, 'guardians'>,
+  session: PortalSessionIdentity,
+  patient: Patient,
+): Promise<ConsentSigner | null> {
+  if (session.role !== 'guardian') return null;
+  const guardian = patient.guardianId
+    ? await repos.guardians.findById(patient.guardianId)
+    : null;
+  if (
+    !guardian ||
+    !patient.isMinorOn() ||
+    !canRepresentMinor(guardian.relationship)
+  ) {
+    throw new ForbiddenError(ADULT_CONSENT_ONLY_MESSAGE);
+  }
+  return { guardianId: guardian.id, relationship: guardian.relationship };
 }
 
 export async function resolvePortalPartner(

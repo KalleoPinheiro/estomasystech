@@ -65,6 +65,8 @@ export class RowLockingTransactionManager implements TransactionManager {
       findByIds: (ids) => base.findByIds(ids),
       findByReferrer: (id) => base.findByReferrer(id),
       findByGuardian: (id) => base.findByGuardian(id),
+      findAdultsAwaitingMajorityReview: (ids, cutoff) =>
+        base.findAdultsAwaitingMajorityReview(ids, cutoff),
       findAll: (search, page) => base.findAll(search, page),
       findClinicIdById: (id) => base.findClinicIdById(id),
       findByIdForUpdate: async (id) => {
