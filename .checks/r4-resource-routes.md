@@ -1,6 +1,6 @@
 # R4 nas rotas clínicas por id de recurso (#186)
 
-Profile: `standard` · Source: [issue #186](https://github.com/KalleoPinheiro/vitta-flow/issues/186) (critérios 1–5), revisão pré-produção #183.
+Profile: `standard` · Source: [issue #186](https://github.com/KalleoPinheiro/estomasystech/issues/186) (critérios 1–5), revisão pré-produção #183.
 
 ## Checks
 

@@ -14,7 +14,7 @@ O cron do host chama a rota a cada 5 minutos; ela avalia quatro sinais e manda u
 alerta ativo ao operador da plataforma, pelo canal da plataforma
 ([ADR-011](../../adr/011-canal-de-comunicacao-por-clinica.md), [ADR-014](../../adr/014-observabilidade-sem-pii.md)).
 O canal não depende do banco: banco fora do ar ainda vira alerta. Decisão do dono na
-[#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212).
+[#212](https://github.com/KalleoPinheiro/estomasystech/issues/212).
 
 | Campo | Valor |
 | --- | --- |
@@ -42,7 +42,7 @@ O canal não depende do banco: banco fora do ar ainda vira alerta. Decisão do d
 | `reminders-stale` | última execução dos lembretes há mais de 26 h, ou nenhuma | tabela `job_runs` (a migração `0051` grava a hora dela) |
 | `delivery-failures` | falhas de envio de e-mail em 15 min ≥ `ALERT_DELIVERY_FAILURE_THRESHOLD` | convite/reset (`IssueAuthToken`) e lembretes |
 
-"Falha de envio" é só erro do provedor (decisão do dono, [#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313)): recusa ou erro devolvido por ele. Clínica sem canal (`delivered: false` por falta
+"Falha de envio" é só erro do provedor (decisão do dono, [#313](https://github.com/KalleoPinheiro/estomasystech/issues/313)): recusa ou erro devolvido por ele. Clínica sem canal (`delivered: false` por falta
 de credencial, lembrete `skipped`) é configuração, não falha, e não conta.
 
 Mesmo alerta ativo não sai de novo antes de 60 min. Contadores e esse intervalo ficam em memória

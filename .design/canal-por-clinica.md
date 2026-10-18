@@ -7,7 +7,7 @@
 
 - Project: em construção ativa, antes do go-live (primeira clínica ainda não está no ar).
 - Decision: comprometida por @KalleoPinheiro, 2026-10-10, nesta sessão de discovery — construir **antes do go-live**, com permissão para mudar esquema e comportamento "de forma segura e consciente".
-- In flight: RM-20 (Portal do Super Admin, [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214)) entregue; este trabalho estende `/plataforma` e reverte a premissa de `.design/lembretes-custo-zero.md` de que o e-mail sai pela conta única do Vitta Flow. Decisões abertas relacionadas e não tocadas: #215, #248, #250, #251, #210.
+- In flight: RM-20 (Portal do Super Admin, [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214)) entregue; este trabalho estende `/plataforma` e reverte a premissa de `.design/lembretes-custo-zero.md` de que o e-mail sai pela conta única do Vitta Flow. Decisões abertas relacionadas e não tocadas: #215, #248, #250, #251, #210.
 - At stake: caro — muda por onde **todo** e-mail sai (convite, redefinição de senha, lembretes) e guarda segredo de terceiros por clínica. Errar deixa uma clínica sem acesso ou expõe chave de API.
 
 ## Problem

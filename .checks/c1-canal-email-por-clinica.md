@@ -2,7 +2,7 @@
 
 Sources:
 
-- [KalleoPinheiro/vitta-flow#264](https://github.com/KalleoPinheiro/vitta-flow/issues/264) — a issue; aponta para a task
+- [KalleoPinheiro/estomasystech#264](https://github.com/KalleoPinheiro/estomasystech/issues/264) — a issue; aponta para a task
 - `.tasks/c1-canal-email-por-clinica.md` — critérios 1–11, Decided, Unresolved 1
 - `.design/canal-por-clinica.md` — Decisions: Modelo de envio, Tabela, Segredo, Resolução do gateway, E-mail da plataforma, Boot em produção, ADR
 

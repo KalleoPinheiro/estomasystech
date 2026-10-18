@@ -2,7 +2,7 @@
 
 Sources:
 
-- [KalleoPinheiro/vitta-flow#267](https://github.com/KalleoPinheiro/vitta-flow/issues/267) — a issue; aponta para a task
+- [KalleoPinheiro/estomasystech#267](https://github.com/KalleoPinheiro/estomasystech/issues/267) — a issue; aponta para a task
 - `.tasks/c4-plataforma-organizada.md` — critérios 1–9, Decided (contrato `emailChannel`), Impact (botões "Auditoria" da lista saem), Unresolved 1 (default: botão desabilitado)
 - `.design/canal-por-clinica.md` — Decisions: Status na plataforma, Taxonomia; Success (sinal precoce)
 

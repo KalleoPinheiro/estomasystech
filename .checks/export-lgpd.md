@@ -4,7 +4,7 @@ Profile: `standard` · handoff: sessão orquestradora faz a verificação indepe
 
 Sources:
 
-- [Issue #185](https://github.com/KalleoPinheiro/vitta-flow/issues/185): critérios de aceite 1–5 e a pergunta aberta sobre o Atendente
+- [Issue #185](https://github.com/KalleoPinheiro/estomasystech/issues/185): critérios de aceite 1–5 e a pergunta aberta sobre o Atendente
 - [ADR-002](../docs/adr/002-autorizacao-em-duas-camadas.md): proxy + handler leem a mesma política
 - [ADR-003](../docs/adr/003-modelo-de-papeis-multi-empresa.md): vínculo dinâmico do Profissional (R4)
 

@@ -9,7 +9,7 @@ last_reviewed: 2026-10-18
 # Runbook de produção
 
 Como colocar e manter no ar o Vitta Flow com dado de saúde (LGPD). Alvo decidido pelo dono do
-produto ([#206](https://github.com/KalleoPinheiro/vitta-flow/issues/206), 2026-10-11): **VPS
+produto ([#206](https://github.com/KalleoPinheiro/estomasystech/issues/206), 2026-10-11): **VPS
 Hetzner + `docker compose`** (app + Postgres), **uma réplica**, Caddy na frente terminando TLS,
 fotos em volume local. Desenvolvimento local fica em [`onboarding.md`](onboarding.md); erros
 conhecidos, em [`troubleshooting.md`](troubleshooting.md).
@@ -21,7 +21,7 @@ conhecidos, em [`troubleshooting.md`](troubleshooting.md).
 | Hospedagem | VPS Hetzner, `docker-compose.yml` + `docker-compose.prod.yml`, 1 réplica |
 | Fotos | volume `uploads` no servidor (`PHOTO_STORAGE` vazio) |
 | RPO / RTO | 24 h / 4 h: backup diário cifrado do banco e das fotos, 30 dias fora do servidor, teste de restauração mensal (§ 5) |
-| Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)) |
+| Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/estomasystech/issues/212)) |
 | Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, GlitchTip self-hosted no compose ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
 
 **Transferência internacional (LGPD art. 33):** o servidor fica fora do Brasil (Alemanha, UE). A
@@ -30,9 +30,9 @@ UE, adequação recíproca Brasil ↔ UE como base e cláusulas-padrão da ANPD 
 sai cifrado (`age`) e a Storage Box fica em outra localização **da UE**. **Pendência jurídica
 (bloqueia cadastrar paciente real):** a conferência da adequação na fonte primária, o mecanismo
 para Resend e Google Agenda (fora da UE) e a revisão jurídica dos cinco textos (aviso, TCLE, imagem, parceiro, direitos do titular; hoje `LEGAL_REVIEW_PENDING`, [ADR-030](../adr/030-textos-lgpd-ligados-sem-revisao-juridica.md)) e a ato da ANPD, na
-[#216](https://github.com/KalleoPinheiro/vitta-flow/issues/216).
+[#216](https://github.com/KalleoPinheiro/estomasystech/issues/216).
 
-Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/vitta-flow/issues/313),
+Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/estomasystech/issues/313),
 `.specs/STATE.md` AD-033):
 
 | Tema | Decisão | Onde entra |
@@ -70,7 +70,7 @@ Provisionamento, uma vez:
    oficial do Docker), `git`, `age` e `curl`.
 3. DNS: registro `A`/`AAAA` do domínio apontando para o servidor (o Caddy precisa dele para emitir
    o certificado).
-4. `git clone` do repositório em `/opt/vitta-flow` e, ali, um `.env` com `chmod 600`, a partir do
+4. `git clone` do repositório em `/opt/estomasystech` e, ali, um `.env` com `chmod 600`, a partir do
    `.env.example`, contendo pelo menos:
 
    ```bash
@@ -88,7 +88,7 @@ Provisionamento, uma vez:
    ALERT_EMAIL_TO=operador@exemplo.com.br
    ```
 
-   Com `COMPOSE_FILE` no `.env`, todo `docker compose` rodado em `/opt/vitta-flow` (inclusive
+   Com `COMPOSE_FILE` no `.env`, todo `docker compose` rodado em `/opt/estomasystech` (inclusive
    pelos scripts de backup) já inclui o Caddy.
 5. `docker compose up -d --build` e confira:
    `curl -fsS https://clinica.exemplo.com.br/api/health/ready` (`200` com banco e migrações `ok`).
@@ -169,7 +169,7 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
   nova e aceitam o de imagem no primeiro acesso ao portal.
 - **Depois das migrações deste lote:**
   1. `npm run db:portal-orphans` — lista contas de portal que a migração `0040` não conseguiu
-     vincular ao cadastro pelo e-mail ([#196](https://github.com/KalleoPinheiro/vitta-flow/issues/196));
+     vincular ao cadastro pelo e-mail ([#196](https://github.com/KalleoPinheiro/estomasystech/issues/196));
      recrie-as em */configuracoes* escolhendo o paciente/parceiro.
   2. `npm run data:reencrypt` — § 6.
 
@@ -222,7 +222,7 @@ Sem a chave privada `age`, nenhum backup serve.
 3. Rode uma vez à mão e confira a pasta nova no destino:
 
    ```bash
-   cd /opt/vitta-flow
+   cd /opt/estomasystech
    sudo BACKUP_AGE_RECIPIENTS_FILE=/etc/vitta/backup.pub BACKUP_OFFSITE_CMD='…' scripts/backup.sh
    ```
 
@@ -309,7 +309,7 @@ linha do crontab (`/etc/vitta/cron.headers`, `chmod 600`, com a linha
 ```text
 MAILTO=operador@exemplo.com.br
 # Backup diário às 02:00 de São Paulo. Silencioso quando dá certo; a falha vai por e-mail.
-0 5 * * * root . /etc/vitta/backup.env && /opt/vitta-flow/scripts/backup.sh >> /var/log/vitta-backup.log 2>&1 || echo "backup falhou: /var/log/vitta-backup.log"
+0 5 * * * root . /etc/vitta/backup.env && /opt/estomasystech/scripts/backup.sh >> /var/log/vitta-backup.log 2>&1 || echo "backup falhou: /var/log/vitta-backup.log"
 # Lembretes às 08:00 de São Paulo (decidido em 2026-10-12, #313).
 0 11 * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/reminders/run
 # Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1). O flock espera o backup
@@ -348,8 +348,8 @@ auditoria 5 anos, lista de espera e contas inativas 2 anos). Nada é excluído d
 da foto é apagado do volume `uploads`. Contrato e regras:
 [`integrations/retencao.md`](integrations/retencao.md), [ADR-013](../adr/013-retencao-por-anonimizacao.md),
 [ADR-031](../adr/031-retencao-em-dias-inteiros-e-fonte-unica.md).
-Issues: [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294),
-[#323](https://github.com/KalleoPinheiro/vitta-flow/issues/323).
+Issues: [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294),
+[#323](https://github.com/KalleoPinheiro/estomasystech/issues/323).
 
 - **Agendamento:** linha do `/etc/cron.d/vitta` no § 7, uma vez por dia às 03:00 de São Paulo,
   depois do backup, com o mesmo `CRON_SECRET` dos lembretes. Na alternativa Vercel, o
@@ -431,7 +431,7 @@ Roda **uma vez**, depois da migração `0063`. **Manual**. Regras: ACE-RN-57, [A
 
 ## 9. Monitoramento e alertas
 
-Decisões do dono ([#212](https://github.com/KalleoPinheiro/vitta-flow/issues/212)): tudo
+Decisões do dono ([#212](https://github.com/KalleoPinheiro/estomasystech/issues/212)): tudo
 self-hosted, alertas por **e-mail** ao operador pelo canal da plataforma. Desenho e o que sai do
 processo: [ADR-014](../adr/014-observabilidade-sem-pii.md).
 
@@ -524,7 +524,7 @@ docker compose logs --no-log-prefix app | jq -c 'select(.level == "error")'
 ```
 
 Os logs não carregam dado pessoal (`logError`,
-[#202](https://github.com/KalleoPinheiro/vitta-flow/issues/202); e-mail e número longo viram
+[#202](https://github.com/KalleoPinheiro/estomasystech/issues/202); e-mail e número longo viram
 `[e-mail]`/`[número]`). O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
 mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 

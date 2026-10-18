@@ -1,6 +1,6 @@
 # Fase C — LGPD / Segurança de Dado Specification
 
-Cobre as 4 issues da Fase C da auditoria UX: [#69](https://github.com/KalleoPinheiro/vitta-flow/issues/69), [#70](https://github.com/KalleoPinheiro/vitta-flow/issues/70), [#71](https://github.com/KalleoPinheiro/vitta-flow/issues/71), [#72](https://github.com/KalleoPinheiro/vitta-flow/issues/72).
+Cobre as 4 issues da Fase C da auditoria UX: [#69](https://github.com/KalleoPinheiro/estomasystech/issues/69), [#70](https://github.com/KalleoPinheiro/estomasystech/issues/70), [#71](https://github.com/KalleoPinheiro/estomasystech/issues/71), [#72](https://github.com/KalleoPinheiro/estomasystech/issues/72).
 
 ## Problem Statement
 

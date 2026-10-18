@@ -5,9 +5,9 @@
 
 ## Situation
 
-- Project: in active construction — revisão pré-produção ([#183](https://github.com/KalleoPinheiro/vitta-flow/issues/183)); nada em produção.
-- Decision: committed pelo [ADR-001](../docs/adr/001-multi-tenancy.md) ("toda empresa nova é criada manualmente pelo Super Admin" até a Fase 3). O **como** estava aberto em [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) e foi fechado nesta discovery com @KalleoPinheiro em 2026-09-27.
-- In flight: [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) (decisão mono × multi — respondida aqui), [#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210) (auditoria sem empresa cai na clínica legada — item 1 e 4 resolvidos aqui), [#211](https://github.com/KalleoPinheiro/vitta-flow/issues/211) (`partners.email` global — entra como bloco pré-requisito), [#215](https://github.com/KalleoPinheiro/vitta-flow/issues/215) (permissões dentro da clínica — fora deste escopo).
+- Project: in active construction — revisão pré-produção ([#183](https://github.com/KalleoPinheiro/estomasystech/issues/183)); nada em produção.
+- Decision: committed pelo [ADR-001](../docs/adr/001-multi-tenancy.md) ("toda empresa nova é criada manualmente pelo Super Admin" até a Fase 3). O **como** estava aberto em [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) e foi fechado nesta discovery com @KalleoPinheiro em 2026-09-27.
+- In flight: [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) (decisão mono × multi — respondida aqui), [#210](https://github.com/KalleoPinheiro/estomasystech/issues/210) (auditoria sem empresa cai na clínica legada — item 1 e 4 resolvidos aqui), [#211](https://github.com/KalleoPinheiro/estomasystech/issues/211) (`partners.email` global — entra como bloco pré-requisito), [#215](https://github.com/KalleoPinheiro/estomasystech/issues/215) (permissões dentro da clínica — fora deste escopo).
 - At stake: costly. Dado de saúde sob LGPD: erro de escopo grava ou mostra dado na empresa errada, e corrigir depois do go-live é migrar dado real. O super_admin controla todas as clínicas: comprometer a conta dele compromete a plataforma.
 
 ## Problem
@@ -69,19 +69,19 @@ In:
 - Suspender e reativar clínica.
 - Super_admin sem acesso clínico nem operacional às clínicas.
 - Proteção do super_admin: só um, criado só pelo bootstrap; segundo fator obrigatório; recuperação de emergência.
-- Auditoria: trilha da plataforma só para o super_admin; ações do super_admin numa clínica também na trilha dela ([#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210) itens 1 e 4).
+- Auditoria: trilha da plataforma só para o super_admin; ações do super_admin numa clínica também na trilha dela ([#210](https://github.com/KalleoPinheiro/estomasystech/issues/210) itens 1 e 4).
 - Importação do catálogo global de taxonomias passa a ser ato de plataforma.
-- `partners.email` único por empresa ([#211](https://github.com/KalleoPinheiro/vitta-flow/issues/211)), pré-requisito da segunda clínica.
+- `partners.email` único por empresa ([#211](https://github.com/KalleoPinheiro/estomasystech/issues/211)), pré-requisito da segunda clínica.
 
 Out:
 - Configurações operacionais da clínica (grade, feriados, cancelamento, lembretes, integrações) — continuam do `company_admin`.
 - Exclusão de clínica — abandonada pelo dono: prontuário tem guarda protegida por lei.
 - Fuso por clínica — todas as clínicas no radar estão no horário de Brasília.
 - Self-service de clínica e cobrança — Fase 3 do ADR-001.
-- Retenção, índice composto e paginação por cursor da trilha de auditoria ([#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210) itens 2 e 3).
-- Quem altera grade/feriados/taxa dentro da clínica ([#215](https://github.com/KalleoPinheiro/vitta-flow/issues/215)).
+- Retenção, índice composto e paginação por cursor da trilha de auditoria ([#210](https://github.com/KalleoPinheiro/estomasystech/issues/210) itens 2 e 3).
+- Quem altera grade/feriados/taxa dentro da clínica ([#215](https://github.com/KalleoPinheiro/estomasystech/issues/215)).
 - Segundo fator para outros papéis.
-- Estado por empresa em cache de processo (fato 6 da [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214)) — já resolvido: `src/lib/report-cache.ts:24` e `src/infrastructure/container.ts:267` usam a clínica na chave; o rate limit foi resolvido na #201.
+- Estado por empresa em cache de processo (fato 6 da [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214)) — já resolvido: `src/lib/report-cache.ts:24` e `src/infrastructure/container.ts:267` usam a clínica na chave; o rate limit foi resolvido na #201.
 
 ## Prior art
 
@@ -132,7 +132,7 @@ erDiagram
 - `audit_events.clinic_id` → nullable; `null` = evento de plataforma. `resolveActor` deixa de usar `LEGACY_CLINIC_ID`; ação do super_admin sobre uma clínica grava `clinic_id` da clínica-alvo.
 - `DrizzleAuditEventRepository` → montado com `clinicId` no container como os demais repositórios; a leitura de plataforma usa `clinic_id is null or actor_role = 'super_admin'`.
 - `POST /api/admin/taxonomy/import` → removida (substituída por `/api/platform/taxonomy/import`).
-- `partners.email` → índice único `(clinic_id, email)` no lugar do global ([#211](https://github.com/KalleoPinheiro/vitta-flow/issues/211)).
+- `partners.email` → índice único `(clinic_id, email)` no lugar do global ([#211](https://github.com/KalleoPinheiro/estomasystech/issues/211)).
 - `docs/domains/acesso/README.md` → ACE-RN-10 reescrita (super_admin sem acesso a dado de clínica), novas regras de plataforma, suspensão e segundo fator; papel `super_admin` na tabela de papéis.
 - `docs/engineering/producao.md` → procedimento de recuperação do super_admin.
 
@@ -157,8 +157,8 @@ Also in the field, for perspective and not as candidates:
 | B3 Recuperação de emergência | `scripts/recover-super-admin.ts` + runbook em `producao.md` | clear |
 | B4 Cadastro de clínicas | Colunas de contato, API e telas de listar/criar/editar clínica; listar admins, reenviar convite, desativar e reativar; tela de convite sobre a rota que o B1 criou | clear |
 | B5 Suspensão e reativação | Estado da clínica, login negado, revogação em ≤ 60 s, lembretes pausados | clear |
-| B6 Auditoria de plataforma | `audit_events.clinic_id` nullable, trilha de plataforma, repositório escopado ([#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210) itens 1 e 4) | clear |
-| B7 Parceiro por empresa | `partners.email` único por `(clinic_id, email)` ([#211](https://github.com/KalleoPinheiro/vitta-flow/issues/211)) | clear |
+| B6 Auditoria de plataforma | `audit_events.clinic_id` nullable, trilha de plataforma, repositório escopado ([#210](https://github.com/KalleoPinheiro/estomasystech/issues/210) itens 1 e 4) | clear |
+| B7 Parceiro por empresa | `partners.email` único por `(clinic_id, email)` ([#211](https://github.com/KalleoPinheiro/estomasystech/issues/211)) | clear |
 
 Ordem: B1 primeiro (cria a família `platform` que B4–B6 usam). O convite do primeiro admin saiu do B4 para o B1: sem ele, depois que o super_admin deixa as rotas da clínica, não existe caminho para criar um `company_admin`, e a suíte E2E (que hoje roda como super_admin) fica sem admin; B2 e B3 juntos; B4 → B5; B6 e B7 independentes. Tudo antes do go-live; B7 no máximo antes da segunda clínica.
 
@@ -183,7 +183,7 @@ Ordem: B1 primeiro (cria a família `platform` que B4–B6 usam). O convite do p
 
 ## Needs an RFC
 
-1. Retenção da trilha de auditoria ([#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210) item 2) — decisão jurídica; bloqueia a rotina de expurgo e o particionamento, não este escopo.
+1. Retenção da trilha de auditoria ([#210](https://github.com/KalleoPinheiro/estomasystech/issues/210) item 2) — decisão jurídica; bloqueia a rotina de expurgo e o particionamento, não este escopo.
 
 ## Open
 
@@ -195,7 +195,7 @@ Ordem: B1 primeiro (cria a família `platform` que B4–B6 usam). O convite do p
 
 ## Sources
 
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214), [#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210), [#211](https://github.com/KalleoPinheiro/vitta-flow/issues/211), [#215](https://github.com/KalleoPinheiro/vitta-flow/issues/215) — decisões pendentes que esta discovery responde.
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214), [#210](https://github.com/KalleoPinheiro/estomasystech/issues/210), [#211](https://github.com/KalleoPinheiro/estomasystech/issues/211), [#215](https://github.com/KalleoPinheiro/estomasystech/issues/215) — decisões pendentes que esta discovery responde.
 - [ADR-001](../docs/adr/001-multi-tenancy.md) — compromisso "empresa nova criada pelo Super Admin".
 - [ADR-003](../docs/adr/003-modelo-de-papeis-multi-empresa.md), [ADR-004](../docs/adr/004-remocao-google-oauth-autenticacao.md), [ADR-005](../docs/adr/005-revogacao-de-sessao-por-versao.md), [ADR-006](../docs/adr/006-chave-de-dados-clinicos.md) — emendados ou reaproveitados.
 - `src/lib/auth/tenant-scope.ts:41`, `src/lib/audit.ts:85`, `src/domain/auth/role-hierarchy.ts:10`, `src/lib/auth/route-family.ts:125`, `src/lib/auth/staff-revocation.ts`, `src/app/api/admin/taxonomy/import/route.ts` — estado atual lido nesta discovery.

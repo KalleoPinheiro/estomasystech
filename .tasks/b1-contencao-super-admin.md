@@ -15,7 +15,7 @@ barra a segunda conta **sem** clínica. Qualquer `company_admin` consegue dispar
 todas as clínicas. Quem paga são as clínicas clientes: o operador da plataforma tem acesso a dado
 de saúde que não precisa ver (minimização da LGPD), e uma clínica consegue alterar dado das outras.
 Nada está em produção; o go-live terá uma clínica e outras estão no radar
-([#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214)).
+([#214](https://github.com/KalleoPinheiro/estomasystech/issues/214)).
 
 Com esta task, o super_admin passa a ser o operador da plataforma. Ele entra em `/plataforma` e não
 abre mais nenhuma tela nem API da clínica. Só existe um super_admin, e o banco recusa qualquer
@@ -203,7 +203,7 @@ exclusivo do super_admin.
 ## Sources
 
 - [`.design/portal-super-admin.md`](../.design/portal-super-admin.md) — bloco B1 do Roadmap; linhas de Decisions "Onde fica a área do super_admin", "Alcance do super_admin", "Unicidade do super_admin" e "Catálogo de taxonomias"; Journey estados 1, 9 e 10.
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) — decisões do dono do produto, 2026-09-27.
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) — decisões do dono do produto, 2026-09-27.
 - Conversa com @KalleoPinheiro, 2026-09-27 (sem endereço), linhas que decidem: "deve existir somente 1 superadmin e ele sou eu, o super admin deveria ser cadastrado de uma forma a prova de falha"; pergunta 4 "não, sem acesso clínico por padrão"; pergunta 5 "opção (b)".
 - Código lido: `src/lib/auth/route-family.ts`, `src/lib/auth/access-policy.ts`, `src/proxy.ts`, `src/domain/auth/role-hierarchy.ts`, `src/application/auth/create-account.ts`, `src/app/api/accounts/route.ts`, `src/app/api/settings/clinic-info/route.ts`, `src/app/api/admin/taxonomy/import/route.ts`, `e2e/global-setup.ts`, `playwright.config.ts`, `playwright.prod.config.ts`.
 

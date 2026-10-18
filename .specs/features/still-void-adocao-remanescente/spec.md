@@ -1,6 +1,6 @@
 # Spec — Adoção still-void: Tabs, Tooltip, Prose
 
-- **Issue:** [#85](https://github.com/KalleoPinheiro/vitta-flow/issues/85)
+- **Issue:** [#85](https://github.com/KalleoPinheiro/estomasystech/issues/85)
 - **Escopo:** Medium (3 sub-itens, consumidor real confirmado por item, implementação+verificação inline)
 
 ## Decisão de escopo (item a item)

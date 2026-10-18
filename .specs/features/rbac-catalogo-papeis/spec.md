@@ -1,6 +1,6 @@
 # RBAC: Catálogo de 6 Papéis e Hierarquia de Cadastro por Empresa — Specification
 
-Issue: [#20](https://github.com/KalleoPinheiro/vitta-flow/issues/20). Sub-issues (ordem cronológica obrigatória): [#28](https://github.com/KalleoPinheiro/vitta-flow/issues/28) (R1), [#29](https://github.com/KalleoPinheiro/vitta-flow/issues/29) (R2), [#30](https://github.com/KalleoPinheiro/vitta-flow/issues/30) (R3), [#31](https://github.com/KalleoPinheiro/vitta-flow/issues/31) (R4). Executa [ADR-003](../../../docs/adr/003-modelo-de-papeis-multi-empresa.md). Depende de #19 (fundação de multi-tenancy, já mergeada).
+Issue: [#20](https://github.com/KalleoPinheiro/estomasystech/issues/20). Sub-issues (ordem cronológica obrigatória): [#28](https://github.com/KalleoPinheiro/estomasystech/issues/28) (R1), [#29](https://github.com/KalleoPinheiro/estomasystech/issues/29) (R2), [#30](https://github.com/KalleoPinheiro/estomasystech/issues/30) (R3), [#31](https://github.com/KalleoPinheiro/estomasystech/issues/31) (R4). Executa [ADR-003](../../../docs/adr/003-modelo-de-papeis-multi-empresa.md). Depende de #19 (fundação de multi-tenancy, já mergeada).
 
 ## Problem Statement
 

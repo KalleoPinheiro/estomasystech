@@ -13,7 +13,7 @@ related:
 
 # Baseline de carga
 
-> **TL;DR:** com 30 usuários simultâneos (≈15 req/s, pausa de 2 s entre cliques) numa VPS de 4 vCPU, toda leitura da equipe e do portal fica com **p95 ≤ 100 ms**, inclusive com 100 mil consultas e 1 milhão de eventos de auditoria; só o autoagendamento do portal (`/slots`) chegava a 460 ms nesse volume — corrigido na [#360](https://github.com/KalleoPinheiro/vitta-flow/issues/360) (§ 8: 79 ms). Zero erro em todas as medições. O ponto fraco era o laço por candidato do `/slots` (hoje em lote); sob saturação o limite é o processo Node (um núcleo a 110 %, Postgres a 20 %), não o banco. Issue [#222](https://github.com/KalleoPinheiro/vitta-flow/issues/222); decisão AD-049 em [`STATE.md`](../../.specs/STATE.md).
+> **TL;DR:** com 30 usuários simultâneos (≈15 req/s, pausa de 2 s entre cliques) numa VPS de 4 vCPU, toda leitura da equipe e do portal fica com **p95 ≤ 100 ms**, inclusive com 100 mil consultas e 1 milhão de eventos de auditoria; só o autoagendamento do portal (`/slots`) chegava a 460 ms nesse volume — corrigido na [#360](https://github.com/KalleoPinheiro/estomasystech/issues/360) (§ 8: 79 ms). Zero erro em todas as medições. O ponto fraco era o laço por candidato do `/slots` (hoje em lote); sob saturação o limite é o processo Node (um núcleo a 110 %, Postgres a 20 %), não o banco. Issue [#222](https://github.com/KalleoPinheiro/estomasystech/issues/222); decisão AD-049 em [`STATE.md`](../../.specs/STATE.md).
 
 ## 1. Perfis medidos
 
@@ -124,7 +124,7 @@ Resultado: **todas as rotas cumprem**; o `/slots` com 20 profissionais e 100 mil
 ## 6. Leitura e consequências
 
 - **Dimensionamento:** 30 usuários pedem ≈ 15 req/s e a máquina entrega 80 a 165; há folga de 5× a 10× numa VPS de 4 vCPU. A segunda réplica não é necessária para o go-live.
-- **`/slots` do portal** é a única rota que escala com o número de profissionais (29 ms com 5, 233 ms com 20; 1,1 s e 2,4 s sob saturação): `ListAvailableSlots` fazia `await isFree(...)`, com uma consulta de conflito, por candidato (`src/application/portal/list-available-slots.ts`). Resolvido pela [#360](https://github.com/KalleoPinheiro/vitta-flow/issues/360) (§ 8).
+- **`/slots` do portal** é a única rota que escala com o número de profissionais (29 ms com 5, 233 ms com 20; 1,1 s e 2,4 s sob saturação): `ListAvailableSlots` fazia `await isFree(...)`, com uma consulta de conflito, por candidato (`src/application/portal/list-available-slots.ts`). Resolvido pela [#360](https://github.com/KalleoPinheiro/estomasystech/issues/360) (§ 8).
 - **Portal `/api/portal/patient`** custa ≈ 400 ms sob saturação (cerca de 3× a ficha de paciente da equipe, 140 ms); no uso realista fica em 11 ms de mediana. Sem ticket.
 - **Índices compostos da #222 (item 1): não construir agora.** No `multi` (400 mil consultas, 2 milhões de eventos, 20 empresas) as rotas de agenda, faturas, follow-ups e auditoria ficam em p95 ≤ 25 ms; a trilha de auditoria já tem o índice `(clinic_id, occurred_at desc, id desc)` (#322). Revisar se uma empresa passar de ≈ 1 milhão de consultas ou se o p95 realista de qualquer rota passar de 300 ms.
 - **Bundle (item 4):** na build desta medição o maior chunk tem 229 KB (72 KB gzip), contra 428 KB (131 KB gzip) em 2026-09-26. Não foi refeita a tabela por página.
@@ -134,10 +134,10 @@ Resultado: **todas as rotas cumprem**; o `/slots` com 20 profissionais e 100 mil
 | Lacuna | Por quê | Próximo passo |
 | --- | --- | --- |
 | Escritas (agendar, pagar, baixa de estoque) | script só lê; escrita concorrente pede cenário próprio | medir se o p95 de escrita preocupar em produção |
-| Job de lembretes (item 3) | **Resolvido na [#361](https://github.com/KalleoPinheiro/vitta-flow/issues/361).** Medido contando as leituras de repositório por execução (4 e 40 pacientes, cada um com consulta amanhã e retorno vencido, metade com responsável): antes 14 e 122 (cerca de 3 por lembrete); depois 6 e 6, fixas (COM-RN-21). O teste `tests/application/send-reminders-queries.test.ts` falha se uma leitura voltar a crescer com o lote. Latência em tempo real não medida: exige canal de e-mail e o custo era de idas ao banco | nenhum |
+| Job de lembretes (item 3) | **Resolvido na [#361](https://github.com/KalleoPinheiro/estomasystech/issues/361).** Medido contando as leituras de repositório por execução (4 e 40 pacientes, cada um com consulta amanhã e retorno vencido, metade com responsável): antes 14 e 122 (cerca de 3 por lembrete); depois 6 e 6, fixas (COM-RN-21). O teste `tests/application/send-reminders-queries.test.ts` falha se uma leitura voltar a crescer com o lote. Latência em tempo real não medida: exige canal de e-mail e o custo era de idas ao banco | nenhum |
 | Navegador (LCP, hidratação) | não houve browser nesta rodada | rodar Lighthouse na Hetzner depois do go-live |
 | Rede e disco reais | tudo em loopback, `fsync=off` | repetir `tipica` na VPS definitiva (§ 3 funciona igual) |
-| `getRepositories` (item 5) | custo por requisição já aparece nos p50 de 4 a 6 ms das rotas leves; [#220](https://github.com/KalleoPinheiro/vitta-flow/issues/220) segue aberta | nenhum |
+| `getRepositories` (item 5) | custo por requisição já aparece nos p50 de 4 a 6 ms das rotas leves; [#220](https://github.com/KalleoPinheiro/estomasystech/issues/220) segue aberta | nenhum |
 
 ## 8. `/slots` em lote (#360, AD-053)
 

@@ -6,7 +6,7 @@ Sources:
 
 - [`.tasks/b1-contencao-super-admin.md`](../.tasks/b1-contencao-super-admin.md) - critérios 1–24, Decided, Impact, Out of scope; registro de decisão
 - [`.design/portal-super-admin.md`](../.design/portal-super-admin.md) - bloco B1; Journey 10 ajustado para "redireciona para `/`"
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) - issue mãe (o B1 não a fecha: `Refs #214`)
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) - issue mãe (o B1 não a fecha: `Refs #214`)
 - Conversa com @KalleoPinheiro, 2026-09-27 - as 4 perguntas de `Unresolved` confirmadas com a recomendação padrão: convite do 1º admin no B1; migração falha sem alterar nada; equipe em `/plataforma` → `/`; sem bloqueio do próprio e-mail
 - Sem design de tela vinculante: `/plataforma` é título + botão (critério 12)
 

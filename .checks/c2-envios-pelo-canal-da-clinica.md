@@ -2,7 +2,7 @@
 
 Sources:
 
-- [KalleoPinheiro/vitta-flow#265](https://github.com/KalleoPinheiro/vitta-flow/issues/265) — a issue; aponta para a task
+- [KalleoPinheiro/estomasystech#265](https://github.com/KalleoPinheiro/estomasystech/issues/265) — a issue; aponta para a task
 - `.tasks/c2-envios-pelo-canal-da-clinica.md` — critérios 1–16, Decided, Unresolved 1–2 (defaults adotados)
 - `.design/canal-por-clinica.md` — Decisions: Convite do 1º admin, Link quando não entregue, Redefinição pelo admin, Esqueci a senha, Lembretes sem canal; Open 3 e 4
 

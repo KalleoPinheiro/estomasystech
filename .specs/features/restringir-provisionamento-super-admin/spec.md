@@ -1,6 +1,6 @@
 # Restringir provisionamento do super_admin — Specification
 
-Issue: [#253](https://github.com/KalleoPinheiro/vitta-flow/issues/253) — resíduo da #214/ADR-007.
+Issue: [#253](https://github.com/KalleoPinheiro/estomasystech/issues/253) — resíduo da #214/ADR-007.
 Escopo: **Medium** (mudança cirúrgica em 2 arquivos de domínio/lib + testes + 2 docs; sem
 arquitetura nova, sem gray area de produto — a regra de negócio já está decidida no ADR-007).
 

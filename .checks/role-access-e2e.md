@@ -4,9 +4,9 @@ Profile: `standard` (tlc-implement) · handoff: `on`.
 
 Sources:
 
-- [#188](https://github.com/KalleoPinheiro/vitta-flow/issues/188) - Atendente sem profissional e sem catálogo (403 em `/api/professionals` e `/api/procedures`)
-- [#189](https://github.com/KalleoPinheiro/vitta-flow/issues/189) - Profissional sem SAE (403 em `/api/taxonomy/**`), sem nomes de profissionais, aba Pacotes 403
-- [#204](https://github.com/KalleoPinheiro/vitta-flow/issues/204) - E2E da equipe roda só como Super Admin
+- [#188](https://github.com/KalleoPinheiro/estomasystech/issues/188) - Atendente sem profissional e sem catálogo (403 em `/api/professionals` e `/api/procedures`)
+- [#189](https://github.com/KalleoPinheiro/estomasystech/issues/189) - Profissional sem SAE (403 em `/api/taxonomy/**`), sem nomes de profissionais, aba Pacotes 403
+- [#204](https://github.com/KalleoPinheiro/estomasystech/issues/204) - E2E da equipe roda só como Super Admin
 - Regras: `AGENTS.md` (escopo de empresa, auth fail-closed, `@still-void/ui`, nunca inventar regra), [ADR-001](../docs/adr/001-multi-tenancy.md), [ADR-002](../docs/adr/002-autorizacao-em-duas-camadas.md)
 
 ## Out of scope

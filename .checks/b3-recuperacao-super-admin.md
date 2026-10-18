@@ -7,7 +7,7 @@ Sources:
 - [`.design/portal-super-admin.md`](../.design/portal-super-admin.md) - bloco B3: Decision "Recuperação total" (literal: `scripts/recover-super-admin.ts` no servidor com `DATABASE_URL`; limpa fator e códigos, troca e-mail opcional, `session_version + 1`, auditoria de plataforma, imprime link de definir senha; rota com segredo de deploy rejeitada); Journey 12; Shape › Adds (script, ADR emendando o ADR-004) e Changes (`producao.md`)
 - [`.checks/b2-segundo-fator-super-admin.md`](b2-segundo-fator-super-admin.md) - o que o B2 deixou: `user_mfa`, `mfa_recovery_codes`, login devolve `mfaEnrollmentRequired` sem fator
 - [`.tasks/b1-contencao-super-admin.md`](../.tasks/b1-contencao-super-admin.md) - um único super_admin (`ck_user_accounts_system_role_has_no_clinic` + `uq_user_accounts_single_system_account`)
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) - issue mãe (`Refs #214`)
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) - issue mãe (`Refs #214`)
 - Conversa com @KalleoPinheiro, 2026-09-27 - auditoria da recuperação pelo **mesmo caminho do login** (`recordAuditNow`, ator `super_admin`, `clinicId: null`): hoje cai na `legacy-clinic` como os eventos do B2; vira evento de plataforma quando o B6 mudar `resolveActor`, sem tocar no script
 - Sem tela: nada de interface neste bloco
 

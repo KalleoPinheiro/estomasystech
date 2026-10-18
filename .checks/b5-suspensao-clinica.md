@@ -8,7 +8,7 @@ Sources:
 - Pedido do dono (@KalleoPinheiro) para este bloco, 2026-09-27 - exclusão de clínica fora; ação do super_admin grava auditoria com o `clinic_id` da clínica-alvo; trilha de plataforma é o B6
 - [`.checks/b4-cadastro-clinicas.md`](b4-cadastro-clinicas.md) - contratos de `PlatformClinicDto`, lista, telas, gate do convite, escrita write-ahead da auditoria
 - [ADR-005](../docs/adr/005-revogacao-de-sessao-por-versao.md) - revogação por consulta com cache de 60 s
-- [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214) - issue mãe (`Refs #214`, não fecha)
+- [#214](https://github.com/KalleoPinheiro/estomasystech/issues/214) - issue mãe (`Refs #214`, não fecha)
 - Sem design de tela vinculante: layout e textos da tela decididos aqui (Landing)
 
 ## Out of scope

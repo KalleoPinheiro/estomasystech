@@ -90,7 +90,7 @@ esquecer de uma delas.
 | `AGENTS.md` | tudo que vale para toda tarefa (L0) |
 | `CLAUDE.md` | `@AGENTS.md` e nada mais |
 | `.github/copilot-instructions.md` | 1 parágrafo: "siga `AGENTS.md`" + link |
-| `.cursor/rules/00-vitta-flow.mdc` | `alwaysApply: true`, aponta para `AGENTS.md` |
+| `.cursor/rules/00-estomasystech.mdc` | `alwaysApply: true`, aponta para `AGENTS.md` |
 | `.cursor/rules/<escopo>.mdc` | **só** ponteiros com `globs` — ex.: `src/components/**` → "leia `docs/still-void-gaps.md`"; nunca regra nova |
 | `.clinerules` / `.windsurfrules` | não criar; se a ferramenta exigir, 1 linha apontando para `AGENTS.md` |
 
