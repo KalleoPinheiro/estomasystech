@@ -1,0 +1,8 @@
+# E-mail ao operador quando o backup falha (OnFailure do estomasystech-backup.service).
+[Unit]
+Description=EstomaSysTech: aviso de falha do backup
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/estomasystech/backup.env
+ExecStart=/opt/estomasystech-backup/backup-alert.sh

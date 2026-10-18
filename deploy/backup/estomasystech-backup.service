@@ -1,0 +1,17 @@
+# Backup diário cifrado (age) do banco e das fotos para fora do servidor (ADR-040).
+# Instalação: docs/engineering/producao.md § 5. Configuração: /etc/estomasystech/backup.env.
+[Unit]
+Description=EstomaSysTech: backup cifrado do banco e das fotos
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+OnFailure=estomasystech-backup-alert.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/estomasystech/backup.env
+ExecStart=/opt/estomasystech-backup/backup.sh
+UMask=0077
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=3h

@@ -54,7 +54,7 @@ art. 33 para Resend e Google.
 **Transferência internacional (LGPD art. 33):** o servidor fica fora do Brasil (Alemanha, UE). A
 base técnica está decidida no [ADR-018](../adr/018-transferencia-internacional-ue.md): destino na
 UE, adequação recíproca Brasil ↔ UE como base e cláusulas-padrão da ANPD como reserva; o backup
-sai cifrado (`age`) e a Storage Box fica em outra localização **da UE**. **Pendência jurídica
+sai cifrado (`age`) para um bucket R2 com jurisdição **UE** ([ADR-040](../adr/040-backup-cifrado-no-coolify-para-o-r2-na-ue.md)). **Pendência jurídica
 (bloqueia cadastrar paciente real):** a conferência da adequação na fonte primária, o mecanismo
 para Resend e Google Agenda (fora da UE) e a revisão jurídica dos cinco textos (aviso, TCLE, imagem, parceiro, direitos do titular; hoje `LEGAL_REVIEW_PENDING`, [ADR-030](../adr/030-textos-lgpd-ligados-sem-revisao-juridica.md)) e a ato da ANPD, na
 [#216](https://github.com/KalleoPinheiro/estomasystech/issues/216).
@@ -64,7 +64,7 @@ Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/estoma
 
 | Tema | Decisão | Onde entra |
 | --- | --- | --- |
-| Cópia fora do servidor | **Hetzner Storage Box** em outra localização da UE (Helsinki, ou outra diferente da do servidor; [ADR-018](../adr/018-transferencia-internacional-ue.md)), com snapshot automático diário e os 14 mais recentes guardados. O `rsync --delete` não pode apagar os snapshots | § 5 — `BACKUP_OFFSITE_CMD` |
+| Cópia fora do servidor | ~~Hetzner Storage Box~~ substituída em 2026-10-18 por **bucket R2 com jurisdição UE**, trava de objeto de 30 dias ([ADR-040](../adr/040-backup-cifrado-no-coolify-para-o-r2-na-ue.md)) | § 5 — `BACKUP_RCLONE_DEST` |
 | Região | **Alemanha** (UE); vale também para a base legal da transferência internacional (#216) | § 2 |
 | Cifra do disco | **Sem LUKS**: só os backups cifrados (`age`) e os campos cifrados ([ADR-006](../adr/006-chave-de-dados-clinicos.md)). As fotos ficam em claro no disco da VPS e o servidor volta sozinho após um reboot ([ADR-015](../adr/015-servidor-sem-cifra-de-disco.md)) | § 2 |
 | E-mail do host (alertas do cron) | **`msmtp` pela porta 587 com o SMTP do Resend** (a porta 25 é bloqueada) | § 9.3 |
@@ -78,7 +78,7 @@ Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/estoma
 
 > **Formato `docker compose` (suportado, não é o que roda).** Esta seção e o § 5 descrevem a VPS
 > montada à mão (`/opt/estomasystech`, `/etc/cron.d`, `msmtp`). A produção real usa Coolify (§ 0 e
-> § 3). Os scripts de backup e restore do § 5 dependem deste formato.
+> § 3). Os scripts de backup e restore do § 5 servem aos dois formatos (Coolify e compose).
 
 | Peça | Configuração |
 | --- | --- |
@@ -126,7 +126,7 @@ Provisionamento, uma vez:
 6. Backup (§ 5), cron (§ 7), primeiro acesso (§ 8) e alertas (§ 9).
 
 **Atualizar a versão:** `git pull`,
-`sudo sh -c '. /etc/estomasystech/backup.env && scripts/backup.sh'` (rollback é restaurar, § 4) e
+`sudo systemctl start estomasystech-backup` (rollback é restaurar, § 4) e
 `docker compose up -d --build`. O app fica fora do ar só enquanto o container novo sobe e migra.
 
 ### Alternativa não adotada: Vercel + Supabase
@@ -284,94 +284,192 @@ proposital enquanto não há staging e as migrações não têm `down`
 ## 5. Backup e restore
 
 Guarda do prontuário: Lei 13.787/2018 e LGPD art. 46. **Sem restauração testada, não há backup.**
-Meta decidida: RPO 24 h, RTO 4 h.
+Meta decidida: RPO 24 h, RTO 4 h. Desenho: [ADR-040](../adr/040-backup-cifrado-no-coolify-para-o-r2-na-ue.md).
 
 | O quê | Como |
 | --- | --- |
-| Banco | [`scripts/backup.sh`](../../scripts/backup.sh): `pg_dump -Fc` do serviço `db` → `db.dump.age` |
-| Fotos | o mesmo script: `tar` do volume `uploads` pelo serviço `uploads-backup` do compose (sem log, para o tar não parar em claro no disco) → `uploads.tar.age` |
+| Banco | [`scripts/backup.sh`](../../scripts/backup.sh): `pg_dump -Fc` por `docker exec` no container do Postgres do Coolify → `db.dump.age` |
+| Fotos | o mesmo script: `tar` do volume montado em `/app/uploads`, num container sem rede e sem log (o tar não para em claro no disco) → `uploads.tar.age` |
 | Cifra | `age` com chave pública no servidor; a **chave privada fica fora dele** (cofre + cópia offline). O dado em claro não toca o disco |
-| Destino | `$BACKUP_DIR/<data UTC>/` no servidor e cópia fora dele, numa Hetzner Storage Box de outra localização, por `BACKUP_OFFSITE_CMD` |
-| Retenção | 30 dias (`BACKUP_KEEP_DAYS`) no servidor; fora dele, espelhe a pasta com `rsync --delete`; os snapshots da Storage Box guardam o que o espelho apagar |
+| Agenda | `systemd` timer do host, **02:00 de São Paulo**, 1 h 30 antes da retenção do Coolify (03:30), que apaga fotos ([`deploy/backup/`](../../deploy/backup/)) |
+| Destino | `/var/backups/estomasystech/<data UTC>/` no servidor e cópia num **bucket R2 com jurisdição `eu`** (`BACKUP_RCLONE_DEST`) |
+| Retenção | 7 dias no servidor (`BACKUP_KEEP_DAYS`); no R2, **trava de objeto de 30 dias** (nem o token do servidor apaga) e ciclo de vida que apaga com 35 |
+| Falha | e-mail ao operador por `msmtp` no SMTP do Resend (`OnFailure`, [`scripts/backup-alert.sh`](../../scripts/backup-alert.sh)) |
 | Chaves | `DATA_ENCRYPTION_KEY` (e as anteriores) e a chave privada `age` no cofre de segredos, **nunca** dentro do backup |
 
+O backup nativo do Coolify (03:00, bucket `estomasystech-backups`) **não é cifrado**: desligue o
+envio dele para o S3 depois do primeiro backup cifrado conferido e da primeira restauração de
+teste, e apague do bucket antigo os dumps em claro (passo 8).
+
 **Retenção e backup (#311, [ADR-013](../adr/013-retencao-por-anonimizacao.md)):** a anonimização
-não reescreve cópias antigas. Com a guarda de 30 dias, o dado identificável de um paciente
-anonimizado some dos backups 30 dias depois. Ao restaurar um backup, rode
+não reescreve cópias antigas. Com a guarda de 30 dias no R2, o dado identificável de um paciente
+anonimizado some dos backups 30 a 35 dias depois. Ao restaurar um backup, rode
 `POST /api/retention/run` em seguida: o job é idempotente e refaz a anonimização do que já tinha
 vencido.
 
 Sem `DATA_ENCRYPTION_KEY` o backup do banco não serve: os textos clínicos estão cifrados com ela.
 Sem a chave privada `age`, nenhum backup serve.
 
-**Configurar, uma vez:**
+### 5.1 Instalar, uma vez
 
-1. Na máquina do operador (não no servidor): `age-keygen -o estomasystech-backup.key`. Guarde o arquivo
-   no cofre e numa cópia offline; a linha `# public key: age1…` vai para o servidor em
-   `/etc/estomasystech/backup.pub` (`chmod 600`).
-2. Prepare a Storage Box (uma vez, no painel da Hetzner e na máquina do operador): crie a caixa
-   **em outra localização** que não a do servidor; habilite o acesso por SSH; instale a chave
-   pública SSH do servidor na caixa (`~/.ssh/authorized_keys` dela); ligue os **snapshots
-   automáticos** da caixa: **1 por dia, guardando os 14 mais recentes** (decisão de 2026-10-12). Os
-   snapshots são incrementais, ocupam a cota da própria caixa e são geridos só pelo painel ou pela API
-   da Hetzner: a chave SSH do servidor não consegue apagá-los. Assim, 14 dias é a janela para
-   perceber um incidente que tenha apagado os backups.
-   O script roda o comando de cópia com `sh -c`, exportando `BACKUP_PATH` (pasta do backup novo) e
-   `BACKUP_DIR` (todas). Para a Storage Box (SSH na porta 23), em `/etc/estomasystech/backup.env` (§ 7):
+Os comandos do servidor rodam por `ssh vps`; os da máquina do operador, no WSL. **Nenhum segredo
+vai para o chat nem para o repositório.** No zsh, para digitar um segredo sem eco, use
+`bash -c 'read -rs V; ...'`.
+
+1. **Chave `age`, na máquina do operador** (nunca no servidor):
 
    ```bash
-   export BACKUP_OFFSITE_CMD='rsync -a --delete -e "ssh -p 23" "$BACKUP_DIR"/ u123456@u123456.your-storagebox.de:estomasystech/'
+   age-keygen -o estomasystech-backup.key
    ```
 
-   (`u123456` é o usuário da sua caixa.) O `--delete` espelha a pasta `estomasystech/` dentro da caixa:
-   quem apagar os backups do servidor apaga também a cópia espelhada no próximo ciclo. O que
-   protege disso são os **snapshots da caixa**; o comando acima mexe só na pasta espelhada, e
-   nenhum comando do runbook apaga snapshots.
-3. Rode uma vez à mão e confira a pasta nova no destino:
+   Guarde o arquivo no cofre e numa cópia offline. A linha `# public key: age1…` é a única coisa
+   que vai para o servidor.
+
+2. **Bucket e token, no painel da Cloudflare (R2):**
+   - *Create bucket* `estomasystech-backups-age`, **Location → Specify jurisdiction → European
+     Union (`eu`)**. A jurisdição não muda depois de criado.
+   - No bucket, *Settings → Bucket lock rules → Add rule*: prefixo `prod/`, retenção **30 dias**.
+   - *Settings → Object lifecycle rules → Add rule*: prefixo `prod/`, apagar objetos com **35 dias**.
+   - *Manage API tokens → Create API token*: permissão **Object Read & Write**, só esse bucket.
+     Anote o Access Key ID e o Secret (vão direto para o servidor no passo 4).
+
+3. **Pacotes e arquivos no servidor:**
 
    ```bash
-   cd /opt/estomasystech
-   sudo BACKUP_AGE_RECIPIENTS_FILE=/etc/estomasystech/backup.pub BACKUP_OFFSITE_CMD='…' scripts/backup.sh
+   sudo DEBIAN_FRONTEND=noninteractive apt install -y age rclone msmtp
+   sudo install -d -m 700 /etc/estomasystech /opt/estomasystech-backup
    ```
 
-4. Agende no cron (§ 7).
+   Da máquina do operador, num checkout atualizado do repositório:
+
+   ```bash
+   scp scripts/backup.sh scripts/backup-target.sh scripts/restore.sh scripts/backup-alert.sh \
+     deploy/backup/estomasystech-backup.* deploy/backup/estomasystech-backup-alert.service vps:/tmp/
+   ssh vps 'cd /tmp && sudo install -m 700 backup.sh backup-target.sh restore.sh backup-alert.sh /opt/estomasystech-backup/ \
+     && sudo install -m 644 estomasystech-backup.service estomasystech-backup.timer estomasystech-backup-alert.service /etc/systemd/system/ \
+     && rm backup.sh backup-target.sh restore.sh backup-alert.sh estomasystech-backup*'
+   ```
+
+4. **Configuração no servidor** (todos `chmod 600`, dono root). Crie cada arquivo com
+   `sudo install -m 600 /dev/null <arquivo> && sudo nano <arquivo>` e cole o conteúdo lá, no
+   terminal do servidor:
+   - `/etc/estomasystech/backup.pub`: a linha `age1…` do passo 1.
+   - Nomes do Coolify: `docker ps --format '{{.Names}}\t{{.Image}}'` (o Postgres é o container
+     com `postgres:18-alpine`) e `docker volume ls` (o volume termina em `-estomasystech-uploads`).
+   - `/etc/estomasystech/rclone.conf` (o `<ACCOUNT_ID>` está na página do R2):
+
+     ```ini
+     [r2]
+     type = s3
+     provider = Cloudflare
+     endpoint = https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com
+     access_key_id = <Access Key ID do passo 2>
+     secret_access_key = <Secret do passo 2>
+     no_check_bucket = true
+     ```
+
+   - `/etc/estomasystech/backup.env` (formato `CHAVE=valor`, sem `export`, lido pelo systemd):
+
+     ```bash
+     BACKUP_AGE_RECIPIENTS_FILE=/etc/estomasystech/backup.pub
+     BACKUP_DB_CONTAINER=<nome do container do Postgres>
+     BACKUP_UPLOADS_VOLUME=<nome do volume das fotos>
+     BACKUP_RCLONE_DEST=r2:estomasystech-backups-age/prod
+     BACKUP_KEEP_DAYS=7
+     RCLONE_CONFIG=/etc/estomasystech/rclone.conf
+     BACKUP_ALERT_TO=<e-mail do operador>
+     ```
+
+     Se o app usa um banco diferente do `POSTGRES_DB` do container (compare com a `DATABASE_URL`
+     do app), acrescente `BACKUP_DB_NAME=<banco>`.
+
+   - `/etc/msmtprc` (SMTP do Resend; a senha é uma API key do Resend só de envio):
+
+     ```text
+     defaults
+     auth on
+     tls on
+     tls_trust_file /etc/ssl/certs/ca-certificates.crt
+     account default
+     host smtp.resend.com
+     port 587
+     user resend
+     password <API key do Resend>
+     from <remetente de um domínio verificado no Resend>
+     ```
+
+5. **Primeiro backup, à mão:**
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl start estomasystech-backup     # volta quando terminar
+   sudo journalctl -u estomasystech-backup -n 20 --no-pager
+   sudo rclone --config /etc/estomasystech/rclone.conf lsl r2:estomasystech-backups-age/prod/
+   ```
+
+   O log termina em `cópia fora do servidor ok` e o R2 mostra a pasta `<data UTC>/` com
+   `db.dump.age`, `uploads.tar.age` e `SHA256SUMS`.
+
+6. **Teste do alerta:** `sudo systemctl start estomasystech-backup-alert` deve chegar no e-mail
+   (confira o spam). Depois ligue a agenda:
+   `sudo systemctl enable --now estomasystech-backup.timer` e confira em
+   `systemctl list-timers estomasystech-backup.timer`.
+
+7. **Restauração de teste** (§ 5.3), na máquina do operador, com o backup do passo 5.
+
+8. Só depois do passo 7 ok: no Coolify, no backup agendado do `estomasystech-db`, desligue o
+   envio para o S3 e apague do bucket `estomasystech-backups` os dumps em claro já enviados
+   (irreversível: confira antes que o passo 7 passou).
 
 | Saída do `backup.sh` | Significado |
 | --- | --- |
-| `0` | backup gerado e copiado para fora do servidor; cópias locais com mais de 30 dias apagadas |
-| `2` | configuração: chave pública ausente, `age`/`flock` faltando ou outro backup rodando. Nada foi gerado |
-| `3` | backup gerado **só** no servidor: `BACKUP_OFFSITE_CMD` vazio ou falhou. Corrija e rode de novo |
-| `1` | falha inesperada (ex.: banco fora do ar). Pasta parcial descartada |
+| `0` | backup gerado e copiado para fora do servidor; cópias locais além de `BACKUP_KEEP_DAYS` apagadas |
+| `2` | configuração: chave pública ausente, `age`/`flock`/`rclone` faltando, container do banco parado ou com outro nome, volume não encontrado ou outro backup rodando. Nada foi gerado |
+| `3` | backup gerado **só** no servidor: destino vazio ou cópia falhou. Corrija e rode de novo |
+| `1` | falha inesperada (ex.: banco fora do ar, foto apagada no meio do tar). Pasta parcial descartada |
 
-**Restaurar** ([`scripts/restore.sh`](../../scripts/restore.sh)), com a chave privada trazida do
-cofre só para isso:
+### 5.2 Restaurar
+
+[`scripts/restore.sh`](../../scripts/restore.sh) usa o mesmo alvo do backup (`BACKUP_DB_CONTAINER`,
+`BACKUP_UPLOADS_VOLUME`) e a chave privada trazida do cofre **só para isso**:
 
 ```bash
-BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh /caminho/20261011T060000Z
-BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh /caminho/20261011T060000Z --confirmar
+# da máquina do operador
+scp estomasystech-backup.key vps:/tmp/
+# no servidor (troque a data pela pasta escolhida no R2)
+sudo install -d -m 700 /root/restore && sudo mv /tmp/estomasystech-backup.key /root/restore/
+sudo rclone --config /etc/estomasystech/rclone.conf copy r2:estomasystech-backups-age/prod/20261019T050000Z /root/restore/20261019T050000Z
+sudo sh -c 'set -a; . /etc/estomasystech/backup.env; set +a; BACKUP_AGE_IDENTITY_FILE=/root/restore/estomasystech-backup.key /opt/estomasystech-backup/restore.sh /root/restore/20261019T050000Z'
 ```
 
 Sem `--confirmar` o script só confere: `SHA256SUMS`, decifra os dois arquivos (chave errada sai
-com `2`) e lista o dump e o tar das fotos.
-Com `--confirmar` ele para o app, recria o banco `estomasystech`, restaura o dump, troca o conteúdo do
-volume de fotos e sobe o app (que roda as migrações pendentes se o backup for de versão
-anterior). Saída `0` ok, `2` uso ou pré-condição (nada foi alterado), `1` falha no meio — rode de
-novo. Apague a chave privada do servidor ao terminar.
+com `2`) e lista o dump e o tar das fotos. Para substituir: **pare o app no Coolify** (Stop),
+repita com `--confirmar` (recria o banco, restaura o dump e troca o conteúdo do volume de fotos),
+**ligue o app** (Start; as migrações do boot alinham o schema se o backup for de versão anterior)
+e rode `POST /api/retention/run`. Com o app conectado ao banco, o `--confirmar` sai com `2` sem
+alterar nada. Saída `0` ok, `2` uso ou pré-condição (nada foi alterado), `1` falha no meio: rode de
+novo. Ao terminar, `sudo rm -rf /root/restore` (a chave privada não fica no servidor).
 
-**Desastre (servidor perdido):** provisione outro (§ 2) com o mesmo `.env` do cofre, suba
-(`docker compose up -d --build`), traga a pasta do backup mais recente do destino e restaure com
-`--confirmar`. O RTO de 4 h cabe nisso só se o teste mensal mostrar que cabe.
+**Desastre (servidor perdido):** provisione outro (§ 2), recrie no Coolify o app e o Postgres com
+as variáveis do cofre, instale o backup (§ 5.1, passos 3 e 4 com os nomes novos), traga a pasta mais
+recente do R2 e restaure com `--confirmar`. O RTO de 4 h cabe nisso só se o teste mensal mostrar
+que cabe.
 
-**Teste de restauração (mensal):** numa máquina descartável (outra VPS ou o notebook do operador,
-com o repositório e Docker), sem o Traefik e em portas que não colidem:
+### 5.3 Teste de restauração (mensal)
+
+Numa máquina descartável (o WSL do operador, com o repositório e Docker), sem tocar a produção:
 
 ```bash
 export COMPOSE_FILE=docker-compose.yml COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433
-# POSTGRES_PASSWORD, AUTH_SECRET e DATA_ENCRYPTION_KEY de produção (do cofre) no ambiente
-docker compose up -d --build
-BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh ./20261011T060000Z --confirmar
+# POSTGRES_PASSWORD qualquer; AUTH_SECRET e DATA_ENCRYPTION_KEY de produção (do cofre) no ambiente
+docker compose up -d --build --wait
+rclone copy r2:estomasystech-backups-age/prod/<data UTC> ./<data UTC>   # rclone local com um token de leitura
+docker compose stop app
+BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh ./<data UTC> --confirmar
+docker compose up -d --wait app
 ```
 
+Sem `BACKUP_DB_CONTAINER`, o script usa o `db` e o volume `uploads` desse projeto compose.
 Abra `http://localhost:3100`, entre e confira a ficha de um paciente com evolução, anamnese e
 foto. Cronometre do início do download até a ficha abrir (é o RTO real). Depois,
 `docker compose down -v` e apague a chave e o backup da máquina. Registre abaixo; se algo
@@ -383,7 +481,7 @@ falhar, abra issue com o rótulo `bug`.
 
 O CI repete o ciclo inteiro a cada PR com uma chave descartável
 ([`scripts/backup-smoke.sh`](../../scripts/backup-smoke.sh)): grava linha e foto, faz backup, apaga
-tudo, restaura e confere.
+tudo, restaura com o app parado e confere.
 
 ## 6. Segredos e rotação
 
@@ -427,10 +525,9 @@ não aparece na linha do comando nem em arquivo. A imagem é `node:alpine`, ent�
 - `wget` sai com código diferente de zero em resposta não-2xx; o Coolify guarda a execução (status e
   saída) em *Scheduled Tasks → Executions* e avisa por e-mail se a notificação de falha de tarefa
   agendada estiver ligada em *Notifications* (confira uma vez).
-- **Não há backup nem `flock` aqui.** O backup do banco é o agendamento nativo do Coolify (03:00,
-  para o R2); a retenção roda às 03:30 para ficar depois dele. O `pg_dump` é consistente, então não
-  há corrida com a retenção. A corrida da retenção apagando foto com um `tar` do volume `uploads`
-  lendo ao mesmo tempo é do backup das fotos, que é do § 5 e ainda não está ligado em produção.
+- **Não há backup nem `flock` aqui.** O backup cifrado do banco e das fotos é um timer do systemd
+  no host às 02:00 de São Paulo (§ 5, [ADR-040](../adr/040-backup-cifrado-no-coolify-para-o-r2-na-ue.md)),
+  1 h 30 antes da retenção (03:30): a retenção apaga fotos e não pode cruzar o `tar` do volume.
 - Formato compose (alternativa): crontab do host em `/etc/cron.d/estomasystech`, com
   `curl -fsS -X POST -H @/etc/estomasystech/cron.headers …` e o `scripts/backup.sh` do § 5. O
   host fica em UTC, então as horas ali são as de São Paulo + 3 (backup `0 5`, lembretes `0 11`,
