@@ -274,4 +274,5 @@ Só depois da etapa 7 aprovada:
 | `backup.sh` sai com `2` | configuração (container, volume, chave pública) | leia a mensagem no `journalctl`; [runbook § 5.1](producao.md#51-instalar-uma-vez) |
 | `backup.sh` sai com `3` | cópia para o R2 falhou | rode o teste da 4.4 |
 | restauração local: `unsupported version (1.16) in file header` | banco local em Postgres 16 | use o Postgres 18 do § 5.3 |
+| banco local em Postgres 18 não sobe (dados em `/var/lib/postgresql/data`) | o volume do compose aponta para o caminho antigo | o override do § 5.3 monta `pgdata:/var/lib/postgresql` |
 | `read: -p: no coprocess` | colou no zsh | digite `bash` antes |

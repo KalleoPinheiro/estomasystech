@@ -475,11 +475,12 @@ que cabe.
 Numa máquina descartável (o WSL do operador, com o repositório e Docker), sem tocar a produção.
 O banco do teste sobe em **Postgres 18**, o mesmo da produção: o `docker-compose.yml` ainda é 16
 ([#385](https://github.com/KalleoPinheiro/estomasystech/issues/385)) e o `pg_restore` 16 não lê
-dump do 18. Os `read` são de bash (no zsh, rode `bash` antes). O download usa um token R2 **só de
+dump do 18; a imagem 18 guarda os dados em `/var/lib/postgresql` (não em `.../data`), por isso o
+override troca o volume. Os `read` são de bash (no zsh, rode `bash` antes). O download usa um token R2 **só de
 leitura** (não o do servidor), passado por variáveis de ambiente, sem arquivo:
 
 ```bash
-printf 'services:\n  db:\n    image: postgres:18-alpine\n' > /tmp/compose.restore-pg18.yml
+printf 'services:\n  db:\n    image: postgres:18-alpine\n    volumes: !override\n      - pgdata:/var/lib/postgresql\n' > /tmp/compose.restore-pg18.yml
 export COMPOSE_FILE=docker-compose.yml:/tmp/compose.restore-pg18.yml COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433 APP_URL=http://localhost:3100
 export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 read -rsp "AUTH_SECRET: " AUTH_SECRET; echo; export AUTH_SECRET                       # de produção
@@ -503,7 +504,7 @@ falhar, abra issue com o rótulo `bug`.
 
 | Data | Backup de | Quem | Tempo até voltar | Resultado |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | nenhum teste registrado ainda |
+| 2026-10-18 | `20261018T231224Z` (1º backup) | Kalléo (com Claude, no WSL) | poucos minutos com o build em cache (não cronometrado) | **parcial**: conferência e `--confirmar` ok (104 tabelas), `/api/health/ready` `200`, contagens iguais à produção (1 clínica, 1 conta, 5 eventos de auditoria). Produção ainda sem paciente nem foto, e o app subiu com `AUTH_SECRET`/`DATA_ENCRYPTION_KEY` descartáveis: a decifragem do dado clínico com a chave real fica para o próximo teste, com paciente cadastrado |
 
 O CI repete o ciclo inteiro a cada PR com uma chave descartável
 ([`scripts/backup-smoke.sh`](../../scripts/backup-smoke.sh)): grava linha e foto, faz backup, apaga
