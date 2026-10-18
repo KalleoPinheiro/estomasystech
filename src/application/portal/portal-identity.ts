@@ -48,8 +48,9 @@ async function linkedAccount(
 
 /**
  * Pacientes ativos que a conta de responsável pode representar: os ligados ao
- * cadastro dela (`patients.guardian_id`). Desvincular o paciente, inativá-lo ou
- * desativar a conta encerra o acesso sem mais nenhum passo (ADR-027).
+ * cadastro dela (`patients.guardian_id`). Desvincular o paciente, inativá-lo,
+ * desativar a conta ou o paciente encerrar o acesso (ADR-028) tira o paciente
+ * da lista sem mais nenhum passo (ADR-027).
  */
 export async function listRepresentablePatients(
   repos: { userAccounts: UserAccountRepository; patients: PatientRepository },
@@ -60,7 +61,9 @@ export async function listRepresentablePatients(
     throw new NotFoundError('Responsável', account?.id ?? 'sem-conta');
   }
   const linked = await repos.patients.findByGuardian(account.guardianId);
-  return linked.filter((patient) => patient.isActive);
+  return linked.filter(
+    (patient) => patient.isActive && !patient.guardianPortalRevokedAt,
+  );
 }
 
 /**

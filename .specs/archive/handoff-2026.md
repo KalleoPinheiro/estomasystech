@@ -1173,3 +1173,11 @@ O responsável (#329) ganha conta própria de portal e age em nome do paciente, 
 - **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage, build de produção, E2E prod e dev). Docker/smoke não rodam (sem daemon). the-judge não posta (sem `gh`): autorrevisão.
 - **Pergunta aberta**: o paciente adulto revogar sozinho o acesso do responsável pelo portal (hoje, pela clínica). Texto final do consentimento (#216) não muda isto.
 - **Next step**: nenhum. **Blockers**: nenhum. Deploy: aplicar a migração 0061 antes do código.
+
+## Issue #354 — Paciente encerra sozinho o acesso do responsável (2026-10-18) — ENCERRADO
+
+Decisão de @KalleoPinheiro: o paciente adulto revoga o responsável pelo portal ([ADR-028](../../docs/adr/028-paciente-encerra-acesso-do-responsavel.md), AD-047, POR-RN-24). Fecha a pergunta aberta da #351.
+- **Código**: `patients.guardian_portal_revoked_at` (**migração 0062**); `revokeGuardianAccess` grava `update`/`guardian-access-revocation` (ator = paciente) antes e marca o paciente; `DELETE /api/portal/patient/guardian-access` (só `patient`, responsável `403`, sem responsável/já encerrado `404`). `listRepresentablePatients` e `getGuardianAccess` ignoram o revogado. Botão "Encerrar acesso" com confirmação no portal do paciente; a ficha da equipe mostra a data. Trocar ou desvincular o responsável (`Patient.update`) zera a marca: é assim que a equipe concede de novo.
+- **Por paciente, não por conta**: o responsável pode representar outros pacientes; desativar a conta cortaria quem não pediu.
+- **Perguntas abertas**: avisar o responsável por e-mail ao ser revogado; tratamento específico para paciente menor (hoje decide a clínica com o representante legal).
+- **Next step**: nenhum. **Blockers**: nenhum. Deploy: aplicar a migração 0062 antes do código.

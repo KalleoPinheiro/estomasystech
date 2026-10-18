@@ -49,4 +49,23 @@ test.describe("portal do responsável (ADR-027)", () => {
     await expect(page.getByText(`${guardian.fullName} (Filho(a))`)).toBeVisible();
     await expect(page.getByText("pode acessar este portal em seu nome")).toBeVisible();
   });
+
+  test("paciente encerra o acesso do responsável e o responsável deixa de entrar (ADR-028)", async ({ page, context, request }) => {
+    const id = unique();
+    const guardian = await createGuardian(request, `Carla Responsável ${id}`, `carla.${id}@e2e.vittaflow.test`);
+    const patient = await createPatient(request, { fullName: `Davi Titular ${id}`, guardianId: guardian.id });
+    await linkGuardianAccount(request, guardian);
+    await linkPortalAccount(request, "patient", patient);
+
+    await context.addCookies([sessionCookie(patient.email, "patient")]);
+    await page.goto("/portal");
+    await page.getByRole("button", { name: "Encerrar acesso" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Encerrar acesso" }).click();
+    await expect(page.getByText("pode acessar este portal em seu nome")).toHaveCount(0);
+
+    await context.clearCookies();
+    await context.addCookies([sessionCookie(guardian.email, "guardian")]);
+    await page.goto("/portal");
+    await expect(page.getByText(`Acessando em nome de ${patient.fullName}.`)).toHaveCount(0);
+  });
 });

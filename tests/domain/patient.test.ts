@@ -284,3 +284,37 @@ describe('Feature: CPF do paciente (#326)', () => {
     });
   });
 });
+
+describe('Feature: Paciente encerra o acesso do responsável ao portal (#354, ADR-028)', () => {
+  const withGuardian = () =>
+    Patient.create({ ...validProps, guardianId: 'g-1' });
+
+  it('Quando revoga, Então guarda a data e mantém o vínculo com o responsável', () => {
+    const now = new Date('2026-10-18T10:00:00Z');
+    const revoked = withGuardian().revokeGuardianPortalAccess(now);
+
+    expect(revoked.guardianPortalRevokedAt).toEqual(now);
+    expect(revoked.guardianId).toBe('g-1');
+    expect(withGuardian().guardianPortalRevokedAt).toBeNull();
+  });
+
+  it('Quando edita outro campo, Então a revogação é mantida', () => {
+    const revoked = withGuardian().revokeGuardianPortalAccess();
+
+    expect(
+      revoked.update({ fullName: 'Maria Souza' }).guardianPortalRevokedAt,
+    ).not.toBeNull();
+    expect(
+      revoked.update({ guardianId: 'g-1' }).guardianPortalRevokedAt,
+    ).not.toBeNull();
+  });
+
+  it.each([null, 'g-2'])(
+    'Quando a equipe troca o responsável para %s, Então a revogação é zerada',
+    (guardianId) => {
+      const revoked = withGuardian().revokeGuardianPortalAccess();
+
+      expect(revoked.update({ guardianId }).guardianPortalRevokedAt).toBeNull();
+    },
+  );
+});

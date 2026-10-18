@@ -16,6 +16,8 @@ export interface PatientDto {
   notes: string | null;
   referredByPartnerId: string | null;
   guardianId: string | null;
+  /** Quando o paciente encerrou o acesso do responsável ao portal (ADR-028). */
+  guardianPortalRevokedAt: string | null;
   /** Só nas respostas de detalhe (ficha, documentos); a listagem traz `guardianId`. */
   guardian?: GuardianDto | null;
   active: boolean;
@@ -37,6 +39,8 @@ export const toPatientDto = (
   notes: patient.notes,
   referredByPartnerId: patient.referredByPartnerId,
   guardianId: patient.guardianId,
+  guardianPortalRevokedAt:
+    patient.guardianPortalRevokedAt?.toISOString() ?? null,
   ...(guardian !== undefined && {
     guardian: guardian ? toGuardianDto(guardian) : null,
   }),

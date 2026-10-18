@@ -91,6 +91,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/024-responsavel-do-paciente.md`](adr/024-responsavel-do-paciente.md) | responsável ou cuidador do paciente: entidade própria, só de contato |
 | [`adr/026-textos-lgpd-previa-nao-ligada.md`](adr/026-textos-lgpd-previa-nao-ligada.md) | textos LGPD em versão prévia ficam em `docs/legal/`, fora do código, até a revisão jurídica; nenhum aceite cai |
 | [`adr/027-responsavel-acessa-portal-em-nome-do-paciente.md`](adr/027-responsavel-acessa-portal-em-nome-do-paciente.md) | responsável do paciente acessa o portal em nome dele, com conta própria (`guardian`), aviso fixo e trilha |
+| [`adr/028-paciente-encerra-acesso-do-responsavel.md`](adr/028-paciente-encerra-acesso-do-responsavel.md) | o paciente encerra sozinho, pelo portal, o acesso do responsável (marca por paciente, trilha, religar pela equipe) |
 | [`adr/025-cpf-no-recibo-e-protecao.md`](adr/025-cpf-no-recibo-e-protecao.md) | CPF do paciente/pagador opcional, validado, cifrado e mascarado; exigido só no recibo do IRPF, com CNPJ do prestador |
 
 Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md).

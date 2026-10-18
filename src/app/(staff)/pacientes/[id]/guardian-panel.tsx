@@ -17,6 +17,7 @@ import {
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
 import { apiFetch } from '@/lib/client';
 import type { GuardianDto, PatientDto } from '@/lib/dto';
+import { formatDateTime } from '@/lib/format';
 import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 
@@ -200,7 +201,13 @@ function GuardianPickerModal({
   );
 }
 
-function GuardianSummary({ guardian }: { guardian: GuardianDto }) {
+function GuardianSummary({
+  guardian,
+  portalRevokedAt,
+}: {
+  guardian: GuardianDto;
+  portalRevokedAt: string | null;
+}) {
   return (
     <p className="text-sm">
       <strong>{guardian.fullName}</strong> — {guardian.relationshipLabel}
@@ -208,6 +215,13 @@ function GuardianSummary({ guardian }: { guardian: GuardianDto }) {
         {formatBrazilianPhone(guardian.phone)}
         {guardian.email ? ` · ${guardian.email}` : ''}
       </span>
+      {portalRevokedAt && (
+        <span className="block text-ink-2">
+          O paciente encerrou o acesso deste responsável ao portal em{' '}
+          {formatDateTime(portalRevokedAt)}. Para conceder de novo, desvincule e
+          vincule o responsável.
+        </span>
+      )}
     </p>
   );
 }
@@ -275,7 +289,10 @@ export function GuardianPanel({
       <h2 className="font-semibold text-sm">Responsável ou cuidador</h2>
       {error && <ErrorAlert message={error} />}
       {guardian ? (
-        <GuardianSummary guardian={guardian} />
+        <GuardianSummary
+          guardian={guardian}
+          portalRevokedAt={patient.guardianPortalRevokedAt}
+        />
       ) : (
         <p className="text-ink-2 text-sm">Nenhum responsável vinculado.</p>
       )}

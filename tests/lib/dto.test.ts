@@ -69,6 +69,7 @@ describe('Feature: DTO de paciente', () => {
       notes: 'Alergia a látex',
       referredByPartnerId: 'partner-1',
       guardianId: null,
+      guardianPortalRevokedAt: null,
       active: true,
       anonymized: false,
       createdAt: patient.createdAt.toISOString(),

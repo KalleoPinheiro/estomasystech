@@ -23,6 +23,7 @@ const toPatient = (row: PatientRow, cipher: FieldCipher): Patient =>
     notes: cipher.decryptNullable(row.notes),
     referredByPartnerId: row.referredByPartnerId,
     guardianId: row.guardianId,
+    guardianPortalRevokedAt: row.guardianPortalRevokedAt,
     active: row.active,
     createdAt: row.createdAt,
     anonymizedAt: row.anonymizedAt,
@@ -52,6 +53,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       notes: this.cipher.encryptNullable(patient.notes),
       referredByPartnerId: patient.referredByPartnerId,
       guardianId: patient.guardianId,
+      guardianPortalRevokedAt: patient.guardianPortalRevokedAt,
       active: patient.isActive,
       createdAt: patient.createdAt,
     };

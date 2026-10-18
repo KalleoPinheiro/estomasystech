@@ -379,6 +379,11 @@ export const patients = pgTable(
       () => partners.id,
     ),
     guardianId: text('guardian_id').references(() => guardians.id),
+    // O paciente encerrou o acesso do responsável ao portal (#354, ADR-028).
+    guardianPortalRevokedAt: timestamp('guardian_portal_revoked_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', {
       withTimezone: true,

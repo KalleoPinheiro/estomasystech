@@ -2,7 +2,7 @@
 
 ## Decisions
 
-Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-026, AD-027, AD-029, AD-030, AD-031.
+Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-024, AD-026, AD-027, AD-029, AD-030, AD-031.
 
 ### AD-001
 - **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
@@ -157,14 +157,6 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 - **Date**: 2026-09-01
 - **Status**: active
 
-### AD-024
-- **Decision**: Gestão de conta existente (`PATCH /api/accounts/[id]`, `POST /api/accounts/[id]/resend-invite`) usa a matriz `canProvision` do cadastro; negação → `403` (`ProvisioningDeniedError`, mesmo status do `POST`); `GET /api/accounts` lista só as contas que o papel pode gerir; desativar a própria conta ou o último `company_admin` ativo → `400`; senha/ativação/reenvio auditados write-ahead (`recordAuditNow` antes do `save`). Issue #184.
-- **Reason**: P0 da revisão pré-produção (#183): atendente/profissional trocavam a senha do Admin e o desativavam, sem trilha.
-- **Trade-off**: padrão seguro aplicado a três perguntas em aberto para o dono do produto — (1) `password` no PATCH foi mantido (agora sob hierarquia + auditoria); (2) Atendente/Profissional não trocam a própria senha nem se reativam pelo PATCH (a matriz não os deixa gerir o próprio papel; o caminho é "esqueci a senha"); (3) desativação concorrente de dois admins não tem trava transacional.
-- **Scope**: src/domain/auth/account-management.ts, src/lib/auth/account-manager.ts, src/app/api/accounts/**
-- **Date**: 2026-09-26
-- **Status**: resolved — perguntas respondidas por @KalleoPinheiro em 2026-10-11 (o PATCH perde `password`, "Minha conta" troca a própria senha, trava com 409 no último admin) e 2026-10-12 (Admin remove o 2º fator de quem perdeu o celular). Implementado na #295; ver ADR-019 e ACE-RN-11, ACE-RN-52 a ACE-RN-54. **Resolvida.**
-
 ### AD-025
 - **Decision**: `GET /api/patients/:id/export` (exportação LGPD, art. 18) é família `clinical` e aplica o vínculo R4: Atendente recebe 403, Profissional sem vínculo recebe 404. Toda sub-rota de `/api/patients/:id/*` passa a ser clínica por padrão; a exceção é uma allowlist explícita (`NON_CLINICAL_PATIENT_SUBROUTES` em `src/lib/auth/route-family.ts`, hoje vazia).
 - **Reason**: o export devolve anamnese, SOAP, condições e fotos; qualquer subrota nova nascia `operational` e aberta ao Atendente porque a regra antiga listava só as clínicas e casava com `pathname.includes`.
@@ -230,6 +222,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 
 ### AD-046
 - **Decision**: o responsável do paciente acessa o portal **em nome dele** (#351, [ADR-027](../docs/adr/027-responsavel-acessa-portal-em-nome-do-paciente.md)), por decisão de @KalleoPinheiro (2026-10-17) com a exigência de evidência; desenho delegado ao coordenador: papel `guardian` com conta própria (migração `0061`), concedida pelo Admin de Empresa ou Atendente com **atestação** de que o paciente autorizou; o responsável escolhe o paciente, a tela mostra "Acessando em nome de X" o tempo todo, cada requisição grava `guardian-access` antes de seguir (ator = responsável, titular = paciente) e o paciente vê quem tem acesso e o último acesso. **Trade-off**: consentimento, parceiro indicador, cópia dos dados e pedidos LGPD ficam `403` para o responsável; foto só com o aceite do paciente; a prova é a atestação da equipe, sem convite ao paciente; um `read` por requisição enche a trilha. Pergunta aberta: o paciente adulto revogar sozinho o acesso pelo portal. POR-RN-21..23, ACE-RN-56 · 2026-10-17 · active
+
+### AD-047
+- **Decision**: o paciente adulto **revoga sozinho**, pelo portal, o acesso do responsável (#354, [ADR-028](../docs/adr/028-paciente-encerra-acesso-do-responsavel.md)), por decisão de @KalleoPinheiro (2026-10-18). Marca **por paciente** (`patients.guardian_portal_revoked_at`, migração `0062`), não desativação da conta: o responsável pode representar outros pacientes e o contato dele (ADR-024) continua. Trilha `guardian-access-revocation` (ator = paciente) antes de gravar. Só a equipe concede de novo, desvinculando e vinculando o responsável. **Trade-off**: o responsável não é avisado; religar é ato manual da equipe. POR-RN-24 · 2026-10-18 · active
 
 ### Baseline de segurança medido em `fcd6110`
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).

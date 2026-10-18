@@ -35,6 +35,8 @@ export interface PatientState extends PatientProps {
   createdAt: Date;
   /** Anonimizado pela retenção (#294): não volta a ser ativado (ADR-017). */
   anonymizedAt?: Date | null;
+  /** O paciente encerrou o acesso do responsável ao portal (#354, ADR-028). */
+  guardianPortalRevokedAt?: Date | null;
 }
 
 export const ANONYMIZED_PATIENT_REACTIVATION =
@@ -102,7 +104,19 @@ export class Patient {
       },
       phoneChanged,
     );
-    return new Patient({ ...this.state, ...validated });
+    // Trocar ou desvincular o responsável é ato da equipe e zera a revogação:
+    // o vínculo novo nasce sem ela (ADR-028).
+    const guardianChanged = validated.guardianId !== this.state.guardianId;
+    return new Patient({
+      ...this.state,
+      ...validated,
+      ...(guardianChanged && { guardianPortalRevokedAt: null }),
+    });
+  }
+
+  /** O próprio paciente encerra o acesso do responsável ao portal (ADR-028). */
+  revokeGuardianPortalAccess(now: Date = new Date()): Patient {
+    return new Patient({ ...this.state, guardianPortalRevokedAt: now });
   }
 
   deactivate(): Patient {
@@ -165,6 +179,10 @@ export class Patient {
 
   get guardianId(): string | null {
     return this.state.guardianId ?? null;
+  }
+
+  get guardianPortalRevokedAt(): Date | null {
+    return this.state.guardianPortalRevokedAt ?? null;
   }
 
   get isActive(): boolean {
