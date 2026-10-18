@@ -1,9 +1,11 @@
+import { RETENTION_YEARS } from '@/domain/retention/retention-policy';
+
 /**
  * Aviso de privacidade (LGPD, art. 9º; #216, ADR-030). Informativo: não pede
  * aceite e não tem hash. Exibido em `/privacidade` (genérico, sem login) e no
  * portal do paciente (com os dados da clínica). Mudou o conteúdo, suba a
- * versão. Os prazos espelham a retenção (ADR-013, ADR-017) e o destino dos
- * dados espelha o ADR-018; mudou lá, muda aqui.
+ * versão. Os prazos vêm de `RETENTION_YEARS` (fonte única, #323); o destino
+ * dos dados espelha o ADR-018; mudou lá, muda aqui.
  *
  * Texto redigido sem revisão jurídica (`LEGAL_REVIEW_PENDING`).
  */
@@ -63,10 +65,10 @@ ativado, Google Agenda) recebem somente os dados descritos acima e só são usad
 mecanismos do art. 33 da LGPD.
 
 6. Por quanto tempo guardamos
-- Prontuário e fotos clínicas: 20 anos após o último atendimento (Lei nº 13.787/2018); depois,
+- Prontuário e fotos clínicas: ${RETENTION_YEARS.clinicalRecord} anos após o último atendimento (Lei nº 13.787/2018); depois,
   os dados são anonimizados.
-- Registros de acesso e de alterações: 5 anos; depois, anonimizados.
-- Lista de espera e contas inativas: 2 anos; depois, anonimizadas.
+- Registros de acesso e de alterações: ${RETENTION_YEARS.auditTrail} anos; depois, anonimizados.
+- Lista de espera e contas inativas: ${RETENTION_YEARS.waitlist} anos; depois, anonimizadas.
 - Faturas e recibos: pelo prazo fiscal; valores e datas permanecem, e os dados pessoais são
   anonimizados junto com o cadastro.
 - Cópias de segurança: 30 dias.

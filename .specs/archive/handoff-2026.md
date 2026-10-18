@@ -1229,6 +1229,15 @@ Follow-up da #213: contar e gravar eram passos separados e envios simultâneos d
 - **Testes**: concorrência real com `RowLockingTransactionManager` (imita o lock de linha em memória; sem ele o in-memory não reproduz a corrida) para consultas e fotos, mais teste SQL de que o `FOR UPDATE` é emitido (o PGlite tem uma conexão só e serializa, mesma estratégia da #192).
 - **Decisão**: lock de linha em vez de restrição no banco (janela móvel de 24 h e consultas da equipe não cabem em `UNIQUE`/`CHECK`) e de lock distribuído. A foto vai ao storage dentro da transação: commit falho deixa no máximo um arquivo órfão.
 - **Housekeeping**: arquivei AD-045 (substituída pelo AD-050) em `decisions-2026.md` para o `STATE.md` caber em 250 linhas.
+
+## Issue #323 — Retenção da trilha de auditoria e runbook (2026-10-18) — ENCERRADO
+
+Fatia da #210 item 2, destravada pela #216 (prazo final no aviso: registros de acesso e alterações, 5 anos). O job de retenção da #294 já anonimizava a trilha; faltavam a fronteira, a fonte única do prazo, o registro de cada execução e o runbook ([ADR-031](../../docs/adr/031-retencao-em-dias-inteiros-e-fonte-unica.md), AD-052, ACE-RN-44, RET-02, RET-09).
+- **Código**: `retentionCutoff` conta em dias inteiros no `APP_TIMEZONE` (CC art. 132 § 3º; 29/02 termina em 01/03), para todos os tipos; o aviso de privacidade interpola `RETENTION_YEARS`; teste trava prazo e `PRIVACY_NOTICE_VERSION` juntos. `RunRetention` grava um evento de plataforma a cada execução (`clinics`, `failedClinics`, `auditTrailCutoff`); a clínica só quando algo mudou.
+- **Decisões (coordenador como PO)**: prazo configurável só no código, sem variável de ambiente (o aviso não pode ficar desatualizado); trilha anonimizada continua no banco (ADR-013), expurgo/partição é decisão futura.
+- **Sem migração.** Runbook: `producao.md` § 7.1 (fronteira, trocar prazo, rodar à mão, conferir, falhas, tamanho).
+- **#210**: itens 1 e 4 (#240), 3 (#322, índice composto + cursor) e 2 (esta) feitos; a umbrella fecha junto.
+- **Gate**: Actions sem cota; local completo. Docker/smoke não rodam (sem daemon). the-judge não posta (sem `gh`): autorrevisão.
 - **Next step**: nenhum. **Blockers**: nenhum.
 
 ## Issue #359 — Testes `readiness` e `health-route` intermitentes sob carga (2026-10-18) — ENCERRADO

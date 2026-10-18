@@ -10,6 +10,7 @@ import {
   ANONYMIZED_PASSWORD_HASH,
   ANONYMIZED_PATIENT_NAME,
   anonymizedEmail,
+  retentionCutoff,
 } from '@/domain/retention/retention-policy';
 import type { AppDb } from '@/infrastructure/persistence/drizzle/db';
 import { DrizzleClinicRepository } from '@/infrastructure/persistence/drizzle/drizzle-clinic-repository';
@@ -709,6 +710,32 @@ describe('Feature: Retenção da trilha de auditoria — 5 anos (#294, RET-05)',
     );
     expect(await byId(platform)).toMatchObject({ actorId: ANONYMIZED_MARKER });
     expect(await byId(otherClinic)).toMatchObject({ actorId: 'admin@x.com' });
+  });
+
+  it('Dado evento no último dia do prazo, Quando o job roda nesse dia, Então ele fica; no dia seguinte, sai (#323)', async () => {
+    const SP = 'America/Sao_Paulo';
+    const other = new DrizzleRetentionRepository(appDb, OTHER);
+    const lastDay = await insertEvent(
+      OTHER,
+      new Date('2021-10-18T23:30:00-03:00'),
+    );
+    const dayBefore = await insertEvent(
+      OTHER,
+      new Date('2021-10-17T23:59:00-03:00'),
+    );
+
+    await other.anonymizeAuditEvents(
+      retentionCutoff(new Date('2026-10-18T23:59:00-03:00'), 5, SP),
+    );
+    expect(await byId(lastDay)).toMatchObject({ actorId: 'admin@x.com' });
+    expect(await byId(dayBefore)).toMatchObject({
+      actorId: ANONYMIZED_MARKER,
+    });
+
+    await other.anonymizeAuditEvents(
+      retentionCutoff(new Date('2026-10-19T00:01:00-03:00'), 5, SP),
+    );
+    expect(await byId(lastDay)).toMatchObject({ actorId: ANONYMIZED_MARKER });
   });
 
   it('Dado escopo de sistema, Quando pede prontuário, fila ou contas, Então recusa', async () => {

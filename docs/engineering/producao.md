@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-12
+last_reviewed: 2026-10-18
 ---
 
 # Runbook de produção
@@ -317,25 +317,51 @@ quando falham. Precisa de um relay de e-mail no host (`msmtp`, § 9.3).
   Disparar de novo no mesmo dia deve devolver `sent: 0`. Na agenda, **Enviar WhatsApp** abre o
   `wa.me` e passa a mostrar "enviado hoje às HH:MM".
 
-### 7.1 Cron de retenção e anonimização (#294)
+### 7.1 Cron de retenção e anonimização (#294, #323)
 
 Anonimiza o que passou do prazo (prontuário e fotos 20 anos após a última atividade, trilha de
 auditoria 5 anos, lista de espera e contas inativas 2 anos). Nada é excluído do banco; o arquivo
 da foto é apagado do volume `uploads`. Contrato e regras:
-[`integrations/retencao.md`](integrations/retencao.md), [ADR-013](../adr/013-retencao-por-anonimizacao.md).
-Issue: [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294).
+[`integrations/retencao.md`](integrations/retencao.md), [ADR-013](../adr/013-retencao-por-anonimizacao.md),
+[ADR-031](../adr/031-retencao-em-dias-inteiros-e-fonte-unica.md).
+Issues: [#294](https://github.com/KalleoPinheiro/vitta-flow/issues/294),
+[#323](https://github.com/KalleoPinheiro/vitta-flow/issues/323).
 
-- Linha do `/etc/cron.d/vitta` no § 7: uma vez por dia, fora do horário da clínica, com o mesmo
-  `CRON_SECRET` dos lembretes. Na alternativa Vercel, o `vercel.json` agenda
-  `GET /api/retention/run` às 06:00 UTC.
-- **Backup:** o dado anonimizado continua identificável nos backups até eles expirarem — no
-  máximo 30 dias (§ 5), mais o que a retenção do destino fora do servidor guardar.
+- **Agendamento:** linha do `/etc/cron.d/vitta` no § 7, uma vez por dia às 03:00 de São Paulo,
+  depois do backup, com o mesmo `CRON_SECRET` dos lembretes. Na alternativa Vercel, o
+  `vercel.json` agenda `GET /api/retention/run` às 06:00 UTC.
+- **Prazo e fronteira:** conta em dias inteiros no `APP_TIMEZONE`. O último dia do prazo fica
+  inteiro: um evento de auditoria de 18/10/2021 sai na execução de 19/10/2026, não antes. Nenhum
+  dado clínico sai dentro dos 20 anos.
+- **Trocar um prazo:** não há variável de ambiente. Mude `RETENTION_YEARS`
+  (`src/domain/retention/retention-policy.ts`) e suba `PRIVACY_NOTICE_VERSION` no mesmo PR: o aviso
+  de privacidade lê os números de lá, e o teste de `legal-text` falha se só um dos dois mudar.
 - **Primeira execução:** a trilha de auditoria pode ter muitos eventos com mais de 5 anos e a
-  atualização é uma só por empresa; rode fora do horário de uso. Contagem prévia:
-  `SELECT clinic_id, count(*) FROM audit_events WHERE occurred_at < now() - interval '5 years' AND actor_id <> 'anonimizado' GROUP BY 1;`
-- **Verificação:** a resposta traz só contagens por tipo e por empresa; a segunda execução no
-  mesmo dia devolve tudo `0`. Entrada com `error` indica empresa que falhou (as outras seguem);
-  veja `docker compose logs app`.
+  atualização é uma só por empresa; rode fora do horário de uso. Contagem prévia (aproximada: o
+  job usa o dia em São Paulo):
+  `SELECT clinic_id, count(*) FROM audit_events WHERE occurred_at < date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo' - interval '5 years') AT TIME ZONE 'America/Sao_Paulo' AND actor_id <> 'anonimizado' GROUP BY 1;`
+- **Rodar à mão** (depois de restaurar backup, ou para conferir): no host,
+  `curl -fsS -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/retention/run`.
+  É idempotente; a segunda execução no mesmo dia devolve tudo `0`. Use o mesmo `flock` da linha
+  do cron se o backup estiver rodando.
+- **Conferir que rodou:** *Plataforma → Auditoria* (Super Admin) mostra um evento `retention` do
+  ator `retention-job` **por execução**, mesmo sem nada vencido. O detalhe traz as contagens da
+  trilha de plataforma, `clinics` (empresas processadas), `failedClinics` (quantas falharam) e
+  `auditTrailCutoff` (o corte usado). A trilha de cada clínica (*Configurações → Auditoria*) só
+  ganha o evento quando algo foi anonimizado nela, com as contagens por tipo. Pelo banco:
+  `SELECT occurred_at, detail FROM audit_events WHERE resource_type = 'retention' AND clinic_id IS NULL ORDER BY occurred_at DESC LIMIT 5;`
+- **Sem evento de hoje** depois das 03:00: o cron não chamou ou o app não respondeu. Veja o
+  e-mail do `MAILTO` e `docker compose logs app`, e rode à mão.
+- **`failedClinics` acima de zero** ou entrada com `error` na resposta: a empresa que falhou está
+  no log (`Retenção da empresa <id>: falha`); as outras seguiram, e o que já tinha sido feito na
+  empresa com falha está contado na trilha dela. Corrija a causa e rode à mão; o job retoma de onde
+  parou.
+- **Backup:** o dado anonimizado continua identificável nos backups até eles expirarem, no
+  máximo 30 dias (§ 5), mais o que a retenção do destino fora do servidor guardar. Ao restaurar,
+  rode o job à mão em seguida.
+- **Tamanho:** a trilha anonimizada continua no banco (ADR-013). Acompanhe com
+  `SELECT pg_size_pretty(pg_total_relation_size('audit_events'));`; expurgar ou particionar é
+  decisão nova (ADR-031).
 - Contas inativas antes da migração `0049` contam os 2 anos a partir dela.
 
 ### 7.2 Reescrita dos eventos antigos do Google Agenda (#339)

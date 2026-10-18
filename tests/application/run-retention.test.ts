@@ -102,18 +102,18 @@ describe('Feature: Job de retenção (#294)', () => {
     ).execute();
 
     expect(retention.findPatientsDue).toHaveBeenCalledWith(
-      new Date('2006-10-11T12:00:00Z'),
+      new Date('2006-10-11T00:00:00Z'),
       PATIENT_BATCH,
     );
     expect(retention.findPendingPhotos).toHaveBeenCalledWith(PHOTO_BATCH);
     expect(retention.anonymizeAuditEvents).toHaveBeenCalledWith(
-      new Date('2021-10-11T12:00:00Z'),
+      new Date('2021-10-11T00:00:00Z'),
     );
     expect(retention.anonymizeWaitlistEntries).toHaveBeenCalledWith(
-      new Date('2024-10-11T12:00:00Z'),
+      new Date('2024-10-11T00:00:00Z'),
     );
     expect(retention.anonymizeInactiveAccounts).toHaveBeenCalledWith(
-      new Date('2024-10-11T12:00:00Z'),
+      new Date('2024-10-11T00:00:00Z'),
       NOW,
     );
     // Arquivo que falhou não é marcado: volta na próxima execução (RET-04).
@@ -158,10 +158,13 @@ describe('Feature: Job de retenção (#294)', () => {
       accounts: 0,
       waitlistExpired: 0,
       calendarEvents: 0,
+      clinics: 1,
+      failedClinics: 0,
+      auditTrailCutoff: '2021-10-11T00:00:00.000Z',
     });
   });
 
-  it('Dado nada vencido, Quando roda, Então não grava evento de auditoria (RET-09)', async () => {
+  it('Dado nada vencido, Quando roda, Então a clínica não ganha evento e a plataforma registra a execução (RET-09, #323)', async () => {
     const audit = fakeAudit();
     const platformAudit = fakeAudit();
 
@@ -193,7 +196,17 @@ describe('Feature: Job de retenção (#294)', () => {
       },
     ]);
     expect(audit.saved).toEqual([]);
-    expect(platformAudit.saved).toEqual([]);
+    expect(platformAudit.saved).toHaveLength(1);
+    expect(platformAudit.saved[0]).toMatchObject({
+      clinicId: null,
+      actorId: RETENTION_ACTOR,
+      resourceType: 'retention',
+    });
+    expect(JSON.parse(platformAudit.saved[0].detail ?? '')).toMatchObject({
+      auditEvents: 0,
+      clinics: 1,
+      failedClinics: 0,
+    });
   });
 
   it('Dada uma clínica que falha, Quando roda, Então ela traz o erro e as outras e a plataforma seguem (RET-10)', async () => {
@@ -290,7 +303,7 @@ describe('Feature: Job de retenção (#294)', () => {
     expect(retention.anonymizePatient).toHaveBeenCalledWith(
       'p1',
       NOW,
-      new Date('2006-10-11T12:00:00Z'),
+      new Date('2006-10-11T00:00:00Z'),
     );
     const partial = {
       clinicalRecords: 2,
@@ -459,5 +472,35 @@ describe('Feature: Job de retenção (#294)', () => {
         waitlistExpired: 3,
       });
     });
+  });
+});
+
+describe('Feature: Registro de cada execução na trilha de plataforma (#323)', () => {
+  it('Dada uma clínica que falha, Quando roda, Então o evento de plataforma conta a falha sem identificar a empresa', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const platformAudit = fakeAudit();
+
+    await new RunRetention(
+      ['bad', 'good'],
+      async (clinicId) => {
+        if (clinicId === 'bad') throw new Error('banco fora');
+        return {
+          retention: fakeRetention(),
+          photoStorage: fakeStorage(),
+          calendar: new NullCalendarGateway(),
+          auditEvents: fakeAudit().repo,
+        };
+      },
+      async () => ({
+        retention: fakeRetention(),
+        auditEvents: platformAudit.repo,
+      }),
+      NOW,
+    ).execute();
+
+    expect(platformAudit.saved).toHaveLength(1);
+    const detail = platformAudit.saved[0].detail ?? '';
+    expect(JSON.parse(detail)).toMatchObject({ clinics: 2, failedClinics: 1 });
+    expect(detail).not.toContain('bad');
   });
 });

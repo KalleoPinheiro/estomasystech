@@ -99,7 +99,7 @@ export class RunRetention {
     for (const clinicId of this.clinicIds) {
       clinics.push(await this.runClinic(clinicId));
     }
-    const platform = await this.runPlatform();
+    const platform = await this.runPlatform(clinics);
     const totals = { ...ZERO, auditEvents: platform.auditEvents };
     for (const clinic of clinics) {
       for (const key of Object.keys(ZERO) as (keyof RetentionCounts)[]) {
@@ -230,16 +230,29 @@ export class RunRetention {
     return removed;
   }
 
-  private async runPlatform(): Promise<RetentionRunSummary['platform']> {
+  /**
+   * Trilha de plataforma (eventos sem empresa). Grava um evento a cada execução,
+   * mesmo sem nada vencido (#323): é o registro de que o job rodou, com quantas
+   * empresas falharam e o corte usado na trilha. A trilha de cada clínica só
+   * ganha evento quando algo mudou nela (RET-09).
+   */
+  private async runPlatform(
+    clinics: ClinicRetentionSummary[],
+  ): Promise<RetentionRunSummary['platform']> {
     try {
       const services = await this.platformServices();
       const auditEvents = await services.retention.anonymizeAuditEvents(
         this.cutoffs.auditTrail,
       );
-      await this.recordRun(services.auditEvents, null, {
-        ...ZERO,
-        auditEvents,
-      });
+      await services.auditEvents.save(
+        this.runEvent(null, {
+          ...ZERO,
+          auditEvents,
+          clinics: clinics.length,
+          failedClinics: clinics.filter((clinic) => clinic.error).length,
+          auditTrailCutoff: this.cutoffs.auditTrail.toISOString(),
+        }),
+      );
       return { auditEvents };
     } catch (error) {
       logError('Retenção da trilha de plataforma: falha', error);
@@ -250,20 +263,22 @@ export class RunRetention {
   /** Evento só com as contagens (nada de PII), e só se algo mudou. */
   private async recordRun(
     auditEvents: AuditEventRepository,
-    clinicId: string | null,
+    clinicId: string,
     counts: RetentionCounts,
   ): Promise<void> {
     if (Object.values(counts).every((count) => count === 0)) return;
-    await auditEvents.save(
-      AuditEvent.create({
-        clinicId,
-        actorRole: 'system',
-        actorId: RETENTION_ACTOR,
-        action: 'update',
-        resourceType: 'retention',
-        resourceId: this.now.toISOString().slice(0, 10),
-        detail: JSON.stringify(counts),
-      }),
-    );
+    await auditEvents.save(this.runEvent(clinicId, counts));
+  }
+
+  private runEvent(clinicId: string | null, detail: object): AuditEvent {
+    return AuditEvent.create({
+      clinicId,
+      actorRole: 'system',
+      actorId: RETENTION_ACTOR,
+      action: 'update',
+      resourceType: 'retention',
+      resourceId: this.now.toISOString().slice(0, 10),
+      detail: JSON.stringify(detail),
+    });
   }
 }

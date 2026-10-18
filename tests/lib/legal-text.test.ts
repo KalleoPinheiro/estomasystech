@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Clinic, type ClinicState } from '@/domain/clinic/clinic';
+import { RETENTION_YEARS } from '@/domain/retention/retention-policy';
 import { ConflictError } from '@/domain/shared/errors';
 import {
   controllerFromClinic,
@@ -8,7 +9,10 @@ import {
   LEGAL_REVIEW_PENDING,
   renderLegalText,
 } from '@/lib/legal-text';
-import { PRIVACY_NOTICE_TEXT } from '@/lib/privacy-notice-text';
+import {
+  PRIVACY_NOTICE_TEXT,
+  PRIVACY_NOTICE_VERSION,
+} from '@/lib/privacy-notice-text';
 
 const clinic = (extra: Partial<ClinicState> = {}) =>
   Clinic.restore({
@@ -107,5 +111,39 @@ describe('Feature: Interpolação dos textos LGPD', () => {
 
   it('Dado o estado da revisão jurídica, Então segue pendente (a revisão é externa)', () => {
     expect(LEGAL_REVIEW_PENDING).toBe(true);
+  });
+});
+
+describe('Feature: Prazos do aviso vêm da retenção (#323, ADR-031)', () => {
+  it('Dado o aviso, Então os prazos são os de RETENTION_YEARS', () => {
+    expect(PRIVACY_NOTICE_TEXT).toContain(
+      `Prontuário e fotos clínicas: ${RETENTION_YEARS.clinicalRecord} anos após o último atendimento`,
+    );
+    expect(PRIVACY_NOTICE_TEXT).toContain(
+      `Registros de acesso e de alterações: ${RETENTION_YEARS.auditTrail} anos; depois, anonimizados.`,
+    );
+    expect(PRIVACY_NOTICE_TEXT).toContain(
+      `Lista de espera e contas inativas: ${RETENTION_YEARS.waitlist} anos`,
+    );
+  });
+
+  it('Dada a linha que junta fila e contas, Então os dois prazos são iguais', () => {
+    expect(RETENTION_YEARS.waitlist).toBe(RETENTION_YEARS.inactiveAccount);
+  });
+
+  it('Dado um prazo mudado, Então a versão do aviso sobe junto', () => {
+    // Trava: mudou um prazo, suba PRIVACY_NOTICE_VERSION e atualize os dois aqui.
+    expect({
+      version: PRIVACY_NOTICE_VERSION,
+      years: RETENTION_YEARS,
+    }).toEqual({
+      version: 'v1',
+      years: {
+        clinicalRecord: 20,
+        auditTrail: 5,
+        waitlist: 2,
+        inactiveAccount: 2,
+      },
+    });
   });
 });
