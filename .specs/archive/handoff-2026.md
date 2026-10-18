@@ -1256,3 +1256,13 @@ Achado no baseline de carga (PR #362). Sem migração, sem ADR (refatoração se
 - **Testes**: `send-reminders-queries.test.ts` (leituras iguais com 4 e 40 pacientes, destinatários corretos), mais lote nos repositórios Drizzle e in-memory, com isolamento por empresa e canal.
 - **Gate**: Actions sem cota; gate local. Docker/smoke não rodam (sem daemon); autorrevisão no lugar do the-judge.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Issue #360 — `/slots` do portal em lote (2026-10-18) — ENCERRADO
+
+`ListAvailableSlots` fazia uma consulta de conflito por horário candidato e era a única rota perto do orçamento (460 ms com 20 profissionais, AD-049). Agora lê as consultas do dia uma vez (AD-053). Sem migração, sem regra de negócio nova.
+- **Código**: `assertSlotAvailable` foi dividida em regras (grade, bloqueios, horário do profissional) + conflito; novo `assertSlotAvailableAmong(pool, …)` confere o candidato contra a lista já lida, com a mesma mensagem. `ListAvailableSlots` faz um `findConflicting` sobre a janela do dia (folga mínima nas pontas, mesmo `excludeId` e profissional) e chama a nova função. Agendar e remarcar não mudaram.
+- **Testes**: `tests/application/list-available-slots-batch.test.ts` compara, em 8 agendas aleatórias determinísticas (com canceladas, 3 folgas mínimas, almoço), recesso e remarcação, o resultado novo com o laço antigo de `assertSlotAvailable`; e confirma 1 única leitura de conflitos por listagem.
+- **Medição** (`scripts/load/`, perfil `issue`, antes e depois na mesma máquina): realista p50/p95 403/593 → 50/79 ms; saturação 4 172/4 920 → 1 622/2 169 ms; sequencial 344/406 → 44/61 ms. Zero erro. Tabela em `performance-baseline.md` § 8.
+- **Housekeeping**: arquivei AD-043 em `decisions-2026.md` para o `STATE.md` caber em 250 linhas.
+- **Gate**: local completo (ver PR); Docker/smoke não rodam (sem daemon); autorrevisão (sem `gh`).
+- **Next step**: #361 (job de lembretes). **Blockers**: nenhum.
