@@ -41,6 +41,7 @@ algo que não está aqui? Adicione a linha no mesmo PR.
 | Sintoma | Causa provável | Ação |
 | --- | --- | --- |
 | E2E intermitente: modal não fecha, aba ou item não aparece, `[Fast Refresh] rebuilding` no trace | o `next dev` compila sob demanda e refaz o Fast Refresh no meio do teste, pior em máquina lenta (#308) | rode a suíte contra o build: `npm run build && npm run test:e2e:prod`; só os specs de `ROLE_ACCOUNT_SPECS` ficam no `next dev`. Não suba `retries` nem timeouts ([ADR-021](../adr/021-e2e-contra-build-de-producao.md)) |
+| `readiness`/`health-route` falham de vez em quando em máquina carregada (`database: 'fail'`) | `vi.resetModules()` no `afterEach` descarta o PGlite aquecido e a partida a frio (~1 s) cai dentro do prazo de 3 s de `checkReadiness` (#359) | abra o banco **dentro** do teste (`warmDatabase()`), depois do reset e antes de chamar `checkReadiness`; não suba o prazo de produção |
 | E2E falha só ao reaproveitar `npm run dev` | `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN` diferentes de `AUTH_SECRET`/`VITTA_BOOTSTRAP_TOKEN` do servidor | use os mesmos valores, ou deixe a suíte subir o próprio servidor |
 | `check:sv` falha com `sv-gap órfão` | comentário `// sv-gap: <slug>` sem seção em `docs/still-void-gaps.md` | adicione a seção ou troque pelo componente `@still-void/ui` |
 | `check:docs` falha com `file:line -> target` | link relativo para arquivo que não existe | corrija o caminho; se o arquivo mudou de lugar, atualize todos os links vivos |

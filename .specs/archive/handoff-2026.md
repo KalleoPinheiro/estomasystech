@@ -1230,3 +1230,11 @@ Follow-up da #213: contar e gravar eram passos separados e envios simultâneos d
 - **Decisão**: lock de linha em vez de restrição no banco (janela móvel de 24 h e consultas da equipe não cabem em `UNIQUE`/`CHECK`) e de lock distribuído. A foto vai ao storage dentro da transação: commit falho deixa no máximo um arquivo órfão.
 - **Housekeeping**: arquivei AD-045 (substituída pelo AD-050) em `decisions-2026.md` para o `STATE.md` caber em 250 linhas.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Issue #359 — Testes `readiness` e `health-route` intermitentes sob carga (2026-10-18) — ENCERRADO
+
+- **Causa raiz (medida)**: o `afterEach` fazia `vi.resetModules()` e jogava fora o PGlite aquecido no `beforeAll`; o teste seguinte reimportava `db` e a partida a frio (carregar o snapshot, ~1 s ocioso) caía dentro do prazo de 3 s do `checkReadiness`. Sob carga passava dos 3 s e a resposta vinha `database: 'fail'`.
+- **Correção**: só testes. `warmDatabase()` abre o banco dentro de cada teste que usa o banco real (`tests/infrastructure/readiness.test.ts`, `tests/api/health-route.test.ts`). Prazo de produção intacto; nenhum teste pulado ou desativado.
+- **Teste de suspensão (#251)**: não reproduzi a falha. 14 rodadas dos 12 arquivos de suspensão com 8 processos saturando a CPU, 6 rodadas com ordem embaralhada, suíte inteira (5258) duas vezes sob carga e `coverage`, e os 2 E2E de suspensão: tudo verde. Sem log da falha original (Actions sem cota), não há causa raiz a corrigir; nada foi alterado ali. Para fechar: colar o erro da próxima ocorrência (arquivo, asserção, `Expected/Received`). Observado de passagem: uma rodada de `test:coverage` falhou uma vez em `tests/pages/configuracoes-email-channel.test.tsx` (carregando/falha) e não repetiu em 4 rodadas sob carga nem na suíte inteira seguinte; sem a mensagem do erro, nada a corrigir ainda.
+- **Gate**: Actions sem cota; gate local (typecheck, lint, check:sv, check:docs, test:coverage 5329 testes, 96,89% de linhas). Sem mudança em `src/`, então sem E2E novo. Autorrevisão no lugar do the-judge.
+- **Next step**: nenhum. **Blockers**: nenhum. Sem migração.

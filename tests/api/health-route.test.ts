@@ -1,15 +1,19 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
-describe('Feature: health check (#212, OBS-01, OBS-02)', () => {
-  // Abre o PGlite antes: o primeiro getDb() do arquivo carrega o snapshot e,
-  // sob carga, comeria o prazo de 3 s da readiness.
-  beforeAll(async () => {
-    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
-    await getDb();
-  });
+/**
+ * Abre o PGlite do registro de módulos atual antes da checagem: a partida a
+ * frio (carregar o snapshot) leva ~1 s em máquina ociosa e, sob carga, comeria
+ * o prazo de 3 s da readiness. Não vale abrir só no `beforeAll`: o `afterEach`
+ * zera o registro e descarta essa instância (#359).
+ */
+async function warmDatabase() {
+  const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+  await getDb();
+}
 
+describe('Feature: health check (#212, OBS-01, OBS-02)', () => {
   afterEach(() => {
     vi.doUnmock('@/infrastructure/persistence/drizzle/readiness');
     vi.resetModules();
@@ -29,6 +33,7 @@ describe('Feature: health check (#212, OBS-01, OBS-02)', () => {
   });
 
   it('Dado banco migrado, Quando GET /api/health/ready, Então 200 com as duas checagens ok', async () => {
+    await warmDatabase();
     const { GET } = await import('@/app/api/health/ready/route');
 
     const response = await GET();

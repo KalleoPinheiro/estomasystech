@@ -1,15 +1,20 @@
 import { sql } from 'drizzle-orm';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 process.env.VITTA_DB_DRIVER = 'pglite';
 
-describe('Feature: readiness do banco (#212, OBS-02)', () => {
-  // Abre o PGlite antes: carregar o snapshot sob carga comeria o prazo de 3 s.
-  beforeAll(async () => {
-    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
-    await getDb();
-  });
+/**
+ * Abre o PGlite do registro de módulos atual antes da checagem: carregar o
+ * snapshot (~1 s ocioso) sob carga comeria o prazo de 3 s. Cada teste que usa
+ * o banco real chama isto, porque o `afterEach` zera o registro e descarta a
+ * instância aquecida (#359).
+ */
+async function warmDatabase() {
+  const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+  return getDb();
+}
 
+describe('Feature: readiness do banco (#212, OBS-02)', () => {
   afterEach(() => {
     vi.doUnmock('@/infrastructure/persistence/drizzle/db');
     vi.resetModules();
@@ -17,6 +22,7 @@ describe('Feature: readiness do banco (#212, OBS-02)', () => {
   });
 
   it('Dado todas as migrações aplicadas, Quando checa, Então pronto', async () => {
+    await warmDatabase();
     const { checkReadiness } = await import(
       '@/infrastructure/persistence/drizzle/readiness'
     );
@@ -29,8 +35,7 @@ describe('Feature: readiness do banco (#212, OBS-02)', () => {
   });
 
   it('Dado uma migração do diretório que não está no banco, Quando checa, Então pendente', async () => {
-    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
-    const db = await getDb();
+    const db = await warmDatabase();
     await db.execute(
       sql`delete from drizzle.__drizzle_migrations where created_at = (select max(created_at) from drizzle.__drizzle_migrations)`,
     );
