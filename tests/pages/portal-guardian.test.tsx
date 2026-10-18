@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
@@ -210,4 +211,66 @@ describe('Feature: Paciente vê quem acessa em nome dele (ADR-027)', () => {
       expect(screen.getByText(expected, { exact: false })).toBeInTheDocument();
     },
   );
+
+  it('Dado responsável com acesso, Quando o paciente confirma "Encerrar acesso", Então chama a API e recarrega', async () => {
+    const calls: string[] = [];
+    mockFetch({
+      'GET /api/portal/patient': () => ({
+        ...baseBundle,
+        guardianAccess: { ...access, lastAccessAt: null },
+      }),
+      'GET /api/portal/patient/consent': () => ({
+        ...consentPending,
+        accepted: true,
+      }),
+      'GET /api/portal/patient/partner-consent': () => ({}),
+      'GET /api/portal/patient/data-requests': () => [],
+      'DELETE /api/portal/patient/guardian-access': () => {
+        calls.push('revoke');
+        return { revoked: true };
+      },
+    });
+
+    renderWithToast(<PatientPortalView />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Encerrar acesso' }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Encerrar acesso',
+      }),
+    );
+
+    await waitFor(() => expect(calls).toEqual(['revoke']));
+  });
+
+  it('Dado falha na API, Quando confirmar "Encerrar acesso", Então mostra o erro e não recarrega', async () => {
+    mockFetch({
+      'GET /api/portal/patient': () => ({
+        ...baseBundle,
+        guardianAccess: { ...access, lastAccessAt: null },
+      }),
+      'GET /api/portal/patient/consent': () => ({
+        ...consentPending,
+        accepted: true,
+      }),
+      'GET /api/portal/patient/partner-consent': () => ({}),
+      'GET /api/portal/patient/data-requests': () => [],
+      'DELETE /api/portal/patient/guardian-access': () => {
+        throw new Error('Falha ao encerrar');
+      },
+    });
+
+    renderWithToast(<PatientPortalView />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Encerrar acesso' }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', {
+        name: 'Encerrar acesso',
+      }),
+    );
+
+    expect(await screen.findByText('Falha ao encerrar')).toBeInTheDocument();
+  });
 });

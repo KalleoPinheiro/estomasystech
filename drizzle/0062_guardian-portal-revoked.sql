@@ -1,0 +1,1 @@
+ALTER TABLE "patients" ADD COLUMN "guardian_portal_revoked_at" timestamp with time zone;

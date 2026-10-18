@@ -10,6 +10,7 @@ import {
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
+import { ConfirmAction } from '@/components/confirm-action';
 import {
   EmptyState,
   ErrorAlert,
@@ -156,7 +157,9 @@ export function PatientPortalView({
         }
       />
 
-      {data.guardianAccess && <GuardianAccessNotice {...data.guardianAccess} />}
+      {data.guardianAccess && (
+        <GuardianAccessNotice {...data.guardianAccess} onRevoked={refresh} />
+      )}
 
       {data.actingFor ? (
         <GuardianConsentNote status={consent} />
@@ -444,16 +447,37 @@ function GuardianConsentNote({ status }: { status: ConsentStatusDto | null }) {
   );
 }
 
-/** O titular vê quem pode agir em nome dele e quando foi o último acesso. */
+/** O titular vê quem pode agir em nome dele, quando foi o último acesso e encerra o acesso (ADR-028). */
 function GuardianAccessNotice({
   fullName,
   relationshipLabel,
   lastAccessAt,
+  onRevoked,
 }: {
   fullName: string;
   relationshipLabel: string;
   lastAccessAt: string | null;
+  onRevoked: () => void;
 }) {
+  const { toast } = useToast();
+  const revoke = async () => {
+    try {
+      await apiFetch('/api/portal/patient/guardian-access', {
+        method: 'DELETE',
+      });
+      toast({
+        description: 'Acesso do responsável encerrado',
+        variant: 'success',
+      });
+      onRevoked();
+    } catch (err) {
+      toast({
+        description:
+          err instanceof Error ? err.message : 'Erro ao encerrar o acesso',
+        variant: 'danger',
+      });
+    }
+  };
   return (
     <Alert variant="info" icon={<Icon name="info" />}>
       <AlertDescription>
@@ -464,7 +488,14 @@ function GuardianAccessNotice({
         {lastAccessAt
           ? `Último acesso em ${formatDateTime(lastAccessAt)}.`
           : 'Ainda não houve acesso.'}{' '}
-        Para encerrar esse acesso, fale com a clínica.
+        <ConfirmAction
+          trigger={<Button variant="outline">Encerrar acesso</Button>}
+          title="Encerrar o acesso do responsável?"
+          description={`${fullName} deixa de acessar este portal em seu nome agora. A clínica pode conceder o acesso de novo se você pedir.`}
+          confirmLabel="Encerrar acesso"
+          variant="danger"
+          onConfirm={revoke}
+        />
       </AlertDescription>
     </Alert>
   );

@@ -33,6 +33,7 @@ const patient = (guardian: GuardianDto | null): PatientDto => ({
   notes: null,
   referredByPartnerId: null,
   guardianId: guardian?.id ?? null,
+  guardianPortalRevokedAt: null,
   guardian,
   active: true,
   anonymized: false,
@@ -89,10 +90,17 @@ function mockApi(opts: { role?: string; fail?: string } = {}) {
 const mutations = (calls: Call[]) =>
   calls.filter((c) => c.method !== 'GET' && c.url !== '/api/auth/identity');
 
-const renderPanel = (guardian: GuardianDto | null, onChanged = vi.fn()) => {
+const renderPanel = (
+  guardian: GuardianDto | null,
+  onChanged = vi.fn(),
+  overrides: Partial<PatientDto> = {},
+) => {
   renderWithToast(
     <WithStaffIdentity>
-      <GuardianPanel patient={patient(guardian)} onChanged={onChanged} />
+      <GuardianPanel
+        patient={{ ...patient(guardian), ...overrides }}
+        onChanged={onChanged}
+      />
     </WithStaffIdentity>,
   );
   return onChanged;
@@ -298,6 +306,17 @@ describe('Feature: Responsável na ficha do paciente (#329)', () => {
 
     expect(
       await within(dialog).findByText(/ainda está ligado a pacientes/),
+    ).toBeInTheDocument();
+  });
+
+  it('Dado paciente que encerrou o acesso, Então a equipe vê a data e como conceder de novo', async () => {
+    mockApi();
+    renderPanel(ANA, vi.fn(), {
+      guardianPortalRevokedAt: '2026-10-18T10:00:00.000Z',
+    });
+
+    expect(
+      await screen.findByText(/O paciente encerrou o acesso deste responsável/),
     ).toBeInTheDocument();
   });
 });

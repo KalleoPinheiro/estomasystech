@@ -25,7 +25,7 @@ export async function getGuardianAccess(
   },
   patient: Patient,
 ): Promise<GuardianAccessView | null> {
-  if (!patient.guardianId) return null;
+  if (!patient.guardianId || patient.guardianPortalRevokedAt) return null;
   const guardian = await repos.guardians.findById(patient.guardianId);
   const account = guardian
     ? await repos.userAccounts.findByPortalLink({ guardianId: guardian.id })

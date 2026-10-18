@@ -189,6 +189,7 @@ const patient: PatientDto = {
   anonymized: false,
   referredByPartnerId: null,
   guardianId: null,
+  guardianPortalRevokedAt: null,
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 

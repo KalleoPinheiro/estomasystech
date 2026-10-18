@@ -59,6 +59,7 @@ describe('Feature: Responsável acessa o portal em nome do paciente (ADR-027)', 
   let consentRoute: typeof import('@/app/api/portal/patient/consent/route');
   let exportRoute: typeof import('@/app/api/portal/patient/export/route');
   let dataRequestsRoute: typeof import('@/app/api/portal/patient/data-requests/route');
+  let revokeRoute: typeof import('@/app/api/portal/patient/guardian-access/route');
 
   beforeAll(async () => {
     await ensureTestClinics();
@@ -76,6 +77,9 @@ describe('Feature: Responsável acessa o portal em nome do paciente (ADR-027)', 
     exportRoute = await import('@/app/api/portal/patient/export/route');
     dataRequestsRoute = await import(
       '@/app/api/portal/patient/data-requests/route'
+    );
+    revokeRoute = await import(
+      '@/app/api/portal/patient/guardian-access/route'
     );
   });
 
@@ -375,6 +379,121 @@ describe('Feature: Responsável acessa o portal em nome do paciente (ADR-027)', 
     );
     expect(unlink.status).toBe(200);
     expect((await portal(headers)).status).toBe(404);
+  });
+
+  it('revogação (ADR-028): o paciente encerra sozinho o acesso, só para ele, com trilha ator=paciente', async () => {
+    const guardianId = await createGuardian('Ana Revogada');
+    const patientId = await createPatient('Paulo Titular', guardianId);
+    const otherPatientId = await createPatient('Irmã de Paulo', guardianId);
+    const login = unique('paciente-revoga');
+    const email = unique('resp-revoga');
+    expect((await grantAccess(guardianId, email)).status).toBe(200);
+    const { userAccounts, auditEvents, patients } = await getRepositories(
+      clinicScope(CLINIC_A_ID),
+    );
+    const { UserAccount } = await import('@/domain/auth/user-account');
+    await userAccounts.save(
+      UserAccount.create({
+        email: login,
+        passwordHash: 'scrypt$x',
+        role: 'patient',
+        clinicId: CLINIC_A_ID,
+        patientId,
+      }),
+    );
+    const patientHeaders = cookieHeaderFor('patient', login, CLINIC_A_ID);
+    const revoke = (headers: Record<string, string>) =>
+      revokeRoute.DELETE(
+        portalRequest('/api/portal/patient/guardian-access', headers, 'DELETE'),
+      );
+
+    // O responsável não revoga a própria autorização.
+    expect((await revoke(guardianCookie(email, patientId))).status).toBe(403);
+    expect((await portal(guardianCookie(email, patientId))).status).toBe(200);
+
+    expect((await revoke(patientHeaders)).status).toBe(200);
+
+    const events = await trail(patientId, 'guardian-access-revocation');
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      actorRole: 'patient',
+      actorId: login,
+      action: 'update',
+      resourceId: patientId,
+    });
+    // Fecha o acesso para este paciente; o outro dele segue aberto.
+    // Cookie do paciente revogado não o reabre: cai no único que sobrou.
+    const stillOpen = await portal(guardianCookie(email, patientId));
+    expect(stillOpen.body.data.patient.id).toBe(otherPatientId);
+    const listed = await patientsListRoute.GET(
+      portalRequest('/api/portal/guardian/patients', guardianCookie(email)),
+    );
+    const { data } = (await listed.json()) as Envelope<{
+      patients: { id: string }[];
+    }>;
+    expect(data.patients.map((p) => p.id)).toEqual([otherPatientId]);
+    // O titular deixa de ver o responsável e a revogação não se repete.
+    expect((await portal(patientHeaders)).body.data.guardianAccess).toBeNull();
+    expect((await revoke(patientHeaders)).status).toBe(404);
+    expect(await trail(patientId, 'guardian-access-revocation')).toHaveLength(
+      1,
+    );
+    expect(
+      await auditEvents.findAll({
+        patientId: otherPatientId,
+        resourceType: 'guardian-access-revocation',
+      }),
+    ).toHaveLength(0);
+
+    // A equipe vê a revogação e restaura desvinculando e vinculando de novo.
+    const detail = await patientByIdRoute.GET(
+      jsonRequest(`/api/patients/${patientId}`, 'GET', undefined, admin()),
+      context(patientId),
+    );
+    expect(
+      ((await detail.json()) as Envelope<{ guardianPortalRevokedAt: string }>)
+        .data.guardianPortalRevokedAt,
+    ).toEqual(expect.any(String));
+    for (const body of [{ guardianId: null }, { guardianId }]) {
+      const res = await patientByIdRoute.PUT(
+        jsonRequest(`/api/patients/${patientId}`, 'PUT', body, admin()),
+        context(patientId),
+      );
+      expect(res.status).toBe(200);
+    }
+    expect(
+      (await patients.findById(patientId))?.guardianPortalRevokedAt,
+    ).toBeNull();
+    expect((await portal(guardianCookie(email, patientId))).status).toBe(200);
+  });
+
+  it('revogação: paciente sem responsável ligado recebe 404 e nada é gravado', async () => {
+    const patientId = await createPatient('Sem Responsável');
+    const login = unique('paciente-sem-resp');
+    const { userAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
+    const { UserAccount } = await import('@/domain/auth/user-account');
+    await userAccounts.save(
+      UserAccount.create({
+        email: login,
+        passwordHash: 'scrypt$x',
+        role: 'patient',
+        clinicId: CLINIC_A_ID,
+        patientId,
+      }),
+    );
+
+    const response = await revokeRoute.DELETE(
+      portalRequest(
+        '/api/portal/patient/guardian-access',
+        cookieHeaderFor('patient', login, CLINIC_A_ID),
+        'DELETE',
+      ),
+    );
+
+    expect(response.status).toBe(404);
+    expect(await trail(patientId, 'guardian-access-revocation')).toHaveLength(
+      0,
+    );
   });
 
   it('a conta do paciente não entra na rota de escolha do responsável e vice-versa', async () => {
