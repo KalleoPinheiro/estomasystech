@@ -3,7 +3,7 @@ title: "Índice de docs/"
 status: living
 audience: [dev, po, stakeholder, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-11
+last_reviewed: 2026-10-18
 ---
 
 # docs/

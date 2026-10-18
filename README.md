@@ -24,7 +24,7 @@ Pré-requisito: Docker + Docker Compose.
 
 ```bash
 cp .env.example .env
-# preencha no mínimo AUTH_SECRET, VITTA_BOOTSTRAP_TOKEN, RESEND_API_KEY e EMAIL_FROM
+# preencha no mínimo AUTH_SECRET e VITTA_BOOTSTRAP_TOKEN (RESEND_API_KEY e EMAIL_FROM: opcionais em dev, necessárias em produção)
 docker compose up -d --build
 
 until curl -sf http://localhost:3000/api/auth/providers >/dev/null; do sleep 2; done

@@ -3,7 +3,7 @@ title: "Onboarding técnico e setup"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-11
+last_reviewed: 2026-10-18
 related:
   - .env.example
   - docs/engineering/integrations/README.md
