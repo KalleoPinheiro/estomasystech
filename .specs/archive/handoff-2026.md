@@ -1202,3 +1202,10 @@ Medição de carga antes do go-live, sem mudar código da aplicação ([`docs/en
 - **Limites**: só leitura, loopback e `fsync=off`; sem navegador, sem escrita, sem o job de lembretes (doc § 7). Repetir `tipica` na VPS definitiva.
 - **Gate**: Actions sem cota; local: typecheck, lint, check:sv, check:docs, test:coverage (5 266 testes), build de produção. Nenhum arquivo de `src/` mudou, então o E2E não foi repetido. the-judge não posta (sem `gh`): autorrevisão.
 - **Next step**: #360, #361. **Blockers**: nenhum. Também arquivei AD-025 (pergunta respondida em 2026-10-12) para o `STATE.md` caber em 250 linhas.
+
+## Issue #358 — Bloquear recibo com CNPJ marcado (2026-10-18) — ENCERRADO
+
+Fecha a pergunta aberta da #355 por decisão do coordenador (PO): recibo com CNPJ errado não vale como documento fiscal ([ADR-029](../../docs/adr/029-cnpj-antigo-invalido-marcado-para-correcao.md) atualizado, AD-048, ACE-RN-57, FIN-RN-15).
+- **Código**: `resolveReceiptParties` lança `CNPJ_UNDER_REVIEW_MESSAGE` quando `cnpjReviewSince` está preenchida (depois da checagem de CNPJ ausente); vale para a tela do recibo e para `POST /api/documents/issue`. A página do recibo mostra o link "Corrigir o CNPJ nas Configurações". Recibos já emitidos (registro de emissão) não mudam; documentos clínicos não são bloqueados.
+- **Sem migração.** **Gate**: local completo; Docker/smoke não rodam (sem daemon); autorrevisão.
+- **Next step**: nenhum. **Blockers**: nenhum.

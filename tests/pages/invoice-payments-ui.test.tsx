@@ -16,6 +16,7 @@ import {
 import BillingPage from '@/app/(staff)/faturamento/page';
 import PaymentReceiptPage from '@/app/documentos/recibo/[invoiceId]/[paymentId]/page';
 import type { ReceiptParties } from '@/domain/billing/receipt';
+import { CNPJ_UNDER_REVIEW_MESSAGE } from '@/domain/billing/receipt';
 import type { ClinicInfoDto, InvoiceDto } from '@/lib/dto';
 import { renderWithToast } from '../support/render-with-toast';
 
@@ -392,6 +393,31 @@ describe('Feature: Recibo de pagamento', () => {
     expect(
       await screen.findByText('O paciente não tem CPF cadastrado.'),
     ).toBeInTheDocument();
+    expect(calls.some((c) => c.url === '/api/documents/issue')).toBe(false);
+  });
+
+  it('Dado CNPJ marcado para correção, Quando abrir o recibo, Então bloqueia e leva às Configurações (#358)', async () => {
+    const calls = mockFetch((url) => {
+      if (url === '/api/clinic-info') return ok(CLINIC);
+      if (url === '/api/invoices/inv-1') return ok(partial);
+      if (url === '/api/invoices/inv-1/payments/pay-1/receipt') {
+        return failure(CNPJ_UNDER_REVIEW_MESSAGE);
+      }
+      return undefined;
+    });
+    await act(async () => {
+      renderWithToast(
+        <PaymentReceiptPage
+          params={Promise.resolve({ invoiceId: 'inv-1', paymentId: 'pay-1' })}
+        />,
+      );
+    });
+    expect(
+      await screen.findByText(CNPJ_UNDER_REVIEW_MESSAGE),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Corrigir o CNPJ nas Configurações' }),
+    ).toHaveAttribute('href', '/configuracoes');
     expect(calls.some((c) => c.url === '/api/documents/issue')).toBe(false);
   });
 
