@@ -239,15 +239,27 @@ describe('Feature: VPS com Traefik do Coolify e backup cifrado (#206)', () => {
     expect(backup).toContain('BACKUP_KEEP_DAYS:-30');
 
     // O tar das fotos sai pelo stdout: sem log, ele não para em claro no json-file.
-    expect(backup).toContain('--entrypoint tar uploads-backup');
-    const reader = serviceBlock('uploads-backup');
-    expect(reader).toMatch(/^ {4}profiles: \[ops\]$/m);
-    expect(reader).toMatch(/^ {4}logging:\n {6}driver: none$/m);
-    expect(reader).toMatch(/^ {6}- uploads:\/app\/uploads:ro$/m);
+    // Alvo do Coolify (container + volume) ou do compose, sem serviço extra (ADR-040).
+    const target = read('scripts/backup-target.sh');
+    expect(target).toContain('BACKUP_DB_CONTAINER');
+    expect(target).toContain('BACKUP_UPLOADS_VOLUME');
+    expect(target).toContain('--network none --log-driver none');
+    expect(backup).toContain('. "$(dirname "$0")/backup-target.sh"');
+    expect(backup).toContain('BACKUP_RCLONE_DEST');
+    expect(read('docker-compose.yml')).not.toContain('uploads-backup');
+
+    const service = read('deploy/backup/estomasystech-backup.service');
+    expect(service).toContain('OnFailure=estomasystech-backup-alert.service');
+    expect(service).toContain('EnvironmentFile=/etc/estomasystech/backup.env');
+    expect(read('deploy/backup/estomasystech-backup.timer')).toContain(
+      'OnCalendar=*-*-* 02:00:00 America/Sao_Paulo',
+    );
 
     const restore = read('scripts/restore.sh');
     expect(restore).toContain('--confirmar) confirm=true');
     expect(restore).toContain('sha256sum --quiet -c SHA256SUMS');
+    // Com o app conectado ao banco, o --confirmar recusa antes de apagar qualquer coisa.
+    expect(restore).toContain('pare o app antes');
 
     const ci = read('.github/workflows/ci.yml');
     expect(ci).toContain('run: bash scripts/backup-smoke.sh');

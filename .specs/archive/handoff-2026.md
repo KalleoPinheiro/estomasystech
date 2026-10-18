@@ -1358,3 +1358,13 @@ Pedido do Kalléo (via coordenação): com o sistema no ar, varrer docs, defini�
 - **Rollback deste lote**: só docs; reverter o commit.
 - **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge.
 - **Next step**: PR de alinhamento PG18 em compose/CI (com daemon Docker); PR de `npm audit fix`. **Blockers**: nenhum.
+
+## Backup cifrado do banco e das fotos no Coolify (2026-10-18) — ENCERRADO
+
+Pedido do Kalléo (via coordenação, #381): o backup nativo do Coolify para o R2 não é cifrado com `age` (ADR-018) e o volume de fotos não tinha backup; os dois bloqueiam paciente real. Decisão: [ADR-040](../../docs/adr/040-backup-cifrado-no-coolify-para-o-r2-na-ue.md), AD-055.
+- **Feito**: `scripts/backup-target.sh` (alvo do Coolify por `BACKUP_DB_CONTAINER`/`BACKUP_UPLOADS_VOLUME`, ou o compose do repositório sem eles); `backup.sh` com `BACKUP_RCLONE_DEST`; `restore.sh` recusa com o app conectado e não sobe o app sozinho; `backup-alert.sh` + units `deploy/backup/` (timer 02:00 America/Sao_Paulo, `OnFailure`); serviço `uploads-backup` removido do compose; smoke para o app antes do restore; runbook § 5 reescrito (instalação, restauração, teste mensal), linhas de backup do § 1, § 2 e § 7.
+- **Teste local**: backup → apagar → restore com Postgres 16 local e um `docker` simulado (conferência, chave errada, app conectado recusado, `--confirmar`, `rclone`); `backup-smoke.sh` real não rodou (sem daemon Docker no container).
+- **Kalléo roda**: runbook § 5.1, passos 1–8 (chave age no cofre, bucket R2 `eu` com trava, arquivos no servidor, primeiro backup, alerta, restauração de teste, desligar o S3 do Coolify).
+- **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge.
+- **Next step**: restauração de teste registrada na tabela do § 5.3. **Blockers**: nenhum.
+

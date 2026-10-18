@@ -1,0 +1,12 @@
+# 02:00 de São Paulo, 1 h 30 antes da retenção LGPD do Coolify (03:30): a retenção apaga
+# fotos e não pode rodar junto do tar do volume (ADR-040). Persistent: um backup perdido
+# com o servidor desligado roda assim que ele voltar.
+[Unit]
+Description=EstomaSysTech: agenda do backup cifrado
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 America/Sao_Paulo
+Persistent=true
+
+[Install]
+WantedBy=timers.target

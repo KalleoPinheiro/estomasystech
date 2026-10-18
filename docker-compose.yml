@@ -94,18 +94,6 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
 
-  # Leitura do volume de fotos pelo scripts/backup.sh (#206). O tar das fotos sai
-  # pelo stdout: sem log (driver none), ele não é gravado em claro no disco pelo
-  # json-file do Docker. Só roda com `docker compose run`; o `up` ignora o perfil.
-  uploads-backup:
-    image: postgres:16-alpine
-    profiles: [ops]
-    network_mode: none
-    logging:
-      driver: none
-    volumes:
-      - uploads:/app/uploads:ro
-
 volumes:
   pgdata:
   uploads:

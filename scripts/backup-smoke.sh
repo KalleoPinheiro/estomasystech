@@ -3,7 +3,8 @@
 # sobe Postgres + app, grava uma linha e uma foto, faz o backup cifrado com uma
 # chave age descartável, apaga tudo (down -v), confere que o restore sem
 # --confirmar não altera nada e restaura com --confirmar a partir da cópia
-# "fora do servidor". Termina com o app healthy e o dado de volta.
+# "fora do servidor" (com o app parado, como no Coolify). Termina com o app healthy e o
+# dado de volta. Usa o alvo padrão do compose (scripts/backup-target.sh).
 set -euo pipefail
 
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(openssl rand -hex 16)}"
@@ -79,7 +80,10 @@ BACKUP_AGE_IDENTITY_FILE="$work/key.txt" bash scripts/restore.sh "$backup"
 test -z "$(sql "SELECT to_regclass('backup_smoke')")"
 echo "✓ restore sem --confirmar não altera nada"
 
+docker compose stop app
 BACKUP_AGE_IDENTITY_FILE="$work/key.txt" bash scripts/restore.sh "$backup" --confirmar
+docker compose up -d --no-build --wait app
+wait_ready
 test "$(sql 'SELECT v FROM backup_smoke')" = "prontuario"
 test "$(sql 'SELECT count(*) FROM drizzle.__drizzle_migrations')" = "$migrations"
 test "$(docker compose exec -T app cat /app/uploads/c1/p.jpg)" = "foto"
