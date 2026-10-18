@@ -6,7 +6,7 @@ Plan: `.specs/features/layout-mobile-first/plan.md`
 35 checks em 4 fatias · 4 portas sem volta · 1 pergunta aberta (`blocks go-live`: publicar a lib)
 
 Dois repositórios. Checks da S1 rodam em `still-void/` (Vitest, texto do CSS + jsdom), os demais
-em `vitta-flow/` (Vitest para componente, Playwright para arranjo real em 390x844 e 1440x900).
+em `estomasystech/` (Vitest para componente, Playwright para arranjo real em 390x844 e 1440x900).
 Os specs novos do app são `e2e/layout-mobile-first.spec.ts` (páginas, casca e telas específicas)
 e `e2e/layout-tabelas.spec.ts` (table set, com seed de dado por tabela).
 
@@ -183,7 +183,7 @@ Evidence:
 
 - `still-void/src/components/ui/table.tsx`: hoje repassa props sem condicional -> instrumentação; com `stack`/`label` passa a decidir 2 pontos -> decide
 - `still-void/src/css/style.css` seção Table: nenhuma media query hoje; a nova forma decide por `(width < 40rem)` -> decide
-- analogue: `still-void/tests/table-css-contract.test.ts` já prova a seção Table por contrato de texto; `vitta-flow/e2e/portal-responsivo.spec.ts` já prova arranjo por medição de caixa em 390x844 e 375x667
+- analogue: `still-void/tests/table-css-contract.test.ts` já prova a seção Table por contrato de texto; `estomasystech/e2e/portal-responsivo.spec.ts` já prova arranjo por medição de caixa em 390x844 e 375x667
 
 Cost: 6 provas na lib (3 arquivos de teste) e ~26 no app (2 specs E2E novos + 3 testes Vitest).
 

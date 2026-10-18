@@ -11,8 +11,8 @@ import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -20,7 +20,7 @@ interface Envelope<T> {
   error: string | null;
 }
 
-const OPERATOR = 'dono@vitta.app';
+const OPERATOR = 'dono@estomasystech.app';
 const SUPER_ADMIN = cookieHeaderFor('super_admin', OPERATOR, null);
 const SUSPENDED_INVITE =
   'Clínica suspensa: reative a clínica antes de convidar o admin';
@@ -144,13 +144,13 @@ describe('Feature: Suspender e reativar clínica pela plataforma (B5, Journey 7 
     const { response, json } = await change(
       'reactivate',
       clinicId,
-      cookieHeaderFor('super_admin', 'recuperado@vitta.app', null),
+      cookieHeaderFor('super_admin', 'recuperado@estomasystech.app', null),
     );
 
     expect(response.status).toBe(200);
     expect(json.data).toMatchObject({
       status: 'active',
-      statusChangedBy: 'recuperado@vitta.app',
+      statusChangedBy: 'recuperado@estomasystech.app',
     });
     expect(Date.parse(json.data.statusChangedAt as string)).toBeGreaterThan(
       Date.parse(suspended.json.data.statusChangedAt as string),

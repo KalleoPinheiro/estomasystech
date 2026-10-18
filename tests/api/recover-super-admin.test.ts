@@ -23,13 +23,13 @@ import {
 } from '@/lib/auth/staff-revocation';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 const AUTH_SECRET = 'segredo-do-teste-de-recuperacao';
 process.env.AUTH_SECRET = AUTH_SECRET;
 
 const APP_URL = 'https://clinica.exemplo.com.br';
-const OLD_EMAIL = 'dono-antigo@vitta.test';
-const NEW_EMAIL = 'dono-novo@vitta.test';
+const OLD_EMAIL = 'dono-antigo@estomasystech.test';
+const NEW_EMAIL = 'dono-novo@estomasystech.test';
 const OLD_PASSWORD = 'senha-que-vazou';
 const NEW_PASSWORD = 'senha-nova-do-dono';
 
@@ -180,7 +180,7 @@ describe('Feature: jornada 12 — o super_admin perdeu tudo (B3)', () => {
 
   it('Dado o e-mail trocado pela recuperação, Quando checar o cookie com o e-mail antigo, Então a sessão com o e-mail antigo cai mesmo com a versão atual', async () => {
     const current = await account();
-    await recover('mais-um@vitta.test');
+    await recover('mais-um@estomasystech.test');
     const after = await account();
 
     expect(
@@ -206,6 +206,8 @@ describe('Feature: jornada 12 — o super_admin perdeu tudo (B3)', () => {
     await db.delete(authTokens).where(eq(authTokens.accountId, accountId));
     await db.delete(userAccounts).where(eq(userAccounts.id, accountId));
 
-    expect(await revoked(systemSession('qualquer@vitta.test', 9))).toBe(false);
+    expect(await revoked(systemSession('qualquer@estomasystech.test', 9))).toBe(
+      false,
+    );
   });
 });

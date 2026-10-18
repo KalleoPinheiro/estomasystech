@@ -1312,3 +1312,12 @@ Pedido do Kalléo: o repositório virou `KalleoPinheiro/estomasystech` e as refe
 - **Mantido de propósito**: rótulos de chave criptográfica, ADRs aceitos e arquivo histórico, `vitta` (banco/usuário), `VITTA_*`, `vitta_session`, marca "VittaFlow".
 - **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge (sem `gh`).
 - **Next step**: Kalléo decide se a marca "VittaFlow" muda. **Blockers**: nenhum.
+
+## Renomeação completa para estomasystech (2026-10-18) — ENCERRADO
+
+Pedido do Kalléo (sem produção, pode quebrar): trocar também banco, rótulos de chave e todas as outras referências, README incluído. Decisão: [ADR-035](../../docs/adr/035-renomeacao-completa-para-estomasystech.md), com a tabela antes/depois.
+- **Trocado**: banco/usuário `estomasystech`, `VITTA_*` → `ESTOMASYSTECH_*`, cookie, rótulos de chave, caminhos de backup/cron, marca "EstomaSysTech" (UI, e-mails, README, testes).
+- **Intocado**: ADRs aceitos e este arquivo (nomes da época).
+- **Deploy**: renomear as variáveis `VITTA_*` no Coolify/`.env`; recriar bancos de desenvolvimento (`docker compose down -v`).
+- **Gate**: Actions sem cota; gate local. Autorrevisão no lugar do the-judge (sem `gh`).
+- **Next step**: nenhum. **Blockers**: nenhum.

@@ -25,7 +25,7 @@ Proof: `npx vitest run tests/docs/structure.test.ts -t "AGENTS.md tem as seçõe
 **C3** - `Mapa de contexto` é uma tabela com as colunas `Se vai mexer em`, `Leia primeiro`, `Depois, se precisar` e uma linha que linka cada um dos 9 `docs/domains/<slug>/` (DOCS-01, AC 2)
 Proof: `npx vitest run tests/docs/structure.test.ts -t "mapa de contexto linka os 9 domínios"`
 
-**C4** - `.github/copilot-instructions.md` e `.cursor/rules/00-vitta-flow.mdc` existem, têm no máximo 15 linhas cada e linkam `AGENTS.md` (DOCS-01, AC 3)
+**C4** - `.github/copilot-instructions.md` e `.cursor/rules/00-estomasystech.mdc` existem, têm no máximo 15 linhas cada e linkam `AGENTS.md` (DOCS-01, AC 3)
 Proof: `npx vitest run tests/docs/structure.test.ts -t "pontes apontam para AGENTS.md"`
 
 **C5** - `README.md` tem no máximo 120 linhas e não contém a linha de cabeçalho da tabela de variáveis (`| Variável |`) (DOCS-01, AC 4)
@@ -124,7 +124,7 @@ Proof: `npx vitest run tests/docs/structure.test.ts -t "handoffs arquivados"`
 | --- | --- | --- |
 | domínios (9) | C6, C3, C7 - table-driven sobre os 9 | - |
 | seções H2 de `AGENTS.md` (5) | C2, table-driven sobre as 5 | - |
-| pontes de ferramenta (2) | `copilot-instructions.md` C4 · `00-vitta-flow.mdc` C4 | - |
+| pontes de ferramenta (2) | `copilot-instructions.md` C4 · `00-estomasystech.mdc` C4 | - |
 | chaves de frontmatter (5) | C8, table-driven sobre as 5 | - |
 | valores de `status` do frontmatter (4) | C10, table-driven sobre os 4 · inválido C9 | - |
 | templates (5) | C13, table-driven sobre os 5 | - |

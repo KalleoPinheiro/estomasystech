@@ -108,7 +108,7 @@ describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', (
     await waitFor(() => {
       expect(toastMock).toHaveBeenCalledWith({
         description:
-          'O Google não devolveu credencial de longa duração — revogue o acesso do VittaFlow na sua conta Google e conecte de novo.',
+          'O Google não devolveu credencial de longa duração — revogue o acesso do EstomaSysTech na sua conta Google e conecte de novo.',
         variant: 'danger',
       });
     });

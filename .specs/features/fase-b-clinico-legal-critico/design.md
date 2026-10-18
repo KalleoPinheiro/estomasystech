@@ -115,7 +115,7 @@ graph TD
 
 - **Purpose**: GET consumido pelas páginas de documento — passa a ler do repositório (por `clinicId` da sessão) em vez de env var.
 - **Location**: `src/app/api/clinic-info/route.ts`
-- **Mudança**: troca `getClinicInfo()` (env) por `getRepositories({clinicId}).clinics.findById(clinicId)` + `toClinicInfoDto`, com fallback pro nome default (`"VittaFlow — Clínica de Estomaterapia"`) quando `findById` retorna `null` (defensivo — nunca deveria faltar, já que a conta staff sempre tem `clinicId` de uma clínica existente).
+- **Mudança**: troca `getClinicInfo()` (env) por `getRepositories({clinicId}).clinics.findById(clinicId)` + `toClinicInfoDto`, com fallback pro nome default (`"EstomaSysTech — Clínica de Estomaterapia"`) quando `findById` retorna `null` (defensivo — nunca deveria faltar, já que a conta staff sempre tem `clinicId` de uma clínica existente).
 
 ### `ClinicInfoSection` (novo, em Configurações)
 

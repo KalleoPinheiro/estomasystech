@@ -21,7 +21,7 @@ describe('Feature: Texto único do lembrete (reminderContent)', () => {
     const { subject, text } = reminderContent('confirmation', {
       firstName: 'Maria',
       clinicName: 'Clínica Alfa',
-      portalUrl: 'https://vitta.example.com/portal',
+      portalUrl: 'https://estomasystech.example.com/portal',
       startsAt,
     });
 
@@ -30,7 +30,7 @@ describe('Feature: Texto único do lembrete (reminderContent)', () => {
     expect(text).toContain('17/07/2026');
     expect(text).toContain('09:30');
     expect(text).toContain('Clínica Alfa');
-    expect(text).toContain('https://vitta.example.com/portal');
+    expect(text).toContain('https://estomasystech.example.com/portal');
   });
 
   it('Dado procedimento e motivo informados (wa.me), Quando montar, Então os inclui', () => {

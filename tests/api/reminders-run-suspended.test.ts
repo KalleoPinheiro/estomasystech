@@ -9,7 +9,7 @@ import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const CLINIC_ID = 'rem-suspensa';
 const PATIENT_EMAIL = 'paciente-suspensa@example.com';
@@ -37,8 +37,10 @@ async function setStatus(suspended: boolean) {
   const clinic = (await clinics.findById(CLINIC_ID)) as Clinic;
   await clinics.saveStatus(
     suspended
-      ? clinic.suspend('root@vitta.test', new Date(), { reason: 'other' })
-      : clinic.reactivate('root@vitta.test', new Date()),
+      ? clinic.suspend('root@estomasystech.test', new Date(), {
+          reason: 'other',
+        })
+      : clinic.reactivate('root@estomasystech.test', new Date()),
   );
 }
 

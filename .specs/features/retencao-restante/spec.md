@@ -31,7 +31,7 @@ mudam código e só entram na doc.
 
 | Decisão | Motivo |
 | --- | --- |
-| Evento do Google Agenda é **apagado**, não renomeado | A #311 aceita as duas; apagar não deixa nada do paciente, e o `removed()` já apaga no cancelamento. O horário vago some da agenda externa, mas a consulta passada fica no VittaFlow. |
+| Evento do Google Agenda é **apagado**, não renomeado | A #311 aceita as duas; apagar não deixa nada do paciente, e o `removed()` já apaga no cancelamento. O horário vago some da agenda externa, mas a consulta passada fica no EstomaSysTech. |
 | O marcador do evento é o próprio `google_event_id` (nulo = limpo) | Idempotente e sem migração: o que falhou continua com o id e entra na busca seguinte, como a foto (ADR-013 §5). |
 | Gateway nulo ⇒ não limpa o id | Sem credencial o evento não foi apagado; limpar o id perderia a chance de apagá-lo quando a integração voltar. |
 | `expired` sem migração | `waitlist_entries.status` é texto sem `CHECK`. |

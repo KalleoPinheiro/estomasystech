@@ -26,7 +26,11 @@ vi.mock('@/infrastructure/container', () => ({
   },
 }));
 
-const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+const SUPER_ADMIN = cookieHeaderFor(
+  'super_admin',
+  'dono@estomasystech.app',
+  null,
+);
 const CLINIC_ID = 'clinica-alvo';
 
 type Handler = (

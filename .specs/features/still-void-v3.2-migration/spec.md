@@ -5,7 +5,7 @@
 A `3.2.0` do `@still-void/ui` (publicada 2026-08-26, `CHANGELOG.md` do pacote)
 fecha, em um único release, as 6 lacunas abertas em `docs/still-void-gaps.md`
 contra a `3.1.0`: `pagination`, `progress`, `separator`, `data-chart`,
-`icon-set-gaps` e `dialog-close-label`. O VittaFlow tem workaround local
+`icon-set-gaps` e `dialog-close-label`. O EstomaSysTech tem workaround local
 marcado (`sv-gap: <slug>`) para 4 delas; as outras 2 (`progress`,
 `dialog-close-label`) são `sv-gap-doc-only` — necessidade real já coberta por
 outro workaround, ou configuração já adaptada sem marcação própria.
@@ -61,7 +61,7 @@ Fronteira herdada de AD-014 (port, não redesign) e reafirmada aqui porque a
 
 ### P1: Fechar as 4 lacunas com call site marcado ⭐ MVP
 
-**User Story**: Como time do VittaFlow, quero que `pagination`, `separator`,
+**User Story**: Como time do EstomaSysTech, quero que `pagination`, `separator`,
 `data-chart` e `icon-set-gaps` usem os artefatos da `3.2.0` no lugar dos
 workarounds locais, para que a dívida documentada em `docs/still-void-gaps.md`
 deixe de existir no código.
@@ -84,7 +84,7 @@ do pedido ("adaptar o sistema para usar os artefatos já adaptados").
 
 ### P1: Fechar `dialog-close-label` e `progress` (doc-only) ⭐ MVP
 
-**User Story**: Como time do VittaFlow, quero que o `Modal` use `closeLabel`
+**User Story**: Como time do EstomaSysTech, quero que o `Modal` use `closeLabel`
 nativo em vez do botão de fechar próprio, para eliminar o workaround que
 existia só por causa do nome acessível hardcoded em inglês.
 

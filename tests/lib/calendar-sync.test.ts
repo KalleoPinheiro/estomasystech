@@ -148,9 +148,9 @@ describe('Feature: Agendamento da sincronização com Google Calendar (após a r
   });
 
   describe.each([
-    ['https://app.vitta.test/', 'https://app.vitta.test'],
+    ['https://app.estomasystech.test/', 'https://app.estomasystech.test'],
     ['http://localhost:3000', 'http://localhost:3000'],
-    ['ftp://app.vitta.test', null],
+    ['ftp://app.estomasystech.test', null],
     ['não é url', null],
     [undefined, null],
   ])('APP_URL=%s', (appUrl, expected) => {

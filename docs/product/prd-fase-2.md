@@ -1,12 +1,12 @@
 ---
-title: "PRD — VittaFlow Fase 2: Prova de Resultado, Margem e Operação"
+title: "PRD — EstomaSysTech Fase 2: Prova de Resultado, Margem e Operação"
 status: frozen
 audience: [po, stakeholder, dev]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-09-23
 ---
 
-# PRD — VittaFlow Fase 2: Prova de Resultado, Margem e Operação
+# PRD — EstomaSysTech Fase 2: Prova de Resultado, Margem e Operação
 
 - **Versão:** 1.0
 - **Data:** 2026-07-18

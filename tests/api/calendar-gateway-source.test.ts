@@ -4,7 +4,7 @@ import { DrizzleGoogleAccountRepository } from '@/infrastructure/persistence/dri
 import { encryptSecret } from '@/lib/auth/crypto';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const clearGoogleAccounts = async () => {
   const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
@@ -32,7 +32,7 @@ describe('Feature: Origem da credencial do Google Agenda', () => {
   beforeEach(() => {
     process.env.GOOGLE_CLIENT_ID = 'client-abc';
     process.env.GOOGLE_CLIENT_SECRET = 'secret-xyz';
-    process.env.APP_URL = 'https://app.vitta.test';
+    process.env.APP_URL = 'https://app.estomasystech.test';
     delete process.env.GOOGLE_ALLOWED_EMAILS;
   });
 
@@ -109,9 +109,9 @@ describe('Feature: Origem da credencial do Google Agenda', () => {
   it('Dada service account e nenhuma conta conectada, Quando usar a agenda, Então o gateway resolvido é o Google', async () => {
     await clearGoogleAccounts();
     delete process.env.GOOGLE_CLIENT_ID;
-    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'sa@vitta.iam.test';
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'sa@estomasystech.iam.test';
     process.env.GOOGLE_PRIVATE_KEY = 'chave-fake';
-    process.env.GOOGLE_CALENDAR_ID = 'agenda@vitta.test';
+    process.env.GOOGLE_CALENDAR_ID = 'agenda@estomasystech.test';
     const { getRepositories } = await import('@/infrastructure/container');
 
     const { calendar } = await getRepositories(systemScope());

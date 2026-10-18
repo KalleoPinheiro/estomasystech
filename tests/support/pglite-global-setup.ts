@@ -13,7 +13,7 @@ declare module 'vitest' {
  * Migra o PGlite 1x pra todo o processo de teste (não 1x por arquivo — #111,
  * maior custo de tempo/máquina da suíte) e guarda o resultado num arquivo de
  * dump. Cada arquivo que precisa de um PGlite (getDb() com
- * VITTA_DB_DRIVER=pglite via tests/setup.ts, + os arquivos de
+ * ESTOMASYSTECH_DB_DRIVER=pglite via tests/setup.ts, + os arquivos de
  * tests/infrastructure que montam PGlite direto) carrega esse dump via
  * `loadDataDir` — pula o `migrate()` (parsing+execução de todo o SQL de
  * schema), mas cada arquivo ainda recebe sua própria instância PGlite
@@ -40,7 +40,7 @@ export default async function setup(project: TestProject) {
   await client.close();
 
   const templatePath = path.join(
-    await fs.mkdtemp(path.join(os.tmpdir(), 'vitta-pglite-template-')),
+    await fs.mkdtemp(path.join(os.tmpdir(), 'estomasystech-pglite-template-')),
     'template.tar',
   );
   await fs.writeFile(templatePath, Buffer.from(await dump.arrayBuffer()));

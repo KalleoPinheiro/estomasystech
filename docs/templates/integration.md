@@ -12,7 +12,7 @@ last_reviewed: 2026-09-23
 
 ## Propósito
 
-<Para que o Vitta Flow usa este serviço, em uma frase. Qual domínio depende dele.>
+<Para que o EstomaSysTech usa este serviço, em uma frase. Qual domínio depende dele.>
 
 | Campo | Valor |
 | --- | --- |
@@ -49,7 +49,7 @@ Content-Type: application/json
 
 ## Modos de falha
 
-| Situação | Comportamento do Vitta Flow | Visível para |
+| Situação | Comportamento do EstomaSysTech | Visível para |
 | --- | --- | --- |
 | credencial ausente em produção | <falha na construção do gateway / 503 / desativa> | log de boot |
 | credencial ausente fora de produção | <dry-run: loga em vez de enviar> | log |

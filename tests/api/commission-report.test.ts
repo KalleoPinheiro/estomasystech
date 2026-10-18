@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;

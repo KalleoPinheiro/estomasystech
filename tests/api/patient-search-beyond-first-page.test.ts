@@ -5,7 +5,7 @@ import { clinicScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;

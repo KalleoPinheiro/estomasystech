@@ -7,8 +7,8 @@ import {
 import { systemScope } from '@/lib/auth/tenant-scope';
 import { spyOnSentEmails, tokenFromLastEmail } from '../support/email';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 const BOOTSTRAP_TOKEN = 'segredo-de-deploy-do-bootstrap'; // gitleaks:allow — fixture de teste, não é credencial
 
@@ -61,7 +61,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
   const originalEnv = { ...process.env };
 
   beforeEach(async () => {
-    process.env.VITTA_BOOTSTRAP_TOKEN = BOOTSTRAP_TOKEN;
+    process.env.ESTOMASYSTECH_BOOTSTRAP_TOKEN = BOOTSTRAP_TOKEN;
     await emptyInstallation();
   });
 
@@ -105,7 +105,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     emails.restore();
 
     expect(json.data.inviteUrl).toContain(
-      'https://app.vitta.test/definir-senha?token=',
+      'https://app.estomasystech.test/definir-senha?token=',
     );
   });
 
@@ -113,7 +113,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     // Com credenciais presentes o container monta o gateway real (enabled), que
     // é o caminho de produção; o `fetch` é interceptado para não sair nada.
     process.env.RESEND_API_KEY = 're_fixture_de_teste'; // gitleaks:allow — fixture de teste, não é credencial
-    process.env.EMAIL_FROM = 'clinica@vitta.test';
+    process.env.EMAIL_FROM = 'clinica@estomasystech.test';
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({ ok: true })),
@@ -141,7 +141,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     expect(emails.bodies).toHaveLength(1);
     expect(emails.bodies[0]).toContain('convite-sa@clinica.com');
     expect(emails.bodies[0]).toContain(
-      'https://app.vitta.test/definir-senha?token=',
+      'https://app.estomasystech.test/definir-senha?token=',
     );
     emails.restore();
   });
@@ -305,8 +305,8 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
     expect(await userAccounts.hasAnyAccount()).toBe(false);
   });
 
-  it('Dado VITTA_BOOTSTRAP_TOKEN não configurado, Quando POST com qualquer header, Então responde 403', async () => {
-    delete process.env.VITTA_BOOTSTRAP_TOKEN;
+  it('Dado ESTOMASYSTECH_BOOTSTRAP_TOKEN não configurado, Quando POST com qualquer header, Então responde 403', async () => {
+    delete process.env.ESTOMASYSTECH_BOOTSTRAP_TOKEN;
     const route = await import('@/app/api/auth/bootstrap/route');
 
     const response = await route.POST(
@@ -340,7 +340,7 @@ describe('Feature: POST /api/auth/bootstrap (primeiro Super Admin)', () => {
 
     expect(response.status).toBe(200);
     expect(json.data.inviteUrl).toContain(
-      'https://app.vitta.test/definir-senha?token=',
+      'https://app.estomasystech.test/definir-senha?token=',
     );
     expect(errors).toHaveBeenCalled();
   });

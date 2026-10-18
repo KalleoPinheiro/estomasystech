@@ -127,9 +127,9 @@ describe('Feature: rascunho clínico sobrevive à sessão expirada (#207)', () =
         await screen.findByText('Sua sessão expirou. Entre novamente.'),
       ).toBeInTheDocument();
       expect(redirectMock).toHaveBeenCalled();
-      expect(window.sessionStorage.getItem('vitta:draft:soap:pac-1')).toContain(
-        'Dor 7/10',
-      );
+      expect(
+        window.sessionStorage.getItem('estomasystech:draft:soap:pac-1'),
+      ).toContain('Dor 7/10');
 
       // Volta do login: nova montagem da tela.
       cleanup();
@@ -141,9 +141,9 @@ describe('Feature: rascunho clínico sobrevive à sessão expirada (#207)', () =
         'Dor 7/10, exsudato seroso',
       );
       // Consumido na leitura: não reaparece numa terceira montagem.
-      expect(window.sessionStorage.getItem('vitta:draft:soap:pac-1')).toBe(
-        null,
-      );
+      expect(
+        window.sessionStorage.getItem('estomasystech:draft:soap:pac-1'),
+      ).toBe(null);
 
       fireEvent.click(screen.getByText('Registrar evolução'));
       await waitFor(() =>
@@ -162,9 +162,9 @@ describe('Feature: rascunho clínico sobrevive à sessão expirada (#207)', () =
       await renderInStaff(evolutions());
 
       await waitFor(() =>
-        expect(window.sessionStorage.getItem('vitta:draft:soap:pac-1')).toBe(
-          null,
-        ),
+        expect(
+          window.sessionStorage.getItem('estomasystech:draft:soap:pac-1'),
+        ).toBe(null),
       );
       expect(screen.queryByText(RECOVERED)).not.toBeInTheDocument();
       expect(screen.queryByText('Registrar evolução')).not.toBeInTheDocument();
@@ -194,7 +194,7 @@ describe('Feature: rascunho clínico sobrevive à sessão expirada (#207)', () =
       await screen.findByText('+ Nova evolução');
       expect(screen.queryByText(RECOVERED)).not.toBeInTheDocument();
       expect(
-        window.sessionStorage.getItem('vitta:draft:soap:pac-2'),
+        window.sessionStorage.getItem('estomasystech:draft:soap:pac-2'),
       ).not.toBeNull();
     });
   });
@@ -220,7 +220,7 @@ describe('Feature: rascunho clínico sobrevive à sessão expirada (#207)', () =
         ),
       );
       expect(
-        window.sessionStorage.getItem('vitta:draft:anamnesis:pac-1'),
+        window.sessionStorage.getItem('estomasystech:draft:anamnesis:pac-1'),
       ).not.toBeNull();
 
       cleanup();

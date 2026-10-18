@@ -56,8 +56,8 @@ describe('Feature: TOTP do RFC 6238 (B2, ADR-007)', () => {
   });
 
   it('Dado chave e e-mail, Quando montar o link otpauth, Então tem a forma literal do Landing com o e-mail codificado', () => {
-    expect(otpauthUri('JBSWY3DPEHPK3PXP', 'dono+ops@vitta.test')).toBe(
-      'otpauth://totp/VittaFlow:dono%2Bops%40vitta.test?secret=JBSWY3DPEHPK3PXP&issuer=VittaFlow&algorithm=SHA1&digits=6&period=30',
+    expect(otpauthUri('JBSWY3DPEHPK3PXP', 'dono+ops@estomasystech.test')).toBe(
+      'otpauth://totp/EstomaSysTech:dono%2Bops%40estomasystech.test?secret=JBSWY3DPEHPK3PXP&issuer=EstomaSysTech&algorithm=SHA1&digits=6&period=30',
     );
   });
 

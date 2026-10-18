@@ -12,7 +12,7 @@ import { logger } from '@/lib/observability/logger';
  * separada do `AUTH_SECRET` da sessão.
  *
  * - Chave: `DATA_ENCRYPTION_KEY` (≥ 32 caracteres); AES-256-GCM com chave
- *   derivada por HKDF-SHA256 (info `vitta-flow/clinical-data/v1`).
+ *   derivada por HKDF-SHA256 (info `estomasystech/clinical-data/v1`).
  * - Payload: `v1.<keyId>.<iv>.<tag>.<ct>` — `keyId` são 8 hex derivados do
  *   material da chave, então a rotação não depende de o operador numerar
  *   versões. `DATA_ENCRYPTION_KEY_PREVIOUS` (lista separada por vírgula) só
@@ -26,7 +26,7 @@ import { logger } from '@/lib/observability/logger';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
-const HKDF_INFO = 'vitta-flow/clinical-data/v1';
+const HKDF_INFO = 'estomasystech/clinical-data/v1';
 export const MIN_DATA_KEY_LENGTH = 32;
 
 const B64 = '[A-Za-z0-9_-]';
@@ -43,7 +43,7 @@ interface DataKey {
 
 export function dataKeyId(material: string): string {
   return createHash('sha256')
-    .update(`vitta-flow/key-id:${material}`)
+    .update(`estomasystech/key-id:${material}`)
     .digest('hex')
     .slice(0, 8);
 }
@@ -173,7 +173,7 @@ export type FieldCipher = Pick<
   'encrypt' | 'decrypt' | 'encryptNullable' | 'decryptNullable' | 'isCurrent'
 >;
 
-const DEV_KEY_PREFIX = 'vitta-flow-dev-only-data-key:';
+const DEV_KEY_PREFIX = 'estomasystech-dev-only-data-key:';
 
 let warnedDevKey = false;
 

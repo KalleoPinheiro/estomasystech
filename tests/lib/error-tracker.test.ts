@@ -122,7 +122,7 @@ describe('Error tracking no GlitchTip (#212, OBS-07, OBS-08)', () => {
     const scrubbed = scrubEvent({
       message: 'erro de maria@x.com',
       request: {
-        headers: { cookie: 'vitta_session=abc' },
+        headers: { cookie: 'estomasystech_session=abc' },
         data: '{"cpf":"1"}',
       },
       user: { email: 'maria@x.com' },

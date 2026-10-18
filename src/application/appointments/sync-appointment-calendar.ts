@@ -9,7 +9,7 @@ import type { AppointmentRepository } from '@/domain/scheduling/appointment-repo
 
 /**
  * Conteúdo do evento externo (#217, AGE-RN-18): só iniciais do paciente, o
- * horário e o link para a consulta no VittaFlow. Nunca nome completo, telefone
+ * horário e o link para a consulta no EstomaSysTech. Nunca nome completo, telefone
  * nem procedimento — o calendário é de terceiro e pode ser pessoal/compartilhado.
  * Criação e remarcação usam o mesmo conteúdo.
  */
@@ -21,7 +21,7 @@ export function eventContent(
   return {
     title: initials ? `Consulta · ${initials}` : 'Consulta',
     description: appUrl
-      ? `Abrir no VittaFlow: ${consultationLink(appUrl, appointment)}`
+      ? `Abrir no EstomaSysTech: ${consultationLink(appUrl, appointment)}`
       : '',
     startsAt: appointment.slot.start,
     endsAt: appointment.slot.end,

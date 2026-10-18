@@ -38,7 +38,7 @@ class FakeEmail implements EmailGateway {
 
 const config = (overrides: Partial<AlertConfig> = {}): AlertConfig => ({
   ...alertConfigFromEnv({
-    ALERT_EMAIL_TO: 'operador@vitta.test',
+    ALERT_EMAIL_TO: 'operador@estomasystech.test',
     APP_URL: 'https://clinica.exemplo.com.br',
   }),
   ...overrides,
@@ -96,12 +96,14 @@ describe('Feature: alertas ao operador (#212, OBS-11..OBS-14)', () => {
 
     expect(summary.checks.every((c) => c.firing && c.notified)).toBe(true);
     expect(email.sent.map((m) => m.subject)).toEqual([
-      '[Vitta Flow] Alerta: aplicação não está pronta (/api/health/ready)',
-      '[Vitta Flow] Alerta: erros 5xx acima do limiar',
-      '[Vitta Flow] Alerta: job de lembretes sem rodar',
-      '[Vitta Flow] Alerta: falhas de entrega de e-mail recorrentes',
+      '[EstomaSysTech] Alerta: aplicação não está pronta (/api/health/ready)',
+      '[EstomaSysTech] Alerta: erros 5xx acima do limiar',
+      '[EstomaSysTech] Alerta: job de lembretes sem rodar',
+      '[EstomaSysTech] Alerta: falhas de entrega de e-mail recorrentes',
     ]);
-    expect(email.sent.every((m) => m.to === 'operador@vitta.test')).toBe(true);
+    expect(
+      email.sent.every((m) => m.to === 'operador@estomasystech.test'),
+    ).toBe(true);
     expect(email.sent[1].text).toContain('10 nos últimos 15 min (limiar 10)');
     expect(email.sent[2].text).toContain('limite 26 h');
     expect(email.sent[0].text).toContain(

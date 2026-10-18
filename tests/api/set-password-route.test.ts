@@ -10,8 +10,8 @@ import {
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -99,12 +99,13 @@ describe('Feature: POST /api/auth/set-password', () => {
 
     expect(response.status).toBe(200);
     const cookie = response.headers.get('set-cookie') ?? '';
-    expect(cookie).toContain('vitta_session=');
+    expect(cookie).toContain('estomasystech_session=');
 
     // O cookie precisa carregar o papel gravado na conta (a conta foi criada
     // com role "atendente"), não um valor fixo — AUTH-06.
     const { verifySessionToken } = await import('@/lib/auth/session');
-    const sessionToken = cookie.match(/vitta_session=([^;]+)/)?.[1] ?? '';
+    const sessionToken =
+      cookie.match(/estomasystech_session=([^;]+)/)?.[1] ?? '';
     const session = verifySessionToken(
       process.env.AUTH_SECRET as string,
       sessionToken,

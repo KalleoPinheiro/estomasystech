@@ -32,17 +32,17 @@ vi.mock('next/server', async (importOriginal) => {
 
 /**
  * `getDb()` (src/infrastructure/persistence/drizzle/db.ts) migra o PGlite do
- * zero quando `VITTA_DB_DRIVER=pglite`. Repassamos o caminho do snapshot já
+ * zero quando `ESTOMASYSTECH_DB_DRIVER=pglite`. Repassamos o caminho do snapshot já
  * migrado (tests/support/pglite-global-setup.ts, 1x pra toda a suíte) — ao
  * encontrar essa env var, `createPgliteDb()` carrega o snapshot em vez de
  * rodar `migrate()` de novo (#111). Cada arquivo ainda ganha sua própria
  * instância PGlite (mesmo isolamento de sempre), só que restaurada de um
  * dump binário, não remontada via SQL.
  *
- * Setado incondicionalmente (não só quando `VITTA_DB_DRIVER === 'pglite'`):
+ * Setado incondicionalmente (não só quando `ESTOMASYSTECH_DB_DRIVER === 'pglite'`):
  * arquivos de teste setam essa env var no topo do próprio módulo, que só
  * executa DEPOIS de `setupFiles` — checar a env var aqui sempre veria o
  * valor antigo (ou nenhum). Arquivos que não usam PGlite simplesmente nunca
- * leem `VITTA_PGLITE_TEMPLATE_PATH`.
+ * leem `ESTOMASYSTECH_PGLITE_TEMPLATE_PATH`.
  */
-process.env.VITTA_PGLITE_TEMPLATE_PATH = inject('pgliteTemplatePath');
+process.env.ESTOMASYSTECH_PGLITE_TEMPLATE_PATH = inject('pgliteTemplatePath');

@@ -286,7 +286,7 @@ describe('Feature: AuditPage', () => {
 });
 
 const EMPTY_CLINIC_INFO = {
-  name: 'Clínica VittaFlow',
+  name: 'Clínica EstomaSysTech',
   cnpj: null,
   address: null,
   city: null,
@@ -366,7 +366,7 @@ describe('Feature: SettingsPage', () => {
       await screen.findByText('Dados da clínica');
 
       fireEvent.change(screen.getByPlaceholderText('Nome da clínica'), {
-        target: { value: 'Clínica VittaFlow Ltda' },
+        target: { value: 'Clínica EstomaSysTech Ltda' },
       });
       fireEvent.change(screen.getByPlaceholderText('00.000.000/0001-00'), {
         target: { value: '12.345.678/0001-95' },
@@ -381,7 +381,9 @@ describe('Feature: SettingsPage', () => {
           '/api/settings/clinic-info',
           expect.objectContaining({
             method: 'PUT',
-            body: expect.stringContaining('"name":"Clínica VittaFlow Ltda"'),
+            body: expect.stringContaining(
+              '"name":"Clínica EstomaSysTech Ltda"',
+            ),
           }),
         );
       });
@@ -1831,7 +1833,7 @@ describe('Feature: SettingsPage', () => {
         ) {
           return jsonResponse({
             delivered: false,
-            inviteUrl: 'https://app.vitta.test/definir-senha?token=t1',
+            inviteUrl: 'https://app.estomasystech.test/definir-senha?token=t1',
           });
         }
         if (url.startsWith('/api/accounts')) {
@@ -1866,7 +1868,7 @@ describe('Feature: SettingsPage', () => {
       const toastText = await screen.findByText(message);
       expect(toastText.closest('.sv-toast--warning')).not.toBeNull();
       expect(screen.getByLabelText('Link para ana@clinica.com')).toHaveValue(
-        'https://app.vitta.test/definir-senha?token=t1',
+        'https://app.estomasystech.test/definir-senha?token=t1',
       );
     });
 

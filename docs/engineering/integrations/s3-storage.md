@@ -49,6 +49,6 @@ compartilhado.
 ```bash
 # MinIO local
 docker run -p 9000:9000 -e MINIO_ROOT_USER=minio -e MINIO_ROOT_PASSWORD=minio123 minio/minio server /data
-# .env: PHOTO_STORAGE=s3 S3_BUCKET=vitta S3_ACCESS_KEY_ID=minio S3_SECRET_ACCESS_KEY=minio123
+# .env: PHOTO_STORAGE=s3 S3_BUCKET=estomasystech S3_ACCESS_KEY_ID=minio S3_SECRET_ACCESS_KEY=minio123
 #       S3_ENDPOINT=http://localhost:9000 S3_FORCE_PATH_STYLE=true
 ```

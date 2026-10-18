@@ -10,7 +10,7 @@ Registro do que foi entregue (RM-30 em [`docs/plano-evolucao-faseado.md`](../../
 
 ## Escopo entregue
 
-`VITTA_ALLOW_OPEN_MODE` removida: sem `AUTH_SECRET` tudo responde 503 (ADR-002); `MetaWhatsAppGateway`, a porta `MessagingGateway` e `WHATSAPP_*` removidos do código, com o RM-14 mantido como especificado.
+`ESTOMASYSTECH_ALLOW_OPEN_MODE` removida: sem `AUTH_SECRET` tudo responde 503 (ADR-002); `MetaWhatsAppGateway`, a porta `MessagingGateway` e `WHATSAPP_*` removidos do código, com o RM-14 mantido como especificado.
 
 ## Limites e pendências
 

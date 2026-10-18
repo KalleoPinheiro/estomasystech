@@ -259,7 +259,7 @@ describe('Feature: Auditoria write-ahead em ações críticas (SEC1-20..21)', ()
 describe('Feature: Evento sem empresa vira evento de plataforma (B6, #210)', () => {
   const superAdmin: Session = {
     expiresAtMs: Date.now() + 60_000,
-    subject: 'dono@vitta.app',
+    subject: 'dono@estomasystech.app',
     role: 'super_admin',
     clinicId: null,
     professionalId: null,

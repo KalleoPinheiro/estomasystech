@@ -14,7 +14,7 @@ import { dataCipherFromEnv } from "@/lib/data-cipher";
  * Roteiro completo: docs/engineering/producao.md § 6.
  */
 async function main(): Promise<void> {
-  process.env.VITTA_MIGRATE_ON_BOOT ??= "false";
+  process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
   // Fora de produção cairia na chave de desenvolvimento: aqui ela é exigida.
   if (!process.env.DATA_ENCRYPTION_KEY) {
     throw new Error("Defina DATA_ENCRYPTION_KEY (a chave atual) para recifrar");

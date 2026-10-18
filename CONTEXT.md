@@ -1,6 +1,6 @@
-# CONTEXT — VittaFlow Domain
+# CONTEXT — EstomaSysTech Domain
 
-**VittaFlow** is a clinical management system for enterostomal therapy / wound, ostomy and continence nursing (estomaterapia) clinics. It manages patient records, clinical conditions, appointments, inventory, and team operations.
+**EstomaSysTech** is a clinical management system for enterostomal therapy / wound, ostomy and continence nursing (estomaterapia) clinics. It manages patient records, clinical conditions, appointments, inventory, and team operations.
 
 ## Glossary
 
@@ -272,7 +272,7 @@ One account belongs to exactly one Clinic (email is unique per Clinic, not globa
 **Auth fail-closed**
 
 - Without `AUTH_SECRET` configured, all routes return 503.
-- There is no unauthenticated mode: `VITTA_ALLOW_OPEN_MODE` was removed (#327) and has no effect anywhere.
+- There is no unauthenticated mode: `ESTOMASYSTECH_ALLOW_OPEN_MODE` was removed (#327) and has no effect anywhere.
 - There is no master/break-glass password: every account, including Super Admin, is a real record with its own credential.
 
 **Photo storage**

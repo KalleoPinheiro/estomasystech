@@ -8,7 +8,7 @@ import { maskEmail } from "../../src/lib/redact";
  * o e-mail completo nem o corpo (CWE-532).
  *
  * Como o e-mail sai mascarado (`e2e-atendente@…` e `e2e-profissional@…` viram
- * ambos `e2***@vitta.test`), o chamador passa só o trecho do log escrito depois
+ * ambos `e2***@estomasystech.test`), o chamador passa só o trecho do log escrito depois
  * de pedir o convite; dentro dele vale o último bloco daquele destinatário
  * (emitir de novo invalida o anterior).
  *

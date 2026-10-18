@@ -3,10 +3,10 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: vitta
+      POSTGRES_USER: estomasystech
       # Sem senha fixa (#191): a subida falha se POSTGRES_PASSWORD não existir.
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD (ex. openssl rand -hex 24)}
-      POSTGRES_DB: vitta
+      POSTGRES_DB: estomasystech
     # Só no loopback do host (#191): o app fala com o banco pela rede interna do
     # compose; a porta local existe apenas para a Via B do onboarding (npm run
     # dev contra este banco). Nunca publicado em todas as interfaces.
@@ -15,7 +15,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vitta -d vitta"]
+      test: ["CMD-SHELL", "pg_isready -U estomasystech -d estomasystech"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -27,7 +27,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://vitta:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@db:5432/vitta
+      DATABASE_URL: postgres://estomasystech:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@db:5432/estomasystech
       TZ: ${TZ:-America/Sao_Paulo}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
       AUTH_SECRET: ${AUTH_SECRET:?defina AUTH_SECRET (ex. openssl rand -hex 32)}
@@ -42,7 +42,7 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
       # Libera POST /api/auth/bootstrap enquanto a instalação não tem nenhuma conta.
-      VITTA_BOOTSTRAP_TOKEN: ${VITTA_BOOTSTRAP_TOKEN:-}
+      ESTOMASYSTECH_BOOTSTRAP_TOKEN: ${ESTOMASYSTECH_BOOTSTRAP_TOKEN:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_SERVICE_ACCOUNT_EMAIL: ${GOOGLE_SERVICE_ACCOUNT_EMAIL:-}
@@ -65,7 +65,7 @@ services:
       # Proxies reversos confiáveis à frente do app (Nginx/Caddy = 1, Cloudflare + Nginx = 2).
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX:-}
-      VITTA_MIGRATE_ON_BOOT: ${VITTA_MIGRATE_ON_BOOT:-}
+      ESTOMASYSTECH_MIGRATE_ON_BOOT: ${ESTOMASYSTECH_MIGRATE_ON_BOOT:-}
       PG_POOL_MAX: ${PG_POOL_MAX:-}
       PG_CONNECT_TIMEOUT_MS: ${PG_CONNECT_TIMEOUT_MS:-}
       PG_IDLE_TIMEOUT_MS: ${PG_IDLE_TIMEOUT_MS:-}

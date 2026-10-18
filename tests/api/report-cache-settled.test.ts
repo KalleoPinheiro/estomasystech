@@ -7,7 +7,7 @@ import {
 import { clearReportCache } from '@/lib/report-cache';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const settledReport = (): MonthlyReport => ({
   totalAppointments: 1,

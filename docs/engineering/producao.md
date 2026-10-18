@@ -8,7 +8,7 @@ last_reviewed: 2026-10-18
 
 # Runbook de produção
 
-Como colocar e manter no ar o Vitta Flow com dado de saúde (LGPD). Alvo decidido pelo dono do
+Como colocar e manter no ar o EstomaSysTech com dado de saúde (LGPD). Alvo decidido pelo dono do
 produto ([#206](https://github.com/KalleoPinheiro/estomasystech/issues/206), 2026-10-11): **VPS
 Hetzner + `docker compose`** (app + Postgres), **uma réplica**, Caddy na frente terminando TLS,
 fotos em volume local. Desenvolvimento local fica em [`onboarding.md`](onboarding.md); erros
@@ -57,7 +57,7 @@ Decisões do dono em 2026-10-12 ([#313](https://github.com/KalleoPinheiro/estoma
 | Região | Hetzner, Alemanha (UE) |
 | Fotos | volume `uploads` (uma réplica). Mais de uma réplica exige bucket (`PHOTO_STORAGE=s3`) |
 | Disco | **sem LUKS** ([ADR-015](../adr/015-servidor-sem-cifra-de-disco.md)): o servidor volta sozinho após um reboot; as fotos ficam em claro no volume, e o que protege são os backups `age`, os campos cifrados (ADR-006), o acesso SSH só por chave e o Cloud Firewall |
-| Cron | `/etc/cron.d/vitta` do host (§ 7) |
+| Cron | `/etc/cron.d/estomasystech` do host (§ 7) |
 | Fuso | a imagem define `TZ=America/Sao_Paulo`; o host pode ficar em UTC (as linhas do cron estão em UTC) |
 
 Provisionamento, uma vez:
@@ -82,9 +82,9 @@ Provisionamento, uma vez:
    AUTH_SECRET=...            # openssl rand -hex 32
    DATA_ENCRYPTION_KEY=...    # openssl rand -hex 32 — cópia no cofre (§ 6)
    CRON_SECRET=...            # openssl rand -hex 24
-   VITTA_BOOTSTRAP_TOKEN=...  # só até o primeiro acesso (§ 8)
+   ESTOMASYSTECH_BOOTSTRAP_TOKEN=...  # só até o primeiro acesso (§ 8)
    RESEND_API_KEY=...         # canal da plataforma: convite do Super Admin e alertas (§ 9)
-   EMAIL_FROM="Vitta Flow <nao-responda@exemplo.com.br>"
+   EMAIL_FROM="EstomaSysTech <nao-responda@exemplo.com.br>"
    ALERT_EMAIL_TO=operador@exemplo.com.br
    ```
 
@@ -95,14 +95,14 @@ Provisionamento, uma vez:
 6. Backup (§ 5), cron (§ 7), primeiro acesso (§ 8) e alertas (§ 9).
 
 **Atualizar a versão:** `git pull`,
-`sudo sh -c '. /etc/vitta/backup.env && scripts/backup.sh'` (rollback é restaurar, § 4) e
+`sudo sh -c '. /etc/estomasystech/backup.env && scripts/backup.sh'` (rollback é restaurar, § 4) e
 `docker compose up -d --build`. O app fica fora do ar só enquanto o container novo sobe e migra.
 
 ### Alternativa não adotada: Vercel + Supabase
 
 O código continua compatível (`vercel.json`), mas não é o alvo. Diferenças que importam: o app
 usa o pooler do Supabase em modo transação (porta `6543`) e as migrações a conexão direta
-(`5432`), com `VITTA_MIGRATE_ON_BOOT=false` e `PG_POOL_MAX=5`; fotos **obrigatoriamente** em
+(`5432`), com `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e `PG_POOL_MAX=5`; fotos **obrigatoriamente** em
 bucket (`PHOTO_STORAGE=s3`, a aplicação recusa o disco local quando `VERCEL` existe); o Vercel
 Cron chama `GET /api/reminders/run` e `GET /api/retention/run` com
 `Authorization: Bearer $CRON_SECRET`; `TZ` é reservado e
@@ -128,10 +128,10 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
 
 ## 4. Migrações
 
-- Padrão na VPS: o app migra no boot com advisory lock (`VITTA_MIGRATE_ON_BOOT` vazio). Uma
+- Padrão na VPS: o app migra no boot com advisory lock (`ESTOMASYSTECH_MIGRATE_ON_BOOT` vazio). Uma
   réplica, então o deploy é: backup, `docker compose up -d --build`, o container novo migra e sobe.
-- Para migrar como passo separado: `VITTA_MIGRATE_ON_BOOT=false` e, de um checkout no host,
-  `DATABASE_URL=postgres://vitta:…@127.0.0.1:5432/vitta npm run db:migrate` (a imagem standalone
+- Para migrar como passo separado: `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e, de um checkout no host,
+  `DATABASE_URL=postgres://estomasystech:…@127.0.0.1:5432/estomasystech npm run db:migrate` (a imagem standalone
   não tem `drizzle-kit`).
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
   última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`
@@ -198,9 +198,9 @@ Sem a chave privada `age`, nenhum backup serve.
 
 **Configurar, uma vez:**
 
-1. Na máquina do operador (não no servidor): `age-keygen -o vitta-backup.key`. Guarde o arquivo
+1. Na máquina do operador (não no servidor): `age-keygen -o estomasystech-backup.key`. Guarde o arquivo
    no cofre e numa cópia offline; a linha `# public key: age1…` vai para o servidor em
-   `/etc/vitta/backup.pub` (`chmod 600`).
+   `/etc/estomasystech/backup.pub` (`chmod 600`).
 2. Prepare a Storage Box (uma vez, no painel da Hetzner e na máquina do operador): crie a caixa
    **em outra localização** que não a do servidor; habilite o acesso por SSH; instale a chave
    pública SSH do servidor na caixa (`~/.ssh/authorized_keys` dela); ligue os **snapshots
@@ -209,13 +209,13 @@ Sem a chave privada `age`, nenhum backup serve.
    da Hetzner: a chave SSH do servidor não consegue apagá-los. Assim, 14 dias é a janela para
    perceber um incidente que tenha apagado os backups.
    O script roda o comando de cópia com `sh -c`, exportando `BACKUP_PATH` (pasta do backup novo) e
-   `BACKUP_DIR` (todas). Para a Storage Box (SSH na porta 23), em `/etc/vitta/backup.env` (§ 7):
+   `BACKUP_DIR` (todas). Para a Storage Box (SSH na porta 23), em `/etc/estomasystech/backup.env` (§ 7):
 
    ```bash
-   export BACKUP_OFFSITE_CMD='rsync -a --delete -e "ssh -p 23" "$BACKUP_DIR"/ u123456@u123456.your-storagebox.de:vitta/'
+   export BACKUP_OFFSITE_CMD='rsync -a --delete -e "ssh -p 23" "$BACKUP_DIR"/ u123456@u123456.your-storagebox.de:estomasystech/'
    ```
 
-   (`u123456` é o usuário da sua caixa.) O `--delete` espelha a pasta `vitta/` dentro da caixa:
+   (`u123456` é o usuário da sua caixa.) O `--delete` espelha a pasta `estomasystech/` dentro da caixa:
    quem apagar os backups do servidor apaga também a cópia espelhada no próximo ciclo. O que
    protege disso são os **snapshots da caixa**; o comando acima mexe só na pasta espelhada, e
    nenhum comando do runbook apaga snapshots.
@@ -223,7 +223,7 @@ Sem a chave privada `age`, nenhum backup serve.
 
    ```bash
    cd /opt/estomasystech
-   sudo BACKUP_AGE_RECIPIENTS_FILE=/etc/vitta/backup.pub BACKUP_OFFSITE_CMD='…' scripts/backup.sh
+   sudo BACKUP_AGE_RECIPIENTS_FILE=/etc/estomasystech/backup.pub BACKUP_OFFSITE_CMD='…' scripts/backup.sh
    ```
 
 4. Agende no cron (§ 7).
@@ -239,13 +239,13 @@ Sem a chave privada `age`, nenhum backup serve.
 cofre só para isso:
 
 ```bash
-BACKUP_AGE_IDENTITY_FILE=./vitta-backup.key scripts/restore.sh /caminho/20261011T060000Z
-BACKUP_AGE_IDENTITY_FILE=./vitta-backup.key scripts/restore.sh /caminho/20261011T060000Z --confirmar
+BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh /caminho/20261011T060000Z
+BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh /caminho/20261011T060000Z --confirmar
 ```
 
 Sem `--confirmar` o script só confere: `SHA256SUMS`, decifra os dois arquivos (chave errada sai
 com `2`) e lista o dump e o tar das fotos.
-Com `--confirmar` ele para o app, recria o banco `vitta`, restaura o dump, troca o conteúdo do
+Com `--confirmar` ele para o app, recria o banco `estomasystech`, restaura o dump, troca o conteúdo do
 volume de fotos e sobe o app (que roda as migrações pendentes se o backup for de versão
 anterior). Saída `0` ok, `2` uso ou pré-condição (nada foi alterado), `1` falha no meio — rode de
 novo. Apague a chave privada do servidor ao terminar.
@@ -258,10 +258,10 @@ novo. Apague a chave privada do servidor ao terminar.
 com o repositório e Docker), sem o Caddy e em portas que não colidem:
 
 ```bash
-export COMPOSE_FILE=docker-compose.yml COMPOSE_PROJECT_NAME=vitta-restore APP_PORT=3100 POSTGRES_PORT=5433
+export COMPOSE_FILE=docker-compose.yml COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433
 # POSTGRES_PASSWORD, AUTH_SECRET e DATA_ENCRYPTION_KEY de produção (do cofre) no ambiente
 docker compose up -d --build
-BACKUP_AGE_IDENTITY_FILE=./vitta-backup.key scripts/restore.sh ./20261011T060000Z --confirmar
+BACKUP_AGE_IDENTITY_FILE=./estomasystech-backup.key scripts/restore.sh ./20261011T060000Z --confirmar
 ```
 
 Abra `http://localhost:3100`, entre e confira a ficha de um paciente com evolução, anamnese e
@@ -287,10 +287,10 @@ com permissão `600`, fora do controle de versão (o `.gitignore` o ignora), e u
 | --- | --- | --- |
 | `AUTH_SECRET` | incidente ou troca de pessoal | derruba **todas** as sessões (todos logam de novo). Não afeta o dado clínico ([ADR-006](../adr/006-chave-de-dados-clinicos.md)); mantenha o valor antigo só se ainda houver dado no formato legado (antes de rodar a recifra) |
 | `DATA_ENCRYPTION_KEY` | anual ou incidente | 1) valor atual → `DATA_ENCRYPTION_KEY_PREVIOUS`; 2) novo valor em `DATA_ENCRYPTION_KEY`; 3) deploy; 4) `npm run data:reencrypt`; 5) quando o script reportar 0 pendências, remova o antigo de `_PREVIOUS`. Guarde a chave antiga no cofre enquanto houver backup (30 dias) cifrado com ela |
-| `POSTGRES_PASSWORD` | incidente | `ALTER ROLE vitta PASSWORD '…'` no `db`, novo valor no `.env`, `docker compose up -d` |
-| Chave `age` do backup | incidente ou troca de operador | gere outra, troque `/etc/vitta/backup.pub`; guarde a privada antiga enquanto houver backup (30 dias) cifrado com ela |
-| `VITTA_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **remova** depois do primeiro acesso (§ 8) |
-| `CRON_SECRET` | incidente | atualize junto em `/etc/vitta/cron.headers` (§ 7) |
+| `POSTGRES_PASSWORD` | incidente | `ALTER ROLE estomasystech PASSWORD '…'` no `db`, novo valor no `.env`, `docker compose up -d` |
+| Chave `age` do backup | incidente ou troca de operador | gere outra, troque `/etc/estomasystech/backup.pub`; guarde a privada antiga enquanto houver backup (30 dias) cifrado com ela |
+| `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **remova** depois do primeiro acesso (§ 8) |
+| `CRON_SECRET` | incidente | atualize junto em `/etc/estomasystech/cron.headers` (§ 7) |
 | `RESEND_API_KEY`, credenciais Google | conforme o provedor | troque no provedor e no `.env` |
 | `GLITCHTIP_SECRET_KEY`, `GLITCHTIP_DB_PASSWORD` | incidente | troca derruba as sessões da interface do GlitchTip; a senha do banco dele segue o roteiro da `POSTGRES_PASSWORD` no serviço `glitchtip-db` |
 | `GLITCHTIP_DSN` | incidente | gere outra chave no projeto do GlitchTip, troque no `.env`, `docker compose up -d app` e revogue a antiga |
@@ -303,25 +303,25 @@ idempotente: pode ser interrompido e rodado de novo.
 ## 7. Cron (lembretes, backup, retenção, alertas)
 
 O host fica em UTC; São Paulo é UTC−3 o ano todo. Guarde o segredo do cron num arquivo, não na
-linha do crontab (`/etc/vitta/cron.headers`, `chmod 600`, com a linha
-`x-cron-secret: <CRON_SECRET>`). Em `/etc/cron.d/vitta`:
+linha do crontab (`/etc/estomasystech/cron.headers`, `chmod 600`, com a linha
+`x-cron-secret: <CRON_SECRET>`). Em `/etc/cron.d/estomasystech`:
 
 ```text
 MAILTO=operador@exemplo.com.br
 # Backup diário às 02:00 de São Paulo. Silencioso quando dá certo; a falha vai por e-mail.
-0 5 * * * root . /etc/vitta/backup.env && /opt/estomasystech/scripts/backup.sh >> /var/log/vitta-backup.log 2>&1 || echo "backup falhou: /var/log/vitta-backup.log"
+0 5 * * * root . /etc/estomasystech/backup.env && /opt/estomasystech/scripts/backup.sh >> /var/log/estomasystech-backup.log 2>&1 || echo "backup falhou: /var/log/estomasystech-backup.log"
 # Lembretes às 08:00 de São Paulo (decidido em 2026-10-12, #313).
-0 11 * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/reminders/run
+0 11 * * * root curl -fsS -o /dev/null -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/reminders/run
 # Retenção LGPD às 03:00 de São Paulo, depois do backup (§ 7.1). O flock espera o backup
 # terminar: apagar uma foto enquanto o tar lê o volume faria o backup falhar.
-0 6 * * * root flock -w 3600 /var/backups/vitta/.lock curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/retention/run
+0 6 * * * root flock -w 3600 /var/backups/estomasystech/.lock curl -fsS -o /dev/null -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/retention/run
 # Alertas ao operador a cada 5 min (§ 9). O e-mail sai do app; se o app não responder, o
 # curl falha e o MAILTO avisa.
-*/5 * * * * root curl -fsS -o /dev/null -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/alerts/run
+*/5 * * * * root curl -fsS -o /dev/null -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/alerts/run
 ```
 
-`/etc/vitta/backup.env` (`chmod 600`) exporta a configuração do § 5:
-`export BACKUP_AGE_RECIPIENTS_FILE=/etc/vitta/backup.pub` e `export BACKUP_OFFSITE_CMD='…'`.
+`/etc/estomasystech/backup.env` (`chmod 600`) exporta a configuração do § 5:
+`export BACKUP_AGE_RECIPIENTS_FILE=/etc/estomasystech/backup.pub` e `export BACKUP_OFFSITE_CMD='…'`.
 O `cron` manda por e-mail ao `MAILTO` tudo que o comando escrever; as quatro linhas só escrevem
 quando falham. Precisa de um relay de e-mail no host (`msmtp`, § 9.3).
 
@@ -351,7 +351,7 @@ da foto é apagado do volume `uploads`. Contrato e regras:
 Issues: [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294),
 [#323](https://github.com/KalleoPinheiro/estomasystech/issues/323).
 
-- **Agendamento:** linha do `/etc/cron.d/vitta` no § 7, uma vez por dia às 03:00 de São Paulo,
+- **Agendamento:** linha do `/etc/cron.d/estomasystech` no § 7, uma vez por dia às 03:00 de São Paulo,
   depois do backup, com o mesmo `CRON_SECRET` dos lembretes. Na alternativa Vercel, o
   `vercel.json` agenda `GET /api/retention/run` às 06:00 UTC.
 - **Prazo e fronteira:** conta em dias inteiros no `APP_TIMEZONE`. O último dia do prazo fica
@@ -365,7 +365,7 @@ Issues: [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294),
   job usa o dia em São Paulo):
   `SELECT clinic_id, count(*) FROM audit_events WHERE occurred_at < date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo' - interval '5 years') AT TIME ZONE 'America/Sao_Paulo' AND actor_id <> 'anonimizado' GROUP BY 1;`
 - **Rodar à mão** (depois de restaurar backup, ou para conferir): no host,
-  `curl -fsS -X POST -H @/etc/vitta/cron.headers https://clinica.exemplo.com.br/api/retention/run`.
+  `curl -fsS -X POST -H @/etc/estomasystech/cron.headers https://clinica.exemplo.com.br/api/retention/run`.
   É idempotente; a segunda execução no mesmo dia devolve tudo `0`. Use o mesmo `flock` da linha
   do cron se o backup estiver rodando.
 - **Conferir que rodou:** *Plataforma → Auditoria* (Super Admin) mostra um evento `retention` do
@@ -419,12 +419,12 @@ Roda **uma vez**, depois da migração `0063`. **Manual**. Regras: ACE-RN-57, [A
 
 ## 8. Primeiro acesso
 
-1. Configure todas as variáveis obrigatórias (`.env.example`), incluindo `VITTA_BOOTSTRAP_TOKEN`.
-2. `curl -sX POST "$APP_URL/api/auth/bootstrap" -H "Content-Type: application/json" -H "x-bootstrap-token: $VITTA_BOOTSTRAP_TOKEN" -d '{"email":"responsavel@clinica.com.br"}'` — cria o Super Admin e envia o convite.
+1. Configure todas as variáveis obrigatórias (`.env.example`), incluindo `ESTOMASYSTECH_BOOTSTRAP_TOKEN`.
+2. `curl -sX POST "$APP_URL/api/auth/bootstrap" -H "Content-Type: application/json" -H "x-bootstrap-token: $ESTOMASYSTECH_BOOTSTRAP_TOKEN" -d '{"email":"responsavel@clinica.com.br"}'` — cria o Super Admin e envia o convite.
 3. Defina a senha pelo link do convite e entre. Com `RESEND_API_KEY`/`EMAIL_FROM` (opcionais,
    [ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) ele chega por e-mail; sem elas, ou se o
    envio falhar, vem no campo `inviteUrl` da resposta do passo 2.
-4. Remova `VITTA_BOOTSTRAP_TOKEN` do `.env` e `docker compose up -d`.
+4. Remova `ESTOMASYSTECH_BOOTSTRAP_TOKEN` do `.env` e `docker compose up -d`.
 5. Cadastre a clínica e convide o administrador dela; em */configuracoes* da clínica: dados (CNPJ,
    responsável técnico), canal de e-mail, grade de horários, profissionais, contas da equipe.
 6. Contas de portal: crie a partir do paciente/parceiro já cadastrado (o vínculo é obrigatório).
@@ -448,7 +448,7 @@ morre, mas não o que fica `unhealthy`.
 
 ### 9.2 Alertas por e-mail
 
-`*/5` no `/etc/cron.d/vitta` (§ 7) chama `POST /api/alerts/run`. Precisa de `ALERT_EMAIL_TO` e
+`*/5` no `/etc/cron.d/estomasystech` (§ 7) chama `POST /api/alerts/run`. Precisa de `ALERT_EMAIL_TO` e
 do canal da plataforma (`RESEND_API_KEY`/`EMAIL_FROM`) no `.env`. Contrato e detalhes:
 [`integrations/alertas.md`](integrations/alertas.md).
 
@@ -471,7 +471,7 @@ não está pronta". `docker compose start db` em seguida.
 | --- | --- |
 | App fora do ar | o `curl -f` do cron de alertas falha e o `MAILTO` avisa; com o servidor inteiro fora, só o verificador externo avisa (UptimeRobot, abaixo) |
 | Backup, lembretes ou retenção falharam | `MAILTO` do cron (§ 7) |
-| Disco | linha no `/etc/cron.d/vitta`: `0 * * * * root df --output=pcent / /var/lib/docker \| awk 'NR>1 && $1+0 > 85 {print "disco em " $1}'` |
+| Disco | linha no `/etc/cron.d/estomasystech`: `0 * * * * root df --output=pcent / /var/lib/docker \| awk 'NR>1 && $1+0 > 85 {print "disco em " $1}'` |
 | Backup que não rodou | o `MAILTO` não pega cron parado; o verificador de "último backup" segue fora desta entrega |
 
 **E-mail do host (`msmtp`).** O `MAILTO` do cron precisa de um relay no host: a Hetzner bloqueia a

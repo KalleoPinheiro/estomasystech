@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-O VittaFlow depende de `@still-void/ui@^1.1.0`. A versão `2.0.0` remove o entry point
+O EstomaSysTech depende de `@still-void/ui@^1.1.0`. A versão `2.0.0` remove o entry point
 bare `@still-void/ui` — cinco arquivos do app importam dele e quebram na resolução de
 módulo. Além disso, o app reimplementa em HTML cru componentes que a lib já entrega
 (botão, input, card, alerta, diálogo), e pinta 52 utilitários Tailwind (`amber-*`,
@@ -49,7 +49,7 @@ módulo. Além disso, o app reimplementa em HTML cru componentes que a lib já e
 
 ### P1: Subir para a v2 sem quebrar a resolução de módulo ⭐ MVP
 
-**User Story**: Como mantenedor do VittaFlow, quero o app rodando em `@still-void/ui@^2.0.1`
+**User Story**: Como mantenedor do EstomaSysTech, quero o app rodando em `@still-void/ui@^2.0.1`
 para receber correções e componentes shadcn da linha 2.x.
 
 **Why P1**: Sem isso nada mais compila. É o bloqueio raiz.
@@ -69,7 +69,7 @@ para receber correções e componentes shadcn da linha 2.x.
 
 ### P1: Trocar reimplementações por componentes do catálogo v2 ⭐ MVP
 
-**User Story**: Como desenvolvedor do VittaFlow, quero que todo elemento que a lib já
+**User Story**: Como desenvolvedor do EstomaSysTech, quero que todo elemento que a lib já
 entrega venha da lib, para não manter estilo duplicado e divergente.
 
 **Why P1**: É o núcleo do pedido — "adaptar todos os componentes existentes para usar a lib".
@@ -92,13 +92,13 @@ entrega venha da lib, para não manter estilo duplicado e divergente.
 ### P1: Registrar as lacunas do catálogo ⭐ MVP
 
 **User Story**: Como mantenedor do still-void, quero a lista exata dos componentes que o
-VittaFlow precisa e a lib não tem, para transformar em backlog da lib.
+EstomaSysTech precisa e a lib não tem, para transformar em backlog da lib.
 
 **Why P1**: É a segunda metade explícita do pedido.
 
 **Acceptance Criteria**:
 
-1. WHEN `docs/still-void-gaps.md` existe THEN SHALL listar cada componente ausente com: nome proposto, motivo, quantidade de call sites no VittaFlow, arquivos de exemplo e o workaround em vigor
+1. WHEN `docs/still-void-gaps.md` existe THEN SHALL listar cada componente ausente com: nome proposto, motivo, quantidade de call sites no EstomaSysTech, arquivos de exemplo e o workaround em vigor
 2. WHEN um componente é listado como ausente THEN SHALL **não** constar na export line de `@still-void/ui/react@2.0.1` nem de `@still-void/ui/react/client@2.0.1`
 3. WHEN o arquivo é lido THEN SHALL conter no mínimo as lacunas confirmadas por inventário: `Textarea`, `NativeSelect`, `Label`/`Field`, família `Table`, `Checkbox`, `RadioGroup`, `Pagination`, `Progress`, `Separator` e `AlertDialog`
 4. WHEN um workaround local sobrevive no código THEN SHALL existir um comentário `// sv-gap: <nome-da-lacuna>` no ponto do código, apontando para a entrada correspondente do documento

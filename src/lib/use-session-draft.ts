@@ -10,7 +10,7 @@ import { useStaffIdentity } from './staff-access';
  * primeira leitura. Traz o e-mail da conta: outra pessoa que entre na mesma
  * aba não vê o texto.
  */
-const PREFIX = 'vitta:draft:';
+const PREFIX = 'estomasystech:draft:';
 
 interface StoredDraft<T> {
   owner: string;

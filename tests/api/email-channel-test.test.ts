@@ -7,7 +7,7 @@ import { saveEmailChannel, stubProviderFetch } from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -22,7 +22,7 @@ interface TestResult {
 }
 
 const URL = '/api/settings/email-channel/test';
-const SUBJECT = 'VittaFlow — teste do canal de e-mail';
+const SUBJECT = 'EstomaSysTech — teste do canal de e-mail';
 
 let seq = 0;
 /** Clínica nova por teste: o limite de taxa do teste é por clínica. */
@@ -201,9 +201,9 @@ describe('Feature: POST /api/settings/email-channel/test', () => {
     ]);
   });
 
-  it('sem AUTH_SECRET (mesmo com VITTA_ALLOW_OPEN_MODE, removida em #327): 503, nada é enviado', async () => {
+  it('sem AUTH_SECRET (mesmo com ESTOMASYSTECH_ALLOW_OPEN_MODE, removida em #327): 503, nada é enviado', async () => {
     vi.stubEnv('AUTH_SECRET', '');
-    vi.stubEnv('VITTA_ALLOW_OPEN_MODE', 'true');
+    vi.stubEnv('ESTOMASYSTECH_ALLOW_OPEN_MODE', 'true');
     const fetchMock = stubProviderFetch(200);
     try {
       const route = await import('@/app/api/settings/email-channel/test/route');

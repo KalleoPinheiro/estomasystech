@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-O VittaFlow roda em `@still-void/ui@^2.0.1`. A `3.1.0` (latest) entrega, num único
+O EstomaSysTech roda em `@still-void/ui@^2.0.1`. A `3.1.0` (latest) entrega, num único
 salto, **13 das 18 lacunas** que a própria migração v2 levantou e registrou em
 `docs/still-void-gaps.md` — inclusive as sete de maior volume (`native-select`,
 `table`, `textarea`, `card-as-element`, `button-accent-variant`, `radio-group`,
@@ -85,7 +85,7 @@ Escopo Large ⇒ varredura completa; cada dimensão resolve em requisito ou `N/A
 
 ### P1: Subir para a `3.1.0` absorvendo as quebras da major ⭐ MVP
 
-**User Story**: Como mantenedor do VittaFlow, quero o app rodando em `@still-void/ui@^3.1.0`
+**User Story**: Como mantenedor do EstomaSysTech, quero o app rodando em `@still-void/ui@^3.1.0`
 com todo o comportamento atual preservado, para poder consumir o catálogo novo.
 
 **Why P1**: É o bloqueio raiz — nenhuma das outras histórias existe sem a versão instalada.
@@ -107,7 +107,7 @@ com todo o comportamento atual preservado, para poder consumir o catálogo novo.
 
 ### P1: Campos de formulário vêm do catálogo ⭐ MVP
 
-**User Story**: Como desenvolvedor do VittaFlow, quero que `<select>`, `<textarea>`,
+**User Story**: Como desenvolvedor do EstomaSysTech, quero que `<select>`, `<textarea>`,
 `<input type="file|checkbox|radio">` venham da lib, para que a receita `nativeField`
 — 45 usos espelhando à mão o frame do `Input` — deixe de existir.
 

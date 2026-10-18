@@ -6,11 +6,11 @@ import {
 } from '@/domain/clinic/clinic-channel';
 import { ConflictError } from '@/domain/shared/errors';
 
-export const TEST_EMAIL_SUBJECT = 'VittaFlow — teste do canal de e-mail';
+export const TEST_EMAIL_SUBJECT = 'EstomaSysTech — teste do canal de e-mail';
 export const NO_CHANNEL_TO_TEST_MESSAGE = 'Configure o canal antes de testar';
 
 const TEST_EMAIL_TEXT = [
-  'Este é um e-mail de teste do VittaFlow.',
+  'Este é um e-mail de teste do EstomaSysTech.',
   '',
   'Se você o recebeu, o canal de e-mail da clínica está funcionando:',
   'lembretes, convites e redefinições de senha saem por ele.',

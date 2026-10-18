@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 /**
  * Confirma a AC "não existe nenhuma rota de auto-cadastro" (RBAC-14):

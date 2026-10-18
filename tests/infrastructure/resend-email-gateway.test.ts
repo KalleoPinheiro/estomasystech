@@ -26,7 +26,7 @@ describe('Feature: Gateway de e-mail transacional (Resend)', () => {
       vi.stubGlobal('fetch', fetchMock);
       const gateway = new ResendEmailGateway({
         apiKey: 're_123',
-        from: 'VittaFlow <no@v.com>',
+        from: 'EstomaSysTech <no@v.com>',
       });
 
       await gateway.send({
@@ -44,7 +44,7 @@ describe('Feature: Gateway de e-mail transacional (Resend)', () => {
         'Content-Type': 'application/json',
       });
       expect(JSON.parse(options.body as string)).toEqual({
-        from: 'VittaFlow <no@v.com>',
+        from: 'EstomaSysTech <no@v.com>',
         to: ['p@c.com'],
         subject: 'Defina sua senha',
         text: 'link aqui',

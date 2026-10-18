@@ -72,7 +72,7 @@ liste só `company_admin`, para que nenhuma rota futura herde, por engano, permi
 
 ### P1: Modo aberto de `/api/accounts/[id]` alinhado a `company_admin` ⭐ MVP
 
-**User Story**: Como desenvolvedor rodando em `VITTA_ALLOW_OPEN_MODE=true`, quero que o modo aberto
+**User Story**: Como desenvolvedor rodando em `ESTOMASYSTECH_ALLOW_OPEN_MODE=true`, quero que o modo aberto
 trate sessão ausente como `company_admin` em toda rota de conta, para que editar
 atendente/profissional continue funcionando após a matriz ser enxugada.
 

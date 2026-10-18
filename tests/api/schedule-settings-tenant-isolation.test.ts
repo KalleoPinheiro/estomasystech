@@ -8,7 +8,7 @@ import {
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;

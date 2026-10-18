@@ -7,8 +7,8 @@ import { spyOnSentEmails } from '../support/email';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -54,7 +54,11 @@ interface SummaryDto {
   createdAt: string;
 }
 
-const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+const SUPER_ADMIN = cookieHeaderFor(
+  'super_admin',
+  'dono@estomasystech.app',
+  null,
+);
 
 let cnpjSeq = 10;
 /** CNPJ novo por teste — `uq_clinics_cnpj` recusa repetido. */
@@ -161,7 +165,7 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
       // A clínica nova não tem canal: o convite nunca sai por e-mail (C2, #265).
       delivered: false,
       inviteUrl: expect.stringMatching(
-        /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+        /^https:\/\/app\.estomasystech\.test\/definir-senha\?token=[\w-]+$/,
       ),
     });
     const { clinics, userAccounts } = await repositories(clinicId);
@@ -189,7 +193,7 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(json.data.admin.delivered).toBe(false);
     expect(json.data.admin.inviteUrl).toMatch(
-      /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/,
+      /^https:\/\/app\.estomasystech\.test\/definir-senha\?token=[\w-]+$/,
     );
     const secret = new URL(json.data.admin.inviteUrl ?? '').searchParams.get(
       'token',
@@ -380,7 +384,7 @@ describe('Feature: Cadastro de clínica pela plataforma (B4, #214)', () => {
           resourceType: 'clinic',
           resourceId: clinicId,
           actorRole: 'super_admin',
-          actorId: 'dono@vitta.app',
+          actorId: 'dono@estomasystech.app',
           clinicId,
         }),
         expect.objectContaining({

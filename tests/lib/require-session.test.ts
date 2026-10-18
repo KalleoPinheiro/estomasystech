@@ -108,7 +108,7 @@ describe('Feature: Guarda de sessão nas rotas (camada 2 de autorização)', () 
         'x@y.com',
         'company_admin',
       );
-      const forjado = { cookie: `vitta_session=${token}` };
+      const forjado = { cookie: `estomasystech_session=${token}` };
 
       const guard = requireStaffSession(request(forjado));
 
@@ -118,7 +118,9 @@ describe('Feature: Guarda de sessão nas rotas (camada 2 de autorização)', () 
     });
 
     it('Dado cookie malformado, Então responde 401', () => {
-      const forjado = { cookie: 'vitta_session=payload.assinatura-invalida' };
+      const forjado = {
+        cookie: 'estomasystech_session=payload.assinatura-invalida',
+      };
 
       const guard = requireStaffSession(request(forjado));
 
@@ -141,11 +143,11 @@ describe('Feature: Guarda de sessão nas rotas (camada 2 de autorização)', () 
       );
     });
 
-    it('Dado VITTA_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 503 sem AUTH_SECRET', () => {
+    it('Dado ESTOMASYSTECH_ALLOW_OPEN_MODE=true (variável removida, #327), Então segue 503 sem AUTH_SECRET', () => {
       delete process.env.AUTH_SECRET;
       delete process.env.AUTH_PASSWORD;
       vi.stubEnv('NODE_ENV', 'development');
-      vi.stubEnv('VITTA_ALLOW_OPEN_MODE', 'true');
+      vi.stubEnv('ESTOMASYSTECH_ALLOW_OPEN_MODE', 'true');
 
       const guard = requireStaffSession(request());
 

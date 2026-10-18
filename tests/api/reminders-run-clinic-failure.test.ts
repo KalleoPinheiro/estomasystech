@@ -6,7 +6,7 @@ import {
 } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 // A leitura da empresa B lança; o resto do container é o real.
 vi.mock('@/infrastructure/container', async (importOriginal) => {

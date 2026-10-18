@@ -7,8 +7,8 @@ import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -70,7 +70,11 @@ describe('Feature: desativação atômica do último admin (#244)', () => {
       seedAdmin(clinicId, `p1-a-${seq}@x.com`),
       seedAdmin(clinicId, `p1-b-${seq}@x.com`),
     ]);
-    const superAdmin = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+    const superAdmin = cookieHeaderFor(
+      'super_admin',
+      'dono@estomasystech.app',
+      null,
+    );
     const route = await import(
       '@/app/api/platform/clinics/[id]/admins/[accountId]/route'
     );

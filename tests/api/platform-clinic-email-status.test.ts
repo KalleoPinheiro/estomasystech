@@ -6,7 +6,7 @@ import { ensureClinic } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -23,7 +23,11 @@ interface EmailChannel {
 
 type WithChannel = { id: string; emailChannel: EmailChannel };
 
-const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+const SUPER_ADMIN = cookieHeaderFor(
+  'super_admin',
+  'dono@estomasystech.app',
+  null,
+);
 const API_KEY = 're_chave_secreta_W9x2';
 const SENDER = 'Clínica Status <contato@status.test>';
 const PROVIDER_ERROR = 'domínio status.test não verificado';

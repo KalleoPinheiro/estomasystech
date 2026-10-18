@@ -51,7 +51,7 @@ O jurídico pode reabrir qualquer um.
 
 | # | Ponto | Decisão |
 | --- | --- | --- |
-| 1 | Controlador × operador | A **clínica** é controladora; o VittaFlow é **operador** |
+| 1 | Controlador × operador | A **clínica** é controladora; o EstomaSysTech é **operador** |
 | 2 | Encarregado | Nome e canal por clínica, em Configurações (Admin de Empresa). Sem eles vale o e-mail ou telefone de contato da clínica. Sem CNPJ **ou** sem nenhum canal, o aceite e o termo impresso respondem `409` |
 | 3 | Base legal do prontuário | Tutela da saúde (LGPD, art. 11, II, "f") e obrigação legal (Lei 13.787/2018); o TCLE é o consentimento informado do tratamento, não a base da LGPD |
 | 4 | Uso de foto fora do tratamento | **Não há**. O termo de imagem exclui aula, congresso e divulgação; qualquer uso futuro pede termo novo |

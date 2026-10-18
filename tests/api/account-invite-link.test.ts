@@ -18,8 +18,8 @@ import {
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -33,7 +33,8 @@ interface LinkDto {
   inviteUrl: string | null;
 }
 
-const LINK = /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/;
+const LINK =
+  /^https:\/\/app\.estomasystech\.test\/definir-senha\?token=[\w-]+$/;
 const ADMIN = cookieHeaderFor(
   'company_admin',
   'admin-link@a.test',

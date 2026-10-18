@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
  *
  * Desde a remoção da senha mestre (issue #21 / ADR-004) o único caminho de login é
  * e-mail + senha da própria conta, então o `global-setup` primeiro faz o bootstrap do
- * Super Admin (`POST /api/auth/bootstrap`, autenticado por `VITTA_BOOTSTRAP_TOKEN`),
+ * Super Admin (`POST /api/auth/bootstrap`, autenticado por `ESTOMASYSTECH_BOOTSTRAP_TOKEN`),
  * consome o convite que chega no dry-run do gateway de e-mail e só então loga. Os
  * specs de portal seguem assinando um cookie de sessão manualmente (mesma assinatura
  * HMAC de `src/lib/auth/session.ts`), já que a suíte não semeia contas de
@@ -28,14 +28,14 @@ export const MAIN_PORT = 3000;
  * `process.env`. Este módulo é carregado primeiro pelo runner do Playwright (via
  * `playwright.config.ts`); os workers são processos filhos e herdam esse `env`, e o
  * servidor que o próprio Playwright sobe recebe os valores por `webServer.env`
- * (mapeados para `AUTH_SECRET`/`VITTA_BOOTSTRAP_TOKEN`).
+ * (mapeados para `AUTH_SECRET`/`ESTOMASYSTECH_BOOTSTRAP_TOKEN`).
  *
  * O alcance para aí: a propagação cobre apenas processos gerenciados pelo Playwright.
  * Um `npm run dev` iniciado à parte lê o ambiente dele, e `webServer.env` não é
  * aplicado quando `reuseExistingServer` reaproveita esse processo. Para reaproveitar
  * um servidor já em pé é preciso que os pares batam: exporte
  * `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN` para a suíte e
- * `AUTH_SECRET`/`VITTA_BOOTSTRAP_TOKEN` com os mesmos valores para o servidor.
+ * `AUTH_SECRET`/`ESTOMASYSTECH_BOOTSTRAP_TOKEN` com os mesmos valores para o servidor.
  */
 const secretFromEnv = (name: string, bytes: number): string => {
   const current = process.env[name];
@@ -58,7 +58,7 @@ export const E2E_DATA_ENCRYPTION_KEY = secretFromEnv("E2E_DATA_ENCRYPTION_KEY", 
  * importa o catálogo de taxonomias e convida o Admin de Empresa da suíte, mas não
  * abre nenhuma tela da clínica.
  */
-export const E2E_SUPER_ADMIN_EMAIL = "e2e-super-admin@vitta.test";
+export const E2E_SUPER_ADMIN_EMAIL = "e2e-super-admin@estomasystech.test";
 /** Senha definida pelo próprio fluxo de convite — não é senha mestre de ninguém. */
 export const E2E_SUPER_ADMIN_PASSWORD = secretFromEnv("E2E_ADMIN_PASSWORD", 18);
 
@@ -67,7 +67,7 @@ export const E2E_SUPER_ADMIN_PASSWORD = secretFromEnv("E2E_ADMIN_PASSWORD", 18);
  * (`ADMIN_STORAGE_STATE_PATH`). Convidado pelo Super Admin por
  * `POST /api/platform/clinics/legacy-clinic/admins`.
  */
-export const E2E_CLINIC_ADMIN_EMAIL = "e2e-admin@vitta.test";
+export const E2E_CLINIC_ADMIN_EMAIL = "e2e-admin@estomasystech.test";
 export const E2E_CLINIC_ADMIN_PASSWORD = secretFromEnv("E2E_CLINIC_ADMIN_PASSWORD", 18);
 
 export const ADMIN_STORAGE_STATE_PATH = "e2e/.auth/admin-storage.json";
@@ -96,15 +96,15 @@ export type E2EStaffRole = (typeof E2E_STAFF_ROLES)[number];
 /** Conta de cada papel: criada por `POST /api/accounts` + convite + login no `global-setup`. */
 export const ROLE_ACCOUNTS: Record<E2EStaffRole, { email: string; storageState: string }> = {
   company_admin: {
-    email: "e2e-company-admin@vitta.test",
+    email: "e2e-company-admin@estomasystech.test",
     storageState: "e2e/.auth/company_admin-storage.json",
   },
   atendente: {
-    email: "e2e-atendente@vitta.test",
+    email: "e2e-atendente@estomasystech.test",
     storageState: "e2e/.auth/atendente-storage.json",
   },
   profissional: {
-    email: "e2e-profissional@vitta.test",
+    email: "e2e-profissional@estomasystech.test",
     storageState: "e2e/.auth/profissional-storage.json",
   },
 };
@@ -127,7 +127,7 @@ export const E2E_CLINIC_ID = "legacy-clinic";
 export const SEED_DATA_PATH = "e2e/support/seed-data.json";
 
 /** Mesmo nome de cookie de `src/lib/auth/session.ts` (SESSION_COOKIE). */
-export const SESSION_COOKIE_NAME = "vitta_session";
+export const SESSION_COOKIE_NAME = "estomasystech_session";
 
 /**
  * Espelha `DEFAULT_SCHEDULE_CONFIG` de `src/domain/scheduling/schedule-config.ts`.

@@ -11,7 +11,7 @@ import { linkPortalAccount } from '../support/portal-account';
 import { jsonRequest as staffRequest } from '../support/request';
 import { adminCookieHeader, cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 process.env.AUTH_SECRET = 'test-secret-e2e';
 
 interface Envelope<T> {
@@ -23,7 +23,7 @@ interface Envelope<T> {
 const portalRequest = (url: string, method: string, token: string) =>
   new NextRequest(`http://localhost${url}`, {
     method,
-    headers: { cookie: `vitta_session=${token}` },
+    headers: { cookie: `estomasystech_session=${token}` },
   });
 
 describe('Feature: Termos de tratamento e de imagem à parte (#216, ADR-030)', () => {

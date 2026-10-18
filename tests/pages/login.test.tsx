@@ -331,7 +331,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
   async function signIn() {
     render(<LoginPage />);
     fireEvent.change(await screen.findByLabelText('Email'), {
-      target: { value: 'dono@vitta.test' },
+      target: { value: 'dono@estomasystech.test' },
     });
     fireEvent.change(screen.getByLabelText('Senha'), {
       target: { value: 'senha-do-dono' },
@@ -413,7 +413,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
         jsonResponse(true, {
           secret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
           otpauthUri:
-            'otpauth://totp/VittaFlow:dono%40vitta.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+            'otpauth://totp/EstomaSysTech:dono%40estomasystech.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
           pendingToken: 'mfa.c.s',
         }),
       '/api/auth/mfa/verify': () =>
@@ -428,7 +428,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
       screen.getByRole('link', { name: 'Abrir no app autenticador' }),
     ).toHaveAttribute(
       'href',
-      'otpauth://totp/VittaFlow:dono%40vitta.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+      'otpauth://totp/EstomaSysTech:dono%40estomasystech.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
     );
     const qr = await screen.findByRole('img', {
       name: 'QR code para cadastrar o app autenticador',

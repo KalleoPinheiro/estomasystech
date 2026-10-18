@@ -13,10 +13,10 @@ describe('Feature: Rodapé de privacidade em todo e-mail (#216, ADR-030)', () =>
   });
 
   it('Dada APP_URL absoluta, Quando montar o rodapé, Então aponta para /privacidade', () => {
-    process.env.APP_URL = 'https://app.vitta.test/';
+    process.env.APP_URL = 'https://app.estomasystech.test/';
 
     expect(withPrivacyFooter('Olá')).toBe(
-      'Olá\n\n--\nAviso de privacidade: https://app.vitta.test/privacidade',
+      'Olá\n\n--\nAviso de privacidade: https://app.estomasystech.test/privacidade',
     );
   });
 
@@ -28,7 +28,7 @@ describe('Feature: Rodapé de privacidade em todo e-mail (#216, ADR-030)', () =>
   });
 
   it('Dado o envio pelo Resend, Então o corpo enviado leva o rodapé', async () => {
-    process.env.APP_URL = 'https://app.vitta.test';
+    process.env.APP_URL = 'https://app.estomasystech.test';
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
 
@@ -40,7 +40,7 @@ describe('Feature: Rodapé de privacidade em todo e-mail (#216, ADR-030)', () =>
 
     const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(options.body as string).text).toBe(
-      'Corpo\n\n--\nAviso de privacidade: https://app.vitta.test/privacidade',
+      'Corpo\n\n--\nAviso de privacidade: https://app.estomasystech.test/privacidade',
     );
   });
 });

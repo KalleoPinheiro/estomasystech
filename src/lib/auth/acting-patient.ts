@@ -5,7 +5,7 @@ import { SESSION_TTL_MS } from './session';
  * é só um id: cada requisição o revalida contra o vínculo do responsável
  * (`patients.guardian_id`), então adulterar o cookie não abre outro paciente.
  */
-export const ACTING_PATIENT_COOKIE = 'vitta_acting_patient';
+export const ACTING_PATIENT_COOKIE = 'estomasystech_acting_patient';
 
 export function actingPatientCookieOptions() {
   return {

@@ -10,7 +10,7 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/session';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const PASSWORD = 'senha-forte-123';
 const STAFF_MESSAGE =
@@ -44,8 +44,10 @@ async function setSuspended(clinicId: string, suspended: boolean) {
   const clinic = (await clinics.findById(clinicId)) as Clinic;
   await clinics.saveStatus(
     suspended
-      ? clinic.suspend('dono@vitta.app', new Date(), { reason: 'other' })
-      : clinic.reactivate('dono@vitta.app', new Date()),
+      ? clinic.suspend('dono@estomasystech.app', new Date(), {
+          reason: 'other',
+        })
+      : clinic.reactivate('dono@estomasystech.app', new Date()),
   );
 }
 

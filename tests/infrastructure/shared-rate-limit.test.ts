@@ -5,7 +5,7 @@ import { rateLimitWindows } from '@/infrastructure/persistence/drizzle/schema';
 import { type RateLimitStore, SharedRateLimiter } from '@/lib/auth/rate-limit';
 import { loggedLines } from '../support/log-lines';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const WINDOW = 60_000;
 const T0 = Date.parse('2026-09-23T12:00:00Z');

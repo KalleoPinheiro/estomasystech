@@ -18,8 +18,8 @@ import {
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
-process.env.APP_URL = 'https://app.vitta.test';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+process.env.APP_URL = 'https://app.estomasystech.test';
 
 interface Envelope<T> {
   success: boolean;
@@ -36,7 +36,11 @@ interface ActionDto {
   inviteUrl: string | null;
 }
 
-const SUPER_ADMIN = cookieHeaderFor('super_admin', 'dono@vitta.app', null);
+const SUPER_ADMIN = cookieHeaderFor(
+  'super_admin',
+  'dono@estomasystech.app',
+  null,
+);
 
 const repositories = async (clinicId: string) => {
   const { getRepositories } = await import('@/infrastructure/container');
@@ -260,7 +264,7 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
             resourceId: target.id,
             detail: action,
             actorRole: 'super_admin',
-            actorId: 'dono@vitta.app',
+            actorId: 'dono@estomasystech.app',
             clinicId,
           }),
         ]),
@@ -297,7 +301,8 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
   });
 
   describe('C2/#265 link do reenvio e reset-link', () => {
-    const LINK = /^https:\/\/app\.vitta\.test\/definir-senha\?token=[\w-]+$/;
+    const LINK =
+      /^https:\/\/app\.estomasystech\.test\/definir-senha\?token=[\w-]+$/;
 
     afterEach(async () => {
       vi.unstubAllGlobals();

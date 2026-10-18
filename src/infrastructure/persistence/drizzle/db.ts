@@ -11,7 +11,7 @@ export const MAX_ROWS = 500;
 export const MIGRATIONS_FOLDER = path.join(process.cwd(), 'drizzle');
 
 const globalForDb = globalThis as unknown as {
-  vittaDbPromise?: Promise<AppDb>;
+  estomasystechDbPromise?: Promise<AppDb>;
 };
 
 async function createPgliteDb(): Promise<AppDb> {
@@ -26,7 +26,7 @@ async function createPgliteDb(): Promise<AppDb> {
   // o processo e expõe o dump aqui — pula o `migrate()` (parsing+execução de
   // todo o SQL de schema, o maior custo de tempo/máquina da suíte, issue
   // #111) sem abrir mão de uma instância PGlite nova e isolada por arquivo.
-  const templatePath = process.env.VITTA_PGLITE_TEMPLATE_PATH;
+  const templatePath = process.env.ESTOMASYSTECH_PGLITE_TEMPLATE_PATH;
   if (templatePath) {
     const fs = await import('node:fs/promises');
     const buffer = await fs.readFile(templatePath);
@@ -85,8 +85,8 @@ async function createPostgresDb(): Promise<AppDb> {
   attachPoolErrorLogger(pool);
   const db = drizzle(pool, { schema });
 
-  // Preferir `npm run db:migrate` no deploy; VITTA_MIGRATE_ON_BOOT=false desliga o boot-migrate.
-  if (process.env.VITTA_MIGRATE_ON_BOOT !== 'false') {
+  // Preferir `npm run db:migrate` no deploy; ESTOMASYSTECH_MIGRATE_ON_BOOT=false desliga o boot-migrate.
+  if (process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT !== 'false') {
     try {
       await migrateWithLock(pool, db);
     } catch (error) {
@@ -125,21 +125,21 @@ async function migrateWithLock(
  * tentativa (um pool só). A falha é logada alto a cada tentativa.
  */
 export function getDb(): Promise<AppDb> {
-  if (!globalForDb.vittaDbPromise) {
+  if (!globalForDb.estomasystechDbPromise) {
     const attempt = (
-      process.env.VITTA_DB_DRIVER === 'pglite'
+      process.env.ESTOMASYSTECH_DB_DRIVER === 'pglite'
         ? createPgliteDb()
         : createPostgresDb()
     ).catch((error: unknown) => {
-      if (globalForDb.vittaDbPromise === attempt) {
-        globalForDb.vittaDbPromise = undefined;
+      if (globalForDb.estomasystechDbPromise === attempt) {
+        globalForDb.estomasystechDbPromise = undefined;
       }
       logError('Banco: falha ao inicializar a conexão/migração', error);
       throw error;
     });
-    globalForDb.vittaDbPromise = attempt;
+    globalForDb.estomasystechDbPromise = attempt;
   }
-  return globalForDb.vittaDbPromise;
+  return globalForDb.estomasystechDbPromise;
 }
 
 /**
@@ -149,11 +149,11 @@ export function getDb(): Promise<AppDb> {
  * Dispara a conexão + migração em segundo plano, sem bloquear a subida: banco
  * fora do ar não derruba o processo (a falha já é logada por `getDb` e a
  * próxima chamada tenta de novo). Sem `DATABASE_URL` ou com
- * `VITTA_MIGRATE_ON_BOOT=false`, não faz nada.
+ * `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`, não faz nada.
  */
 export function warmUpDatabase(): Promise<void> {
   if (
-    process.env.VITTA_MIGRATE_ON_BOOT === 'false' ||
+    process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT === 'false' ||
     !process.env.DATABASE_URL
   ) {
     return Promise.resolve();

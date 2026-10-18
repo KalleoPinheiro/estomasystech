@@ -46,7 +46,7 @@ Só leitura: a medição não grava nada (as leituras de prontuário gravam audi
 
 ```bash
 # 1. Postgres 16 vazio + app migrado (o boot migra com advisory lock)
-export DATABASE_URL=postgres://vitta:vitta@localhost:5432/vitta AUTH_SECRET=... DATA_ENCRYPTION_KEY=...
+export DATABASE_URL=postgres://estomasystech:estomasystech@localhost:5432/estomasystech AUTH_SECRET=... DATA_ENCRYPTION_KEY=...
 export API_RATE_LIMIT_MAX=1000000 TZ=America/Sao_Paulo APP_TIMEZONE=America/Sao_Paulo
 npm run build && (cd .next/standalone && PORT=3000 node server.js &)
 

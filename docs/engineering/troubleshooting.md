@@ -17,7 +17,7 @@ algo que não está aqui? Adicione a linha no mesmo PR.
 | Sintoma | Causa provável | Ação |
 | --- | --- | --- |
 | `503` em toda rota | sem `AUTH_SECRET` | defina `AUTH_SECRET` (não existe modo sem login) |
-| bootstrap responde `403` | já existe conta, ou `x-bootstrap-token` ≠ `VITTA_BOOTSTRAP_TOKEN` | instalação com contas: use "esqueci minha senha" |
+| bootstrap responde `403` | já existe conta, ou `x-bootstrap-token` ≠ `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | instalação com contas: use "esqueci minha senha" |
 | convite/reset não chega | fora de produção sem `RESEND_API_KEY`/`EMAIL_FROM` o gateway é dry-run | o link está no log: `[e-mail desativado] Para fu***@x.com — …` (destinatário mascarado; o link só sai fora de produção) |
 | convite do bootstrap não chega em produção | sem `RESEND_API_KEY`/`EMAIL_FROM` o canal da plataforma fica desativado ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | use o `inviteUrl` da resposta do `POST /api/auth/bootstrap`, ou defina as duas e reinicie |
 
@@ -42,6 +42,6 @@ algo que não está aqui? Adicione a linha no mesmo PR.
 | --- | --- | --- |
 | E2E intermitente: modal não fecha, aba ou item não aparece, `[Fast Refresh] rebuilding` no trace | o `next dev` compila sob demanda e refaz o Fast Refresh no meio do teste, pior em máquina lenta (#308) | rode a suíte contra o build: `npm run build && npm run test:e2e:prod`; só os specs de `ROLE_ACCOUNT_SPECS` ficam no `next dev`. Não suba `retries` nem timeouts ([ADR-021](../adr/021-e2e-contra-build-de-producao.md)) |
 | `readiness`/`health-route` falham de vez em quando em máquina carregada (`database: 'fail'`) | `vi.resetModules()` no `afterEach` descarta o PGlite aquecido e a partida a frio (~1 s) cai dentro do prazo de 3 s de `checkReadiness` (#359) | abra o banco **dentro** do teste (`warmDatabase()`), depois do reset e antes de chamar `checkReadiness`; não suba o prazo de produção |
-| E2E falha só ao reaproveitar `npm run dev` | `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN` diferentes de `AUTH_SECRET`/`VITTA_BOOTSTRAP_TOKEN` do servidor | use os mesmos valores, ou deixe a suíte subir o próprio servidor |
+| E2E falha só ao reaproveitar `npm run dev` | `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN` diferentes de `AUTH_SECRET`/`ESTOMASYSTECH_BOOTSTRAP_TOKEN` do servidor | use os mesmos valores, ou deixe a suíte subir o próprio servidor |
 | `check:sv` falha com `sv-gap órfão` | comentário `// sv-gap: <slug>` sem seção em `docs/still-void-gaps.md` | adicione a seção ou troque pelo componente `@still-void/ui` |
 | `check:docs` falha com `file:line -> target` | link relativo para arquivo que não existe | corrija o caminho; se o arquivo mudou de lugar, atualize todos os links vivos |

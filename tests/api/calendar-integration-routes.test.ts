@@ -27,7 +27,7 @@ vi.mock('@/lib/auth/google-oauth-client', async (importOriginal) => {
   return { createOAuthClient: oauthClientMock };
 });
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const staffHeaders = (): Record<string, string> =>
   cookieHeaderFor('company_admin', 'agenda@clinica.com', CLINIC_A_ID);
@@ -75,7 +75,7 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
   beforeEach(() => {
     process.env.GOOGLE_CLIENT_ID = 'client-abc';
     process.env.GOOGLE_CLIENT_SECRET = 'secret-xyz';
-    process.env.APP_URL = 'https://app.vitta.test';
+    process.env.APP_URL = 'https://app.estomasystech.test';
     oauthClientMock.mockImplementation((config: unknown) =>
       realClient.create?.(config),
     );
@@ -104,7 +104,7 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
       );
       expect(location.searchParams.get('access_type')).toBe('offline');
       expect(location.searchParams.get('redirect_uri')).toBe(
-        'https://app.vitta.test/api/integrations/google-calendar/callback',
+        'https://app.estomasystech.test/api/integrations/google-calendar/callback',
       );
     });
 

@@ -38,7 +38,7 @@ afterEach(() => {
 describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
   it('Dado clinicId válido, Quando carrega, Então mostra o nome real da clínica, o e-mail e o papel', async () => {
     mockIdentityFetch({
-      clinicLabel: 'Clínica VittaFlow Ltda',
+      clinicLabel: 'Clínica EstomaSysTech Ltda',
       account: {
         email: 'ana@clinica.com',
         role: 'company_admin',
@@ -50,7 +50,9 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     renderWithToast(<SidebarIdentity />);
 
     await waitFor(() => {
-      expect(screen.getByText('Clínica VittaFlow Ltda')).toBeInTheDocument();
+      expect(
+        screen.getByText('Clínica EstomaSysTech Ltda'),
+      ).toBeInTheDocument();
     });
     // E-mail e papel em linhas separadas: o e-mail aparece inteiro (#199) e
     // o papel continua sempre visível.
@@ -65,7 +67,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     mockIdentityFetch({
       clinicLabel: 'Conta de sistema',
       account: {
-        email: 'root@vitta.com',
+        email: 'root@estomasystech.com',
         role: 'company_admin',
         roleLabel: 'Super Admin',
         professionalId: null,
@@ -102,7 +104,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
 
   it('C42 e-mail da sidebar quebra linha em vez de truncar', async () => {
     mockIdentityFetch({
-      clinicLabel: 'Clínica VittaFlow Ltda',
+      clinicLabel: 'Clínica EstomaSysTech Ltda',
       account: {
         email: 'recepcao.turno.manha@clinica-estomaterapia.com.br',
         role: 'atendente',

@@ -32,7 +32,7 @@ Leitura do critério 10 ("nem o link nem o segredo aparecem … no log"): vale p
 
 ### S1 — Primeiro admin por link manual · 5 files · 31 KB · ~8k
 
-**C1** — `POST /api/platform/clinics` não chama `send` em gateway nenhum e responde `admin.delivered = false` e `admin.inviteUrl = https://app.vitta.test/definir-senha?token=<segredo>`; o token persistido é `invite` com expiração em 24 h
+**C1** — `POST /api/platform/clinics` não chama `send` em gateway nenhum e responde `admin.delivered = false` e `admin.inviteUrl = https://app.estomasystech.test/definir-senha?token=<segredo>`; o token persistido é `invite` com expiração em 24 h
 Proof: `npx vitest run tests/api/platform-clinics.test.ts -t "link manual"`
 
 **C2** — `/plataforma/clinicas/nova`, após criar, mostra o link num campo somente leitura, o botão "Copiar link" (que grava o link na área de transferência) e o texto "Envie este link ao administrador da clínica. Ele vale por 24 horas e só pode ser usado uma vez."

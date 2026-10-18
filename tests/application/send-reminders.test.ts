@@ -68,7 +68,7 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
   beforeEach(async () => {
     email = new FakeEmailGateway();
     clinic = newClinic(email);
-    vi.stubEnv('APP_URL', 'https://vitta.example.com');
+    vi.stubEnv('APP_URL', 'https://estomasystech.example.com');
     maria = await new CreatePatient(clinic.patients).execute({
       fullName: 'Maria da Silva',
       email: 'maria@example.com',
@@ -134,7 +134,9 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
       expect(message.text).toContain('17/07/2026');
       expect(message.text).toContain('09:30');
       expect(message.text).toContain('Clínica Alfa');
-      expect(message.text).toContain('https://vitta.example.com/portal');
+      expect(message.text).toContain(
+        'https://estomasystech.example.com/portal',
+      );
       expect(message.text).not.toContain('Troca de bolsa');
       expect(message.subject).not.toContain('Troca de bolsa');
     });
@@ -273,7 +275,7 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
       expect(message.text).toContain('15/07/2026');
       expect(message.text).toContain('Clínica Alfa');
       expect(message.text).toContain(
-        'Agende seu retorno no portal: https://vitta.example.com/portal.',
+        'Agende seu retorno no portal: https://estomasystech.example.com/portal.',
       );
       expect(message.text).not.toContain('Curativo');
       expect(message.text).not.toContain('lesão');
@@ -285,7 +287,7 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
     });
 
     it('C4 APP_URL sem esquema não gera link', async () => {
-      vi.stubEnv('APP_URL', 'vitta.example.com');
+      vi.stubEnv('APP_URL', 'estomasystech.example.com');
       await scheduleTomorrow();
       await addFollowUp(new Date('2026-07-15T12:00:00Z'));
 
@@ -293,18 +295,20 @@ describe('Feature: Lembretes por e-mail — confirmação D-1 e recall de retorn
 
       expect(email.sent).toHaveLength(2);
       for (const message of email.sent) {
-        expect(message.text).not.toContain('vitta.example.com');
+        expect(message.text).not.toContain('estomasystech.example.com');
         expect(message.text).toContain('Entre em contato com a clínica');
       }
     });
 
     it('Dado APP_URL com barras extras, Quando enviar, Então normaliza o link', async () => {
-      vi.stubEnv('APP_URL', 'https://vitta.example.com//');
+      vi.stubEnv('APP_URL', 'https://estomasystech.example.com//');
       await addFollowUp(new Date('2026-07-15T12:00:00Z'));
 
       await run();
 
-      expect(email.sent[0].text).toContain('https://vitta.example.com/portal.');
+      expect(email.sent[0].text).toContain(
+        'https://estomasystech.example.com/portal.',
+      );
     });
   });
 

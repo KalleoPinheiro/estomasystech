@@ -56,7 +56,7 @@ o evento leva só:
 | --- | --- |
 | Título | `Consulta · J.S.` — iniciais do paciente (primeira e última, sem partículas); sem paciente, `Consulta` |
 | Horário | início e fim da consulta |
-| Descrição | `Abrir no VittaFlow: <APP_URL>/agenda?consulta=<id>&em=<início ISO>` (vazia se `APP_URL` ausente ou não for http/https) |
+| Descrição | `Abrir no EstomaSysTech: <APP_URL>/agenda?consulta=<id>&em=<início ISO>` (vazia se `APP_URL` ausente ou não for http/https) |
 
 **Nunca** vão nome completo, telefone, procedimento nem observações. Criação e remarcação usam o mesmo
 conteúdo (`eventContent` em `sync-appointment-calendar.ts`). O link só abre os detalhes para quem está

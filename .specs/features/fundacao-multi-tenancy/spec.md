@@ -5,7 +5,7 @@
 
 ## Problem Statement
 
-O VittaFlow hoje atende uma única clínica por deploy — não existe entidade "empresa" no banco, nem forma de isolar dados entre clientes diferentes. Isso bloqueia a reforma de login que distingue Super Admin (acesso a tudo) de Admin de Empresa (acesso só à própria empresa): sem uma Clinic real e um jeito de restringir consultas a ela, "Admin de Empresa" seria a mesma coisa que "acesso total".
+O EstomaSysTech hoje atende uma única clínica por deploy — não existe entidade "empresa" no banco, nem forma de isolar dados entre clientes diferentes. Isso bloqueia a reforma de login que distingue Super Admin (acesso a tudo) de Admin de Empresa (acesso só à própria empresa): sem uma Clinic real e um jeito de restringir consultas a ela, "Admin de Empresa" seria a mesma coisa que "acesso total".
 
 ## Goals
 

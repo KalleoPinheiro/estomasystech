@@ -217,9 +217,12 @@ export interface Services {
 const globalForServices = globalThis as unknown as {
   // hazard: chave por clínica (não uma entrada única) — cache global sem essa
   // chave reaproveitava a credencial OAuth de uma empresa em outra (issue #74).
-  vittaCalendar?: Map<string, { key: string; gateway: CalendarGateway }>;
-  vittaS3?: S3Sender;
-  vittaCipher?: { key: string; cipher: DataCipher };
+  estomasystechCalendar?: Map<
+    string,
+    { key: string; gateway: CalendarGateway }
+  >;
+  estomasystechS3?: S3Sender;
+  estomasystechCipher?: { key: string; cipher: DataCipher };
 };
 
 /**
@@ -234,10 +237,13 @@ export function currentDataCipher(): DataCipher {
     env.DATA_ENCRYPTION_KEY_PREVIOUS,
     env.AUTH_SECRET,
   ].join('\u0000');
-  if (globalForServices.vittaCipher?.key !== key) {
-    globalForServices.vittaCipher = { key, cipher: dataCipherFromEnv() };
+  if (globalForServices.estomasystechCipher?.key !== key) {
+    globalForServices.estomasystechCipher = {
+      key,
+      cipher: dataCipherFromEnv(),
+    };
   }
-  return globalForServices.vittaCipher.cipher;
+  return globalForServices.estomasystechCipher.cipher;
 }
 
 async function oauthCalendarGateway(
@@ -293,8 +299,8 @@ async function buildCalendarGateway(
       : new NullCalendarGateway(),
   };
 
-  globalForServices.vittaCalendar ??= new Map();
-  const cache = globalForServices.vittaCalendar;
+  globalForServices.estomasystechCalendar ??= new Map();
+  const cache = globalForServices.estomasystechCalendar;
   const cacheKey = clinicId ?? 'system';
   const cached = cache.get(cacheKey);
   if (cached?.key === next.key) {
@@ -373,9 +379,9 @@ export function buildPhotoStorage(clinicId: string): PhotoStorage {
   if (!config) {
     return new LocalPhotoStorage(undefined, clinicId);
   }
-  globalForServices.vittaS3 ??= createS3Client(config);
+  globalForServices.estomasystechS3 ??= createS3Client(config);
   return new S3PhotoStorage(
-    globalForServices.vittaS3,
+    globalForServices.estomasystechS3,
     config.bucket,
     clinicId,
     config.serverSideEncryption,

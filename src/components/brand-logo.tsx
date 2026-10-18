@@ -17,7 +17,7 @@ interface BrandLogoProps {
  */
 export function BrandLogo({
   href = '/',
-  label = 'VittaFlow',
+  label = 'EstomaSysTech',
   className,
 }: BrandLogoProps) {
   return (

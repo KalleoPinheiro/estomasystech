@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { PlatformHeader } from './platform-header';
 
 export const metadata: Metadata = {
-  title: 'Plataforma — VittaFlow',
+  title: 'Plataforma — EstomaSysTech',
 };
 
 /**

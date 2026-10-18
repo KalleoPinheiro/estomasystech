@@ -28,7 +28,7 @@ import {
 } from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -89,7 +89,7 @@ describe('Feature: lembretes pelo canal de cada clínica', () => {
     await db.delete(schema.appointments);
     await clearEmailChannels();
     vi.stubEnv('CRON_SECRET', 'cron-secreto');
-    vi.stubEnv('APP_URL', 'https://vitta.example.com');
+    vi.stubEnv('APP_URL', 'https://estomasystech.example.com');
   });
 
   afterEach(async () => {
@@ -102,7 +102,7 @@ describe('Feature: lembretes pelo canal de cada clínica', () => {
   it('canal de cada clínica: A sai pela chave dela, B (sem canal) pula sem log, e o resumo traz o canal por clínica', async () => {
     // A conta da plataforma existe e mesmo assim não é usada pela clínica B.
     vi.stubEnv('RESEND_API_KEY', 're_chave_plataforma');
-    vi.stubEnv('EMAIL_FROM', 'Vitta <nao-responda@vitta.app>');
+    vi.stubEnv('EMAIL_FROM', 'EstomaSysTech <nao-responda@estomasystech.app>');
     await saveEmailChannel(CLINIC_A_ID, 're_chave_da_A');
     await seedTomorrow(CLINIC_A_ID, 'paciente.a@example.com');
     await seedTomorrow(CLINIC_B_ID, 'paciente.b@example.com');

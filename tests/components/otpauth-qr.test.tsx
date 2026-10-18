@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { OtpauthQr } from '@/components/otpauth-qr';
 
 const URI =
-  'otpauth://totp/VittaFlow:dono%40vitta.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=VittaFlow';
+  'otpauth://totp/EstomaSysTech:dono%40estomasystech.test?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=EstomaSysTech';
 
 afterEach(() => {
   cleanup();

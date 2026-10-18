@@ -33,7 +33,7 @@ POST /api/reminders/run
 x-cron-secret: $CRON_SECRET
 ```
 
-Na produção (VPS), o `/etc/cron.d/vitta` do host chama a forma acima ([runbook](../producao.md) § 7).
+Na produção (VPS), o `/etc/cron.d/estomasystech` do host chama a forma acima ([runbook](../producao.md) § 7).
 Ou, no formato do Vercel Cron (`vercel.json`, alternativa não adotada — runbook § 2):
 
 ```http

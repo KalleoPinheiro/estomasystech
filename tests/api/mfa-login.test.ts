@@ -30,11 +30,11 @@ import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { proxy } from '@/proxy';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 const AUTH_SECRET = 'segredo-do-teste-de-segundo-fator';
 process.env.AUTH_SECRET = AUTH_SECRET;
 
-const EMAIL = 'dono@vitta.test';
+const EMAIL = 'dono@estomasystech.test';
 const PASSWORD = 'senha-do-super-admin';
 const EXPIRED = 'Verificação expirada. Entre novamente com e-mail e senha.';
 
@@ -390,7 +390,7 @@ describe('Feature: Login do super_admin em duas etapas (B2, ADR-007)', () => {
       expect(result.status).toBe(200);
       expect(result.body.data.secret).toMatch(/^[A-Z2-7]{32}$/);
       expect(result.body.data.otpauthUri).toBe(
-        `otpauth://totp/VittaFlow:dono%40vitta.test?secret=${result.body.data.secret}&issuer=VittaFlow&algorithm=SHA1&digits=6&period=30`,
+        `otpauth://totp/EstomaSysTech:dono%40estomasystech.test?secret=${result.body.data.secret}&issuer=EstomaSysTech&algorithm=SHA1&digits=6&period=30`,
       );
       expect(result.body.data.pendingToken).toMatch(/^mfa\./);
       const db = await getDb();

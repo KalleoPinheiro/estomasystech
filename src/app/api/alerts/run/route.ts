@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
 /** Último envio de cada alerta, por processo (uma réplica, #206). */
 const globalForAlerts = globalThis as unknown as {
-  vittaAlertsNotified?: Map<AlertKey, number>;
+  estomasystechAlertsNotified?: Map<AlertKey, number>;
 };
 
 async function runAlerts(provided: string) {
@@ -47,7 +47,7 @@ async function runAlerts(provided: string) {
   }
 
   return handleRequest(() => {
-    globalForAlerts.vittaAlertsNotified ??= new Map();
+    globalForAlerts.estomasystechAlertsNotified ??= new Map();
     return new EvaluateAlerts(
       {
         readiness: () => checkReadiness(),
@@ -58,7 +58,7 @@ async function runAlerts(provided: string) {
       },
       platformEmailGateway(),
       alertConfigFromEnv(),
-      globalForAlerts.vittaAlertsNotified,
+      globalForAlerts.estomasystechAlertsNotified,
     ).execute();
   });
 }

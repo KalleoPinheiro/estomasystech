@@ -19,7 +19,7 @@ import {
  * `--think-ms 0` mede saturação (sem pausa entre requisições de cada usuário).
  * Só lê: não grava nada. O banco precisa estar semeado por `scripts/load/seed.ts`.
  */
-const SESSION_COOKIE = "vitta_session";
+const SESSION_COOKIE = "estomasystech_session";
 const MS_PER_DAY = 86_400_000;
 
 interface Sample {

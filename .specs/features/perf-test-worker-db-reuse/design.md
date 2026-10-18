@@ -13,10 +13,10 @@ based on: spec.md
    - Fecha o PGlite temporário; retorna uma função de teardown que apaga o arquivo.
 
 2. **`tests/setup.ts`** (existente, `setupFiles`)
-   - `process.env.VITTA_PGLITE_TEMPLATE_PATH = inject('pgliteTemplatePath')` — setado incondicionalmente (arquivos de teste setam `VITTA_DB_DRIVER` no topo do próprio módulo, que só executa *depois* de `setupFiles`, então checar a env var aqui sempre veria o valor antigo).
+   - `process.env.ESTOMASYSTECH_PGLITE_TEMPLATE_PATH = inject('pgliteTemplatePath')` — setado incondicionalmente (arquivos de teste setam `ESTOMASYSTECH_DB_DRIVER` no topo do próprio módulo, que só executa *depois* de `setupFiles`, então checar a env var aqui sempre veria o valor antigo).
 
 3. **`src/infrastructure/persistence/drizzle/db.ts`** (`createPgliteDb()`)
-   - Se `VITTA_PGLITE_TEMPLATE_PATH` está setado: lê o arquivo, constrói `new PGlite({ loadDataDir: new Blob([buffer]), extensions... })` — **pula `migrate()`**.
+   - Se `ESTOMASYSTECH_PGLITE_TEMPLATE_PATH` está setado: lê o arquivo, constrói `new PGlite({ loadDataDir: new Blob([buffer]), extensions... })` — **pula `migrate()`**.
    - Sem a env var (produção, ou se o `globalSetup` não rodou): comportamento idêntico ao de antes (`migrate()` completo).
    - `getDb()` continua cacheando 1 instância por processo (`globalThis`) — inalterado; cada arquivo de teste (isolamento de módulo padrão do Vitest, `isolate: true`, sem mudança) ainda ganha sua própria instância nova, só que restaurada do snapshot em vez de remontada via SQL.
 

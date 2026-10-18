@@ -15,7 +15,7 @@ test.describe("portal do responsável (ADR-027)", () => {
     request,
   }) => {
     const id = unique();
-    const guardian = await createGuardian(request, `Ana Responsável ${id}`, `resp.${id}@e2e.vittaflow.test`);
+    const guardian = await createGuardian(request, `Ana Responsável ${id}`, `resp.${id}@e2e.estomasystech.test`);
     const first = await createPatient(request, { fullName: `Luiza Filha ${id}`, guardianId: guardian.id });
     const second = await createPatient(request, { fullName: `Pedro Filho ${id}`, guardianId: guardian.id });
     await linkGuardianAccount(request, guardian);
@@ -38,7 +38,7 @@ test.describe("portal do responsável (ADR-027)", () => {
 
   test("paciente vê quem pode acessar o portal em nome dele", async ({ page, context, request }) => {
     const id = unique();
-    const guardian = await createGuardian(request, `Bia Responsável ${id}`, `bia.${id}@e2e.vittaflow.test`);
+    const guardian = await createGuardian(request, `Bia Responsável ${id}`, `bia.${id}@e2e.estomasystech.test`);
     const patient = await createPatient(request, { fullName: `Tomás Titular ${id}`, guardianId: guardian.id });
     await linkGuardianAccount(request, guardian);
     await linkPortalAccount(request, "patient", patient);
@@ -52,7 +52,7 @@ test.describe("portal do responsável (ADR-027)", () => {
 
   test("paciente encerra o acesso do responsável e o responsável deixa de entrar (ADR-028)", async ({ page, context, request }) => {
     const id = unique();
-    const guardian = await createGuardian(request, `Carla Responsável ${id}`, `carla.${id}@e2e.vittaflow.test`);
+    const guardian = await createGuardian(request, `Carla Responsável ${id}`, `carla.${id}@e2e.estomasystech.test`);
     const patient = await createPatient(request, { fullName: `Davi Titular ${id}`, guardianId: guardian.id });
     await linkGuardianAccount(request, guardian);
     await linkPortalAccount(request, "patient", patient);

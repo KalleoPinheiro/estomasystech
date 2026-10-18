@@ -15,7 +15,7 @@ export const GOOGLE_CALENDAR_SCOPES = [
 ];
 
 /** Cookie de estado anti-CSRF do fluxo de conexão da agenda. */
-export const CALENDAR_OAUTH_STATE_COOKIE = 'vitta_calendar_oauth_state';
+export const CALENDAR_OAUTH_STATE_COOKIE = 'estomasystech_calendar_oauth_state';
 
 /**
  * O cookie carrega `<state>:<subject>` — o `state` fecha o CSRF e o `subject`

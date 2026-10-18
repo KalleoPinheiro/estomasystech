@@ -40,7 +40,8 @@ describe('Feature: Nova clínica pela plataforma (B4, Journey 3)', () => {
   });
 
   it('C2/#265 link de convite: após criar, mostra o link somente leitura, o botão Copiar link e o aviso de validade', async () => {
-    const inviteUrl = 'https://app.vitta.test/definir-senha?token=segredo-1';
+    const inviteUrl =
+      'https://app.estomasystech.test/definir-senha?token=segredo-1';
     const fetchMock = vi.fn().mockResolvedValue(
       envelope({
         clinic: { id: 'nova-1', name: 'Clínica Nova' },

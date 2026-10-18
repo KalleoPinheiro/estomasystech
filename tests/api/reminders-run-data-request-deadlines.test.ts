@@ -28,7 +28,7 @@ import {
 } from '../support/email-channel';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Summary {
   dataRequestDeadlines: { alerted: number; skipped: number; failed: number };
@@ -88,7 +88,7 @@ describe('Feature: aviso de prazo dos pedidos do titular no cron diário (#312)'
     await db.delete(schema.dataSubjectRequests);
     await clearEmailChannels();
     vi.stubEnv('CRON_SECRET', 'cron-secreto');
-    vi.stubEnv('APP_URL', 'https://vitta.example.com');
+    vi.stubEnv('APP_URL', 'https://estomasystech.example.com');
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
   });
 
@@ -121,7 +121,7 @@ describe('Feature: aviso de prazo dos pedidos do titular no cron diário (#312)'
       to: 'admin-a@example.com',
     });
     expect(calls[0]?.text).toContain(
-      'https://vitta.example.com/pedidos-titular',
+      'https://estomasystech.example.com/pedidos-titular',
     );
     expect(calls[0]?.text).not.toContain('sigiloso');
     // Segunda execução: A já foi avisada; B segue pulada.

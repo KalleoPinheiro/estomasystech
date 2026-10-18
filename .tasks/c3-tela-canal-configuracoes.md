@@ -29,7 +29,7 @@ e-mail de teste para si e remover o canal.
 
 ### Testar
 
-6. Quando ele clica em "Enviar e-mail de teste", então `POST /api/settings/email-channel/test` envia, pelo canal da clínica, um e-mail para o e-mail da conta logada (assunto `"VittaFlow — teste do canal de e-mail"`, sem dado de paciente), grava `last_status = 'ok'` e `last_status_at = agora`, e a tela mostra "Teste enviado para <e-mail> em <data e hora>".
+6. Quando ele clica em "Enviar e-mail de teste", então `POST /api/settings/email-channel/test` envia, pelo canal da clínica, um e-mail para o e-mail da conta logada (assunto `"EstomaSysTech — teste do canal de e-mail"`, sem dado de paciente), grava `last_status = 'ok'` e `last_status_at = agora`, e a tela mostra "Teste enviado para <e-mail> em <data e hora>".
 7. Se o provedor recusa (ex.: domínio não verificado), então `last_status = 'failed'`, `last_error` recebe a mensagem do provedor truncada a 300 caracteres, a resposta é `200` com `{ lastStatus: 'failed', lastError }`, e a tela mostra o erro num `Alert` de erro.
 8. Dada clínica sem canal, quando o teste é chamado, então `409` com `"Configure o canal antes de testar"`.
 

@@ -17,7 +17,7 @@ No `tasks.md` present in the feature folder (only `spec.md` + this report). Impl
 
 | Criterion (WHEN X THEN Y) | Spec-defined outcome | `file:line` + assertion | Result |
 | --- | --- | --- | --- |
-| SIDEBAR-01: `clinicId` válido → mostra `clinics.name` | `clinicLabel === 'Clínica B (teste)'` (real seeded clinic name) | `tests/api/auth-identity.test.ts:52` — `expect(body.data?.clinicLabel).toBe('Clínica B (teste)')`; also `tests/pages/staff-layout-client.test.tsx:29-40` renders `'Clínica VittaFlow Ltda'` | ✅ PASS |
+| SIDEBAR-01: `clinicId` válido → mostra `clinics.name` | `clinicLabel === 'Clínica B (teste)'` (real seeded clinic name) | `tests/api/auth-identity.test.ts:52` — `expect(body.data?.clinicLabel).toBe('Clínica B (teste)')`; also `tests/pages/staff-layout-client.test.tsx:29-40` renders `'Clínica EstomaSysTech Ltda'` | ✅ PASS |
 | SIDEBAR-02: `clinicId === null` → "Conta de sistema" | `clinicLabel === 'Conta de sistema'` (exact string) | `tests/api/auth-identity.test.ts:72` — `expect(body.data?.clinicLabel).toBe('Conta de sistema')`; component: `tests/pages/staff-layout-client.test.tsx:47-51` | ✅ PASS |
 | SIDEBAR-03: sessão existe → mostra e-mail (`subject`) + rótulo legível do `role` | `account.email === subject`, `account.roleLabel` = mapped label | `tests/api/auth-identity.test.ts:53-56` — `expect(body.data?.account).toEqual({ email: 'ana@clinica.com', roleLabel: 'Admin de Empresa' })`; component: `tests/pages/staff-layout-client.test.tsx:33-40` — `expect(screen.getByText('ana@clinica.com · Admin de Empresa')).toBeInTheDocument()` | ✅ PASS (see note below on "próximo ao botão de logout") |
 | SIDEBAR-04: `clinics.findById(clinicId)` retorna `null` → "Clínica não encontrada" | `clinicLabel === 'Clínica não encontrada'` (exact string) | `tests/api/auth-identity.test.ts:93` — `expect(body.data?.clinicLabel).toBe('Clínica não encontrada')` | ✅ PASS |
@@ -32,7 +32,7 @@ No `tasks.md` present in the feature folder (only `spec.md` + this report). Impl
 
 | Edge case (spec.md) | `file:line` + assertion | Result |
 | --- | --- | --- |
-| Sessão `null` (modo aberto, `VITTA_ALLOW_OPEN_MODE=true`) → "Conta de sistema", sem quebrar | `tests/api/auth-identity.test.ts:96-111` — `expect(body.data?.clinicLabel).toBe('Conta de sistema')`, `expect(body.data?.account).toBeNull()` | ✅ PASS |
+| Sessão `null` (modo aberto, `ESTOMASYSTECH_ALLOW_OPEN_MODE=true`) → "Conta de sistema", sem quebrar | `tests/api/auth-identity.test.ts:96-111` — `expect(body.data?.clinicLabel).toBe('Conta de sistema')`, `expect(body.data?.account).toBeNull()` | ✅ PASS |
 | `role` fora do mapa de rótulos conhecidos → cai para exibir o valor bruto do `role` | — no citation found | ❌ GAP — NOT COVERED |
 
 **Evidence for the gap:** `grep -rn "role-labels" tests/` returns no matches — `src/lib/auth/role-labels.ts` has zero direct tests. The route tests (`tests/api/auth-identity.test.ts`) only exercise the 4 mapped roles (`company_admin`, `super_admin`, `atendente`, implicitly `profissional` via the map but never asserted). `STAFF_ROLE_LABELS[role] ?? role` fallback branch (`src/lib/auth/role-labels.ts:12`) is never exercised by any test — evidence-or-zero rule applies: NOT covered.
@@ -61,7 +61,7 @@ Working tree confirmed restored to original state after each mutation and at the
 `SidebarIdentityDto { clinicLabel: string; account: { email: string; roleLabel: string } | null }`.
 
 - Route tests assert on actual field values, not just HTTP status: `tests/api/auth-identity.test.ts:52,53-56,72,73-76,93,109-110` all assert `body.data?.clinicLabel` / `body.data?.account` content, not merely `response.status === 200`.
-- Component tests assert on rendered text derived from those fields, not just "no crash": `tests/pages/staff-layout-client.test.tsx:33-40` (`'Clínica VittaFlow Ltda'` and `'ana@clinica.com · Admin de Empresa'`), `:47-51` (`'Conta de sistema'`), `:56-64` (account null → no `·` separator rendered, via `screen.queryByText(/·/)).not.toBeInTheDocument()`), `:66-78` (no leftover hardcoded `'Clínica de Estomaterapia'` string).
+- Component tests assert on rendered text derived from those fields, not just "no crash": `tests/pages/staff-layout-client.test.tsx:33-40` (`'Clínica EstomaSysTech Ltda'` and `'ana@clinica.com · Admin de Empresa'`), `:47-51` (`'Conta de sistema'`), `:56-64` (account null → no `·` separator rendered, via `screen.queryByText(/·/)).not.toBeInTheDocument()`), `:66-78` (no leftover hardcoded `'Clínica de Estomaterapia'` string).
 - **Result**: ✅ Conjunction check passes — no test in scope is a shallow "200 OK" or "renders without throwing" assertion; all target concrete field/text values.
 
 ---

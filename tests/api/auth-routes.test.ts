@@ -8,7 +8,7 @@ import {
   ensureTestClinics,
 } from '../support/clinics';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const jsonRequest = (
   url: string,
@@ -198,7 +198,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
         ),
       );
       const cookie = response.headers.get('set-cookie') ?? '';
-      const token = cookie.match(/vitta_session=([^;]+)/)?.[1] ?? '';
+      const token = cookie.match(/estomasystech_session=([^;]+)/)?.[1] ?? '';
 
       const session = verifySessionToken('test-secret-role-fix', token);
       expect(session?.role).toBe('profissional');
@@ -429,7 +429,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
         ),
       );
       const cookie = response.headers.get('set-cookie') ?? '';
-      const token = cookie.match(/vitta_session=([^;]+)/)?.[1] ?? '';
+      const token = cookie.match(/estomasystech_session=([^;]+)/)?.[1] ?? '';
       const session = verifySessionToken('test-secret-email-duplicado', token);
 
       expect(response.status).toBe(200);
@@ -534,7 +534,7 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       expect(response.status).toBe(200);
       expect(body.data.ok).toBe(true);
       const cookie = response.headers.get('set-cookie') ?? '';
-      expect(cookie).toContain('vitta_session=');
+      expect(cookie).toContain('estomasystech_session=');
       expect(cookie).toMatch(/max-age=0/i);
     });
 
@@ -563,7 +563,8 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
         ),
       );
       const cookie = loginResponse.headers.get('set-cookie') ?? '';
-      const sessionCookie = cookie.match(/vitta_session=[^;]+/)?.[0] ?? '';
+      const sessionCookie =
+        cookie.match(/estomasystech_session=[^;]+/)?.[0] ?? '';
 
       const response = await logoutRoute.POST(
         jsonRequest('/api/auth/logout', 'POST', undefined, {

@@ -31,7 +31,7 @@ ela o bootstrap devolve o link de convite em `inviteUrl`. Domínio: [acesso](../
 | --- | --- | --- | --- |
 | chave da clínica | por clínica, opcional | a clínica cria a conta no Resend e verifica o domínio dela | `re_…`, gravada cifrada em `clinic_channels` ([ADR-011](../../adr/011-canal-de-comunicacao-por-clinica.md)) |
 | `RESEND_API_KEY` | opcional | painel Resend da plataforma → API Keys | `re_…` — só contas sem clínica (Super Admin) |
-| `EMAIL_FROM` | com `RESEND_API_KEY` | domínio verificado no Resend | `"VittaFlow <nao-responda@suaclinica.com>"` |
+| `EMAIL_FROM` | com `RESEND_API_KEY` | domínio verificado no Resend | `"EstomaSysTech <nao-responda@suaclinica.com>"` |
 
 Qual chave sai: o e-mail de uma clínica sai **só** pela chave dela (`clinic_channels`, lida no primeiro
 envio do request); sem canal, não sai. O escopo de sistema usa `RESEND_API_KEY`/`EMAIL_FROM`.

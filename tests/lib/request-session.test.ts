@@ -32,7 +32,7 @@ describe('Feature: Sessão da requisição (defesa em profundidade)', () => {
       Date.now() + 60_000,
       'maria@clinica.com',
     );
-    const request = requestWithCookie(`vitta_session=${token}`);
+    const request = requestWithCookie(`estomasystech_session=${token}`);
 
     expect(getRequestSession(request)).toBeNull();
   });
@@ -45,7 +45,7 @@ describe('Feature: Sessão da requisição (defesa em profundidade)', () => {
       'maria@clinica.com',
       'company_admin',
     );
-    const request = requestWithCookie(`vitta_session=${token}`);
+    const request = requestWithCookie(`estomasystech_session=${token}`);
 
     const session = getRequestSession(request);
 
@@ -63,7 +63,7 @@ describe('Feature: Sessão da requisição (defesa em profundidade)', () => {
 
   it('Dado AUTH_SECRET configurado e cookie inválido, Quando getRequestSession, Então retorna null', () => {
     process.env.AUTH_SECRET = SECRET;
-    const request = requestWithCookie('vitta_session=token-invalido');
+    const request = requestWithCookie('estomasystech_session=token-invalido');
 
     expect(getRequestSession(request)).toBeNull();
   });
@@ -71,7 +71,7 @@ describe('Feature: Sessão da requisição (defesa em profundidade)', () => {
   it('Dado AUTH_SECRET configurado com token assinado por outro segredo, Quando getRequestSession, Então retorna null', () => {
     process.env.AUTH_SECRET = SECRET;
     const token = createSessionToken('outro-segredo', Date.now() + 60_000);
-    const request = requestWithCookie(`vitta_session=${token}`);
+    const request = requestWithCookie(`estomasystech_session=${token}`);
 
     expect(getRequestSession(request)).toBeNull();
   });

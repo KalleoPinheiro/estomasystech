@@ -62,7 +62,7 @@ describe('Feature: Token de login pendente do super_admin (B2)', () => {
   it('Dado payload assinado mas inválido, Quando verificar, Então recusa etapa desconhecida e JSON quebrado', async () => {
     const { createHmac } = await import('node:crypto');
     const key = createHmac('sha256', SECRET)
-      .update('vitta-flow/mfa-pending/v1')
+      .update('estomasystech/mfa-pending/v1')
       .digest();
     const signed = (payload: string) =>
       `mfa.${payload}.${createHmac('sha256', key).update(payload).digest('hex')}`;
@@ -86,7 +86,7 @@ describe('Feature: Token de login pendente do super_admin (B2)', () => {
     const session = createSessionToken(
       SECRET,
       NOW + 60_000,
-      'root@vitta.test',
+      'root@estomasystech.test',
       'super_admin',
       null,
       null,

@@ -8,9 +8,9 @@ last_reviewed: 2026-09-23
 
 # Auditoria de design system — gaps do `@still-void/ui` (2026-08)
 
-- **Origem:** `/impeccable critique` — auditoria completa das 18 superfícies do VittaFlow (14 páginas + 4 documentos clínicos), rodada em 2026-08-29 com app local (Docker Postgres + `next dev`, dados de seed mínimos).
+- **Origem:** `/impeccable critique` — auditoria completa das 18 superfícies do EstomaSysTech (14 páginas + 4 documentos clínicos), rodada em 2026-08-29 com app local (Docker Postgres + `next dev`, dados de seed mínimos).
 - **Versão auditada:** `@still-void/ui@3.2.0`.
-- **Relação com `docs/still-void-gaps.md`:** este documento é **novo e separado**. `still-void-gaps.md` está fechado (0 lacunas ativas, 6 arquivadas) e é gate-tracked pelo `npm run check:sv` via comentários `sv-gap: <slug>` no código — não editamos esse arquivo nem adicionamos marcações, porque isso é trabalho de implementação (Tasks), não de auditoria. Este documento é o **backlog candidato**: cada gap abaixo, se você decidir portar, vira uma entrada em `still-void-gaps.md` só quando o workaround correspondente ganhar a marcação `sv-gap: <slug>` no código do VittaFlow.
+- **Relação com `docs/still-void-gaps.md`:** este documento é **novo e separado**. `still-void-gaps.md` está fechado (0 lacunas ativas, 6 arquivadas) e é gate-tracked pelo `npm run check:sv` via comentários `sv-gap: <slug>` no código — não editamos esse arquivo nem adicionamos marcações, porque isso é trabalho de implementação (Tasks), não de auditoria. Este documento é o **backlog candidato**: cada gap abaixo, se você decidir portar, vira uma entrada em `still-void-gaps.md` só quando o workaround correspondente ganhar a marcação `sv-gap: <slug>` no código do EstomaSysTech.
 - **Correção factual sobre o arquivo existente:** `still-void-gaps.md` afirma que a 3.2.0 "continua sem exportar um `Progress` genérico". Isso está desatualizado — `dist/react/index.d.ts:803` da 3.2.0 instalada exporta `Progress`/`ProgressProps`. Vale corrigir a entrada histórica para não induzir um workaround desnecessário no futuro.
 - **Como ler:** cada gap tem contagem de call sites (quantas páginas reimplementam o mesmo problema), os workarounds exatos (arquivo:linha) e uma sugestão de API para a lib. Ordenados por alcance (quantas superfícies do app o gap atinge), não por severidade — a severidade de cada instância está na auditoria de UX (`docs/audits/auditoria-ux-2026-08.md`).
 
@@ -118,7 +118,7 @@ last_reviewed: 2026-09-23
 
 ### 10. Primitivos de documento imprimível (categoria nova — 4 gaps específicos, só em `/documentos`)
 
-Uma lib nascida para blog nunca precisou de "modo impressão". O VittaFlow tem 4 documentos clínicos (atestado, consentimento, plano de cuidados, relatório) com zero cobertura de impressão no catálogo:
+Uma lib nascida para blog nunca precisou de "modo impressão". O EstomaSysTech tem 4 documentos clínicos (atestado, consentimento, plano de cuidados, relatório) com zero cobertura de impressão no catálogo:
 
 - **`print-sheet`** — sem `@page`, cabeçalho/rodapé repetido por página, contador de página, `break-inside/break-after`. Workaround: `documentos/layout.tsx:12` (`print:max-w-none print:p-0`) + `document-frame.tsx:35` (`print:hidden`) — e **zero** `@media print` em `globals.css`. Sugestão: `<PrintSheet size="a4" margin="20mm" runningHeader runningFooter pageNumbers>`.
 - **`print-neutral-tokens`** — sem modo neutro preto-sobre-branco independente de tema. Workaround: `text-black`/`bg-white` literais espalhados em `document-frame.tsx:34`, `layout.tsx:12`, e repetidos em **cada** `TableHead` de `plano-cuidados/page.tsx` e `relatorio/page.tsx` — a ponto de o projeto ter escrito um check estático (`check-sv-adoption.sh:44-47`) só para proteger esse workaround de regressão. Sugestão: `<Table variant="print">` ou token `data-print-neutral`.
@@ -169,7 +169,7 @@ Uma lib nascida para blog nunca precisou de "modo impressão". O VittaFlow tem 4
 
 ## Adoção pendente (não são gaps — componentes já existem, decisão AD-014 os deixou fora da migração)
 
-Estes NÃO entram como issue na lib — são trabalho de adoção no VittaFlow, já com componente pronto no catálogo:
+Estes NÃO entram como issue na lib — são trabalho de adoção no EstomaSysTech, já com componente pronto no catálogo:
 
 - **`Tabs`** — as 5 abas do prontuário (`pacientes/[id]/page.tsx:99-114`) e as abas de documentos são `Button` com `border-b-2` manual, sem `role="tablist"`/ARIA/teclado. `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` já vêm do client entry.
 - **`AlertDialog`** — nenhuma das ~15 ações destrutivas do sistema (desativar paciente/profissional/parceiro/procedimento, resolver condição/plano, cancelar fatura, excluir foto) usa confirmação. Está pronto e ocioso.

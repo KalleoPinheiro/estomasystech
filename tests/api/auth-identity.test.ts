@@ -9,7 +9,7 @@ import {
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -61,7 +61,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
         '/api/auth/identity',
         'GET',
         undefined,
-        cookieHeaderFor('super_admin', 'root@vitta.com', null),
+        cookieHeaderFor('super_admin', 'root@estomasystech.com', null),
       ),
     );
     const body = (await response.json()) as Envelope<SidebarIdentityDto>;
@@ -87,9 +87,9 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     expect(body.data?.clinicLabel).toBe('Clínica não encontrada');
   });
 
-  it('Dado AUTH_SECRET ausente (mesmo com VITTA_ALLOW_OPEN_MODE, removida em #327), Quando GET, Então retorna 503', async () => {
+  it('Dado AUTH_SECRET ausente (mesmo com ESTOMASYSTECH_ALLOW_OPEN_MODE, removida em #327), Quando GET, Então retorna 503', async () => {
     delete process.env.AUTH_SECRET;
-    vi.stubEnv('VITTA_ALLOW_OPEN_MODE', 'true');
+    vi.stubEnv('ESTOMASYSTECH_ALLOW_OPEN_MODE', 'true');
     const route = await import('@/app/api/auth/identity/route');
 
     const response = await route.GET(

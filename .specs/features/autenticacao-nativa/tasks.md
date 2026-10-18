@@ -553,7 +553,7 @@ T20 → T21
 
 - [x] Base vazia + header correto cria conta `super_admin` e envia convite
 - [x] Segunda chamada (já existe conta) responde 403 sem criar nada
-- [x] Header ausente/incorreto e `VITTA_BOOTSTRAP_TOKEN` não configurado respondem 403
+- [x] Header ausente/incorreto e `ESTOMASYSTECH_BOOTSTRAP_TOKEN` não configurado respondem 403
 - [x] Gate check passes: `npx vitest run tests/api/bootstrap-route.test.ts`
 - [x] Test count: 6 tests pass (no silent deletions)
 
@@ -700,7 +700,7 @@ T20 → T21
 
 **Done when**:
 
-- [x] `.env.example` documenta `RESEND_API_KEY`, `EMAIL_FROM`, `VITTA_BOOTSTRAP_TOKEN` e não cita mais `AUTH_PASSWORD`/`GOOGLE_ALLOWED_EMAILS`
+- [x] `.env.example` documenta `RESEND_API_KEY`, `EMAIL_FROM`, `ESTOMASYSTECH_BOOTSTRAP_TOKEN` e não cita mais `AUTH_PASSWORD`/`GOOGLE_ALLOWED_EMAILS`
 - [x] `AGENTS.md` e `README.md` descrevem o novo fail-closed e o fluxo de convite
 - [x] `.specs/STATE.md` ganha as decisões novas sem tocar nas anteriores
 - [x] Gate check passes: `npm run typecheck && npm run lint && npm run check:sv && npx vitest run --coverage && npm run build`

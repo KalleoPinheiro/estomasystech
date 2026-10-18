@@ -52,7 +52,7 @@ async function renderPage(ui: ReactElement) {
 }
 
 const CLINIC_INCOMPLETE: ClinicInfoDto = {
-  name: 'Clínica VittaFlow',
+  name: 'Clínica EstomaSysTech',
   cnpj: null,
   address: null,
   city: null,
@@ -61,7 +61,7 @@ const CLINIC_INCOMPLETE: ClinicInfoDto = {
 };
 
 const CLINIC_COMPLETE: ClinicInfoDto = {
-  name: 'Clínica VittaFlow',
+  name: 'Clínica EstomaSysTech',
   cnpj: '12.345.678/0001-95',
   address: 'Rua das Flores, 100',
   city: 'São Paulo',
@@ -70,12 +70,12 @@ const CLINIC_COMPLETE: ClinicInfoDto = {
 };
 
 const CONTROLLER = {
-  name: 'Clínica VittaFlow',
+  name: 'Clínica EstomaSysTech',
   cnpj: '12.345.678/0001-95',
   address: 'Rua das Flores, 100, São Paulo',
   technicalLead: 'Enf. Ana',
   dpoName: 'Beatriz Lima',
-  dpoContact: 'privacidade@vittaflow.test',
+  dpoContact: 'privacidade@estomasystech.test',
 };
 
 const appointment = (status: string): AppointmentDto => ({

@@ -11,15 +11,15 @@ export type SignalKind = 'server-error' | 'delivery-failure';
 const RETENTION_MS = 60 * 60_000;
 
 const globalForSignals = globalThis as unknown as {
-  vittaSignals?: Record<SignalKind, number[]>;
+  estomasystechSignals?: Record<SignalKind, number[]>;
 };
 
 function store(): Record<SignalKind, number[]> {
-  globalForSignals.vittaSignals ??= {
+  globalForSignals.estomasystechSignals ??= {
     'server-error': [],
     'delivery-failure': [],
   };
-  return globalForSignals.vittaSignals;
+  return globalForSignals.estomasystechSignals;
 }
 
 export function recordSignal(kind: SignalKind, nowMs = Date.now()): void {
@@ -38,5 +38,5 @@ export function countSignals(kind: SignalKind, sinceMs: number): number {
 
 /** Para o teste. */
 export function resetSignals(): void {
-  globalForSignals.vittaSignals = undefined;
+  globalForSignals.estomasystechSignals = undefined;
 }

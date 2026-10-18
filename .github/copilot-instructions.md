@@ -1,4 +1,4 @@
-# Copilot — Vitta Flow
+# Copilot — EstomaSysTech
 
 As instruções deste repositório vivem em [`AGENTS.md`](../AGENTS.md) (fonte única). Leia-o antes
 de sugerir código: comandos, regras invioláveis (escopo de empresa, auth fail-closed,

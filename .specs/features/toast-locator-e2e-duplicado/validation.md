@@ -20,7 +20,7 @@ Helper novo `e2e/support/assertions.ts`: `expectToast(page, text) = expect(page.
 
 ## Execução
 
-- `npx playwright test e2e/agenda.spec.ts e2e/portal-paciente.spec.ts` → **PASS (8) FAIL (0)**, 41.1s (container `vitta-flow-app-1` parado antes e reiniciado depois).
+- `npx playwright test e2e/agenda.spec.ts e2e/portal-paciente.spec.ts` → **PASS (8) FAIL (0)**, 41.1s (container `estomasystech-app-1` parado antes e reiniciado depois).
 - `npm run typecheck` → limpo, sem erros.
 
 ## Conclusão

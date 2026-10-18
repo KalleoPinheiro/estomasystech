@@ -10,7 +10,7 @@ Sources:
 
 ## Problem
 
-O VittaFlow foi montado para desktop e só o portal foi conferido no celular. Nas telas da equipe
+O EstomaSysTech foi montado para desktop e só o portal foi conferido no celular. Nas telas da equipe
 e nas telas públicas, em 390px de largura, hoje:
 
 - **Tabelas escondem colunas.** Pacientes, faturamento, parceiros, profissionais, procedimentos,
@@ -188,8 +188,8 @@ serem copiados para as telas da equipe.
 1. `still-void/src/css/style.css` (exists) - corrige `.sv-layout` e adiciona a regra de toque (door 2) e a forma empilhada `.sv-table--stack` (door 1)
 2. `still-void/src/components/ui/table.tsx` (exists) - `Table` ganha `stack`, `TableCell` ganha `label` (door 1)
 3. release `@still-void/ui@3.4.0` via Changesets (exists) -> npm
-4. `vitta-flow/package.json` (exists) - sobe para `^3.4.0` (door 3); `src/app/globals.css` (exists) perde os dois `sv-gap` do portal
-5. `vitta-flow/src/components/page-header.tsx` (door 4) - usado pelas 19 telas
+4. `estomasystech/package.json` (exists) - sobe para `^3.4.0` (door 3); `src/app/globals.css` (exists) perde os dois `sv-gap` do portal
+5. `estomasystech/src/components/page-header.tsx` (door 4) - usado pelas 19 telas
 6. páginas em `src/app/**` (exists) - adotam `PageHeader`, `Table stack`, `Tabs` e o grid mobile-first
 7. out: as mesmas rotas, sem mudança de API nem de dado
 
@@ -200,7 +200,7 @@ None - nenhuma mudança de dado armazenado.
 ## Surface
 
 None - nenhuma rota HTTP muda. A API de componente que sai do repositório (a `Table`/`TableCell`
-da lib, consumida pelo VittaFlow e pelo blog) e a regra de CSS nova estão nos doors 1 e 2 de
+da lib, consumida pelo EstomaSysTech e pelo blog) e a regra de CSS nova estão nos doors 1 e 2 de
 `Landing`, com a forma literal.
 
 ## Landing

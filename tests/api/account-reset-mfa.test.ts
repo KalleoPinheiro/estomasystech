@@ -11,7 +11,7 @@ import {
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 interface Envelope<T> {
   success: boolean;
@@ -219,7 +219,7 @@ describe('Feature: POST /api/accounts/[id]/reset-mfa (#295)', () => {
         `/api/platform/clinics/${CLINIC_A_ID}/admins/${target.id}`,
         'PATCH',
         { action: 'reset-mfa' },
-        cookieHeaderFor('super_admin', 'dono@vitta.app', null),
+        cookieHeaderFor('super_admin', 'dono@estomasystech.app', null),
       ),
       { params: Promise.resolve({ id: CLINIC_A_ID, accountId: target.id }) },
     );

@@ -73,7 +73,7 @@ papel na sidebar (desktop e mobile).
 
 ## Edge Cases
 
-- WHEN sessão é `null` (modo aberto, `VITTA_ALLOW_OPEN_MODE=true`) THEN a
+- WHEN sessão é `null` (modo aberto, `ESTOMASYSTECH_ALLOW_OPEN_MODE=true`) THEN a
   sidebar SHALL mostrar "Conta de sistema" (mesmo tratamento do
   `clinicId === null`), sem quebrar a página.
 - WHEN `role` não está no mapa de rótulos conhecidos (não deveria ocorrer,

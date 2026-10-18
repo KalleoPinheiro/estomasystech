@@ -12,7 +12,7 @@ import {
 } from '@/infrastructure/storage/s3-photo-storage';
 import { systemScope } from '@/lib/auth/tenant-scope';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 type Command = { input: Record<string, unknown> };
 
@@ -48,7 +48,7 @@ function fakeBucket() {
 
 const S3_ENV = {
   PHOTO_STORAGE: 's3',
-  S3_BUCKET: 'vitta-fotos',
+  S3_BUCKET: 'estomasystech-fotos',
   S3_ACCESS_KEY_ID: 'AKIA-TESTE',
   S3_SECRET_ACCESS_KEY: 'segredo-teste',
 };
@@ -63,12 +63,16 @@ describe('Feature: Fotos clínicas em bucket S3-compatível', () => {
   describe('S3PhotoStorage', () => {
     it('Dada uma foto gravada, Quando ler, Então devolve os mesmos bytes; após remover, null', async () => {
       const { client, objects } = fakeBucket();
-      const storage = new S3PhotoStorage(client, 'vitta-fotos', 'clinica-a');
+      const storage = new S3PhotoStorage(
+        client,
+        'estomasystech-fotos',
+        'clinica-a',
+      );
       const bytes = new Uint8Array([1, 2, 3]);
 
       await storage.write('foto-1', bytes);
       expect([...objects.keys()]).toEqual([
-        'vitta-fotos/clinica-a/condition-photos/foto-1',
+        'estomasystech-fotos/clinica-a/condition-photos/foto-1',
       ]);
       expect(await storage.read('foto-1')).toEqual(bytes);
 
@@ -169,7 +173,7 @@ describe('Feature: Fotos clínicas em bucket S3-compatível', () => {
       });
 
       expect(s3PhotoStorageConfigFromEnv()).toEqual({
-        bucket: 'vitta-fotos',
+        bucket: 'estomasystech-fotos',
         region: 'us-east-1',
         endpoint: 'http://minio:9000',
         accessKeyId: 'AKIA-TESTE',

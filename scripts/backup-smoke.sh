@@ -40,7 +40,7 @@ wait_ready() {
 }
 
 sql() {
-  docker compose exec -T db psql -U vitta -d vitta -tAq -v ON_ERROR_STOP=1 -c "$1"
+  docker compose exec -T db psql -U estomasystech -d estomasystech -tAq -v ON_ERROR_STOP=1 -c "$1"
 }
 
 age-keygen -o "$work/key.txt" 2> /dev/null

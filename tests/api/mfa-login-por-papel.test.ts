@@ -25,7 +25,7 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/session';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 const AUTH_SECRET = 'segredo-do-teste-de-2fa-por-papel';
 process.env.AUTH_SECRET = AUTH_SECRET;
 

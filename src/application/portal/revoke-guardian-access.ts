@@ -85,7 +85,7 @@ async function notifyGuardianOfRevocation(
     if (recipient && (await repos.email.isEnabled())) {
       await repos.email.send({
         to: recipient,
-        subject: 'Vitta Flow: seu acesso ao portal foi encerrado',
+        subject: 'EstomaSysTech: seu acesso ao portal foi encerrado',
         text:
           `Seu acesso ao portal em nome de ${patient.fullName} foi encerrado.\n\n` +
           'Você não verá mais esse paciente ao entrar. Os demais pacientes ' +

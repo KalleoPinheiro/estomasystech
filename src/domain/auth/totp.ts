@@ -8,7 +8,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 export const TOTP_STEP_SECONDS = 30;
 export const TOTP_DIGITS = 6;
 export const TOTP_WINDOW = 1;
-export const TOTP_ISSUER = 'VittaFlow';
+export const TOTP_ISSUER = 'EstomaSysTech';
 const SECRET_BYTES = 20;
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';

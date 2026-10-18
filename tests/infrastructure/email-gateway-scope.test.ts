@@ -18,7 +18,7 @@ import {
   ensureTestClinics,
 } from '../support/clinics';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const message = { to: 'paciente@x.test', subject: 'Assunto', text: 'Corpo' };
 
@@ -89,7 +89,7 @@ describe('Feature: Gateway de e-mail resolvido pelo escopo', () => {
 
   it('sem canal: clínica sem canal não envia, mesmo com a chave da plataforma definida', async () => {
     vi.stubEnv('RESEND_API_KEY', 're_da_plataforma');
-    vi.stubEnv('EMAIL_FROM', 'VittaFlow <no-reply@vitta.test>');
+    vi.stubEnv('EMAIL_FROM', 'EstomaSysTech <no-reply@estomasystech.test>');
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const { email } = await getRepositories(clinicScope(CLINIC_B_ID));
 
@@ -101,7 +101,7 @@ describe('Feature: Gateway de e-mail resolvido pelo escopo', () => {
 
   it('plataforma: o escopo de sistema envia pela chave da plataforma', async () => {
     vi.stubEnv('RESEND_API_KEY', 're_da_plataforma');
-    vi.stubEnv('EMAIL_FROM', 'VittaFlow <no-reply@vitta.test>');
+    vi.stubEnv('EMAIL_FROM', 'EstomaSysTech <no-reply@estomasystech.test>');
     const { email } = await getRepositories(systemScope());
 
     await email.send(message);
@@ -110,7 +110,7 @@ describe('Feature: Gateway de e-mail resolvido pelo escopo', () => {
     expect(sentWith(fetchMock)).toEqual([
       {
         auth: 'Bearer re_da_plataforma',
-        from: 'VittaFlow <no-reply@vitta.test>',
+        from: 'EstomaSysTech <no-reply@estomasystech.test>',
       },
     ]);
   });

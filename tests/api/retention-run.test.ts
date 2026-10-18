@@ -19,7 +19,7 @@ import * as schema from '@/infrastructure/persistence/drizzle/schema';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const CLINIC_ID = 'ret-rota';
 const OLD = new Date('2001-03-01T12:00:00Z');

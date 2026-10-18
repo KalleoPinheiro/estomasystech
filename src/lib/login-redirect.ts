@@ -14,7 +14,7 @@ export const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente.';
  */
 const AUTH_PAGES = ['/login', '/definir-senha', '/esqueci-senha'] as const;
 
-const SAME_ORIGIN = 'http://vitta.invalid';
+const SAME_ORIGIN = 'http://estomasystech.invalid';
 
 /** Barra final ignorada: `/login/` também é a tela de login. */
 const isAuthPage = (pathname: string): boolean => {

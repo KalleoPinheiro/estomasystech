@@ -1,12 +1,12 @@
 ---
-title: "Auditoria UX/UI — VittaFlow (2026-08)"
+title: "Auditoria UX/UI — EstomaSysTech (2026-08)"
 status: frozen
 audience: [dev, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-09-23
 ---
 
-# Auditoria UX/UI — VittaFlow (2026-08)
+# Auditoria UX/UI — EstomaSysTech (2026-08)
 
 **Method:** dual-agent per superfície — 9 agentes opus rodaram em paralelo, cada um com leitura de código-fonte + screenshots reais (desktop 1440×900 e mobile 390×844) do app rodando localmente (Docker Postgres + `next dev`, modo aberto, dados de seed mínimos: 1 paciente com colostomia, 1 profissional, 1 procedimento, 1 insumo, 1 consulta futura, 1 condição clínica + plano de cuidados ativos). Detector estático `impeccable/detect.mjs` rodou limpo (0 achados) sobre `src/app` e `src/components` — consistente com o gate `npm run check:sv` 100% verde: **os dois gates confirmam zero degrau de paleta crua e zero elemento nativo (`<button>`/`<input>`/`<select>`/`<table>`) fora do catálogo do design system, mas não cobrem todo HTML** — a própria auditoria abaixo encontra `<div onClick>` e `<img>` crus (e o documento irmão registra um `<circle>` cru), e isso não garante qualidade de UX — é exatamente o que esta auditoria mede.
 

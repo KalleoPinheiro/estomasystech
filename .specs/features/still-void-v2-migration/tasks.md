@@ -651,7 +651,7 @@ T27 → T28 → T29 → T30
 
 ### T29: Documento de lacunas do catálogo
 
-**What**: O arquivo pedido — componentes que o VittaFlow precisa e a `@still-void/ui@2.0.1` não tem.
+**What**: O arquivo pedido — componentes que o EstomaSysTech precisa e a `@still-void/ui@2.0.1` não tem.
 **Where**: `docs/still-void-gaps.md` (novo), `README.md` (um link)
 **Depends on**: T28
 **Requirement**: SV2-10, SV2-11

@@ -21,7 +21,7 @@ import { InMemoryUserAccountRepository } from '@/infrastructure/persistence/in-m
 import { verifyPassword } from '@/lib/auth/password';
 
 const NOW = new Date('2026-09-01T12:00:00.000Z').getTime();
-const APP_URL = 'https://app.vitta.test';
+const APP_URL = 'https://app.estomasystech.test';
 
 class InMemoryAuthTokenRepository implements AuthTokenRepository {
   readonly items = new Map<string, AuthToken>();
@@ -134,7 +134,7 @@ describe('Feature: Emissão e consumo de token de convite/reset', () => {
       expect(email.sent).toHaveLength(1);
       expect(email.sent[0].to).toBe('pessoa@clinica.com');
       expect(email.sent[0].subject).toBe(
-        'VittaFlow — defina sua senha de acesso',
+        'EstomaSysTech — defina sua senha de acesso',
       );
       expect(email.sent[0].text).toContain(`${APP_URL}/definir-senha?token=`);
       expect(email.sent[0].text).toContain('24 horas');
@@ -177,7 +177,9 @@ describe('Feature: Emissão e consumo de token de convite/reset', () => {
         nowMs: NOW,
       });
 
-      expect(email.sent[0].subject).toBe('VittaFlow — redefinição de senha');
+      expect(email.sent[0].subject).toBe(
+        'EstomaSysTech — redefinição de senha',
+      );
       expect(email.sent[0].text).toContain('1 hora');
     });
 

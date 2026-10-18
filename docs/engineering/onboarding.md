@@ -13,7 +13,7 @@ related:
 # Onboarding técnico e setup
 
 > **TL;DR (5 min):** `cp .env.example .env` → preencha `POSTGRES_PASSWORD`, `AUTH_SECRET`,
-> `DATA_ENCRYPTION_KEY`, `VITTA_BOOTSTRAP_TOKEN` → `docker compose up -d --build` → `POST /api/auth/bootstrap` → abra o
+> `DATA_ENCRYPTION_KEY`, `ESTOMASYSTECH_BOOTSTRAP_TOKEN` → `docker compose up -d --build` → `POST /api/auth/bootstrap` → abra o
 > link de convite (vem no `inviteUrl` da resposta; por e-mail só com `RESEND_API_KEY`/`EMAIL_FROM`,
 > opcionais — [ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)). Travou?
 > [Troubleshooting](troubleshooting.md).
@@ -47,8 +47,8 @@ cp .env.example .env
 # preencha no mínimo:
 #   POSTGRES_PASSWORD=$(openssl rand -hex 24)
 #   AUTH_SECRET=$(openssl rand -hex 32)
-#   VITTA_BOOTSTRAP_TOKEN=$(openssl rand -hex 24)
-#   RESEND_API_KEY=...   EMAIL_FROM="VittaFlow <nao-responda@suaclinica.com>"
+#   ESTOMASYSTECH_BOOTSTRAP_TOKEN=$(openssl rand -hex 24)
+#   RESEND_API_KEY=...   EMAIL_FROM="EstomaSysTech <nao-responda@suaclinica.com>"
 docker compose up -d --build
 
 # espere o Next aceitar conexões
@@ -58,7 +58,7 @@ until curl -sf http://localhost:3000/api/auth/providers >/dev/null; do sleep 2; 
 set -a; . ./.env; set +a
 curl -sX POST http://localhost:3000/api/auth/bootstrap \
   -H "Content-Type: application/json" \
-  -H "x-bootstrap-token: $VITTA_BOOTSTRAP_TOKEN" \
+  -H "x-bootstrap-token: $ESTOMASYSTECH_BOOTSTRAP_TOKEN" \
   -d '{"email":"voce@exemplo.com"}'
 # confira `delivered` na resposta: se false, abra o `inviteUrl` retornado
 ```
@@ -66,7 +66,7 @@ curl -sX POST http://localhost:3000/api/auth/bootstrap \
 | Serviço | Endereço |
 | --- | --- |
 | App | http://localhost:3000 |
-| Postgres | `127.0.0.1:5432` (só loopback) · usuário `vitta` · senha `POSTGRES_PASSWORD` · db `vitta` |
+| Postgres | `127.0.0.1:5432` (só loopback) · usuário `estomasystech` · senha `POSTGRES_PASSWORD` · db `estomasystech` |
 
 - **Sem senha padrão:** o compose não sobe sem `POSTGRES_PASSWORD`, e a porta do banco só é publicada
   no loopback do host — o app usa a rede interna do compose.
@@ -89,8 +89,8 @@ npm run dev                   # http://localhost:3000
 ```
 
 - **Sem login não há app:** sem `AUTH_SECRET`, tudo responde 503, em qualquer ambiente. O antigo
-  "modo aberto" (`VITTA_ALLOW_OPEN_MODE`) foi removido (#327) e a variável não tem efeito.
-- **Migração manual:** `npm run db:migrate` e `VITTA_MIGRATE_ON_BOOT=false`.
+  "modo aberto" (`ESTOMASYSTECH_ALLOW_OPEN_MODE`) foi removido (#327) e a variável não tem efeito.
+- **Migração manual:** `npm run db:migrate` e `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`.
 - **E-mail em dev:** sem `RESEND_API_KEY` o gateway é dry-run: o log traz destinatário mascarado,
   assunto e o link de definição de senha (`[e-mail desativado] Para fu***@x.com — …`) — nunca o
   corpo. O link só sai com `NODE_ENV !== 'production'`.
@@ -105,12 +105,12 @@ npm run dev                   # http://localhost:3000
 | Variável | Obrigatória | Para | Detalhe |
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | sim (compose) | senha do Postgres do compose, sem padrão | `openssl rand -hex 24`; entra no `DATABASE_URL` do app |
-| `DATABASE_URL` | sim (fora do compose) | Postgres | `postgres://vitta:<POSTGRES_PASSWORD>@localhost:5432/vitta` |
+| `DATABASE_URL` | sim (fora do compose) | Postgres | `postgres://estomasystech:<POSTGRES_PASSWORD>@localhost:5432/estomasystech` |
 | `AUTH_SECRET` | sim em produção | assina a sessão (só isso: o dado clínico tem chave própria) | `openssl rand -hex 32`; sem ele, 503 em toda rota. Rotacionar derruba todas as sessões |
 | `DATA_ENCRYPTION_KEY` | sim em produção | cifra o texto clínico e o token do Google em repouso ([ADR-006](../adr/006-chave-de-dados-clinicos.md)) | `openssl rand -hex 32` (≥ 32 caracteres); fora de produção, sem ela, usa chave de desenvolvimento. Perdê-la é perder o prontuário: guarde no cofre |
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |
 | `APP_URL` | sim em produção | links de convite/reset, redirect do OAuth, link do recall | — |
-| `VITTA_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
+| `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | não | e-mail **da plataforma** (contas sem clínica: bootstrap e reset do Super Admin); cada clínica usa a chave que cadastra ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | [resend.md](integrations/resend.md) |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
@@ -126,11 +126,11 @@ npm run dev                   # http://localhost:3000
 | `GLITCHTIP_DSN` / `APP_RELEASE` | não | error tracking no GlitchTip self-hosted ([ADR-014](../adr/014-observabilidade-sem-pii.md)) e a versão marcada em cada evento | vazio = no-op; [glitchtip.md](integrations/glitchtip.md) |
 | `GLITCHTIP_DB_PASSWORD` / `GLITCHTIP_SECRET_KEY` | só com o GlitchTip | senha do Postgres próprio e chave do GlitchTip, lidas por `docker-compose.glitchtip.yml` (não pelo app) | [producao.md](producao.md) § 9.5 |
 | `ALERT_EMAIL_TO` / `ALERT_5XX_THRESHOLD` / `ALERT_DELIVERY_FAILURE_THRESHOLD` | não (sim em produção) | alertas por e-mail ao operador (`POST /api/alerts/run`) pelo canal da plataforma | limiares em 15 min, padrão `10` e `3`; [alertas.md](integrations/alertas.md) |
-| `VITTA_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
+| `ESTOMASYSTECH_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
 | `POSTGRES_PORT` / `APP_PORT` | não | portas publicadas pelo compose no host | padrão `5432` (só loopback) e `3000` |
 | `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 | `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |
-| `VITTA_DB_DRIVER` / `VITTA_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
+| `ESTOMASYSTECH_DB_DRIVER` / `ESTOMASYSTECH_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
 
 ## 5. Testes
 
@@ -145,7 +145,7 @@ npm run test:e2e:dev     # só papéis e login, contra `next dev`
 
 A suíte E2E sobe os próprios servidores e gera as credenciais a cada execução. Só para
 reaproveitar um `npm run dev` já no ar: `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN` (suíte) e
-`AUTH_SECRET`/`VITTA_BOOTSTRAP_TOKEN` (servidor) precisam ter os mesmos valores.
+`AUTH_SECRET`/`ESTOMASYSTECH_BOOTSTRAP_TOKEN` (servidor) precisam ter os mesmos valores.
 Estilo e níveis de teste: [conventions.md](conventions.md#testes).
 
 **Artefato de produção (CI, #203):** além de `test:coverage` e do E2E de papéis (`test:e2e:dev`, contra `next dev`), o

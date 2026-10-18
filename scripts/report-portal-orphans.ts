@@ -9,7 +9,7 @@ import { listOrphanPortalAccounts } from "@/infrastructure/persistence/drizzle/p
  * com o paciente/parceiro correto.
  */
 async function main(): Promise<void> {
-  process.env.VITTA_MIGRATE_ON_BOOT ??= "false";
+  process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
   const orphans = await listOrphanPortalAccounts(await getDb());
   if (orphans.length === 0) {
     console.log("Nenhuma conta de portal sem vínculo.");

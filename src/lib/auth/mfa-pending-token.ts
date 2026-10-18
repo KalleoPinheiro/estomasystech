@@ -8,7 +8,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
  */
 export const MFA_PENDING_TTL_MS = 5 * 60 * 1000;
 const PREFIX = 'mfa.';
-const KEY_LABEL = 'vitta-flow/mfa-pending/v1';
+const KEY_LABEL = 'estomasystech/mfa-pending/v1';
 
 /** `verify`: falta o código; `enroll`: falta cadastrar; `confirm`: falta confirmar a chave nova. */
 export type MfaStage = 'verify' | 'enroll' | 'confirm';

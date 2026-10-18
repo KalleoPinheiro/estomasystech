@@ -15,7 +15,7 @@ import { systemScope } from '@/lib/auth/tenant-scope';
 import { CLINIC_A_ID } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 // Espiona o verificador fictício sem trocar o comportamento (#208).
 vi.mock('@/lib/auth/password', async (importOriginal) => {

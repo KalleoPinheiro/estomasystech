@@ -16,7 +16,10 @@ describe('Erro não tratado na requisição (#212, OBS-09)', () => {
       {
         path: '/api/patients/abc?nome=Fulano',
         method: 'GET',
-        headers: { 'x-request-id': 'req-12345678', cookie: 'vitta_session=s' },
+        headers: {
+          'x-request-id': 'req-12345678',
+          cookie: 'estomasystech_session=s',
+        },
       },
       { routePath: '/api/patients/[id]', routeType: 'route' },
     );
@@ -33,7 +36,7 @@ describe('Erro não tratado na requisição (#212, OBS-09)', () => {
     });
     const raw = String(log.mock.calls[0][0]);
     expect(raw).not.toContain('Fulano');
-    expect(raw).not.toContain('vitta_session');
+    expect(raw).not.toContain('estomasystech_session');
     expect(countSignals('server-error', 0)).toBe(1);
   });
 

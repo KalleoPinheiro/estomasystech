@@ -56,7 +56,7 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
           clinicId: 'c1',
           clinicName: 'Clínica Sol',
           actorRole: 'super_admin',
-          actorId: 'dono@vitta.app',
+          actorId: 'dono@estomasystech.app',
           action: 'create',
           resourceType: 'clinic-info',
           detail: null,

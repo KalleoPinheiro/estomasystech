@@ -5,7 +5,7 @@ import { CLINIC_A_ID, completeClinicRegistration } from '../support/clinics';
 import { linkAllPortalAccounts } from '../support/portal-account';
 import { jsonRequest } from '../support/request';
 
-process.env.VITTA_DB_DRIVER = 'pglite';
+process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 /**
  * Mock leve do SDK "googleapis" — não fazemos chamada HTTP real. Cobre os
@@ -117,7 +117,7 @@ describe('Feature: Fechamento de branches — login e rotas do portal', () => {
   });
 
   const cookieHeader = (token: string) => ({
-    cookie: `vitta_session=${token}`,
+    cookie: `estomasystech_session=${token}`,
   });
   const sessionFor = (
     email: string,

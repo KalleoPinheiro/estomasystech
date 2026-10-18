@@ -26,7 +26,7 @@ o recall sem teto (N2) vira spam real em qualquer canal que de fato entregue.
 ## Evidence
 
 - Meta, categoria *utility* no Brasil: ~R$ 0,04–0,05 por mensagem entregue (~US$ 0,008); grátis dentro da janela de 24 h aberta pelo paciente — fontes secundárias (a página da Meta está bloqueada no ambiente desta discovery). Para ~400 consultas/mês ≈ R$ 20/mês por clínica.
-- Resend grátis: 3.000 e-mails/mês e **100/dia** — a conta Resend é única do Vitta Flow (`RESEND_API_KEY`), então o custo do e-mail é do Vitta Flow, não da clínica. 1 clínica cabe; na 3ª–4ª clínica o teto diário estoura (Pro ~US$ 20/mês).
+- Resend grátis: 3.000 e-mails/mês e **100/dia** — a conta Resend é única do EstomaSysTech (`RESEND_API_KEY`), então o custo do e-mail é do EstomaSysTech, não da clínica. 1 clínica cabe; na 3ª–4ª clínica o teto diário estoura (Pro ~US$ 20/mês).
 - Consultas/dia da primeira clínica: **desconhecido** — ela hoje não confirma nada à mão; passará a confirmar pelo sistema. Não é "pequeno", é não medido: mede-se pelos `reminder_logs` do canal `whatsapp_link` após o go-live.
 - Bounce de e-mail: não observável no sistema (o gateway só vê erro síncrono da API; bounce é assíncrono no painel do Resend). Medir exigiria webhook do Resend — fora do escopo.
 - Adoção do portal pelos pacientes: desconhecida — é o número que reabre o push.
