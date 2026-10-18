@@ -29,6 +29,8 @@ export interface ConsentStatusDto {
   canSign?: boolean;
   /** Parentesco de quem assinou pelo menor; nulo quando foi o próprio paciente. */
   signedByRelationship?: string | null;
+  /** O aceite do representante venceu 90 dias após os 18 anos (#375). */
+  representativeExpired?: boolean;
 }
 
 const COPY: Record<
@@ -183,6 +185,12 @@ export function ConsentCard({
       <h2 className="mb-2 font-bold text-sm text-warning">
         {copy.pendingTitle}
       </h2>
+      {status.representativeExpired && !asRepresentative && (
+        <p className="mb-2 text-sm">
+          O aceite feito pelo seu representante legal venceu 90 dias depois dos
+          seus 18 anos. Leia e aceite em seu nome para continuar.
+        </p>
+      )}
       {error && <ErrorAlert message={error} />}
       <Prose className="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-warning-soft bg-sv-surface p-3 text-sm">
         {status.consentText}

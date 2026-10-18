@@ -4,9 +4,15 @@ import {
   listMajorityReviews,
 } from '@/application/guardians/majority-review';
 import { UserAccount } from '@/domain/auth/user-account';
+import { ConsentRecord } from '@/domain/consent/consent-record';
+import { PartnerShareConsent } from '@/domain/consent/partner-share-consent';
 import { Guardian } from '@/domain/guardian/guardian';
 import { Patient } from '@/domain/patient/patient';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import {
+  InMemoryConsentRecordRepository,
+  InMemoryPartnerShareConsentRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
 import { InMemoryUserAccountRepository } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryGuardianRepository } from '@/infrastructure/persistence/in-memory/in-memory-guardian-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
@@ -20,6 +26,8 @@ async function setup() {
     userAccounts: new InMemoryUserAccountRepository(),
     patients: new InMemoryPatientRepository(),
     guardians: new InMemoryGuardianRepository(),
+    consentRecords: new InMemoryConsentRecordRepository(),
+    partnerShareConsents: new InMemoryPartnerShareConsentRepository(),
   };
   const guardian = Guardian.create({
     fullName: 'Paula Mãe',
@@ -78,6 +86,78 @@ describe('Feature: aviso de maioridade (#372)', () => {
     const items = await listMajorityReviews(repos, NOW);
 
     expect(items.map((item) => item.patient.fullName)).toEqual(['Ana Adulta']);
+    expect(items[0]).toMatchObject({
+      guardianName: 'Paula Mãe',
+      guardianRelationship: 'mae',
+      awaitingTransfer: true,
+      representativeConsentExpiresOn: null,
+      representativeConsentExpired: false,
+    });
+  });
+
+  it('lista o adulto com aceite do representante vigente, com o prazo de 90 dias (#375)', async () => {
+    const { repos, guardian, patient } = await setup();
+    const signer = { guardianId: guardian.id, relationship: 'mae' };
+    // Conta própria: não aguarda transferência, mas o aceite ainda é da mãe.
+    const within = patient('Ana Dentro', '2008-09-01');
+    const expired = patient('Bia Vencida', '2008-01-01');
+    const ownName = patient('Caio Assinou', '2008-01-01');
+    const minor = patient('Duda Menor', '2010-01-01');
+    for (const p of [within, expired, ownName, minor]) {
+      await repos.patients.save(p);
+      await repos.userAccounts.save(
+        UserAccount.create({
+          email: `${p.id}@x.com`,
+          passwordHash: UNSET_PASSWORD_HASH,
+          role: 'patient',
+          clinicId: 'c-1',
+          patientId: p.id,
+        }),
+      );
+      await repos.consentRecords.save(
+        ConsentRecord.create({
+          patientId: p.id,
+          consentText: 'termo',
+          textVersion: 'v1',
+          signer,
+        }),
+      );
+    }
+    await repos.consentRecords.save(
+      ConsentRecord.restore({
+        id: 'own-name',
+        patientId: ownName.id,
+        kind: 'accept',
+        textHash: 'h',
+        textVersion: 'v1',
+        ipAddress: null,
+        acceptedAt: new Date(Date.now() + 1000),
+      }),
+    );
+    await repos.partnerShareConsents.save(
+      PartnerShareConsent.accept({
+        patientId: within.id,
+        partnerId: 'p-1',
+        consentText: 'parceiro',
+        textVersion: 'v1',
+        ipAddress: null,
+        signer,
+      }),
+    );
+
+    const items = await listMajorityReviews(repos, NOW);
+
+    expect(
+      items.map((item) => [
+        item.patient.fullName,
+        item.awaitingTransfer,
+        item.representativeConsentExpiresOn?.toISOString().slice(0, 10),
+        item.representativeConsentExpired,
+      ]),
+    ).toEqual([
+      ['Ana Dentro', false, '2026-11-30', false],
+      ['Bia Vencida', false, '2026-04-01', true],
+    ]);
     expect(items[0]).toMatchObject({
       guardianName: 'Paula Mãe',
       guardianRelationship: 'mae',

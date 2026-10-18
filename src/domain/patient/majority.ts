@@ -33,3 +33,57 @@ export function isMinorOn(
   if (!birthDate) return false;
   return birthDate.getTime() > majorityBirthCutoff(now, timeZone).getTime();
 }
+
+/**
+ * Prazo do aceite feito pelo representante legal depois dos 18 anos (#375,
+ * ADR-033): 90 dias para o paciente aceitar em nome próprio, sem interromper o
+ * curativo; depois disso o aceite do representante não vale mais.
+ */
+export const REPRESENTATIVE_CONSENT_GRACE_DAYS = 90;
+
+/** Dia (meia-noite UTC do dia civil) em que o paciente fica maior de idade. */
+export function majorityDate(birthDate: Date): Date {
+  return new Date(
+    Date.UTC(
+      birthDate.getUTCFullYear() + AGE_OF_MAJORITY,
+      birthDate.getUTCMonth(),
+      birthDate.getUTCDate(),
+    ),
+  );
+}
+
+/**
+ * Primeiro dia em que o aceite do representante já não vale: 90 dias depois
+ * do aniversário de 18 anos. Até a véspera, ainda vale.
+ */
+export function representativeConsentExpiresOn(birthDate: Date): Date {
+  const majority = majorityDate(birthDate);
+  return new Date(
+    Date.UTC(
+      majority.getUTCFullYear(),
+      majority.getUTCMonth(),
+      majority.getUTCDate() + REPRESENTATIVE_CONSENT_GRACE_DAYS,
+    ),
+  );
+}
+
+/**
+ * O aceite do representante venceu em `now`? Sem data de nascimento não há
+ * como provar que o titular ainda é menor ou está no prazo: venceu (falha
+ * fechada; o representante só assina por menor com data informada).
+ */
+export function isRepresentativeConsentExpired(
+  birthDate: Date | null | undefined,
+  now: Date = new Date(),
+  timeZone: string = appTimeZone(),
+): boolean {
+  if (!birthDate) return true;
+  const today = zonedParts(now, timeZone);
+  const todayUtc = Date.UTC(today.year, today.month - 1, today.day);
+  return todayUtc >= representativeConsentExpiresOn(birthDate).getTime();
+}
+
+/** Titular do aceite, para decidir se o aceite do representante ainda vale. */
+export interface ConsentHolder {
+  birthDate: Date | null;
+}

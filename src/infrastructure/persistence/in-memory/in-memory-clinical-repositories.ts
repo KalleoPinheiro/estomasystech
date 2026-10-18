@@ -186,6 +186,14 @@ export class InMemoryConsentRecordRepository
     const records = await this.findByPatientId(patientId);
     return records[0] ?? null;
   }
+
+  async findPatientIdsSignedByRepresentative(): Promise<string[]> {
+    return [
+      ...new Set(
+        this.items.filter((r) => r.signer !== null).map((r) => r.patientId),
+      ),
+    ];
+  }
 }
 
 export class InMemoryPartnerShareConsentRepository
@@ -211,5 +219,13 @@ export class InMemoryPartnerShareConsentRepository
     return this.items
       .filter((r) => r.partnerId === partnerId && wanted.has(r.patientId))
       .sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime());
+  }
+
+  async findPatientIdsSignedByRepresentative(): Promise<string[]> {
+    return [
+      ...new Set(
+        this.items.filter((r) => r.signer !== null).map((r) => r.patientId),
+      ),
+    ];
   }
 }

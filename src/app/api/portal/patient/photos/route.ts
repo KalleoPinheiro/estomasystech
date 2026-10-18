@@ -68,12 +68,16 @@ export async function POST(request: NextRequest) {
     // imagem aceito (à parte do TCLE, #216) — sem aceite vigente, nada é gravado.
     const consents = await consentRecords.findByPatientId(patient.id);
     if (
-      !ConsentRecord.resolveStatus(consents, IMAGE_CONSENT_TEXT, 'image')
-        .accepted
+      !ConsentRecord.resolveStatus(
+        consents,
+        IMAGE_CONSENT_TEXT,
+        'image',
+        patient,
+      ).accepted
     ) {
       throw new ConsentRequiredError(
         session.role === 'guardian'
-          ? 'Consentimento pendente — o próprio paciente precisa aceitar o termo de imagem no portal antes do envio de fotos'
+          ? 'Consentimento pendente — o termo de imagem precisa estar aceito no portal (pelo paciente ou, se menor, por você) antes do envio de fotos'
           : 'Consentimento pendente — aceite o termo de imagem no portal antes de enviar fotos',
       );
     }

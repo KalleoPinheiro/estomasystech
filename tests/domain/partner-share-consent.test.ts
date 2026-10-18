@@ -142,6 +142,7 @@ describe('Feature: Consentimento paciente × parceiro (#292)', () => {
         active: false,
         current: null,
         latestAccept: null,
+        representativeExpired: false,
       });
     });
 
@@ -219,7 +220,74 @@ describe('Feature: Consentimento paciente × parceiro (#292)', () => {
         active: false,
         current: null,
         latestAccept: null,
+        representativeExpired: false,
       });
     });
+  });
+});
+
+describe('Feature: autorização do parceiro pelo representante do menor (#375)', () => {
+  const signer = { guardianId: 'g-1', relationship: 'mae' };
+  const minor = { birthDate: new Date('2015-01-01T00:00:00Z') };
+  const expiredAdult = { birthDate: new Date('2000-01-01T00:00:00Z') };
+  const NOW = new Date('2026-10-18T15:00:00Z');
+
+  it('grava quem assinou no aceite e na revogação', () => {
+    const accept = PartnerShareConsent.accept({
+      patientId: 'pat-1',
+      partnerId: 'par-1',
+      consentText: TEXT,
+      textVersion: 'v1',
+      ipAddress: null,
+      signer,
+    });
+    const revoke = PartnerShareConsent.revoke({
+      patientId: 'pat-1',
+      partnerId: 'par-1',
+      actor: 'patient',
+      ipAddress: null,
+      signer,
+    });
+    expect(accept.signer).toEqual(signer);
+    expect(revoke.signer).toEqual(signer);
+    expect(
+      PartnerShareConsent.acceptOnPaper({
+        patientId: 'pat-1',
+        partnerId: 'par-1',
+        consentText: TEXT,
+        textVersion: 'v1',
+        recordedBy: 'staff-1',
+        ipAddress: null,
+      }).signer,
+    ).toBeNull();
+  });
+
+  it('vale para o menor e vence 90 dias depois dos 18; sem titular, não vale', () => {
+    const records = [
+      restore({ signerGuardianId: 'g-1', signerRelationship: 'mae' }),
+    ];
+    const status = (holder?: { birthDate: Date | null }) =>
+      PartnerShareConsent.resolveStatus(records, 'par-1', TEXT, holder, NOW);
+    expect(status(minor)).toMatchObject({
+      active: true,
+      representativeExpired: false,
+    });
+    expect(status(expiredAdult)).toMatchObject({
+      active: false,
+      representativeExpired: true,
+    });
+    expect(status()).toMatchObject({ active: false });
+  });
+
+  it('o aceite do próprio paciente não vence', () => {
+    expect(
+      PartnerShareConsent.resolveStatus(
+        [restore({})],
+        'par-1',
+        TEXT,
+        expiredAdult,
+        NOW,
+      ),
+    ).toMatchObject({ active: true, representativeExpired: false });
   });
 });

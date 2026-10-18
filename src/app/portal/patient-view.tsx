@@ -280,11 +280,12 @@ export function PatientPortalView({
         <InvoicesList invoices={data.invoices} />
       </Section>
 
-      {!data.actingFor && (
+      {/* O representante do menor também decide aqui (#375); o de adulto, não. */}
+      {(!data.actingFor || consent?.canSign) && (
         <>
-          <PartnerConsentSection />
+          <PartnerConsentSection asRepresentative={Boolean(data.actingFor)} />
 
-          <DataRights />
+          <DataRights asRepresentative={Boolean(data.actingFor)} />
         </>
       )}
     </div>

@@ -800,6 +800,10 @@ export const partnerShareConsents = pgTable(
     actor: text('actor').notNull(),
     // Quem da equipe lançou (e-mail da conta); nulo quando o paciente agiu (#310).
     recordedBy: text('recorded_by'),
+    // Representante legal que agiu pelo menor no portal (#375, ADR-033); sem FK,
+    // como em `consent_records`.
+    signerGuardianId: text('signer_guardian_id'),
+    signerRelationship: text('signer_relationship'),
     ipAddress: text('ip_address'),
     recordedAt: timestamp('recorded_at', {
       withTimezone: true,

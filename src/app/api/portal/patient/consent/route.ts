@@ -54,6 +54,8 @@ function toConsentStatusDto(
     textVersion: status.latestAccept?.textVersion ?? null,
     // Parentesco de quem assinou pelo menor; nulo quando foi o próprio paciente.
     signedByRelationship: status.latestAccept?.signer?.relationship ?? null,
+    // O aceite do representante venceu (90 dias após os 18; #375): aceite de novo.
+    representativeExpired: status.representativeExpired ?? false,
     revokedAt: revoked
       ? (status.current?.acceptedAt.toISOString() ?? null)
       : null,
@@ -76,6 +78,7 @@ export async function GET(request: NextRequest) {
       records,
       document.template,
       purpose,
+      patient,
     );
     const canSign = await consentSignerFor(services, auth.session, patient)
       .then(() => true)
@@ -117,6 +120,7 @@ export async function POST(request: NextRequest) {
       existing,
       document.template,
       purpose,
+      patient,
     );
     // Já aceito: só grava de novo quando o paciente, já adulto, assina em
     // nome próprio o que o representante aceitou por ele.

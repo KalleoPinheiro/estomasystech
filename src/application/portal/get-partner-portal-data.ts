@@ -112,10 +112,7 @@ export class GetPartnerPortalData {
 
     const referred = await this.patients.findByReferrer(partner.id);
     const cutoff = historyCutoff(this.now());
-    const sharingIds = await this.sharingPatientIds(
-      partner.id,
-      referred.map((p) => p.id),
-    );
+    const sharingIds = await this.sharingPatientIds(partner.id, referred);
 
     // Janela aplicada no banco; condições e avaliações só de quem consentiu.
     const [allAppointments, allConditions] = await Promise.all([
@@ -159,22 +156,27 @@ export class GetPartnerPortalData {
 
   private async sharingPatientIds(
     partnerId: string,
-    patientIds: string[],
+    patients: readonly Patient[],
   ): Promise<Set<string>> {
     const records = await this.consents.repository.findByPartnerAndPatientIds(
       partnerId,
-      patientIds,
+      patients.map((p) => p.id),
     );
     const byPatient = groupBy(records, (r) => r.patientId);
+    // O titular entra no status: aceite do representante vence 90 dias após os 18 (#375).
     return new Set(
-      patientIds.filter(
-        (id) =>
-          PartnerShareConsent.resolveStatus(
-            byPatient.get(id) ?? [],
-            partnerId,
-            this.consents.consentText,
-          ).active,
-      ),
+      patients
+        .filter(
+          (patient) =>
+            PartnerShareConsent.resolveStatus(
+              byPatient.get(patient.id) ?? [],
+              partnerId,
+              this.consents.consentText,
+              patient,
+              this.now(),
+            ).active,
+        )
+        .map((patient) => patient.id),
     );
   }
 }

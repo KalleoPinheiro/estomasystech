@@ -32,9 +32,15 @@ function saveJson(data: unknown, filename: string) {
 
 /**
  * Direitos do titular no portal (LGPD art. 18, #293): baixar a cópia dos
- * próprios dados e pedir correção ou eliminação, que a clínica analisa.
+ * próprios dados e pedir correção ou eliminação, que a clínica analisa. O
+ * representante legal do menor baixa a cópia e pede correção; a eliminação é
+ * só na clínica (#375, ADR-033).
  */
-export function DataRights() {
+export function DataRights({
+  asRepresentative = false,
+}: {
+  asRepresentative?: boolean;
+}) {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
@@ -73,15 +79,17 @@ export function DataRights() {
           disabled={downloading}
           onClick={() => void download()}
         >
-          Baixar cópia dos meus dados
+          {asRepresentative
+            ? 'Baixar cópia dos dados do paciente'
+            : 'Baixar cópia dos meus dados'}
         </Button>
-        <DataRequests />
+        <DataRequests asRepresentative={asRepresentative} />
       </Card>
     </section>
   );
 }
 
-function DataRequests() {
+function DataRequests({ asRepresentative }: { asRepresentative: boolean }) {
   const { toast } = useToast();
   const { data, refresh } = useApiQuery<DataSubjectRequestDto[]>(
     '/api/portal/patient/data-requests',
@@ -114,19 +122,33 @@ function DataRequests() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="font-medium">Pedir correção ou eliminação</h3>
-      <label className="flex flex-col gap-1 text-sm">
-        Tipo de pedido
-        <NativeSelect
-          value={kind}
-          onChange={(event) => setKind(event.target.value as Kind)}
-        >
-          <option value="correction">
-            {DATA_REQUEST_KIND_LABELS.correction}
-          </option>
-          <option value="erasure">{DATA_REQUEST_KIND_LABELS.erasure}</option>
-        </NativeSelect>
-      </label>
+      {asRepresentative ? (
+        <>
+          <h3 className="font-medium">Pedir correção</h3>
+          <p className="text-ink-3 text-sm">
+            A eliminação dos dados do paciente menor é pedida diretamente à
+            clínica.
+          </p>
+        </>
+      ) : (
+        <>
+          <h3 className="font-medium">Pedir correção ou eliminação</h3>
+          <label className="flex flex-col gap-1 text-sm">
+            Tipo de pedido
+            <NativeSelect
+              value={kind}
+              onChange={(event) => setKind(event.target.value as Kind)}
+            >
+              <option value="correction">
+                {DATA_REQUEST_KIND_LABELS.correction}
+              </option>
+              <option value="erasure">
+                {DATA_REQUEST_KIND_LABELS.erasure}
+              </option>
+            </NativeSelect>
+          </label>
+        </>
+      )}
       <label className="flex flex-col gap-1 text-sm">
         {kind === 'correction'
           ? 'O que precisa ser corrigido?'

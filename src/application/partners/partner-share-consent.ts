@@ -1,3 +1,4 @@
+import type { ConsentSigner } from '@/domain/consent/consent-record';
 import {
   PartnerShareConsent,
   type PartnerShareConsentActor,
@@ -68,19 +69,23 @@ export async function getPartnerShareConsent(
       records,
       partner.id,
       consent.text,
+      patient,
     ),
   };
 }
 
 /**
- * Aceite pelo próprio paciente (portal). Idempotente: com consentimento já
- * ativo para o texto vigente, devolve o aceite existente sem gravar outro.
+ * Aceite pelo próprio paciente ou, no menor, pelo representante legal
+ * (`signer`, #375) no portal. Idempotente: com consentimento já ativo para o
+ * texto vigente, devolve o aceite existente sem gravar outro, exceto quando o
+ * paciente adulto confirma em nome próprio o que o representante aceitou.
  */
 export async function acceptPartnerShareConsent(
   deps: PartnerShareConsentDeps,
   patient: Patient,
   consent: PartnerShareConsentText,
   ipAddress: string | null,
+  signer: ConsentSigner | null = null,
 ): Promise<{ record: PartnerShareConsent; created: boolean }> {
   const partner = await requireReferringPartner(deps, patient);
   const records = await deps.partnerShareConsents.findByPatientId(patient.id);
@@ -88,8 +93,10 @@ export async function acceptPartnerShareConsent(
     records,
     partner.id,
     consent.text,
+    patient,
   );
-  if (status.active && status.current) {
+  const resignsOwnName = signer === null && !!status.current?.signer;
+  if (status.active && status.current && !resignsOwnName) {
     return { record: status.current, created: false };
   }
   const record = PartnerShareConsent.accept({
@@ -98,6 +105,7 @@ export async function acceptPartnerShareConsent(
     consentText: consent.text,
     textVersion: consent.version,
     ipAddress,
+    signer,
   });
   await deps.partnerShareConsents.save(record);
   return { record, created: true };
@@ -121,6 +129,7 @@ export async function registerPaperPartnerShareConsent(
     records,
     partner.id,
     consent.text,
+    patient,
   );
   if (status.active && status.current) {
     return { record: status.current, created: false };
@@ -147,6 +156,7 @@ export async function revokePartnerShareConsent(
   actor: PartnerShareConsentActor,
   ipAddress: string | null,
   recordedBy: string | null = null,
+  signer: ConsentSigner | null = null,
 ): Promise<PartnerShareConsent> {
   const partner = await requireReferringPartner(deps, patient);
   const record = PartnerShareConsent.revoke({
@@ -155,6 +165,7 @@ export async function revokePartnerShareConsent(
     actor,
     recordedBy,
     ipAddress,
+    signer,
   });
   await deps.partnerShareConsents.save(record);
   return record;

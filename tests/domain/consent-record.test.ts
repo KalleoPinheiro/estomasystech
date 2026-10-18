@@ -263,3 +263,42 @@ describe('Feature: Hash SHA-256 do texto de consentimento (hashConsentText)', ()
     );
   });
 });
+
+describe('Feature: termo aceito pelo representante do menor vence (#375)', () => {
+  const NOW = new Date('2026-10-18T15:00:00Z');
+  const signed = ConsentRecord.create({
+    patientId: 'patient-1',
+    consentText: 'Termo',
+    textVersion: 'v1',
+    signer: { guardianId: 'g-1', relationship: 'mae' },
+  });
+  const status = (holder?: { birthDate: Date | null }) =>
+    ConsentRecord.resolveStatus([signed], 'Termo', 'treatment', holder, NOW);
+
+  it('vale enquanto o titular é menor ou está nos 90 dias depois dos 18', () => {
+    expect(
+      status({ birthDate: new Date('2008-09-01T00:00:00Z') }),
+    ).toMatchObject({ accepted: true, representativeExpired: false });
+  });
+
+  it('passado o prazo, ou sem o titular informado, deixa de valer', () => {
+    expect(
+      status({ birthDate: new Date('2008-01-01T00:00:00Z') }),
+    ).toMatchObject({ accepted: false, representativeExpired: true });
+    expect(status()).toMatchObject({ accepted: false });
+    expect(status({ birthDate: null })).toMatchObject({ accepted: false });
+  });
+
+  it('o aceite do próprio paciente não vence', () => {
+    const own = ConsentRecord.create({
+      patientId: 'patient-1',
+      consentText: 'Termo',
+      textVersion: 'v1',
+    });
+    expect(
+      ConsentRecord.resolveStatus([own], 'Termo', 'treatment', {
+        birthDate: new Date('2000-01-01T00:00:00Z'),
+      }),
+    ).toMatchObject({ accepted: true, representativeExpired: false });
+  });
+});

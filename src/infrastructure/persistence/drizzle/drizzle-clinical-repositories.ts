@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNotNull } from 'drizzle-orm';
 import { Anamnesis } from '@/domain/clinical/anamnesis';
 import {
   ClinicalCondition,
@@ -546,6 +546,20 @@ export class DrizzleConsentRecordRepository implements ConsentRecordRepository {
         purpose: row.purpose as ConsentPurpose,
       }),
     );
+  }
+
+  async findPatientIdsSignedByRepresentative(): Promise<string[]> {
+    const rows = await this.db
+      .selectDistinct({ patientId: consentRecords.patientId })
+      .from(consentRecords)
+      .where(
+        withTenant(
+          consentRecords,
+          this.clinicId,
+          isNotNull(consentRecords.signerGuardianId),
+        ),
+      );
+    return rows.map((row) => row.patientId);
   }
 
   async findLatestByPatientId(

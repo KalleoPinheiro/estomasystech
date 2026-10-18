@@ -1,6 +1,10 @@
+import {
+  type ConsentHolder,
+  isRepresentativeConsentExpired,
+} from '../patient/majority';
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
-import { hashConsentText } from './consent-record';
+import { type ConsentSigner, hashConsentText } from './consent-record';
 
 /** "accept": aceite do compartilhamento. "revoke": revogação (append-only, nunca apaga o aceite). */
 export type PartnerShareConsentKind = 'accept' | 'revoke';
@@ -23,6 +27,9 @@ export interface PartnerShareConsentState {
   recordedBy: string | null;
   ipAddress: string | null;
   recordedAt: Date;
+  /** Representante legal que agiu pelo menor no portal (#375). Nulo = o paciente ou a equipe. */
+  signerGuardianId?: string | null;
+  signerRelationship?: string | null;
 }
 
 /** Origem do aceite: o paciente pelo portal ou a equipe a partir de um termo em papel (#310). */
@@ -35,7 +42,14 @@ export interface PartnerShareConsentStatus {
   current: PartnerShareConsent | null;
   /** Aceite mais recente, mesmo que revogado depois (para mostrar data e versão). */
   latestAccept: PartnerShareConsent | null;
+  /** O aceite vigente é do representante e venceu (90 dias após os 18; #375). */
+  representativeExpired: boolean;
 }
+
+const signerState = (signer: ConsentSigner | null | undefined) => ({
+  signerGuardianId: signer?.guardianId ?? null,
+  signerRelationship: signer?.relationship ?? null,
+});
 
 function requireIds(patientId: string, partnerId: string): void {
   if (!patientId.trim()) {
@@ -66,6 +80,7 @@ export class PartnerShareConsent {
     consentText: string;
     textVersion: string;
     ipAddress?: string | null;
+    signer?: ConsentSigner | null;
   }): PartnerShareConsent {
     requireIds(input.patientId, input.partnerId);
     if (!input.consentText.trim()) {
@@ -85,6 +100,7 @@ export class PartnerShareConsent {
       recordedBy: null,
       ipAddress: input.ipAddress?.trim() || null,
       recordedAt: new Date(),
+      ...signerState(input.signer),
     });
   }
 
@@ -105,7 +121,7 @@ export class PartnerShareConsent {
     if (!recordedBy) {
       throw new ValidationError('Quem lançou o consentimento é obrigatório');
     }
-    const record = PartnerShareConsent.accept(input);
+    const record = PartnerShareConsent.accept({ ...input, signer: null });
     return new PartnerShareConsent({
       ...record.state,
       actor: 'staff',
@@ -119,6 +135,7 @@ export class PartnerShareConsent {
     actor: PartnerShareConsentActor;
     recordedBy?: string | null;
     ipAddress?: string | null;
+    signer?: ConsentSigner | null;
   }): PartnerShareConsent {
     requireIds(input.patientId, input.partnerId);
     return new PartnerShareConsent({
@@ -132,6 +149,7 @@ export class PartnerShareConsent {
       recordedBy: input.recordedBy?.trim() || null,
       ipAddress: input.ipAddress?.trim() || null,
       recordedAt: new Date(),
+      ...signerState(input.signer),
     });
   }
 
@@ -143,12 +161,15 @@ export class PartnerShareConsent {
    * Status do par paciente × parceiro a partir do histórico (qualquer ordem).
    * Registros de outro parceiro são ignorados: trocar o "Indicado por" não
    * leva o consentimento junto. Ativo só se o registro mais recente é um
-   * aceite do texto vigente.
+   * aceite do texto vigente. Aceite do representante legal só vale até 90
+   * dias depois dos 18 anos do titular (`holder`; sem ele, não vale; #375).
    */
   static resolveStatus(
     records: readonly PartnerShareConsent[],
     partnerId: string,
     consentText: string,
+    holder?: ConsentHolder,
+    now: Date = new Date(),
   ): PartnerShareConsentStatus {
     const ofPartner = records
       .filter((record) => record.partnerId === partnerId)
@@ -156,10 +177,15 @@ export class PartnerShareConsent {
     const current = ofPartner[0] ?? null;
     const latestAccept =
       ofPartner.find((record) => record.kind === 'accept') ?? null;
+    const representativeExpired =
+      current?.kind === 'accept' &&
+      current.signer !== null &&
+      (!holder || isRepresentativeConsentExpired(holder.birthDate, now));
     const active =
       current?.kind === 'accept' &&
-      current.textHash === hashConsentText(consentText);
-    return { active, current, latestAccept };
+      current.textHash === hashConsentText(consentText) &&
+      !representativeExpired;
+    return { active, current, latestAccept, representativeExpired };
   }
 
   get id(): string {
@@ -203,6 +229,14 @@ export class PartnerShareConsent {
     return this.state.ipAddress;
   }
 
+  /** Representante que agiu pelo menor, ou `null`. */
+  get signer(): ConsentSigner | null {
+    const { signerGuardianId, signerRelationship } = this.state;
+    return signerGuardianId
+      ? { guardianId: signerGuardianId, relationship: signerRelationship ?? '' }
+      : null;
+  }
+
   get recordedAt(): Date {
     return this.state.recordedAt;
   }
@@ -217,4 +251,6 @@ export interface PartnerShareConsentRepository {
     partnerId: string,
     patientIds: string[],
   ): Promise<PartnerShareConsent[]>;
+  /** Pacientes com algum registro do representante legal (#375). */
+  findPatientIdsSignedByRepresentative(): Promise<string[]>;
 }

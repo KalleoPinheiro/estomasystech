@@ -39,6 +39,10 @@ export const MINOR_PATIENT_PORTAL_MESSAGE =
 export const ADULT_CONSENT_ONLY_MESSAGE =
   'O aceite dos termos é do próprio paciente. Como responsável, você só assina pelo paciente menor de idade.';
 
+/** Cópia, correção e parceiro de adulto são só do próprio paciente (ADR-027, ADR-033). */
+export const ADULT_TITULAR_ONLY_MESSAGE =
+  'Este pedido é do próprio paciente. Como responsável, você só age aqui pelo paciente menor de idade.';
+
 type PortalRepos = {
   userAccounts: UserAccountRepository;
   patients: PatientRepository;
@@ -162,13 +166,18 @@ export async function resolvePortalPatient(
  * adulto assina por si (`signer` nulo); o representante legal assina pelo
  * menor, com o cadastro e o parentesco gravados no registro. Responsável de
  * paciente adulto recebe `403`: o aceite continua personalíssimo (ADR-027).
+ * Vale também para cópia, correção e parceiro do menor (#375, ADR-033).
  */
 export async function resolveConsentSigner(
   repos: PortalRepos & { auditEvents: AuditEventRepository },
   session: PortalSessionIdentity,
+  deniedMessage: string = ADULT_CONSENT_ONLY_MESSAGE,
 ): Promise<{ patient: Patient; signer: ConsentSigner | null }> {
   const patient = await resolvePortalPatient(repos, session);
-  return { patient, signer: await consentSignerFor(repos, session, patient) };
+  return {
+    patient,
+    signer: await consentSignerFor(repos, session, patient, deniedMessage),
+  };
 }
 
 /** Quem assina por `patient` já resolvido; `403` para o responsável de adulto. */
@@ -176,6 +185,7 @@ export async function consentSignerFor(
   repos: Pick<PortalRepos, 'guardians'>,
   session: PortalSessionIdentity,
   patient: Patient,
+  deniedMessage: string = ADULT_CONSENT_ONLY_MESSAGE,
 ): Promise<ConsentSigner | null> {
   if (session.role !== 'guardian') return null;
   const guardian = patient.guardianId
@@ -186,7 +196,7 @@ export async function consentSignerFor(
     !patient.isMinorOn() ||
     !canRepresentMinor(guardian.relationship)
   ) {
-    throw new ForbiddenError(ADULT_CONSENT_ONLY_MESSAGE);
+    throw new ForbiddenError(deniedMessage);
   }
   return { guardianId: guardian.id, relationship: guardian.relationship };
 }
