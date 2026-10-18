@@ -1,15 +1,13 @@
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
+import type { TransactionManager } from '@/application/ports/transaction-manager';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
-import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import {
   assertUnderPortalFutureCap,
   assertWithinPortalHorizon,
 } from '@/domain/scheduling/patient-self-service';
-import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
-import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 
 export interface ScheduleOwnAppointmentInput {
@@ -35,11 +33,9 @@ const MINUTE_MS = 60_000;
 export class ScheduleOwnAppointment {
   constructor(
     private readonly patients: PatientRepository,
-    private readonly appointments: AppointmentRepository,
     private readonly procedures: ProcedureRepository,
     private readonly followUps: FollowUpRepository,
-    private readonly scheduleConfig?: ScheduleConfigRepository,
-    private readonly availability?: ScheduleAvailabilityRepository,
+    private readonly transactions: TransactionManager,
   ) {}
 
   async execute(input: ScheduleOwnAppointmentInput): Promise<Appointment> {
@@ -62,31 +58,43 @@ export class ScheduleOwnAppointment {
     // Limites anti-abuso (#213): valem aqui, não só na UI, porque o POST é
     // alcançável direto. Uma consulta sem profissional bloqueia a agenda toda.
     assertWithinPortalHorizon(input.startsAt, now);
-    assertUnderPortalFutureCap(
-      await this.appointments.findByPatientId(patient.id, { endsAfter: now }),
-      now,
-    );
 
     const followUp = await this.resolveOwnFollowUp(
       input.followUpId ?? null,
       patient.id,
     );
 
-    const appointment = await new ScheduleAppointment(
-      this.appointments,
-      this.patients,
-      this.scheduleConfig,
-      this.availability,
-    ).execute({
-      patientId: patient.id,
-      startsAt: input.startsAt,
-      endsAt: new Date(
-        input.startsAt.getTime() + procedure.durationMinutes * MINUTE_MS,
-      ),
-      procedure: procedure.name,
-      priceCents: procedure.priceCents,
-      procedureId: procedure.id,
-    });
+    const appointment = await this.transactions.run(
+      async ({
+        patients,
+        appointments,
+        scheduleConfig,
+        scheduleAvailability,
+      }) => {
+        // Tranca o paciente (#363): contar e gravar viram um passo só, então
+        // envios simultâneos esperam em fila e o teto vale para todos.
+        await patients.findByIdForUpdate(patient.id);
+        assertUnderPortalFutureCap(
+          await appointments.findByPatientId(patient.id, { endsAfter: now }),
+          now,
+        );
+        return new ScheduleAppointment(
+          appointments,
+          patients,
+          scheduleConfig,
+          scheduleAvailability,
+        ).execute({
+          patientId: patient.id,
+          startsAt: input.startsAt,
+          endsAt: new Date(
+            input.startsAt.getTime() + procedure.durationMinutes * MINUTE_MS,
+          ),
+          procedure: procedure.name,
+          priceCents: procedure.priceCents,
+          procedureId: procedure.id,
+        });
+      },
+    );
 
     // Só sai da pendência depois que a consulta existe (PORT4-06).
     if (followUp && followUp.status === 'pending') {

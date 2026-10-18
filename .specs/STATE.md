@@ -229,6 +229,9 @@ Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-202
 ### AD-050
 - **Decision**: os textos LGPD da #216 saem da prévia e ficam **ligados ao sistema** (@KalleoPinheiro, 2026-10-18: "cubra todas as informações necessárias e feche essa etapa, a revisão será feita por profissional da área"), supersede AD-045. Pendências do § 7 fechadas pela opção mais segura (tabela em `docs/legal/textos-lgpd.md` § 3): termo de **imagem à parte** (`purpose`), encarregado por clínica com queda no contato da clínica, hash do texto-base + `controller_snapshot`, aviso público `/privacidade`, rodapé de privacidade nos e-mails. **Trade-off**: aceites antigos viram `treatment` e o paciente reaceita o TCLE `v2` e o de imagem; revisão jurídica ainda pendente, sinalizada por `LEGAL_REVIEW_PENDING`. [ADR-030](../docs/adr/030-textos-lgpd-ligados-sem-revisao-juridica.md), PRO-RN-23, POR-RN-25, ACE-RN-58, COM-RN-20 · 2026-10-18 · active
 
+### AD-051
+- **Decision**: o teto de consultas futuras e a cota diária de fotos do portal (#363, follow-up da #213) são **atômicos por paciente**: contagem e gravação rodam na mesma transação, que tranca a linha do paciente (`SELECT … FOR UPDATE`). Escolhido, com a autonomia delegada por @KalleoPinheiro (2026-10-18), em vez de restrição no banco (o limite é janela móvel de 24 h e inclui consultas da equipe, que não cabem em `UNIQUE`/`CHECK`) e de lock distribuído (Postgres já basta). **Trade-off**: envios do mesmo paciente passam a ser em fila (só dele); a foto vai ao storage dentro da transação, então um commit que falhe deixa no máximo um arquivo órfão, nunca linha sem arquivo. POR-RN-17 · 2026-10-18 · active
+
 ### Baseline de segurança medido em `fcd6110`
 Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/engineering/security-scan.md).
 

@@ -15,6 +15,7 @@ import {
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 import { portalPatientId } from '../support/portal-identity';
+import { noTransaction } from '../support/transaction-scope';
 
 // 2026-07-20 = segunda; 2026-07-25 = sábado. Testes rodam com TZ=UTC.
 describe('Feature: Horários disponíveis para o paciente agendar (PORT4-01..03)', () => {
@@ -225,9 +226,9 @@ describe('Feature: Paciente agenda o próprio retorno (PORT4-04..07)', () => {
   ) =>
     new ScheduleOwnAppointment(
       patientRepo,
-      appointmentRepo,
       procedureRepo,
       followUpRepo,
+      noTransaction({ patients: patientRepo, appointments: appointmentRepo }),
     ).execute({
       patientId: await portalPatientId(
         patientRepo,
@@ -264,10 +265,13 @@ describe('Feature: Paciente agenda o próprio retorno (PORT4-04..07)', () => {
     await expect(
       new ScheduleOwnAppointment(
         patientRepo,
-        appointmentRepo,
         procedureRepo,
         followUpRepo,
-        scheduleConfig,
+        noTransaction({
+          patients: patientRepo,
+          appointments: appointmentRepo,
+          scheduleConfig,
+        }),
       ).execute({
         patientId: await portalPatientId(patientRepo, 'maria@example.com'),
         procedureId: curativo.id,
@@ -283,9 +287,9 @@ describe('Feature: Paciente agenda o próprio retorno (PORT4-04..07)', () => {
     await expect(
       new ScheduleOwnAppointment(
         patientRepo,
-        appointmentRepo,
         procedureRepo,
         followUpRepo,
+        noTransaction({ patients: patientRepo, appointments: appointmentRepo }),
       ).execute({
         patientId: await portalPatientId(patientRepo, 'maria@example.com'),
         procedureId: curativo.id,

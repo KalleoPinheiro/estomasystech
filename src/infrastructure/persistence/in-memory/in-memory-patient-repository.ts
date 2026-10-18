@@ -16,6 +16,10 @@ export class InMemoryPatientRepository implements PatientRepository {
     return this.patients.get(id) ?? null;
   }
 
+  findByIdForUpdate(id: string): Promise<Patient | null> {
+    return this.findById(id);
+  }
+
   /** Repositório in-memory não é tenant-aware — usado só em testes de camada de aplicação. */
   async findClinicIdById(): Promise<string | null> {
     return null;

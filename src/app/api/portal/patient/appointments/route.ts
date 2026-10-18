@@ -29,11 +29,9 @@ export async function POST(request: NextRequest) {
 
     const appointment = await new ScheduleOwnAppointment(
       services.patients,
-      services.appointments,
       services.procedures,
       services.followUps,
-      services.scheduleConfig,
-      services.scheduleAvailability,
+      services.transactions,
     ).execute({
       patientId: (await resolvePortalPatient(services, session)).id,
       procedureId: body.procedureId,

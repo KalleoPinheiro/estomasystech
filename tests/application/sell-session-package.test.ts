@@ -19,6 +19,7 @@ import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memo
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { inMemoryScope } from '../support/transaction-scope';
 
 describe('Feature: Venda de pacote de sessões (SellSessionPackage)', () => {
   let patients: InMemoryPatientRepository;
@@ -30,14 +31,14 @@ describe('Feature: Venda de pacote de sessões (SellSessionPackage)', () => {
   beforeEach(async () => {
     patients = new InMemoryPatientRepository();
     procedures = new InMemoryProcedureRepository();
-    scope = {
+    scope = inMemoryScope({
       appointments: new InMemoryAppointmentRepository(),
       invoices: new InMemoryInvoiceRepository(),
       followUps: new InMemoryFollowUpRepository(),
       sessionPackages: new InMemorySessionPackageRepository(),
       userAccounts: new InMemoryUserAccountRepository(),
       auditEvents: new InMemoryAuditEventRepository(),
-    };
+    });
     maria = await new CreatePatient(patients).execute({
       fullName: 'Maria da Silva',
       email: 'maria@example.com',

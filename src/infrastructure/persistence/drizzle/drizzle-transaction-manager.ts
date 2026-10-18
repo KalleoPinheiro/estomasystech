@@ -6,10 +6,19 @@ import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { DrizzleAppointmentRepository } from './drizzle-appointment-repository';
 import { DrizzleAuditEventRepository } from './drizzle-audit-event-repository';
-import { DrizzleUserAccountRepository } from './drizzle-foundation-repositories';
+import {
+  DrizzleClinicalConditionRepository,
+  DrizzleConditionPhotoRepository,
+} from './drizzle-clinical-repositories';
+import {
+  DrizzleScheduleConfigRepository,
+  DrizzleUserAccountRepository,
+} from './drizzle-foundation-repositories';
 import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
+import { DrizzlePatientRepository } from './drizzle-patient-repository';
+import { DrizzleScheduleAvailabilityRepository } from './drizzle-schedule-availability-repository';
 
 /**
  * Unidade de trabalho sobre `db.transaction` do Drizzle: os repositórios do
@@ -36,6 +45,22 @@ export class DrizzleTransactionManager implements TransactionManager {
         sessionPackages: new DrizzleSessionPackageRepository(tx, this.clinicId),
         userAccounts: new DrizzleUserAccountRepository(tx, this.clinicId),
         auditEvents: new DrizzleAuditEventRepository(tx, this.clinicId),
+        patients: new DrizzlePatientRepository(tx, this.clinicId, this.cipher),
+        scheduleConfig: new DrizzleScheduleConfigRepository(tx, this.clinicId),
+        scheduleAvailability: new DrizzleScheduleAvailabilityRepository(
+          tx,
+          this.clinicId,
+        ),
+        conditions: new DrizzleClinicalConditionRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        conditionPhotos: new DrizzleConditionPhotoRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
       }),
     );
   }

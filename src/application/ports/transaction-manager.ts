@@ -2,14 +2,24 @@ import type { AuditEventRepository } from '@/domain/audit/audit-event-repository
 import type { UserAccountRepository } from '@/domain/auth/user-account';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
+import type {
+  ClinicalConditionRepository,
+  ConditionPhotoRepository,
+} from '@/domain/clinical/clinical-repositories';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
+import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
+import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
+import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 
 /**
  * Repositórios disponíveis dentro de uma transação — escopo enxuto, apenas o
  * que a conclusão de consulta usa (YAGNI); cresce quando outro fluxo precisar.
  * `userAccounts`/`auditEvents` entraram pelo convite de admin da plataforma
  * (#243): a conta nova e o evento de auditoria gravam juntos ou nada grava.
+ * `patients` (com `findByIdForUpdate`), agenda e fotos entraram com o teto
+ * atômico do portal (#363): tudo que o fluxo lê dentro da transação precisa vir
+ * do escopo — usar o repositório de fora trava o PGlite (conexão única).
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -18,6 +28,11 @@ export interface TransactionScope {
   sessionPackages: SessionPackageRepository;
   userAccounts: UserAccountRepository;
   auditEvents: AuditEventRepository;
+  patients: PatientRepository;
+  scheduleConfig: ScheduleConfigRepository;
+  scheduleAvailability: ScheduleAvailabilityRepository;
+  conditions: ClinicalConditionRepository;
+  conditionPhotos: ConditionPhotoRepository;
 }
 
 /**
