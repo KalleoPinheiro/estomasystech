@@ -1221,3 +1221,12 @@ Pedido de @KalleoPinheiro: "cubra todas as informações necessárias e feche es
 - **Pendências humanas antes de paciente real**: revisão jurídica dos cinco textos; mecanismo do art. 33 para Resend/Google; ato do ANPD/encarregado formal.
 - **Limite**: menor de idade não aceita no portal; assinatura do representante segue em papel, sem registro no sistema.
 - **Next step**: nenhum técnico. **Blockers**: revisão jurídica (externa).
+
+## Issue #363 — Teto atômico dos limites do portal (2026-10-18) — ENCERRADO
+
+Follow-up da #213: contar e gravar eram passos separados e envios simultâneos do mesmo paciente passavam do teto em 1 ou 2 (AD-051, POR-RN-17). Sem migração e sem ADR novo.
+- **Código**: `PatientRepository.findByIdForUpdate` (`SELECT … FOR UPDATE`); `TransactionScope` ganhou `patients`, `scheduleConfig`, `scheduleAvailability`, `conditions`, `conditionPhotos`. `ScheduleOwnAppointment` (agora com `TransactionManager`) tranca o paciente, confere o teto e cria a consulta no mesmo passo; novo `AddOwnConditionPhoto` faz o mesmo com a cota de fotos (a rota usa ele).
+- **Testes**: concorrência real com `RowLockingTransactionManager` (imita o lock de linha em memória; sem ele o in-memory não reproduz a corrida) para consultas e fotos, mais teste SQL de que o `FOR UPDATE` é emitido (o PGlite tem uma conexão só e serializa, mesma estratégia da #192).
+- **Decisão**: lock de linha em vez de restrição no banco (janela móvel de 24 h e consultas da equipe não cabem em `UNIQUE`/`CHECK`) e de lock distribuído. A foto vai ao storage dentro da transação: commit falho deixa no máximo um arquivo órfão.
+- **Housekeeping**: arquivei AD-045 (substituída pelo AD-050) em `decisions-2026.md` para o `STATE.md` caber em 250 linhas.
+- **Next step**: nenhum. **Blockers**: nenhum.

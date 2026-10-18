@@ -10,8 +10,8 @@ const DAY_MS = 86_400_000;
 /**
  * Cota de fotos do paciente no portal (#213): no máximo
  * `PATIENT_MAX_PHOTOS_PER_DAY` nas últimas 24 h, somando todas as condições.
- * Contagem e gravação não são atômicas: envios simultâneos podem passar do
- * teto por uma ou duas fotos — o limite contém abuso, não é contábil.
+ * Só conta: a atomicidade com a gravação vem de `AddOwnConditionPhoto`, que
+ * chama isto dentro da transação com o paciente trancado (#363).
  */
 export async function assertPatientPhotoQuota(
   conditions: ClinicalConditionRepository,

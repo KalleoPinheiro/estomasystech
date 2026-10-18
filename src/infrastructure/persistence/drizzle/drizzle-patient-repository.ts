@@ -72,6 +72,16 @@ export class DrizzlePatientRepository implements PatientRepository {
     return rows[0] ? toPatient(rows[0], this.cipher) : null;
   }
 
+  async findByIdForUpdate(id: string): Promise<Patient | null> {
+    const rows = await this.db
+      .select()
+      .from(patients)
+      .where(withTenant(patients, this.clinicId, eq(patients.id, id)))
+      .limit(1)
+      .for('update');
+    return rows[0] ? toPatient(rows[0], this.cipher) : null;
+  }
+
   async findByIds(ids: string[]): Promise<Patient[]> {
     const unique = [...new Set(ids)];
     if (unique.length === 0) {

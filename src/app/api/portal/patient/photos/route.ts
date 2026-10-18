@@ -1,6 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { AddConditionPhoto } from '@/application/clinical/add-condition-photo';
-import { assertPatientPhotoQuota } from '@/application/portal/assert-photo-quota';
+import { AddOwnConditionPhoto } from '@/application/portal/add-own-condition-photo';
 import { resolvePortalPatient } from '@/application/portal/portal-identity';
 import { MAX_PHOTO_BYTES } from '@/domain/clinical/condition-photo';
 import { ConsentRecord } from '@/domain/consent/consent-record';
@@ -46,10 +45,10 @@ export async function POST(request: NextRequest) {
     const services = await getRepositories(writeScope(session));
     const {
       conditions,
-      conditionPhotos,
       consentRecords,
       photoStorage,
       auditEvents,
+      transactions,
     } = services;
 
     // Sem titular vinculado, a resposta é a mesma de condição alheia (404).
@@ -79,17 +78,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cota diária (#213): checada depois do consentimento e antes de gravar.
-    await assertPatientPhotoQuota(conditions, conditionPhotos, patient.id);
-
-    const photo = await new AddConditionPhoto(
-      conditionPhotos,
-      conditions,
+    // Cota diária (#213): conferida e gravada na mesma transação (#363),
+    // depois do consentimento.
+    const photo = await new AddOwnConditionPhoto(
       photoStorage,
+      transactions,
     ).execute({
+      patientId: patient.id,
       conditionId,
       data: new Uint8Array(await file.arrayBuffer()),
-      origin: 'patient',
       patientNote: typeof note === 'string' && note ? note.slice(0, 500) : null,
     });
 

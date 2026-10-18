@@ -11,6 +11,13 @@ export interface PatientPage {
 export interface PatientRepository {
   save(patient: Patient): Promise<void>;
   findById(id: string): Promise<Patient | null>;
+  /**
+   * Como `findById`, mas tranca a linha (`SELECT … FOR UPDATE`) até o fim da
+   * transação: serializa os fluxos do mesmo paciente que contam antes de gravar
+   * (limites anti-abuso do portal, #363). Fora de transação o lock some ao fim
+   * da própria leitura.
+   */
+  findByIdForUpdate(id: string): Promise<Patient | null>;
   findByIds(ids: string[]): Promise<Patient[]>;
   findByReferrer(partnerId: string): Promise<Patient[]>;
   /** Pacientes ligados a um responsável (#329); base da regra de exclusão. */

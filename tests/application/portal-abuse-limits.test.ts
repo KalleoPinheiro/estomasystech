@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { CreateCondition } from '@/application/clinical/create-condition';
 import { CreatePatient } from '@/application/patients/create-patient';
+import { AddOwnConditionPhoto } from '@/application/portal/add-own-condition-photo';
 import { assertPatientPhotoQuota } from '@/application/portal/assert-photo-quota';
 import { ListAvailableSlots } from '@/application/portal/list-available-slots';
 import { RescheduleOwnAppointment } from '@/application/portal/reschedule-own-appointment';
@@ -26,6 +27,10 @@ import {
 import { InMemoryProcedureRepository } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import {
+  noTransaction,
+  RowLockingTransactionManager,
+} from '../support/transaction-scope';
 
 // Limites anti-abuso do portal (#213). Testes rodam com TZ=UTC; o relógio é
 // injetado, então as datas não envelhecem.
@@ -49,6 +54,7 @@ describe('Feature: Limites anti-abuso do autoagendamento (#213)', () => {
   let curativo: Procedure;
 
   beforeEach(async () => {
+    locking = undefined;
     patients = new InMemoryPatientRepository();
     appointments = new InMemoryAppointmentRepository();
     procedures = new InMemoryProcedureRepository();
@@ -77,9 +83,29 @@ describe('Feature: Limites anti-abuso do autoagendamento (#213)', () => {
   const scheduleOwn = (startsAt: Date) =>
     new ScheduleOwnAppointment(
       patients,
-      appointments,
       procedures,
       new InMemoryFollowUpRepository(),
+      noTransaction({ patients, appointments }),
+    ).execute({
+      patientId: maria.id,
+      procedureId: curativo.id,
+      startsAt,
+      now,
+    });
+
+  // Uma instância só: o lock de linha vive no gerenciador, como no Postgres.
+  let locking: RowLockingTransactionManager | undefined;
+  const lockingTransactions = () => {
+    locking ??= new RowLockingTransactionManager({ patients, appointments });
+    return locking;
+  };
+
+  const scheduleOwnConcurrently = (startsAt: Date) =>
+    new ScheduleOwnAppointment(
+      patients,
+      procedures,
+      new InMemoryFollowUpRepository(),
+      lockingTransactions(),
     ).execute({
       patientId: maria.id,
       procedureId: curativo.id,
@@ -121,6 +147,45 @@ describe('Feature: Limites anti-abuso do autoagendamento (#213)', () => {
       await scheduleOwn(at(2));
 
       await expect(scheduleOwn(at(3))).resolves.toBeDefined();
+    });
+  });
+
+  describe('Atomicidade do teto (#363)', () => {
+    it('Dado o paciente sem consultas, Quando 5 agendamentos chegam ao mesmo tempo, Então só o teto é criado e os demais são rejeitados', async () => {
+      const results = await Promise.allSettled(
+        [1, 2, 3, 4, 5].map((day) => scheduleOwnConcurrently(at(day))),
+      );
+
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(
+        PORTAL_MAX_FUTURE_APPOINTMENTS,
+      );
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(rejected).toHaveLength(5 - PORTAL_MAX_FUTURE_APPOINTMENTS);
+      for (const r of rejected) {
+        expect(r.reason).toBeInstanceOf(ValidationError);
+        expect(r.reason.message).toMatch(/já tem 2 consultas futuras/);
+      }
+      expect(await appointments.findByPatientId(maria.id)).toHaveLength(
+        PORTAL_MAX_FUTURE_APPOINTMENTS,
+      );
+    });
+
+    it('Dado uma consulta futura, Quando 3 agendamentos chegam juntos, Então só mais uma é criada', async () => {
+      await scheduleOwn(at(1));
+
+      const results = await Promise.allSettled(
+        [2, 3, 4].map((day) => scheduleOwnConcurrently(at(day))),
+      );
+
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      expect(await appointments.findByPatientId(maria.id)).toHaveLength(2);
+    });
+
+    it('Dado agendamento rejeitado por conflito de horário, Quando outro chega depois, Então o lock foi liberado e ele é atendido', async () => {
+      await scheduleOwnConcurrently(at(1));
+      await expect(scheduleOwnConcurrently(at(1))).rejects.toThrow();
+
+      await expect(scheduleOwnConcurrently(at(2))).resolves.toBeDefined();
     });
   });
 
@@ -283,5 +348,73 @@ describe('Feature: Cota diária de fotos do paciente (#213)', () => {
     await expect(
       assertPatientPhotoQuota(conditions, photos, other.id, now),
     ).resolves.toBeUndefined();
+  });
+
+  describe('Atomicidade da cota (#363)', () => {
+    const PNG_BYTES = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    // O relógio do envio é o real (as fotos novas nascem com `new Date()`),
+    // então as já enviadas são semeadas relativas a ele.
+    let stored: Set<string>;
+    let upload: (condition: ClinicalCondition) => Promise<ConditionPhoto>;
+
+    beforeEach(() => {
+      stored = new Set();
+      const storage = {
+        write: async (id: string) => {
+          stored.add(id);
+        },
+        read: async () => null,
+        remove: async (id: string) => {
+          stored.delete(id);
+        },
+      };
+      const transactions = new RowLockingTransactionManager({
+        patients,
+        conditions,
+        conditionPhotos: photos,
+      });
+      upload = (condition) =>
+        new AddOwnConditionPhoto(storage, transactions).execute({
+          patientId: maria.id,
+          conditionId: condition.id,
+          data: PNG_BYTES,
+        });
+    });
+
+    it(`Dado ${PATIENT_MAX_PHOTOS_PER_DAY - 2} fotos nas últimas 24 h, Quando 6 envios chegam ao mesmo tempo, Então só 2 passam, ficam gravadas e no storage`, async () => {
+      await sendPhotos(ferida.id, PATIENT_MAX_PHOTOS_PER_DAY - 2, {
+        createdAt: new Date(Date.now() - 3_600_000),
+      });
+      const before = stored.size;
+
+      const results = await Promise.allSettled(
+        Array.from({ length: 6 }, (_, i) =>
+          upload(i % 2 === 0 ? ferida : estomia),
+        ),
+      );
+
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(2);
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(rejected).toHaveLength(4);
+      for (const r of rejected) {
+        expect(r.reason).toBeInstanceOf(ValidationError);
+        expect(r.reason.message).toMatch(/já enviou 10 fotos/);
+      }
+      expect(stored.size - before).toBe(2);
+      await expect(
+        assertPatientPhotoQuota(conditions, photos, maria.id),
+      ).rejects.toThrow(/já enviou 10 fotos/);
+    });
+
+    it('Dado a cota cheia, Quando o envio é rejeitado, Então nada vai ao storage', async () => {
+      await sendPhotos(ferida.id, PATIENT_MAX_PHOTOS_PER_DAY, {
+        createdAt: new Date(Date.now() - 3_600_000),
+      });
+
+      await expect(upload(ferida)).rejects.toThrow(ValidationError);
+      expect(stored.size).toBe(0);
+    });
   });
 });
