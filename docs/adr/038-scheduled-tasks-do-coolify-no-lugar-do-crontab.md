@@ -42,4 +42,5 @@ das fotos (`uploads`) entrar no ar.
 - O alerta "job de lembretes sem rodar" (26 h) do app continua sendo a rede de segurança dos lembretes.
 - Se a tarefa de alertas parar junto com o app, só o UptimeRobot avisa: por isso ele monitora o
   `/api/health/ready` de fora.
+- **Nota de 2026-10-18 (ADR-040):** o backup virou um timer do systemd do host às 02:00, cifrado (`age`), e não o do Coolify das 03:00 citado acima. A retenção às 03:30 segue depois dele (1 h 30 de folga), então o `flock` continua desnecessário. O `msmtp` existe no host só para o alerta do backup.
 - Mudou o segredo `CRON_SECRET`: troca no Coolify e *Deploy*; nenhuma tarefa precisa ser editada.
