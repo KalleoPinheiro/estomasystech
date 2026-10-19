@@ -7,14 +7,14 @@
 # Roteiro: docs/engineering/producao.md § 9.
 services:
   glitchtip-db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: glitchtip
       POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:?defina GLITCHTIP_DB_PASSWORD (ex. openssl rand -hex 24)}
       POSTGRES_DB: glitchtip
     volumes:
-      - glitchtip_pgdata:/var/lib/postgresql/data
+      - glitchtip_pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U glitchtip -d glitchtip"]
       interval: 5s

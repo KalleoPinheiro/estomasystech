@@ -14,8 +14,9 @@ related:
 
 > **Este documento é de desenvolvimento local.** Produção roda no Coolify (Dockerfile + PostgreSQL 18
 > gerenciado, deploy manual): estado atual, release e rollback em
-> [`producao.md`](producao.md) § 0 e § 3.1. Localmente o compose ainda sobe Postgres 16
-> ([ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) decide alinhar a 18).
+> [`producao.md`](producao.md) § 0 e § 3.1. Localmente o compose sobe o mesmo major
+> (Postgres 18, [ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md)). Quem tem um volume `pgdata` criado
+> com Postgres 16 precisa recriá-lo: `docker compose down -v` (apaga o banco local) ou dump/restore antes da troca.
 
 > **TL;DR (5 min):** `cp .env.example .env` → preencha `POSTGRES_PASSWORD`, `AUTH_SECRET`,
 > `DATA_ENCRYPTION_KEY`, `ESTOMASYSTECH_BOOTSTRAP_TOKEN` → `docker compose up -d --build` → `POST /api/auth/bootstrap` → abra o
@@ -45,7 +46,7 @@ related:
 
 ## 2. Via A — Docker Compose (recomendado)
 
-Sobe Postgres 16 + app. Migrações rodam no boot (advisory lock, seguro com réplicas).
+Sobe Postgres 18 + app. Migrações rodam no boot (advisory lock, seguro com réplicas).
 
 ```bash
 cp .env.example .env
