@@ -149,12 +149,18 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
     PostgreSQL 18 (`postgres:18-alpine`) do próprio Coolify (sem porta pública) com a `DATABASE_URL` interna no app.
   - **Compose** (`docker-compose.yml:docker-compose.prod.yml`): app e banco sem porta no host;
     o domínio entra na variável mágica `SERVICE_FQDN_APP_3000` do recurso.
-- **Middlewares do Traefik** (arquivo `shared-middlewares.yaml` do proxy): `rate-limit-app`,
-  `rate-limit-strict` e `security-headers`. Referencie-os em "Custom Labels" do recurso (ou na
-  label `coolify.traefik.middlewares`, já posta no compose de produção) com o sufixo `@file`,
-  ex.: `coolify.traefik.middlewares=rate-limit-app@file,security-headers@file`. Use
-  `rate-limit-strict@file` numa rota própria para `/api/auth/*`, se for separada.
-  O rate limit do app (`TRUSTED_PROXY_HOPS`) continua valendo por conta.
+- **Middlewares do Traefik** (arquivo `shared-middlewares.yaml` do proxy): `rate-limit-app`
+  (média 20/s, rajada 60, por IP), `rate-limit-strict` (média 5/s, rajada 10) e `security-headers`
+  (`frameDeny` e `nosniff`, redundante com o app). **Existir no arquivo não liga nada**: o recurso
+  precisa referenciá-los nas labels. Em produção o recurso usa *Label management = Managed manually*
+  (a label persiste entre deploys, mas mudanças de domínio ou porta no Coolify deixam de regenerar
+  as labels: edite-as à mão) e o roteador https está com
+  `traefik.http.routers.https-0-<id>.middlewares=gzip,0-<id>-noindex,rate-limit-app@file`
+  (o `<id>` é o do recurso; o http segue `0-<id>-noindex,redirect-to-https`). Verificado em
+  2026-10-19 com rajada de 300 requisições (60 em paralelo): antes 300/300 `200`; depois
+  104/300 `429` em `/login` e 219/300 `429` em `/api/health`. Use `rate-limit-strict@file` numa
+  rota própria para `/api/auth/*`, se for separada (não no roteador geral). As labels `caddy_*`
+  do Coolify são inertes com Traefik. O rate limit do app (`TRUSTED_PROXY_HOPS`) continua valendo.
 - **Checklist de deploy no Coolify (Dockerfile)** — verificado contra o código em 2026-10-18:
   - *Imagem*: `Dockerfile` já roda como `nextjs` (não-root), `PORT=3000`, `HOSTNAME=0.0.0.0`,
     `HEALTHCHECK` em `/api/health` (liveness, sem banco) e `TZ`/`APP_TIMEZONE=America/Sao_Paulo`.
@@ -192,7 +198,8 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
     desligados "Use Git LFS" e "Include Git Submodules" (menos superfície no clone do deploy).
   - *Rótulo dos middlewares*: confira em *Configuration → General → Custom Labels* (ou na aba
     *Advanced*) que existe `traefik.http.routers.<router>.middlewares=rate-limit-app@file,security-headers@file`
-    (o Coolify também aceita `coolify.traefik.middlewares`). Prova pela resposta, § 9.6.
+    (o Coolify também aceita `coolify.traefik.middlewares`). Leia as labels reais do container com
+    `docker inspect` (§ 9.6) e prove pela resposta.
 - O cookie de sessão é `Secure` em produção: **login não funciona por HTTP** fora de `localhost`.
 - `APP_URL` precisa ser `https://…` (compõe os links de convite/reset e o redirect da agenda).
 - O app lê o IP do cliente contando `TRUSTED_PROXY_HOPS` saltos a partir do fim do
@@ -847,7 +854,7 @@ dado de paciente. Substitua `U=https://estomasystech.kalleopinheiro.com.br`.
 | demais cabeçalhos | `curl -sI $U/login` | `x-frame-options`, `x-content-type-options`, `referrer-policy`, `cross-origin-opener-policy` e `cross-origin-resource-policy` presentes, sem duplicar a CSP |
 | rotas de job fechadas | `curl -s -o /dev/null -w '%{http_code}' -X POST $U/api/alerts/run` (sem `x-cron-secret`) | `401` (`503` significa `CRON_SECRET` ausente; `200` seria falha grave) |
 | cookies | DevTools → Application → Cookies, depois de um login | cookie de sessão com `Secure`, `HttpOnly` e `SameSite` (exige login: não faz parte da fumaça sem conta) |
-| rate limit | leia o limite de `rate-limit-app` em `shared-middlewares.yaml` do proxy e exceda-o com `GET` em `/api/health` | `429` ao passar do limite; se nunca vier, o rótulo do § 3 não está aplicado ao recurso |
+| rate limit | rajada paralela, ≥ 300 requisições com 60 simultâneas (o `rate-limit-app` é 20/s com rajada 60; um laço sequencial de `curl` fica abaixo disso e **não** dispara): `seq 1 300 \| xargs -P 60 -I{} curl -s -o /dev/null -w '%{http_code}\n' $U/login \| sort \| uniq -c` | dezenas de `429` (em 2026-10-19: 104 em `/login`, 219 em `/api/health`); só `200` = o roteador não referencia `rate-limit-app@file` (confira com `sudo docker inspect <container> --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{println}}{{end}}' \| grep middlewares`) |
 | imagem | *Deployments* do Coolify | SHA igual ao esperado e `healthy` |
 
 Sem o login, os itens que dependem de sessão (lembretes, evento `retention` na auditoria) se
