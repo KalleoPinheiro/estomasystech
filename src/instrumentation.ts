@@ -8,6 +8,8 @@ import type { Instrumentation } from 'next';
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { startRuntimeGuards } = await import('@/lib/runtime-guards');
+    await startRuntimeGuards();
     const { enforceProcessTimeZone } = await import('@/lib/app-timezone');
     await enforceProcessTimeZone();
     const { warmUpDatabase } = await import(

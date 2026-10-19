@@ -31,3 +31,19 @@ describe('Feature: Corpo máximo do proxy (issue #213)', () => {
     expect(6 * 1024 * 1024).toBeGreaterThan(MAX_PHOTO_BYTES);
   });
 });
+
+describe('Feature: noindex em homologação (ADR-041)', () => {
+  it('Dado APP_ENV=staging, Então o next.config acrescenta X-Robots-Tag', async () => {
+    const { vi } = await import('vitest');
+    vi.resetModules();
+    vi.stubEnv('APP_ENV', 'staging');
+    const config = (await import('../next.config')).default;
+    const rules = await config.headers?.();
+    expect(rules?.[0].headers).toContainEqual({
+      key: 'X-Robots-Tag',
+      value: 'noindex, nofollow',
+    });
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+});

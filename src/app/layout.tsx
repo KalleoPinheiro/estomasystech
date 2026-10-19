@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import { StagingBanner } from '@/components/staging-banner';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -55,6 +56,7 @@ export default function RootLayout({
       {/* sv-body é o seletor base do Still Void: background, cor, família,
           escala tipográfica e antialiasing vêm todos do design system. */}
       <body className="sv-body min-h-screen">
+        <StagingBanner />
         <Providers>{children}</Providers>
       </body>
     </html>

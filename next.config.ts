@@ -28,6 +28,11 @@ export const SECURITY_HEADERS = [
  */
 export const PROXY_CLIENT_MAX_BODY_SIZE = "6mb";
 
+/** Homologação e preview não aparecem em buscadores (ADR-041). */
+export const NOINDEX_HEADER = { key: "X-Robots-Tag", value: "noindex, nofollow" };
+
+const isHomologation = ["staging", "preview"].includes(process.env.APP_ENV ?? "");
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   // Issue #219: não anuncia `X-Powered-By: Next.js` em toda resposta.
@@ -40,7 +45,12 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   serverExternalPackages: ["pg", "@electric-sql/pglite", "googleapis"],
   async headers() {
-    return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
+    return [
+      {
+        source: "/(.*)",
+        headers: isHomologation ? [...SECURITY_HEADERS, NOINDEX_HEADER] : SECURITY_HEADERS,
+      },
+    ];
   },
 };
 

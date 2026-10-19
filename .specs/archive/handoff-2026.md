@@ -1410,3 +1410,14 @@ Pedido do Kalléo: escolher ferramenta de observabilidade (GitHub Student Pack) 
 - **Docs**: `producao.md` § 0, § 1, rotação e § 9.5 reescrito; `integrations/glitchtip.md`.
 - **Kalléo**: 2FA do operador, regra de e-mail em *Settings → Alerts*, resolver a issue de teste; opcional trocar a Client Key (o DSN apareceu no chat).
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+
+## Homologação na Vercel, MSW, faker e branch `staging` (2026-10-19) — EM REVISÃO
+
+Pedido do Kalléo na thread "ambiente de desenvolvimento na Vercel". Spec: `.specs/features/homologacao-vercel/` (design, plano). ADR-041, AD-055.
+- **Feito**: `APP_ENV` + trava de banco de produção (`src/lib/runtime-env.ts`, `runtime-guards.ts`, `db.ts`); MSW para Resend, Google e S3/R2 (`src/infrastructure/mocks/`, ligado por `MOCK_INTEGRATIONS=true` em `instrumentation.ts`); faixa de homologação e `noindex`; `scripts/vercel-build.ts` (migra, semeia, builda) e `vercel.json`; seed faker determinístico e idempotente (`scripts/seed/`, `npm run seed:staging`); `scripts/staging/rebuild.sh` e `staging.yml`; docs (`homologacao.md`, `producao.md` § 2, `cron.md`, onboarding, `.env.example`, `docs/README.md`, AGENTS.md).
+- **Dependências**: `@faker-js/faker@10.6.0` e `msw@3.0.3`, versões exatas, `npm audit` sem achado novo (os 4 moderados de `drizzle-kit`/`esbuild` já existiam na `main`). Nunca o pacote `faker` sem escopo. O lockfile foi gerado com npm 11 (o npm 10 quebra no Arborist); só acrescenta entradas.
+- **Painel (Kalléo)**: projeto Vercel com Production Branch `staging`, Neon + integração por preview, variáveis e Deployment Protection (`homologacao.md` § 5), proteger a branch `staging`. Nada foi criado na Vercel/Neon por esta thread.
+- **Rollback**: remover o projeto na Vercel e a branch `staging`; produção não é afetada (sem migração de schema, sem mudança de comportamento com `APP_ENV` ausente fora da Vercel).
+- **Fora**: segundo fator pré-cadastrado no seed (o primeiro login cadastra); Supabase; domínio próprio.
+- **Next step**: Kalléo cumpre `homologacao.md` § 5 e confere o primeiro Preview. **Blockers**: nenhum.

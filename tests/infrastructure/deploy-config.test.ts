@@ -171,7 +171,7 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
     for (const section of [
       '## 1. Decisões',
       '## 2. Topologia e provisionamento',
-      '### Alternativa não adotada: Vercel + Supabase',
+      '### Homologação na Vercel (não é produção)',
       '## 3. TLS, URL pública e proxy',
       '## 4. Migrações',
       '## 5. Backup e restore',

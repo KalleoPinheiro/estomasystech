@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { logError } from '@/lib/log-error';
+import { assertNotProductionDatabase } from '@/lib/runtime-env';
 import * as schema from './schema';
 
 export type AppDb = PgDatabase<PgQueryResultHKT, typeof schema>;
@@ -75,6 +76,7 @@ async function createPostgresDb(): Promise<AppDb> {
   if (!connectionString) {
     throw new Error('DATABASE_URL não configurada');
   }
+  assertNotProductionDatabase(connectionString);
   const pool = new Pool({
     connectionString,
     max: intFromEnv('PG_POOL_MAX', 10),

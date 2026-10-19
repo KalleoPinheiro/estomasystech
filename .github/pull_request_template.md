@@ -12,3 +12,4 @@
 - [ ] Decisão difícil de reverter → ADR
 - [ ] Variável de ambiente nova → `docs/engineering/onboarding.md` § 4 **e** `.env.example`
 - [ ] `npm run check:docs` verde
+- [ ] Cenário novo (sucesso e erro) no seed de homologação `scripts/seed/seed.ts` (ou n/a)

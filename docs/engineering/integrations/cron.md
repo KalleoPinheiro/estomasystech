@@ -34,7 +34,7 @@ x-cron-secret: $CRON_SECRET
 ```
 
 Na produção (Coolify), uma Scheduled Task dentro do container chama a forma acima com `wget`, lendo `CRON_SECRET` e `APP_URL` do ambiente ([runbook](../producao.md) § 7, [ADR-038](../../adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md)). No formato compose, o `/etc/cron.d/estomasystech` do host faz o mesmo com `curl`.
-Ou, no formato do Vercel Cron (`vercel.json`, alternativa não adotada — runbook § 2):
+Ou, no formato do Vercel Cron (`vercel.json`, só homologação — ADR-041, [`homologacao.md`](../homologacao.md)):
 
 ```http
 GET /api/reminders/run

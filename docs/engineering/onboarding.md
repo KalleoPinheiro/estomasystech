@@ -118,6 +118,11 @@ npm run dev                   # http://localhost:3000
 | `APP_URL` | sim em produção | links de convite/reset, redirect do OAuth, link do recall | — |
 | `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | não | e-mail **da plataforma** (contas sem clínica: bootstrap e reset do Super Admin); cada clínica usa a chave que cadastra ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | [resend.md](integrations/resend.md) |
+| `APP_ENV` | obrigatória na Vercel | `production`, `staging`, `preview` ou `development` | ausente fora da Vercel: `NODE_ENV=production` é produção, o resto é desenvolvimento ([ADR-041](../adr/041-homologacao-na-vercel-e-branch-staging.md)) |
+| `MOCK_INTEGRATIONS` | não | `true` liga o MSW (Resend, Google, S3/R2 simulados) | recusado em `production` |
+| `PRODUCTION_DB_HOSTS` | homologação | hosts de banco de produção, separados por vírgula | `DATABASE_URL` com esse host é recusada fora de `production` |
+| `STAGING_SEED_PASSWORD` | `npm run seed:staging` | senha (≥ 10 caracteres) das contas fictícias | [homologacao.md](homologacao.md) § 4 |
+| `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | sync de agenda via OAuth (nunca login) | [google-calendar.md](integrations/google-calendar.md) |
