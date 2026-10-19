@@ -151,3 +151,17 @@ Resultado: **todas as rotas cumprem**; o `/slots` com 20 profissionais e 100 mil
 | Total das rotas, uso realista | 40 / 147 ms | 35 / 113 ms |
 
 Zero erro em todas as rodadas. O orçamento (p95 ≤ 500 ms) passa a ter folga de 6×. Sob saturação o `/slots` continua a rota mais cara porque cada requisição ainda lê e decifra as consultas do dia de todos os profissionais (a regra global sem profissional atribuído); só vale otimizar se o p95 realista voltar a passar de 300 ms.
+
+## 9. Produção na VPS (2026-10-19)
+
+Medição leve, só leitura, sem autenticação nem dado clínico: 8 req/s (abaixo dos 20/s do `rate-limit-app`), 60 s por rota, de um cliente em São Paulo contra `https://estomasystech.kalleopinheiro.com.br` (VPS em Falkenstein), um `curl` por requisição (inclui handshake TLS). Script: `scripts/load/prod-baseline.sh`.
+
+| Rota | n | p50 / p95 / p99 (ms) | Resposta |
+| --- | ---: | ---: | --- |
+| `/api/health` | 480 | 693 / 726 / 740 | 480 × `200` |
+| `/api/health/ready` | 480 | 692 / 710 / 733 | 135 × `200`, 345 × `429` |
+| `/login` | 480 | 895 / 908 / 929 | 480 × `200` |
+
+- **A latência é de rede, não do servidor.** O ≈ 700 ms de `/api/health` (que não toca o banco) é o piso de handshake TLS e três idas e voltas São Paulo–Alemanha; `/ready` (com banco) fica igual a ele, e `/login` soma ≈ 200 ms de renderização. Para medir o servidor, rode o gerador na própria VPS ou na mesma região.
+- **Os `429` em `/api/health/ready` vêm do app, não do Traefik.** `src/proxy.ts` limita `/api/*` a 120 requisições por minuto por IP (`API_RATE_LIMIT_MAX`) e isenta só a liveness `/api/health`; 8 req/s são 480 por minuto, e `135` respostas `200` batem com os 120 do limite mais as de uma janela que vira. O `/login` é página, fora desse limite. Consequência: um monitor externo a 1 req/min (UptimeRobot) fica muito abaixo; um teste de carga em rota `/api/*` precisa subir `API_RATE_LIMIT_MAX` ou ficar abaixo de 2 req/s.
+- O limite do Traefik (20/s, rajada 60) não foi tocado neste teste.
