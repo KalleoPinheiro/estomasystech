@@ -27,7 +27,7 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup agendado do banco pelo Coolify **desligado** em 2026-10-18 (era em claro; o cifrado do § 5 o substitui) |
 | Proxy | Traefik do Coolify, único na borda ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)); middlewares `rate-limit-app`, `rate-limit-strict` e `security-headers` (`@file`, sem CSP: o app usa nonce) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
-| Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18). O CI e os testes seguem em Postgres 16 |
+| Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18). Compose, CI e smoke rodam no mesmo major ([ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md)); os testes de unidade usam PGlite |
 | Variáveis | 9 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`. `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
 | Fotos | volume do Coolify em `/app/uploads` (uma réplica) |
 | Migrações | aplicadas no boot, com advisory lock; `/api/health/ready` responde `200` ([#384](https://github.com/KalleoPinheiro/estomasystech/pull/384)) |
@@ -481,15 +481,12 @@ que cabe.
 ### 5.3 Teste de restauração (mensal)
 
 Numa máquina descartável (o WSL do operador, com o repositório e Docker), sem tocar a produção.
-O banco do teste sobe em **Postgres 18**, o mesmo da produção: o `docker-compose.yml` ainda é 16
-([#385](https://github.com/KalleoPinheiro/estomasystech/issues/385)) e o `pg_restore` 16 não lê
-dump do 18; a imagem 18 guarda os dados em `/var/lib/postgresql` (não em `.../data`), por isso o
-override troca o volume. Os `read` são de bash (no zsh, rode `bash` antes). O download usa um token R2 **só de
+O banco do teste sobe em **Postgres 18**, o mesmo da produção (o `docker-compose.yml` é 18 desde a
+[#385](https://github.com/KalleoPinheiro/estomasystech/issues/385); um `pg_restore` de major menor não lê dump do 18). Os `read` são de bash (no zsh, rode `bash` antes). O download usa um token R2 **só de
 leitura** (não o do servidor), passado por variáveis de ambiente, sem arquivo:
 
 ```bash
-printf 'services:\n  db:\n    image: postgres:18-alpine\n    volumes: !override\n      - pgdata:/var/lib/postgresql\n' > /tmp/compose.restore-pg18.yml
-export COMPOSE_FILE=docker-compose.yml:/tmp/compose.restore-pg18.yml COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433 APP_URL=http://localhost:3100
+export COMPOSE_PROJECT_NAME=estomasystech-restore APP_PORT=3100 POSTGRES_PORT=5433 APP_URL=http://localhost:3100
 export POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 read -rsp "AUTH_SECRET: " AUTH_SECRET; echo; export AUTH_SECRET                       # de produção
 read -rsp "DATA_ENCRYPTION_KEY: " DATA_ENCRYPTION_KEY; echo; export DATA_ENCRYPTION_KEY   # de produção
@@ -507,7 +504,6 @@ docker compose up -d --wait app
 Sem `BACKUP_DB_CONTAINER`, o script usa o `db` e o volume `uploads` desse projeto compose.
 Abra `http://localhost:3100`, entre e confira a ficha de um paciente com evolução, anamnese e
 foto. Cronometre do início do download até a ficha abrir (é o RTO real). Depois,
-`docker compose down -v`, apague a chave, o backup e `/tmp/compose.restore-pg18.yml` da máquina. Registre abaixo; se algo
 falhar, abra issue com o rótulo `bug`.
 
 | Data | Backup de | Quem | Tempo até voltar | Resultado |

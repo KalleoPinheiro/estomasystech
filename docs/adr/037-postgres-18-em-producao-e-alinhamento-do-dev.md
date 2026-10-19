@@ -47,3 +47,5 @@ ficaram em majors diferentes.
 **Nota de 2026-10-18 (backup):** o backup às 03:00 citado no Contexto foi substituído pelo cifrado das 02:00 do ADR-040, que já foi testado restaurando em Postgres 18.
 
 **Nota de 2026-10-18 (depois do [ADR-040](040-backup-cifrado-no-coolify-para-o-r2-na-ue.md)):** o serviço `uploads-backup` saiu do `docker-compose.yml`; o alinhamento a 18 troca só a imagem do `db`, do GlitchTip e o volume do banco.
+
+**Nota de 2026-10-19 (alinhamento feito, [#385](https://github.com/KalleoPinheiro/estomasystech/issues/385)):** `docker-compose.yml` e `docker-compose.glitchtip.yml` em `postgres:18-alpine`, volume do banco em `/var/lib/postgresql`; smoke do container e de backup/restore validados localmente com Docker. Quem tinha o `pgdata` de Postgres 16 recria o volume (`docker compose down -v`) ou migra por dump.

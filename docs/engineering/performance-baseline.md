@@ -35,7 +35,7 @@ O `multi` existe para tirar a seletividade do filtro `clinic_id`, que é o que o
 | --- | --- |
 | Máquina | container com 4 vCPU Xeon 2,1 GHz e 15 GB; app, Postgres e gerador de carga **na mesma máquina** (pessimista para CPU) |
 | App | `npm run build` + `node .next/standalone/server.js` (o mesmo comando da imagem), `NODE_ENV=production`, 1 processo |
-| Banco | Postgres 16 local, `shared_buffers=512MB`, `fsync=off` (isola CPU/consulta; produção com `fsync` ligado paga mais nas **escritas**, que este baseline não mede) |
+| Banco | Postgres 18 local, `shared_buffers=512MB`, `fsync=off` (isola CPU/consulta; produção com `fsync` ligado paga mais nas **escritas**, que este baseline não mede) |
 | Sessão | cookie assinado com `AUTH_SECRET`, como o E2E; conta `company_admin` e 50 contas `patient` semeadas |
 | Rate limit | `API_RATE_LIMIT_MAX=1000000` (o teto padrão cortaria o teste) |
 | Janela | 10 s de aquecimento descartados + 60 s medidos (30 s na saturação); percentil exato sobre as amostras |
@@ -45,7 +45,7 @@ Só leitura: a medição não grava nada (as leituras de prontuário gravam audi
 ## 3. Como reproduzir
 
 ```bash
-# 1. Postgres 16 vazio + app migrado (o boot migra com advisory lock)
+# 1. Postgres 18 vazio + app migrado (o boot migra com advisory lock)
 export DATABASE_URL=postgres://estomasystech:estomasystech@localhost:5432/estomasystech AUTH_SECRET=... DATA_ENCRYPTION_KEY=...
 export API_RATE_LIMIT_MAX=1000000 TZ=America/Sao_Paulo APP_TIMEZONE=America/Sao_Paulo
 npm run build && (cd .next/standalone && PORT=3000 node server.js &)

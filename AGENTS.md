@@ -15,7 +15,7 @@ estoque de insumos, portal do paciente e lembretes por WhatsApp. Dado de saúde 
 - Visão, objetivos e personas: [`docs/product/visao-produto.md`](docs/product/visao-produto.md)
 - Roadmap (o que está entregue/especificado/backlog): [`docs/plano-evolucao-faseado.md`](docs/plano-evolucao-faseado.md)
 
-**Stack:** Next.js 16 (App Router) · React 19 · TypeScript 5 · Drizzle ORM + Postgres (18 em produção, 16 no compose/CI até o ADR-037) ·
+**Stack:** Next.js 16 (App Router) · React 19 · TypeScript 5 · Drizzle ORM + Postgres 18 (produção, compose e CI; ADR-037) ·
 Tailwind v4 · `@still-void/ui` · Vitest + Playwright · Biome · npm (sem workspaces).
 Arquitetura em camadas `app → application → domain ← infrastructure`:
 [`docs/engineering/architecture.md`](docs/engineering/architecture.md).

@@ -372,7 +372,7 @@ Troque `<…>` pelos nomes dos itens no seu cofre (liste só os nomes com
 
 ```bash
 cd ~/projects/estomasystech && docker compose down -v
-shred -u ~/restore-teste/estomasystech-backup.key; rm -rf ~/restore-teste /tmp/compose.restore-pg18.yml
+shred -u ~/restore-teste/estomasystech-backup.key; rm -rf ~/restore-teste
 unset AUTH_SECRET DATA_ENCRYPTION_KEY POSTGRES_PASSWORD COMPOSE_FILE COMPOSE_PROJECT_NAME
 bw lock; unset BW_SESSION
 ```
@@ -408,6 +408,5 @@ Apague no R2 o token de leitura do teste. Registre a linha na tabela do
 | `501 Bad sender address syntax` no msmtp | `from` com nome ou `< >` | `from` só com o endereço, nome em `from_full_name` (4.5) |
 | `backup.sh` sai com `2` | configuração (container, volume, chave pública) | leia a mensagem no `journalctl`; [runbook § 5.1](producao.md#51-instalar-uma-vez) |
 | `backup.sh` sai com `3` | cópia para o R2 falhou | rode o teste da 4.4 |
-| restauração local: `unsupported version (1.16) in file header` | banco local em Postgres 16 | use o Postgres 18 do § 5.3 |
-| banco local em Postgres 18 não sobe (dados em `/var/lib/postgresql/data`) | o volume do compose aponta para o caminho antigo | o override do § 5.3 monta `pgdata:/var/lib/postgresql` |
+| restauração local: `unsupported version (1.16) in file header` | volume `pgdata` antigo, criado quando o compose era Postgres 16 | `docker compose down -v` (apaga o banco local) e suba de novo; o compose é 18 desde a #385 |
 | `read: -p: no coprocess` | colou no zsh | digite `bash` antes |

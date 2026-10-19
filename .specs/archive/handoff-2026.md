@@ -1377,3 +1377,12 @@ Kalléo instalou no servidor, passo a passo, o backup do ADR-040. **Ativo**: cha
 - **Segurança**: checklist no runbook § 5.4.
 - **Passo 8 feito** (decisão do Kalléo): backup do Coolify desligado, bucket e token antigos e dumps do app no disco apagados; filtro de IP recolocado.
 - **Next step**: teste mensal com paciente real (roteiro na "Rotina do Super Admin"). **Blockers**: nenhum.
+
+
+## Compose, GlitchTip e smokes em PostgreSQL 18 (#385, ADR-037) — ENCERRADO (#PR)
+
+- **Feito**: `docker-compose.yml` e `docker-compose.glitchtip.yml` em `postgres:18-alpine` com o volume em `/var/lib/postgresql` (a imagem 18 grava em `.../18/docker`); doc de onboarding, runbook § 3 e § 5.3 (o override do teste de restauração saiu), `backup-passo-a-passo.md`, baseline, arquitetura, AGENTS.md e nota no ADR-037.
+- **Gate local (Docker 29.9.1 no WSL)**: `docker compose build` ok; `scripts/docker-smoke.sh` verde (providers 200, ready 200, x-request-id, gravação e persistência do volume de fotos); `scripts/backup-smoke.sh` verde (backup cifrado, restore sem `--confirmar` não altera, restore com `--confirmar`, app healthy); `check:docs`, `tests/docs`, typecheck e biome ok. Sem mudança em código TS, então a suíte de testes não foi reexecutada. O CI (Actions sem cota) roda o mesmo smoke.
+- **Quem tem o `pgdata` de Postgres 16**: `docker compose down -v` (apaga o banco local) ou dump/restore, documentado no onboarding.
+- **Fora**: números do baseline de carga seguem medidos em PG16 (a tabela do doc diz isso); remedir em 18 quando houver rodada nova.
+- **Next step**: nenhum. **Blockers**: nenhum.
