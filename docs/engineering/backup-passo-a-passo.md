@@ -395,7 +395,7 @@ Apague no R2 o token de leitura do teste. Registre a linha na tabela do
 | Coisa | Onde |
 | --- | --- |
 | Chave privada `age`, tokens R2 e Resend, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` | Bitwarden (notas e itens com nome `estomasystech…`) |
-| Segunda cópia da chave privada | acesso de emergência do Bitwarden ou papel lacrado em local seguro (ainda a decidir) |
+| Segunda cópia da chave privada | nenhuma hoje (risco aceito em 2026-10-19). Se mudar, use o acesso de emergência do Bitwarden ou papel lacrado |
 | Configuração do backup | servidor, `/etc/estomasystech/` (só `root` lê) |
 | Cópias cifradas | R2, bucket `estomasystech-backups-age`, pasta `prod/` |
 
