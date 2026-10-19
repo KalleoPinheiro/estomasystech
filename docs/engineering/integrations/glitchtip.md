@@ -37,6 +37,7 @@ desenho em [ADR-014](../../adr/014-observabilidade-sem-pii.md).
 | `GLITCHTIP_DOMAIN` | compose | URL que o operador usa; padrão `http://localhost:8000` (túnel SSH) |
 | `GLITCHTIP_MAX_EVENT_LIFE_DAYS` | compose | retenção dos eventos; **30 dias** (decidido, [runbook](../producao.md) § 1) |
 | `GLITCHTIP_EMAIL_URL` | compose | SMTP do GlitchTip para os avisos dele; padrão `consolemail://` (não envia) |
+| `EMAIL_URL`, `DEFAULT_FROM_EMAIL` | serviço do Coolify | avisos por e-mail em produção pelo Resend (`smtp+tls://…:587`); runbook § 9.5 passo 9 |
 
 ## O que sai do processo
 
