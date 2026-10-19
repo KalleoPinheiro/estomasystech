@@ -33,7 +33,7 @@ import {
  * Massa fictícia de homologação (ADR-041): sucesso e erro. Passa pelos
  * repositórios da aplicação, então o dado clínico sai cifrado com a
  * `DATA_ENCRYPTION_KEY` do ambiente. Idempotente por clínica: se a clínica
- * principal já existe, não altera nada.
+ * principal já existe, só reaplica a senha das contas fictícias.
  */
 export const MAIN_CLINIC_ID = "hml-clinica-principal";
 export const SUSPENDED_CLINIC_ID = "hml-clinica-suspensa";
@@ -290,11 +290,24 @@ async function seedInventory(now: Date): Promise<number> {
   return batches;
 }
 
+/** Reaplica a senha atual às contas fictícias: o seed não recria banco já semeado. */
+async function syncAccountPasswords(password: string): Promise<number> {
+  const passwordHash = await hashPassword(password);
+  const { userAccounts } = await getRepositories(systemScope());
+  const seeded = (await userAccounts.findAll()).filter((account) =>
+    account.email.endsWith("@homologacao.invalid"),
+  );
+  for (const account of seeded) {
+    await userAccounts.updatePasswordHash(account.id, passwordHash);
+  }
+  return seeded.length;
+}
+
 export async function seedHomologation(options: SeedOptions): Promise<SeedReport> {
   const now = options.now ?? new Date();
   const { clinics } = await getRepositories(systemScope());
   if (await clinics.findById(MAIN_CLINIC_ID)) {
-    return { skipped: true, counts: {} };
+    return { skipped: true, counts: { passwordsSynced: await syncAccountPasswords(options.password) } };
   }
   initFaker(now);
   await seedClinics(now);

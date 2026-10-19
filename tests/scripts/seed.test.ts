@@ -3,6 +3,7 @@ process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 import { describe, expect, it } from 'vitest';
 import { isValidCpf } from '@/domain/shared/cpf';
 import { getRepositories } from '@/infrastructure/container';
+import { verifyPassword } from '@/lib/auth/password';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import {
   birthDateForAge,
@@ -60,7 +61,7 @@ describe('Feature: Seed de homologação com faker (ADR-041)', () => {
     ).not.toBeNull();
   });
 
-  it('Dado já semeado, Quando semear de novo, Então não altera nada', async () => {
+  it('Dado já semeado, Quando semear de novo, Então só reaplica a senha das contas', async () => {
     const before = (
       await (
         await getRepositories(clinicScope(MAIN_CLINIC_ID))
@@ -72,13 +73,26 @@ describe('Feature: Seed de homologação com faker (ADR-041)', () => {
       now: NOW,
     });
 
-    expect(report).toEqual({ skipped: true, counts: {} });
+    expect(report).toEqual({ skipped: true, counts: { passwordsSynced: 5 } });
     const after = (
       await (
         await getRepositories(clinicScope(MAIN_CLINIC_ID))
       ).patients.findAll()
     ).length;
     expect(after).toBe(before);
+  });
+
+  it('Dado já semeado, Quando a senha mudar e semear de novo, Então o login passa a valer com a senha nova', async () => {
+    await seedHomologation({ password: 'senha-nova-456789', now: NOW });
+
+    const { userAccounts } = await getRepositories(systemScope());
+    const admin = await userAccounts.findByEmail('admin@homologacao.invalid');
+    expect(
+      await verifyPassword('senha-nova-456789', admin?.passwordHash ?? ''),
+    ).toBe(true);
+    expect(
+      await verifyPassword('senha-ficticia-123', admin?.passwordHash ?? ''),
+    ).toBe(false);
   });
 });
 
