@@ -3,14 +3,14 @@ title: "Integração: GlitchTip (error tracking)"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-10-19
 ---
 
 # GlitchTip (error tracking self-hosted)
 
-> **Desligado em produção (2026-10-18).** O app roda como Dockerfile no Coolify, sem o
-> `docker-compose.glitchtip.yml`; sem `GLITCHTIP_DSN` o app funciona igual. Ligar exige subir o
-> GlitchTip à parte (runbook § 9.5).
+> **Ligado em produção desde 2026-10-19** como serviço de um clique do Coolify, sem domínio
+> público (runbook § 9.5). O `docker-compose.glitchtip.yml` fica para dev local e para o formato
+> compose. Sem `GLITCHTIP_DSN` o app funciona igual.
 
 ## Propósito
 
@@ -21,16 +21,16 @@ desenho em [ADR-014](../../adr/014-observabilidade-sem-pii.md).
 
 | Campo | Valor |
 | --- | --- |
-| Direção | saída (app → GlitchTip, rede interna do compose). A interface só abre por túnel SSH (`127.0.0.1:8000`), sem porta pública |
+| Direção | saída (app → GlitchTip, rede interna: `coolify` em produção, a do compose em dev). A interface só abre por túnel SSH (`127.0.0.1:8001` no host de produção, `127.0.0.1:8000` no compose), sem porta pública |
 | Obrigatória? | não — sem DSN, no-op |
 | Código | `src/lib/observability/error-tracker.ts` (SDK `@sentry/core`, sem integrações) |
-| Servidor | [`docker-compose.glitchtip.yml`](../../../docker-compose.glitchtip.yml), imagem `glitchtip/glitchtip:v6`, modo `all_in_one` |
+| Servidor | produção: serviço GlitchTip do Coolify (6.0; `web`, `worker`, `postgres`, `redis`), compose ajustado no runbook § 9.5. Dev: [`docker-compose.glitchtip.yml`](../../../docker-compose.glitchtip.yml), imagem `glitchtip/glitchtip:v6`, modo `all_in_one` |
 
 ## Credenciais
 
 | Credencial | Onde | Nota |
 | --- | --- | --- |
-| `GLITCHTIP_DSN` | app | `http://<chave>@glitchtip:8000/<projeto>` (copiado do projeto no GlitchTip, trocando o host pelo nome do serviço) |
+| `GLITCHTIP_DSN` | app | copiado do projeto no GlitchTip, trocando o host: `http://<chave>@web-<uuid>:8000/<projeto>` em produção (container `web` do serviço do Coolify, variável *Runtime only*), `http://<chave>@glitchtip:8000/<projeto>` no compose |
 | `APP_RELEASE` | app | opcional; a versão em cada evento (ex. o commit do deploy) |
 | `GLITCHTIP_DB_PASSWORD` | compose | `openssl rand -hex 24`; Postgres próprio do GlitchTip, separado do banco clínico |
 | `GLITCHTIP_SECRET_KEY` | compose | `openssl rand -hex 32` |

@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-10-19
 ---
 
 # Runbook de produção
@@ -28,14 +28,15 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | Proxy | Traefik do Coolify, único na borda ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)); middlewares `rate-limit-app`, `rate-limit-strict` e `security-headers` (`@file`, sem CSP: o app usa nonce) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
 | Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18). Compose, CI e smoke rodam no mesmo major ([ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md)); os testes de unidade usam PGlite |
-| Variáveis | 9 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`. `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
+| Variáveis | 10 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`, `GLITCHTIP_DSN` (desde 2026-10-19). `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
 | Fotos | volume do Coolify em `/app/uploads` (uma réplica) |
 | Migrações | aplicadas no boot, com advisory lock; `/api/health/ready` responde `200` ([#384](https://github.com/KalleoPinheiro/estomasystech/pull/384)) |
 | Jobs | Scheduled Tasks do Coolify, não crontab do host (§ 7) |
 | Monitoramento | UptimeRobot em `/api/health/ready`, no painel do Coolify e no SSH; alertas do app por e-mail (§ 9) |
+| GlitchTip | serviço de um clique do Coolify (6.0), **ligado em 2026-10-19**: sem domínio, interface só por túnel SSH (`127.0.0.1:8001` no host), retenção de 30 dias, cadastro aberto desligado. Organização `estomasystech`, projeto `estomasystech-app` (§ 9.5) |
 | Dados | Super Admin criado pelo bootstrap; existe só a "Clínica legada" da migração, a renomear quando a clínica real for cadastrada |
 | Backup cifrado | `systemd` timer do host (`estomasystech-backup.timer`), scripts em `/opt/estomasystech-backup`, configuração em `/etc/estomasystech`, alerta de falha por `msmtp` (Resend). Roteiro: [`backup-passo-a-passo.md`](backup-passo-a-passo.md) |
-| Não existe em produção | GlitchTip (§ 9.5), `/etc/cron.d`, `/opt/estomasystech`, Caddy, `docker-compose.prod.yml` |
+| Não existe em produção | `docker-compose.glitchtip.yml` (o GlitchTip roda como serviço do Coolify), `/etc/cron.d`, `/opt/estomasystech`, Caddy, `docker-compose.prod.yml` |
 
 Pendências de go-live: [#381](https://github.com/KalleoPinheiro/estomasystech/issues/381) (operação,
 segurança adiada e rotina mensal) e [#376](https://github.com/KalleoPinheiro/estomasystech/issues/376)
@@ -50,7 +51,7 @@ do** art. 33 para Resend e Google e da revisão jurídica dos textos.
 | Fotos | volume `uploads` no servidor (`PHOTO_STORAGE` vazio) |
 | RPO / RTO | 24 h / 4 h: backup diário cifrado do banco e das fotos, 30 dias fora do servidor, teste de restauração mensal (§ 5). Em produção desde 2026-10-18, com `age` e R2 na UE (ADR-040) |
 | Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/estomasystech/issues/212)) |
-| Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, alertas por e-mail; GlitchTip opcional, hoje desligado ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
+| Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, alertas por e-mail; GlitchTip ligado desde 2026-10-19 como serviço do Coolify (§ 9.5, [ADR-014](../adr/014-observabilidade-sem-pii.md)) |
 
 **Transferência internacional (LGPD art. 33):** o servidor fica fora do Brasil (Alemanha, UE). A
 base técnica está decidida no [ADR-018](../adr/018-transferencia-internacional-ue.md): destino na
@@ -559,8 +560,9 @@ controle de versão. Nenhum dos dois entra no backup. Trocar uma variável no Co
 | `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **removido** da produção depois do primeiro acesso (§ 8) |
 | `CRON_SECRET` | incidente | troque a variável no Coolify e faça *Deploy*; as Scheduled Tasks leem o valor do ambiente do container (§ 7), então nada mais muda. No compose, atualize também `/etc/estomasystech/cron.headers` |
 | `RESEND_API_KEY`, credenciais Google | conforme o provedor | troque no provedor e na variável do Coolify (ou `.env`) |
-| `GLITCHTIP_SECRET_KEY`, `GLITCHTIP_DB_PASSWORD` | incidente | troca derruba as sessões da interface do GlitchTip; a senha do banco dele segue o roteiro da `POSTGRES_PASSWORD` no serviço `glitchtip-db` |
-| `GLITCHTIP_DSN` | incidente | gere outra chave no projeto do GlitchTip, troque no `.env`, `docker compose up -d app` e revogue a antiga |
+| `SECRET_KEY` e senha do Postgres do GlitchTip | incidente | gerados pelo Coolify no serviço GlitchTip (`SERVICE_BASE64_64_ENCRYPTION`, `SERVICE_PASSWORD_POSTGRESQL`); a troca derruba as sessões da interface. No compose: `GLITCHTIP_SECRET_KEY`, `GLITCHTIP_DB_PASSWORD` |
+| `GLITCHTIP_DSN` | incidente | no GlitchTip, *Project Settings → Client Keys*: crie outra chave; troque a variável do app no Coolify (*Runtime only*) e faça *Restart*; revogue a antiga |
+| Senha do operador do GlitchTip | incidente ou troca de operador | pela interface (perfil), com 2FA ligado; guardada no Bitwarden |
 
 `npm run data:reencrypt` (a partir de um checkout, com `DATABASE_URL`, `DATA_ENCRYPTION_KEY`,
 `DATA_ENCRYPTION_KEY_PREVIOUS` e, se ainda houver dado legado, o `AUTH_SECRET` antigo) regrava
@@ -818,27 +820,55 @@ mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
 ### 9.5 GlitchTip (error tracking)
 
-Opcional: sem `GLITCHTIP_DSN` o app funciona igual. **Em produção está desligado** (decisão de
-2026-10-18: o app roda como Dockerfile no Coolify, sem o compose do GlitchTip; os 5xx chegam pelo
-alerta por e-mail e pelos logs). O roteiro abaixo vale para o formato compose. Configurar, uma vez:
+Opcional: sem `GLITCHTIP_DSN` o app funciona igual. **Em produção está ligado desde 2026-10-19**
+como serviço de um clique do Coolify (decisão do Kalléo: só GlitchTip, sem OpenTelemetry nem
+SaaS; o código do app não mudou). Medição de memória antes de subir: ~360 MiB com carga. O que sai
+do app e o que nunca sai: [`integrations/glitchtip.md`](integrations/glitchtip.md).
 
-1. No `.env`: `GLITCHTIP_DB_PASSWORD` (`openssl rand -hex 24`), `GLITCHTIP_SECRET_KEY`
-   (`openssl rand -hex 32`) e `docker-compose.glitchtip.yml` no fim do `COMPOSE_FILE`.
-   Guarde os dois no cofre.
-2. `docker compose up -d glitchtip` e crie o operador:
-   `docker compose exec glitchtip ./manage.py createsuperuser`. O cadastro aberto fica desligado.
-3. Da máquina do operador: `ssh -L 8000:127.0.0.1:8000 <servidor>` e abra
-   `http://localhost:8000`. A interface não tem porta pública.
-4. Crie organização e projeto (plataforma Node), copie o DSN e grave no `.env` trocando o host
-   pelo serviço: `GLITCHTIP_DSN=http://<chave>@glitchtip:8000/<projeto>`. Opcional:
-   `APP_RELEASE=$(git rev-parse --short HEAD)` a cada deploy.
-5. `docker compose up -d app`. Confira com um erro de verdade (ex. a fumaça do § 9.2).
+**Subir (uma vez).** No projeto do Coolify: *+ New → Service → GlitchTip*. Antes do primeiro
+*Deploy*, em *Edit Compose File*:
 
-O que sai do app para o GlitchTip e o que nunca sai: [`integrations/glitchtip.md`](integrations/glitchtip.md).
-A interface só abre por túnel SSH (passo 3), sem porta pública. Retenção decidida: **30 dias** (`GLITCHTIP_MAX_EVENT_LIFE_DAYS`, o padrão do compose). O banco do GlitchTip não
-entra no backup (§ 5): não guarda dado de paciente e perdê-lo só perde o histórico de erros.
-O erro do navegador **não é capturado por ora**: só o servidor envia eventos. RAM: o GlitchTip `all_in_one` usa cerca de 512 MB a mais; com 4 GB, acompanhe no primeiro
-build com ele no ar.
+1. Tire `SERVICE_URL_GLITCHTIP_8000` do `web` e a linha `GLITCHTIP_DOMAIN=${SERVICE_URL_GLITCHTIP}`:
+   as duas fazem o Coolify gerar domínio público. Em *Domains*, deixe o `web` **vazio**.
+2. Em `web` **e** `worker`: `ENABLE_USER_REGISTRATION=false`, `GLITCHTIP_MAX_EVENT_LIFE_DAYS=30` e
+   `GLITCHTIP_DOMAIN=http://localhost:8000`.
+3. Em `web`, `worker` e `migrate`: o host do `DATABASE_URL` é o **nome do container**
+   (`postgres-<uuid>`) e `REDIS_URL=redis://redis-<uuid>:6379/0`. Na rede `coolify`, os nomes curtos
+   `postgres` e `redis` são o banco e o redis **do próprio Coolify** (o `createsuperuser` falhou
+   com "password authentication failed" por isso).
+4. `redis` com tag fixa (`redis:7.4-alpine`); `web` com `ports: ['127.0.0.1:8001:8000']` (a 8000
+   do host é do painel do Coolify).
+5. Ligue *Connect To Predefined Network* (o app chega ao GlitchTip pela rede `coolify`) e faça
+   *Deploy*. O `migrate` roda e sai com 0; `web`, `worker`, `postgres` e `redis` ficam *healthy*.
+6. Operador: *Terminal* do Coolify no container `web`, `./manage.py createsuperuser`. Senha no
+   Bitwarden e 2FA ligado pela interface.
+7. Interface, da máquina do operador: `ssh -N -L 8000:127.0.0.1:8001 vps` e
+   `http://localhost:8000`. Se a lista ficar girando, o túnel caiu: reabra e recarregue.
+8. Crie organização e projeto (plataforma Node). Copie o DSN trocando o host pelo container `web`:
+   `GLITCHTIP_DSN=http://<chave>@web-<uuid>:8000/<projeto>`. No app: variável *Runtime only* e
+   *Restart* (sem build). Em *Settings → Alerts*, regra de e-mail para issue nova.
+
+**Prova (feita em 2026-10-19, somente leitura no host).** De dentro do container do app:
+`fetch('http://web-<uuid>:8000/_health/')` responde `200`; um evento de teste montado como o
+`buildEvent` (sem `request`, `user` nem `breadcrumbs`), lendo o DSN do ambiente sem imprimir a chave,
+recebe `200` em `/api/<projeto>/store/` e aparece como issue na interface. Resolva a issue de teste.
+
+**Decisões.** A interface só abre por túnel SSH, sem rota no Traefik. Retenção: **30 dias**. O
+banco do GlitchTip **não entra no backup** (§ 5): não guarda dado de paciente e perdê-lo só perde
+o histórico de erros. O erro do navegador **não é capturado por ora**: só o servidor envia eventos.
+Atualização: tags fixas (GlitchTip 6.0, `redis:7.4-alpine`), trocadas só com nota de versão lida;
+depois de atualizar o Coolify, confira se o compose editado do serviço continua igual. Risco
+aceito: o `web` do GlitchTip está na rede `coolify`, como o app.
+
+**Desligar.** Parar o envio: apague `GLITCHTIP_DSN` do app e faça *Restart*. Tirar o GlitchTip:
+*Stop* e *Delete* do serviço com os volumes.
+
+**Formato compose** (dev e o formato não usado em produção): `docker-compose.glitchtip.yml` no fim
+do `COMPOSE_FILE`, com `GLITCHTIP_DB_PASSWORD` (`openssl rand -hex 24`) e `GLITCHTIP_SECRET_KEY`
+(`openssl rand -hex 32`) no `.env`; `docker compose up -d glitchtip`,
+`docker compose exec glitchtip ./manage.py createsuperuser`, túnel
+`ssh -L 8000:127.0.0.1:8000 <servidor>` e `GLITCHTIP_DSN=http://<chave>@glitchtip:8000/<projeto>`.
+O modo `all_in_one` usa cerca de 512 MB a mais.
 
 ### 9.6 Fumaça pós-deploy (somente leitura)
 

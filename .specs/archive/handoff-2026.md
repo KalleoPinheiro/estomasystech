@@ -1400,3 +1400,13 @@ Kalléo instalou no servidor, passo a passo, o backup do ADR-040. **Ativo**: cha
 
 - **Feito**: Kalléo aplicou no painel do Coolify o roteador `strict-<id>` (labels em `producao.md` § 0) e fez o redeploy; revisão das labels antes e prova depois (60 POST em `/api/auth/login`: 5 × `401`, 55 × `429`; `/api/health` no limite geral). Rotas: `/api/auth/{login,forgot-password,set-password,mfa/verify}` e `/api/portal/patient/{appointments,waitlist}`.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+
+## GlitchTip ligado em produção pelo Coolify (2026-10-19) — ENCERRADO
+
+Pedido do Kalléo: escolher ferramenta de observabilidade (GitHub Student Pack) e plano para trocar o GlitchTip. Avaliados Sentry UE (desfaria o "nada para fornecedor externo" do ADR-014), OpenObserve + OpenTelemetry (~215 MiB, sem agrupar erros; o span raiz do Next grava a URL completa) e SigNoz (pesado). Decisão do Kalléo: **GlitchTip só**, como serviço de um clique do Coolify; ADR-014 continua valendo, sem ADR novo e sem mudança de código. Medição e avaliação em `/mnt/project-files/observabilidade/`.
+- **Feito no painel (Kalléo, acompanhado por RC somente leitura)**: serviço sem domínio, `127.0.0.1:8001`, cadastro fechado, retenção 30 dias, redis com tag fixa; `DATABASE_URL`/`REDIS_URL` pelo nome do container (os nomes curtos colidem com o banco e o redis do Coolify na rede `coolify`); operador, organização e projeto; `GLITCHTIP_DSN` *Runtime only* no app.
+- **Prova**: `_health/` 200 de dentro do app; evento de teste 200 em `store/` e visível como issue.
+- **Docs**: `producao.md` § 0, § 1, rotação e § 9.5 reescrito; `integrations/glitchtip.md`.
+- **Kalléo**: 2FA do operador, regra de e-mail em *Settings → Alerts*, resolver a issue de teste; opcional trocar a Client Key (o DSN apareceu no chat).
+- **Next step**: nenhum. **Blockers**: nenhum.
