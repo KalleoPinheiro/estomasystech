@@ -23,7 +23,7 @@ manda para um bucket R2 da Cloudflare **na União Europeia**. Só quem tem a cha
 
 | Peça | Onde fica |
 | --- | --- |
-| Chave privada `age` | cofre (Bitwarden) + pendrive. **Nunca** no servidor, nunca no chat |
+| Chave privada `age` | cofre (Bitwarden), com uma segunda cópia fora dele (veja a Etapa 1). **Nunca** no servidor, nunca no chat |
 | Chave pública `age` | servidor, `/etc/estomasystech/backup.pub` |
 | Scripts | servidor, `/opt/estomasystech-backup/` |
 | Configuração | servidor, `/etc/estomasystech/` e `/etc/msmtprc` |
@@ -98,10 +98,16 @@ O arquivo `estomasystech-backup.key` é a **chave privada**:
 
 1. No Bitwarden: *Novo item → Nota segura*, nome `estomasystech backup age`, cole o conteúdo
    inteiro do arquivo (`cat estomasystech-backup.key`, as 3 linhas).
-2. Copie o arquivo para um pendrive que fica guardado.
-3. Apague da máquina: `rm estomasystech-backup.key`.
+2. **Antes de apagar o arquivo**, prove que o cofre guardou certo: em outra janela, puxe a nota
+   do cofre e rode `age-keygen -y` nela (veja o bloco do teste mensal). Tem que sair a mesma
+   linha `age1…`. Só depois apague.
+3. Segunda cópia (recomendado): o Bitwarden sozinho é um ponto único. Se perder o acesso à conta,
+   perde os backups. Opções: o *acesso de emergência* do Bitwarden para uma pessoa de confiança,
+   ou a chave impressa em papel num envelope lacrado em local físico seguro.
+4. Apague da máquina: `shred -u estomasystech-backup.key`.
 
-**Pronto quando:** a chave está no Bitwarden e no pendrive, e você tem a linha `age1…` anotada.
+**Pronto quando:** a chave está no Bitwarden (conferida com `age-keygen -y`), a segunda cópia
+existe, e você tem a linha `age1…` anotada.
 Perder a chave privada = perder todos os backups.
 
 ## Etapa 2 — Bucket e token no R2 🌐
@@ -348,13 +354,18 @@ Bitwarden CLI (`npm install -g @bitwarden/cli`), em bash:
 bw login --check || bw login                 # pede e-mail, senha mestra e o código 2FA
 export BW_SESSION="$(bw unlock --raw)"       # guarda a sessão numa variável, sem imprimir
 mkdir -p ~/restore-teste && chmod 700 ~/restore-teste
-(umask 077; bw get notes "<nome da nota da chave age>" > ~/restore-teste/estomasystech-backup.key)
+(umask 077; bw get item '<item da chave age>' \
+  | jq -r '.notes // "", (.fields // [] | .[].value // "")' \
+  | grep -o 'AGE-SECRET-KEY-1[0-9A-Z]*' > ~/restore-teste/estomasystech-backup.key)
 age-keygen -y ~/restore-teste/estomasystech-backup.key   # tem que mostrar a chave pública do servidor
 export DATA_ENCRYPTION_KEY="$(bw get item '<item do app>' | jq -r '.fields[] | select(.name=="DATA_ENCRYPTION_KEY") | .value')"
 export AUTH_SECRET="$(bw get item '<item do app>' | jq -r '.fields[] | select(.name=="AUTH_SECRET") | .value')"
 echo "${#DATA_ENCRYPTION_KEY} ${#AUTH_SECRET}"   # só o tamanho (64 64), nunca o valor
 ```
 
+O `jq` e o `grep` acham a chave esteja ela numa nota ou num campo do item, mesmo com a chave
+pública na mesma linha (instale o `jq` com `sudo apt install -y jq`). Se aparecerem duas chaves
+`age1…` diferentes no cofre, vale a que é igual a `/etc/estomasystech/backup.pub` no servidor.
 Troque `<…>` pelos nomes dos itens no seu cofre (liste só os nomes com
 `bw list items --search estomasystech | jq -r '.[].name'`). Se o `bw login` imprimir uma linha
 `export BW_SESSION=…`, **não** mande print dela. Ao terminar o teste:
@@ -384,7 +395,7 @@ Apague no R2 o token de leitura do teste. Registre a linha na tabela do
 | Coisa | Onde |
 | --- | --- |
 | Chave privada `age`, tokens R2 e Resend, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` | Bitwarden (notas e itens com nome `estomasystech…`) |
-| Cópia offline da chave privada | pendrive guardado em local físico seguro |
+| Segunda cópia da chave privada | acesso de emergência do Bitwarden ou papel lacrado em local seguro (ainda a decidir) |
 | Configuração do backup | servidor, `/etc/estomasystech/` (só `root` lê) |
 | Cópias cifradas | R2, bucket `estomasystech-backups-age`, pasta `prod/` |
 

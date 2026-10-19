@@ -516,7 +516,7 @@ Estado conferido na instalação de 2026-10-18. Revise junto com o teste mensal 
 
 | Item | Regra | Estado |
 | --- | --- | --- |
-| Chave privada `age` | só no cofre (Bitwarden) e num pendrive guardado; **nunca** no servidor nem em disco de máquina de uso diário. Para testar, traga do cofre e apague no fim (`shred -u`) | cofre + pendrive; cópia em claro do WSL do operador apagada em 2026-10-18 (confira no teste mensal que a nota do cofre gera a chave pública do servidor) |
+| Chave privada `age` | no cofre (Bitwarden) e numa segunda cópia fora dele; **nunca** no servidor nem em disco de máquina de uso diário. Para testar, traga do cofre e apague no fim (`shred -u`) | só no cofre (conferida em 2026-10-19: gera a chave pública do servidor); cópia em claro do WSL apagada em 2026-10-18. **Pendente:** segunda cópia (acesso de emergência ou papel lacrado) |
 | Token R2 do servidor | **Object Read & Write** só no bucket `estomasystech-backups-age`, com filtro de IP (IPv4 `/32` e IPv6 `/64` do servidor) | escopo ok; filtro de IP recolocado e `R2 OK` em 2026-10-18 (confira no painel na revisão mensal) |
 | Token R2 de restauração | **Object Read only**, só o bucket, TTL de 7 dias; apagar depois do teste | o de 2026-10-18 foi criado com escrita por engano e apagado após o teste; nos próximos, marque *Object Read only* |
 | Trava de objeto | `prod/` com 30 dias: nem um servidor comprometido apaga os backups recentes | ativa |
