@@ -562,6 +562,7 @@ controle de versão. Nenhum dos dois entra no backup. Trocar uma variável no Co
 | `RESEND_API_KEY`, credenciais Google | conforme o provedor | troque no provedor e na variável do Coolify (ou `.env`) |
 | `SECRET_KEY` e senha do Postgres do GlitchTip | incidente | gerados pelo Coolify no serviço GlitchTip (`SERVICE_BASE64_64_ENCRYPTION`, `SERVICE_PASSWORD_POSTGRESQL`); a troca derruba as sessões da interface. No compose: `GLITCHTIP_SECRET_KEY`, `GLITCHTIP_DB_PASSWORD` |
 | `GLITCHTIP_DSN` | incidente | no GlitchTip, *Project Settings → Client Keys*: crie outra chave; troque a variável do app no Coolify (*Runtime only*) e faça *Restart*; revogue a antiga |
+| Chave do Resend do GlitchTip (`EMAIL_URL`) | incidente | crie outra chave só de envio no Resend, troque a variável do serviço GlitchTip no Coolify, *Restart* e revogue a antiga |
 | Senha do operador do GlitchTip | incidente ou troca de operador | pela interface (perfil), com 2FA ligado; guardada no Bitwarden |
 
 `npm run data:reencrypt` (a partir de um checkout, com `DATABASE_URL`, `DATA_ENCRYPTION_KEY`,
@@ -846,7 +847,14 @@ do app e o que nunca sai: [`integrations/glitchtip.md`](integrations/glitchtip.m
    `http://localhost:8000`. Se a lista ficar girando, o túnel caiu: reabra e recarregue.
 8. Crie organização e projeto (plataforma Node). Copie o DSN trocando o host pelo container `web`:
    `GLITCHTIP_DSN=http://<chave>@web-<uuid>:8000/<projeto>`. No app: variável *Runtime only* e
-   *Restart* (sem build). Em *Settings → Alerts*, regra de e-mail para issue nova.
+   *Restart* (sem build).
+9. Avisos por e-mail: nas *Environment Variables* do serviço GlitchTip (não no compose, que já lê
+   as duas), `EMAIL_URL=smtp+tls://resend:<chave>@smtp.resend.com:587` (chave do Resend só de envio,
+   própria do GlitchTip, com *Lock*, sem *Build time*) e `DEFAULT_FROM_EMAIL=alertas@mail.kalleopinheiro.com.br`
+   (domínio verificado no Resend); *Restart*. Sem isso o padrão é `consolemail://` e nada sai. No
+   projeto: *Settings → Project Alerts*, 1 evento em 1 minuto, destinatário e-mail; o time do
+   operador precisa estar ligado ao projeto (*Organization → Teams → Projects*). Provado em
+   2026-10-19 (o primeiro aviso caiu no lixo eletrônico: marque o remetente como confiável).
 
 **Prova (feita em 2026-10-19, somente leitura no host).** De dentro do container do app:
 `fetch('http://web-<uuid>:8000/_health/')` responde `200`; um evento de teste montado como o
