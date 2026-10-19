@@ -37,10 +37,10 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | Backup cifrado | `systemd` timer do host (`estomasystech-backup.timer`), scripts em `/opt/estomasystech-backup`, configuração em `/etc/estomasystech`, alerta de falha por `msmtp` (Resend). Roteiro: [`backup-passo-a-passo.md`](backup-passo-a-passo.md) |
 | Não existe em produção | GlitchTip (§ 9.5), `/etc/cron.d`, `/opt/estomasystech`, Caddy, `docker-compose.prod.yml` |
 
-Pendências de go-live: [#381](https://github.com/KalleoPinheiro/estomasystech/issues/381) (operação e
-backup cifrado) e [#376](https://github.com/KalleoPinheiro/estomasystech/issues/376) (jurídico,
-art. 33). **Paciente real só depois de** backup cifrado (ADR-018), backup do volume `uploads` e do
-art. 33 para Resend e Google.
+Pendências de go-live: [#381](https://github.com/KalleoPinheiro/estomasystech/issues/381) (operação,
+segurança adiada e rotina mensal) e [#376](https://github.com/KalleoPinheiro/estomasystech/issues/376)
+(jurídico, art. 33). O backup cifrado do banco e das fotos já roda (§ 5). **Paciente real só depois
+do** art. 33 para Resend e Google e da revisão jurídica dos textos.
 
 ## 1. Decisões
 
@@ -48,7 +48,7 @@ art. 33 para Resend e Google.
 | --- | --- |
 | Hospedagem | VPS Hetzner com Coolify, 1 réplica. Decidido em #206 como `docker compose`; em produção virou Dockerfile + Postgres do Coolify (§ 0, ADR-036) |
 | Fotos | volume `uploads` no servidor (`PHOTO_STORAGE` vazio) |
-| RPO / RTO | 24 h / 4 h: backup diário cifrado do banco e das fotos, 30 dias fora do servidor, teste de restauração mensal (§ 5). **Hoje** só o banco tem backup diário (Coolify → R2), ainda sem a cifra `age` do ADR-018 (#381) |
+| RPO / RTO | 24 h / 4 h: backup diário cifrado do banco e das fotos, 30 dias fora do servidor, teste de restauração mensal (§ 5). Em produção desde 2026-10-18, com `age` e R2 na UE (ADR-040) |
 | Operação e alertas | o dono da plataforma opera; alertas por e-mail ao operador pelo canal da plataforma (§ 9, [#212](https://github.com/KalleoPinheiro/estomasystech/issues/212)) |
 | Observabilidade (#212) | `/api/health` e `/api/health/ready`, logs JSON com `requestId`, alertas por e-mail; GlitchTip opcional, hoje desligado ([ADR-014](../adr/014-observabilidade-sem-pii.md)) |
 
@@ -218,8 +218,9 @@ proposital enquanto não há staging e as migrações não têm `down`
 1. **Antes:** a `main` com o CI verde (ou o gate local, enquanto o Actions estiver sem cota) e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote o commit em produção (*Deployments* do
    recurso mostra o SHA) e as migrações novas do lote (`drizzle/*.sql`, ordem do § 4).
-2. **Backup:** *Backups → Backup now* no recurso do banco (e confira *Available* no R2). Sem backup
-   do mesmo dia, não deploye migração.
+2. **Backup:** o timer das 02:00 (§ 5) cobre o dia; antes de um deploy com migração, rode o backup
+   na hora (`sudo systemctl start estomasystech-backup.service`) e confira que terminou sem erro.
+   Sem backup do mesmo dia, não deploye migração.
 3. **Deploy:** *Deploy* no recurso do app. O container novo migra no boot (advisory lock) e o
    `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois.
 4. **Verificar:** `curl -fsS https://estomasystech.kalleopinheiro.com.br/api/health/ready` (`200`,
@@ -613,8 +614,8 @@ da foto é apagado do volume `uploads`. Contrato e regras:
 Issues: [#294](https://github.com/KalleoPinheiro/estomasystech/issues/294),
 [#323](https://github.com/KalleoPinheiro/estomasystech/issues/323).
 
-- **Agendamento:** Scheduled Task do § 7, uma vez por dia às 03:30 de São Paulo, depois do backup
-  do banco das 03:00, com o mesmo `CRON_SECRET` dos lembretes. Na alternativa Vercel, o
+- **Agendamento:** Scheduled Task do § 7, uma vez por dia às 03:30 de São Paulo, 1 h 30 depois do backup
+  cifrado das 02:00, com o mesmo `CRON_SECRET` dos lembretes. Na alternativa Vercel, o
   `vercel.json` agenda `GET /api/retention/run` às 06:00 UTC.
 - **Prazo e fronteira:** conta em dias inteiros no `APP_TIMEZONE`. O último dia do prazo fica
   inteiro: um evento de auditoria de 18/10/2021 sai na execução de 19/10/2026, não antes. Nenhum
@@ -748,12 +749,12 @@ compose: `docker compose stop db` / `start db`.
 | --- | --- |
 | App fora do ar | o UptimeRobot (abaixo) avisa por e-mail; a tarefa de alertas também falha no Coolify |
 | Lembretes ou retenção falharam | execução com erro em *Scheduled Tasks → Executions* (e e-mail do Coolify, se ligado); o alerta "job de lembretes sem rodar" (26 h) cobre os lembretes |
-| Backup do banco | notificação do Coolify e *Backups → Executions* (*Available* no R2). No compose, `MAILTO` do cron (§ 7) |
+| Backup do banco e das fotos | `OnFailure` do timer manda e-mail por `msmtp` (§ 5); confira `systemctl list-timers estomasystech-backup.timer` e a pasta do dia no R2 |
 | Disco e atualizações do host | Coolify (alerta de disco do servidor) e a rotina mensal do 1º sábado (#381). No compose: linha no `cron.d` com `df` |
 | Backup que não rodou | o verificador de "último backup" segue fora desta entrega |
 
-**E-mail do host (`msmtp`) — só no formato compose; não existe na produção atual** (os avisos saem do
-Coolify e do app, ambos pelo Resend). O `MAILTO` do cron precisa de um relay no host: a Hetzner bloqueia a
+**E-mail do host (`msmtp`).** Em produção o `msmtp` existe só para o alerta de falha do backup (§ 5); os
+demais avisos saem do Coolify e do app, ambos pelo Resend. No formato compose, o `MAILTO` do cron também precisa de um relay no host: a Hetzner bloqueia a
 porta 25 de saída, então o decidido é o `msmtp` na **porta 587** com o SMTP do Resend (o mesmo
 provedor do canal da plataforma). Uma vez, no servidor:
 
