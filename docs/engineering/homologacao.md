@@ -76,7 +76,7 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 
 ## 4. Contas fictícias do seed
 
-Senha: `STAGING_SEED_PASSWORD`. O segundo fator é cadastrado no primeiro login (QR no app).
+Senha: `STAGING_SEED_PASSWORD`. Se a variável mudar, o próximo deploy reaplica a nova senha às contas (o seed não recria banco já semeado). O segundo fator é cadastrado no primeiro login (QR no app).
 
 | E-mail | Papel | Cenário |
 | --- | --- | --- |

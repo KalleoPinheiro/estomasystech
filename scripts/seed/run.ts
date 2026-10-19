@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
   await getDb();
   const report = await seedHomologation({ password });
-  console.log(report.skipped ? "Seed: já semeado, nada alterado." : `Seed: ${JSON.stringify(report.counts)}`);
+  console.log(report.skipped ? `Seed: já semeado, senha das contas reaplicada (${JSON.stringify(report.counts)}).` : `Seed: ${JSON.stringify(report.counts)}`);
 }
 
 main().then(
