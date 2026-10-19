@@ -69,7 +69,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Test (e2e: papéis e login, contra o next dev)
+      - name: "Test (e2e: papéis e login, contra o next dev)"
         run: npm run test:e2e:dev
 
       - name: Upload Playwright report
