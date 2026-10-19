@@ -1386,3 +1386,11 @@ Kalléo instalou no servidor, passo a passo, o backup do ADR-040. **Ativo**: cha
 - **Quem tem o `pgdata` de Postgres 16**: `docker compose down -v` (apaga o banco local) ou dump/restore, documentado no onboarding.
 - **Fora**: números do baseline de carga seguem medidos em PG16 (a tabela do doc diz isso); remedir em 18 quando houver rodada nova.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+
+## Dry-runs de produção (#339, #355) e baseline de carga na VPS (2026-10-19) — ENCERRADO
+
+- **#355 `clinics:cnpj-review` e #339 `calendar:minimize`** rodados sem `--confirmar` contra a produção (túnel `ssh vps`, checkout descartável, nada gravado): nenhuma empresa com CNPJ inválido; a única empresa (legado) está sem integração com o Google Agenda. Não há o que confirmar; `--confirmar` não foi executado.
+- **Baseline leve** (8 req/s, 60 s por rota, sem autenticação): [`performance-baseline.md`](../../docs/engineering/performance-baseline.md) § 9. Latência dominada pela rede; os `429` em `/api/health/ready` são o limite do app (120/min por IP), não o do Traefik.
+- **`rate-limit-strict`**: proposta de labels do Traefik entregue ao Kalléo (login/mfa/senha em `/api/auth/*` e autoagendamento em `/api/portal/patient/appointments` e `/waitlist`); ele aplica no painel e cola a saída do Passo 0.
+- **Next step**: aplicar e provar o `rate-limit-strict`, registrando em `producao.md` § 0 e § 9.6. **Blockers**: nenhum.
