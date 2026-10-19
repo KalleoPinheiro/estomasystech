@@ -158,8 +158,11 @@ o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
   `traefik.http.routers.https-0-<id>.middlewares=gzip,0-<id>-noindex,rate-limit-app@file`
   (o `<id>` é o do recurso; o http segue `0-<id>-noindex,redirect-to-https`). Verificado em
   2026-10-19 com rajada de 300 requisições (60 em paralelo): antes 300/300 `200`; depois
-  104/300 `429` em `/login` e 219/300 `429` em `/api/health`. Use `rate-limit-strict@file` numa
-  rota própria para `/api/auth/*`, se for separada (não no roteador geral). As labels `caddy_*`
+  104/300 `429` em `/login` e 219/300 `429` em `/api/health`. Desde 2026-10-19 há um segundo roteador
+  `strict-<id>` (`priority=100`, mesmo serviço e `certresolver`, middlewares `gzip,0-<id>-noindex,rate-limit-strict@file`)
+  com a regra `Host(...) && (PathPrefix(/api/auth/login) || PathPrefix(/api/auth/forgot-password) || PathPrefix(/api/auth/set-password) || PathPrefix(/api/auth/mfa/verify) || PathPrefix(/api/portal/patient/appointments) || PathPrefix(/api/portal/patient/waitlist))`:
+  login, recuperação e definição de senha, MFA e autoagendamento (5/s, rajada 10 por IP); o `/login` é só a página e fica no limite geral.
+  Prova após o redeploy: 60 POST em `/api/auth/login` (30 em paralelo) deram 5 × `401` e 55 × `429`; `/api/health` seguiu no limite geral (138 × `200`, 162 × `429` em 300). Voltar atrás: remover as 7 linhas `strict-<id>` e redeploy. As labels `caddy_*`
   do Coolify são inertes com Traefik. O rate limit do app (`TRUSTED_PROXY_HOPS`) continua valendo.
 - **Checklist de deploy no Coolify (Dockerfile)** — verificado contra o código em 2026-10-18:
   - *Imagem*: `Dockerfile` já roda como `nextjs` (não-root), `PORT=3000`, `HOSTNAME=0.0.0.0`,

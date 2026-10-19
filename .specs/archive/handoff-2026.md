@@ -1394,3 +1394,9 @@ Kalléo instalou no servidor, passo a passo, o backup do ADR-040. **Ativo**: cha
 - **Baseline leve** (8 req/s, 60 s por rota, sem autenticação): [`performance-baseline.md`](../../docs/engineering/performance-baseline.md) § 9. Latência dominada pela rede; os `429` em `/api/health/ready` são o limite do app (120/min por IP), não o do Traefik.
 - **`rate-limit-strict`**: proposta de labels do Traefik entregue ao Kalléo (login/mfa/senha em `/api/auth/*` e autoagendamento em `/api/portal/patient/appointments` e `/waitlist`); ele aplica no painel e cola a saída do Passo 0.
 - **Next step**: aplicar e provar o `rate-limit-strict`, registrando em `producao.md` § 0 e § 9.6. **Blockers**: nenhum.
+
+
+## rate-limit-strict em login e autoagendamento (2026-10-19) — ENCERRADO
+
+- **Feito**: Kalléo aplicou no painel do Coolify o roteador `strict-<id>` (labels em `producao.md` § 0) e fez o redeploy; revisão das labels antes e prova depois (60 POST em `/api/auth/login`: 5 × `401`, 55 × `429`; `/api/health` no limite geral). Rotas: `/api/auth/{login,forgot-password,set-password,mfa/verify}` e `/api/portal/patient/{appointments,waitlist}`.
+- **Next step**: nenhum. **Blockers**: nenhum.
