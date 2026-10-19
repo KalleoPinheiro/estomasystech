@@ -2,16 +2,7 @@
 
 ## Decisions
 
-Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-024, AD-026, AD-027, AD-029, AD-030, AD-031, AD-025, AD-045.
-
-### AD-001
-- **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
-- **Reason**: allow-list quebraria login Google (GOOGLE_ALLOWED_EMAILS não cria conta) e a suíte E2E que forja cookies.
-- **Trade-off**: conta Google desativada só pela allowlist de env não é revogada em tempo real (mitigado: remoção da env + expiração de 12h).
-- **Nota de 2026-09-01 (issue #21)**: a premissa mudou de forma, não de conclusão. Com o login Google e a senha mestre removidos (ADR-004), os subjects sem linha em `user_accounts` que a deny-list protegia deixaram de existir em produção — sobram só os cookies forjados pela suíte E2E e sessões de instalações antigas. A semântica de deny-list foi mantida: continua bloqueando conta existente e inativa, e nenhuma sessão perdeu proteção.
-- **Scope**: proxy, lib/auth
-- **Date**: 2026-08-15
-- **Status**: active
+Decisões resolvidas e arquivadas (sem edição): [`.specs/archive/decisions-2026.md`](archive/decisions-2026.md) — AD-022, AD-015, AD-023, AD-024, AD-026, AD-027, AD-029, AD-030, AD-031, AD-025, AD-045, AD-001.
 
 ### AD-002
 - **Decision**: Sanitização de metadados de imagem (EXIF/XMP/comentários) implementada em TypeScript puro no domínio (parser de segmentos JPEG/chunks PNG/chunks RIFF-WebP), sem dependência nativa nova (sharp).
@@ -245,6 +236,12 @@ Reproduza pelo procedimento de [`docs/engineering/security-scan.md`](../docs/eng
 | `npm audit` | 0 HIGH/CRITICAL; 4 MODERATE de `esbuild` (AD-009) |
 
 Um scan GitGuard sobre `fcd6110` deve cair de 54 para ~9 findings: 2 `hardcoded_secrets` deduplicados, 1 `unsafe-formatstring` e os 6 TRIVY obsoletos, que só somem quando o serviço reindexar o lockfile. Acima disso, reproduza localmente antes de agir.
+
+### AD-055
+- **Decision**: Homologação pública na Vercel (`*.vercel.app`) com Neon, MSW nas integrações e `@faker-js/faker@10.6.0`; `APP_ENV` obrigatório na Vercel; `PRODUCTION_DB_HOSTS` recusa banco de produção fora de `production`; git com `main` implantável e `staging` descartável (`main` + features em teste, `scripts/staging/rebuild.sh`).
+- **Reason**: ver a feature numa URL pública com massa fictícia antes do merge, sem tocar produção (LGPD) e sem depender do Actions sem cota.
+- **Trade-off**: Hobby é uso não comercial e o cron é diário; `staging` diverge da `main` de propósito; seed por repositórios (cifrado) em vez de SQL cru, mais código para manter. Neon escolhido sobre Supabase (branch de banco por preview). ADR-041.
+- **Scope**: engenharia (ambientes, release), `src/lib/runtime-env.ts`, `src/infrastructure/mocks`, `scripts/seed`, `scripts/vercel-build.ts`
 
 ## Handoff
 Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto: #308 (E2E intermitente, em investigação), #376 (jurídico, art. 33) e #381 (operação em produção: backup cifrado, uploads, UptimeRobot); o resto da fila segue pelo coordenador do projeto. Produção está no ar desde 2026-10-18: [`producao.md`](../docs/engineering/producao.md) § 0.

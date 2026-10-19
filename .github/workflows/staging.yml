@@ -1,0 +1,57 @@
+name: Staging
+
+# Homologação (ADR-041). O deploy é a integração Git da Vercel (push na `staging`);
+# este workflow só recria a branch e confere a URL publicada. Sem cota de Actions,
+# o mesmo fluxo roda local: `npm run staging:rebuild` e `curl` na URL (homologacao.md).
+on:
+  workflow_dispatch:
+    inputs:
+      branches:
+        description: "Branches a mergear na staging (separadas por espaço); vazio = só a main"
+        required: false
+        default: ""
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    name: Recriar staging (main + branches)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar autor
+        run: |
+          git config user.name "estomasystech-staging"
+          git config user.email "staging@users.noreply.github.com"
+
+      - name: Reconstruir e publicar
+        env:
+          BRANCHES: ${{ inputs.branches }}
+        run: |
+          # shellcheck disable=SC2086
+          bash scripts/staging/rebuild.sh --push $BRANCHES
+
+  smoke:
+    name: Fumaça da homologação publicada
+    if: >-
+      github.event_name == 'deployment_status' &&
+      github.event.deployment_status.state == 'success' &&
+      startsWith(github.event.deployment_status.environment, 'Production')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Health pronto
+        env:
+          TARGET_URL: ${{ github.event.deployment_status.environment_url }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "${TARGET_URL}/api/health/ready")
+          echo "GET /api/health/ready -> ${code}"
+          test "${code}" = "200"

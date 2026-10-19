@@ -131,15 +131,12 @@ Provisionamento, uma vez:
 `sudo systemctl start estomasystech-backup` (rollback é restaurar, § 4) e
 `docker compose up -d --build`. O app fica fora do ar só enquanto o container novo sobe e migra.
 
-### Alternativa não adotada: Vercel + Supabase
+### Homologação na Vercel (não é produção)
 
-O código continua compatível (`vercel.json`), mas não é o alvo. Diferenças que importam: o app
-usa o pooler do Supabase em modo transação (porta `6543`) e as migrações a conexão direta
-(`5432`), com `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e `PG_POOL_MAX=5`; fotos **obrigatoriamente** em
-bucket (`PHOTO_STORAGE=s3`, a aplicação recusa o disco local quando `VERCEL` existe); o Vercel
-Cron chama `GET /api/reminders/run` e `GET /api/retention/run` com
-`Authorization: Bearer $CRON_SECRET`; `TZ` é reservado e
-o app alinha o fuso a `APP_TIMEZONE` na subida (`src/instrumentation.ts`).
+A Vercel hospeda só **homologação e previews**, com Neon, MSW e dados fictícios
+([ADR-041](../adr/041-homologacao-na-vercel-e-branch-staging.md), [`homologacao.md`](homologacao.md)).
+Produção continua nesta VPS. Um banco de produção nunca é apontado para lá: `APP_ENV` e
+`PRODUCTION_DB_HOSTS` recusam.
 
 ## 3. TLS, URL pública e proxy
 

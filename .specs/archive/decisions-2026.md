@@ -92,3 +92,12 @@ Movidas de `.specs/STATE.md` § Decisions sem edição de conteúdo, para manter
 
 ### AD-040
 - **Decision**: remarcação bloqueada para profissional inativo e revogação imediata no recadastro do 2º fator (#297), decididas por @KalleoPinheiro (2026-10-11). `RescheduleAppointment` recebe o repositório de profissionais (opcional, como em `ScheduleAppointment`) e reusa `assertActiveProfessional` com a mensagem "Profissional inativo: escolha outro profissional" (`400`); `POST /api/me/mfa/confirm` chama `forgetSessionStatus` como logout, set-password e PATCH de conta. Pergunta aberta sobre a remarcação **pelo portal** **decidida** pelo coordenador (autonomia de @KalleoPinheiro): também é bloqueada, com mensagem pedindo contato com a clínica (`400`; POR-RN-20), porque consulta sem profissional ativo seria atendimento fantasma; cancelar segue livre. Trade-off: o paciente depende da clínica para trocar de profissional; a equipe resolve o impasse trocando de profissional ou reativando o cadastro. AGE-RN-20, POR-RN-20, ACE-RN-53 · 2026-10-17 · active
+
+### AD-001
+- **Decision**: Revogação de sessão staff usa semântica de deny-list: só bloqueia quando a conta existe em `user_accounts` E está inativa; subject sem linha (login Google via allowlist, sessões E2E forjadas, "local") continua válido.
+- **Reason**: allow-list quebraria login Google (GOOGLE_ALLOWED_EMAILS não cria conta) e a suíte E2E que forja cookies.
+- **Trade-off**: conta Google desativada só pela allowlist de env não é revogada em tempo real (mitigado: remoção da env + expiração de 12h).
+- **Nota de 2026-09-01 (issue #21)**: a premissa mudou de forma, não de conclusão. Com o login Google e a senha mestre removidos (ADR-004), os subjects sem linha em `user_accounts` que a deny-list protegia deixaram de existir em produção — sobram só os cookies forjados pela suíte E2E e sessões de instalações antigas. A semântica de deny-list foi mantida: continua bloqueando conta existente e inativa, e nenhuma sessão perdeu proteção.
+- **Scope**: proxy, lib/auth
+- **Date**: 2026-08-15
+- **Status**: active
