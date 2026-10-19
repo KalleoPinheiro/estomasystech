@@ -504,6 +504,7 @@ docker compose up -d --wait app
 Sem `BACKUP_DB_CONTAINER`, o script usa o `db` e o volume `uploads` desse projeto compose.
 Abra `http://localhost:3100`, entre e confira a ficha de um paciente com evolução, anamnese e
 foto. Cronometre do início do download até a ficha abrir (é o RTO real). Depois,
+`docker compose down -v`, apague a chave e o backup da máquina. Registre abaixo; se algo
 falhar, abra issue com o rótulo `bug`.
 
 | Data | Backup de | Quem | Tempo até voltar | Resultado |
