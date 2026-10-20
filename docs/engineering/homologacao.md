@@ -49,7 +49,7 @@ mesmo comando por `workflow_dispatch` quando houver cota.
 | --- | --- | --- | --- | --- |
 | Onde | VPS + Coolify | Vercel (branch `staging`) | Vercel (branch do PR) | `npm run dev` |
 | `APP_ENV` | `production` (ou ausente com `NODE_ENV=production`) | `staging` | `preview` | `development` |
-| Banco | Postgres 18 privado | Neon branch `staging` | Neon branch por preview | docker compose |
+| Banco | Postgres 18 privado | Neon branch `staging` | Neon branch por preview | docker compose (`npm run ambiente:local`, [ADR-044](../adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md)) |
 | Dados | reais | fictícios (seed) | fictícios (seed) | seed opcional |
 | Integrações | reais | MSW (`MOCK_INTEGRATIONS=true`) | MSW | opcional |
 | Faixa de aviso e `noindex` | não | sim | sim | não |

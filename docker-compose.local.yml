@@ -1,0 +1,7 @@
+# Complemento do ambiente local completo (issue #404): `npm run ambiente:local`.
+# Usado junto de docker-compose.yml, sempre com `-p estomasystech-local` (volumes próprios).
+# O app é a mesma imagem de produção (NODE_ENV=production); o compose base já injeta o resto.
+services:
+  db:
+    # Poucas centenas de conexões: a suíte de integração abre um banco por arquivo de teste.
+    command: ["postgres", "-c", "max_connections=200"]

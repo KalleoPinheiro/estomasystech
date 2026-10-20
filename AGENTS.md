@@ -35,6 +35,8 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run test:e2e` | fluxos de UI (loop local) | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados; o E2E **não roda no Actions** |
 | `npm run check:sv` | toca JSX | adoção de `@still-void/ui` |
 | `npm run check:docs` | toca `.md` | links e frontmatter |
+| `npm run ambiente:local` / `ambiente:local:down` | validar à mão com Postgres 18 + app + massa fictícia | exige daemon Docker; recusa banco de produção ([ADR-044](docs/adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md)) |
+| `npm run test:integracao` | mudou persistência, migração ou concorrência | suíte contra Postgres real, não PGlite; fora do `gate:local` |
 | `npm run db:migrate` | schema mudou | drizzle-kit |
 | `npm run build` | — | **não remova** `--max-old-space-size=4096` (e o `ENV NODE_OPTIONS` do estágio `builder` do `Dockerfile`) |
 

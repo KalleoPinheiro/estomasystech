@@ -1444,3 +1444,15 @@ Pedido do Kalléo na thread "Versionamento e release". Design: `.design/versiona
 - **Desvio do design**: `check:changeset` não entra no `gate:local` porque `scripts/gate/` é do dono (ADR-042); roda no `ci.yml`. O PR de versão, com `package.json` e CHANGELOG, não exige changeset.
 - **Docker/imagem**: smoke da imagem pulado (sem daemon na nuvem); `Dockerfile` não mudou.
 - **Next step**: Kalléo roda `npm run release:prepare` quando quiser o primeiro release (`v0.2.0`), decide se `check:changeset` entra no `gate:local` e confirma o marco `1.0.0` (primeiro paciente real). **Blockers**: nenhum.
+
+
+## Ambiente local completo e suíte de integração em Postgres real (2026-10-20) — EM REVISÃO
+
+Issue #404, pedido do Kalléo junto do gate local (#409). ADR-044.
+- **Feito**: `npm run ambiente:local` / `ambiente:local:down` (`scripts/ambiente/`, `docker-compose.local.yml`, projeto compose próprio, segredos descartáveis em `.ambiente-local/`); `npm run test:integracao` (`vitest.integracao.config.mts`, `tests/support/postgres-*.ts`) com um banco clonado de modelo por arquivo de teste; guarda do ADR-041 (recusa produção e banco não local, antes de tocar no Docker); docs (onboarding, homologação, AGENTS.md, ADR-044, `docs/README.md`).
+- **Testes novos** (nenhum existente editado): `tests/scripts/ambiente-local.test.ts` (guarda, segredos, compose, portas, resumo) e `tests/integracao/postgres-real.integracao.ts` (PostgreSQL real com `pg_trgm`/`btree_gist`; anti-double-booking sob duas conexões concorrentes).
+- **Medido**: 116 arquivos / 1898 testes passam contra PostgreSQL 16 nativo (sem Docker na nuvem), ~160 s. Com `PG_POOL_MAX=3` dois testes antigos falham por corrida do próprio teste (leem logo após o `after()` da auditoria); por isso a suíte usa 1 conexão por arquivo e a concorrência real mora em `tests/integracao/`.
+- **Não validado**: compose + imagem + seed no Docker e Postgres 18 (sem daemon na nuvem). Kalléo roda `npm run ambiente:local` e `npm run test:integracao` no WSL.
+- **Desvios**: `vitest.integracao.config.mts` é arquivo novo (o hook da regra 8 só protege `vitest.config.mts`); fora do `gate:local` (`scripts/gate/` é do dono).
+- **Rollback**: reverter o PR; sem migração e sem mudança no app.
+- **Next step**: Kalléo valida no WSL; decide se `test:integracao` entra no `gate:local`. **Blockers**: nenhum.

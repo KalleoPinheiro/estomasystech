@@ -85,6 +85,25 @@ curl -sX POST http://localhost:3000/api/auth/bootstrap \
 Porta ocupada: `POSTGRES_PORT=5477 APP_PORT=3001 docker compose up -d --build`.
 Parar: `docker compose down` · apagar dados: `docker compose down -v`.
 
+### Ambiente local completo (um comando)
+
+```bash
+npm run ambiente:local        # compose próprio (Postgres 18 + app) + migra + semeia + imprime URL e contas
+npm run test:integracao       # suíte de integração contra esse Postgres (não PGlite)
+npm run ambiente:local:down   # derruba e apaga volume e segredos descartáveis
+```
+
+- Projeto compose `estomasystech-local` (não mexe no `docker compose up` do dia a dia). O app é a imagem de
+  produção; o banco fica em `127.0.0.1:55432` (`POSTGRES_PORT`) e o app em `http://localhost:3000` (`APP_PORT`).
+- Mesma massa e mesmas contas fictícias da [homologação](homologacao.md#4-contas-fictícias-do-seed); a senha é
+  gerada na 1ª execução e fica em `.ambiente-local/` (fora do git). O cookie de sessão é `Secure`: use Chrome,
+  Edge ou Firefox.
+- **Recusa produção:** `APP_ENV`/`NODE_ENV=production`, host em `PRODUCTION_DB_HOSTS` ou `DATABASE_URL` que não seja
+  da própria máquina. Desfaça a variável e rode de novo.
+- `test:integracao` aceita `INTEGRATION_DATABASE_URL` (um Postgres local, usuário que cria bancos) para rodar sem
+  Docker; cada arquivo de teste ganha um banco clonado de um modelo migrado. Decisão e limites:
+  [ADR-044](../adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md).
+
 ## 3. Via B — Node local + Postgres do compose
 
 ```bash
@@ -112,6 +131,7 @@ npm run dev                   # http://localhost:3000
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | sim (compose) | senha do Postgres do compose, sem padrão | `openssl rand -hex 24`; entra no `DATABASE_URL` do app |
 | `DATABASE_URL` | sim (fora do compose) | Postgres | `postgres://estomasystech:<POSTGRES_PASSWORD>@localhost:5432/estomasystech` |
+| `INTEGRATION_DATABASE_URL` | não | Postgres local da suíte de integração (`npm run test:integracao`); sem ela, sobe o `db` do compose | `postgres://estomasystech:<senha>@127.0.0.1:5432/postgres` (só máquina local; produção é recusada) |
 | `AUTH_SECRET` | sim em produção | assina a sessão (só isso: o dado clínico tem chave própria) | `openssl rand -hex 32`; sem ele, 503 em toda rota. Rotacionar derruba todas as sessões |
 | `DATA_ENCRYPTION_KEY` | sim em produção | cifra o texto clínico e o token do Google em repouso ([ADR-006](../adr/006-chave-de-dados-clinicos.md)) | `openssl rand -hex 32` (≥ 32 caracteres); fora de produção, sem ela, usa chave de desenvolvimento. Perdê-la é perder o prontuário: guarde no cofre |
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |
