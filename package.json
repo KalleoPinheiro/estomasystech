@@ -31,7 +31,11 @@
     "check:sv": "bash scripts/check-sv-adoption.sh",
     "check:docs": "tsx scripts/check-docs.ts",
     "check:testes": "tsx scripts/gate/check-test-integrity.ts",
-    "gate:local": "tsx scripts/gate/local.ts"
+    "gate:local": "tsx scripts/gate/local.ts",
+    "changeset": "changeset",
+    "check:changeset": "tsx scripts/release/check-changeset.ts",
+    "release:prepare": "tsx scripts/release/prepare.ts",
+    "release:publish": "tsx scripts/release/publish.ts"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": "biome check --no-errors-on-unmatched --write"
@@ -51,6 +55,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.12",
+    "@changesets/cli": "^3.0.3",
     "@electric-sql/pglite": "^0.5.4",
     "@faker-js/faker": "10.6.0",
     "@playwright/test": "^1.61.1",
