@@ -115,6 +115,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/048-bdd-com-describe-it-e-rastreabilidade-de-regras-criticas.md`](adr/048-bdd-com-describe-it-e-rastreabilidade-de-regras-criticas.md) | BDD em `describe/it` Dado/Quando/Então e teste que liga cada regra crítica ao seu cenário |
 | [`adr/049-matriz-de-excecoes-por-dominio.md`](adr/049-matriz-de-excecoes-por-dominio.md) | matriz de casos de exceção por domínio (7 categorias) e teste que prova que cada linha cita um teste que existe |
 | [`adr/050-limiar-100-por-camada-e-ui-medida.md`](adr/050-limiar-100-por-camada-e-ui-medida.md) | limiar de 100% por camada de regra; UI segue medida com piso de 90% |
+| [`adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-semanal.md`](adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-semanal.md) | mutação por arquivo alterado no `gate:local` e rodada completa semanal |
 | [`adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md`](adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) | produção em PostgreSQL 18 (Dockerfile + banco do Coolify); compose e CI em 16 até um PR com Docker alinhar |
 | [`adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md`](adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md) | alertas, lembretes e retenção como Scheduled Tasks do Coolify, com `wget` e `CRON_SECRET` do ambiente |
 | [`adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md`](adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md) | deploy manual depois do backup; rollback por redeploy ou restauração |

@@ -38,12 +38,22 @@ export const REQUIRED_STEPS = [
   'e2e-dev',
 ] as const;
 
+/**
+ * Arquivos de regra que o Stryker sabe mutar (ADR-047): mesmo escopo de `stryker.config.json`
+ * (`src/domain` e `src/application`, sem `.d.ts` nem `index.ts`).
+ */
+export function mutationTargets(changedFiles: string[]): string[] {
+  return changedFiles.filter(
+    (f) => /^src\/(domain|application)\/.+\.ts$/.test(f) && !f.endsWith('.d.ts') && !/(^|\/)index\.ts$/.test(f),
+  );
+}
+
 export interface Check {
   ok: boolean;
   reason: string;
 }
 
-export function verifyReceipt(prBody: string, headSha: string): Check {
+export function verifyReceipt(prBody: string, headSha: string, changedFiles: string[] = []): Check {
   const m = LINE.exec(prBody);
   if (!m) return { ok: false, reason: 'Corpo do PR sem a linha `E2E-GATE:` (rode `npm run gate:local`).' };
   const [, sha, status, rest] = m;
@@ -57,5 +67,10 @@ export function verifyReceipt(prBody: string, headSha: string): Check {
   const missing = REQUIRED_STEPS.filter((s) => !steps.includes(s));
   if (missing.length > 0)
     return { ok: false, reason: `Recibo sem as etapas obrigatórias: ${missing.join(', ')}.` };
+  if (mutationTargets(changedFiles).length > 0 && !steps.includes('mutacao'))
+    return {
+      ok: false,
+      reason: 'O diff muda regra em domain/application: o recibo precisa da etapa `mutacao` (ADR-047).',
+    };
   return { ok: true, reason: `Recibo válido para ${headSha.slice(0, 7)}.` };
 }

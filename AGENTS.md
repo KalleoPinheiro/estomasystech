@@ -32,7 +32,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run release:prepare` / `release:publish` | release de produção | PR de versão, depois tag + GitHub Release com `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
 | `npm run check:testes` | automático no `pre-push` e no CI | regra 8: falha se um teste foi enfraquecido |
 | `npm run test:changed [-- <ref>]` | loop local (ex.: `-- origin/main`) | não substitui `test:coverage`; o CI roda a suíte completa |
-| `npm run test:mutacao` | mudou regra em `src/domain/**` ou `src/application/**` | Stryker + Vitest (`stryker.config.json`, `vitest.mutacao.config.mts`); ~1h20 na suíte inteira, use `-- --mutate <arquivo>` para um arquivo; relatório em `reports/mutation`; fora do Actions e do `gate:local` ([ADR-047](docs/adr/047-testes-de-mutacao-com-stryker.md)) |
+| `npm run test:mutacao` | mudou regra em `src/domain/**` ou `src/application/**` | Stryker + Vitest (`stryker.config.json`, `vitest.mutacao.config.mts`); o `gate:local` já roda sozinho nos arquivos alterados de domain/application; rodada completa ~1h20 (semanal no Actions); `-- --mutate <arquivo>` para um arquivo; relatório em `reports/mutation` ([ADR-047](docs/adr/047-testes-de-mutacao-com-stryker.md), [ADR-051](docs/adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-semanal.md)) |
 | `npm run test:e2e` | fluxos de UI (loop local) | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados; o E2E **não roda no Actions** |
 | `npm run check:sv` | toca JSX | adoção de `@still-void/ui` |
 | `npm run check:docs` | toca `.md` | links e frontmatter |

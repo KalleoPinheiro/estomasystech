@@ -1504,3 +1504,11 @@ Issue #408, pedido do Kalléo em 2026-10-19 (ADR-049); última da fila de qualid
 - **Testes novos** (nenhum existente editado, sem `TESTE-ALTERADO`): `tests/api/estoque-excecoes.test.ts` (papéis sem permissão e saídas concorrentes), `tests/api/prontuario-excecoes.test.ts` (evolução imutável, PRO-RN-02), `tests/api/agenda-excecoes.test.ts` (dois POSTs no mesmo horário: 200 e 409, AGE-RN-02). Demais linhas usam teste que já existia.
 - **`n/a`** só com motivo de arquitetura (ex.: relatório é só leitura; sem integração externa entregue em estoque e financeiro, PSP no backlog).
 - **Next step**: Kalléo revisa as linhas `n/a`; caso de exceção novo é decisão de produto (pergunta aberta). **Blockers**: nenhum.
+
+
+## Mutação no gate local (2026-10-20) — EM REVISÃO
+
+Pedido do Kalléo (thread "Mutação no gate local"), com permissão para editar `scripts/gate/` (ADR-051).
+- **Feito**: `gate:local` roda `test:mutacao --mutate` nos arquivos de domain/application alterados contra `origin/main`; etapa `mutacao` no recibo; `verify-receipt.ts --base-ref` exige a etapa quando o diff muda regra; `mutacao-semanal.yml` (rodada completa incremental, domingo). Teste novo `tests/scripts/gate-mutacao.test.ts`; AGENTS.md, `docs/README.md`, ADR-051.
+- **Pergunta aberta**: a rotina semanal consome cota do Actions (decisão dele: manter cron ou só `workflow_dispatch`).
+- **Next step**: Kalléo revisa; subir `break` para 90 após rodada completa ≥ 90%. **Blockers**: nenhum.
