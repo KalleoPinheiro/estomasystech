@@ -73,10 +73,17 @@ export default defineConfig({
         "src/app/documentos/**",
       ],
       thresholds: {
+        // Piso global: UI (src/app/**, src/components/**) segue medida, sem baixar (ADR-050).
         lines: 90,
         functions: 90,
         branches: 90,
         statements: 90,
+        // Camadas de regra: 100% (ADR-046).
+        "src/proxy.ts": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/domain/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/application/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/infrastructure/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/lib/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
       },
     },
   },
