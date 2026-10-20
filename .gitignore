@@ -77,3 +77,6 @@ uploads/
 .tlc/harness/state/
 .cursor/hooks.json
 .claude/settings.json
+
+# recibo do gate local (ADR-042)
+/.gate/

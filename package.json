@@ -29,7 +29,9 @@
     "test:e2e:ui": "playwright test --ui",
     "import-taxonomy": "tsx scripts/import-taxonomy.ts",
     "check:sv": "bash scripts/check-sv-adoption.sh",
-    "check:docs": "tsx scripts/check-docs.ts"
+    "check:docs": "tsx scripts/check-docs.ts",
+    "check:testes": "tsx scripts/gate/check-test-integrity.ts",
+    "gate:local": "tsx scripts/gate/local.ts"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": "biome check --no-errors-on-unmatched --write"

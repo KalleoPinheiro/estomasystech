@@ -6,16 +6,22 @@ import { describe, expect, it } from 'vitest';
  * Issue #203: o artefato de produção (build do Next e imagem Docker) nunca era
  * verificado antes do deploy, e o E2E só rodava contra `next dev` (CSP
  * relaxada). Checagem textual do workflow — a execução em si é o próprio CI.
+ * ADR-042: o E2E saiu do Actions e virou `gate:local` (recibo no PR); o build
+ * continua no job `ci` e o Docker no `docker.yml`.
  */
 const root = path.resolve(import.meta.dirname, '../..');
-const workflow = readFileSync(
-  path.join(root, '.github/workflows/ci.yml'),
-  'utf8',
-);
+const read = (file: string): string =>
+  readFileSync(path.join(root, file), 'utf8');
+const workflow = read('.github/workflows/ci.yml');
+const dockerWorkflow = read('.github/workflows/docker.yml');
+const packageScripts = JSON.parse(read('package.json')).scripts as Record<
+  string,
+  string
+>;
 
 /** Bloco de um job (até o próximo job de 2 espaços). */
-function job(name: string): string {
-  const lines = workflow.split('\n');
+function job(name: string, source = workflow): string {
+  const lines = source.split('\n');
   const start = lines.indexOf(`  ${name}:`);
   expect(start, `job ${name}`).toBeGreaterThanOrEqual(0);
   const rest = lines.slice(start + 1);
@@ -25,7 +31,7 @@ function job(name: string): string {
 
 describe('CI de produção (#203)', () => {
   it('C43 CI roda npm run build', () => {
-    const block = job('build-e2e-prod');
+    const block = job('ci');
 
     expect(block).toMatch(/^ {8}run: npm run build$/m);
     // Bloqueante: nada de continue-on-error no job ou no passo.
@@ -33,7 +39,7 @@ describe('CI de produção (#203)', () => {
   });
 
   it('C44 CI constrói a imagem e faz smoke', () => {
-    const block = job('docker');
+    const block = job('docker', dockerWorkflow);
     const smoke = readFileSync(
       path.join(root, 'scripts/docker-smoke.sh'),
       'utf8',
@@ -49,19 +55,20 @@ describe('CI de produção (#203)', () => {
     expect(smoke).toContain('--force-recreate');
   });
 
-  it('C45 CI roda o E2E principal contra o build de produção, com checagem de CSP', () => {
-    const block = job('build-e2e-prod');
+  it('C45 o gate local roda o E2E principal contra o build de produção, com checagem de CSP', () => {
+    const gate = read('scripts/gate/local.ts');
     const config = readFileSync(
       path.join(root, 'playwright.prod.config.ts'),
       'utf8',
     );
 
-    expect(block).toMatch(
-      /npx playwright test -c playwright\.prod\.config\.ts/,
+    expect(packageScripts['test:e2e:prod']).toBe(
+      'playwright test -c playwright.prod.config.ts',
     );
-    expect(block.indexOf('npm run build')).toBeLessThan(
-      block.indexOf('playwright.prod.config.ts'),
+    expect(gate.indexOf("name: 'build'")).toBeLessThan(
+      gate.indexOf("name: 'e2e-producao'"),
     );
+    expect(gate).toContain("args: ['run', 'test:e2e:prod']");
     expect(config).toContain('command: "npm run start"');
     // #308: a suíte principal roda contra o build; o `next dev` fica só com os
     // specs que precisam do convite no log (contas por papel) e o login.
@@ -72,15 +79,16 @@ describe('CI de produção (#203)', () => {
 });
 
 describe('E2E: next dev só para o que depende dele (#308)', () => {
-  it('C46 o job e2e roda os specs de papéis e de login contra o next dev', () => {
-    const block = job('e2e');
+  it('C46 o gate local roda os specs de papéis e de login contra o next dev', () => {
+    const gate = read('scripts/gate/local.ts');
     const dev = readFileSync(path.join(root, 'playwright.config.ts'), 'utf8');
     const constants = readFileSync(
       path.join(root, 'e2e/support/constants.ts'),
       'utf8',
     );
 
-    expect(block).toMatch(/run: npm run test:e2e:dev$/m);
+    expect(packageScripts['test:e2e:dev']).toBe('playwright test');
+    expect(gate).toContain("args: ['run', 'test:e2e:dev']");
     expect(dev).toContain('testMatch: [...ROLE_ACCOUNT_SPECS, "auth.spec.ts"]');
     for (const spec of [
       'papeis-atendente.spec.ts',
@@ -91,5 +99,24 @@ describe('E2E: next dev só para o que depende dele (#308)', () => {
     ]) {
       expect(constants).toContain(`"${spec}"`);
     }
+  });
+});
+
+describe('E2E fora do Actions (ADR-042)', () => {
+  it('C47 o Actions não roda Playwright: quem confere o E2E é o recibo do gate local', () => {
+    for (const file of [
+      '.github/workflows/ci.yml',
+      '.github/workflows/docker.yml',
+      '.github/workflows/recibo-gate.yml',
+    ]) {
+      expect(read(file), file).not.toMatch(/playwright/i);
+    }
+    expect(read('.github/workflows/recibo-gate.yml')).toContain(
+      'scripts/gate/verify-receipt.ts',
+    );
+  });
+
+  it('C48 a staging não dispara o CI completo', () => {
+    expect(workflow).toMatch(/push:\n\s+branches: \[main\]/);
   });
 });

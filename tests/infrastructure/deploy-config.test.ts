@@ -154,7 +154,7 @@ describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', 
     );
     expect(app).toMatch(/^ {6}S3_SSE: \$\{S3_SSE:-\}/m);
 
-    expect(read('.github/workflows/ci.yml')).toMatch(
+    expect(read('.github/workflows/docker.yml')).toMatch(
       /^ {10}DATA_ENCRYPTION_KEY: build-only$/m,
     );
     expect(read('scripts/docker-smoke.sh')).toContain(
@@ -261,7 +261,7 @@ describe('Feature: VPS com Traefik do Coolify e backup cifrado (#206)', () => {
     // Com o app conectado ao banco, o --confirmar recusa antes de apagar qualquer coisa.
     expect(restore).toContain('pare o app antes');
 
-    const ci = read('.github/workflows/ci.yml');
+    const ci = read('.github/workflows/docker.yml');
     expect(ci).toContain('run: bash scripts/backup-smoke.sh');
     expect(ci).toContain('apt-get install -y -qq age');
   });

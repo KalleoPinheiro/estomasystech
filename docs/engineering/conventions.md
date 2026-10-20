@@ -49,7 +49,8 @@ last_reviewed: 2026-09-26
 
 - Estilo BDD nos nomes (`Feature / Cenário / Dado-Quando-Então`); fixtures via `tests/support/builders.ts`.
 - Cobertura ≥ 90% em linhas, funções, branches e statements — limiar em `vitest.config.mts`, CI roda a suíte completa.
-- Nunca enfraqueça uma asserção nem use `skip` para ficar verde; flake é causa a investigar, não motivo para pular.
+- **Teste é intocável (regra 8, [ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)).** Nunca enfraqueça, apague nem desligue teste, reduza limiar de cobertura ou aumente `retries`/`timeout` para ficar verde: corrija o código. Flake é causa a investigar. Mudar teste existente só quando o requisito de negócio mudou, com `TESTE-ALTERADO: <motivo>` no PR. O hook `.claude/hooks/protect-tests.sh`, o `pre-push` e o CI (`npm run check:testes`) barram isso por script.
+- Teste novo descreve comportamento de negócio de uma funcionalidade real (cenário Dado/Quando/Então com os termos do `CONTEXT.md`), inclusive os caminhos de erro e exceção; não espelha a implementação.
 - **Toda feature de tela precisa de cobertura para os papéis que a usam** (#204). Rota nova: teste
   pelo proxy (`tests/proxy.test.ts`) para cada papel que deve passar e cada um que deve levar `403`
   — chamar o handler direto não exercita a borda. Tela nova ou fluxo novo: E2E com a sessão real do
@@ -63,5 +64,5 @@ last_reviewed: 2026-09-26
 
 - Conventional Commits (`feat(scope): …`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`).
 - Hooks: `lint-staged` roda `biome check --write` nos arquivos alterados; `.claude/hooks/` bloqueia comandos git destrutivos.
-- Gates do CI (`.github/workflows/ci.yml`): typecheck, lint, `check:sv`, `check:docs`, `test:coverage`; jobs separados de E2E: o principal contra o build de produção (`build-e2e-prod`) e o de papéis contra `next dev` ([ADR-021](../adr/021-e2e-contra-build-de-producao.md)).
+- Gates do CI: `ci.yml` (typecheck, lint, `check:sv`, `check:docs`, `test:coverage`, build), `recibo-gate.yml` (recibo do `gate:local` e integridade dos testes) e `docker.yml` (só quando a imagem ou o backup mudam). O E2E não roda no Actions: é o `npm run gate:local` ([ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md); configuração em [ADR-021](../adr/021-e2e-contra-build-de-producao.md)).
 - Mudou comportamento de domínio → atualize `docs/domains/<slug>/` no mesmo PR ([governance.md](../governance.md)).

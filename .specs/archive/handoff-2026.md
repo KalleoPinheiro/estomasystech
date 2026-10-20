@@ -1421,3 +1421,15 @@ Pedido do Kalléo na thread "ambiente de desenvolvimento na Vercel". Spec: `.spe
 - **Rollback**: remover o projeto na Vercel e a branch `staging`; produção não é afetada (sem migração de schema, sem mudança de comportamento com `APP_ENV` ausente fora da Vercel).
 - **Fora**: segundo fator pré-cadastrado no seed (o primeiro login cadastra); Supabase; domínio próprio.
 - **Next step**: Kalléo cumpre `homologacao.md` § 5 e confere o primeiro Preview. **Blockers**: nenhum.
+
+
+## E2E fora do Actions, gate local com recibo e testes intocáveis (2026-10-19) — EM REVISÃO
+
+Pedido do Kalléo na thread "E2E fora do Actions". Diagnóstico: `/mnt/project-files/ci/e2e-fora-do-actions.md`. ADR-042.
+- **Causa**: plano Pro com 3.000 min/mês esgotados; run completo ~25 a 30 min, E2E ~60%; CI também disparava na `staging` e repetia a suíte a cada merge.
+- **Feito**: `ci.yml` só com gate rápido (+ build); `docker.yml` com filtro de caminhos; `recibo-gate.yml` (recibo `E2E-GATE:` do SHA do head + integridade dos testes); `npm run gate:local` (`scripts/gate/local.ts`); regra 7 reescrita e regra 8 nova no `AGENTS.md`.
+- **Regra 8 imposta por script**: `scripts/gate/test-integrity.ts` (análise pura) usada pelo hook `.claude/hooks/protect-tests.sh` (PreToolUse), `.husky/pre-push`, `gate:local` e CI. Achado proibido: teste desligado, limiar de cobertura reduzido, retry/timeout aumentado. Justificável com `TESTE-ALTERADO:`: asserção alterada, arquivo apagado, config alterada.
+- **Teste alterado com motivo** (`tests/infrastructure/ci-workflow.test.ts`): C43 a C46 passaram a apontar para o `ci.yml`, o `docker.yml` e o `gate:local` porque o requisito mudou (decisão do dono em 2026-10-19); C47 e C48 novos garantem que o Actions não roda Playwright e que a `staging` não dispara CI.
+- **Limite**: recibo e `TESTE-ALTERADO:` são autodeclarados; hook, `pre-push` e CI barram descuido, não um autor deliberado (ADR-042, Consequências).
+- **Fora (tickets)**: 100% de cobertura, mutantes, BDD, matriz de exceções, ambiente local completo (`/mnt/project-files/ci/tickets-qualidade-de-testes.md`).
+- **Next step**: Kalléo confirma se o plano permite Environment com revisor obrigatório para a trava humana; revisão em 2026-11-30. **Blockers**: nenhum.

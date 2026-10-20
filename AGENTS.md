@@ -27,8 +27,10 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run typecheck` | antes de commitar | `tsc --noEmit` |
 | `npm run lint` / `npm run format` | antes de commitar | Biome é a única ferramenta de lint+format |
 | `npm run test:coverage` | gate de CI | **mínimo 90%** |
+| `npm run gate:local` | antes de marcar o PR como pronto | build + E2E + gates + integridade dos testes; imprime a linha `E2E-GATE:` do PR ([ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)) |
+| `npm run check:testes` | automático no `pre-push` e no CI | regra 8: falha se um teste foi enfraquecido |
 | `npm run test:changed [-- <ref>]` | loop local (ex.: `-- origin/main`) | não substitui `test:coverage`; o CI roda a suíte completa |
-| `npm run test:e2e` | fluxos de UI | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados |
+| `npm run test:e2e` | fluxos de UI (loop local) | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados; o E2E **não roda no Actions** |
 | `npm run check:sv` | toca JSX | adoção de `@still-void/ui` |
 | `npm run check:docs` | toca `.md` | links e frontmatter |
 | `npm run db:migrate` | schema mudou | drizzle-kit |
@@ -55,10 +57,17 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
    usuário: registre como pergunta aberta, não como requisito.
 6. **Doc no mesmo PR.** Mudou comportamento de um domínio → atualize `docs/domains/<slug>/`.
    Decisão arquitetural durável → novo ADR. → [`docs/governance.md`](docs/governance.md)
-7. **Merge só com CI 100% verde.** Nenhum PR é mergeado (nem dado como pronto para merge) com
-   qualquer step do CI falhando — inclusive quando a falha não foi causada pelo PR (ex.: também
-   vermelha na `main`). Nesse caso a falha é corrigida primeiro, no próprio PR ou em outro que
-   entre antes. Decisão de @KalleoPinheiro, 2026-09-25.
+7. **Merge só com CI verde e recibo do gate local.** O Actions roda o gate rápido (typecheck, lint,
+   sv, docs, cobertura, build) e o E2E roda localmente por `npm run gate:local`, que imprime a linha
+   `E2E-GATE: <sha> pass ...` no corpo do PR; o CI reprova recibo ausente, de outro commit ou sem
+   etapas. Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
+   não é do PR: corrija primeiro. Decisões de @KalleoPinheiro, 2026-09-25 e 2026-10-19. → [ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)
+8. **Teste é intocável.** Nunca edite, afrouxe, apague ou desligue teste (`skip`/`only`/`fixme`),
+   nem reduza limiar de cobertura, nem aumente `retries`/`timeout`, para resolver problema de
+   desenvolvimento: **corrija o código**. Teste novo é permitido; mudar teste existente só quando o
+   requisito de negócio mudou, com `TESTE-ALTERADO: <motivo>` no PR. Imposto por script, não por
+   confiança: hook do Claude Code, `pre-push` e CI (`npm run check:testes`). Teste verifica
+   comportamento de negócio (cenário Given/When/Then), não a implementação. → [ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)
 
 ## Mapa de contexto
 
