@@ -85,6 +85,25 @@ curl -sX POST http://localhost:3000/api/auth/bootstrap \
 Porta ocupada: `POSTGRES_PORT=5477 APP_PORT=3001 docker compose up -d --build`.
 Parar: `docker compose down` · apagar dados: `docker compose down -v`.
 
+### Ambiente local completo (um comando)
+
+```bash
+npm run ambiente:local        # compose próprio (Postgres 18 + app) + migra + semeia + imprime URL e contas
+npm run test:integracao       # suíte de integração contra esse Postgres (não PGlite)
+npm run ambiente:local:down   # derruba e apaga volume e segredos descartáveis
+```
+
+- Projeto compose `estomasystech-local` (não mexe no `docker compose up` do dia a dia). O app é a imagem de
+  produção; o banco fica em `127.0.0.1:55432` (`POSTGRES_PORT`) e o app em `http://localhost:3000` (`APP_PORT`).
+- Mesma massa e mesmas contas fictícias da [homologação](homologacao.md#4-contas-fictícias-do-seed); a senha é
+  gerada na 1ª execução e fica em `.ambiente-local/` (fora do git). O cookie de sessão é `Secure`: use Chrome,
+  Edge ou Firefox.
+- **Recusa produção:** `APP_ENV`/`NODE_ENV=production`, host em `PRODUCTION_DB_HOSTS` ou `DATABASE_URL` que não seja
+  da própria máquina. Desfaça a variável e rode de novo.
+- `test:integracao` aceita `INTEGRATION_DATABASE_URL` (um Postgres local, usuário que cria bancos) para rodar sem
+  Docker; cada arquivo de teste ganha um banco clonado de um modelo migrado. Decisão e limites:
+  [ADR-044](../adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md).
+
 ## 3. Via B — Node local + Postgres do compose
 
 ```bash
