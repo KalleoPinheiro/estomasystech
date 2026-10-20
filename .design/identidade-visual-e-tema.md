@@ -98,6 +98,18 @@ erDiagram
   - Instalar na tela inicial: `app/manifest.ts` (nome, `display: standalone`, `theme_color`, `background_color`, ícones 192/512 e maskable) e `apple-touch-icon` 180px; sem service worker agora (offline em saúde exige decisão própria).
   - Links nativos: `tel:` e o botão de WhatsApp existente abrem o app certo em cada sistema.
 
+- Acessibilidade priorizada (WCAG 2.2 AA como piso, critério de pronto de todo bloco):
+  - `tests/lib/contraste-tema.test.ts`: calcula o contraste de cada par de token usado (texto, texto secundário, acento como texto, texto sobre botão de acento, selo de estado) nas 4 cores × 2 modos e falha abaixo de 4,5:1 (3:1 para texto grande e bordas de componente). Hoje o texto `#0a0a0c` sobre o acento é o par a conferir.
+  - Estados nunca só por cor: selo de status sempre com texto; ícone mais texto em alertas.
+  - Foco visível em todo controle (anel de 2px com contraste 3:1 sobre o fundo, sem `outline: none`), ordem de tab igual à ordem visual, "pular para o conteúdo" no shell.
+  - Leitores de tela (VoiceOver no iOS, TalkBack no Android): barra inferior é `<nav aria-label>` com `aria-current="page"`; seletores de tema e cor são `radiogroup` com `aria-checked`; ícones sem texto levam `aria-label`; logo com `alt` = nome da clínica, avatar com `alt` vazio quando o nome já aparece ao lado.
+  - Texto ampliável: fontes em `rem`, layout sem quebra a 200% de zoom e com a fonte grande do sistema (iOS Dynamic Type e tamanho de fonte do Android); sem `maximum-scale` nem `user-scalable=no`.
+  - Alvos de toque de 44px com 8px de espaço entre alvos vizinhos.
+  - Movimento: `prefers-reduced-motion` desliga transições; sem animação automática.
+  - Modo de alto contraste do sistema (`forced-colors`) mantém borda nos cartões e botões.
+  - Erros de formulário ligados ao campo (`aria-describedby`) e anunciados (`role="alert"`), em linguagem simples.
+  - E2E com `@axe-core/playwright` nas telas novas (Hoje, Identidade, Aparência, `/login`) no `gate:local`, 0 violações sérias ou críticas.
+
 ### Changes
 
 - `src/app/layout.tsx` → lê identidade da clínica da sessão e renderiza `data-theme`/`data-accent`; sem sessão, padrão `system`/`violet`.
@@ -123,6 +135,7 @@ A versão pesada (tema por usuário no banco, cor livre, temas completos) só co
 | Shell mobile e "Hoje" | barra inferior, tela inicial nova | design |
 | Listas em cartões | pacientes, faturamento, repasses em telas pequenas | design |
 | Logo em login e comprovantes | logo no login, PDFs e e-mails | open |
+| Trava de acessibilidade | teste de contraste dos tokens + axe no E2E, antes dos demais blocos | clear |
 | Peculiaridades iOS/Android | viewport, safe-area, `100dvh`, manifest, HEIC, gesto de voltar | spike |
 
 ## Decisions
@@ -135,6 +148,7 @@ A versão pesada (tema por usuário no banco, cor livre, temas completos) só co
 | Padrão de clínica sem configuração | `system` + `violet` | preserva o visual atual | — | reversible |
 | Armazenamento de logo/avatar | mesmo `PhotoStorage` das fotos clínicas (S3/R2 cifrado), chaves `logo_key`/`avatar_key` | já cifrado e com adaptador local/indisponível | bucket público de ativos, se o carregamento do login pesar | costly |
 | Limites de imagem | até 1 MB, `image/png\|jpeg\|webp`; logo também `svg` sanitizado ou fora | evita SVG com script e arquivo gigante | aceitar SVG, só com sanitização testada | reversible |
+| Acessibilidade | WCAG 2.2 AA como piso; teste de contraste dos tokens e `@axe-core/playwright` no `gate:local` | dado de saúde e públicos com mobilidade ou visão reduzida; trava automática evita regressão | auditoria manual com leitor de tela por release, em complemento e não no lugar | reversible |
 | Telas com entalhe e barra de gestos | `viewport-fit=cover` + `env(safe-area-inset-*)` + `100dvh` | evita barra inferior escondida no iPhone e salto de altura no Chrome Android | — | reversible |
 | Foto do iOS (HEIC) | aceitar `image/heic` no envio e converter para JPEG no servidor (`sharp`), limite 1 MB após conversão | iPhone tira HEIC por padrão e o Chrome não renderiza | redimensionar no cliente com canvas, se a conversão no servidor pesar | costly |
 | Instalar como app | `manifest.ts` standalone + `apple-touch-icon`, sem service worker | dá ícone e tela cheia sem custo de cache offline de dado de saúde | PWA completo com offline, só após decisão de LGPD sobre cache local | reversible |
