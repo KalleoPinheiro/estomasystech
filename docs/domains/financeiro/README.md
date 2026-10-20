@@ -58,6 +58,7 @@ Specs de execução: `.specs/features/{financeiro-p0-p3-pontuais,faturamento-kpi
 | API | `src/app/api/{invoices,packages,commission-payouts,my-payouts,summary}/` |
 | UI | `src/app/(staff)/{faturamento,repasses}/`, `src/app/documentos/{recibo,repasse}/` |
 | testes | `tests/domain/`, `tests/application/`, `e2e/faturamento.spec.ts` |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

@@ -41,6 +41,8 @@ last_reviewed: 2026-10-18
 
 Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo README do domínio.
 
+Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-por-dominio.md)): [`acesso`](domains/acesso/excecoes.md) · [`pacientes-prontuario`](domains/pacientes-prontuario/excecoes.md) · [`agenda`](domains/agenda/excecoes.md) · [`financeiro`](domains/financeiro/excecoes.md) · [`estoque`](domains/estoque/excecoes.md) · [`portal`](domains/portal/excecoes.md) · [`equipe-parceiros`](domains/equipe-parceiros/excecoes.md) · [`comunicacao`](domains/comunicacao/excecoes.md) · [`relatorios`](domains/relatorios/excecoes.md).
+
 ## Engenharia
 
 | Arquivo | Para quê |
@@ -111,6 +113,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/046-cobertura-100-nas-camadas-de-regra.md`](adr/046-cobertura-100-nas-camadas-de-regra.md) | 100% de cobertura em domain, application, infrastructure e lib; UI por E2E |
 | [`adr/047-testes-de-mutacao-com-stryker.md`](adr/047-testes-de-mutacao-com-stryker.md) | testes de mutação com Stryker em domain e application: placar medido, meta em degraus de 5 pontos, só local |
 | [`adr/048-bdd-com-describe-it-e-rastreabilidade-de-regras-criticas.md`](adr/048-bdd-com-describe-it-e-rastreabilidade-de-regras-criticas.md) | BDD em `describe/it` Dado/Quando/Então e teste que liga cada regra crítica ao seu cenário |
+| [`adr/049-matriz-de-excecoes-por-dominio.md`](adr/049-matriz-de-excecoes-por-dominio.md) | matriz de casos de exceção por domínio (7 categorias) e teste que prova que cada linha cita um teste que existe |
 | [`adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md`](adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) | produção em PostgreSQL 18 (Dockerfile + banco do Coolify); compose e CI em 16 até um PR com Docker alinhar |
 | [`adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md`](adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md) | alertas, lembretes e retenção como Scheduled Tasks do Coolify, com `wget` e `CRON_SECRET` do ambiente |
 | [`adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md`](adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md) | deploy manual depois do backup; rollback por redeploy ou restauração |

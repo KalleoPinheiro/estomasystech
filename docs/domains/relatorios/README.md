@@ -42,6 +42,7 @@ Specs de execução: `.specs/features/{dashboard-p1-p3-pontuais,dashboard-summar
 | API | `src/app/api/{reports,summary}/` |
 | UI | `src/app/(staff)/page.tsx`, `src/app/(staff)/relatorios/` |
 | testes | `tests/application/`, `e2e/relatorios.spec.ts` |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

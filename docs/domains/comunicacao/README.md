@@ -60,6 +60,7 @@ e-mails transacionais de acesso (convite e reset, detalhados em [acesso](../aces
 | API | `src/app/api/reminders/run/`, `src/app/api/reminders/whatsapp-link/`, `src/app/api/settings/email-channel/` |
 | tela | `src/app/(staff)/configuracoes/email-channel-section.tsx` |
 | gateways | `src/infrastructure/email/` (o gateway da Meta foi removido na #328; RM-14 segue planejado) |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

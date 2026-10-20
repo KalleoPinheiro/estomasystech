@@ -47,6 +47,7 @@ PRD: [fase 1](../../product/prd-fase-1.md) (F4).
 | API | `src/app/api/supplies/` |
 | UI | `src/app/(staff)/materiais/` |
 | testes | `tests/domain/`, `tests/application/`, `e2e/inventario.spec.ts` |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 
