@@ -122,6 +122,10 @@ npm run dev                   # http://localhost:3000
 | `MOCK_INTEGRATIONS` | não | `true` liga o MSW (Resend, Google, S3/R2 simulados) | recusado em `production` |
 | `PRODUCTION_DB_HOSTS` | homologação | hosts de banco de produção, separados por vírgula | `DATABASE_URL` com esse host é recusada fora de `production` |
 | `STAGING_SEED_PASSWORD` | `npm run seed:staging` | senha (≥ 10 caracteres) das contas fictícias | [homologacao.md](homologacao.md) § 4 |
+| `NEXT_PUBLIC_APP_VERSION` | não | versão exibida às clínicas; o `next.config.ts` a embute no build a partir do `package.json` | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
+| `NEXT_PUBLIC_APP_COMMIT` | não | SHA curto exibido junto da versão; só em homologação e preview | vem de `VERCEL_GIT_COMMIT_SHA` |
+| `VERCEL_GIT_COMMIT_SHA` | Vercel | injetada pela Vercel no build | origem de `NEXT_PUBLIC_APP_COMMIT` |
+| `CHANGESET_BASE` | não | base do `npm run check:changeset` (padrão `origin/main`; o CI usa a base do PR) | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
 | `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
