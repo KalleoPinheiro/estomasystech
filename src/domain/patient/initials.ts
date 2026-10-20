@@ -20,6 +20,6 @@ export function patientInitials(fullName: string): string | null {
   }
   const letters = [picked[0], picked.length > 1 ? picked.at(-1) : undefined]
     .filter((word): word is string => word !== undefined)
-    .map((word) => `${Array.from(word)[0]?.toUpperCase() ?? ''}.`);
+    .map((word) => `${Array.from(word)[0].toUpperCase()}.`);
   return letters.join('');
 }

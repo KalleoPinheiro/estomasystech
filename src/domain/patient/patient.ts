@@ -86,13 +86,15 @@ export class Patient {
   update(changes: Partial<PatientProps>): Patient {
     // Telefone legado (fora do E.164) segue válido enquanto ninguém o altera:
     // editar outro campo não pode travar o cadastro (#324).
+    const incomingPhone = changes.phone;
     const phoneChanged =
-      changes.phone !== undefined && changes.phone.trim() !== this.state.phone;
+      incomingPhone !== undefined && incomingPhone.trim() !== this.state.phone;
+    const nextPhone = phoneChanged ? incomingPhone : this.state.phone;
     const validated = Patient.validate(
       {
         fullName: changes.fullName ?? this.state.fullName,
         email: changes.email !== undefined ? changes.email : this.state.email,
-        phone: phoneChanged ? (changes.phone ?? '') : this.state.phone,
+        phone: nextPhone,
         cpf: changes.cpf !== undefined ? changes.cpf : this.state.cpf,
         birthDate:
           changes.birthDate !== undefined
