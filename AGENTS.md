@@ -29,7 +29,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run test:coverage` | gate de CI | **100% em domain, application, infrastructure e lib; piso 90% global, UI incluída** ([ADR-050](docs/adr/050-limiar-100-por-camada-e-ui-medida.md)) |
 | `npm run gate:local` | antes de marcar o PR como pronto | build + E2E + gates + integridade dos testes; imprime a linha `E2E-GATE:` do PR ([ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)) |
 | `npm run changeset` / `npm run check:changeset` | PR que toca `src/`, `drizzle/` ou `Dockerfile` | um `.changeset/*.md` por PR (`--empty` se nada muda para a clínica); níveis no [ADR-043](docs/adr/043-versionamento-com-changesets-e-release-por-tag.md) |
-| `npm run release:prepare` / `release:publish` | release de produção | PR de versão, depois tag + GitHub Release com `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
+| `npm run release:sync` / `release:prepare` / `release:publish` | release de produção | fluxo `feat → release/vX.Y.Z → main` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md), `homologacao.md` § 1): `sync` mergeia a `main` na release; `prepare` (na release) versiona e deixa a Release em rascunho; `publish` (na `main`) tagueia o commit de merge, `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
 | `npm run check:testes` | automático no `pre-push` e no CI | regra 8: falha se um teste foi enfraquecido |
 | `npm run test:changed [-- <ref>]` | loop local (ex.: `-- origin/main`) | não substitui `test:coverage`; o CI roda a suíte completa |
 | `npm run test:mutacao` | mudou regra em `src/domain/**` ou `src/application/**` | Stryker + Vitest (`stryker.config.json`, `vitest.mutacao.config.mts`); o `gate:local` já roda sozinho nos arquivos alterados de domain/application; rodada completa ~1h20 (mensal no Actions, último dia do mês); `-- --mutate <arquivo>` para um arquivo; relatório em `reports/mutation` ([ADR-047](docs/adr/047-testes-de-mutacao-com-stryker.md), [ADR-051](docs/adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md)) |
@@ -62,7 +62,7 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
    usuário: registre como pergunta aberta, não como requisito.
 6. **Doc no mesmo PR.** Mudou comportamento de um domínio → atualize `docs/domains/<slug>/`.
    Decisão arquitetural durável → novo ADR. → [`docs/governance.md`](docs/governance.md)
-7. **Merge só com CI verde e recibo do gate local.** O Actions roda o gate rápido (typecheck, lint,
+7. **Merge só com CI verde e recibo do gate local.** `feat/*` entra na `release/vX.Y.Z` (squash, sem recibo, com `## Homologação`); só `release/*` e `hotfix/*` vão para a `main` (merge commit na release), e é nesse PR que o recibo vale; nunca rebase da `release/*` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md)). O Actions roda o gate rápido (typecheck, lint,
    sv, docs, cobertura, build) e o E2E roda localmente por `npm run gate:local`, que imprime a linha
    `E2E-GATE: <sha> pass ...` no corpo do PR; o CI reprova recibo ausente, de outro commit ou sem
    etapas. Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
@@ -90,7 +90,7 @@ Leia **uma** linha. Desça para a terceira coluna só se a segunda não bastar.
 | lembrete, WhatsApp, e-mail | [`docs/domains/comunicacao/`](docs/domains/comunicacao/README.md) | [`integrations/`](docs/engineering/integrations/README.md) |
 | relatório gerencial, KPI | [`docs/domains/relatorios/`](docs/domains/relatorios/README.md) | `src/application/reports` |
 | Resend, Google Calendar, WhatsApp, S3, cron | [`docs/engineering/integrations/`](docs/engineering/integrations/README.md) | `src/infrastructure/` |
-| ambiente de homologação, Vercel, seed, fluxo de git (`staging`) | [`docs/engineering/homologacao.md`](docs/engineering/homologacao.md) | ADR-041, `scripts/seed/` |
+| ambiente de homologação, Vercel, seed, fluxo de git (`release/*`, `staging`) | [`docs/engineering/homologacao.md`](docs/engineering/homologacao.md) | ADR-041, ADR-052, `scripts/seed/` |
 | erro ao rodar/buildar/testar | [`docs/engineering/troubleshooting.md`](docs/engineering/troubleshooting.md) | — |
 | nova feature (planejar) | [`docs/agents/planning.md`](docs/agents/planning.md) | [`docs/templates/`](docs/templates/) |
 | decisão tomada durante execução | [`.specs/STATE.md`](.specs/STATE.md) § Decisions | `.specs/features/<slug>/` |

@@ -9,6 +9,8 @@ related: [.design/versionamento-e-release.md, docs/adr/039-deploy-manual-no-cool
 
 # ADR 043 — Versionamento com Changesets e release por tag
 
+> **Parcialmente substituído pelo [ADR-052](052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md):** o release em dois passos (`prepare` na `main`, PR de versão, `publish`) virou `prepare` na `release/vX.Y.Z`, rascunho da Release e tag no commit de merge. Changesets, níveis e versão na tela seguem valendo.
+
 - **Data:** 2026-10-20
 - **Status:** aceito (decisão de @KalleoPinheiro em 2026-10-19: Changesets, e versão visível às clínicas)
 - **Domínios afetados:** engenharia (release, deploy), interface (nota de versão)

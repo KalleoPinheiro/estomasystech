@@ -1,53 +1,88 @@
 /**
- * `npm run release:prepare` — passo 1 do release (ADR-043). Espelha o PR "Version Packages" do
- * `changesets/action`: a partir da `main` atualizada, consome os changesets, sobe a versão,
- * gera o CHANGELOG e empurra a branch `release/vX.Y.Z`. O PR é aberto e mergeado como qualquer
- * outro; depois vem `release:publish`.
+ * `npm run release:prepare -- --rollback=redeploy|backup` — passo de versão do release
+ * (ADR-052, que substitui o do ADR-043). Roda **na `release/vX.Y.Z`** (ou `hotfix/*`) depois da
+ * homologação: consome os changesets, sobe a versão, gera o CHANGELOG, confere que a versão
+ * calculada bate com o nome da branch, commita, empurra e deixa a GitHub Release em rascunho
+ * (changelog, migrações do lote e o rollback declarado). O PR `release → main` vem a seguir.
  */
-import { readFileSync } from 'node:fs';
-import { must, pendingChangesets, sh, tagFor } from './lib';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  changelogSection,
+  checkVersionForBranch,
+  migrationsSinceLastTag,
+  must,
+  parseRollback,
+  pendingChangesets,
+  releaseBody,
+  sh,
+  tagFor,
+} from './lib';
 
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
+const version = (): string => JSON.parse(readFileSync('package.json', 'utf8')).version as string;
 
-function assertReady(): void {
-  if (must('git', ['status', '--porcelain']) !== '') {
-    console.error('✗ árvore suja: faça commit ou stash antes.');
-    process.exit(1);
+function fail(message: string): never {
+  console.error(`✗ ${message}`);
+  process.exit(1);
+}
+
+function assertReady(branch: string): void {
+  if (must('git', ['status', '--porcelain']) !== '') fail('árvore suja: faça commit ou stash antes.');
+  must('git', ['fetch', '-q', 'origin', 'main', branch]);
+  if (must('git', ['rev-parse', 'HEAD']) !== must('git', ['rev-parse', `origin/${branch}`])) {
+    fail(`${branch} local difere de origin/${branch}: atualize (git pull) ou empurre antes.`);
   }
-  must('git', ['fetch', '-q', 'origin', 'main']);
-  const head = must('git', ['rev-parse', 'HEAD']);
-  const main = must('git', ['rev-parse', 'origin/main']);
-  const branch = must('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
-  if (branch !== 'main' || head !== main) {
-    console.error('✗ rode a partir da `main` igual a `origin/main`.');
-    process.exit(1);
+  if (!sh('git', ['merge-base', '--is-ancestor', 'origin/main', 'HEAD']).ok) {
+    fail('a `main` tem commits que a branch não tem: rode `npm run release:sync` (merge, nunca rebase).');
   }
 }
 
-function currentVersion(): string {
-  return JSON.parse(readFileSync('package.json', 'utf8')).version as string;
-}
+const branch = must('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+const rollbackArg = process.argv.find((a) => a.startsWith('--rollback='));
+const rollback = parseRollback(rollbackArg?.slice('--rollback='.length));
+if (rollback === null) fail('declare o rollback do lote: --rollback=redeploy ou --rollback=backup (ADR-039).');
 
-assertReady();
+assertReady(branch);
 const pending = pendingChangesets(lines(must('git', ['ls-files', '.changeset'])));
 if (pending.length === 0) {
   console.log('Nada a publicar: não há changesets pendentes.');
   process.exit(0);
 }
 
-must('git', ['switch', '-c', 'release/next']);
+const before = version();
 must('npx', ['changeset', 'version']);
-const version = currentVersion();
-must('npm', ['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund']);
-const branch = `release/${tagFor(version)}`;
-must('git', ['branch', '-m', branch]);
-must('git', ['add', '-A']);
-must('git', ['commit', '-q', '-m', `chore(release): ${tagFor(version)}`]);
-must('git', ['push', '-u', 'origin', branch]);
+const computed = version();
+const check = checkVersionForBranch(branch, before, computed);
+if (!check.ok) {
+  must('git', ['reset', '--hard', 'HEAD']);
+  fail(check.reason);
+}
 
-const gh = sh('gh', ['--version']).ok;
+must('npm', ['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund']);
+const tag = tagFor(computed);
+must('git', ['add', '-A']);
+must('git', ['commit', '-q', '-m', `chore(release): ${tag}`]);
+must('git', ['push', 'origin', branch]);
+console.log(`✓ ${branch}: ${tag} commitada com ${pending.length} changeset(s) consumido(s).`);
+
+const section = changelogSection(readFileSync('CHANGELOG.md', 'utf8'), computed);
+if (section === null) fail(`CHANGELOG.md não tem a seção ${computed} depois do changeset version.`);
+const body = releaseBody({ version: computed, section, migrations: migrationsSinceLastTag(), rollback });
+const notes = join(tmpdir(), `release-notes-${tag}.md`);
+writeFileSync(notes, body);
+
+const exists = sh('gh', ['release', 'view', tag]).ok;
+const draft = exists
+  ? sh('gh', ['release', 'edit', tag, '--notes-file', notes])
+  : sh('gh', ['release', 'create', tag, '--draft', '--title', tag, '--notes-file', notes, '--target', branch]);
 console.log(
-  `✓ ${branch} empurrada com ${pending.length} changeset(s) consumido(s).\n` +
-    `  Abra o PR "chore(release): ${tagFor(version)}" contra a main${gh ? ' (gh pr create)' : ''}, ` +
-    'rode `npm run gate:local` e cole o recibo no corpo. Depois do merge: `npm run release:publish`.',
+  draft.ok
+    ? `✓ GitHub Release ${tag} em rascunho.`
+    : `⚠ não consegui deixar o rascunho com \`gh\` (${draft.out.split('\n')[0]}). Crie o rascunho ${tag} no GitHub com o texto:\n\n${body}`,
+);
+console.log(
+  `\nPróximo: \`npm run gate:local\` no head, PR "chore(release): ${tag}" contra a main com o recibo no corpo,\n` +
+    `the-judge, merge com **merge commit**. Logo depois: \`npm run release:publish -- --rollback=${rollback}\`.`,
 );

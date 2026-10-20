@@ -39,8 +39,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # O PR `release/* → main` consome os changesets no commit de versão (ADR-052): não exige novo.
       - name: Changeset (ADR-043)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
         run: npm run check:changeset
         env:
           CHANGESET_BASE: origin/${{ github.base_ref }}
