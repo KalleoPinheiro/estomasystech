@@ -1,24 +1,61 @@
 name: Staging
 
-# Homologação (ADR-041). O deploy é a integração Git da Vercel (push na `staging`);
-# este workflow só recria a branch e confere a URL publicada. Sem cota de Actions,
-# o mesmo fluxo roda local: `npm run staging:rebuild` e `curl` na URL (homologacao.md).
+# Homologação (ADR-041, fluxo de git do ADR-052). O deploy é a integração Git da Vercel (push na
+# `staging`); este workflow mantém as branches e confere a URL publicada. A cada push na `main`
+# (hotfix ou release mergeada): (1) a `main` é mergeada na release aberta e (2) a `staging` é
+# reconstruída = release aberta (ou = main, se não houver). Sem cota de Actions, o mesmo fluxo
+# roda local: `npm run release:sync`, `npm run staging:rebuild -- --release --push` e `curl` na URL.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       branches:
-        description: "Branches a mergear na staging (separadas por espaço); vazio = só a main"
+        description: "Branches extras a mergear na staging (separadas por espaço); vazio = só a base"
         required: false
         default: ""
+      release:
+        description: "Base da staging = release aberta (desmarcado: a main)"
+        type: boolean
+        required: false
+        default: true
   deployment_status:
+
+concurrency:
+  group: staging-${{ github.workflow }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  # Conflito aborta e falha o job (o GitHub avisa por e-mail); a release segue como estava.
+  sync-release:
+    name: Mergear a main na release aberta
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar autor
+        run: |
+          git config user.name "estomasystech-staging"
+          git config user.email "staging@users.noreply.github.com"
+
+      - name: Merge da main na release (nunca rebase)
+        run: bash scripts/release/sync-main.sh --push
+
   rebuild:
-    name: Recriar staging (main + branches)
-    if: github.event_name == 'workflow_dispatch'
+    name: Recriar staging (release aberta ou main, mais branches extras)
+    needs: sync-release
+    # Reconstrói mesmo se o merge da main na release deu conflito: a staging reflete a release como está.
+    if: >-
+      always() &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -35,9 +72,13 @@ jobs:
       - name: Reconstruir e publicar
         env:
           BRANCHES: ${{ inputs.branches }}
+          # No push na main o input não existe: o padrão é a release aberta.
+          USE_RELEASE: ${{ github.event_name == 'push' || inputs.release }}
         run: |
+          flag=""
+          if [ "$USE_RELEASE" = "true" ]; then flag="--release"; fi
           # shellcheck disable=SC2086
-          bash scripts/staging/rebuild.sh --push $BRANCHES
+          bash scripts/staging/rebuild.sh $flag --push $BRANCHES
 
   smoke:
     name: Fumaça da homologação publicada

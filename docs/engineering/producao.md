@@ -227,13 +227,15 @@ Produção continua nesta VPS. Um banco de produção nunca é apontado para lá
 ### 3.1 Release e rollback com deploy manual
 
 O deploy é **manual** (botão *Deploy* no Coolify): nada sobe sozinho por um push na `main`. Isso é
-proposital enquanto não há staging e as migrações não têm `down`
+proposital enquanto as migrações não têm `down`
 ([ADR-039](../adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md)).
 
-0. **Release (ADR-043):** com os PRs do lote na `main`, `npm run release:prepare` abre a branch
-   `release/vX.Y.Z` (versão e CHANGELOG), o PR de versão é mergeado como qualquer outro e
-   `npm run release:publish -- --rollback=redeploy|backup` cria a tag `vX.Y.Z` e a GitHub Release
-   (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**.
+0. **Release (ADR-052, que substitui o passo do ADR-043):** com a staging aprovada,
+   `npm run release:prepare -- --rollback=redeploy|backup` na `release/vX.Y.Z` (versão e CHANGELOG, Release em
+   rascunho); PR `release → main` com `gate:local` e merge **commit**; depois
+   `npm run release:publish -- --rollback=...` cria a tag `vX.Y.Z` no commit de merge e publica a
+   Release (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**. Fluxo completo
+   em [`homologacao.md`](homologacao.md) § 1.
 1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde e o recibo do gate local
    ([ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)), e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da

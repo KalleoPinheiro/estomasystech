@@ -2,6 +2,8 @@ name: Recibo do gate
 
 # Confere, em segundos, que o E2E (que não roda mais no Actions) rodou localmente para o
 # commit atual e que nenhum teste foi enfraquecido (regra 7 e 8 do AGENTS.md, ADR-042).
+# O recibo é exigido só no PR que entra na `main` (`release/* → main` ou `hotfix/* → main`);
+# `feat/* → release/*` roda a integridade dos testes e a seção de homologação (ADR-052).
 # Roda também quando o corpo do PR é editado (`edited`), que é onde o recibo e o
 # `TESTE-ALTERADO:` são colados.
 on:
@@ -40,6 +42,7 @@ jobs:
         run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
 
       - name: Recibo do gate local no corpo do PR
+        if: github.base_ref == 'main'
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BASE_REF: ${{ github.base_ref }}
@@ -49,3 +52,9 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: npx tsx scripts/gate/check-test-integrity.ts "origin/$BASE_REF" --body-file "$RUNNER_TEMP/pr-body.txt"
+
+      - name: Seed e cenários de homologação (ADR-052)
+        if: startsWith(github.base_ref, 'release/')
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: npx tsx scripts/release/check-homologacao.ts --body-file "$RUNNER_TEMP/pr-body.txt" --base "origin/$BASE_REF"

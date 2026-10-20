@@ -38,6 +38,7 @@
     "gate:local": "tsx scripts/gate/local.ts",
     "changeset": "changeset",
     "check:changeset": "tsx scripts/release/check-changeset.ts",
+    "release:sync": "bash scripts/release/sync-main.sh",
     "release:prepare": "tsx scripts/release/prepare.ts",
     "release:publish": "tsx scripts/release/publish.ts"
   },

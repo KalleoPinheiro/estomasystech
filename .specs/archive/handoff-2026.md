@@ -1512,3 +1512,13 @@ Pedido do Kalléo (thread "Mutação no gate local"), com permissão para editar
 - **Feito**: `gate:local` roda `test:mutacao --mutate` nos arquivos de domain/application alterados contra `origin/main`; etapa `mutacao` no recibo; `verify-receipt.ts --base-ref` exige a etapa quando o diff muda regra; `mutacao-mensal.yml` (rodada completa incremental, último dia do mês). Teste novo `tests/scripts/gate-mutacao.test.ts`; AGENTS.md, `docs/README.md`, ADR-051.
 - **Pergunta aberta**: a rotina mensal consome cota do Actions (decisão dele: manter cron ou só `workflow_dispatch`).
 - **Next step**: Kalléo revisa; subir `break` para 90 após rodada completa ≥ 90%. **Blockers**: nenhum.
+
+
+## Fluxo de release: feat → release/vX.Y.Z → main (2026-10-20) — EM REVISÃO
+
+Pedido do Kalléo (thread "Implantar fluxo de release"), fluxo acordado em `/mnt/project-files/fluxo/fluxo-acordado.md` (ADR-052).
+- **Feito**: ADR-052 (substitui o git do ADR-041 e o release do ADR-043; ambos ganham nota de substituição parcial). `release:prepare` roda na release, confere nome × versão (hotfix: só patch) e deixa a Release em rascunho; `release:publish` exige merge commit (`--hotfix` abre exceção) e tagueia o commit da `main`; `release:sync` (`sync-main.sh`) mergeia a `main` na release aberta e aborta em conflito; `staging:rebuild --release`; `staging.yml` com gatilho em push na `main` (sync + rebuild); `recibo-gate.yml` exige recibo só com base `main` e confere `## Homologação` (seed + Dado/Quando/Então) com base `release/*`; `ci.yml` não pede changeset novo no PR `release/*`; template de PR; `homologacao.md` § 1, `producao.md` § 3.1, AGENTS.md.
+- **Testes novos**: `tests/scripts/release-fluxo.test.ts` (regras puras e os scripts bash em repositórios git temporários). Nenhum teste existente editado, `scripts/gate/` intocado.
+- **Fica com o Kalléo (painel)**: *Allow merge commits* no repositório; ruleset de `release/**` (PR obrigatório, CI rápido exigido, force push bloqueado, bypass para quem roda `release:sync`/Actions); depois do reset da cota, provar `staging.yml` com um push na `main`.
+- **Pergunta aberta**: o `GITHUB_TOKEN` consegue dar push em `release/*` com PR obrigatório? Se o bypass do GitHub Actions não existir na lista do ruleset, usar segredo próprio ou rodar `release:sync` à mão.
+- **Next step**: abrir a primeira `release/vX.Y.Z` pelo fluxo novo. **Blockers**: nenhum.

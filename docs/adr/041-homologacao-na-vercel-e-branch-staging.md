@@ -9,6 +9,8 @@ related: [docs/engineering/homologacao.md, docs/adr/039-deploy-manual-no-coolify
 
 # ADR 041 — Homologação na Vercel (Neon, MSW, faker) e branch `staging` descartável
 
+> **Parcialmente substituído pelo [ADR-052](052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md):** o item "Git" (main + features na `staging`) virou "`staging` = release aberta". O restante segue valendo.
+
 - **Data:** 2026-10-19
 - **Status:** aceito.
 - **Domínios afetados:** engenharia (ambientes, release, git)
