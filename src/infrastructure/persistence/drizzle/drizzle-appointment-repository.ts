@@ -332,13 +332,12 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
     // Profissional definido: conflita com o mesmo profissional ou com consultas
     // sem atribuição. Sem profissional: conflita com tudo (comportamento global).
     if (professionalId) {
-      const scoped = or(
-        eq(appointments.professionalId, professionalId),
-        isNull(appointments.professionalId),
+      conditions.push(
+        or(
+          eq(appointments.professionalId, professionalId),
+          isNull(appointments.professionalId),
+        ) as SQL,
       );
-      if (scoped) {
-        conditions.push(scoped);
-      }
     }
     const rows = await this.db
       .select()

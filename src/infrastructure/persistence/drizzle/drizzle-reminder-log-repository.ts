@@ -94,7 +94,7 @@ export class DrizzleReminderLogRepository implements ReminderLogRepository {
         ),
       )
       .groupBy(reminderLogs.referenceId);
-    return new Map(rows.map((row) => [row.referenceId, row.last ?? 0]));
+    return new Map(rows.map((row) => [row.referenceId, row.last as number]));
   }
 
   async firstSentAt(
