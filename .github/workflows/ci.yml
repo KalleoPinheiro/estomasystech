@@ -1,8 +1,11 @@
 name: CI
 
+# Só o gate rápido roda aqui (ADR-042). O E2E é o `gate:local`, conferido por recibo em
+# `recibo-gate.yml`; o Docker está em `docker.yml`, só quando o que ele valida muda.
+# A `staging` não dispara CI: é espelho da `main` + features que já passaram no PR.
 on:
   push:
-    branches: [main, staging]
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -18,7 +21,7 @@ permissions:
 
 jobs:
   ci:
-    name: Typecheck, lint, sv-gate, test:coverage
+    name: Typecheck, lint, sv-gate, test:coverage, build
     runs-on: ubuntu-24.04
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
@@ -50,101 +53,6 @@ jobs:
       - name: Test (coverage)
         run: npm run test:coverage
 
-  e2e:
-    name: E2E (Playwright, papéis no next dev)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: "24"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: "Test (e2e: papéis e login, contra o next dev)"
-        run: npm run test:e2e:dev
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
-
-  # Issues #203 e #308: o artefato que vai para produção é verificado antes do
-  # deploy. Build de produção (bloqueante) + E2E principal contra `next start`,
-  # com a CSP estrita de produção e falha em qualquer violação de CSP. O `next dev`
-  # (job acima) fica só com o que depende dele: contas por papel e login.
-  build-e2e-prod:
-    name: Build de produção + E2E (next start)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: "24"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
+      # Build de produção (1,5 min): barra erro de compilação sem pagar o E2E.
       - name: Build
         run: npm run build
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Test (e2e contra o build de produção)
-        run: npx playwright test -c playwright.prod.config.ts
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: playwright-report-prod
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
-
-  docker:
-    name: Imagem Docker + smoke do container
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - name: Docker build (sem push)
-        env:
-          # O compose valida as variáveis obrigatórias até no build.
-          POSTGRES_PASSWORD: build-only
-          AUTH_SECRET: build-only
-          DATA_ENCRYPTION_KEY: build-only
-          RESEND_API_KEY: build-only
-          EMAIL_FROM: build-only
-        run: docker compose build
-
-      - name: Smoke do container
-        run: bash scripts/docker-smoke.sh
-
-      # Backup cifrado + restore contra o compose (#206, runbook § 5).
-      - name: Instalar age
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
-
-      - name: Smoke do backup/restore
-        run: bash scripts/backup-smoke.sh

@@ -11,6 +11,15 @@
         ]
       },
       {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$ROOT_DIR\"/.claude/hooks/protect-tests.sh"
+          }
+        ]
+      },
+      {
         "hooks": [
           {
             "type": "command",

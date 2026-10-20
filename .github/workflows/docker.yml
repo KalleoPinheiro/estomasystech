@@ -1,0 +1,64 @@
+name: Docker
+
+# Imagem de produção + smoke do container + backup/restore (ADR-042). Só roda quando algo
+# que a imagem ou o runbook de backup usa muda; no resto, o `gate:local` cobre.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "docker-compose*.yml"
+      - ".dockerignore"
+      - "deploy/**"
+      - "package-lock.json"
+      - "scripts/docker-smoke.sh"
+      - "scripts/backup*.sh"
+      - "scripts/restore.sh"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - "docker-compose*.yml"
+      - ".dockerignore"
+      - "deploy/**"
+      - "package-lock.json"
+      - "scripts/docker-smoke.sh"
+      - "scripts/backup*.sh"
+      - "scripts/restore.sh"
+      - ".github/workflows/docker.yml"
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    name: Imagem Docker + smoke do container
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Docker build (sem push)
+        env:
+          # O compose valida as variáveis obrigatórias até no build.
+          POSTGRES_PASSWORD: build-only
+          AUTH_SECRET: build-only
+          DATA_ENCRYPTION_KEY: build-only
+          RESEND_API_KEY: build-only
+          EMAIL_FROM: build-only
+        run: docker compose build
+
+      - name: Smoke do container
+        run: bash scripts/docker-smoke.sh
+
+      # Backup cifrado + restore contra o compose (#206, runbook § 5).
+      - name: Instalar age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Smoke do backup/restore
+        run: bash scripts/backup-smoke.sh

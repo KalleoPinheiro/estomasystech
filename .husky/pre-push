@@ -1,0 +1,4 @@
+# Regra 8 (ADR-042): nenhum teste enfraquecido chega ao remoto. Motivo de negócio, quando
+# há: TESTE_ALTERADO_MOTIVO="..." git push. `--no-verify` é bloqueado pelo hook do Claude Code.
+git fetch -q origin main 2>/dev/null || true
+npm run check:testes --silent

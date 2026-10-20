@@ -149,6 +149,7 @@ npm run dev                   # http://localhost:3000
 npm test                 # domínio, aplicação, integração Postgres via PGlite, API
 npm run test:changed     # só o afetado pelo diff (loop local; não substitui o próximo)
 npm run test:coverage    # gate de CI: mínimo 90% (limiar em vitest.config.mts)
+npm run gate:local       # E2E + todos os gates, com recibo para o PR (ADR-042)
 npm run test:e2e         # build + Playwright contra `next start` e contra `next dev` (ADR-021); na 1ª vez ou após bump: npx playwright install
 npm run test:e2e:prod    # só a suíte principal, contra o build (precisa de `npm run build` antes)
 npm run test:e2e:dev     # só papéis e login, contra `next dev`
@@ -159,12 +160,12 @@ reaproveitar um `npm run dev` já no ar: `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN`
 `AUTH_SECRET`/`ESTOMASYSTECH_BOOTSTRAP_TOKEN` (servidor) precisam ter os mesmos valores.
 Estilo e níveis de teste: [conventions.md](conventions.md#testes).
 
-**Artefato de produção (CI, #203):** além de `test:coverage` e do E2E de papéis (`test:e2e:dev`, contra `next dev`), o
-CI roda:
+**Artefato de produção (#203):** o Actions roda só o gate rápido; o E2E e o resto do artefato rodam em
+`npm run gate:local` ([ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)), que executa
 
 ```bash
 npm run build && npx playwright test -c playwright.prod.config.ts   # E2E contra `next start`
-docker compose build && bash scripts/docker-smoke.sh                # imagem + smoke do container
+docker compose build && bash scripts/docker-smoke.sh                # imagem + smoke do container (com daemon Docker)
 bash scripts/backup-smoke.sh                                         # backup cifrado + restore (precisa de `age`)
 ```
 
@@ -182,11 +183,19 @@ backup faz o ciclo backup → apagar tudo → restore do [runbook](producao.md) 
 
 ## 6. Gates locais
 
-Rode antes de abrir PR — o CI roda os mesmos:
+No loop de desenvolvimento: `npm run test:changed`. **Antes de marcar o PR como pronto**, uma vez, com a
+árvore limpa (tudo commitado):
 
 ```bash
-npm run typecheck && npm run lint && npm run check:sv && npm run check:docs && npm run test:coverage
-npm run test:e2e   # se tocou UI ou fluxo
+npm run gate:local
 ```
+
+Ele roda typecheck, lint, `check:sv`, `check:docs`, integridade dos testes, `test:coverage`, build, E2E de
+produção, E2E em `next dev` e, se houver daemon Docker, o smoke da imagem e do backup. No fim imprime a linha
+`E2E-GATE: <sha> pass ...`: cole-a no corpo do PR. O CI (`recibo-gate.yml`) reprova recibo ausente, de outro
+commit (qualquer push novo invalida) ou sem as etapas obrigatórias. Se o gate falhar, **corrija o código, nunca o
+teste** (regra 8 do `AGENTS.md`); só mude teste existente quando o requisito de negócio mudou, com
+`TESTE-ALTERADO: <motivo>` no PR. Sem Docker (ex.: thread na nuvem), as etapas `docker` e `backup` ficam
+registradas como puladas e o `docker.yml` cobre quando o que elas validam muda.
 
 Próximo passo: leia o [`AGENTS.md`](../../AGENTS.md) § Regras invioláveis e o domínio em que vai trabalhar.

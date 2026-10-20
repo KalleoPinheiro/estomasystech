@@ -4,7 +4,13 @@
 
 ## Como validar
 
-<!-- Comandos ou passos; o CI roda typecheck, lint, check:sv, check:docs e test:coverage. -->
+<!-- Comandos ou passos. O CI roda typecheck, lint, check:sv, check:docs, test:coverage e build. -->
+
+<!-- Recibo do gate local (ADR-042): cole a linha impressa por `npm run gate:local` (sem ela o CI reprova). -->
+E2E-GATE:
+
+<!-- Só se um teste EXISTENTE mudou porque o requisito de negócio mudou (regra 8); senão apague a linha. -->
+TESTE-ALTERADO:
 
 ## Documentação
 - [ ] Comportamento mudou → `docs/domains/<d>/` atualizado (ou n/a)

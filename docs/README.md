@@ -104,6 +104,7 @@ Specs funcionais vivas ficam em `domains/<slug>/features/` e são linkadas pelo 
 | [`adr/035-renomeacao-completa-para-estomasystech.md`](adr/035-renomeacao-completa-para-estomasystech.md) | troca total: banco, `ESTOMASYSTECH_*`, rótulos de chave, cookie e marca (sem produção, sem compatibilidade) |
 | [`adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md`](adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md) | Traefik do Coolify como único proxy de entrada; Caddy removido |
 | [`adr/041-homologacao-na-vercel-e-branch-staging.md`](adr/041-homologacao-na-vercel-e-branch-staging.md) | homologação na Vercel (Neon, MSW, faker) e branch `staging` descartável |
+| [`adr/042-e2e-fora-do-actions-gate-local-com-recibo.md`](adr/042-e2e-fora-do-actions-gate-local-com-recibo.md) | E2E fora do Actions; `gate:local` com recibo no PR; testes intocáveis (regra 8) impostos por hook, `pre-push` e CI |
 | [`adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md`](adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) | produção em PostgreSQL 18 (Dockerfile + banco do Coolify); compose e CI em 16 até um PR com Docker alinhar |
 | [`adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md`](adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md) | alertas, lembretes e retenção como Scheduled Tasks do Coolify, com `wget` e `CRON_SECRET` do ambiente |
 | [`adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md`](adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md) | deploy manual depois do backup; rollback por redeploy ou restauração |

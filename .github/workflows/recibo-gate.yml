@@ -1,0 +1,46 @@
+name: Recibo do gate
+
+# Confere, em segundos, que o E2E (que não roda mais no Actions) rodou localmente para o
+# commit atual e que nenhum teste foi enfraquecido (regra 7 e 8 do AGENTS.md, ADR-042).
+# Roda também quando o corpo do PR é editado (`edited`), que é onde o recibo e o
+# `TESTE-ALTERADO:` são colados.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: recibo-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  recibo-gate:
+    name: Recibo do gate local + integridade dos testes
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # O corpo do PR vai por variável de ambiente, nunca interpolado no script.
+      - name: Recibo do gate local no corpo do PR
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx tsx scripts/gate/verify-receipt.ts
+
+      - name: Integridade dos testes (regra 8)
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: npx tsx scripts/gate/check-test-integrity.ts "origin/${{ github.base_ref }}"
