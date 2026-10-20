@@ -130,7 +130,12 @@ describe('Feature: Revogação de sessão por conta e por clínica (#194, B5)', 
   };
 
   it('Dado e-mail sem conta na clínica, Quando consultar o banco, Então a sessão segue válida (lista negra, AD-001)', async () => {
+    vi.stubEnv('ESTOMASYSTECH_DB_DRIVER', 'pglite');
+    const falhas = vi.spyOn(console, 'error');
+
     expect(await isSessionRevoked(session)).toBe(false);
+    expect(falhas).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 
   it('Dado suspensão de uma clínica, Quando esquecer o cache dela, Então o status das outras clínicas é preservado', async () => {

@@ -76,4 +76,29 @@ describe('Feature: Fotos de evolução da condição', () => {
 
     expect(result.current.actionError).toBe('Erro ao excluir foto');
   });
+
+  it('Dado exclusão recusada pelo servidor, Quando excluir a foto, Então mostra a mensagem do servidor', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) =>
+        init?.method === 'DELETE'
+          ? Promise.reject(new Error('Foto não encontrada'))
+          : Promise.resolve({
+              ok: true,
+              status: 200,
+              json: async () => ({ success: true, data: [], error: null }),
+            }),
+      ),
+    );
+    const { result } = renderHook(() => useConditionPhotos('cond-1'), {
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.photos).toEqual([]));
+
+    await act(async () => {
+      await result.current.remove({ id: 'foto-1' } as never);
+    });
+
+    expect(result.current.actionError).toBe('Foto não encontrada');
+  });
 });

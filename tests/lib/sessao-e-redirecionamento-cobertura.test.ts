@@ -68,6 +68,19 @@ describe('Feature: Volta ao lugar depois do login (#207)', () => {
     expect(safeNextPath('/agenda\n')).toBeNull();
   });
 
+  it('Dado caminho que o parser de URL não consegue interpretar, Quando validar o next, Então descarta', () => {
+    vi.stubGlobal(
+      'URL',
+      class {
+        constructor() {
+          throw new TypeError('Invalid URL');
+        }
+      },
+    );
+
+    expect(safeNextPath('/agenda')).toBeNull();
+  });
+
   it('Dado sessão expirada em tela interna, Quando redirecionar sem navegador injetado, Então usa a navegação da janela', () => {
     const assign = vi.fn();
     vi.stubGlobal('location', {

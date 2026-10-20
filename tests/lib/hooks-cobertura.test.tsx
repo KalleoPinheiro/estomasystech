@@ -89,6 +89,18 @@ describe('Feature: Emissão de documento persistida (#94, DOC-01)', () => {
   });
 });
 
+describe('Feature: Emissão de documento com erro do servidor', () => {
+  it('Dado erro com mensagem, Quando emitir, Então mostra a mensagem do servidor', async () => {
+    rejectWith(new Error('Documento sem CPF do paciente'));
+
+    const { result } = renderHook(() => useDocumentIssuance('recibo', 'p-1'));
+
+    await waitFor(() =>
+      expect(result.current.error).toBe('Documento sem CPF do paciente'),
+    );
+  });
+});
+
 describe('Feature: Lista paginada por deslocamento', () => {
   it('Dado a tela fechada antes da 1ª página, Quando responde ou falha, Então o estado não muda', async () => {
     const { pending } = controlledFetch();
