@@ -1509,6 +1509,6 @@ Issue #408, pedido do Kalléo em 2026-10-19 (ADR-049); última da fila de qualid
 ## Mutação no gate local (2026-10-20) — EM REVISÃO
 
 Pedido do Kalléo (thread "Mutação no gate local"), com permissão para editar `scripts/gate/` (ADR-051).
-- **Feito**: `gate:local` roda `test:mutacao --mutate` nos arquivos de domain/application alterados contra `origin/main`; etapa `mutacao` no recibo; `verify-receipt.ts --base-ref` exige a etapa quando o diff muda regra; `mutacao-semanal.yml` (rodada completa incremental, domingo). Teste novo `tests/scripts/gate-mutacao.test.ts`; AGENTS.md, `docs/README.md`, ADR-051.
-- **Pergunta aberta**: a rotina semanal consome cota do Actions (decisão dele: manter cron ou só `workflow_dispatch`).
+- **Feito**: `gate:local` roda `test:mutacao --mutate` nos arquivos de domain/application alterados contra `origin/main`; etapa `mutacao` no recibo; `verify-receipt.ts --base-ref` exige a etapa quando o diff muda regra; `mutacao-mensal.yml` (rodada completa incremental, último dia do mês). Teste novo `tests/scripts/gate-mutacao.test.ts`; AGENTS.md, `docs/README.md`, ADR-051.
+- **Pergunta aberta**: a rotina mensal consome cota do Actions (decisão dele: manter cron ou só `workflow_dispatch`).
 - **Next step**: Kalléo revisa; subir `break` para 90 após rodada completa ≥ 90%. **Blockers**: nenhum.
