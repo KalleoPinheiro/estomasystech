@@ -48,6 +48,7 @@ last_reviewed: 2026-09-26
 | `e2e/` | jornadas no navegador | Playwright, servidor próprio |
 
 - Estilo BDD nos nomes (`Feature / Cenário / Dado-Quando-Então`); fixtures via `tests/support/builders.ts`.
+- Regra de negócio crítica (dado de saúde, dinheiro, acesso entre papéis ou empresas, agenda) tem cenário ligado em `tests/bdd/regras-criticas.ts`; `tests/bdd/rastreabilidade.test.ts` falha se faltar ([ADR-048](../adr/048-bdd-com-describe-it-e-rastreabilidade-de-regras-criticas.md)). Regra crítica nova entra no manifesto no mesmo PR.
 - Cobertura ≥ 90% em linhas, funções, branches e statements — limiar em `vitest.config.mts`, CI roda a suíte completa.
 - **Teste é intocável (regra 8, [ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)).** Nunca enfraqueça, apague nem desligue teste, reduza limiar de cobertura ou aumente `retries`/`timeout` para ficar verde: corrija o código. Flake é causa a investigar. Mudar teste existente só quando o requisito de negócio mudou, com `TESTE-ALTERADO: <motivo>` no PR. O hook `.claude/hooks/protect-tests.sh`, o `pre-push` e o CI (`npm run check:testes`) barram isso por script.
 - Teste novo descreve comportamento de negócio de uma funcionalidade real (cenário Dado/Quando/Então com os termos do `CONTEXT.md`), inclusive os caminhos de erro e exceção; não espelha a implementação.

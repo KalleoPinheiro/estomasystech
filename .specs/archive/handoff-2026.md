@@ -1486,3 +1486,12 @@ Issue #406, pedido do Kalléo (ADR-047).
 - **Rodar**: rodada completa ~1h20 (4 núcleos); um arquivo: `npm run test:mutacao -- --mutate <arquivo>`. `npm` 10.9 falha ao instalar (`edgesOut`); as dependências entraram com `npx npm@11`.
 - **Next step**: Kalléo decide se a mutação entra no `gate:local` por diff; próximo degrau 90% (candidatos no ADR-047). **Blockers**: nenhum.
 
+
+## BDD: cenário executável por regra crítica (2026-10-20) — EM REVISÃO
+
+Issue #407, decisão do Kalléo: `describe/it` em Dado/Quando/Então + teste de rastreabilidade, sem `.feature` (ADR-048).
+- **Feito**: `tests/bdd/regras-criticas.ts` (18 regras críticas em 6 domínios → arquivo + título do cenário), `tests/bdd/rastreabilidade.test.ts` (falha se a regra não existe em `docs/domains`, não tem cenário, o título não é Dado/Quando/Então ou sumiu do arquivo; com testes de que a falha acontece), `tests/support/rastreabilidade-bdd.ts`, e `tests/bdd/cenarios-criticos.test.ts` com cenários para EST-RN-02, EST-RN-03, PRO-RN-02 e POR-RN-03, que não tinham. Docs: ADR-048, `conventions.md`, `docs/README.md`.
+- **Nenhum teste existente editado** (vínculo por título citado, não por tag; sem `TESTE-ALTERADO`). Os testes já estavam no formato Dado/Quando/Então, então não houve migração de formato.
+- **Pergunta aberta ao dono**: quais das ~160 regras restantes são críticas (critério e lista inicial no ADR-048).
+- **Next step**: T5 (matriz de exceções) reaproveita os ids; Kalléo revisa a lista de críticas. **Blockers**: nenhum.
+
