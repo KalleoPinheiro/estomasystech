@@ -44,7 +44,6 @@ export default defineConfig({
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     coverage: {
       provider: "v8",
-      // UI (src/app/**, src/components/**) fica de fora: coberta por E2E (ADR-046).
       include: [
         // Camada 1 de autorização (antigo middleware) — arquivo mais sensível do projeto.
         "src/proxy.ts",
@@ -52,6 +51,8 @@ export default defineConfig({
         "src/application/**",
         "src/infrastructure/**",
         "src/lib/**",
+        "src/app/**",
+        "src/components/**",
       ],
       exclude: [
         // Composition root — apenas wiring de DI, sem lógica.
@@ -65,12 +66,24 @@ export default defineConfig({
         "src/infrastructure/calendar/**",
         // Cliente OAuth do Google — chamada HTTP externa real, coberto por E2E de login.
         "src/lib/auth/google-oauth-client.ts",
+        // Layouts/loading do App Router — sem branches, cobertos visualmente por E2E.
+        "src/app/**/layout.tsx",
+        "src/app/**/loading.tsx",
+        // Páginas de impressão de documentos — renderização server pura, coberta por E2E.
+        "src/app/documentos/**",
       ],
       thresholds: {
-        lines: 100,
-        functions: 100,
-        branches: 100,
-        statements: 100,
+        // Piso global: UI (src/app/**, src/components/**) segue medida, sem baixar (ADR-050).
+        lines: 90,
+        functions: 90,
+        branches: 90,
+        statements: 90,
+        // Camadas de regra: 100% (ADR-046).
+        "src/proxy.ts": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/domain/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/application/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/infrastructure/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
+        "src/lib/**": { lines: 100, functions: 100, branches: 100, statements: 100 },
       },
     },
   },
