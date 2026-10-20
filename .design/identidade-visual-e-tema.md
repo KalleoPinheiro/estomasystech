@@ -147,7 +147,8 @@ A versão pesada (tema por usuário no banco, cor livre, temas completos) só co
 | Cores permitidas | enum `cyan\|violet\|mint\|amber` | contraste AA calibrado no Still Void | hex livre, só se o Still Void gerar o par de contraste automaticamente | reversible |
 | Padrão de clínica sem configuração | `system` + `violet` | preserva o visual atual | — | reversible |
 | Armazenamento de logo/avatar | mesmo `PhotoStorage` das fotos clínicas (S3/R2 cifrado), chaves `logo_key`/`avatar_key` | já cifrado e com adaptador local/indisponível | bucket público de ativos, se o carregamento do login pesar | costly |
-| Limites de imagem | até 1 MB, `image/png\|jpeg\|webp`; logo também `svg` sanitizado ou fora | evita SVG com script e arquivo gigante | aceitar SVG, só com sanitização testada | reversible |
+| Limites de imagem | até 1 MB; logo e avatar aceitam `png`, `jpeg`, `webp`, `gif`, `avif`, `heic` e `svg` (decidido por @KalleoPinheiro, 2026-10-20) | formatos comuns de imagem | restringir a raster, se aparecer abuso | reversible |
+| SVG seguro | sanitizar no envio com allowlist de elementos e atributos (sem `script`, `foreignObject`, `on*`, `href` externo, `javascript:`, `style` com `url()`); gravar o SVG já limpo; servir em `GET` com `Content-Type: image/svg+xml`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`; exibir só por `<img>`, nunca inline; teste com payloads de XSS conhecidos | SVG é XML executável: a defesa tem de existir no envio, na entrega e na exibição | converter SVG em PNG no envio, se a sanitização der falso negativo | costly |
 | Acessibilidade | WCAG 2.2 AA como piso; teste de contraste dos tokens e `@axe-core/playwright` no `gate:local` | dado de saúde e públicos com mobilidade ou visão reduzida; trava automática evita regressão | auditoria manual com leitor de tela por release, em complemento e não no lugar | reversible |
 | Telas com entalhe e barra de gestos | `viewport-fit=cover` + `env(safe-area-inset-*)` + `100dvh` | evita barra inferior escondida no iPhone e salto de altura no Chrome Android | — | reversible |
 | Foto do iOS (HEIC) | aceitar `image/heic` no envio e converter para JPEG no servidor (`sharp`), limite 1 MB após conversão | iPhone tira HEIC por padrão e o Chrome não renderiza | redimensionar no cliente com canvas, se a conversão no servidor pesar | costly |
@@ -168,9 +169,18 @@ Cannot be planned until somebody draws it.
 1. Conversão HEIC no servidor - `sharp` com HEIC funciona no build do Dockerfile do Coolify? Se não, cai para redimensionar no cliente. Para quando uma foto HEIC real de iPhone virar JPEG em teste local.
 2. Comportamento em aparelhos reais (Safari iOS e Chrome Android) do rodapé fixo com teclado aberto e da gaveta com gesto de voltar - só se mede no aparelho; para quando as duas telas de formulário (agenda e paciente) se comportarem nos dois.
 
+## "Mais" por papel
+
+A barra inferior tem no máximo 5 atalhos (limite do iOS). O que sobra vai em "Mais", uma tela de lista agrupada que respeita `canRoleAccess`.
+
+| Papel | Barra | Em "Mais" |
+|---|---|---|
+| Admin da clínica | Hoje, Agenda, Pacientes, Faturas, Mais | Triagem, Parceiros, Profissionais, Procedimentos, Materiais, Relatórios, Repasses, Auditoria, Pedidos do titular, Configurações, Minha conta, Sair |
+| Atendente | Hoje, Agenda, Pacientes, Mais | Parceiros, Configurações, Minha conta, Sair |
+| Profissional | Hoje, Agenda, Triagem (com contador), Pacientes, Mais | Parceiros, Repasses, Configurações, Minha conta, Sair |
+
 ## Open
 
-1. SVG como logo - padrão tomado: aceitar só PNG/JPEG/WebP até haver sanitização.
 2. Logo na barra e login antes de a clínica estar identificada - padrão: logo do EstomaSysTech.
 3. Troca de cor em sessão aberta - padrão: vale na próxima navegação.
 
