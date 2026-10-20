@@ -1,0 +1,80 @@
+name: Mutação mensal
+
+# Rodada completa do Stryker em src/domain e src/application (ADR-051). O gate:local só muta
+# os arquivos alterados do PR; esta rotina confere o placar global contra `thresholds.break`
+# de `stryker.config.json` e pega a deriva entre PRs. Não bloqueia PR. O cache do arquivo
+# incremental faz as rodadas seguintes mutarem só o que mudou desde a anterior.
+# Roda uma vez por mês, no último dia: o cron dispara de 28 a 31 e o job `ultimo-dia` só deixa
+# passar quando amanhã é dia 1 (cron não tem "último dia do mês").
+# Custo: a primeira rodada é a mais longa (~1h20 com 4 núcleos); acompanhe a cota do Actions.
+on:
+  schedule:
+    - cron: "0 6 28-31 * *" # 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: mutacao-mensal
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ultimo-dia:
+    name: É o último dia do mês?
+    runs-on: ubuntu-24.04
+    outputs:
+      rodar: ${{ steps.dia.outputs.rodar }}
+    steps:
+      - id: dia
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u -d tomorrow +%d)" = "01" ]; then
+            echo "rodar=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rodar=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  mutacao:
+    name: Mutação (rodada completa)
+    needs: ultimo-dia
+    if: needs.ultimo-dia.outputs.rodar == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      AUTH_SECRET: ci-placeholder-secret-0000000000000000
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache incremental do Stryker
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: reports/mutation/stryker-incremental.json
+          key: stryker-incremental-${{ github.run_id }}
+          restore-keys: stryker-incremental-
+
+      - name: Stryker
+        run: npx stryker run --incremental
+
+      - name: Placar no resumo
+        if: always()
+        run: |
+          if [ -f reports/mutation/mutation.json ]; then
+            node -e "const r=require('./reports/mutation/mutation.json');let k={};for(const f of Object.values(r.files))for(const m of f.mutants)k[m.status]=(k[m.status]||0)+1;console.log('## Mutação mensal\n\n'+JSON.stringify(k))" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: relatorio-mutacao
+          path: reports/mutation/
+          retention-days: 30

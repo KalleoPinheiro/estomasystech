@@ -4,12 +4,15 @@
  * testes, e imprime a linha `E2E-GATE:` que vai no corpo do PR. A árvore precisa
  * estar limpa: o recibo vale para o SHA do HEAD, não para arquivos soltos.
  *
+ * Se o diff muda regra em `src/domain` ou `src/application`, roda também a mutação (Stryker) só
+ * nesses arquivos e falha abaixo de `thresholds.break` (ADR-047).
+ *
  * Docker é opcional só quando o daemon não existe (ex.: thread na nuvem); a etapa
  * pulada fica registrada no recibo e o CI roda o job Docker quando o que ele valida muda.
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { formatReceipt } from './receipt';
+import { formatReceipt, mutationTargets } from './receipt';
 
 interface Step {
   name: string;
@@ -38,6 +41,13 @@ const DOCKER_STEPS: Step[] = [
 
 function git(...args: string[]): string {
   return spawnSync('git', args, { encoding: 'utf8' }).stdout.trim();
+}
+
+/** Arquivos alterados contra a base (`GATE_BASE`, padrão `origin/main`) que a mutação cobre. */
+function changedRuleFiles(): string[] {
+  const base = process.env.GATE_BASE ?? 'origin/main';
+  const out = git('diff', '--name-only', '--diff-filter=d', `${base}...HEAD`);
+  return mutationTargets(out.split('\n').filter(Boolean));
 }
 
 function dockerAvailable(): boolean {
@@ -74,7 +84,11 @@ async function main(): Promise<void> {
   let passed = true;
 
   const hasDocker = dockerAvailable();
-  const plan = [...STEPS, ...(hasDocker ? DOCKER_STEPS : [])];
+  const rules = changedRuleFiles();
+  const mutation: Step[] = rules.length
+    ? [{ name: 'mutacao', cmd: 'npm', args: ['run', 'test:mutacao', '--', '--mutate', rules.join(',')] }]
+    : [];
+  const plan = [...STEPS, ...mutation, ...(hasDocker ? DOCKER_STEPS : [])];
   if (!hasDocker) skipped.push('docker', 'backup');
 
   for (const step of plan) {

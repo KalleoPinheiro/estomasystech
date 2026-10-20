@@ -146,6 +146,7 @@ npm run dev                   # http://localhost:3000
 | `NEXT_PUBLIC_APP_COMMIT` | não | SHA curto exibido junto da versão; só em homologação e preview | vem de `VERCEL_GIT_COMMIT_SHA` |
 | `VERCEL_GIT_COMMIT_SHA` | Vercel | injetada pela Vercel no build | origem de `NEXT_PUBLIC_APP_COMMIT` |
 | `CHANGESET_BASE` | não | base do `npm run check:changeset` (padrão `origin/main`; o CI usa a base do PR) | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
+| `GATE_BASE` | não | base do diff com que o `npm run gate:local` escolhe os arquivos de domain/application a mutar (padrão `origin/main`) | [ADR-051](../adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md) |
 | `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
@@ -216,7 +217,7 @@ npm run gate:local
 ```
 
 Ele roda typecheck, lint, `check:sv`, `check:docs`, integridade dos testes, `test:coverage`, build, E2E de
-produção, E2E em `next dev` e, se houver daemon Docker, o smoke da imagem e do backup. No fim imprime a linha
+produção, E2E em `next dev`, a mutação nos arquivos de regra alterados (só se o diff toca domain/application) e, se houver daemon Docker, o smoke da imagem e do backup. No fim imprime a linha
 `E2E-GATE: <sha> pass ...`: cole-a no corpo do PR. O CI (`recibo-gate.yml`) reprova recibo ausente, de outro
 commit (qualquer push novo invalida) ou sem as etapas obrigatórias. Se o gate falhar, **corrija o código, nunca o
 teste** (regra 8 do `AGENTS.md`); só mude teste existente quando o requisito de negócio mudou, com

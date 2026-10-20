@@ -42,7 +42,8 @@ jobs:
       - name: Recibo do gate local no corpo do PR
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: npx tsx scripts/gate/verify-receipt.ts --body-file "$RUNNER_TEMP/pr-body.txt" --head-sha "$HEAD_SHA"
+          BASE_REF: ${{ github.base_ref }}
+        run: npx tsx scripts/gate/verify-receipt.ts --body-file "$RUNNER_TEMP/pr-body.txt" --head-sha "$HEAD_SHA" --base-ref "origin/$BASE_REF"
 
       - name: Integridade dos testes (regra 8)
         env:
