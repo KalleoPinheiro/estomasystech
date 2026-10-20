@@ -75,9 +75,9 @@ export class CreateAccount {
       role: input.role,
       clinicId: input.clinicId,
       professionalId: input.professionalId ?? null,
-      patientId: input.role === 'patient' ? (input.patientId ?? null) : null,
-      partnerId: input.role === 'partner' ? (input.partnerId ?? null) : null,
-      guardianId: input.role === 'guardian' ? (input.guardianId ?? null) : null,
+      patientId: input.role === 'patient' ? input.patientId : null,
+      partnerId: input.role === 'partner' ? input.partnerId : null,
+      guardianId: input.role === 'guardian' ? input.guardianId : null,
     });
     await this.accounts.save(account);
     return account;
