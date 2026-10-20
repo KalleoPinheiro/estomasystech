@@ -1456,3 +1456,12 @@ Issue #404, pedido do Kalléo junto do gate local (#409). ADR-044.
 - **Desvios**: `vitest.integracao.config.mts` é arquivo novo (o hook da regra 8 só protege `vitest.config.mts`); fora do `gate:local` (`scripts/gate/` é do dono).
 - **Rollback**: reverter o PR; sem migração e sem mudança no app.
 - **Next step**: Kalléo valida no WSL; decide se `test:integracao` entra no `gate:local`. **Blockers**: nenhum.
+
+
+## Cobertura de 100% nas camadas de regra (2026-10-20) — EM REVISÃO
+
+Issue #405, decisão do Kalléo (ADR-046).
+- **Feito**: testes novos para domain, application, infrastructure, lib e proxy; medido 0 lacunas nessas camadas (suíte completa: 443 arquivos, 5778 testes). Total com UI: 98,37% stmts, 95,53% branches.
+- **Código simplificado sem mudar comportamento** (ramos inalcançáveis): `Clinic.status`, `condition-assessment` (soma DET), `create-account`, `patient.update`, `revoke-guardian-access`, `initials`, `reminder-content`, `staff-access`, `report-cache`, vários repositórios Drizzle/in-memory; `memoizeAvailability` e `preferred` exportados para teste.
+- **Nenhum teste existente editado.** Todos os arquivos são novos (`*-cobertura.test.ts`, `*-bordas.test.ts` e afins).
+- **Next step**: Kalléo sobe os limiares para 100 em `vitest.config.mts` (proposta no PR); depois #406 (mutantes). **Blockers**: nenhum.
