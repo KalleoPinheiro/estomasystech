@@ -187,7 +187,9 @@ const EMPTY_INFO: Required<ClinicInfoFields> = {
 
 /** Empresa/clínica — unidade de isolamento de dados (multi-tenancy). */
 export class Clinic {
-  private constructor(private readonly state: ClinicState) {}
+  private constructor(
+    private readonly state: ClinicState & { status: ClinicStatus },
+  ) {}
 
   /** Clínica nova pela plataforma (B4): nasce com o cadastro completo. */
   static create(props: ClinicProps): Clinic {
@@ -275,7 +277,7 @@ export class Clinic {
   }
 
   get status(): ClinicStatus {
-    return this.state.status ?? 'active';
+    return this.state.status;
   }
 
   get statusChangedAt(): Date | null {

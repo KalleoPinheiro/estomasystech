@@ -85,6 +85,19 @@ describe('Feature: Horários livres do autoagendamento nas bordas (PORT4-01)', (
       }),
     ).rejects.toThrow('banco indisponível');
   });
+  it('Dado falha ao ler os bloqueios da agenda, Quando listar, Então propaga o erro em vez de esconder horários', async () => {
+    vi.spyOn(availability, 'listClosures').mockRejectedValue(
+      new Error('bloqueios indisponíveis'),
+    );
+    await expect(
+      useCase.execute({
+        patientId,
+        procedureId: procedure.id,
+        date: DAY,
+        now: new Date('2026-07-19T12:00:00Z'),
+      }),
+    ).rejects.toThrow('bloqueios indisponíveis');
+  });
 });
 
 describe('Feature: Leitura de disponibilidade em cache durante a listagem (#360)', () => {

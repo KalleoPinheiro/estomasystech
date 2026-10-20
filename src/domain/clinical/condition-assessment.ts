@@ -293,13 +293,14 @@ export class ConditionAssessment {
       [this.state.detErosionArea, this.state.detErosionSeverity],
       [this.state.detOvergrowthArea, this.state.detOvergrowthSeverity],
     ];
-    if (domains.some(([area, severity]) => area == null || severity == null)) {
-      return null;
+    let total = 0;
+    for (const [area, severity] of domains) {
+      if (area == null || severity == null) {
+        return null;
+      }
+      total += area + severity;
     }
-    return domains.reduce(
-      (sum, [area, severity]) => sum + (area ?? 0) + (severity ?? 0),
-      0,
-    );
+    return total;
   }
 
   get detDiscolorationArea(): number | null {

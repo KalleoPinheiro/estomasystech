@@ -101,6 +101,20 @@ describe('Feature: Repasse do profissional sem valor configurado', () => {
   });
 });
 
+describe('Feature: Repasse fixo legado sem valor gravado', () => {
+  it('Dado profissional restaurado com repasse fixo sem valor, Quando ler a regra, Então não há repasse', () => {
+    const professional = Professional.restore({
+      id: 'prof-1',
+      fullName: 'Enf. Beatriz Lima',
+      active: true,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      commissionType: 'fixed',
+      commissionFixedCents: null,
+    });
+    expect(professional.commissionRule).toBeNull();
+  });
+});
+
 describe('Feature: Telefone com zero de tronco inválido', () => {
   it('Dado número iniciado em 0 cujo restante não tem 10 ou 11 dígitos, Quando validar, Então recusa por tamanho', () => {
     const result = parseBrazilianPhone('0123');

@@ -246,4 +246,24 @@ describe('Feature: Plano de cuidados e pedidos do titular nas bordas', () => {
 
     expect(save).toHaveBeenCalledWith(request);
   });
+
+  it('Dado falha ao listar os admins, Quando o titular abrir o pedido, Então o pedido é gravado mesmo assim', async () => {
+    const accounts = {
+      findByRole: async () => {
+        throw new Error('banco indisponível');
+      },
+    } as unknown as UserAccountRepository;
+    const save = vi.fn(async () => undefined);
+    const request = DataSubjectRequest.create({
+      patientId: 'p-1',
+      kind: 'erasure',
+    });
+
+    await new OpenDataSubjectRequest({ save } as never, accounts, {
+      isEnabled: async () => true,
+      send: vi.fn(),
+    }).commit(request);
+
+    expect(save).toHaveBeenCalledWith(request);
+  });
 });
