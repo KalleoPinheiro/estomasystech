@@ -59,6 +59,9 @@ export async function DELETE(request: NextRequest) {
   if (!guard.ok) return guard.response;
 
   const response = ok({ patientId: null });
-  response.cookies.delete(ACTING_PATIENT_COOKIE);
+  response.cookies.set(ACTING_PATIENT_COOKIE, '', {
+    ...actingPatientCookieOptions(),
+    maxAge: 0,
+  });
   return response;
 }
