@@ -78,9 +78,12 @@ console.log(`✓ tag ${tag} empurrada.`);
 
 const notes = join(tmpdir(), `release-notes-${tag}.md`);
 writeFileSync(notes, body);
-if (sh('gh', ['--version']).ok) {
-  must('gh', ['release', 'create', tag, '--title', tag, '--notes-file', notes]);
+const created = sh('gh', ['release', 'create', tag, '--title', tag, '--notes-file', notes]);
+if (created.ok) {
   console.log(`✓ GitHub Release ${tag} criada. Faça o Deploy dessa tag no Coolify (producao.md § 3.1).`);
 } else {
-  console.log(`\n⚠ sem \`gh\`: crie a Release ${tag} no GitHub e cole o texto abaixo.\n\n${body}`);
+  console.log(
+    `\n⚠ não consegui criar a Release com \`gh\` (${created.out.split('\n')[0]}).\n` +
+      `  A tag já foi empurrada. Crie a Release ${tag} no GitHub e cole o texto abaixo.\n\n${body}`,
+  );
 }
