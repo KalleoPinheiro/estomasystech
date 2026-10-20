@@ -55,7 +55,7 @@ describe('Feature: Fotos de evolução da condição', () => {
   it('Dado exclusão que falha sem Error, Quando excluir a foto, Então mostra a mensagem padrão', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn((url: string, init?: RequestInit) =>
+      vi.fn((_url: string, init?: RequestInit) =>
         init?.method === 'DELETE'
           ? Promise.reject('queda')
           : Promise.resolve({

@@ -49,7 +49,8 @@ export const toPartnerShareConsentDto = (
   options: { includeRecordedBy?: boolean } = {},
 ): PartnerShareConsentDto => {
   const { current, latestAccept, active } = view.status;
-  const revoked = current?.kind === 'revoke';
+  const revocation = current?.kind === 'revoke' ? current : null;
+  const revoked = revocation !== null;
   return {
     partnerName: view.partner.fullName,
     consentText: consent.text,
@@ -62,8 +63,8 @@ export const toPartnerShareConsentDto = (
     acceptedBy: options.includeRecordedBy
       ? (latestAccept?.recordedBy ?? null)
       : null,
-    revokedAt: revoked ? (current?.recordedAt.toISOString() ?? null) : null,
-    revokedBy: revoked ? (current?.actor ?? null) : null,
+    revokedAt: revocation?.recordedAt.toISOString() ?? null,
+    revokedBy: revocation?.actor ?? null,
     signedByRelationship: latestAccept?.signer?.relationship ?? null,
     representativeExpired: view.status.representativeExpired,
   };
