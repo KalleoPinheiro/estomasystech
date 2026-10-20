@@ -90,6 +90,14 @@ describe('Regra 8: teste não se edita para resolver problema de desenvolvimento
       ]);
     });
 
+    it('não confunde texto de fixture com teste desligado', () => {
+      expect(
+        analyzeDiff(
+          diffOf('tests/x.test.ts', [], ['const linha = "it.skip(\'x\')";']),
+        ),
+      ).toEqual([]);
+    });
+
     it('ignora arquivo que não é teste nem config', () => {
       expect(
         analyzeDiff(diffOf('src/domain/x.ts', ['expect(1)'], ['expect(2)'])),

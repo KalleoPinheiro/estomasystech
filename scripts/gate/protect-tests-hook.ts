@@ -1,8 +1,8 @@
 /**
  * Hook PreToolUse do Claude Code (Edit|Write|MultiEdit), regra 8 / ADR-042.
  * Lê o JSON do hook em stdin e sai 2 (bloqueia) quando a escrita enfraquece um
- * teste ou mexe no próprio gate. O dono libera uma sessão sua com
- * `GATE_OWNER_EDIT=1` no ambiente do Claude Code; o agente não consegue setar isso.
+ * teste ou mexe no próprio gate. O dono libera a própria sessão com `GATE_OWNER_EDIT=1`
+ * no ambiente do Claude Code; quem checa isso é o `protect-tests.sh`, antes do tsx.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
@@ -29,7 +29,6 @@ export function findingsFor(tool: string, input: ToolInput, root: string): Findi
 }
 
 function main(): void {
-  if (process.env.GATE_OWNER_EDIT === '1') return;
   const payload = JSON.parse(readFileSync(0, 'utf8')) as { tool_name?: string; tool_input?: ToolInput };
   const findings = findingsFor(payload.tool_name ?? '', payload.tool_input ?? {}, process.cwd());
   if (findings.length === 0) return;

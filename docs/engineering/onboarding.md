@@ -195,7 +195,7 @@ produção, E2E em `next dev` e, se houver daemon Docker, o smoke da imagem e do
 `E2E-GATE: <sha> pass ...`: cole-a no corpo do PR. O CI (`recibo-gate.yml`) reprova recibo ausente, de outro
 commit (qualquer push novo invalida) ou sem as etapas obrigatórias. Se o gate falhar, **corrija o código, nunca o
 teste** (regra 8 do `AGENTS.md`); só mude teste existente quando o requisito de negócio mudou, com
-`TESTE-ALTERADO: <motivo>` no PR. Sem Docker (ex.: thread na nuvem), as etapas `docker` e `backup` ficam
+`TESTE-ALTERADO: <motivo>` no PR e o mesmo texto em `.gate/motivo-teste.txt` (local, fora do git; o `pre-push` e o `gate:local` leem). Sem Docker (ex.: thread na nuvem), as etapas `docker` e `backup` ficam
 registradas como puladas e o `docker.yml` cobre quando o que elas validam muda.
 
 Próximo passo: leia o [`AGENTS.md`](../../AGENTS.md) § Regras invioláveis e o domínio em que vai trabalhar.

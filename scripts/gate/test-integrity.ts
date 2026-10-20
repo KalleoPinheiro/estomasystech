@@ -27,8 +27,9 @@ const GATE_FILE = /^(\.claude\/(settings\.json|hooks\/.+)|\.husky\/.+|scripts\/g
 
 const ASSERTION =
   /\b(expect|assert)\b|\.(toBe|toEqual|toThrow|toMatch|toHaveText|toBeVisible|toHaveURL)\w*\(|^\s*(it|test|describe)(\.\w+)*\s*\(/;
+/** Só no começo da instrução: o texto `it.skip(` dentro de string de fixture não conta. */
 const DISABLED =
-  /\b(it|test|describe)\.(skip|only|fixme|todo|fail|slow)\b|\bx(it|describe)\b|\.skip\(|\btest\.setTimeout\b/;
+  /^\s*((it|test|describe)\.(skip|only|fixme|todo|fail|slow)\b|x(it|describe)\s*\(|test\.setTimeout\b)/;
 const THRESHOLD = /^\s*(lines|functions|branches|statements)\s*:\s*(\d+)/;
 const RETRY_OR_TIMEOUT = /^\s*(retries|timeout|testTimeout|hookTimeout)\s*:\s*([\d_]+)/;
 const EXPECT_TIMEOUT = /\bexpect\s*:\s*\{\s*timeout\s*:\s*([\d_]+)/;
