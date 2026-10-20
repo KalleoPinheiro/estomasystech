@@ -81,3 +81,8 @@ uploads/
 # recibo do gate local (ADR-042)
 /.gate/
 /.ambiente-local/
+
+# mutation testing (Stryker)
+/reports/
+/.stryker-tmp/
+stryker.log
