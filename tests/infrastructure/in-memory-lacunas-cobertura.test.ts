@@ -215,4 +215,24 @@ describe('Feature: Repositórios em memória espelham os desempates e filtros do
 
     await expect(repo.save(make('ap-2'))).rejects.toBeInstanceOf(ConflictError);
   });
+  it('Dado ids de responsáveis em que um não existe, Quando buscar por ids, Então devolve só os existentes', async () => {
+    const repo = new InMemoryGuardianRepository();
+    const ana = Guardian.create({
+      fullName: 'Ana Souza',
+      relationship: 'cuidador',
+      phone: '11999990000',
+    });
+    await repo.save(ana);
+
+    const found = await repo.findByIds([ana.id, 'inexistente']);
+
+    expect(found.map((g) => g.id)).toEqual([ana.id]);
+  });
+
+  it('Dado consumo registrado para um pacote que não existe mais, Quando perguntar o pacote da consulta, Então devolve nulo', async () => {
+    const repo = new InMemorySessionPackageRepository();
+    await repo.recordConsumption('pacote-removido', 'ap1');
+
+    expect(repo.consumedBy('ap1')).toBeNull();
+  });
 });
