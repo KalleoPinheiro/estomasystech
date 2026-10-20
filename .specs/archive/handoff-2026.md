@@ -1475,3 +1475,14 @@ Issue #405, decisão do Kalléo (ADR-046).
 - **Código simplificado sem mudar comportamento** (ramos inalcançáveis): `Clinic.status`, `condition-assessment` (soma DET), `create-account`, `patient.update`, `revoke-guardian-access`, `initials`, `reminder-content`, `staff-access`, `report-cache`, vários repositórios Drizzle/in-memory; `memoizeAvailability` e `preferred` exportados para teste.
 - **Nenhum teste existente editado.** Todos os arquivos são novos (`*-cobertura.test.ts`, `*-bordas.test.ts` e afins).
 - **Next step**: Kalléo sobe os limiares para 100 em `vitest.config.mts` (proposta no PR); depois #406 (mutantes). **Blockers**: nenhum.
+
+
+## Testes de mutação com Stryker em domain e application (2026-10-20) — EM REVISÃO
+
+Issue #406, pedido do Kalléo (ADR-047).
+- **Feito**: `npm run test:mutacao` (`stryker.config.json`, `vitest.mutacao.config.mts`, relatório em `reports/mutation`, fora do git); placar medido **80,48%** na main (7.930 mutantes; 1.152 sobreviventes, 396 sem cobertura) e **85,98%** com os testes novos (+5,5 pontos); `thresholds.break` em 85; docs (ADR-047, AGENTS.md, onboarding, `docs/README.md`).
+- **Testes novos** (nenhum existente editado): `tests/domain/mutacao/{phone,condition-assessment,schedule-config}-mutacao.test.ts` e `tests/application/mutacao/{manage-clinic-admins,mfa-login,portal-identity,data-subject-requests}-mutacao.test.ts`. Arquivos que partiram de 25 a 80 mutantes vivos chegaram a 0 a 5.
+- **Desvio**: o runner usa só `tests/domain` e `tests/application` (a suíte inteira estoura o tempo da rodada inicial); mutante coberto só por API aparece como "sem cobertura". O gate (`scripts/gate/`) é do dono: proposta em `/mnt/project-files/ci/proposta-mutacao-no-gate.md`.
+- **Rodar**: rodada completa ~1h20 (4 núcleos); um arquivo: `npm run test:mutacao -- --mutate <arquivo>`. `npm` 10.9 falha ao instalar (`edgesOut`); as dependências entraram com `npx npm@11`.
+- **Next step**: Kalléo decide se a mutação entra no `gate:local` por diff; próximo degrau 90% (candidatos no ADR-047). **Blockers**: nenhum.
+
