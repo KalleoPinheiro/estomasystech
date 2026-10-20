@@ -77,7 +77,8 @@ export function useCursorPagedQuery<T>(
     apiFetchPage<T>(pageUrl(nextCursor))
       .then((page) => {
         if (requestIdRef.current !== requestId) return;
-        setItems((latest) => [...(latest ?? []), ...page.items]);
+        // `nextCursor` só existe depois da 1ª página: `latest` nunca é nulo aqui.
+        setItems((latest) => [...(latest as T[]), ...page.items]);
         setNextCursor(page.nextCursor);
         setError(null);
       })

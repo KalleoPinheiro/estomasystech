@@ -159,10 +159,14 @@ export class DataCipher {
   }
 
   /** Null e vazio passam direto: não há conteúdo a proteger em "". */
+  encryptNullable(value: string): string;
+  encryptNullable(value: string | null): string | null;
   encryptNullable(value: string | null): string | null {
     return value === null || value === '' ? value : this.encrypt(value);
   }
 
+  decryptNullable(value: string): string;
+  decryptNullable(value: string | null): string | null;
   decryptNullable(value: string | null): string | null {
     return value === null || value === '' ? value : this.decrypt(value);
   }

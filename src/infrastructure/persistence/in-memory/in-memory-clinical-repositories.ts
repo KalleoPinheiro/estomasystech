@@ -52,8 +52,8 @@ export class InMemoryEvolutionNoteRepository
       .sort(
         (a, b) =>
           b.createdAt.getTime() - a.createdAt.getTime() ||
-          (this.insertionOrder.get(b.id) ?? 0) -
-            (this.insertionOrder.get(a.id) ?? 0),
+          (this.insertionOrder.get(b.id) as number) -
+            (this.insertionOrder.get(a.id) as number),
       );
   }
 }

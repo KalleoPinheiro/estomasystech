@@ -37,7 +37,7 @@ const toBillingRef = (row: {
       }
     : null;
 
-const preferred = (
+export const preferred = (
   current: BillingRef | null,
   candidate: BillingRef | null,
 ): BillingRef | null => {

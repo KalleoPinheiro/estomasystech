@@ -37,9 +37,10 @@ export function cacheReport(
   report: MonthlyReport,
 ): void {
   if (closedMonthCache.size >= MAX_CACHED_MONTHS) {
-    const oldest = closedMonthCache.keys().next();
-    if (!oldest.done) {
-      closedMonthCache.delete(oldest.value);
+    // Map preserva a ordem de inserção: a primeira chave é a mais antiga.
+    for (const oldest of closedMonthCache.keys()) {
+      closedMonthCache.delete(oldest);
+      break;
     }
   }
   closedMonthCache.set(cacheKeyFor(clinicId, month), report);

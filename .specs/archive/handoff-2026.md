@@ -1466,3 +1466,12 @@ Itens abertos da #381, pedido do Kalléo na thread "Itens abertos da #381". ADR-
 - **Logs/GlitchTip**: auditado no código (ADR-014): sem PII em `logger.*`, e-mail mascarado, `scrubEvent`. **Não verificado**: conteúdo dos logs do container em produção (leitura não liberada na sessão).
 - **Cookie de sessão pela resposta**: não coletado (exige login); coberto por teste e pelo `Set-Cookie` de criação, que já era `Secure`/`HttpOnly`/`SameSite=Lax`.
 - **Next step**: Kalléo confere uma amostra dos logs em produção (§ 9.6) e o `Set-Cookie` no DevTools no próximo login. **Blockers**: nenhum.
+
+
+## Cobertura de 100% nas camadas de regra (2026-10-20) — EM REVISÃO
+
+Issue #405, decisão do Kalléo (ADR-046).
+- **Feito**: testes novos para domain, application, infrastructure, lib e proxy; medido 0 lacunas nessas camadas (suíte completa: 443 arquivos, 5778 testes). Total com UI: 98,37% stmts, 95,53% branches.
+- **Código simplificado sem mudar comportamento** (ramos inalcançáveis): `Clinic.status`, `condition-assessment` (soma DET), `create-account`, `patient.update`, `revoke-guardian-access`, `initials`, `reminder-content`, `staff-access`, `report-cache`, vários repositórios Drizzle/in-memory; `memoizeAvailability` e `preferred` exportados para teste.
+- **Nenhum teste existente editado.** Todos os arquivos são novos (`*-cobertura.test.ts`, `*-bordas.test.ts` e afins).
+- **Next step**: Kalléo sobe os limiares para 100 em `vitest.config.mts` (proposta no PR); depois #406 (mutantes). **Blockers**: nenhum.

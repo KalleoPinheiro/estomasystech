@@ -58,12 +58,11 @@ export class DrizzleAnamnesisRepository implements AnamnesisRepository {
     const values = {
       clinicId: this.clinicId,
       patientId: anamnesis.patientId,
-      comorbidities: this.cipher.encryptNullable(anamnesis.comorbidities) ?? '',
-      allergies: this.cipher.encryptNullable(anamnesis.allergies) ?? '',
-      medications: this.cipher.encryptNullable(anamnesis.medications) ?? '',
-      surgicalHistory:
-        this.cipher.encryptNullable(anamnesis.surgicalHistory) ?? '',
-      notes: this.cipher.encryptNullable(anamnesis.notes) ?? '',
+      comorbidities: this.cipher.encryptNullable(anamnesis.comorbidities),
+      allergies: this.cipher.encryptNullable(anamnesis.allergies),
+      medications: this.cipher.encryptNullable(anamnesis.medications),
+      surgicalHistory: this.cipher.encryptNullable(anamnesis.surgicalHistory),
+      notes: this.cipher.encryptNullable(anamnesis.notes),
       updatedAt: anamnesis.updatedAt,
     };
     await this.db
@@ -89,11 +88,11 @@ export class DrizzleAnamnesisRepository implements AnamnesisRepository {
     // Anamnese cifrada em repouso (#195); "" segue "" (nada a proteger).
     return Anamnesis.restore({
       ...row,
-      comorbidities: this.cipher.decryptNullable(row.comorbidities) ?? '',
-      allergies: this.cipher.decryptNullable(row.allergies) ?? '',
-      medications: this.cipher.decryptNullable(row.medications) ?? '',
-      surgicalHistory: this.cipher.decryptNullable(row.surgicalHistory) ?? '',
-      notes: this.cipher.decryptNullable(row.notes) ?? '',
+      comorbidities: this.cipher.decryptNullable(row.comorbidities),
+      allergies: this.cipher.decryptNullable(row.allergies),
+      medications: this.cipher.decryptNullable(row.medications),
+      surgicalHistory: this.cipher.decryptNullable(row.surgicalHistory),
+      notes: this.cipher.decryptNullable(row.notes),
     });
   }
 }
@@ -108,10 +107,10 @@ export class DrizzleEvolutionNoteRepository implements EvolutionNoteRepository {
   private toEntity(row: typeof evolutionNotes.$inferSelect): EvolutionNote {
     return EvolutionNote.restore({
       ...row,
-      subjective: this.cipher.decryptNullable(row.subjective) ?? '',
-      objective: this.cipher.decryptNullable(row.objective) ?? '',
-      assessment: this.cipher.decryptNullable(row.assessment) ?? '',
-      plan: this.cipher.decryptNullable(row.plan) ?? '',
+      subjective: this.cipher.decryptNullable(row.subjective),
+      objective: this.cipher.decryptNullable(row.objective),
+      assessment: this.cipher.decryptNullable(row.assessment),
+      plan: this.cipher.decryptNullable(row.plan),
     });
   }
 
@@ -127,10 +126,10 @@ export class DrizzleEvolutionNoteRepository implements EvolutionNoteRepository {
       patientId: note.patientId,
       appointmentId: note.appointmentId,
       professionalId: note.professionalId,
-      subjective: this.cipher.encryptNullable(note.subjective) ?? '',
-      objective: this.cipher.encryptNullable(note.objective) ?? '',
-      assessment: this.cipher.encryptNullable(note.assessment) ?? '',
-      plan: this.cipher.encryptNullable(note.plan) ?? '',
+      subjective: this.cipher.encryptNullable(note.subjective),
+      objective: this.cipher.encryptNullable(note.objective),
+      assessment: this.cipher.encryptNullable(note.assessment),
+      plan: this.cipher.encryptNullable(note.plan),
       createdAt: note.createdAt,
     });
   }
@@ -487,7 +486,7 @@ export class DrizzleConditionPhotoRepository
           ),
         ),
       );
-    return row?.total ?? 0;
+    return row.total;
   }
 
   async delete(id: string): Promise<void> {

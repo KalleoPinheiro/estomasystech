@@ -4,7 +4,7 @@ import { isSafeOrigin } from '@/application/auth/send-invite';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import { AuthToken, RESET_TTL_MS } from '@/domain/auth/auth-token';
 import { normalizeAccountEmail } from '@/domain/auth/user-account';
-import { ValidationError } from '@/domain/shared/errors';
+import type { ValidationError } from '@/domain/shared/errors';
 import { recordAuditNow } from '@/lib/audit';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import type { AppDb } from './db';
@@ -91,10 +91,8 @@ async function resolveNewEmail(
   try {
     email = normalizeAccountEmail(raw);
   } catch (error) {
-    if (error instanceof ValidationError) {
-      throw new RecoveryPreconditionError(error.message);
-    }
-    throw error;
+    // `normalizeAccountEmail` só falha com ValidationError (e-mail inválido).
+    throw new RecoveryPreconditionError((error as ValidationError).message);
   }
   if (email === account.email) return null;
   const [taken] = await db

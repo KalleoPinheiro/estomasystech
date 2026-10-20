@@ -218,16 +218,11 @@ export class DrizzleRetentionRepository implements RetentionRepository {
         ),
       )
       .limit(limit);
-    return rows.flatMap((row) =>
-      row.googleEventId
-        ? [
-            {
-              appointmentId: row.appointmentId,
-              googleEventId: row.googleEventId,
-            },
-          ]
-        : [],
-    );
+    // O filtro `isNotNull(googleEventId)` acima garante o id do evento.
+    return rows.map((row) => ({
+      appointmentId: row.appointmentId,
+      googleEventId: row.googleEventId as string,
+    }));
   }
 
   async markCalendarEventRemoved(appointmentId: string): Promise<void> {

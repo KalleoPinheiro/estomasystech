@@ -12,6 +12,7 @@ import {
 } from '@/domain/catalog/procedure-kit';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import {
+  cancellationPolicyOf,
   DEFAULT_CANCELLATION_POLICY,
   type ScheduleConfig,
   type ScheduleConfigRepository,
@@ -378,6 +379,7 @@ export class DrizzleScheduleConfigRepository
       );
     }
     const validated = validateScheduleConfig(config);
+    const policy = cancellationPolicyOf(validated);
     const values = {
       id: newId(),
       clinicId: this.clinicId,
@@ -387,8 +389,8 @@ export class DrizzleScheduleConfigRepository
       minGapMinutes: validated.minGapMinutes,
       lunchStartMinute: validated.lunchBreak?.startMinute ?? null,
       lunchEndMinute: validated.lunchBreak?.endMinute ?? null,
-      cancelNoticeHours: validated.cancellationPolicy?.noticeHours ?? null,
-      lateCancelFeeCents: validated.cancellationPolicy?.lateFeeCents ?? null,
+      cancelNoticeHours: policy.noticeHours,
+      lateCancelFeeCents: policy.lateFeeCents,
       updatedAt: new Date(),
     };
     await this.db

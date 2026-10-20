@@ -242,7 +242,7 @@ function parseLocalDate(date: string): Date | null {
 }
 
 /** Leituras de disponibilidade em cache durante uma listagem. */
-function memoizeAvailability(
+export function memoizeAvailability(
   source: ScheduleAvailabilityRepository,
 ): ScheduleAvailabilityRepository {
   const closures = new Map<string, ReturnType<typeof source.listClosures>>();

@@ -92,4 +92,4 @@ export function reminderContent<K extends ReminderKind>(
 
 /** Primeiro nome para a saudação. */
 export const firstNameOf = (fullName: string): string =>
-  fullName.trim().split(/\s+/)[0] ?? fullName;
+  fullName.trim().split(/\s+/)[0];

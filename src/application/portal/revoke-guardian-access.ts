@@ -55,7 +55,7 @@ export async function revokeGuardianAccess(
   );
   const revoked = patient.revokeGuardianPortalAccess();
   await repos.patients.save(revoked);
-  await notifyGuardianOfRevocation(repos, patient, actor);
+  await notifyGuardianOfRevocation(repos, patient, patient.guardianId, actor);
   return revoked;
 }
 
@@ -73,14 +73,13 @@ async function notifyGuardianOfRevocation(
     email: EmailGateway;
   },
   patient: Patient,
+  guardianId: string,
   actor: { subject: string; clinicId: string | null },
 ): Promise<void> {
   let outcome: GuardianRevocationNoticeOutcome = 'skipped';
   let recipient: string | null = null;
   try {
-    const guardian = patient.guardianId
-      ? await repos.guardians.findById(patient.guardianId)
-      : null;
+    const guardian = await repos.guardians.findById(guardianId);
     recipient = guardian?.email ?? null;
     if (recipient && (await repos.email.isEnabled())) {
       await repos.email.send({
