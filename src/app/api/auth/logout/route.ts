@@ -2,7 +2,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getRepositories } from '@/infrastructure/container';
 import { recordAuditNow } from '@/lib/audit';
 import { getRequestSession } from '@/lib/auth/request-session';
-import { SESSION_COOKIE, type Session } from '@/lib/auth/session';
+import {
+  expiredCookieOptions,
+  SESSION_COOKIE,
+  type Session,
+} from '@/lib/auth/session';
 import { forgetSessionStatus } from '@/lib/auth/staff-revocation';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 import { logError } from '@/lib/log-error';
@@ -34,11 +38,7 @@ export async function POST(request: NextRequest) {
     data: { ok: true },
     error: null,
   });
-  response.cookies.set(SESSION_COOKIE, '', {
-    httpOnly: true,
-    path: '/',
-    maxAge: 0,
-  });
+  response.cookies.set(SESSION_COOKIE, '', expiredCookieOptions());
   return response;
 }
 

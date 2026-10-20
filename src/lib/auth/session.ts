@@ -14,6 +14,15 @@ export function sessionCookieOptions() {
   };
 }
 
+/**
+ * Atributos do cookie que expira (logout, fim de fluxo): os mesmos `Secure`,
+ * `HttpOnly` e `SameSite` do cookie que ele apaga, para que nenhum
+ * `Set-Cookie` da resposta fique fora do padrão (#381).
+ */
+export function expiredCookieOptions() {
+  return { ...sessionCookieOptions(), maxAge: 0 };
+}
+
 const sign = (secret: string, payload: string): string =>
   createHmac('sha256', secret).update(payload).digest('hex');
 

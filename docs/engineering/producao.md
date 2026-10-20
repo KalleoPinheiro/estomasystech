@@ -185,8 +185,10 @@ Produção continua nesta VPS. Um banco de produção nunca é apontado para lá
     (`next.config.ts`) e a **CSP com nonce por requisição** (`src/proxy.ts`). O middleware
     `security-headers@file` não pode definir `Content-Security-Policy` (sobrescreveria o nonce e
     quebraria a página); duplicar os demais cabeçalhos é inofensivo.
-  - *Cookies*: são `Secure` por `NODE_ENV=production`, independente de cabeçalho do proxy; basta
-    o acesso ser por HTTPS, que o Traefik garante.
+  - *Cookies*: são `Secure`, `HttpOnly` e `SameSite=Lax` por `NODE_ENV=production`, independente de
+    cabeçalho do proxy; basta o acesso ser por HTTPS, que o Traefik garante (HTTP responde `307` para
+    HTTPS). Os cookies que expiram (logout, OAuth do Calendar, paciente representado) usam os mesmos
+    atributos (`expiredCookieOptions`).
   - *Fotos*: sem bucket, monte um volume persistente do Coolify em `/app/uploads`.
   - *Healthcheck*: vale o `HEALTHCHECK` do `Dockerfile` (liveness em `/api/health`, sem banco); o
     healthcheck próprio do Coolify fica **desligado**. Quem checa o banco e as migrações é o
@@ -198,15 +200,20 @@ Produção continua nesta VPS. Um banco de produção nunca é apontado para lá
   - *Git*: o repositório não usa Git LFS nem submódulos; em *Configuration → Source*, deixe
     desligados "Use Git LFS" e "Include Git Submodules" (menos superfície no clone do deploy).
   - *Rótulo dos middlewares*: confira em *Configuration → General → Custom Labels* (ou na aba
-    *Advanced*) que existe `traefik.http.routers.<router>.middlewares=rate-limit-app@file,security-headers@file`
-    (o Coolify também aceita `coolify.traefik.middlewares`). Leia as labels reais do container com
-    `docker inspect` (§ 9.6) e prove pela resposta.
+    *Advanced*) o `traefik.http.routers.https-0-<id>.middlewares=gzip,0-<id>-noindex,rate-limit-app@file`
+    e o roteador `strict-<id>` com `rate-limit-strict@file` (lidos do container em 2026-10-20). O
+    `security-headers@file` **não** é referenciado de propósito: o app já envia esses cabeçalhos uma
+    vez só e a CSP tem nonce ([ADR-045](../adr/045-borda-atras-do-traefik-app-dono-dos-cabecalhos.md)).
+    Leia as labels reais com `docker inspect` (§ 9.6) e prove pela resposta.
 - O cookie de sessão é `Secure` em produção: **login não funciona por HTTP** fora de `localhost`.
 - `APP_URL` precisa ser `https://…` (compõe os links de convite/reset e o redirect da agenda).
 - O app lê o IP do cliente contando `TRUSTED_PROXY_HOPS` saltos a partir do fim do
   `x-forwarded-for` (rate limit do login e da API). O Traefik acrescenta o IP de quem conectou
   ao fim da cadeia, então:
-  - Traefik sozinho (o decidido, sem Cloudflare): `TRUSTED_PROXY_HOPS=1`.
+  - Traefik sozinho (o decidido, sem Cloudflare): `TRUSTED_PROXY_HOPS=1`. Provado em 2026-10-20:
+    9 `POST /api/auth/login` com corpo `{}` e `x-forwarded-for` forjado diferente em cada um deram
+    5 × `401` e 4 × `429` com a mensagem do app (`Muitas tentativas de login…`); com salto errado o
+    limite por IP nunca dispararia. Repita sempre que mudar a topologia (ADR-045).
   - Cloudflare (proxy laranja) na frente do Traefik: o Traefik precisa confiar nas faixas de IP
     da Cloudflare (`forwardedHeaders.trustedIPs` no entrypoint, configuração do proxy do Coolify)
     para manter a cadeia; só então use `TRUSTED_PROXY_HOPS=2`. Sem isso o Traefik descarta o
@@ -895,6 +902,7 @@ dado de paciente. Substitua `U=https://estomasystech.kalleopinheiro.com.br`.
 | demais cabeçalhos | `curl -sI $U/login` | `x-frame-options`, `x-content-type-options`, `referrer-policy`, `cross-origin-opener-policy` e `cross-origin-resource-policy` presentes, sem duplicar a CSP |
 | rotas de job fechadas | `curl -s -o /dev/null -w '%{http_code}' -X POST $U/api/alerts/run` (sem `x-cron-secret`) | `401` (`503` significa `CRON_SECRET` ausente; `200` seria falha grave) |
 | cookies | DevTools → Application → Cookies, depois de um login | cookie de sessão com `Secure`, `HttpOnly` e `SameSite` (exige login: não faz parte da fumaça sem conta) |
+| salto do proxy | 9 `POST $U/api/auth/login -H 'content-type: application/json' -d '{}'` com `-H "x-forwarded-for: 203.0.113.$i"` diferente em cada um, 0,5 s entre eles | 5 × `401` e depois `429` com `Muitas tentativas de login`; só `401` = salto errado (o cliente escolhe o próprio IP) |
 | rate limit | rajada paralela, ≥ 300 requisições com 60 simultâneas (o `rate-limit-app` é 20/s com rajada 60; um laço sequencial de `curl` fica abaixo disso e **não** dispara): `seq 1 300 \| xargs -P 60 -I{} curl -s -o /dev/null -w '%{http_code}\n' $U/login \| sort \| uniq -c` | dezenas de `429` (em 2026-10-19: 104 em `/login`, 219 em `/api/health`); só `200` = o roteador não referencia `rate-limit-app@file` (confira com `sudo docker inspect <container> --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{println}}{{end}}' \| grep middlewares`) |
 | imagem | *Deployments* do Coolify | SHA igual ao esperado e `healthy` |
 

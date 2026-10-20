@@ -1456,3 +1456,13 @@ Issue #404, pedido do Kalléo junto do gate local (#409). ADR-044.
 - **Desvios**: `vitest.integracao.config.mts` é arquivo novo (o hook da regra 8 só protege `vitest.config.mts`); fora do `gate:local` (`scripts/gate/` é do dono).
 - **Rollback**: reverter o PR; sem migração e sem mudança no app.
 - **Next step**: Kalléo valida no WSL; decide se `test:integracao` entra no `gate:local`. **Blockers**: nenhum.
+
+## Borda atrás do Traefik: cookies, cabeçalhos, 1 salto e logs (2026-10-20) — EM REVISÃO
+
+Itens abertos da #381, pedido do Kalléo na thread "Itens abertos da #381". ADR-045.
+- **Provado em produção** (somente leitura, sem login): `TRUSTED_PROXY_HOPS=1` (XFF forjado não escapa do limite de 5/min do login); rajada de 300 requisições com 60 em paralelo: `/login` 146 × `200` e 154 × `429`, `/api/health` 129 × `200` e 171 × `429`; `strict` em `/api/auth/login` 5 × `401` e 55 × `429`; cada cabeçalho de segurança uma vez só, CSP única com nonce; HTTP `307` para HTTPS; `/api/alerts/run` sem segredo `401`. Rótulos do container lidos via `docker inspect`.
+- **Corrigido**: cookies que expiram (logout, OAuth do Calendar, paciente representado) saíam sem `Secure` e `SameSite`; agora `expiredCookieOptions()` (`src/lib/auth/session.ts`). Teste novo `tests/lib/cookie-options.test.ts` (nenhum teste existente alterado).
+- **Decisão**: `security-headers@file` não é ligado ao roteador; o app é dono dos cabeçalhos (ADR-045).
+- **Logs/GlitchTip**: auditado no código (ADR-014): sem PII em `logger.*`, e-mail mascarado, `scrubEvent`. **Não verificado**: conteúdo dos logs do container em produção (leitura não liberada na sessão).
+- **Cookie de sessão pela resposta**: não coletado (exige login); coberto por teste e pelo `Set-Cookie` de criação, que já era `Secure`/`HttpOnly`/`SameSite=Lax`.
+- **Next step**: Kalléo confere uma amostra dos logs em produção (§ 9.6) e o `Set-Cookie` no DevTools no próximo login. **Blockers**: nenhum.
