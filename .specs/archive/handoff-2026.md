@@ -1433,3 +1433,14 @@ Pedido do Kalléo na thread "E2E fora do Actions". Diagnóstico: `/mnt/project-f
 - **Limite**: recibo e `TESTE-ALTERADO:` são autodeclarados; hook, `pre-push` e CI barram descuido, não um autor deliberado (ADR-042, Consequências).
 - **Fora (tickets)**: 100% de cobertura, mutantes, BDD, matriz de exceções, ambiente local completo (`/mnt/project-files/ci/tickets-qualidade-de-testes.md`).
 - **Next step**: Kalléo confirma se o plano permite Environment com revisor obrigatório para a trava humana; revisão em 2026-11-30. **Blockers**: nenhum.
+
+
+## Versionamento com Changesets, release por tag e versão visível (2026-10-20) — EM REVISÃO
+
+Pedido do Kalléo na thread "Versionamento e release". Design: `.design/versionamento-e-release.md` (PR #403). ADR-043.
+- **Feito**: `.changeset/` (config com `privatePackages`, README com os níveis); `scripts/release/` (`check-changeset.ts`, `prepare.ts`, `publish.ts`, `lib.ts`) e os comandos `changeset`, `check:changeset`, `release:prepare`, `release:publish`; `check:changeset` também no `ci.yml` (PR); versão do `package.json` embutida no build (`next.config.ts`) e exibida em `src/components/app-version.tsx` no rodapé da barra lateral da equipe e do portal, nunca em páginas públicas; docs (`producao.md` § 3.1 com deploy da tag, `AGENTS.md`, onboarding, `.env.example`, `docs/README.md`, template de PR).
+- **Testado**: unitários da regra de changeset, do CHANGELOG, das notas e da formatação da versão. `prepare` e `publish` rodados de ponta a ponta num remoto local de laboratório (branch `release/v0.2.0`, tag idempotente, falha do `gh` não esconde a tag). Não rodados contra o GitHub real: o primeiro release real é o teste.
+- **Rollback deste PR**: reverter o PR; sem migração e sem mudança de comportamento além do rodapé de versão.
+- **Desvio do design**: `check:changeset` não entra no `gate:local` porque `scripts/gate/` é do dono (ADR-042); roda no `ci.yml`. O PR de versão, com `package.json` e CHANGELOG, não exige changeset.
+- **Docker/imagem**: smoke da imagem pulado (sem daemon na nuvem); `Dockerfile` não mudou.
+- **Next step**: Kalléo roda `npm run release:prepare` quando quiser o primeiro release (`v0.2.0`), decide se `check:changeset` entra no `gate:local` e confirma o marco `1.0.0` (primeiro paciente real). **Blockers**: nenhum.
