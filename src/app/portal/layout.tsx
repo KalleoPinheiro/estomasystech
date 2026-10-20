@@ -1,6 +1,7 @@
 import { Alert, AlertDescription, Header, Layout } from '@still-void/ui/react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
 
@@ -51,6 +52,9 @@ export default function PortalLayout({
               Aviso de privacidade
             </Link>
           </p>
+          <div className="text-center">
+            <AppVersion />
+          </div>
         </main>
       </Layout>
     </div>

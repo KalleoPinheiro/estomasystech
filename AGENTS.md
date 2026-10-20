@@ -28,6 +28,8 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run lint` / `npm run format` | antes de commitar | Biome é a única ferramenta de lint+format |
 | `npm run test:coverage` | gate de CI | **mínimo 90%** |
 | `npm run gate:local` | antes de marcar o PR como pronto | build + E2E + gates + integridade dos testes; imprime a linha `E2E-GATE:` do PR ([ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)) |
+| `npm run changeset` / `npm run check:changeset` | PR que toca `src/`, `drizzle/` ou `Dockerfile` | um `.changeset/*.md` por PR (`--empty` se nada muda para a clínica); níveis no [ADR-043](docs/adr/043-versionamento-com-changesets-e-release-por-tag.md) |
+| `npm run release:prepare` / `release:publish` | release de produção | PR de versão, depois tag + GitHub Release com `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
 | `npm run check:testes` | automático no `pre-push` e no CI | regra 8: falha se um teste foi enfraquecido |
 | `npm run test:changed [-- <ref>]` | loop local (ex.: `-- origin/main`) | não substitui `test:coverage`; o CI roda a suíte completa |
 | `npm run test:e2e` | fluxos de UI (loop local) | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados; o E2E **não roda no Actions** |

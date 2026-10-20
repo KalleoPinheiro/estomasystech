@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
 // Content-Security-Policy saiu daqui (issue #76): precisa de um nonce por
@@ -33,8 +34,22 @@ export const NOINDEX_HEADER = { key: "X-Robots-Tag", value: "noindex, nofollow" 
 
 const isHomologation = ["staging", "preview"].includes(process.env.APP_ENV ?? "");
 
+/**
+ * Versão do `package.json` embutida no build (ADR-043). O SHA só vai para homologação e
+ * preview: em produção a tela mostra apenas a versão.
+ */
+export const APP_VERSION: string = JSON.parse(
+  readFileSync("package.json", "utf8"),
+).version;
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  env: {
+    NEXT_PUBLIC_APP_VERSION: APP_VERSION,
+    NEXT_PUBLIC_APP_COMMIT: isHomologation
+      ? (process.env.VERCEL_GIT_COMMIT_SHA ?? "")
+      : "",
+  },
   // Issue #219: não anuncia `X-Powered-By: Next.js` em toda resposta.
   poweredByHeader: false,
   output: "standalone",

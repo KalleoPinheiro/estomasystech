@@ -17,5 +17,6 @@ TESTE-ALTERADO:
 - [ ] Termo de domínio novo → `CONTEXT.md`
 - [ ] Decisão difícil de reverter → ADR
 - [ ] Variável de ambiente nova → `docs/engineering/onboarding.md` § 4 **e** `.env.example`
+- [ ] Mudou `src/`, `drizzle/` ou `Dockerfile` → `.changeset/*.md` (`npm run changeset`; ADR-043)
 - [ ] `npm run check:docs` verde
 - [ ] Cenário novo (sucesso e erro) no seed de homologação `scripts/seed/seed.ts` (ou n/a)

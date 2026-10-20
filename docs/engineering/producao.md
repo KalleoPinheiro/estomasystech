@@ -223,9 +223,15 @@ O deploy é **manual** (botão *Deploy* no Coolify): nada sobe sozinho por um pu
 proposital enquanto não há staging e as migrações não têm `down`
 ([ADR-039](../adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md)).
 
-1. **Antes:** a `main` com o CI verde (ou o gate local, enquanto o Actions estiver sem cota) e o
-   `.specs/archive/handoff-2026.md` do lote escrito. Anote o commit em produção (*Deployments* do
-   recurso mostra o SHA) e as migrações novas do lote (`drizzle/*.sql`, ordem do § 4).
+0. **Release (ADR-043):** com os PRs do lote na `main`, `npm run release:prepare` abre a branch
+   `release/vX.Y.Z` (versão e CHANGELOG), o PR de versão é mergeado como qualquer outro e
+   `npm run release:publish -- --rollback=redeploy|backup` cria a tag `vX.Y.Z` e a GitHub Release
+   (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**.
+1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde e o recibo do gate local
+   ([ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)), e o
+   `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da
+   barra lateral e em *Deployments* do recurso, com o SHA) e as migrações novas do lote
+   (`drizzle/*.sql`, ordem do § 4).
 2. **Backup:** o timer das 02:00 (§ 5) cobre o dia; antes de um deploy com migração, rode o backup
    na hora (`sudo systemctl start estomasystech-backup.service`) e confira que terminou sem erro.
    Sem backup do mesmo dia, não deploye migração.
@@ -240,7 +246,7 @@ proposital enquanto não há staging e as migrações não têm `down`
    ignorar o que foi adicionado. Do contrário, restaure o backup do passo 2 (perde o que foi escrito
    depois dele) ou escreva uma migração nova que desfaça a mudança. Decida **antes** do deploy qual
    dos dois vale para o lote.
-7. **Depois:** apague do Coolify variável de contorno que sobrou e registre o commit no handoff.
+7. **Depois:** apague do Coolify variável de contorno que sobrou e registre a versão e o commit no handoff.
 
 ## 4. Migrações
 

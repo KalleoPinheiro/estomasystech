@@ -95,7 +95,7 @@ A aposta: o contrato é o arquivo `.changeset/*.md` por PR e o `package.json` co
 - `next.config.ts` → define `env.NEXT_PUBLIC_APP_VERSION` a partir de `package.json` e `NEXT_PUBLIC_APP_COMMIT` a partir do SHA do build quando houver.
 - `docs/engineering/producao.md` § 3.1 → o deploy passa a ser "de uma tag"; passo 1 cita a versão em vez do SHA anotado à mão.
 - `AGENTS.md` (tabela de comandos) → acrescenta `release:prepare` e `release:publish`.
-- Gate local de PR → inclui `changeset status --since=origin/main`, ao lado do recibo `E2E-GATE`.
+- Verificação de changeset → `npm run check:changeset` (`scripts/release/check-changeset.ts`), rodada no `ci.yml` em PR. Revisão pós-ADR-042: `scripts/gate/` é do dono, então não entra no `gate:local` (ver Open).
 
 ### Leaves
 
@@ -113,7 +113,7 @@ Também no campo, só como perspectiva: release-please e semantic-release - exig
 |---|---|---|
 | Changesets e scripts de release | `.changeset/`, `release:prepare`, `release:publish`, tag e Release com migrações do lote, ADR e docs | clear |
 | Versão visível no app | `app-version.ts`, `app-version.tsx`, montagem no layout autenticado, teste | clear |
-| Changeset no gate de PR | `changeset status` no gate local, integrado ao recibo `E2E-GATE` quando aquela thread fechar o formato | open |
+| Changeset no gate de PR | `check:changeset` no `ci.yml`; entrada no `gate:local` fica com o Kalléo (ADR-042) | open |
 | Migração para o Actions | workflow `changesets/action` no lugar dos scripts | open |
 
 ## Decisions
@@ -137,7 +137,7 @@ Nada.
 
 Baixo impacto, com padrão adotado; a revisão acontece no diff.
 
-1. Ligação com o recibo `E2E-GATE`: a ordem exata dentro do gate local depende do formato que a thread "E2E fora do GitHub Actions" definir - padrão: `changeset status` roda antes do recibo e falha rápido.
+1. Ligação com o gate local: a thread "E2E fora do GitHub Actions" fechou (ADR-042) e `scripts/gate/` só o Kalléo edita (`GATE_OWNER_EDIT=1`). Padrão adotado: `check:changeset` roda no `ci.yml` e à mão; acrescentá-lo às etapas do `gate:local` é decisão do dono.
 2. Fase do número: manter `0.x` até a primeira clínica real, depois da revisão jurídica #376; `1.0.0` é o primeiro release com paciente real - padrão adotado, o Kalléo pode mudar o marco.
 3. Origem do SHA exibido em staging e Preview: `VERCEL_GIT_COMMIT_SHA` na Vercel; em produção o SHA não é exibido e não é preciso ler variável do Coolify.
 4. Criação da GitHub Release: usa `gh release create` quando o `gh` existir no computador; sem ele, o script empurra a tag e imprime o texto da Release para colar - padrão adotado.

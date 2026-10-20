@@ -6,6 +6,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@still-void/ui/react/client';
+import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
 import type { SidebarIdentityDto } from '@/lib/dto';
@@ -75,7 +76,10 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
                 <StaffNav />
               </SidebarSection>
             </div>
-            <LogoutButton />
+            <div className="flex flex-col gap-2">
+              <LogoutButton />
+              <AppVersion />
+            </div>
           </SidebarPanel>
           <SidebarInset className="min-w-0 flex-1 px-4 py-5 sm:p-6 lg:p-8">
             <div className="mb-4 flex items-center gap-3 lg:hidden">
