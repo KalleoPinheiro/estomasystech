@@ -131,6 +131,7 @@ npm run dev                   # http://localhost:3000
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | sim (compose) | senha do Postgres do compose, sem padrão | `openssl rand -hex 24`; entra no `DATABASE_URL` do app |
 | `DATABASE_URL` | sim (fora do compose) | Postgres | `postgres://estomasystech:<POSTGRES_PASSWORD>@localhost:5432/estomasystech` |
+| `INTEGRATION_DATABASE_URL` | não | Postgres local da suíte de integração (`npm run test:integracao`); sem ela, sobe o `db` do compose | `postgres://estomasystech:<senha>@127.0.0.1:5432/postgres` (só máquina local; produção é recusada) |
 | `AUTH_SECRET` | sim em produção | assina a sessão (só isso: o dado clínico tem chave própria) | `openssl rand -hex 32`; sem ele, 503 em toda rota. Rotacionar derruba todas as sessões |
 | `DATA_ENCRYPTION_KEY` | sim em produção | cifra o texto clínico e o token do Google em repouso ([ADR-006](../adr/006-chave-de-dados-clinicos.md)) | `openssl rand -hex 32` (≥ 32 caracteres); fora de produção, sem ela, usa chave de desenvolvimento. Perdê-la é perder o prontuário: guarde no cofre |
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |

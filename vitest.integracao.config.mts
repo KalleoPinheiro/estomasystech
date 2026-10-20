@@ -18,7 +18,7 @@ export default defineConfig({
     ...base.test,
     globalSetup: [...(base.test.globalSetup as string[]), 'tests/support/postgres-global-setup.ts'],
     setupFiles: [...(base.test.setupFiles as string[]), 'tests/support/postgres-setup.ts'],
-    include: ['tests/api/**/*.test.ts', 'tests/integracao/**/*.test.ts', 'tests/scripts/seed.test.ts'],
+    include: ['tests/api/**/*.test.ts', 'tests/integracao/**/*.integracao.ts', 'tests/scripts/seed.test.ts'],
     // Cada arquivo clona um banco: limita os workers para respeitar max_connections.
     maxWorkers: 4,
   },

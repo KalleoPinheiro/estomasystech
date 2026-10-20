@@ -42,7 +42,7 @@ o seed com cenários de sucesso e erro e a trava de banco de produção; falta o
 - **Guarda (ADR-041):** recusa `APP_ENV=production`, `NODE_ENV=production`, host em `PRODUCTION_DB_HOSTS` e
   qualquer `DATABASE_URL` que não seja `localhost`, `127.0.0.1`, `[::1]` ou `db`. A guarda roda antes de tocar no Docker.
 - **`npm run test:integracao`:** `vitest.integracao.config.mts` herda a config da suíte e roda `tests/api/**`,
-  `tests/scripts/seed.test.ts` e `tests/integracao/**` contra o Postgres. O `getDb()` é trocado (`vi.mock` em
+  `tests/scripts/seed.test.ts` e `tests/integracao/**/*.integracao.ts` contra o Postgres. O `getDb()` é trocado (`vi.mock` em
   `tests/support/postgres-setup.ts`) por um banco clonado de um modelo migrado 1x
   (`CREATE DATABASE ... TEMPLATE`), um por arquivo de teste: o mesmo isolamento do PGlite, no motor real. Nenhum
   teste existente foi editado (regra 8). `INTEGRATION_DATABASE_URL` (local) dispensa o Docker.
