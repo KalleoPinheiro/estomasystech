@@ -156,6 +156,29 @@ A versão pesada (tema por usuário no banco, cor livre, temas completos) só co
 | Avatar | só equipe; iniciais como padrão | paciente é dado de saúde e menor (#376) | avatar de paciente, só após revisão jurídica | one-way se publicado |
 | Mobile-first | barra inferior abaixo de `md`, lateral a partir de `md` | alvo de toque e polegar | manter menu lateral em gaveta, se a barra não couber os papéis | reversible |
 
+## Cobertura das telas existentes no Claude Design
+
+Canvas: https://claude.ai/artifact/Jmb2Gcr4LH3nVVeYzgSzeU (celular 390×844 e web 1280, mesmos tokens do Still Void).
+
+| Tela do app | Rota | No desenho |
+|---|---|---|
+| Início | `/` | Hoje (celular), Início (web) |
+| Agenda | `/agenda` | Agenda dia com tempo real do procedimento |
+| Triagem | `/triagem` | cartões de foto com Avaliar e Pedir nova foto |
+| Pacientes e prontuário | `/pacientes`, `/pacientes/[id]` | lista em cartões (celular) e tabela (web); prontuário com evolução, TIME e abas |
+| Faturamento | `/faturamento` | cartões (celular) e tabela (web) |
+| Procedimentos, Materiais, Profissionais, Parceiros | `/procedimentos`, `/materiais`, `/profissionais`, `/parceiros` | um desenho de referência (procedimentos): lista mais ficha (web), cartões e folha de formulário (celular); os outros três reusam o padrão |
+| Relatórios, Repasses | `/relatorios`, `/repasses` | indicadores e extrato |
+| Auditoria e Pedidos do titular | `/auditoria`, `/pedidos-titular` | duas abas na mesma tela |
+| Configurações com Identidade | `/configuracoes` | hub (celular) e seções (web) |
+| Minha conta com avatar | `/minha-conta` | foto, aparência no aparelho, senha, duas etapas |
+| Entrar (e esqueci/definir senha) | `/login`, `/esqueci-senha`, `/definir-senha` | Entrar; as outras duas reusam o formulário |
+| Portal do paciente | `/portal` | próxima consulta, evolução, consentimentos |
+| Plataforma (operador) | `/plataforma/**` | lista de clínicas; subtelas reusam o padrão |
+| "Mais" por papel | menu | Admin, Atendente e Profissional |
+
+Fora desta rodada: documentos impressos `/documentos/**` (A4, recebem só o logo da clínica) e `/privacidade` (texto longo, só tema).
+
 ## Needs design
 
 Cannot be planned until somebody draws it.
