@@ -14,7 +14,7 @@ import {
   UserAccount,
   type UserAccountRepository,
 } from '@/domain/auth/user-account';
-import type { CarePlanRepository } from '@/domain/clinical/care-plan';
+import type { CarePlanRepository } from '@/domain/clinical/clinical-repositories';
 import { Guardian } from '@/domain/guardian/guardian';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import { DataSubjectRequest } from '@/domain/patient/data-subject-request';

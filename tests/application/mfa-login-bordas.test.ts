@@ -30,6 +30,11 @@ const account = (role: 'company_admin' | 'patient') =>
     sessionVersion: 0,
   });
 
+const comPendente = <T>(pending: T | null): T => {
+  if (!pending) throw new Error('login pendente esperado');
+  return pending;
+};
+
 const deps = (overrides: Partial<MfaRepository> = {}): MfaDeps => ({
   userAccounts: {
     findById: async () => null,
@@ -72,7 +77,7 @@ describe('Feature: Login em duas etapas nas bordas (ADR-008)', () => {
     const pending = await resolvePendingLogin(d, token, ['verify']);
     expect(pending).not.toBeNull();
 
-    expect(await verifyMfaCode(d, pending!, '123456')).toEqual({
+    expect(await verifyMfaCode(d, comPendente(pending), '123456')).toEqual({
       kind: 'expired',
     });
   });
@@ -90,7 +95,7 @@ describe('Feature: Login em duas etapas nas bordas (ADR-008)', () => {
     } as unknown as UserAccountRepository;
     const pending = await resolvePendingLogin(d, token, ['confirm']);
 
-    expect(await verifyMfaCode(d, pending!, '123456')).toEqual({
+    expect(await verifyMfaCode(d, comPendente(pending), '123456')).toEqual({
       kind: 'expired',
     });
   });
@@ -105,6 +110,8 @@ describe('Feature: Login em duas etapas nas bordas (ADR-008)', () => {
     const pending = await resolvePendingLogin(d, pendingToken, ['confirm']);
     const code = totpCode(secret, totpStep(NOW));
 
-    expect(await verifyMfaCode(d, pending!, code)).toEqual({ kind: 'expired' });
+    expect(await verifyMfaCode(d, comPendente(pending), code)).toEqual({
+      kind: 'expired',
+    });
   });
 });
