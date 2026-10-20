@@ -53,13 +53,16 @@ export function isOpenToAllStaff(api: string): boolean {
   return CLINIC_STAFF_ROLES.every((role) => canRoleAccess(api, role));
 }
 
-/** Tela da equipe a que o caminho pertence (prefixo mais longo; `/` só exato). */
+/**
+ * Tela da equipe a que o caminho pertence (`/` só exato). Os `href` não são
+ * prefixo uns dos outros, então no máximo uma tela casa.
+ */
 export function staffPageFor(pathname: string): StaffPage | undefined {
-  return STAFF_PAGES.filter((page) =>
+  return STAFF_PAGES.find((page) =>
     page.href === '/'
       ? pathname === '/'
       : pathname === page.href || pathname.startsWith(`${page.href}/`),
-  ).sort((a, b) => b.href.length - a.href.length)[0];
+  );
 }
 
 interface StaffIdentityState {
