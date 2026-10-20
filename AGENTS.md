@@ -26,7 +26,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | --- | --- | --- |
 | `npm run typecheck` | antes de commitar | `tsc --noEmit` |
 | `npm run lint` / `npm run format` | antes de commitar | Biome é a única ferramenta de lint+format |
-| `npm run test:coverage` | gate de CI | **mínimo 90%** |
+| `npm run test:coverage` | gate de CI | **mínimo 100%** (domain, application, infrastructure, lib; UI no E2E, ADR-046) |
 | `npm run gate:local` | antes de marcar o PR como pronto | build + E2E + gates + integridade dos testes; imprime a linha `E2E-GATE:` do PR ([ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)) |
 | `npm run changeset` / `npm run check:changeset` | PR que toca `src/`, `drizzle/` ou `Dockerfile` | um `.changeset/*.md` por PR (`--empty` se nada muda para a clínica); níveis no [ADR-043](docs/adr/043-versionamento-com-changesets-e-release-por-tag.md) |
 | `npm run release:prepare` / `release:publish` | release de produção | PR de versão, depois tag + GitHub Release com `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |

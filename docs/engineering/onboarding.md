@@ -172,7 +172,7 @@ npm run dev                   # http://localhost:3000
 ```bash
 npm test                 # domínio, aplicação, integração Postgres via PGlite, API
 npm run test:changed     # só o afetado pelo diff (loop local; não substitui o próximo)
-npm run test:coverage    # gate de CI: mínimo 90% (limiar em vitest.config.mts)
+npm run test:coverage    # gate de CI: mínimo 100% nas camadas de regra (limiar em vitest.config.mts)
 npm run gate:local       # E2E + todos os gates, com recibo para o PR (ADR-042)
 npm run test:mutacao      # mutantes (Stryker) em src/domain e src/application; ~1h20, só local (ADR-047); um arquivo: npm run test:mutacao -- --mutate src/domain/shared/phone.ts
 npm run test:e2e         # build + Playwright contra `next start` e contra `next dev` (ADR-021); na 1ª vez ou após bump: npx playwright install
