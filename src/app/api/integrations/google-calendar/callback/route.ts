@@ -8,7 +8,11 @@ import {
 } from '@/lib/auth/google-calendar-oauth';
 import { createOAuthClient } from '@/lib/auth/google-oauth-client';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { getAuthConfig, type Session } from '@/lib/auth/session';
+import {
+  expiredCookieOptions,
+  getAuthConfig,
+  type Session,
+} from '@/lib/auth/session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 import { logError } from '@/lib/log-error';
 
@@ -35,11 +39,7 @@ function redirectWithReason(
 }
 
 function clearState(response: NextResponse): NextResponse {
-  response.cookies.set(CALENDAR_OAUTH_STATE_COOKIE, '', {
-    httpOnly: true,
-    path: '/',
-    maxAge: 0,
-  });
+  response.cookies.set(CALENDAR_OAUTH_STATE_COOKIE, '', expiredCookieOptions());
   return response;
 }
 
