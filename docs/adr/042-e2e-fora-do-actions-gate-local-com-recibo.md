@@ -21,7 +21,7 @@ passo. Um run completo custava cerca de 25 a 30 min: `ci` 7,3 (medido), Docker 3
 `next dev` ~5 a 7 e build + E2E de produção ~9 a 12 (estimados a partir de medição local de 1,5 + 5,4
 e 3,5 min). O E2E era ~60% do custo, e ainda disparava em todo push na `main` e na `staging`.
 O E2E usa PGlite, então não valida Postgres: quem faz isso é o job Docker.
-Diagnóstico completo: `/mnt/project-files/ci/e2e-fora-do-actions.md`.
+Medição completa no diagnóstico da thread "E2E fora do Actions" (arquivos do projeto, pasta `ci/`).
 
 ## Opções consideradas
 
