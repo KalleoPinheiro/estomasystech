@@ -119,6 +119,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 | API | `src/app/api/{auth,accounts,audit,settings,clinic-info,platform}/` |
 | UI | `src/app/{login,definir-senha,esqueci-senha,plataforma}/`, `src/app/(staff)/{auditoria,configuracoes}/` |
 | testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `tests/api/audit-platform-trail.test.ts`, `tests/api/mfa-login.test.ts`, `tests/api/{own-account,account-reset-mfa}.test.ts`, `tests/api/login-hardening.test.ts`, `tests/{api,infrastructure}/recover-super-admin.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma,plataforma-suspensao}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

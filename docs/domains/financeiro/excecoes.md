@@ -1,0 +1,42 @@
+---
+title: "Financeiro — matriz de exceções"
+status: living
+audience: [dev, po, agent]
+owner: "@KalleoPinheiro"
+last_reviewed: 2026-10-20
+domain: financeiro
+related: [docs/adr/049-matriz-de-excecoes-por-dominio.md]
+---
+
+# Financeiro — matriz de exceções
+
+> **TL;DR:** cada linha é um caso de exceção de faturas, pagamentos, pacotes, comissão e repasses e o teste que o prova;
+> `n/a` só com motivo. O teste de estrutura (`tests/bdd/matriz-excecoes.test.ts`) falha se a categoria some ou se o teste
+> citado deixa de existir. Regras em [`README.md`](README.md).
+
+| Categoria | Caso | Regra | Teste |
+| --- | --- | --- | --- |
+| entrada inválida | Pagamento maior que o saldo, zero ou valor da fatura zero é recusado | FIN-RN-02 | `tests/api/invoice-payments-routes.test.ts` › "Dado pagamento maior que o saldo, Quando receber, Então 400" ; `tests/domain/invoice.test.ts` › "Dado valor zero, Quando emitir, Então lança ValidationError" |
+| entrada inválida | Desconto sem motivo, abaixo do já recebido ou que zera a fatura é recusado | FIN-RN-03 | `tests/api/invoice-payments-routes.test.ts` › "Dado desconto com motivo, Quando aplicar, Então o líquido cai e persiste; sem motivo dá 400" ; `tests/domain/invoice-payments.test.ts` › "Dado R$ 150 já recebidos, Quando o desconto deixaria o líquido abaixo disso, Então ValidationError" |
+| entrada inválida | Pagador sem CPF válido, ou nome sem CPF, é recusado e nada é pago | FIN-RN-15 | `tests/domain/invoice-payments.test.ts` › "Dado CPF do pagador inválido, Quando receber, Então ValidationError e nada é registrado" ; `tests/api/receipt-cpf-routes.test.ts` › "Dado nome sem CPF do pagador (ou o contrário), Quando receber, Então 400 e nada é pago" |
+| entrada inválida | Fechamento de repasse com mês inválido, mês corrente, profissional sem regra ou sem saldo | FIN-RN-08 | `tests/api/payouts-routes.test.ts` › "Dado mês com formato inválido, Quando consultar, Então 400" ; `tests/application/payouts.test.ts` › "Dado mês corrente, Quando fechar, Então recusa (só mês encerrado)" ; `tests/application/payouts.test.ts` › "Dado nada liberado, Quando fechar, Então ValidationError" |
+| entrada inválida | Recibo de empresa sem CNPJ ou de paciente sem CPF é bloqueado com orientação | FIN-RN-15 | `tests/api/receipt-cpf-routes.test.ts` › "Dado empresa sem CNPJ, Quando abrir o recibo, Então 400 pedindo o cadastro da empresa" ; `tests/api/receipt-cpf-routes.test.ts` › "Dado paciente sem CPF, Quando abrir o recibo, Então 400 com orientação" |
+| sem permissão | Faturamento é do Admin: Atendente recebe `403` | — | `tests/api/invoice-payments-routes.test.ts` › "Dado atendente, Quando ler fatura, Então 403 (faturamento é do Admin)" |
+| sem permissão | Repasses da empresa: Atendente `403` nas duas visões; Profissional vê só o próprio extrato e não registra repasse | FIN-RN-08 | `tests/api/payouts-routes.test.ts` › "Dado Atendente, Quando acessa repasses, Então 403 nas duas visões" ; `tests/api/payouts-routes.test.ts` › "Dado Profissional, Quando abre repasses, Então vê só o próprio extrato e não registra repasse" |
+| sem permissão | Cancelar repasse e ler comprovante alheio são negados a Profissional, Atendente e outra clínica | FIN-RN-10 | `tests/api/payout-cancel-receipt-routes.test.ts` › "Dado Profissional, Atendente ou outra clínica, Quando tentam cancelar, Então recusa" ; `tests/api/payout-cancel-receipt-routes.test.ts` › "Dado Profissional, Então lê o próprio comprovante e recebe 404 no alheio ou na rota do Admin" |
+| sem permissão | Profissional vê saldo do pacote só de paciente vinculado, sem preço; sem vínculo `404`; lista com preço segue negada | FIN-RN-14 | `tests/api/professional-write-and-packages-296.test.ts` › "Dado paciente sem vínculo, Então o Profissional recebe 404" ; `tests/api/professional-write-and-packages-296.test.ts` › "Dado o Profissional, Então GET /api/packages (com preço) segue negado" |
+| outra clínica | Clínica A não lista nem paga fatura da clínica B (`404`) | FIN-RN-01 | `tests/api/billing-tenant-isolation.test.ts` › "Dada sessão da clínica A, Quando GET /api/invoices, Então lista não inclui fatura da clínica B" ; `tests/api/invoice-payments-routes.test.ts` › "Dado fatura da clínica A, Quando a clínica B lê ou recebe, Então 404" |
+| outra clínica | Pacote de paciente de outra clínica não aparece | FIN-RN-11 | `tests/api/billing-tenant-isolation.test.ts` › "Dada sessão da clínica A, Quando GET /api/packages de paciente da clínica B, Então lista vazia" |
+| outra clínica | Admin de outra clínica não vê profissionais nem fecha repasse da clínica A; comprovante e recibo de outra empresa dão `404` | FIN-RN-08 | `tests/api/payouts-routes.test.ts` › "Dado Admin de outra clínica, Quando abre repasses, Então não vê profissionais da clínica A nem fecha repasse deles" ; `tests/api/receipt-cpf-routes.test.ts` › "Dado recibo de outra empresa, Quando abrir, Então 404 (isolamento por empresa)" |
+| duplicidade | Fatura paga não é paga nem cancelada de novo | FIN-RN-01 | `tests/domain/invoice.test.ts` › "Dado fatura já paga, Quando pagar de novo, Então lança InvalidStatusTransitionError" ; `tests/domain/invoice.test.ts` › "Dado fatura paga, Quando cancelar, Então lança InvalidStatusTransitionError" |
+| duplicidade | Mês já fechado não fecha de novo; sessão já paga não entra em outro repasse | FIN-RN-08 | `tests/application/payouts.test.ts` › "Dado mês já fechado, Quando fechar de novo, Então ConflictError" ; `tests/domain/commission-payout.test.ts` › "Dada sessão já paga, Então não entra de novo (nunca paga duas vezes)" |
+| duplicidade | Estorno de fatura cancelada depois do repasse entra uma única vez | FIN-RN-09 | `tests/domain/commission-payout.test.ts` › "Dada sessão paga cuja fatura foi cancelada depois, Então gera estorno negativo uma única vez" |
+| duplicidade | Recibo e comprovante emitidos duas vezes mantêm o mesmo número | FIN-RN-15 | `tests/api/invoice-payments-routes.test.ts` › "Dado recibo de um pagamento, Quando emitir duas vezes, Então o número REC- é o mesmo" ; `tests/api/payout-cancel-receipt-routes.test.ts` › "Dado comprovante de repasse, Quando emitido duas vezes, Então o número (REP-) é o mesmo" |
+| concorrência | Dois pagamentos simultâneos da mesma fatura: um passa, o outro é recusado, sem recebimento em dobro | FIN-RN-12 | `tests/api/invoice-concurrent-payment.test.ts` › "C21 pagamentos concorrentes não duplicam o recebimento" |
+| concorrência | Pagar, parcial, desconto e cancelar leem a fatura com lock da linha | FIN-RN-12 | `tests/application/invoice-actions-lock.test.ts` › "lê a fatura com findByIdForUpdate" ; `tests/infrastructure/drizzle-invoice-lock.test.ts` › "C21 findByIdForUpdate trava a linha da fatura (SELECT … FOR UPDATE)" |
+| concorrência | Dois Admins fecham o mesmo mês ao mesmo tempo: o banco barra a sessão já paga | FIN-RN-08 | `tests/api/payouts-routes.test.ts` › "Dada sessão já paga, Quando outro repasse tenta pagá-la (corrida entre dois Admins), Então o banco barra com ConflictError" |
+| falha de integração | Venda de pacote com falha ao gravar a fatura desfaz o pacote (atomicidade) | FIN-RN-11 | `tests/api/package-sale-transaction.test.ts` › "Dada falha ao gravar a fatura, Quando vender o pacote, Então o pacote também não é gravado (rollback)" |
+| falha de integração | Cobrança por PSP e cobrança recorrente ainda não existem (roadmap, Fase 5); o recibo não chama serviço externo | — | n/a — sem integração financeira externa entregue; revisar quando a monetização sair do backlog |
+| estado terminal | Fatura cancelada não recebe pagamento; fatura paga não recebe desconto nem pagamento | FIN-RN-01 | `tests/domain/invoice.test.ts` › "Dado fatura cancelada, Quando pagar, Então lança InvalidStatusTransitionError" ; `tests/domain/invoice-payments.test.ts` › "Dado fatura paga, Quando dar desconto, Então InvalidStatusTransition" |
+| estado terminal | Fatura com pagamento parcial não pode ser cancelada (`409`) | FIN-RN-04 | `tests/api/invoice-payments-routes.test.ts` › "Dado pagamento parcial, Quando cancelar a fatura, Então 409 e ela segue pendente" |
+| estado terminal | Repasse cancelado não cancela de novo; só o último repasse ativo cancela | FIN-RN-10 | `tests/application/payouts.test.ts` › "Dado repasse inexistente ou já cancelado, Quando cancelar, Então recusa" ; `tests/application/payouts.test.ts` › "Dados dois repasses do profissional, Quando cancelar o mais antigo, Então ConflictError apontando o mais recente" |

@@ -67,6 +67,7 @@ Specs de execução: `.specs/features/{agenda-p1-p3-pontuais,catalogo-p0-p3-pont
 | API | `src/app/api/{appointments,follow-ups,procedures,waitlist,settings,options,schedule-config}/` |
 | UI | `src/app/(staff)/{agenda,procedimentos}/` |
 | testes | `tests/domain/`, `tests/application/`, `tests/api/options-routes.test.ts`, `tests/api/schedule-permissions-routes.test.ts`, `e2e/{agenda,followup,lista-espera,feriados-ausencias,layout-mobile-first,papeis-atendente}.spec.ts` |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

@@ -73,6 +73,7 @@ Specs de execução: `.specs/features/{fase-3-compliance-ux-clinico,fase-b-clini
 | API | `src/app/api/{patients,guardians,data-requests,conditions,photos,care-plans,care-plan-interventions,care-plan-outcomes,documents,taxonomy}/` |
 | UI | `src/app/(staff)/{pacientes,triagem,pedidos-titular}/`, `src/app/documentos/` |
 | testes | `tests/domain/`, `tests/application/`, `e2e/{pacientes,clinico,triagem,plano-cuidados,documentos}.spec.ts` |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

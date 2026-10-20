@@ -48,6 +48,7 @@ Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
 | API | `src/app/api/{professionals,partners}/` |
 | UI | `src/app/(staff)/{profissionais,parceiros}/` |
 | testes | `tests/domain/`, `e2e/equipe.spec.ts` |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

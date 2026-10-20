@@ -79,6 +79,7 @@ Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-port
 | UI | `src/app/portal/` |
 | layout mobile | regras de toque e de grid da `@still-void/ui@3.4.0`; só o alvo de toque de link segue local (`.portal-shell` em `src/app/globals.css`, lacuna `touch-target-size` em [`still-void-gaps.md`](../../still-void-gaps.md)) |
 | testes | `tests/application/`, `tests/api/{portal-identity,partner-share-consent-routes,data-subject-rights}.test.ts`, `e2e/{portal-paciente,portal-parceiro,portal-responsivo,portal-direitos-titular,layout-mobile-first}.spec.ts` |
+| exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 

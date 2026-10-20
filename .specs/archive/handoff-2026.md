@@ -1495,3 +1495,12 @@ Issue #407, decisão do Kalléo: `describe/it` em Dado/Quando/Então + teste de 
 - **Pergunta aberta ao dono**: quais das ~160 regras restantes são críticas (critério e lista inicial no ADR-048).
 - **Next step**: T5 (matriz de exceções) reaproveita os ids; Kalléo revisa a lista de críticas. **Blockers**: nenhum.
 
+
+
+## Matriz de casos de exceção por domínio (2026-10-20) — EM REVISÃO
+
+Issue #408, pedido do Kalléo em 2026-10-19 (ADR-049); última da fila de qualidade de testes.
+- **Feito**: `docs/domains/<d>/excecoes.md` nos 9 domínios, com as 7 categorias (entrada inválida, sem permissão, outra clínica, duplicidade, concorrência, falha de integração, estado terminal); cada linha cita `arquivo` › "título literal" do teste que a prova ou `n/a — motivo`. `tests/bdd/matriz-excecoes.test.ts` (lógica em `tests/support/matriz-excecoes.ts`, com testes de que cada falha acontece) reprova categoria sem linha, regra inexistente, arquivo ou título citado que não existe, e `n/a` sem motivo. Docs: ADR-049, `docs/README.md`, `conventions.md`, link no README de cada domínio.
+- **Testes novos** (nenhum existente editado, sem `TESTE-ALTERADO`): `tests/api/estoque-excecoes.test.ts` (papéis sem permissão e saídas concorrentes), `tests/api/prontuario-excecoes.test.ts` (evolução imutável, PRO-RN-02), `tests/api/agenda-excecoes.test.ts` (dois POSTs no mesmo horário: 200 e 409, AGE-RN-02). Demais linhas usam teste que já existia.
+- **`n/a`** só com motivo de arquitetura (ex.: relatório é só leitura; sem integração externa entregue em estoque e financeiro, PSP no backlog).
+- **Next step**: Kalléo revisa as linhas `n/a`; caso de exceção novo é decisão de produto (pergunta aberta). **Blockers**: nenhum.
