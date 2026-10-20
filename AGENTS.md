@@ -74,6 +74,19 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
    confiança: hook do Claude Code, `pre-push` e CI (`npm run check:testes`). Teste verifica
    comportamento de negócio (cenário Given/When/Then), não a implementação. → [ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)
 
+## Branch e PR de agentes (ADR-052)
+
+Todo agente, antes de criar branch, confere estas decisões (o orquestrador as repete no brief da thread):
+
+- **Base sempre a release aberta**, nunca a `main`: `git fetch origin && git switch -c <tipo>/<slug> origin/release/vX.Y.Z`. Ache a release com `git ls-remote --heads origin 'release/*'` (uma por vez).
+- **Nome**: `feat/<slug>` para funcionalidade, `fix/<slug>` para correção, `docs/<slug>` para só documentação. `main` só recebe `release/*` e `hotfix/*`, por merge commit.
+- **PR em squash com base `release/vX.Y.Z`**, com `## Homologação` no corpo (`Seed:` e cenários Dado/Quando/Então, ou `n/a — <motivo>`). Sem recibo do gate local nesse PR.
+- **Changeset**: PR que toca `src/`, `drizzle/` ou `Dockerfile` leva `npm run changeset`; se nada muda para a clínica, `--empty`. PR só de documentação não precisa de changeset.
+- **Handoff** da issue em `.specs/archive/handoff-2026.md`, na mesma PR.
+- **Validação antes do PR**: `npm run test:changed -- origin/release/vX.Y.Z`, `typecheck`, `lint`, `check:docs` (se tocou `.md`). Gate completo (`gate:local`) só no PR `release/*` → `main`.
+
+Se a release aberta não estiver clara ou a branch já nasceu da `main`, pergunte ao orquestrador antes de seguir. Detalhe: [`docs/engineering/homologacao.md`](docs/engineering/homologacao.md) § 1.
+
 ## Mapa de contexto
 
 Leia **uma** linha. Desça para a terceira coluna só se a segunda não bastar.
