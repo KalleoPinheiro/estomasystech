@@ -852,9 +852,13 @@ docker logs <container-do-app> 2>&1 | grep '"requestId":"<id>"' | jq .
 docker logs <container-do-app> 2>&1 | jq -c 'select(.level == "error")'
 ```
 
-Os logs não carregam dado pessoal (`logError`,
-[#202](https://github.com/KalleoPinheiro/estomasystech/issues/202); e-mail e número longo viram
-`[e-mail]`/`[número]`). O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
+Os logs não carregam dado pessoal: `logError` limpa o erro
+([#202](https://github.com/KalleoPinheiro/estomasystech/issues/202)) e o logger redige **todo** campo e
+mensagem antes de escrever (campo sensível vira `[redigido]`; e-mail, número longo, URL com query e
+credencial viram marcador; [ADR-060](../adr/060-redacao-central-de-pii-nos-logs.md)). A auditoria dos
+pontos de log, sempre com dado mascarado, está em
+[`auditoria-logs-pii-2026-10.md`](auditoria-logs-pii-2026-10.md); repita-a na rotina mensal e **nunca
+cole linha crua de log em chat, issue ou PR**. O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
 mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
 ### 9.5 GlitchTip (error tracking)
