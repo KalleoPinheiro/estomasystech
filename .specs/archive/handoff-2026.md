@@ -1634,6 +1634,11 @@ Issue #429, fatia 5, desenho aprovado pelo Kalléo na canvas (Cadastros). `/proc
 - **Pergunta aberta (regra 5)**: no celular a canvas mostra o formulário em folha de baixo; aqui a ficha empilha abaixo da lista. A folha de baixo pede um componente do Still Void (ou `sv-gap`); decidir antes de Materiais/Profissionais/Parceiros, que seguem o mesmo padrão.
 - **Next step**: Materiais, Profissionais, Parceiros no mesmo padrão. **Blockers**: nenhum.
 
+## Login redesenhado (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 6, canvas aprovada (Entrar). `/login`: moldura em dois painéis a partir de `md` (marca do produto + formulário), só formulário no celular, botão Mostrar/Ocultar senha (fora do `<label>`, para não mudar o nome do campo), frase da LGPD junto do link de privacidade. Passos de segundo fator usam a mesma moldura. Nenhum teste existente alterado; o axe de `/login` (claro e escuro) já cobre a tela.
+- **Pergunta aberta (regra 5)**: a canvas mostra logo e nome da clínica no login, mas o login não sabe a clínica de quem entra (e-mail e senha, sem subdomínio). Ficou a marca do produto. Mostrar a clínica exigiria decidir como identificá-la (subdomínio, link do convite ou depois do e-mail).
+- **Next step**: hub de Configurações; Materiais/Profissionais/Parceiros depois da folha de baixo. **Blockers**: nenhum.
 ## Folha de baixo nas fichas (2026-10-21) — EM REVISÃO
 
 Resolve a pergunta aberta de "Procedimentos em lista + ficha". `@still-void/ui` 3.4.1 → 3.5.0 (traz `BottomSheet` e o token `--sv-control-border`, bordas de campo mais fortes). Novo `src/components/sheet-panel.tsx`: ficha ao lado da lista a partir de 1024 px, `BottomSheet` (`closeLabel="Cancelar"`) abaixo disso; só `/procedimentos` usa por ora, é a única lista+ficha mergeada.
