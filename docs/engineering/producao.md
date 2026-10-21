@@ -718,8 +718,16 @@ automática: o Coolify só é atualizado pela interface, depois de conferir o ba
 6. **Monitores:** UptimeRobot verde em `/api/health/ready`; sem falha em *Scheduled Tasks → Executions* (§ 7).
 7. **Registro:** anote data, versões e resultado no handoff do mês (`.specs/archive/handoff-2026.md`).
 
-Um workflow de lembrete mensal está previsto, mas **desligado**: sem agenda, não consome a cota do
-Actions. Para ativar depois, adicione o gatilho `schedule` e o recibo do gate local do PR (ver ADR-053).
+O lembrete existe em `.github/workflows/rotina-mensal.yml`, mas **desligado**: só roda por
+`workflow_dispatch` (Actions → *Rotina mensal* → *Run workflow*) e, sem `schedule`, não consome a cota
+do Actions. Cada execução abre uma issue «Rotina mensal de manutenção — AAAA-MM» com este checklist
+(não duplica se já houver uma aberta). Para ativar:
+
+1. Descomente o bloco `schedule` do workflow (cron de todo sábado às 11:00 UTC; o passo «Só no 1º
+   sábado» descarta os que caem depois do dia 7).
+2. Abra PR `feat/* → release/*` com a mudança; por tocar `.yml`, ele não é só documentação, então
+   siga o fluxo do ADR-052 (changeset e `## Homologação`).
+3. Confirme a cota do Actions antes (o job é de poucos segundos, sem checkout).
 
 ## 8. Primeiro acesso
 
