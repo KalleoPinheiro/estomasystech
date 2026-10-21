@@ -97,6 +97,15 @@
 - Reason: free text (e.g., `appointment #123`, `expired`, `damaged`).
 - Unit price frozen at movement time (immune to catalog price changes).
 
+**Triagem** (fila de fotos do paciente)
+
+- The staff queue of photos a Patient sends from the portal between appointments (origem "paciente", visually distinct from clinical photos). The business term: keep "Triagem" in the UI, the menu and the docs ([PRD fase 3, O4.2](./docs/product/prd-fase-3.md)).
+- Each item goes from pending to evaluated: "ok, manter plano" or "antecipar retorno" (creates a pending Follow-up due immediately). Partners never see these photos.
+
+**Nome do paciente na tela** (display rule)
+
+- Full name wherever it identifies the Patient (record header, next appointment, triagem card, consent). Abbreviated in lists and totals, keeping the first and the last name visible and the initials of the middle names: *Mateus Paulo Costa Silva* shows as *Mateus P. C. Silva* (decided by @KalleoPinheiro, 2026-10-21). Never initials only.
+
 **Follow-up** (retorno)
 
 - Scheduled recall or check-in due date.

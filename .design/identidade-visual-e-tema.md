@@ -107,6 +107,8 @@ erDiagram
   - Alvos de toque de 44px com 8px de espaço entre alvos vizinhos.
   - Movimento: `prefers-reduced-motion` desliga transições; sem animação automática.
   - Modo de alto contraste do sistema (`forced-colors`) mantém borda nos cartões e botões.
+  - Fundos tingidos (selo, linha ativa) usam no máximo 10% da cor; o teste de contraste cobre texto de acento e de estado sobre essa tinta, nas 4 cores × 2 modos.
+  - Campos com `label for`, `type`, `inputmode` e `autocomplete` corretos; borda de controle a 3:1; diálogos com `role="dialog"`, `aria-modal` e foco devolvido; gráfico com valores escritos e `role="img"`.
   - Erros de formulário ligados ao campo (`aria-describedby`) e anunciados (`role="alert"`), em linguagem simples.
   - E2E com `@axe-core/playwright` nas telas novas (Hoje, Identidade, Aparência, `/login`) no `gate:local`, 0 violações sérias ou críticas.
 
@@ -154,6 +156,11 @@ A versão pesada (tema por usuário no banco, cor livre, temas completos) só co
 | Foto do iOS (HEIC) | aceitar `image/heic` no envio e converter para JPEG no servidor (`sharp`), limite 1 MB após conversão | iPhone tira HEIC por padrão e o Chrome não renderiza | redimensionar no cliente com canvas, se a conversão no servidor pesar | costly |
 | Instalar como app | `manifest.ts` standalone + `apple-touch-icon`, sem service worker | dá ícone e tela cheia sem custo de cache offline de dado de saúde | PWA completo com offline, só após decisão de LGPD sobre cache local | reversible |
 | Avatar | só equipe; iniciais como padrão | paciente é dado de saúde e menor (#376) | avatar de paciente, só após revisão jurídica | one-way se publicado |
+| Nome do paciente na tela | nome completo onde o nome identifica o paciente (cabeçalho do prontuário, próximo atendimento, cartão da triagem, termos e consentimentos); abreviado mantendo o primeiro e o último nome visíveis e as iniciais do meio nas listas e totais (`Mateus Paulo Costa Silva` vira `Mateus P. C. Silva`), decidido por @KalleoPinheiro, 2026-10-21 | homônimos são risco de paciente trocado; lista densa não precisa do nome inteiro | nome completo em tudo, se a clínica pedir; nunca só iniciais | reversible |
+| Nome "Triagem" | mantém "Triagem": é o termo do glossário do negócio, decidido por @KalleoPinheiro, 2026-10-21 | vocabulário já usado pelas clínicas e nos docs | "Fotos para avaliar", se pesquisa mostrar que a equipe não entende | reversible |
+| Tinta de estado e de acento | texto de acento e de estado sobre fundo tingido usa no máximo 10% da cor sobre a superfície; o Still Void garante 4,5:1 nesse caso a partir da versão do PR [still-void#28](https://github.com/KalleoPinheiro/still-void/pull/28) | o detector do impeccable achou 4,3:1 no violeta claro e 4,2:1 no vermelho a 12% a 14% | tokens `-soft` no Still Void, se mais de um app repetir o padrão | reversible |
+| Campos de formulário | controles de verdade (`input`, `label for`, `type`, `inputmode`, `autocomplete`), com borda de controle a 3:1 (`--control`) | leitor de tela, teclado certo no celular, gerenciador de senhas | — | reversible |
+| Ajuda | item "Ajuda e suporte" em "Mais" e no menu lateral, código de suporte em Minha conta e nas telas de erro, "O que é TIME?" no prontuário | apoio ao uso sem abrir chamado; o suporte localiza o erro pelo código | central de ajuda completa, em outra rodada | reversible |
 | Mobile-first | barra inferior abaixo de `md`, lateral a partir de `md` | alvo de toque e polegar | manter menu lateral em gaveta, se a barra não couber os papéis | reversible |
 
 ## Cobertura das telas existentes no Claude Design
@@ -176,6 +183,7 @@ Canvas: https://claude.ai/artifact/Jmb2Gcr4LH3nVVeYzgSzeU (celular 390×844 e we
 | Portal do paciente | `/portal` | próxima consulta, evolução, consentimentos |
 | Plataforma (operador) | `/plataforma/**` | lista de clínicas; subtelas reusam o padrão |
 | "Mais" por papel | menu | Admin, Atendente e Profissional |
+| Estados | transversal | login com erro ligado ao campo, lista vazia, falha de envio de foto, offline com hora e ação, confirmação de salvamento, carregando, sessão expirada, erro de servidor com código, confirmação de sair, desfazer |
 
 Fora desta rodada: documentos impressos `/documentos/**` (A4, recebem só o logo da clínica) e `/privacidade` (texto longo, só tema).
 
@@ -183,7 +191,7 @@ Fora desta rodada: documentos impressos `/documentos/**` (A4, recebem só o logo
 
 Cannot be planned until somebody draws it.
 
-1. Shell mobile e "Hoje" - estados vazio, sem permissão (papéis sem resumo financeiro), carregando; proposta inicial já desenhada.
+1. Shell mobile e "Hoje" - estados vazio, carregando, sessão expirada e erro já desenhados (telas Estados e Estados 2); falta só "sem permissão" para papéis sem resumo financeiro.
 2. Listas em cartões - paciente, fatura e repasse em 390px, ações por item, filtros.
 3. Barra inferior por papel - Atendente, Profissional e Admin veem atalhos diferentes; o que vai em "Mais".
 
@@ -198,12 +206,13 @@ A barra inferior tem no máximo 5 atalhos (limite do iOS). O que sobra vai em "M
 
 | Papel | Barra | Em "Mais" |
 |---|---|---|
-| Admin da clínica | Hoje, Agenda, Pacientes, Faturas, Mais | Triagem, Parceiros, Profissionais, Procedimentos, Materiais, Relatórios, Repasses, Auditoria, Pedidos do titular, Configurações, Minha conta, Sair |
-| Atendente | Hoje, Agenda, Pacientes, Mais | Parceiros, Configurações, Minha conta, Sair |
-| Profissional | Hoje, Agenda, Triagem (com contador), Pacientes, Mais | Parceiros, Repasses, Configurações, Minha conta, Sair |
+| Admin da clínica | Hoje, Agenda, Pacientes, Faturas, Mais | Triagem, Parceiros, Profissionais, Procedimentos, Materiais, Relatórios, Repasses, Auditoria, Pedidos do titular, Configurações, Ajuda e suporte, Minha conta, Sair |
+| Atendente | Hoje, Agenda, Pacientes, Mais | Parceiros, Configurações, Ajuda e suporte, Minha conta, Sair |
+| Profissional | Hoje, Agenda, Triagem (com contador), Pacientes, Mais | Parceiros, Repasses, Configurações, Ajuda e suporte, Minha conta, Sair |
 
 ## Open
 
+1. Nome do paciente em lista: a regra de abreviação (primeiro e último nomes visíveis, iniciais no meio) está decidida; falta decidir quando houver dois pacientes com o mesmo nome abreviado na mesma lista (padrão: mostrar a data de nascimento no segundo).
 2. Logo na barra e login antes de a clínica estar identificada - padrão: logo do EstomaSysTech.
 3. Troca de cor em sessão aberta - padrão: vale na próxima navegação.
 
@@ -212,3 +221,4 @@ A barra inferior tem no máximo 5 atalhos (limite do iOS). O que sobra vai em "M
 - Canvas de layout (Claude Design): https://claude.ai/artifact/Jmb2Gcr4LH3nVVeYzgSzeU - Hoje, Aparência, Identidade da clínica.
 - Still Void `src/react/client/ThemeProvider.tsx`, `src/css/theme.css` - mecanismo de tema e cores com AA.
 - `src/app/layout.tsx`, `src/app/(staff)/staff-layout-client.tsx` - estado atual.
+- Still Void PR #28 - passo mínimo de contraste das tintas do modo claro; este doc depende dele para o bloco "Trava de acessibilidade".
