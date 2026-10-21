@@ -1699,3 +1699,9 @@ Correção pedida pelo Kalléo (staging f42666e, desktop): avatar cortado ("C(" 
 - **TESTE-ALTERADO**: `tests/pages/staff-layout-client.test.tsx` (C42) e `e2e/layout-mobile-first.spec.ts` ("e-mail da sidebar"): o requisito de #199 (e-mail inteiro quebrando linha) mudou a pedido do Kalléo para uma linha com reticências; o endereço completo fica no `title`.
 - Não consegui ver o "C(" da staging (o E2E usa iniciais "CE"); a causa provável é o logo/avatar sem `shrink-0` ou sem fundo; o novo teste mede 32x32 para travar isso. Se persistir com imagem real, preciso de uma captura.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Workflow do lembrete mensal (#381) (2026-10-21) — EM REVISÃO
+
+Segundo passo da rotina mensal: `.github/workflows/rotina-mensal.yml` abre a issue «Rotina mensal de manutenção — AAAA-MM» com o checklist do `producao.md` § 7.4. **Desligado**: só `workflow_dispatch`, com o `schedule` (sábados 11:00 UTC, filtrado para o 1º sábado) comentado; job de poucos segundos, sem checkout, sem duplicar issue aberta. `producao.md` § 7.4 ganhou o passo a passo de ativação.
+- **Decisão minha**: `ubuntu-24.04` (como os demais workflows) em vez de `ubuntu-latest`; sem label na issue (label inexistente faria o `gh issue create` falhar).
+- **Next step**: ativar depois do reset da cota (~2026-11-01), descomentando o `schedule`. **Blockers**: nenhum.
