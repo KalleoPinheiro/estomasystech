@@ -33,7 +33,7 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | Abrir a release | `git switch -c release/vX.Y.Z origin/main && git push -u origin release/vX.Y.Z`; o nome promete a versão |
 | Toda feature nasce da release aberta | `git fetch origin && git switch -c feat/x origin/release/vX.Y.Z` |
 | O PR da feature vai contra a **release**, em squash | CI rápido; sem recibo do gate. Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
-| Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação do `gate:local` já comparam com a release aberta de que a branch descende (ADR-058; `GATE_BASE` força outra base) |
+| Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação do `gate:local` já comparam com a release aberta de que a branch saiu (ADR-058; `GATE_BASE` força outra base) |
 | Cada PR ganha um **Preview** sozinho | a Vercel cria `https://<projeto>-git-<branch>-….vercel.app` com banco Neon próprio |
 | `main` mudou (hotfix) | `npm run release:sync` **mergeia** a `main` na release aberta (nunca rebase); conflito aborta e avisa: resolva na release |
 | Testar o lote na staging | `npm run staging:rebuild -- --release --push` (staging = release aberta; branches extras opcionais no fim da linha) |

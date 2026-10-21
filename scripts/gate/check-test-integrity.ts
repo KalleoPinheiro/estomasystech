@@ -1,6 +1,6 @@
 /**
  * `npm run check:testes [-- <base>] [--body-file <arquivo>] [--motivo <texto>]` —
- * regra 8 (ADR-042). Analisa o diff `base...HEAD` (padrão: a release aberta de que a branch descende, senão `origin/main`; `GATE_BASE` vence, ADR-058) e falha se um
+ * regra 8 (ADR-042). Analisa o diff `base...HEAD` (padrão: a release aberta de que a branch saiu, senão `origin/main`; `GATE_BASE` vence, ADR-058) e falha se um
  * teste foi enfraquecido. O motivo de negócio vem do corpo do PR (`--body-file`, no CI),
  * de `--motivo` ou do arquivo local `.gate/motivo-teste.txt` (que o `pre-push` lê).
  */

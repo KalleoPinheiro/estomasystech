@@ -23,7 +23,7 @@ export interface BaseInput {
   /** `GATE_BASE` ou argumento explícito: sempre vence. */
   explicit?: string;
   branch: string;
-  /** Releases abertas (`origin/release/vX.Y.Z`) das quais o HEAD descende e que a `main` ainda não tem. */
+  /** Releases abertas (`origin/release/vX.Y.Z`) de que o HEAD saiu e que a `main` ainda não tem. */
   openReleases: string[];
 }
 
@@ -42,12 +42,18 @@ function git(...args: string[]): { ok: boolean; out: string } {
 const isAncestor = (ancestor: string, of: string): boolean =>
   git('merge-base', '--is-ancestor', ancestor, of).ok;
 
+/** A branch saiu da release (não da `main`): o ponto de partida tem commits que a `main` não tem. */
+function forkedFromRelease(ref: string): boolean {
+  const fork = git('merge-base', ref, 'HEAD');
+  return fork.ok && fork.out !== '' && !isAncestor(fork.out, MAIN_REF);
+}
+
 /** Lê o git local: branch atual e releases remotas ainda não mergeadas na `main`. */
 export function detectBase(explicit?: string): string {
   const releases = git('for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin/release/')
     .out.split('\n')
     .filter(Boolean)
-    .filter((ref) => isAncestor(ref, 'HEAD') && !isAncestor(ref, MAIN_REF));
+    .filter((ref) => !isAncestor(ref, MAIN_REF) && forkedFromRelease(ref));
   return resolveBase({
     explicit: explicit ?? (process.env.GATE_BASE || undefined),
     branch: git('rev-parse', '--abbrev-ref', 'HEAD').out,

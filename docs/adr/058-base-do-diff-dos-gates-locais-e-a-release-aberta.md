@@ -26,7 +26,7 @@ alterado por outros PRs, o `gate:local` falhava na etapa `integridade-de-testes`
 
 1. `GATE_BASE` (ou argumento explícito do `check:testes`), que sempre vence;
 2. `origin/main` se a branch for `main`, `staging`, `release/*` ou `hotfix/*` (PR que vai para a `main`);
-3. a `origin/release/vX.Y.Z` de maior versão da qual o HEAD descende e que a `main` ainda não contém;
+3. a `origin/release/vX.Y.Z` de maior versão que a `main` ainda não contém e da qual a branch saiu (o `merge-base` com o HEAD tem commits fora da `main`). Isso vale mesmo depois que a release andou e a branch ficou para trás;
 4. `origin/main`.
 
 O `pre-push` busca também `refs/heads/release/*`. Para o PR `release → main` nada muda: base `main`,
