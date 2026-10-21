@@ -147,7 +147,7 @@ npm run dev                   # http://localhost:3000
 | `NEXT_PUBLIC_APP_COMMIT` | não | SHA curto exibido junto da versão; só em homologação e preview | vem de `VERCEL_GIT_COMMIT_SHA` |
 | `VERCEL_GIT_COMMIT_SHA` | Vercel | injetada pela Vercel no build | origem de `NEXT_PUBLIC_APP_COMMIT` |
 | `CHANGESET_BASE` | não | base do `npm run check:changeset` (padrão `origin/main`; o CI usa a base do PR) | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
-| `GATE_BASE` | não | base do diff com que o `npm run gate:local` escolhe os arquivos de domain/application a mutar (padrão `origin/main`) | [ADR-051](../adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md) |
+| `GATE_BASE` | não | base do diff de `gate:local`, `check:testes` e `check:changeset` (padrão: a release aberta de que a branch saiu; `release/*`, `hotfix/*` e `main` usam `origin/main`) | [ADR-058](../adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md) |
 | `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |

@@ -1660,3 +1660,9 @@ Issue #429, fatia 7, canvas aprovada (Cadastros). Mesmo padrão de Procedimentos
 Pedido do Kalléo: no login, logo do sistema (não da clínica), bonita, minimalista e moderna. `src/components/brand-mark.tsx`: "E" de três barras arredondadas sobre quadrado de cantos suaves, com ponto à direita; usa `--sv-accent-ink` e `--sv-bg` (par do botão de acento, AA em todos os modos). Login: marca grande no painel (computador) e pequena acima do título (celular). `public/brand/estomasystech.svg`: arquivo estático (violeta fixo) para quem precisar fora do app.
 - **Pergunta aberta (regra 5)**: ícone do app (`public/icons`, favicon, apple-touch) segue o antigo; trocar pela nova marca exige gerar PNGs e decidir cor fixa. Não feito.
 - **Next step**: Materiais e hub de Configurações. **Blockers**: nenhum.
+
+## Base do gate local na release (2026-10-21) — EM REVISÃO
+
+Exceção pontual de @KalleoPinheiro para editar `scripts/gate/` e `.husky/pre-push`. `check:testes`, mutação do `gate:local` e `check:changeset` passam a comparar com a release aberta de que a branch descende (ADR-058); `release/*`, `hotfix/*` e `main` seguem contra `origin/main`; `GATE_BASE` vence. `pre-push` busca as releases. Regra 8 e recibo do PR release→main intactos.
+- **Testes novos**: `tests/scripts/gate-base.test.ts`. Nenhum teste existente alterado.
+- **Next step**: aguardar revisão. **Blockers**: nenhum.
