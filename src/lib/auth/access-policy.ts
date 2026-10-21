@@ -53,6 +53,9 @@ export const PUBLIC_PATHS = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',
+  // Favicon por tema (claro/escuro): tem de abrir antes do login.
+  '/brand/favicon-grafite.svg',
+  '/brand/favicon-branco.svg',
 ] as const;
 
 /** Rotas acessíveis a qualquer papel autenticado; todo o resto é exclusivo do admin (equipe). */
