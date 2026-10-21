@@ -50,6 +50,9 @@ export const metadata: Metadata = {
   title: 'EstomaSysTech — Clínica de Estomaterapia',
   description:
     'Gestão de pacientes, agenda e faturamento para clínica de estomaterapia',
+  // Instalar na tela inicial (#430): ícone do iOS e abertura sem a barra do Safari.
+  icons: { apple: '/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: 'EstomaSysTech' },
 };
 
 // CSP estrita com nonce (issue #76) exige um nonce novo por request — só existe
