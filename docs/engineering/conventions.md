@@ -25,6 +25,7 @@ last_reviewed: 2026-09-26
 
 - Proibidos: `<button>`, `<input>`, `<select>`, `<textarea>`, `<table>` crus e utilitários de cor Tailwind crus.
 - Exceção deliberada: `// sv-gap: <slug>` + seção em [`docs/still-void-gaps.md`](../still-void-gaps.md). `npm run check:sv` mantém os dois em sincronia.
+- Tema (#425): `<html>` nasce com `data-theme`/`data-accent` de `src/lib/theme.ts` (padrão claro + violeta); `ThemeScript` (com o nonce da CSP) e `ThemeProvider` usam a chave `estomasystech:modo`, a preferência claro/escuro do **aparelho**. O Still Void persiste modo **e** acento nessa chave: quando a cor vier da clínica (#426), chame `setAccent` na montagem para a cor da clínica vencer o valor guardado. Só as 4 cores calibradas do Still Void (sem hex livre).
 - Histórico da adoção: [`backlog-design-system.md`](../backlog-design-system.md), `.specs/features/still-void-*`.
 
 ## Dados e escopo

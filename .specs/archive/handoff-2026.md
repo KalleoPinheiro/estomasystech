@@ -1522,3 +1522,12 @@ Pedido do Kalléo (thread "Implantar fluxo de release"), fluxo acordado em `/mnt
 - **Fica com o Kalléo (painel)**: *Allow merge commits* no repositório; ruleset de `release/**` (PR obrigatório, CI rápido exigido, force push bloqueado, bypass para quem roda `release:sync`/Actions); depois do reset da cota, provar `staging.yml` com um push na `main`.
 - **Pergunta aberta**: o `GITHUB_TOKEN` consegue dar push em `release/*` com PR obrigatório? Se o bypass do GitHub Actions não existir na lista do ruleset, usar segredo próprio ou rodar `release:sync` à mão.
 - **Next step**: abrir a primeira `release/vX.Y.Z` pelo fluxo novo. **Blockers**: nenhum.
+
+
+## Fundação de tema (2026-10-21) — EM REVISÃO
+
+Issue #425, primeiro bloco da identidade visual (`.design/identidade-visual-e-tema.md`).
+- **Feito**: `src/lib/theme.ts` (padrão claro + violeta, chave `estomasystech:modo`, rótulo pt-BR); `layout.tsx` renderiza `data-theme`/`data-accent` e o `ThemeScript` com o nonce da CSP (`x-nonce`); `Providers` ganha `ThemeProvider`; `ThemeToggle` (pt-BR) na barra lateral da equipe. Testes novos: `tests/lib/theme.test.ts`, `tests/components/theme-toggle.test.tsx`. Nenhum teste existente editado.
+- **Decisão não crítica**: componente próprio em vez do `ThemeToggle` do pacote (texto em inglês); `package.json` segue em `^3.4.0` (o teste de versão fixa o intervalo; a 3.4.1 entra com a trava de contraste #424).
+- **Atenção para #426**: o Still Void guarda modo e acento na mesma chave do `localStorage` e o valor guardado vence o do servidor; ao ligar a cor da clínica, chamar `setAccent` na montagem. O modo "automático" (`system`) não existe no pacote: #426 decide como mapeá-lo.
+- **Next step**: #426 (identidade da clínica) e #428. **Blockers**: nenhum.

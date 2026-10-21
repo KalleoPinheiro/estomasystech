@@ -9,6 +9,7 @@ import {
 import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import type { SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -77,6 +78,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
               </SidebarSection>
             </div>
             <div className="flex flex-col gap-2">
+              <ThemeToggle />
               <LogoutButton />
               <AppVersion />
             </div>
