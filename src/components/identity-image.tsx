@@ -45,7 +45,7 @@ export function IdentityImage({
       />
     );
   }
-  const box = `inline-flex shrink-0 items-center justify-center bg-sv-surface font-semibold text-accent-ink ${shape}`;
+  const box = `inline-flex shrink-0 items-center justify-center bg-accent-soft font-semibold text-accent-ink ${shape}`;
   const style = { width: size, height: size, fontSize: size / 2.6 };
   if (kind === 'logo') {
     return (

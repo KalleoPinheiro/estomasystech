@@ -1692,3 +1692,10 @@ Escolha do Kalléo: opções C (branca) e D (grafite) da prévia, uma para cada 
 - **Decisão minha**: associei grafite à aba clara e branco à aba escura (contraste com a aba). Se o Kalléo quiser o oposto, é trocar o `media` de cada um.
 - Teste novo `tests/lib/favicon-por-tema.test.ts`; nenhum teste existente alterado.
 - **Next step**: nenhum no #429. **Blockers**: nenhum.
+
+## Barra lateral: bloco da clínica e do usuário (2026-10-21) — EM REVISÃO
+
+Correção pedida pelo Kalléo (staging f42666e, desktop): avatar cortado ("C(" e "A") e nome da clínica e e-mail quebrando em várias linhas. `SidebarIdentity` agora tem logo e avatar de 32 px (iniciais com fundo `bg-accent-soft`, antes invisível sobre o painel), nome da clínica, e-mail e perfil em uma linha com reticências, e o e-mail inteiro no `title`. Teste novo `e2e/sidebar-identidade.spec.ts` (medidas e axe em claro e escuro a 1280 px).
+- **TESTE-ALTERADO**: `tests/pages/staff-layout-client.test.tsx` (C42) e `e2e/layout-mobile-first.spec.ts` ("e-mail da sidebar"): o requisito de #199 (e-mail inteiro quebrando linha) mudou a pedido do Kalléo para uma linha com reticências; o endereço completo fica no `title`.
+- Não consegui ver o "C(" da staging (o E2E usa iniciais "CE"); a causa provável é o logo/avatar sem `shrink-0` ou sem fundo; o novo teste mede 32x32 para travar isso. Se persistir com imagem real, preciso de uma captura.
+- **Next step**: nenhum. **Blockers**: nenhum.
