@@ -56,8 +56,19 @@ export const clinics = pgTable(
     dpoContact: text('dpo_contact'),
     // Logo da clínica (#427): chave no mesmo armazenamento das fotos clínicas.
     logoKey: text('logo_key'),
+    // Tema da clínica (#426): modo padrão e cor de acento, lista fechada.
+    themeMode: text('theme_mode').notNull().default('system'),
+    themeAccent: text('theme_accent').notNull().default('violet'),
   },
   (table) => [
+    check(
+      'clinics_theme_mode_check',
+      sql`${table.themeMode} IN ('light', 'dark', 'system')`,
+    ),
+    check(
+      'clinics_theme_accent_check',
+      sql`${table.themeAccent} IN ('cyan', 'violet', 'mint', 'amber')`,
+    ),
     check(
       'clinics_status_check',
       sql`${table.status} IN ('active', 'suspended')`,

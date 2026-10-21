@@ -30,6 +30,8 @@ const toClinic = (row: ClinicRow): Clinic =>
     dpoName: row.dpoName,
     dpoContact: row.dpoContact,
     logoKey: row.logoKey,
+    themeMode: row.themeMode,
+    themeAccent: row.themeAccent,
   });
 
 /** Dados cadastrais gravados por `create` e `update`. */
@@ -120,6 +122,16 @@ export class DrizzleClinicRepository implements ClinicRepository {
     await this.db
       .update(clinics)
       .set({ logoKey: clinic.logoKey })
+      .where(eq(clinics.id, clinic.id));
+  }
+
+  async saveTheme(clinic: Clinic): Promise<void> {
+    await this.db
+      .update(clinics)
+      .set({
+        themeMode: clinic.theme.mode,
+        themeAccent: clinic.theme.accent,
+      })
       .where(eq(clinics.id, clinic.id));
   }
 }

@@ -1,5 +1,6 @@
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
+import { type ClinicTheme, themeFromStored } from './clinic-identity';
 import { normalizeCnpj } from './cnpj';
 
 /**
@@ -83,6 +84,9 @@ export interface ClinicState extends ClinicInfoFields {
   dpoContact?: string | null;
   /** Chave da logo no armazenamento (#427); `null` = sem logo, valem as iniciais. */
   logoKey?: string | null;
+  /** Tema da clínica (#426) como gravado; fora da lista vale o padrão (`theme`). */
+  themeMode?: string | null;
+  themeAccent?: string | null;
 }
 
 /** Limites do cadastro do encarregado. */
@@ -281,6 +285,20 @@ export class Clinic {
 
   get logoKey(): string | null {
     return this.state.logoKey ?? null;
+  }
+
+  /** Tema da clínica (#426); valor ausente ou fora da lista vale o padrão. */
+  get theme(): ClinicTheme {
+    return themeFromStored(this.state.themeMode, this.state.themeAccent);
+  }
+
+  /** Outra instância com o tema trocado. */
+  withTheme(theme: ClinicTheme): Clinic {
+    return new Clinic({
+      ...this.state,
+      themeMode: theme.mode,
+      themeAccent: theme.accent,
+    });
   }
 
   /** Outra instância com a logo trocada (ou removida, com `null`). */

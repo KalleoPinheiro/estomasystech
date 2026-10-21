@@ -1,9 +1,12 @@
 import type { UserRole } from '@/domain/auth/user-role';
+import type { ClinicTheme } from '@/domain/clinic/clinic-identity';
 /** Identidade da sessão ativa exibida na sidebar (issue #126) — `account` é sempre a conta da sessão. */
 export interface SidebarIdentityDto {
   clinicLabel: string;
   /** Logo da clínica (#427); ausente ou `null` = iniciais. */
   clinicLogoUrl?: string | null;
+  /** Tema da clínica (#426); ausente = o padrão (segue o aparelho, violeta). */
+  clinicTheme?: ClinicTheme;
   /** `role` permite à UI escolher a visão (ex.: repasses da clínica × próprios). */
   /** `professionalId`: vínculo da conta, para a UI limitar o Profissional ao que é dele (#215). */
   account: {

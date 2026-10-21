@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       // Logo (#427): endereço e se o armazenamento aceita envio.
       identity: {
         logoUrl: clinicLogoUrl(clinic.logoKey),
+        theme: clinic.theme,
         imageUploadAvailable: isPhotoStorageAvailable(photoStorage),
       },
     };

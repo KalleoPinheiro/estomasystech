@@ -2,6 +2,7 @@
 
 import { Button } from '@still-void/ui/react';
 import { useTheme } from '@still-void/ui/react/client';
+import { writeDeviceMode } from '@/lib/device-mode';
 import { themeToggleLabel } from '@/lib/theme';
 
 /**
@@ -19,7 +20,10 @@ export function ThemeToggle() {
       size="sm"
       className="self-start"
       aria-label={label}
-      onClick={toggleMode}
+      onClick={() => {
+        writeDeviceMode(mode === 'dark' ? 'light' : 'dark');
+        toggleMode();
+      }}
     >
       {mode === 'dark' ? 'Tema claro' : 'Tema escuro'}
     </Button>

@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { ManageClinicLogo } from '@/application/identity/manage-identity-image';
 import { getRepositories } from '@/infrastructure/container';
-import { fail, handleRequest } from '@/lib/api-response';
+import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { clinicLogoUrl } from '@/lib/dto';
-import { identityImageResponse } from '@/lib/identity-image-response';
 import {
   IDENTITY_UPLOAD_RATE_LIMIT,
   readIdentityUpload,
