@@ -470,11 +470,11 @@ describe('Feature: Dashboard do painel interno', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('link', { name: 'Ver recebido no mês' }),
+          screen.getByRole('link', { name: /^Recebido no mês/ }),
         ).toHaveAttribute('href', '/faturamento');
       });
       expect(
-        screen.getByRole('link', { name: 'Ver consultas no mês' }),
+        screen.getByRole('link', { name: /^Consultas no mês/ }),
       ).toHaveAttribute('href', '/agenda');
     });
 

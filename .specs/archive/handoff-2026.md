@@ -1583,3 +1583,12 @@ Bloco 0 da descoberta `.design/identidade-visual-e-tema.md` (release v0.2.0, ADR
 - **Testes novos**, mais um ajuste com `TESTE-ALTERADO`: `tests/app/still-void-version.test.ts` passa a exigir a 3.4.1 (o #425 deixou a 3.4.0 para esta entrega). Rodado contra o build de produção.
 - **Fora do escopo, pendente no Still Void**: borda de controle a 3:1 (hoje `--sv-border-strong` fica perto de 1,5:1); o teste não cobre bordas até existir um token próprio.
 - **Next step**: telas novas (Hoje, Identidade, Aparência) somam rotas ao spec do axe quando chegarem (#425 a #429). **Blockers**: nenhum.
+
+
+## Acessibilidade das telas da equipe (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 3 (critério de pronto: axe sem violação séria). `e2e/acessibilidade-equipe.spec.ts` roda o axe (WCAG 2.2 AA) em 16 telas da equipe (Hoje, Mais, Pacientes, Agenda, Faturamento, Procedimentos, Materiais, Profissionais, Parceiros, Minha conta, Configurações, Relatórios, Repasses, Auditoria, Triagem, Pedidos do titular), no claro e no escuro, a 390px.
+- **Achados e correções**: Hoje, `label-content-name-mismatch` nos cartões de KPI (o `aria-label` "Ver …" não continha o texto visível; agora o nome vem do conteúdo); Agenda e Faturamento, `color-contrast` do "hoje" e do filtro ativo (`text-white` sobre `bg-accent-ink` no escuro; agora `text-bg`, o mesmo par do `sv-btn--accent`) e dos dias de outros meses no calendário do celular (`opacity-60` removido, fica `text-ink-3`). As demais telas já passavam.
+- **TESTE-ALTERADO**: `tests/pages/staff-dashboard.test.tsx` procura os links dos KPIs pelo texto visível (`/^Recebido no mês/`, `/^Consultas no mês/`) em vez do `aria-label` "Ver …" (critério WCAG 2.5.3: o nome acessível contém o rótulo visível).
+- **Ainda fora do axe**: definir senha (precisa de token), portal do paciente e Plataforma (sessões próprias); entram numa fatia com helper de sessão. O redesenho "lista + ficha" de Procedimentos, Materiais, Profissionais e Parceiros e o hub de Configurações dependem do desenho da canvas (decisão de UX do dono) e ficam como pergunta aberta.
+- **Next step**: definir/portal/plataforma no axe. **Blockers**: nenhum.

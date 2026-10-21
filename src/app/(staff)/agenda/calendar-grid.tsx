@@ -157,7 +157,7 @@ export function CalendarGrid({
                   >
                     <span
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full font-medium text-xs ${
-                        key === todayKey ? 'bg-accent-ink text-white' : ''
+                        key === todayKey ? 'bg-accent-ink text-bg' : ''
                       }`}
                     >
                       {day.getDate()}
