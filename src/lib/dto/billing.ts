@@ -5,6 +5,8 @@ export interface InvoiceDto {
   id: string;
   patientId: string;
   patientName?: string;
+  /** Só nas listas: desambigua homônimos (ISO) ou `null` sem data. */
+  patientBirthDate?: string | null;
   appointmentId: string | null;
   description: string;
   amountCents: number;
@@ -36,10 +38,12 @@ export interface InvoicePaymentDto {
 export const toInvoiceDto = (
   invoice: Invoice,
   patientName?: string,
+  patientBirthDate?: Date | null,
 ): InvoiceDto => ({
   id: invoice.id,
   patientId: invoice.patientId,
   patientName,
+  patientBirthDate: patientBirthDate?.toISOString(),
   appointmentId: invoice.appointmentId,
   description: invoice.description,
   amountCents: invoice.amount.cents,

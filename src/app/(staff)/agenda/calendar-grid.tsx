@@ -8,7 +8,7 @@ import {
 } from '@/domain/scheduling/schedule-config';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
-import { abbreviatePatientName } from '@/lib/patient-name';
+import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import {
   buildMonthDays,
   dayKey,
@@ -69,6 +69,7 @@ export function CalendarGrid({
   const todayKey = dayKey(new Date());
 
   const byDay = new Map<string, AppointmentDto[]>();
+  const homonyms = homonymPatientIds(appointments);
   for (const appointment of appointments) {
     const key = dayKey(new Date(appointment.startsAt));
     byDay.set(key, [...(byDay.get(key) ?? []), appointment]);
@@ -188,7 +189,7 @@ export function CalendarGrid({
                           }`}
                         >
                           {formatTime(appointment.startsAt)}{' '}
-                          {abbreviatePatientName(appointment.patientName)}
+                          {listPatientName(appointment, homonyms)}
                         </Button>
                       ))}
                       {hiddenCount > 0 && (

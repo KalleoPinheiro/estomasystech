@@ -33,7 +33,7 @@ import {
   INVOICE_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
 } from '@/lib/format';
-import { abbreviatePatientName } from '@/lib/patient-name';
+import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 import {
@@ -118,6 +118,7 @@ function InvoicesTable({
   onDiscount,
   onCancel,
 }: InvoicesTableProps) {
+  const homonyms = homonymPatientIds(invoices);
   return (
     <div className="overflow-x-auto">
       <Table stack className="w-full text-left text-sm">
@@ -142,7 +143,7 @@ function InvoicesTable({
                 label="Paciente"
                 className="px-3 py-3 font-medium sm:min-w-44"
               >
-                {abbreviatePatientName(invoice.patientName)}
+                {listPatientName(invoice, homonyms)}
               </TableCell>
               <TableCell
                 label="Descrição"

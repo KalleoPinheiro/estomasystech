@@ -105,6 +105,7 @@
 **Nome do paciente na tela** (display rule)
 
 - Full name wherever it identifies the Patient (record header, next appointment, triagem card, consent). Abbreviated in lists and totals, keeping the first and the last name visible and the initials of the middle names: *Mateus Paulo Costa Silva* shows as *Mateus P. C. Silva* (decided by @KalleoPinheiro, 2026-10-21). Never initials only.
+- Homonyms: when two different Patients show the same abbreviated name in the same list (appointments, invoices, follow-ups), every one that collides also shows the date of birth beside the name (`Maria S. Lima · nasc. 12/03/1980`) — two identifiers for patient safety (decided by @KalleoPinheiro's orchestrator, 2026-10-21). The Patients list already has a birth-date column. The waiting list has no birth date yet.
 
 **Follow-up** (retorno)
 

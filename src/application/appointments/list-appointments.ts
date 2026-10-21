@@ -5,6 +5,8 @@ import type { AppointmentRepository } from '@/domain/scheduling/appointment-repo
 export interface AppointmentWithPatient {
   appointment: Appointment;
   patientName: string;
+  /** Para desambiguar homônimos nas listas (CONTEXT.md). */
+  patientBirthDate: Date | null;
 }
 
 export interface ListAppointmentsInput {
@@ -32,12 +34,13 @@ export class ListAppointments {
     const patients = await this.patients.findByIds(
       appointments.map((a) => a.patientId),
     );
-    const namesById = new Map(patients.map((p) => [p.id, p.fullName]));
+    const byId = new Map(patients.map((p) => [p.id, p]));
 
     return appointments.map((appointment) => ({
       appointment,
       patientName:
-        namesById.get(appointment.patientId) ?? 'Paciente desconhecido',
+        byId.get(appointment.patientId)?.fullName ?? 'Paciente desconhecido',
+      patientBirthDate: byId.get(appointment.patientId)?.birthDate ?? null,
     }));
   }
 }
