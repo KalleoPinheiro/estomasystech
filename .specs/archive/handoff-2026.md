@@ -1609,3 +1609,12 @@ Issue #426 (bloco 2 de `.design/identidade-visual-e-tema.md`), ADR-056; migraç�
 - **Testes novos**: `tests/domain/clinic-identity.test.ts`, `tests/application/update-clinic-theme.test.ts`, `tests/infrastructure/clinic-theme-persistence.test.ts`, `tests/api/clinic-theme.test.ts`, `tests/lib/{theme-clinic,clinic-theme-server,device-mode}.test.ts`, `tests/components/clinic-theme-sync.test.tsx`, `tests/pages/identity-section.test.tsx`.
 - **Pendências**: a consulta da clínica a cada renderização não tem cache; limpeza de avatar órfão (fatia seguinte, LGPD) e logo em login e comprovantes seguem abertas.
 - **Next step**: limpeza de avatar órfão, depois #430. **Blockers**: nenhum.
+
+## Limpeza de avatar órfão na retenção (2026-10-21) — EM REVISÃO
+
+Pendência do #427 (LGPD: foto de rosto é dado pessoal), sem ADR novo (completa o ADR-055).
+- **Feito**: `RetentionRepository.findInactiveAvatarKeys(cutoff)` (mesmo filtro de `anonymizeInactiveAccounts`) e `RunRetention.removeAvatars`: apaga os arquivos antes de anonimizar, porque a anonimização zera a chave; falha de um arquivo vai ao log com a chave e não trava a anonimização. `ACE-RN-60` atualizada.
+- **Edição em teste existente (não enfraquece)**: o helper `fakeRetention` de `tests/application/run-retention.test.ts` ganhou `findInactiveAvatarKeys`, porque o contrato `RetentionRepository` ganhou o método. Nenhuma asserção mudou.
+- **Testes novos**: `tests/application/retention-avatars.test.ts`, `tests/infrastructure/retention-avatars-persistence.test.ts`.
+- **Next step**: #430. **Blockers**: nenhum.
+
