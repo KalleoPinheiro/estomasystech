@@ -33,6 +33,7 @@ function fakeRetention(
     expireWaitlistEntries: vi.fn(async () => 0),
     anonymizeWaitlistEntries: vi.fn(async () => 0),
     anonymizeInactiveAccounts: vi.fn(async () => 0),
+    findInactiveAvatarKeys: vi.fn(async () => []),
     ...overrides,
   };
 }

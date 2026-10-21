@@ -37,4 +37,10 @@ export interface RetentionRepository {
   expireWaitlistEntries(today: string): Promise<number>;
   anonymizeWaitlistEntries(cutoff: Date): Promise<number>;
   anonymizeInactiveAccounts(cutoff: Date, now: Date): Promise<number>;
+  /**
+   * Chaves de avatar (#427) das contas que `anonymizeInactiveAccounts` vai
+   * anonimizar com o mesmo corte: o job apaga os arquivos antes, porque a
+   * anonimização zera a chave e o arquivo ficaria sem referência.
+   */
+  findInactiveAvatarKeys(cutoff: Date): Promise<string[]>;
 }
