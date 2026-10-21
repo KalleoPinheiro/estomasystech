@@ -8,7 +8,7 @@ last_reviewed: 2026-09-26
 
 # Lacunas do `@still-void/ui` — backlog para a lib
 
-- **Status:** Aberto — seções abertas: `touch-target-size`, `combobox` (só relato)
+- **Status:** Aberto — seções abertas: `touch-target-size`, `field-font-16`, `combobox` (só relato)
 - **Data:** 2026-08-26
 - **Versão verificada:** `@still-void/ui@3.2.0`
 - **Origem:** migração 2.0 → 3.1 do EstomaSysTech (`.specs/features/still-void-v3-migration/`); as
@@ -55,6 +55,18 @@ agenda", "Prontuário" e os links de documento medem a altura da linha (~20px).
 
 **Correção sugerida na lib (minor).** Estender a regra de toque da `3.4.0` a um seletor de link
 (ex.: `.sv-link`, ou `a[href]` dentro de `.sv-app-shell`), para o app não precisar da regra própria.
+
+### `field-font-16`
+
+**Lacuna.** `.sv-field` usa `--sv-text-base` (15px) em tela estreita. O Safari do iOS dá zoom ao focar
+um campo abaixo de 16px e a tela fica deslocada (#428).
+
+**Workaround local.** Em `(width < 40rem), (pointer: coarse)`, `.sv-field` ganha
+`font-size: max(1rem, var(--sv-text-base))` em [src/app/globals.css](../src/app/globals.css), provado
+por [e2e/shell-mobile.spec.ts](../e2e/shell-mobile.spec.ts).
+
+**Correção sugerida na lib (patch).** Subir o tamanho de `.sv-field` para 1rem na mesma media query de
+toque da `3.4.0`.
 
 ### `combobox`
 

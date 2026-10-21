@@ -25,7 +25,8 @@ test.describe("sidebar responsivo", () => {
     await expect(sidebarTrigger).toHaveAttribute("aria-expanded", "true");
 
     // Verifica que os links de navegação estão agora acessíveis
-    const navLinks = page.locator("nav a");
+    // Só os links do drawer: a barra inferior (#428) é outra <nav> e o drawer a cobre.
+    const navLinks = page.getByRole("dialog").locator("nav a");
     const count = await navLinks.count();
     expect(count).toBeGreaterThan(0);
 
