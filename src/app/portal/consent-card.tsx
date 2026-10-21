@@ -192,7 +192,12 @@ export function ConsentCard({
         </p>
       )}
       {error && <ErrorAlert message={error} />}
-      <Prose className="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-warning-soft bg-sv-surface p-3 text-sm">
+      <Prose
+        tabIndex={0}
+        role="region"
+        aria-label="Texto do termo de consentimento"
+        className="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-warning-soft bg-sv-surface p-3 text-sm"
+      >
         {status.consentText}
       </Prose>
       <Button
