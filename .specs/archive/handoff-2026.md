@@ -1678,3 +1678,9 @@ Issue #429, fatia 9, canvas aprovada (Configurações). `/configuracoes` ganha `
 - **Decisão**: a canvas mostra o celular como hub com telas por seção (navegar para cada uma). Fiz âncoras na mesma página porque as telas por seção mudariam rotas e quebrariam vários E2E existentes (feriados, canal de e-mail, grade de horários), que não podem ser alterados por regra 8. Se o Kalléo quiser uma tela por seção, vira um PR próprio com migração desses testes.
 - Teste novo `tests/pages/configuracoes-secoes.test.tsx`; nenhum teste existente alterado.
 - **Fechando o #429**: restam só o favicon/ícone do app (decisão do Kalléo) e a pergunta da tela por seção. **Blockers**: nenhum.
+
+## Seed de staging aditivo (2026-10-21) — EM REVISÃO
+
+Pedido do Kalléo (opção A): a staging usa a branch `main` do Neon, sem reset, então as 8 contas novas do #434 e a clínica vizinha nunca entravam. `scripts/seed/seed.ts` passa a criar só o que falta (clínica por id, conta por e-mail, profissional por registro, parceiro por e-mail, pacientes da vizinha por nome), sem apagar nem duplicar; massa pesada só em clínica sem paciente; senha reaplicada em banco já semeado; travas de `APP_ENV` e banco de produção intactas. ADR-059; `homologacao.md` § 4 atualizado.
+- **Testes novos**: `tests/scripts/seed-aditivo.test.ts` (banco vazio, já completo, semeado antes do #434, termos do portal, senha trocada). Nenhum teste existente alterado.
+- **Next step**: após o merge, Kalléo roda `git checkout release/v0.2.0 && git pull && npm run staging:rebuild -- --release --push` no WSL. **Blockers**: nenhum.
