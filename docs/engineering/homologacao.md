@@ -3,8 +3,8 @@ title: "Homologação — Vercel, Neon, MSW, faker e fluxo de git"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-20
-related: [docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md, docs/engineering/producao.md, docs/engineering/onboarding.md]
+last_reviewed: 2026-10-21
+related: [docs/engineering/homologacao-cenarios.md, docs/adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md, docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md, docs/engineering/producao.md, docs/engineering/onboarding.md]
 ---
 
 # Homologação
@@ -80,6 +80,7 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 | `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET` | valores novos, diferentes dos de produção |
 | `STAGING_SEED_PASSWORD` | senha (≥ 10 caracteres) das contas fictícias |
 | `MOCK_INTEGRATIONS` | `true` |
+| `STAGING_DISABLE_MFA` | `true` só em Production (a staging); nunca em Preview. Dispensa o 2FA no login por e-mail e senha ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)); com `APP_ENV` diferente de `staging` o app recusa subir |
 | `APP_URL` | URL pública do ambiente |
 | `TRUSTED_PROXY_HOPS` | `1` (a Vercel acrescenta o IP real ao fim do `x-forwarded-for`; confira no primeiro deploy) |
 | `PHOTO_STORAGE`, `S3_*` | bucket R2 só de homologação (obrigatório: a Vercel não tem disco) |
@@ -87,17 +88,27 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 
 ## 4. Contas fictícias do seed
 
-Senha: `STAGING_SEED_PASSWORD`. Se a variável mudar, o próximo deploy reaplica a nova senha às contas (o seed não recria banco já semeado). O segundo fator é cadastrado no primeiro login (QR no app).
+Senha de todas: `STAGING_SEED_PASSWORD`. Se a variável mudar, o próximo deploy reaplica a nova senha às contas (o seed não recria banco já semeado). Com `STAGING_DISABLE_MFA=true` (ADR-054) ninguém cadastra nem digita segundo fator; sem a variável, o fator é cadastrado no primeiro login (QR no app). Conta nova só aparece em banco novo: reinicie o branch de banco (§ 1).
 
-| E-mail | Papel | Cenário |
+| E-mail | Papel / clínica | Para testar |
 | --- | --- | --- |
-| `super@homologacao.invalid` | `super_admin` | plataforma |
-| `admin@homologacao.invalid` | `company_admin` | clínica principal |
-| `atendente@homologacao.invalid` | `atendente` | sem dado clínico |
-| `profissional@homologacao.invalid` | `profissional` | evolução e prontuário |
-| `admin-suspensa@homologacao.invalid` | `company_admin` | **erro**: clínica suspensa, login negado |
+| `super@homologacao.invalid` | `super_admin` | plataforma, clínicas, suspensão, taxonomia; 403 em rota de clínica |
+| `admin@homologacao.invalid` | `company_admin` · principal | tudo da clínica principal |
+| `admin2@homologacao.invalid` | `company_admin` · principal | segundo admin: desativar um sem cair no último admin |
+| `atendente@homologacao.invalid` | `atendente` · principal | agenda e cadastro, sem dado clínico, 403 em financeiro/estoque/grade |
+| `profissional@homologacao.invalid` | `profissional` · principal | evolução e prontuário só de paciente com vínculo (Ana) |
+| `profissional2@homologacao.invalid` | `profissional` · principal | outro vínculo e outra comissão (Bruno) |
+| `inativo@homologacao.invalid` | `atendente` · principal, **inativa** | **erro**: login recusado |
+| `admin-suspensa@homologacao.invalid` | `company_admin` · suspensa | **erro**: clínica suspensa, login negado (403) |
+| `admin-vizinha@homologacao.invalid` | `company_admin` · vizinha | isolamento entre empresas; admin único (409 ao desativar); clínica sem CNPJ (recibo bloqueado) |
+| `paciente@homologacao.invalid` | `patient` | portal com termo de tratamento e de imagem aceitos: agendar, remarcar, foto |
+| `paciente-novo@homologacao.invalid` | `patient` | portal sem nenhum termo: fluxo de aceite, foto bloqueada |
+| `responsavel@homologacao.invalid` | `guardian` | portal em nome de menor de idade |
+| `parceiro@homologacao.invalid` | `partner` | portal do parceiro |
 
-Massa (`npm run seed:staging`, idempotente; `scripts/seed/`): 40 pacientes (sem e-mail, sem CPF,
+Os casos de validação que cada conta exercita estão em [`homologacao-cenarios.md`](homologacao-cenarios.md).
+
+Massa (`npm run seed:staging`, idempotente; `scripts/seed/`): 3 clínicas (principal, suspensa, vizinha com 3 pacientes), 40 pacientes (sem e-mail, sem CPF,
 menor com responsável), 2 profissionais, 6 procedimentos, agenda de 7 semanas com realizadas,
 cancelamento tardio e falta, faturas pagas e vencidas, avaliações seriadas (ferida melhorando e
 piorando) e estoque com lote vencido, estoque baixo e estoque zerado. Cenários de integração com

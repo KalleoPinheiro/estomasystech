@@ -140,6 +140,7 @@ npm run dev                   # http://localhost:3000
 | `RESEND_API_KEY` / `EMAIL_FROM` | não | e-mail **da plataforma** (contas sem clínica: bootstrap e reset do Super Admin); cada clínica usa a chave que cadastra ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | [resend.md](integrations/resend.md) |
 | `APP_ENV` | obrigatória na Vercel | `production`, `staging`, `preview` ou `development` | ausente fora da Vercel: `NODE_ENV=production` é produção, o resto é desenvolvimento ([ADR-041](../adr/041-homologacao-na-vercel-e-branch-staging.md)) |
 | `MOCK_INTEGRATIONS` | não | `true` liga o MSW (Resend, Google, S3/R2 simulados) | recusado em `production` |
+| `STAGING_DISABLE_MFA` | não | `true` dispensa o segundo fator no login | só com `APP_ENV=staging`; em qualquer outro ambiente o app recusa subir ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)) |
 | `PRODUCTION_DB_HOSTS` | homologação | hosts de banco de produção, separados por vírgula | `DATABASE_URL` com esse host é recusada fora de `production` |
 | `STAGING_SEED_PASSWORD` | `npm run seed:staging` | senha (≥ 10 caracteres) das contas fictícias | [homologacao.md](homologacao.md) § 4 |
 | `NEXT_PUBLIC_APP_VERSION` | não | versão exibida às clínicas; o `next.config.ts` a embute no build a partir do `package.json` | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |

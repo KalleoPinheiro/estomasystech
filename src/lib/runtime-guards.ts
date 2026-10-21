@@ -1,4 +1,8 @@
-import { mockIntegrationsEnabled, resolveAppEnv } from '@/lib/runtime-env';
+import {
+  assertStagingMfaFlagSafe,
+  mockIntegrationsEnabled,
+  resolveAppEnv,
+} from '@/lib/runtime-env';
 
 /**
  * Roda no boot do servidor (`instrumentation.ts`): recusa `APP_ENV` inválido ou
@@ -8,6 +12,7 @@ export async function startRuntimeGuards(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<void> {
   resolveAppEnv(env);
+  assertStagingMfaFlagSafe(env);
   if (mockIntegrationsEnabled(env)) {
     const { startMockServer } = await import('@/infrastructure/mocks/server');
     startMockServer();

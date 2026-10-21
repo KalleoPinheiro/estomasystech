@@ -4,7 +4,9 @@ import { Procedure } from "@/domain/catalog/procedure";
 import { Clinic } from "@/domain/clinic/clinic";
 import { ClinicalCondition } from "@/domain/clinical/clinical-condition";
 import { ConditionAssessment } from "@/domain/clinical/condition-assessment";
+import { ConsentRecord } from "@/domain/consent/consent-record";
 import { Guardian } from "@/domain/guardian/guardian";
+import { Partner } from "@/domain/partner/partner";
 import { Invoice } from "@/domain/billing/invoice";
 import { Supply } from "@/domain/inventory/supply";
 import { SupplyBatch } from "@/domain/inventory/supply-batch";
@@ -14,6 +16,8 @@ import { Money } from "@/domain/shared/money";
 import { TimeSlot } from "@/domain/shared/time-slot";
 import { getRepositories } from "@/infrastructure/container";
 import { hashPassword } from "@/lib/auth/password";
+import { CONSENT_TEXT, CONSENT_TEXT_VERSION } from "@/lib/consent-text";
+import { IMAGE_CONSENT_TEXT, IMAGE_CONSENT_TEXT_VERSION } from "@/lib/image-consent-text";
 import { clinicScope, systemScope } from "@/lib/auth/tenant-scope";
 import { validCnpj } from "../../tests/support/cnpj";
 import {
@@ -37,6 +41,8 @@ import {
  */
 export const MAIN_CLINIC_ID = "hml-clinica-principal";
 export const SUSPENDED_CLINIC_ID = "hml-clinica-suspensa";
+/** Segunda clínica ativa, sem CNPJ e com um único admin: isolamento entre empresas e regra do último admin. */
+export const NEIGHBOR_CLINIC_ID = "hml-clinica-vizinha";
 export const PATIENT_COUNT = 40;
 const DAY_MS = 86_400_000;
 
@@ -83,13 +89,23 @@ async function seedClinics(now: Date): Promise<void> {
     status: "active",
   }).suspend("homologacao-seed", now, { reason: "non_payment" });
   await clinics.create(suspended);
+  await clinics.create(
+    Clinic.restore({
+      ...base,
+      id: NEIGHBOR_CLINIC_ID,
+      name: "Clínica Vizinha (fictícia)",
+      contactPhone: "11 3333-6666",
+      contactEmail: "vizinha@homologacao.invalid",
+      status: "active",
+    }),
+  );
 }
 
-async function seedAccounts(
-  password: string,
-  professionalId: string,
+/** Equipe e cenários de erro de acesso. A matriz conta × cenário está em `docs/engineering/homologacao-cenarios.md`. */
+async function seedStaffAccounts(
+  passwordHash: string,
+  professionals: Professional[],
 ): Promise<number> {
-  const passwordHash = await hashPassword(password);
   const accounts = [
     { email: "super@homologacao.invalid", role: "super_admin", clinicId: null },
     { email: "admin@homologacao.invalid", role: "company_admin", clinicId: MAIN_CLINIC_ID },
@@ -98,16 +114,102 @@ async function seedAccounts(
       email: "profissional@homologacao.invalid",
       role: "profissional",
       clinicId: MAIN_CLINIC_ID,
-      professionalId,
+      professionalId: professionals[0].id,
     },
     // Cenário de erro: login de clínica suspensa.
     { email: "admin-suspensa@homologacao.invalid", role: "company_admin", clinicId: SUSPENDED_CLINIC_ID },
+    // Segundo admin: desativar um dos dois não cai na regra do último admin.
+    { email: "admin2@homologacao.invalid", role: "company_admin", clinicId: MAIN_CLINIC_ID },
+    // Outro profissional: vê outros pacientes (vínculo dinâmico) e outra comissão.
+    {
+      email: "profissional2@homologacao.invalid",
+      role: "profissional",
+      clinicId: MAIN_CLINIC_ID,
+      professionalId: professionals[1].id,
+    },
+    // Admin único de outra clínica: isolamento entre empresas e último admin (409).
+    { email: "admin-vizinha@homologacao.invalid", role: "company_admin", clinicId: NEIGHBOR_CLINIC_ID },
   ] as const;
   const { userAccounts } = await getRepositories(systemScope());
   for (const account of accounts) {
     await userAccounts.save(UserAccount.create({ ...account, passwordHash }));
   }
+  // Cenário de erro: conta desativada não entra (401, sem revelar o motivo).
+  await userAccounts.save(
+    UserAccount.create({
+      email: "inativo@homologacao.invalid",
+      passwordHash,
+      role: "atendente",
+      clinicId: MAIN_CLINIC_ID,
+    }).deactivate(),
+  );
+  return accounts.length + 1;
+}
+
+/** Marca o aceite dos termos como o portal grava (texto e versão vigentes). */
+async function acceptTerms(patientId: string, purposes: ("treatment" | "image")[]) {
+  const { consentRecords } = await getRepositories(clinicScope(MAIN_CLINIC_ID));
+  for (const purpose of purposes) {
+    await consentRecords.save(
+      ConsentRecord.create(
+        purpose === "treatment"
+          ? { patientId, consentText: CONSENT_TEXT, textVersion: CONSENT_TEXT_VERSION, purpose }
+          : { patientId, consentText: IMAGE_CONSENT_TEXT, textVersion: IMAGE_CONSENT_TEXT_VERSION, purpose },
+      ),
+    );
+  }
+}
+
+/**
+ * Portais: paciente com os dois termos aceitos (agenda, foto), paciente novo
+ * sem termo (fluxo de aceite, foto bloqueada), responsável de menor e parceiro.
+ * Usa pacientes do seed: o 0 é menor (tem responsável), o 1 e o 2 são adultos com e-mail.
+ */
+async function seedPortalAccounts(passwordHash: string, patients: Patient[]): Promise<number> {
+  const [minor, withTerms, withoutTerms] = patients;
+  const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
+  const partner = Partner.create({
+    fullName: "Dra. Parceira (fictícia)",
+    email: "parceira.contato@homologacao.invalid",
+    phone: fakePhone(),
+    specialty: "Cirurgia vascular",
+  });
+  await repos.partners.save(partner);
+  await acceptTerms(withTerms.id, ["treatment", "image"]);
+  const { userAccounts } = await getRepositories(systemScope());
+  const accounts = [
+    { email: "paciente@homologacao.invalid", role: "patient", patientId: withTerms.id },
+    { email: "paciente-novo@homologacao.invalid", role: "patient", patientId: withoutTerms.id },
+    { email: "responsavel@homologacao.invalid", role: "guardian", guardianId: minor.guardianId },
+    { email: "parceiro@homologacao.invalid", role: "partner", partnerId: partner.id },
+  ] as const;
+  for (const account of accounts) {
+    await userAccounts.save(
+      UserAccount.create({ ...account, passwordHash, clinicId: MAIN_CLINIC_ID }),
+    );
+  }
   return accounts.length;
+}
+
+/** Massa mínima da clínica vizinha: prova que cada empresa só enxerga o que é seu. */
+async function seedNeighborClinic(): Promise<number> {
+  const repos = await getRepositories(clinicScope(NEIGHBOR_CLINIC_ID));
+  await repos.professionals.save(
+    Professional.create({ fullName: "Carla Dias (fictícia)", registry: "COREN-SP 000003" }),
+  );
+  const names = ["Paciente Vizinho Um", "Paciente Vizinho Dois", "Paciente Vizinho Três"];
+  for (const [index, fullName] of names.entries()) {
+    await repos.patients.save(
+      Patient.create({
+        fullName,
+        email: `vizinho.${index}@homologacao.invalid`,
+        phone: fakePhone(),
+        cpf: fakeCpf(),
+        birthDate: birthDateForAge(40 + index, new Date()),
+      }),
+    );
+  }
+  return names.length;
 }
 
 async function seedPatients(now: Date) {
@@ -312,16 +414,20 @@ export async function seedHomologation(options: SeedOptions): Promise<SeedReport
   initFaker(now);
   await seedClinics(now);
   const { professionals, procedures } = await seedCatalog();
-  const accounts = await seedAccounts(options.password, professionals[0].id);
+  const passwordHash = await hashPassword(options.password);
+  const staffAccounts = await seedStaffAccounts(passwordHash, professionals);
   const patients = await seedPatients(now);
+  const portalAccounts = await seedPortalAccounts(passwordHash, patients);
+  const neighborPatients = await seedNeighborClinic();
   const { appointments, invoices } = await seedAppointments(now, patients, professionals, procedures);
   const assessments = await seedClinical(now, patients);
   const batches = await seedInventory(now);
   return {
     skipped: false,
     counts: {
-      clinics: 2,
-      accounts,
+      clinics: 3,
+      accounts: staffAccounts + portalAccounts,
+      neighborPatients,
       professionals: professionals.length,
       procedures: procedures.length,
       patients: patients.length,
