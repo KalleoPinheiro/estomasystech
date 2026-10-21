@@ -1575,3 +1575,11 @@ Issue #427 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-055; migraç�
 - **Testes novos** (nenhum existente editado): `tests/domain/{svg-sanitizer,identity-image}.test.ts`, `tests/application/manage-identity-image.test.ts`, `tests/infrastructure/{sharp-image-processor,identity-images-persistence}.test.ts`, `tests/api/identity-images.test.ts`, `tests/proxy-identity-images.test.ts`.
 - **Pendências**: (1) varredura de arquivos de avatar órfãos no bucket após a anonimização (a chave é limpa no banco, o arquivo fica; bucket privado, nome UUID); (2) logo no login, nos comprovantes e nos e-mails é a fatia seguinte (roadmap "Logo em login e comprovantes"); (3) migração `0067` e ADR-055 conferidos contra a release no momento do merge (#426 também previa `0067`: quem mergear depois renumera).
 - **Next step**: #430 depende deste. **Blockers**: nenhum.
+
+## Identidade visual: trava de acessibilidade (#424, 2026-10-21) — EM REVISÃO
+
+Bloco 0 da descoberta `.design/identidade-visual-e-tema.md` (release v0.2.0, ADR-052).
+- **Feito**: `@still-void/ui` sobe para `^3.4.1` (tintas de texto do modo claro com folga sobre fundo tingido, still-void#28); `tests/lib/contraste-tema.test.ts` lê o `theme.css` publicado e confere, nas 4 cores × 2 modos, texto e texto secundário sobre as 4 superfícies, acento e estado como texto (superfície lisa e tinta de 10%) e `#0a0a0c` sobre o acento; `@axe-core/playwright` com `e2e/acessibilidade.spec.ts` (login e esqueci-senha, com `prefers-color-scheme` claro e escuro, 0 violações séria/crítica; o app só segue o esquema do sistema depois do #425).
+- **Testes novos**, mais um ajuste com `TESTE-ALTERADO`: `tests/app/still-void-version.test.ts` passa a exigir a 3.4.1 (o #425 deixou a 3.4.0 para esta entrega). Rodado contra o build de produção.
+- **Fora do escopo, pendente no Still Void**: borda de controle a 3:1 (hoje `--sv-border-strong` fica perto de 1,5:1); o teste não cobre bordas até existir um token próprio.
+- **Next step**: telas novas (Hoje, Identidade, Aparência) somam rotas ao spec do axe quando chegarem (#425 a #429). **Blockers**: nenhum.
