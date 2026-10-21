@@ -1627,3 +1627,9 @@ Issue #430 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-057; sem migr
 - **Perguntas abertas (produto)**: logo no login (como identificar a clínica antes de entrar, sem expor quem é cliente?) e logo em e-mail (precisa de URL pública da imagem). HEIC já respondido no ADR-055.
 - **Testes novos**: `tests/lib/instalar-na-tela-inicial.test.ts`, `tests/components/document-frame-logo.test.tsx`. Nenhum teste existente alterado.
 - **Next step**: aguardar decisão de produto sobre login/e-mail. **Blockers**: nenhum.
+
+## Procedimentos em lista + ficha (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 5, desenho aprovado pelo Kalléo na canvas (Cadastros). `/procedimentos`: título "Procedimentos"; Editar abre a ficha ao lado da lista (`lg:` duas colunas; abaixo da lista no celular), linha escolhida com `aria-selected`; Novo procedimento e Kit seguem em janela. Nenhum teste existente alterado; testes novos na página e `e2e/procedimentos-ficha.spec.ts`.
+- **Pergunta aberta (regra 5)**: no celular a canvas mostra o formulário em folha de baixo; aqui a ficha empilha abaixo da lista. A folha de baixo pede um componente do Still Void (ou `sv-gap`); decidir antes de Materiais/Profissionais/Parceiros, que seguem o mesmo padrão.
+- **Next step**: Materiais, Profissionais, Parceiros no mesmo padrão. **Blockers**: nenhum.
