@@ -55,7 +55,7 @@ test.describe("login por e-mail e senha", () => {
     // paralelo. A revogação em si é provada em tests/api/session-revocation.
     await context.addCookies([sessionCookie("logout-e2e@estomasystech.test", "company_admin")]);
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Hoje", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Sair" }).click();
     await expect(page).toHaveURL(/\/login/);

@@ -69,7 +69,7 @@ describe('Feature: menu por papel (#199)', () => {
 
     // Configurações: só Feriados e ausências (#215).
     expect(labels).toEqual([
-      'Dashboard',
+      'Hoje',
       'Agenda',
       'Pacientes',
       'Parceiros',

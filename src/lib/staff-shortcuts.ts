@@ -22,7 +22,7 @@ const page = (href: StaffPage['href'], label?: string): BottomNavItem => {
   return { href, label: label ?? found.label, api: found.api };
 };
 
-const HOJE = page('/', 'Hoje');
+const HOJE = page('/');
 const AGENDA = page('/agenda');
 const PACIENTES = page('/pacientes');
 const FATURAS = page('/faturamento', 'Faturas');

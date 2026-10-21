@@ -484,7 +484,7 @@ describe('Feature: Dashboard do painel interno', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('heading', { level: 1, name: 'Dashboard' }),
+          screen.getByRole('heading', { level: 1, name: 'Hoje' }),
         ).toBeInTheDocument();
       });
       expect(
