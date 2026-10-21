@@ -8,7 +8,7 @@
 
 <!-- Base do PR (ADR-052): `feat/*` → `release/vX.Y.Z` (squash, sem recibo); `release/*` ou `hotfix/*` → `main` (merge commit para a release, com recibo). -->
 
-<!-- Recibo do gate local (ADR-042): só no PR que entra na `main`. Cole a linha impressa por `npm run gate:local` (sem ela o CI reprova). Apague no PR para `release/*`. -->
+<!-- Recibo do gate local (ADR-042): só no PR que entra na `main`. Cole a linha impressa por `npm run gate:local` (sem ela o CI reprova). Apague no PR para `release/*` e no PR que toca só `.md` de documentação (ADR-053). -->
 E2E-GATE:
 
 ## Homologação
