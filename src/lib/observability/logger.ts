@@ -1,3 +1,4 @@
+import { redactFields, scrubText } from '@/lib/redact';
 import { withRequestId } from './request-context';
 
 /**
@@ -6,8 +7,12 @@ import { withRequestId } from './request-context';
  * corrente (quando há) e campos extras. `tests/lib/log-error-architecture`
  * proíbe `console.*` fora deste arquivo.
  *
- * Os campos não devem levar dado pessoal: use ids. Erro passa por `logError`
- * (`src/lib/log-error.ts`), que remove query, parâmetros e PII da mensagem.
+ * Redação central (#381, ADR-059): `msg` e campos passam por `scrubText` e
+ * `redactFields` antes de qualquer saída — CPF, e-mail, telefone, nome de
+ * pessoa, conteúdo clínico, token e senha nunca chegam ao stdout nem ao
+ * GlitchTip, mesmo que o chamador esqueça. Use ids nos campos de qualquer
+ * jeito. Erro passa por `logError` (`src/lib/log-error.ts`), que remove query,
+ * parâmetros e PII da mensagem.
  */
 export type LogLevel = 'info' | 'warn' | 'error';
 
@@ -43,12 +48,15 @@ export function emit(
 ): void {
   const time = new Date().toISOString();
   withRequestId((requestId) => {
+    // Campo não sobrescreve `time`, `level` nem `msg`; a ordem das chaves
+    // (metadados primeiro) é a que o parser do E2E (`invite-log`) espera.
+    const { time: _t, level: _l, msg: _m, ...extra } = redactFields(fields);
     const entry: LogEntry = {
       time,
       level,
-      msg,
+      msg: scrubText(msg),
       ...(requestId ? { requestId } : {}),
-      ...fields,
+      ...extra,
     };
     write(entry);
     sink?.(entry);

@@ -1705,3 +1705,10 @@ Correção pedida pelo Kalléo (staging f42666e, desktop): avatar cortado ("C(" 
 Segundo passo da rotina mensal: `.github/workflows/rotina-mensal.yml` abre a issue «Rotina mensal de manutenção — AAAA-MM» com o checklist do `producao.md` § 7.4. **Desligado**: só `workflow_dispatch`, com o `schedule` (sábados 11:00 UTC, filtrado para o 1º sábado) comentado; job de poucos segundos, sem checkout, sem duplicar issue aberta. `producao.md` § 7.4 ganhou o passo a passo de ativação.
 - **Decisão minha**: `ubuntu-24.04` (como os demais workflows) em vez de `ubuntu-latest`; sem label na issue (label inexistente faria o `gh issue create` falhar).
 - **Next step**: ativar depois do reset da cota (~2026-11-01), descomentando o `schedule`. **Blockers**: nenhum.
+## Mascarar dados pessoais nos logs (2026-10-21) — EM REVISÃO
+
+Issue #381 (item logs/LGPD), decisão do Kalléo: mascarar PII nos logs e auditar/documentar sempre com dado mascarado. `emit` do logger passa `msg` por `scrubText` e os campos por `redactFields` (`src/lib/redact.ts`): chave sensível (CPF, e-mail, telefone, nome de pessoa, anamnese/diagnóstico/notas, senha, token, corpo de mensagem…) vira `[redigido]`; URL com query, Bearer/JWT, sequência opaca, e-mail e número longo viram marcador. GlitchTip: contexto, mensagem, `transaction` e tags também. ADR-059; auditoria dos 56 pontos de log em `docs/engineering/auditoria-logs-pii-2026-10.md`; runbook § 9.4 e `glitchtip.md` atualizados.
+- **Decisão**: única exceção é o `link` de definição de senha fora de produção (dry-run do `NullEmailGateway`; o E2E depende dele). Teste de arquitetura C17 proíbe nome/e-mail/CPF/telefone crus em mensagem de log.
+- **Testes novos**: `redact-campos`, `logger-redacao`, `error-tracker-redacao`, `log-pii-architecture`. Nenhum teste existente alterado.
+- **Pergunta aberta**: o log de acesso do Traefik/Coolify pode guardar `?token=` de convite/reset; não verificado (exige olhar o servidor, via RC). Entra na rotina mensal.
+- **Next step**: aguardar revisão. **Blockers**: nenhum.

@@ -45,9 +45,9 @@ Lista do que **pode** sair (`buildEvent`), não do que não pode:
 
 | Campo do evento | Conteúdo |
 | --- | --- |
-| `message` | o contexto do `logError` (ids, nunca nome/e-mail) |
-| `exception` | tipo, mensagem já limpa (sem SQL e parâmetros, #202; e-mail e número de 8+ dígitos viram `[e-mail]`/`[número]`) e os frames do stack (sem a linha da mensagem) |
-| `tags` | `requestId`, `code` (SQLSTATE ou código do Node), `table` |
+| `message` | o contexto do `logError` (ids, nunca nome/e-mail), com `scrubText` |
+| `exception` | tipo, mensagem já limpa (sem SQL e parâmetros, #202; e-mail e número de 8+ dígitos viram `[e-mail]`/`[número]`; URL com query e credencial viram `[redigido]`) e os frames do stack (sem a linha da mensagem) |
+| `tags` | `requestId`, `code` (SQLSTATE ou código do Node), `table` (valores com `scrubText`, [ADR-059](../../adr/059-redacao-central-de-pii-nos-logs.md)) |
 | `environment`, `release`, `platform`, `sdk` | metadados do processo |
 
 Nunca: `request` (URL, cabeçalhos, cookies, corpo), `user`, `breadcrumbs`, `extra`, `contexts`,
