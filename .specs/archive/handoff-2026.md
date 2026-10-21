@@ -1567,7 +1567,7 @@ Issue #429, fatia 2. Decisão do orquestrador por segurança do paciente (dois i
 - **Fora desta fatia**: lista de espera (a API não traz nascimento) e a lista de Pacientes (já tem coluna de nascimento). Dado de saúde: a data de nascimento já é visível à equipe na lista de Pacientes; as rotas continuam atrás das mesmas guardas e o Profissional só recebe a própria agenda.
 - **Next step**: aguardar #427 e #424 para as telas restantes do #429. **Blockers**: nenhum.
 
-## Logo da clínica e avatar da equipe (2026-10-21) — EM REVISÃO
+## Logo da clínica e avatar da equipe (2026-10-21) — CONCLUÍDO (PR #441 mergeado na release/v0.2.0)
 
 Issue #427 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-055; migração `0067`.
 - **Feito**: `clinics.logo_key` e `user_accounts.avatar_key`; `POST|DELETE /api/settings/clinic-logo` (só o Admin, família administrativa; diverge do nome `/api/clinic/logo` da issue porque a família de rota é por caminho) e `GET /api/clinic/logo` e `POST|DELETE /api/account/avatar` + `GET /api/account/avatar/[id]` (mesma clínica, conta ativa); `identity: { logoUrl, imageUploadAvailable }` em `GET /api/settings/clinic-info`, `imageUploadAvailable` também em `/api/me`, `avatarUrl` em `/api/me`, `clinicLogoUrl`/`account.avatarUrl` em `/api/auth/identity`; telas em Configurações, Minha conta e menu da equipe. SVG: `src/domain/clinic/svg-sanitizer.ts` (allowlist, reconstrói o arquivo, rejeita conteúdo ativo; 70 casos com payloads de XSS), entrega com `nosniff` + CSP `sandbox` (o proxy aplica a CSP isolada nessas rotas). Raster: `sharp` recodifica em WebP sem EXIF.
@@ -1599,3 +1599,13 @@ Issue #429, fatia 4. `e2e/acessibilidade-portal-plataforma.spec.ts` roda o axe (
 - **Achado e correção**: portal, `scrollable-region-focusable` nos textos de termo (`consent-card.tsx`, `partner-consent-card.tsx`): o `Prose` com `overflow-y-auto` não era focável por teclado; ganhou `tabIndex={0}`, `role="region"` e `aria-label`. As demais telas já passavam. Sem teste existente alterado.
 - **Fora do axe**: definir senha com token válido (estado de formulário) e telas internas do portal além do início; ficam para quando houver helper de token.
 - **Next step**: "lista + ficha" e login redesenhado seguem pausados até o Kalléo ver a canvas. **Blockers**: nenhum.
+
+## Tema e cor por clínica (2026-10-21) — EM REVISÃO
+
+Issue #426 (bloco 2 de `.design/identidade-visual-e-tema.md`), ADR-056; migração `0068`.
+- **Feito**: `clinics.theme_mode` (`light|dark|system`) e `clinics.theme_accent` (`cyan|violet|mint|amber`) com `CHECK`; `src/domain/clinic/clinic-identity.ts` (lista fechada, validação, padrão `system` + `violet`); `UpdateClinicTheme`; `PUT /api/settings/clinic-identity` (só o Admin, auditoria `clinic-theme`; diverge do `/api/clinic/identity` da issue pelo mesmo motivo do ADR-055: família de rota por caminho); tema em `identity.theme` de `clinic-info` e `clinicTheme` de `/api/auth/identity`; seção "Identidade visual" em Configurações com prévia (Atendente e Profissional veem, não editam); o layout raiz lê a sessão e escreve `data-theme`/`data-accent`; `ClinicThemeSync` reaplica a cor da clínica a cada montagem (o valor guardado pelo pacote vencia o do servidor) e resolve `system` por `prefers-color-scheme`, ao vivo; botão claro/escuro grava a escolha do aparelho em chave própria (`estomasystech:modo-escolhido`), com cópia em memória. Seed: a clínica vizinha nasce escura e âmbar.
+- **Decisão `system`**: o pacote só tem `light` e `dark`. O servidor entrega claro, o script inline (nonce da CSP) resolve antes de pintar. Aparelhos que já tinham a chave do pacote da #425 seguem o padrão da clínica até o primeiro clique.
+- **TESTE-ALTERADO**: `tests/pages/configuracoes-role.test.tsx` (2 asserções): a lista de títulos do Atendente e do Profissional em Configurações ganhou "Identidade visual", porque o requisito da issue é que eles vejam a seção. Nenhum outro teste existente foi editado.
+- **Testes novos**: `tests/domain/clinic-identity.test.ts`, `tests/application/update-clinic-theme.test.ts`, `tests/infrastructure/clinic-theme-persistence.test.ts`, `tests/api/clinic-theme.test.ts`, `tests/lib/{theme-clinic,clinic-theme-server,device-mode}.test.ts`, `tests/components/clinic-theme-sync.test.tsx`, `tests/pages/identity-section.test.tsx`.
+- **Pendências**: a consulta da clínica a cada renderização não tem cache; limpeza de avatar órfão (fatia seguinte, LGPD) e logo em login e comprovantes seguem abertas.
+- **Next step**: limpeza de avatar órfão, depois #430. **Blockers**: nenhum.

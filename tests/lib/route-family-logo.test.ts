@@ -22,3 +22,14 @@ describe('Feature: Quem mexe na logo e no avatar (#427)', () => {
     },
   );
 });
+
+describe('Feature: Quem muda o tema da clínica (#426)', () => {
+  it('Dado a troca de tema, Quando classificar, Então é administrativa: só o Admin de Empresa', () => {
+    const family = classifyRoute('/api/settings/clinic-identity');
+
+    expect(family).toBe('administrative');
+    expect(isFamilyAllowedForRole(family, 'company_admin')).toBe(true);
+    expect(isFamilyAllowedForRole(family, 'atendente')).toBe(false);
+    expect(isFamilyAllowedForRole(family, 'profissional')).toBe(false);
+  });
+});

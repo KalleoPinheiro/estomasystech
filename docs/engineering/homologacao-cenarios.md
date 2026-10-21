@@ -62,6 +62,7 @@ acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada lin
 | Conta de outra empresa é 404; `clinicId` no corpo é ignorado; auditoria da outra clínica não aparece | ACE-RN-11, ACE-RN-26, ACE-RN-32 | **admin** x **admin-vizinha** | UI + massa |
 | Convite expirado (24 h) ou usado duas vezes: link inválido; senha de 9 caracteres ou comum recusada | ACE-RN-03, ACE-RN-41 | convite de **admin** a novo e-mail (link na tela: clínica sem canal) | UI |
 | Sessão revogada por logout, reset, troca de senha ou desativação | ACE-RN-08 | duas abas com **admin**; trocar a senha em uma | UI |
+| Tema da clínica: só o Admin troca; cada clínica tem o seu; modo do aparelho vence o padrão | ACE-RN-61 | **admin** troca para escuro/menta e **atendente** (403 no PUT, vê desabilitado); **admin-vizinha** já nasce escura e âmbar; trocar claro/escuro no menu e recarregar mantém a escolha do aparelho | UI + massa |
 | Provedor de e-mail falha no convite: conta criada, link devolvido | ACE-RN-33 | convidar `erro@homologacao.invalid` | UI |
 | Bootstrap duplicado, tokens e recuperação em corrida, auditoria write-ahead, readiness 503 | ACE-RN-04, ACE-RN-20, ACE-RN-31, ACE-RN-46 | — | auto |
 | Segundo fator ausente, em formato errado ou código de recuperação | ACE-RN-18 | **desligado na staging** (ADR-054) | auto |

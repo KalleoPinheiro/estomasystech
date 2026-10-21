@@ -48,6 +48,7 @@ import { useSavableForm } from '@/lib/use-savable-form';
 import { CancellationPolicyFields } from './cancellation-policy-fields';
 import { ClosuresSection } from './closures-section';
 import { EmailChannelSection } from './email-channel-section';
+import { IdentitySection } from './identity-section';
 import { LogoSection } from './logo-section';
 import { LunchBreakFields } from './lunch-break-fields';
 import { PortalLinkField } from './portal-link-field';
@@ -103,6 +104,7 @@ export default function SettingsPage() {
       <PageHeader title="Configurações" />
       {can('/api/settings/clinic-info') && <ClinicInfoSection />}
       {can('/api/settings/clinic-info') && <LogoSection />}
+      <IdentitySection />
       {can('/api/settings/clinic-info') && <PrivacyContactSection />}
       {can('/api/settings/schedule') && <ScheduleSection />}
       <ClosuresSection />

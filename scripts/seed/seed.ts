@@ -97,6 +97,9 @@ async function seedClinics(now: Date): Promise<void> {
       contactPhone: "11 3333-6666",
       contactEmail: "vizinha@homologacao.invalid",
       status: "active",
+      // Tema próprio (#426): a vizinha entra escura e âmbar; a principal segue o padrão.
+      themeMode: "dark",
+      themeAccent: "amber",
     }),
   );
 }

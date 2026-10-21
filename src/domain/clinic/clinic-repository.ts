@@ -18,4 +18,6 @@ export interface ClinicRepository {
   saveCnpjReview(clinic: Clinic): Promise<void>;
   /** Grava só a chave da logo (#427), sem regravar o cadastro. */
   saveLogoKey(clinic: Clinic): Promise<void>;
+  /** Grava só o tema (#426), sem regravar o cadastro. */
+  saveTheme(clinic: Clinic): Promise<void>;
 }

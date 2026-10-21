@@ -1,4 +1,8 @@
 import type { NextRequest } from 'next/server';
+import {
+  type ClinicTheme,
+  DEFAULT_CLINIC_THEME,
+} from '@/domain/clinic/clinic-identity';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest, ok } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -9,6 +13,10 @@ import {
   clinicLogoUrl,
   type SidebarIdentityDto,
 } from '@/lib/dto';
+
+const isDefaultTheme = (theme: ClinicTheme) =>
+  theme.mode === DEFAULT_CLINIC_THEME.mode &&
+  theme.accent === DEFAULT_CLINIC_THEME.accent;
 
 const SYSTEM_ACCOUNT_LABEL = 'Conta de sistema';
 
@@ -45,6 +53,9 @@ export async function GET(request: NextRequest) {
     return {
       clinicLabel: clinic ? clinic.name : 'Clínica não encontrada',
       ...(logoUrl ? { clinicLogoUrl: logoUrl } : {}),
+      ...(clinic && !isDefaultTheme(clinic.theme)
+        ? { clinicTheme: clinic.theme }
+        : {}),
       account: { ...account, ...(avatarUrl ? { avatarUrl } : {}) },
     } satisfies SidebarIdentityDto;
   });
