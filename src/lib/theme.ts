@@ -1,4 +1,4 @@
-import type { AccentName, ThemeMode } from '@still-void/ui/react';
+import { type AccentName, colors, type ThemeMode } from '@still-void/ui/react';
 
 /**
  * Tema padrão do app: claro + violeta, o visual de antes da fundação de tema
@@ -19,3 +19,7 @@ export const THEME_STORAGE_KEY = 'estomasystech:modo';
 export function themeToggleLabel(mode: ThemeMode): string {
   return mode === 'dark' ? 'Usar tema claro' : 'Usar tema escuro';
 }
+
+/** Cor da barra do navegador/status bar (`theme-color`): o fundo literal do Still Void. */
+export const THEME_COLOR_LIGHT = colors.light.bg;
+export const THEME_COLOR_DARK = colors.dark.bg;

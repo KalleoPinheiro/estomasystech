@@ -1531,3 +1531,13 @@ Issue #425, primeiro bloco da identidade visual (`.design/identidade-visual-e-te
 - **Decisão não crítica**: componente próprio em vez do `ThemeToggle` do pacote (texto em inglês); `package.json` segue em `^3.4.0` (o teste de versão fixa o intervalo; a 3.4.1 entra com a trava de contraste #424).
 - **Atenção para #426**: o Still Void guarda modo e acento na mesma chave do `localStorage` e o valor guardado vence o do servidor; ao ligar a cor da clínica, chamar `setAccent` na montagem. O modo "automático" (`system`) não existe no pacote: #426 decide como mapeá-lo.
 - **Next step**: #426 (identidade da clínica) e #428. **Blockers**: nenhum.
+
+
+## Shell mobile: barra inferior e Mais (2026-10-21) — EM REVISÃO
+
+Issue #428 (parte 1 de 2; a tela "Hoje" vai em PR separado). Base: `.design/identidade-visual-e-tema.md`.
+- **Feito**: `BottomNav` (abaixo de `md`, atalhos por papel: Admin Hoje/Agenda/Pacientes/Faturas/Mais, Atendente sem Faturas, Profissional com Triagem e contador), rota `/mais` (grupos Atendimento, Gestão e Conta filtrados por `canRoleAccess`, com tema e Sair), `viewport` com `viewport-fit=cover` e `theme-color` claro/escuro, `min-h-dvh`, safe-area na barra e no conteúdo, `sv-gap: field-font-16` (campo ≥ 16px), `overscroll-behavior` e tap-highlight. Testes novos: `tests/lib/staff-shortcuts.test.ts`, `tests/components/bottom-nav.test.tsx`, `e2e/shell-mobile.spec.ts`.
+- **TESTE-ALTERADO**: `e2e/sidebar-responsive.spec.ts` — o seletor `nav a` pegava os links da barra inferior (nova `<nav>`), cobertos pelo drawer; agora escopado ao `dialog` do drawer. Comportamento testado igual.
+- **Decisões não críticas**: drawer do menu lateral mantido no celular (trocá-lo exigiria mexer em 5 E2E existentes; fica para o PR que fechar o shell); "Mais" é rota real (o voltar do aparelho funciona); "Ajuda e suporte" fora (não há tela; pergunta aberta ao dono); sem axe (`@axe-core/playwright` entra com a trava #424).
+- **Pendente (spike do issue)**: rodapé fixo com teclado aberto e gesto de voltar em iPhone e Android reais; só se mede no aparelho.
+- **Next step**: PR "Hoje" (#428 parte 2) e listas em cartões (#429). **Blockers**: nenhum.

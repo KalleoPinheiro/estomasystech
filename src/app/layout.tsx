@@ -1,11 +1,13 @@
 import { ThemeScript } from '@still-void/ui/react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { headers } from 'next/headers';
 import { StagingBanner } from '@/components/staging-banner';
 import {
   DEFAULT_THEME_ACCENT,
   DEFAULT_THEME_MODE,
+  THEME_COLOR_DARK,
+  THEME_COLOR_LIGHT,
   THEME_STORAGE_KEY,
 } from '@/lib/theme';
 import { Providers } from './providers';
@@ -34,6 +36,16 @@ const jetbrainsMono = localFont({
   weight: '100 800',
   display: 'swap',
 });
+
+// viewport-fit=cover deixa o app ocupar a tela toda no iPhone; as bordas usam
+// env(safe-area-inset-*). Sem maximum-scale/user-scalable: o zoom é do usuário.
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: THEME_COLOR_LIGHT },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLOR_DARK },
+  ],
+};
 
 export const metadata: Metadata = {
   title: 'EstomaSysTech — Clínica de Estomaterapia',
@@ -70,7 +82,7 @@ export default async function RootLayout({
       <head>
         <ThemeScript storageKey={THEME_STORAGE_KEY} nonce={nonce} />
       </head>
-      <body className="sv-body min-h-screen">
+      <body className="sv-body min-h-dvh">
         <StagingBanner />
         <Providers>{children}</Providers>
       </body>

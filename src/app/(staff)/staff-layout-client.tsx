@@ -6,6 +6,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@still-void/ui/react/client';
+import { BottomNav } from '@/components/app-shell/bottom-nav';
 import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
@@ -67,7 +68,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
           div (item flex único dessa linha) herda `min-width: auto` e cresce até
           caber o conteúdo do `<main>`, empurrando a página inteira além do
           viewport em mobile mesmo com a tabela já contida em overflow-x-auto. */}
-        <div className="flex min-h-screen w-full min-w-0 flex-1">
+        <div className="flex min-h-dvh w-full min-w-0 flex-1">
           {/* O <main> não usa o <Layout> do pacote de propósito: `.sv-layout` limita
             a 1120px e as telas do staff são tabelas largas. */}
           <SidebarPanel className="w-56 shrink-0 justify-between border-border border-r p-5">
@@ -83,7 +84,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
               <AppVersion />
             </div>
           </SidebarPanel>
-          <SidebarInset className="min-w-0 flex-1 px-4 py-5 sm:p-6 lg:p-8">
+          <SidebarInset className="min-w-0 flex-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6 lg:p-8">
             <div className="mb-4 flex items-center gap-3 lg:hidden">
               {/* min-h-11/min-w-11 (44px): o padding padrão do still-void
                 (--sv-space-2 = 8px) rende um alvo de toque de ~38px — abaixo do
@@ -93,6 +94,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
             </div>
             <RoleGate>{children}</RoleGate>
           </SidebarInset>
+          <BottomNav />
         </div>
       </SidebarProvider>
     </StaffIdentityProvider>

@@ -122,3 +122,21 @@
     min-width: calc(var(--sv-space-10) + var(--sv-space-1));
   }
 }
+
+/* --- Shell mobile (#428) ---
+   Sem destaque azul ao tocar e sem "puxar para atualizar" do navegador por cima
+   do app. A animação reduzida já vem do Still Void (prefers-reduced-motion). */
+html {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* sv-gap: field-font-16
+   O `.sv-field` da lib usa 15px em tela estreita; o Safari do iOS dá zoom ao
+   focar campo abaixo de 16px e a tela fica deslocada. Em tela estreita ou
+   ponteiro grosso, todo campo sobe para no mínimo 1rem. */
+@media (width < 40rem), (pointer: coarse) {
+  .sv-field {
+    font-size: max(1rem, var(--sv-text-base));
+  }
+}
