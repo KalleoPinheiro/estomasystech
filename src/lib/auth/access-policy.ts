@@ -47,6 +47,12 @@ export const PUBLIC_PATHS = [
   // Health check (#212): liveness e readiness, sem dado sensível.
   '/api/health',
   '/api/health/ready',
+  // Instalar na tela inicial (#430): manifesto e ícones da marca, sem dado da clínica.
+  '/manifest.webmanifest',
+  '/apple-touch-icon.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-512.png',
 ] as const;
 
 /** Rotas acessíveis a qualquer papel autenticado; todo o resto é exclusivo do admin (equipe). */

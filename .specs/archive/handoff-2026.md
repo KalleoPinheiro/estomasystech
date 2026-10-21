@@ -1618,3 +1618,12 @@ Pendência do #427 (LGPD: foto de rosto é dado pessoal), sem ADR novo (completa
 - **Testes novos**: `tests/application/retention-avatars.test.ts`, `tests/infrastructure/retention-avatars-persistence.test.ts`.
 - **Next step**: #430. **Blockers**: nenhum.
 
+
+## Instalar na tela inicial e logo nos documentos (2026-10-21) — EM REVISÃO
+
+Issue #430 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-057; sem migração.
+- **Feito**: `src/app/manifest.ts` (`standalone`, `pt-BR`, ícones 192/512/maskable) e ícone do iOS no `metadata` do layout; ícones gerados por `scripts/brand/generate-icons.ts` com tokens do Still Void; os cinco caminhos entram em `PUBLIC_PATHS` (exatos); `ClinicInfoDto.logoUrl` opcional e logo no cabeçalho de `DocumentFrame` só quando a clínica enviou.
+- **Decisões**: sem service worker (nada de prontuário em cache no aparelho); manifesto e ícones são da plataforma, iguais para todas as clínicas (rota pública não sabe a clínica).
+- **Perguntas abertas (produto)**: logo no login (como identificar a clínica antes de entrar, sem expor quem é cliente?) e logo em e-mail (precisa de URL pública da imagem). HEIC já respondido no ADR-055.
+- **Testes novos**: `tests/lib/instalar-na-tela-inicial.test.ts`, `tests/components/document-frame-logo.test.tsx`. Nenhum teste existente alterado.
+- **Next step**: aguardar decisão de produto sobre login/e-mail. **Blockers**: nenhum.
