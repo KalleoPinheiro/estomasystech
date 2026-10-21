@@ -179,11 +179,7 @@ function KpiGrid({
       className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
     >
       {cards.map((card) => (
-        <Link
-          key={card.label}
-          href={card.href}
-          aria-label={`Ver ${card.label.toLowerCase()}`}
-        >
+        <Link key={card.label} href={card.href}>
           <Card className="h-full p-4 transition-colors hover:border-accent sm:p-5">
             <p className="text-ink-3 text-sm">{card.label}</p>
             <p

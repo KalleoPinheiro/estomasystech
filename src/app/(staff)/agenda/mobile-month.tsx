@@ -98,12 +98,12 @@ export function MobileMonth({
                 data-has-appointments={hasAppointments || undefined}
                 onClick={() => setSelection({ monthKey, day: key })}
                 className={`relative h-auto min-h-11 w-full min-w-0 flex-col gap-0.5 p-0 font-medium text-sm ${
-                  inMonth ? '' : 'text-ink-3 opacity-60'
+                  inMonth ? '' : 'text-ink-3'
                 } ${isSelected ? 'bg-accent-soft text-accent-ink' : ''}`}
               >
                 <span
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${
-                    key === todayKey ? 'bg-accent-ink text-white' : ''
+                    key === todayKey ? 'bg-accent-ink text-bg' : ''
                   }`}
                 >
                   {day.getDate()}
