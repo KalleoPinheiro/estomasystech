@@ -31,6 +31,8 @@ export interface UserAccountState extends UserAccountProps {
   sessionVersion?: number;
   /** Anonimizada pela retenção (#294): não volta a ser ativada (#311). */
   anonymizedAt?: Date | null;
+  /** Chave do avatar no armazenamento (#427); só equipe, `null` = iniciais. */
+  avatarKey?: string | null;
 }
 
 export const ANONYMIZED_ACCOUNT_REACTIVATION =
@@ -122,6 +124,15 @@ export class UserAccount {
     return this.state.guardianId ?? null;
   }
 
+  get avatarKey(): string | null {
+    return this.state.avatarKey ?? null;
+  }
+
+  /** Outra instância com o avatar trocado (ou removido, com `null`). */
+  withAvatarKey(avatarKey: string | null): UserAccount {
+    return new UserAccount({ ...this.state, avatarKey });
+  }
+
   get isAnonymized(): boolean {
     return (this.state.anonymizedAt ?? null) !== null;
   }
@@ -177,6 +188,8 @@ export interface UserAccountRepository {
    * token de uso único, não do tenant.
    */
   updatePasswordHash(id: string, passwordHash: string): Promise<void>;
+  /** Grava só a chave do avatar (#427): `save` não a regrava, então não desfaz uma troca concorrente. */
+  saveAvatarKey(id: string, avatarKey: string | null): Promise<void>;
   /**
    * Re-hash da MESMA senha com custo maior, no login (#208): grava só se o
    * hash ainda for `currentHash` — uma troca de senha concorrente vence — e

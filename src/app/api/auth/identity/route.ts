@@ -4,7 +4,11 @@ import { handleRequest, ok } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { staffRoleLabel } from '@/lib/auth/role-labels';
 import { sessionScope } from '@/lib/auth/tenant-scope';
-import type { SidebarIdentityDto } from '@/lib/dto';
+import {
+  accountAvatarUrl,
+  clinicLogoUrl,
+  type SidebarIdentityDto,
+} from '@/lib/dto';
 
 const SYSTEM_ACCOUNT_LABEL = 'Conta de sistema';
 
@@ -30,11 +34,18 @@ export async function GET(request: NextRequest) {
   }
 
   return handleRequest(async () => {
-    const { clinics } = await getRepositories(sessionScope(session));
+    const { clinics, userAccounts } = await getRepositories(
+      sessionScope(session),
+    );
     const clinic = await clinics.findById(session.clinicId as string);
+    const own = await userAccounts.findByEmail(session.subject);
+    const logoUrl = clinicLogoUrl(clinic?.logoKey ?? null);
+    const avatarUrl = own ? accountAvatarUrl(own.id, own.avatarKey) : null;
+    // Chaves só aparecem quando há imagem: a resposta sem imagem não muda.
     return {
       clinicLabel: clinic ? clinic.name : 'Clínica não encontrada',
-      account,
+      ...(logoUrl ? { clinicLogoUrl: logoUrl } : {}),
+      account: { ...account, ...(avatarUrl ? { avatarUrl } : {}) },
     } satisfies SidebarIdentityDto;
   });
 }

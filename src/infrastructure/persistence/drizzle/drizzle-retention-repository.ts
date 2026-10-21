@@ -613,6 +613,9 @@ async function anonymizeAccounts(
       // Idem para o responsável (ADR-027): solta o cadastro, que pode ser
       // apagado quando nenhum paciente o usa.
       guardianId: null,
+      // Avatar (#427): foto de rosto é dado pessoal; a conta anonimizada
+      // deixa de apontar para ela e o arquivo some do alcance da API.
+      avatarKey: null,
       anonymizedAt: now,
     })
     .where(

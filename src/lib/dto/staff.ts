@@ -2,6 +2,8 @@ import type { UserRole } from '@/domain/auth/user-role';
 /** Identidade da sessão ativa exibida na sidebar (issue #126) — `account` é sempre a conta da sessão. */
 export interface SidebarIdentityDto {
   clinicLabel: string;
+  /** Logo da clínica (#427); ausente ou `null` = iniciais. */
+  clinicLogoUrl?: string | null;
   /** `role` permite à UI escolher a visão (ex.: repasses da clínica × próprios). */
   /** `professionalId`: vínculo da conta, para a UI limitar o Profissional ao que é dele (#215). */
   account: {
@@ -9,6 +11,8 @@ export interface SidebarIdentityDto {
     role: UserRole;
     roleLabel: string;
     professionalId: string | null;
+    /** Avatar da conta (#427); ausente ou `null` = iniciais. */
+    avatarUrl?: string | null;
   };
 }
 

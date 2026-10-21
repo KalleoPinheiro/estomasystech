@@ -15,6 +15,7 @@ import { getRequestSession } from '@/lib/auth/request-session';
 import { SESSION_COOKIE, type Session } from '@/lib/auth/session';
 import { isSessionRevoked } from '@/lib/auth/staff-revocation';
 import { isStaffRole } from '@/lib/auth/staff-roles';
+import { IDENTITY_IMAGE_CSP } from '@/lib/identity-image-csp';
 import { loginPath, SESSION_EXPIRED_ERROR } from '@/lib/login-redirect';
 import { runWithRequestId } from '@/lib/observability/request-context';
 import {
@@ -139,6 +140,9 @@ function authNotConfiguredResponse(): NextResponse {
  * de CSS injection.
  */
 function nextWithCsp(request: NextRequest, requestId: string): NextResponse {
+  if (isIdentityImagePath(request.nextUrl.pathname)) {
+    return nextWithImageCsp(request, requestId);
+  }
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const isDev = process.env.NODE_ENV === 'development';
   const csp = [
@@ -163,6 +167,23 @@ function nextWithCsp(request: NextRequest, requestId: string): NextResponse {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', csp);
+  return response;
+}
+
+/** Logo e avatar (#427): a CSP delas é a do `sandbox`, não a da página. */
+const IDENTITY_IMAGE_PATH = /^\/api\/(clinic\/logo|account\/avatar\/[^/]+)$/;
+
+export const isIdentityImagePath = (pathname: string): boolean =>
+  IDENTITY_IMAGE_PATH.test(pathname);
+
+function nextWithImageCsp(
+  request: NextRequest,
+  requestId: string,
+): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(REQUEST_ID_HEADER, requestId);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set('Content-Security-Policy', IDENTITY_IMAGE_CSP);
   return response;
 }
 

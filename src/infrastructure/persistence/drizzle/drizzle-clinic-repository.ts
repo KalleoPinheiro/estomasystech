@@ -29,6 +29,7 @@ const toClinic = (row: ClinicRow): Clinic =>
     cnpjReviewSince: row.cnpjReviewSince,
     dpoName: row.dpoName,
     dpoContact: row.dpoContact,
+    logoKey: row.logoKey,
   });
 
 /** Dados cadastrais gravados por `create` e `update`. */
@@ -112,6 +113,13 @@ export class DrizzleClinicRepository implements ClinicRepository {
     await this.db
       .update(clinics)
       .set({ cnpjReviewSince: clinic.cnpjReviewSince })
+      .where(eq(clinics.id, clinic.id));
+  }
+
+  async saveLogoKey(clinic: Clinic): Promise<void> {
+    await this.db
+      .update(clinics)
+      .set({ logoKey: clinic.logoKey })
       .where(eq(clinics.id, clinic.id));
   }
 }

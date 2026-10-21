@@ -54,6 +54,8 @@ export const clinics = pgTable(
     // Encarregado pelos dados (#216, ADR-030): nulos valem o contato da clínica.
     dpoName: text('dpo_name'),
     dpoContact: text('dpo_contact'),
+    // Logo da clínica (#427): chave no mesmo armazenamento das fotos clínicas.
+    logoKey: text('logo_key'),
   },
   (table) => [
     check(
@@ -196,6 +198,8 @@ export const userAccounts = pgTable(
       withTimezone: true,
       mode: 'date',
     }),
+    // Avatar da equipe (#427): chave no armazenamento; paciente nunca (#376).
+    avatarKey: text('avatar_key'),
   },
   (table) => [
     // Um acesso de portal por cadastro, dentro da empresa (#196).

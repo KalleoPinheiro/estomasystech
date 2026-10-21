@@ -65,6 +65,7 @@ function snapshot(account: UserAccount) {
     active: account.isActive,
     createdAt: account.createdAt,
     sessionVersion: account.sessionVersion,
+    avatarKey: account.avatarKey,
   };
 }
 
@@ -86,6 +87,8 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
       UserAccount.restore({
         ...snapshot(account),
         sessionVersion: stored?.sessionVersion ?? account.sessionVersion,
+        // Idem (#427): o avatar só muda por `saveAvatarKey`.
+        avatarKey: stored?.avatarKey ?? null,
       }),
     );
   }
@@ -112,6 +115,11 @@ export class InMemoryUserAccountRepository implements UserAccountRepository {
         bumpSessionVersion(existing.withPasswordHash(passwordHash)),
       );
     }
+  }
+
+  async saveAvatarKey(id: string, avatarKey: string | null): Promise<void> {
+    const existing = this.items.get(id);
+    if (existing) this.items.set(id, existing.withAvatarKey(avatarKey));
   }
 
   async upgradePasswordHash(
