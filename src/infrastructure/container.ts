@@ -9,6 +9,7 @@ import {
   LazyEmailGateway,
   NullEmailGateway,
 } from '@/application/ports/email-gateway';
+import type { ImageProcessor } from '@/application/ports/image-processor';
 import type { JobRunRepository } from '@/application/ports/job-run-repository';
 import type { PhotoStorage } from '@/application/ports/photo-storage';
 import type { TransactionManager } from '@/application/ports/transaction-manager';
@@ -78,6 +79,7 @@ import {
   EMAIL_PROVIDER_GATEWAYS,
   platformEmailGateway,
 } from './email/resend-email-gateway';
+import { SharpImageProcessor } from './images/sharp-image-processor';
 import type { AppDb } from './persistence/drizzle/db';
 import { getDb } from './persistence/drizzle/db';
 import { DrizzleAppointmentRepository } from './persistence/drizzle/drizzle-appointment-repository';
@@ -193,6 +195,7 @@ export interface Services {
   outcomeEvaluations: OutcomeEvaluationRepository;
   interventionRecords: InterventionRecordRepository;
   photoStorage: PhotoStorage;
+  imageProcessor: ImageProcessor;
   supplies: SupplyRepository;
   stockMovements: StockMovementRepository;
   supplyBatches: SupplyBatchRepository;
@@ -481,6 +484,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       cipher,
     ),
     photoStorage: buildPhotoStorage(tenant.clinicId ?? LEGACY_CLINIC_ID),
+    imageProcessor: new SharpImageProcessor(),
     supplies: new DrizzleSupplyRepository(db, tenant.clinicId),
     stockMovements: new DrizzleStockMovementRepository(db, tenant.clinicId),
     supplyBatches: new DrizzleSupplyBatchRepository(db, tenant.clinicId),

@@ -94,6 +94,9 @@ const ADMINISTRATIVE_PREFIXES = [
   // conta do provedor, cadastra a chave, testa e remove. O handler repete a
   // checagem (ADR-002).
   '/api/settings/email-channel',
+  // Logo da clínica (#427): enviar e remover é do Admin de Empresa; a entrega
+  // (`GET /api/clinic/logo`) é de toda a equipe e fica em `operational`.
+  '/api/settings/clinic-logo',
   // Conectar a agenda do Google é ato administrativo da empresa, não operação
   // de atendimento — mesma família de /api/settings/clinic-info.
   '/api/integrations',

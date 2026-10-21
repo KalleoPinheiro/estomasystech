@@ -81,6 +81,8 @@ export interface ClinicState extends ClinicInfoFields {
    */
   dpoName?: string | null;
   dpoContact?: string | null;
+  /** Chave da logo no armazenamento (#427); `null` = sem logo, valem as iniciais. */
+  logoKey?: string | null;
 }
 
 /** Limites do cadastro do encarregado. */
@@ -221,6 +223,7 @@ export class Clinic {
       cnpjReviewSince: state.cnpjReviewSince ?? null,
       dpoName: state.dpoName ?? null,
       dpoContact: state.dpoContact ?? null,
+      logoKey: state.logoKey ?? null,
     });
   }
 
@@ -274,6 +277,15 @@ export class Clinic {
 
   get dpoContact(): string | null {
     return this.state.dpoContact ?? null;
+  }
+
+  get logoKey(): string | null {
+    return this.state.logoKey ?? null;
+  }
+
+  /** Outra instância com a logo trocada (ou removida, com `null`). */
+  withLogoKey(logoKey: string | null): Clinic {
+    return new Clinic({ ...this.state, logoKey });
   }
 
   get status(): ClinicStatus {

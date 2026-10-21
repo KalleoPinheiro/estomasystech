@@ -9,6 +9,7 @@ import {
 import { BottomNav } from '@/components/app-shell/bottom-nav';
 import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
+import { IdentityImage } from '@/components/identity-image';
 import { LogoutButton } from '@/components/logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import type { SidebarIdentityDto } from '@/lib/dto';
@@ -33,20 +34,38 @@ export function SidebarIdentity() {
   return (
     <div className="min-w-0">
       <BrandLogo />
-      <p className="mt-1 text-ink-3 text-xs">{data?.clinicLabel ?? ''}</p>
+      <div className="mt-2 flex min-w-0 items-center gap-2">
+        {data && (
+          <IdentityImage
+            kind="logo"
+            url={data.clinicLogoUrl}
+            name={data.clinicLabel}
+            size={28}
+          />
+        )}
+        <p className="min-w-0 text-ink-3 text-xs">{data?.clinicLabel ?? ''}</p>
+      </div>
       {data?.account && (
         // E-mail inteiro, quebrando linha (#199): truncado ficava "ad…" e
         // ninguém sabia quem estava logado — o objetivo da #126.
-        <p className="mt-0.5 min-w-0 text-ink-3 text-xs">
-          <span
-            className="block break-all"
-            title={data.account.email}
-            data-sidebar-email
-          >
-            {data.account.email}
-          </span>
-          <span className="block">{data.account.roleLabel}</span>
-        </p>
+        <div className="mt-1 flex min-w-0 items-start gap-2">
+          <IdentityImage
+            kind="avatar"
+            url={data.account.avatarUrl}
+            name={data.account.email.split('@')[0].replace(/[._-]+/g, ' ')}
+            size={28}
+          />
+          <p className="min-w-0 text-ink-3 text-xs">
+            <span
+              className="block break-all"
+              title={data.account.email}
+              data-sidebar-email
+            >
+              {data.account.email}
+            </span>
+            <span className="block">{data.account.roleLabel}</span>
+          </p>
+        </div>
       )}
     </div>
   );

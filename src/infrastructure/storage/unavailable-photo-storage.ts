@@ -28,3 +28,7 @@ export class UnavailablePhotoStorage implements PhotoStorage {
 /** A Vercel define `VERCEL=1` em build e em runtime. */
 export const isVercelRuntime = (env: NodeJS.ProcessEnv = process.env) =>
   Boolean(env.VERCEL);
+
+/** O armazenamento recusa tudo? (logo e avatar ficam desabilitados com aviso, #427) */
+export const isPhotoStorageAvailable = (storage: PhotoStorage): boolean =>
+  !(storage instanceof UnavailablePhotoStorage);

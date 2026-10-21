@@ -16,4 +16,6 @@ export interface ClinicRepository {
   saveStatus(clinic: Clinic): Promise<void>;
   /** Grava só a marca de CNPJ pendente de correção (#355), sem regravar o cadastro. */
   saveCnpjReview(clinic: Clinic): Promise<void>;
+  /** Grava só a chave da logo (#427), sem regravar o cadastro. */
+  saveLogoKey(clinic: Clinic): Promise<void>;
 }
