@@ -1679,6 +1679,13 @@ Issue #429, fatia 9, canvas aprovada (Configurações). `/configuracoes` ganha `
 - Teste novo `tests/pages/configuracoes-secoes.test.tsx`; nenhum teste existente alterado.
 - **Fechando o #429**: restam só o favicon/ícone do app (decisão do Kalléo) e a pergunta da tela por seção. **Blockers**: nenhum.
 
+## Rotina mensal e checklist (#381) (2026-10-21) — EM REVISÃO
+
+Decisões do Kalléo em 2026-10-21 sobre a #381: logs com PII mascarada (thread própria), segurança adiada (Tailscale no lugar de Proton VPN; Cloudflare só com usuários reais) e rotina mensal em opção A (checklist no runbook).
+- **Feito:** `producao.md` § 7.4 com o checklist do 1º sábado. Só `.md`, então pela regra do ADR-053 não exige recibo do gate local.
+- **Próximo passo (outro PR, com recibo):** workflow de lembrete mensal desligado (sem `schedule`), que abre uma issue de lembrete. Ativar depois, com o recibo do gate local.
+- **Atenção:** `mutacao-mensal.yml` já tem `schedule` (último dia do mês) e vai rodar em 2026-10-31, consumindo cota; decidir se o mantém ou desliga até o reset.
+- **Blockers:** nenhum.
 ## Favicon e ícone do app com a logo nova (2026-10-21) — EM REVISÃO
 
 Escolha do Kalléo: opções C (branca) e D (grafite) da prévia, uma para cada cenário claro/escuro. `public/brand/favicon-grafite.svg` (aba clara) e `favicon-branco.svg` (aba escura) entram em `metadata.icons` com `media: prefers-color-scheme`, e viram caminhos públicos (`access-policy.ts`). Ícone do app instalado (manifesto 192/512/maskable) e `apple-touch-icon.png`: grafite, já que o manifesto não troca por tema. `src/app/favicon.ico`: grafite, de reserva.
