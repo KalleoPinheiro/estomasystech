@@ -1654,3 +1654,9 @@ Issue #429, fatia 7, canvas aprovada (Cadastros). Mesmo padrão de Procedimentos
 - **TESTE-ALTERADO**: `tests/pages/staff-operations.test.tsx` (2 testes de "fechar sem salvar"): o botão de fechar a edição passa a se chamar "Fechar ficha" (ficha ao lado da lista, desenho aprovado), em vez do "Fechar" da janela.
 - Sem destaque da linha escolhida nestas duas telas (só em Procedimentos), para não ampliar a mudança.
 - **Next step**: Materiais (945 linhas, estoque e movimentos, pede olhar à parte) e hub de Configurações. **Blockers**: nenhum.
+
+## Logo do EstomaSysTech (2026-10-21) — EM REVISÃO
+
+Pedido do Kalléo: no login, logo do sistema (não da clínica), bonita, minimalista e moderna. `src/components/brand-mark.tsx`: "E" de três barras arredondadas sobre quadrado de cantos suaves, com ponto à direita; usa `--sv-accent-ink` e `--sv-bg` (par do botão de acento, AA em todos os modos). Login: marca grande no painel (computador) e pequena acima do título (celular). `public/brand/estomasystech.svg`: arquivo estático (violeta fixo) para quem precisar fora do app.
+- **Pergunta aberta (regra 5)**: ícone do app (`public/icons`, favicon, apple-touch) segue o antigo; trocar pela nova marca exige gerar PNGs e decidir cor fixa. Não feito.
+- **Next step**: Materiais e hub de Configurações. **Blockers**: nenhum.

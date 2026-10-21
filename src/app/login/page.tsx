@@ -4,6 +4,7 @@ import { Button, CardSkeleton, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { BrandMark } from '@/components/brand-mark';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 import {
@@ -54,6 +55,7 @@ function LoginCard() {
   if (step.kind !== 'password') {
     return (
       <LoginShell>
+        <BrandMark size={40} className="mb-3 md:hidden" />
         <h1 className="sv-display mb-4 font-bold text-xl">EstomaSysTech</h1>
         <SecondFactor step={step} onStep={setStep} />
       </LoginShell>
@@ -62,6 +64,7 @@ function LoginCard() {
 
   return (
     <LoginShell>
+      <BrandMark size={40} className="mb-3 md:hidden" />
       <h1 className="sv-display font-bold text-xl">EstomaSysTech</h1>
       <p className="mt-1 mb-6 text-ink-3 text-sm">
         Entre com seu e-mail e sua senha
@@ -95,6 +98,7 @@ function LoginShell({ children }: { children: React.ReactNode }) {
         aria-hidden="true"
         className="hidden flex-1 flex-col justify-center gap-3 bg-sv-surface px-16 md:flex"
       >
+        <BrandMark size={72} />
         <p className="sv-display font-bold text-3xl">EstomaSysTech</p>
         <p className="max-w-sm text-ink-3">
           Agenda, prontuário e acompanhamento de feridas e estomias em um só
