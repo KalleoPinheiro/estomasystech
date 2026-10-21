@@ -1686,3 +1686,9 @@ Decisões do Kalléo em 2026-10-21 sobre a #381: logs com PII mascarada (thread 
 - **Próximo passo (outro PR, com recibo):** workflow de lembrete mensal desligado (sem `schedule`), que abre uma issue de lembrete. Ativar depois, com o recibo do gate local.
 - **Atenção:** `mutacao-mensal.yml` já tem `schedule` (último dia do mês) e vai rodar em 2026-10-31, consumindo cota; decidir se o mantém ou desliga até o reset.
 - **Blockers:** nenhum.
+## Favicon e ícone do app com a logo nova (2026-10-21) — EM REVISÃO
+
+Escolha do Kalléo: opções C (branca) e D (grafite) da prévia, uma para cada cenário claro/escuro. `public/brand/favicon-grafite.svg` (aba clara) e `favicon-branco.svg` (aba escura) entram em `metadata.icons` com `media: prefers-color-scheme`, e viram caminhos públicos (`access-policy.ts`). Ícone do app instalado (manifesto 192/512/maskable) e `apple-touch-icon.png`: grafite, já que o manifesto não troca por tema. `src/app/favicon.ico`: grafite, de reserva.
+- **Decisão minha**: associei grafite à aba clara e branco à aba escura (contraste com a aba). Se o Kalléo quiser o oposto, é trocar o `media` de cada um.
+- Teste novo `tests/lib/favicon-por-tema.test.ts`; nenhum teste existente alterado.
+- **Next step**: nenhum no #429. **Blockers**: nenhum.

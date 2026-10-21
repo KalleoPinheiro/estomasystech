@@ -51,7 +51,23 @@ export const metadata: Metadata = {
   description:
     'Gestão de pacientes, agenda e faturamento para clínica de estomaterapia',
   // Instalar na tela inicial (#430): ícone do iOS e abertura sem a barra do Safari.
-  icons: { apple: '/apple-touch-icon.png' },
+  // Favicon que acompanha o tema do navegador: grafite na aba clara, branco na
+  // escura (contraste com a aba). O `favicon.ico` do app fica de reserva.
+  icons: {
+    icon: [
+      {
+        url: '/brand/favicon-grafite.svg',
+        type: 'image/svg+xml',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/brand/favicon-branco.svg',
+        type: 'image/svg+xml',
+        media: '(prefers-color-scheme: dark)',
+      },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: { capable: true, title: 'EstomaSysTech' },
 };
 
