@@ -48,13 +48,15 @@ export async function GET(request: NextRequest) {
     const exhausted = await reminderLog.exhaustedRecalls(
       result.map(({ followUp }) => followUp.id),
     );
-    return result.map(({ followUp, patientName, isOverdue }) =>
-      toFollowUpDto(
-        followUp,
-        patientName,
-        isOverdue,
-        exhausted.has(followUp.id),
-      ),
+    return result.map(
+      ({ followUp, patientName, patientBirthDate, isOverdue }) =>
+        toFollowUpDto(
+          followUp,
+          patientName,
+          isOverdue,
+          exhausted.has(followUp.id),
+          patientBirthDate,
+        ),
     );
   });
 }

@@ -22,7 +22,7 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/format';
-import { abbreviatePatientName } from '@/lib/patient-name';
+import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useTriageQueue } from '@/lib/use-triage-queue';
@@ -245,6 +245,7 @@ function TodayAppointmentsCard({
   );
   const today = fromSummary ? (fromSummary.data?.today ?? null) : own.data;
   const source = fromSummary ?? own;
+  const homonyms = homonymPatientIds(today ?? []);
 
   return (
     <SummaryCard
@@ -267,7 +268,7 @@ function TodayAppointmentsCard({
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">
-                {abbreviatePatientName(appointment.patientName)}
+                {listPatientName(appointment, homonyms)}
               </p>
               <p className="truncate text-ink-3 text-sm">
                 {appointment.procedure}
@@ -307,6 +308,7 @@ function FollowUpsCard({
 }: FollowUpsCardProps) {
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const visible = (followUps ?? []).slice(0, FOLLOW_UPS_CAP);
+  const followUpHomonyms = homonymPatientIds(visible);
   const { data: whatsappSent } = useApiQuery<Record<string, string>>(
     visible.length > 0
       ? `/api/reminders/whatsapp-link?kind=recall&referenceIds=${visible.map((f) => f.id).join(',')}`
@@ -345,7 +347,7 @@ function FollowUpsCard({
                     href={`/pacientes/${followUp.patientId}`}
                     className="hover:underline"
                   >
-                    {abbreviatePatientName(followUp.patientName)}
+                    {listPatientName(followUp, followUpHomonyms)}
                   </Link>
                 </p>
                 <p className="break-words text-ink-3 sm:truncate">

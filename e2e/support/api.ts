@@ -81,6 +81,7 @@ export async function createPatient(
     email: string;
     phone: string;
     cpf: string;
+    birthDate: string;
     referredByPartnerId: string | null;
     guardianId: string | null;
   }> = {},
@@ -91,6 +92,7 @@ export async function createPatient(
     email: overrides.email ?? `paciente.${id}@e2e.estomasystech.test`,
     phone: overrides.phone ?? "11999990000",
     ...(overrides.cpf ? { cpf: overrides.cpf } : {}),
+    ...(overrides.birthDate ? { birthDate: overrides.birthDate } : {}),
     referredByPartnerId: overrides.referredByPartnerId ?? null,
     ...(overrides.guardianId ? { guardianId: overrides.guardianId } : {}),
   });

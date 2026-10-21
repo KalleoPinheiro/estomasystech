@@ -5,6 +5,8 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 export interface FollowUpWithPatient {
   followUp: FollowUp;
   patientName: string;
+  /** Para desambiguar homônimos nas listas (CONTEXT.md). */
+  patientBirthDate: Date | null;
   isOverdue: boolean;
 }
 
@@ -31,11 +33,13 @@ export class ListFollowUps {
     const patients = await this.patients.findByIds(
       followUps.map((f) => f.patientId),
     );
-    const namesById = new Map(patients.map((p) => [p.id, p.fullName]));
+    const byId = new Map(patients.map((p) => [p.id, p]));
 
     return followUps.map((followUp) => ({
       followUp,
-      patientName: namesById.get(followUp.patientId) ?? 'Paciente desconhecido',
+      patientName:
+        byId.get(followUp.patientId)?.fullName ?? 'Paciente desconhecido',
+      patientBirthDate: byId.get(followUp.patientId)?.birthDate ?? null,
       isOverdue: followUp.isOverdue(now),
     }));
   }

@@ -55,8 +55,8 @@ export async function GET(request: NextRequest) {
       to: new Date(to),
       professionalId,
     });
-    return result.map(({ appointment, patientName }) =>
-      toAppointmentDto(appointment, patientName),
+    return result.map(({ appointment, patientName, patientBirthDate }) =>
+      toAppointmentDto(appointment, patientName, patientBirthDate),
     );
   });
 }
