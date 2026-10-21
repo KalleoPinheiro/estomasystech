@@ -703,6 +703,24 @@ Roda **uma vez**, depois da migração `0063`. **Manual**. Regras: ACE-RN-57, [A
 2. `npm run clinics:cnpj-review -- --confirmar` — marca cada uma (o número não muda) e audita.
    Reexecutar é seguro. Avise as clínicas listadas: o aviso aparece em *Configurações → Dados da clínica*.
 
+### 7.4 Rotina mensal (1º sábado)
+
+Manutenção feita à mão no 1º sábado de cada mês, com lembrete na agenda do operador (#381). Não é
+automática: o Coolify só é atualizado pela interface, depois de conferir o backup.
+
+1. **Backup:** confirme que o backup `age` do dia anterior chegou ao R2 (§ 5.3). Se falhou, resolva
+   antes de qualquer atualização.
+2. **Coolify:** atualize pela interface do Coolify. Não rode atualização às cegas nem em horário de uso.
+3. **Host (`ssh vps`):** `sudo apt update && apt list --upgradable`; verifique `/var/run/reboot-required`.
+   Reinicie só em janela combinada, porque o app cai junto.
+4. **fail2ban:** `sudo fail2ban-client status sshd` (há bans ativos? algum IP conhecido?).
+5. **Firewall local:** `systemctl status fw-estomasystech --no-pager` (ativo e sem erro).
+6. **Monitores:** UptimeRobot verde em `/api/health/ready`; sem falha em *Scheduled Tasks → Executions* (§ 7).
+7. **Registro:** anote data, versões e resultado no handoff do mês (`.specs/archive/handoff-2026.md`).
+
+Um workflow de lembrete mensal está previsto, mas **desligado**: sem agenda, não consome a cota do
+Actions. Para ativar depois, adicione o gatilho `schedule` e o recibo do gate local do PR (ver ADR-053).
+
 ## 8. Primeiro acesso
 
 Já feito em produção (2026-10-18): o Super Admin foi criado e o token removido. O roteiro vale para
