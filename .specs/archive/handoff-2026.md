@@ -1647,3 +1647,10 @@ Resolve a pergunta aberta de "Procedimentos em lista + ficha". `@still-void/ui` 
 - **Testes novos**: `tests/components/sheet-panel.test.tsx`, `e2e/procedimentos-folha.spec.ts` (390 px). Nenhum teste existente alterado.
 - **Next step**: adoção nas demais fichas. **Blockers**: nenhum.
 
+
+## Parceiros e Profissionais em lista + ficha (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 7, canvas aprovada (Cadastros). Mesmo padrão de Procedimentos, com o `SheetPanel` compartilhado: Editar abre a ficha ao lado da lista (`lg:`) ou a folha de baixo no celular; Novo parceiro/profissional segue em janela.
+- **TESTE-ALTERADO**: `tests/pages/staff-operations.test.tsx` (2 testes de "fechar sem salvar"): o botão de fechar a edição passa a se chamar "Fechar ficha" (ficha ao lado da lista, desenho aprovado), em vez do "Fechar" da janela.
+- Sem destaque da linha escolhida nestas duas telas (só em Procedimentos), para não ampliar a mudança.
+- **Next step**: Materiais (945 linhas, estoque e movimentos, pede olhar à parte) e hub de Configurações. **Blockers**: nenhum.

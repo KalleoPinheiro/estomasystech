@@ -21,6 +21,7 @@ import {
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
+import { SheetPanel } from '@/components/sheet-panel';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { PartnerDto } from '@/lib/dto';
@@ -34,6 +35,7 @@ export default function PartnersPage() {
     refresh,
   } = useApiQuery<PartnerDto[]>('/api/partners');
   const [editing, setEditing] = useState<PartnerDto | 'new' | null>(null);
+  const selected = editing && editing !== 'new' ? editing : null;
   const [actionError, setActionError] = useState<string | null>(null);
 
   const toggleActive = async (partner: PartnerDto) => {
@@ -77,114 +79,138 @@ export default function PartnersPage() {
         <ErrorAlert message={actionError ?? error ?? ''} />
       )}
 
-      <Card>
-        {!partners ? (
-          <LoadingIndicator />
-        ) : partners.length === 0 ? (
-          <EmptyState message="Nenhum parceiro cadastrado." icon="info" />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table stack className="w-full text-left text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-4 py-3">Nome</TableHead>
-                  <TableHead className="px-4 py-3">Contato</TableHead>
-                  <TableHead className="px-4 py-3">CRM</TableHead>
-                  <TableHead className="px-4 py-3">Especialidade</TableHead>
-                  <TableHead className="px-4 py-3">Situação</TableHead>
-                  <TableHead className="px-4 py-3 text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {partners.map((partner) => (
-                  <TableRow
-                    key={partner.id}
-                    className={partner.active ? '' : 'bg-surface-2/60'}
-                  >
-                    <TableCell label="Nome" className="px-4 py-3 font-medium">
-                      {partner.fullName}
-                    </TableCell>
-                    <TableCell label="Contato" className="px-4 py-3 text-ink-2">
-                      <div>
-                        <a
-                          href={`mailto:${partner.email}`}
-                          className="hover:underline"
-                        >
-                          {partner.email}
-                        </a>
-                      </div>
-                      <div className="text-ink-3 text-xs">
-                        <a
-                          href={`tel:${partner.phone}`}
-                          className="hover:underline"
-                        >
-                          {partner.phone}
-                        </a>
-                      </div>
-                    </TableCell>
-                    <TableCell label="CRM" className="px-4 py-3 text-ink-2">
-                      {partner.crm ?? '—'}
-                    </TableCell>
-                    <TableCell
-                      label="Especialidade"
-                      className="px-4 py-3 text-ink-2"
+      <div
+        className={
+          selected
+            ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'
+            : ''
+        }
+      >
+        <Card>
+          {!partners ? (
+            <LoadingIndicator />
+          ) : partners.length === 0 ? (
+            <EmptyState message="Nenhum parceiro cadastrado." icon="info" />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table stack className="w-full text-left text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-4 py-3">Nome</TableHead>
+                    <TableHead className="px-4 py-3">Contato</TableHead>
+                    <TableHead className="px-4 py-3">CRM</TableHead>
+                    <TableHead className="px-4 py-3">Especialidade</TableHead>
+                    <TableHead className="px-4 py-3">Situação</TableHead>
+                    <TableHead className="px-4 py-3 text-right">
+                      Ações
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {partners.map((partner) => (
+                    <TableRow
+                      key={partner.id}
+                      className={partner.active ? '' : 'bg-surface-2/60'}
                     >
-                      {partner.specialty ?? '—'}
-                    </TableCell>
-                    <TableCell label="Situação" className="px-4 py-3">
-                      <StatusBadge
-                        status={partner.active ? 'confirmed' : 'cancelled'}
-                        label={partner.active ? 'Ativo' : 'Inativo'}
-                      />
-                    </TableCell>
-                    <TableCell label="Ações" className="px-4 py-3 text-right">
-                      <Button
-                        type="button"
-                        onClick={() => setEditing(partner)}
-                        variant="ghost"
-                        size="sm"
+                      <TableCell label="Nome" className="px-4 py-3 font-medium">
+                        {partner.fullName}
+                      </TableCell>
+                      <TableCell
+                        label="Contato"
+                        className="px-4 py-3 text-ink-2"
                       >
-                        Editar
-                      </Button>
-                      {partner.active ? (
-                        <ConfirmAction
-                          trigger={
-                            <Button type="button" variant="ghost" size="sm">
-                              Desativar
-                            </Button>
-                          }
-                          title="Desativar parceiro?"
-                          description="O parceiro para de aparecer nos fluxos ativos. Pacientes indicados por ele podem perder a referência na próxima edição do cadastro."
-                          confirmLabel="Confirmar"
-                          variant="danger"
-                          onConfirm={() => toggleActive(partner)}
+                        <div>
+                          <a
+                            href={`mailto:${partner.email}`}
+                            className="hover:underline"
+                          >
+                            {partner.email}
+                          </a>
+                        </div>
+                        <div className="text-ink-3 text-xs">
+                          <a
+                            href={`tel:${partner.phone}`}
+                            className="hover:underline"
+                          >
+                            {partner.phone}
+                          </a>
+                        </div>
+                      </TableCell>
+                      <TableCell label="CRM" className="px-4 py-3 text-ink-2">
+                        {partner.crm ?? '—'}
+                      </TableCell>
+                      <TableCell
+                        label="Especialidade"
+                        className="px-4 py-3 text-ink-2"
+                      >
+                        {partner.specialty ?? '—'}
+                      </TableCell>
+                      <TableCell label="Situação" className="px-4 py-3">
+                        <StatusBadge
+                          status={partner.active ? 'confirmed' : 'cancelled'}
+                          label={partner.active ? 'Ativo' : 'Inativo'}
                         />
-                      ) : (
+                      </TableCell>
+                      <TableCell label="Ações" className="px-4 py-3 text-right">
                         <Button
                           type="button"
-                          onClick={() => void toggleActive(partner)}
+                          onClick={() => setEditing(partner)}
                           variant="ghost"
                           size="sm"
                         >
-                          Reativar
+                          Editar
                         </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                        {partner.active ? (
+                          <ConfirmAction
+                            trigger={
+                              <Button type="button" variant="ghost" size="sm">
+                                Desativar
+                              </Button>
+                            }
+                            title="Desativar parceiro?"
+                            description="O parceiro para de aparecer nos fluxos ativos. Pacientes indicados por ele podem perder a referência na próxima edição do cadastro."
+                            confirmLabel="Confirmar"
+                            variant="danger"
+                            onConfirm={() => toggleActive(partner)}
+                          />
+                        ) : (
+                          <Button
+                            type="button"
+                            onClick={() => void toggleActive(partner)}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            Reativar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </Card>
+        {selected && (
+          <SheetPanel
+            key={selected.id}
+            title="Editar parceiro"
+            onClose={() => setEditing(null)}
+          >
+            <PartnerForm
+              initial={selected}
+              onSaved={() => {
+                setEditing(null);
+                refresh();
+              }}
+            />
+          </SheetPanel>
         )}
-      </Card>
+      </div>
 
-      {editing && (
-        <Modal
-          title={editing === 'new' ? 'Novo parceiro' : 'Editar parceiro'}
-          onClose={() => setEditing(null)}
-        >
+      {editing === 'new' && (
+        <Modal title="Novo parceiro" onClose={() => setEditing(null)}>
           <PartnerForm
-            initial={editing === 'new' ? undefined : editing}
             onSaved={() => {
               setEditing(null);
               refresh();

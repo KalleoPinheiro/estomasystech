@@ -2454,7 +2454,7 @@ describe('Feature: PartnersPage', () => {
       fireEvent.click(screen.getByText('Editar'));
       expect(await screen.findByText('Editar parceiro')).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Fechar ficha' }));
 
       await waitFor(() => {
         expect(screen.queryByText('Editar parceiro')).not.toBeInTheDocument();
@@ -2883,7 +2883,7 @@ describe('Feature: ProfessionalsPage', () => {
         await screen.findByText('Editar profissional'),
       ).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Fechar ficha' }));
 
       await waitFor(() => {
         expect(
