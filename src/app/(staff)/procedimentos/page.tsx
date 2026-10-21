@@ -42,6 +42,11 @@ export default function ProceduresPage() {
   const filtered = (procedures ?? []).filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const selected = editing && editing !== 'new' ? editing : null;
+  const onSaved = () => {
+    setEditing(null);
+    refresh();
+  };
 
   const toggleActive = async (procedure: ProcedureDto) => {
     try {
@@ -67,8 +72,8 @@ export default function ProceduresPage() {
   return (
     <div>
       <PageHeader
-        title="Catálogo de procedimentos"
-        description="Fonte única de nome, preço e duração — o agendamento preenche a partir daqui e a margem por procedimento fica consistente."
+        title="Procedimentos"
+        description="O tempo define o tamanho do horário na agenda. Nome, preço e duração vêm só daqui, então a margem por procedimento fica consistente."
         actions={
           <Button
             type="button"
@@ -89,23 +94,37 @@ export default function ProceduresPage() {
         onSearch={setSearch}
       />
 
-      <ProceduresTable
-        procedures={procedures}
-        filtered={filtered}
-        onKit={setKitFor}
-        onEdit={setEditing}
-        onToggleActive={toggleActive}
-      />
+      <div
+        className={
+          selected
+            ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'
+            : ''
+        }
+      >
+        <ProceduresTable
+          procedures={procedures}
+          filtered={filtered}
+          selectedId={selected?.id ?? null}
+          onKit={setKitFor}
+          onEdit={setEditing}
+          onToggleActive={toggleActive}
+        />
+        {selected && (
+          <ProcedureSheet
+            key={selected.id}
+            procedure={selected}
+            onClose={() => setEditing(null)}
+            onSaved={onSaved}
+          />
+        )}
+      </div>
 
       <KitModal procedure={kitFor} onClose={() => setKitFor(null)} />
 
-      <EditProcedureModal
-        editing={editing}
+      <NewProcedureModal
+        open={editing === 'new'}
         onClose={() => setEditing(null)}
-        onSaved={() => {
-          setEditing(null);
-          refresh();
-        }}
+        onSaved={onSaved}
       />
     </div>
   );
@@ -152,34 +171,52 @@ function SearchBar({
   );
 }
 
-function EditProcedureModal({
-  editing,
+function NewProcedureModal({
+  open,
   onClose,
   onSaved,
 }: {
-  editing: ProcedureDto | 'new' | null;
+  open: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  if (!editing) {
+  if (!open) {
     return null;
   }
   return (
-    <Modal
-      title={editing === 'new' ? 'Novo procedimento' : 'Editar procedimento'}
-      onClose={onClose}
-    >
-      <ProcedureForm
-        initial={editing === 'new' ? undefined : editing}
-        onSaved={onSaved}
-      />
+    <Modal title="Novo procedimento" onClose={onClose}>
+      <ProcedureForm onSaved={onSaved} />
     </Modal>
+  );
+}
+
+/** Ficha ao lado da lista: o procedimento escolhido se edita sem sair da lista. */
+function ProcedureSheet({
+  procedure,
+  onClose,
+  onSaved,
+}: {
+  procedure: ProcedureDto;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-semibold text-lg">Editar procedimento</h2>
+        <Button type="button" onClick={onClose} variant="ghost" size="sm">
+          Fechar ficha
+        </Button>
+      </div>
+      <ProcedureForm initial={procedure} onSaved={onSaved} />
+    </Card>
   );
 }
 
 interface ProceduresTableProps {
   procedures: ProcedureDto[] | null;
   filtered: ProcedureDto[];
+  selectedId: string | null;
   onKit: (procedure: ProcedureDto) => void;
   onEdit: (procedure: ProcedureDto) => void;
   onToggleActive: (procedure: ProcedureDto) => void;
@@ -188,6 +225,7 @@ interface ProceduresTableProps {
 function ProceduresTable({
   procedures,
   filtered,
+  selectedId,
   onKit,
   onEdit,
   onToggleActive,
@@ -217,6 +255,7 @@ function ProceduresTable({
                 <ProcedureRow
                   key={procedure.id}
                   procedure={procedure}
+                  selected={procedure.id === selectedId}
                   onKit={() => onKit(procedure)}
                   onEdit={() => onEdit(procedure)}
                   onToggleActive={() => onToggleActive(procedure)}
@@ -232,17 +271,22 @@ function ProceduresTable({
 
 function ProcedureRow({
   procedure,
+  selected,
   onKit,
   onEdit,
   onToggleActive,
 }: {
   procedure: ProcedureDto;
+  selected: boolean;
   onKit: () => void;
   onEdit: () => void;
   onToggleActive: () => void;
 }) {
   return (
-    <TableRow className={procedure.active ? '' : 'opacity-50'}>
+    <TableRow
+      aria-selected={selected}
+      className={`${procedure.active ? '' : 'opacity-50'} ${selected ? 'bg-sv-surface' : ''}`}
+    >
       <TableCell label="Procedimento" className="px-4 py-3 font-medium">
         {procedure.name}
       </TableCell>
