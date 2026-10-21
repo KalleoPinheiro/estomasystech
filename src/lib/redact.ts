@@ -1,6 +1,6 @@
 /**
  * Mascaramento de dado pessoal para logs e GlitchTip (CWE-532, LGPD art. 46,
- * #381, ADR-059). `maskEmail`/`maskPhone` dizem *para quem* iria uma mensagem
+ * #381, ADR-060). `maskEmail`/`maskPhone` dizem *para quem* iria uma mensagem
  * sem gravar o dado inteiro; `scrubText`, `redactValue` e `redactFields` são a
  * barreira central do logger: nada que passa por `emit` sai sem elas.
  */

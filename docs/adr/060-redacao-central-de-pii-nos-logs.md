@@ -1,5 +1,5 @@
 ---
-title: "ADR 059 — Redação central de dado pessoal nos logs e no GlitchTip"
+title: "ADR 060 — Redação central de dado pessoal nos logs e no GlitchTip"
 status: frozen
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
@@ -7,7 +7,7 @@ last_reviewed: 2026-10-21
 related: [docs/adr/014-observabilidade-sem-pii.md, docs/engineering/auditoria-logs-pii-2026-10.md, docs/engineering/integrations/glitchtip.md]
 ---
 
-# ADR 059 — Redação central de dado pessoal nos logs e no GlitchTip
+# ADR 060 — Redação central de dado pessoal nos logs e no GlitchTip
 
 - **Data:** 2026-10-21
 - **Status:** aceito (decisão de @KalleoPinheiro na [#381](https://github.com/KalleoPinheiro/estomasystech/issues/381): mascarar a PII

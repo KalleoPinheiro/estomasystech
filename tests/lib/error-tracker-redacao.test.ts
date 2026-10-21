@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildEvent, scrubEvent } from '@/lib/observability/error-tracker';
 
-describe('Feature: o GlitchTip só recebe texto sem dado pessoal (#381, ADR-059)', () => {
+describe('Feature: o GlitchTip só recebe texto sem dado pessoal (#381, ADR-060)', () => {
   it('Dado contexto e mensagem com e-mail e CPF, Quando monta o evento, Então saem mascarados', () => {
     const event = buildEvent({
       context: 'Envio para maria@clinica.com falhou',

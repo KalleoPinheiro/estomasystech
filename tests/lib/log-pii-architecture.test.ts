@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * #381, ADR-059: a redação central pega o que o chamador esquece, mas nome,
+ * #381, ADR-060: a redação central pega o que o chamador esquece, mas nome,
  * e-mail e documento em mensagem de log são texto livre — não há como
  * detectá-los depois. Mensagem de `logger.*`/`logError` só interpola id (ou
  * contato mascarado por `maskEmail`/`maskPhone`).

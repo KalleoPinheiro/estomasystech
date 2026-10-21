@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { REDACTED, redactFields, redactValue, scrubText } from '@/lib/redact';
 
-describe('Feature: redação central de campos de log (#381, ADR-059)', () => {
+describe('Feature: redação central de campos de log (#381, ADR-060)', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });

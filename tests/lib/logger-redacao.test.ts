@@ -5,7 +5,7 @@ import { logger } from '@/lib/observability/logger';
 const lastLine = (spy: { mock: { calls: unknown[][] } }) =>
   JSON.parse(String(spy.mock.calls.at(-1)?.[0])) as Record<string, unknown>;
 
-describe('Feature: o logger nunca grava dado pessoal (#381, ADR-059)', () => {
+describe('Feature: o logger nunca grava dado pessoal (#381, ADR-060)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });

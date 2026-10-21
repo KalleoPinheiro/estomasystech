@@ -7,7 +7,7 @@ import { withRequestId } from './request-context';
  * corrente (quando há) e campos extras. `tests/lib/log-error-architecture`
  * proíbe `console.*` fora deste arquivo.
  *
- * Redação central (#381, ADR-059): `msg` e campos passam por `scrubText` e
+ * Redação central (#381, ADR-060): `msg` e campos passam por `scrubText` e
  * `redactFields` antes de qualquer saída — CPF, e-mail, telefone, nome de
  * pessoa, conteúdo clínico, token e senha nunca chegam ao stdout nem ao
  * GlitchTip, mesmo que o chamador esqueça. Use ids nos campos de qualquer

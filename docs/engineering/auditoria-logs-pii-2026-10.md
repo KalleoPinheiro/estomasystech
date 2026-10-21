@@ -4,13 +4,13 @@ status: frozen
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-21
-related: [docs/adr/059-redacao-central-de-pii-nos-logs.md, docs/adr/014-observabilidade-sem-pii.md]
+related: [docs/adr/060-redacao-central-de-pii-nos-logs.md, docs/adr/014-observabilidade-sem-pii.md]
 ---
 
 # Auditoria de logs e dado pessoal — outubro de 2026
 
 > **TL;DR:** 56 chamadas de log em `src/` (45 `logError`, 11 `logger.*`). Nenhum grava dado de paciente
-> hoje: só ids, e-mail mascarado (`maskEmail`) e metadados. A redação central (ADR-059) tornou isso
+> hoje: só ids, e-mail mascarado (`maskEmail`) e metadados. A redação central (ADR-060) tornou isso
 > uma garantia do logger, não do chamador. Este documento **não contém dado real**: todo exemplo
 > está já mascarado (decisão do dono, [#381](https://github.com/KalleoPinheiro/estomasystech/issues/381)).
 > Snapshot de 2026-10-21; a rotina mensal (`producao.md` § 9.4) repete o roteiro e gera novo snapshot.
@@ -46,7 +46,7 @@ Nenhum ponto interpola nome, CPF, telefone, e-mail cru ou conteúdo clínico (ve
 
 | # | Achado | Gravidade | Tratamento |
 | --- | --- | --- | --- |
-| 1 | `msg` e campos do logger não passavam por nenhuma limpeza: só `logError` limpava. Um `logger.info('…', { patient })` gravaria o objeto inteiro | alta (latente; nenhum chamador atual) | ADR-059: `redactFields`/`scrubText` no `emit` |
+| 1 | `msg` e campos do logger não passavam por nenhuma limpeza: só `logError` limpava. Um `logger.info('…', { patient })` gravaria o objeto inteiro | alta (latente; nenhum chamador atual) | ADR-060: `redactFields`/`scrubText` no `emit` |
 | 2 | Link de definição de senha (credencial) no log do dry-run fora de produção | baixa (só dev/E2E, dados fictícios) | mantido como **única exceção**, documentada; em produção sempre redigido |
 | 3 | URL com `?token=` em mensagem de erro de fornecedor (Resend, Google) iria ao log e ao GlitchTip | média | `scrubText` troca a query por `?[redigido]`; credencial `Bearer`/JWT/opaca também |
 | 4 | Tags e `transaction` do evento do GlitchTip não eram limpas | baixa | `scrubEvent`/`buildEvent` passam por `scrubText` |
