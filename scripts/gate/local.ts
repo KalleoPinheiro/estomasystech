@@ -12,6 +12,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { detectBase } from './base';
 import { formatReceipt, mutationTargets } from './receipt';
 
 interface Step {
@@ -43,10 +44,9 @@ function git(...args: string[]): string {
   return spawnSync('git', args, { encoding: 'utf8' }).stdout.trim();
 }
 
-/** Arquivos alterados contra a base (`GATE_BASE`, padrão `origin/main`) que a mutação cobre. */
+/** Arquivos alterados contra a base (`GATE_BASE`, senão a release aberta, senão `origin/main`: ADR-058) que a mutação cobre. */
 function changedRuleFiles(): string[] {
-  const base = process.env.GATE_BASE ?? 'origin/main';
-  const out = git('diff', '--name-only', '--diff-filter=d', `${base}...HEAD`);
+  const out = git('diff', '--name-only', '--diff-filter=d', `${detectBase()}...HEAD`);
   return mutationTargets(out.split('\n').filter(Boolean));
 }
 
@@ -76,6 +76,7 @@ async function main(): Promise<void> {
     console.error('✗ árvore suja: faça commit antes. O recibo vale para o SHA do HEAD.');
     process.exit(1);
   }
+  console.log(`Base do diff: ${detectBase()}`);
   const sha = git('rev-parse', 'HEAD');
   const started = Date.now();
   const done: string[] = [];

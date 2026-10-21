@@ -1,11 +1,12 @@
 /**
  * `npm run check:testes [-- <base>] [--body-file <arquivo>] [--motivo <texto>]` —
- * regra 8 (ADR-042). Analisa o diff `base...HEAD` (padrão `origin/main`) e falha se um
+ * regra 8 (ADR-042). Analisa o diff `base...HEAD` (padrão: a release aberta de que a branch descende, senão `origin/main`; `GATE_BASE` vence, ADR-058) e falha se um
  * teste foi enfraquecido. O motivo de negócio vem do corpo do PR (`--body-file`, no CI),
  * de `--motivo` ou do arquivo local `.gate/motivo-teste.txt` (que o `pre-push` lê).
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { detectBase } from './base';
 import { analyzeDiff, findReason, judge } from './test-integrity';
 
 function option(name: string): string | undefined {
@@ -13,7 +14,7 @@ function option(name: string): string | undefined {
   return i >= 0 ? process.argv[i + 1] : undefined;
 }
 
-const base = process.argv.slice(2).find((a, i, all) => !a.startsWith('--') && !all[i - 1]?.startsWith('--')) ?? 'origin/main';
+const base = detectBase(process.argv.slice(2).find((a, i, all) => !a.startsWith('--') && !all[i - 1]?.startsWith('--')));
 const bodyFile = option('--body-file');
 const motivoFile = '.gate/motivo-teste.txt';
 const sources = [
