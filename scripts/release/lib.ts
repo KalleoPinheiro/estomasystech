@@ -10,6 +10,18 @@ const CHANGESET_FILE = /^\.changeset\/(?!README\.md$)[^/]+\.md$/;
 const MIGRATION_FILE = /^drizzle\/(\d{4})_[^/]+\.sql$/;
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
+/** Pastas cujo `.md` não é documentação: código, teste, pipeline ou configuração de agente. */
+const NOT_DOCS = /^(src|tests|e2e|drizzle|scripts|deploy|\.github|\.claude|\.gate|\.husky|node_modules)\//;
+
+/**
+ * PR só de documentação (ADR-053): todo arquivo tocado (inclusive removido ou renomeado) é `.md`
+ * fora de código, teste, pipeline e configuração de agente. Lista vazia não é docs-only: sem diff
+ * legível, o recibo continua sendo exigido.
+ */
+export function isDocsOnly(touchedFiles: readonly string[]): boolean {
+  return touchedFiles.length > 0 && touchedFiles.every((f) => f.endsWith('.md') && !NOT_DOCS.test(f));
+}
+
 export const ROLLBACKS = ['redeploy', 'backup'] as const;
 export type Rollback = (typeof ROLLBACKS)[number];
 

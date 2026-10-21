@@ -3,6 +3,7 @@ name: Recibo do gate
 # Confere, em segundos, que o E2E (que não roda mais no Actions) rodou localmente para o
 # commit atual e que nenhum teste foi enfraquecido (regra 7 e 8 do AGENTS.md, ADR-042).
 # O recibo é exigido só no PR que entra na `main` (`release/* → main` ou `hotfix/* → main`);
+# Dispensado quando o PR toca só `.md` de documentação (ADR-053).
 # `feat/* → release/*` roda a integridade dos testes e a seção de homologação (ADR-052).
 # Roda também quando o corpo do PR é editado (`edited`), que é onde o recibo e o
 # `TESTE-ALTERADO:` são colados.
@@ -41,8 +42,16 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
 
+      # PR só de `.md` de documentação dispensa o recibo (ADR-053); qualquer outro arquivo o exige.
+      - name: Classificar o diff (só documentação?)
+        id: classe
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+        run: npx tsx scripts/release/docs-only.ts --base "origin/$BASE_REF" --head "$HEAD_SHA" | tee -a "$GITHUB_OUTPUT"
+
       - name: Recibo do gate local no corpo do PR
-        if: github.base_ref == 'main'
+        if: github.base_ref == 'main' && steps.classe.outputs.docs_only != 'true'
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BASE_REF: ${{ github.base_ref }}
