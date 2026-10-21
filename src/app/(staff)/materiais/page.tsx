@@ -26,6 +26,7 @@ import {
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
+import { SheetPanel } from '@/components/sheet-panel';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, StockMovementDto, SupplyDto } from '@/lib/dto';
@@ -73,6 +74,11 @@ export default function SuppliesPage() {
   const filtered = (supplies ?? []).filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const selected = editing && editing !== 'new' ? editing : null;
+  const onSupplySaved = () => {
+    setEditing(null);
+    refresh();
+  };
 
   return (
     <div>
@@ -100,24 +106,38 @@ export default function SuppliesPage() {
         onSearch={setSearch}
       />
 
-      <SuppliesTable
-        supplies={supplies}
-        filtered={filtered}
-        insights={insights?.bySupply ?? []}
-        insightsError={insightsError}
-        onMove={setMoving}
-        onHistory={setHistory}
-        onEdit={setEditing}
-      />
+      <div
+        className={
+          selected
+            ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'
+            : ''
+        }
+      >
+        <SuppliesTable
+          supplies={supplies}
+          filtered={filtered}
+          insights={insights?.bySupply ?? []}
+          insightsError={insightsError}
+          onMove={setMoving}
+          onHistory={setHistory}
+          onEdit={setEditing}
+        />
+        {selected && (
+          <SheetPanel
+            key={selected.id}
+            title="Editar insumo"
+            onClose={() => setEditing(null)}
+          >
+            <SupplyForm initial={selected} onSaved={onSupplySaved} />
+          </SheetPanel>
+        )}
+      </div>
 
-      <EditSupplyModal
-        editing={editing}
-        onClose={() => setEditing(null)}
-        onSaved={() => {
-          setEditing(null);
-          refresh();
-        }}
-      />
+      {editing === 'new' && (
+        <Modal title="Novo insumo" onClose={() => setEditing(null)}>
+          <SupplyForm onSaved={onSupplySaved} />
+        </Modal>
+      )}
 
       <MovementModal
         supply={moving}
@@ -196,29 +216,6 @@ function HistoryModal({
   return (
     <Modal title={`Histórico — ${supply.name}`} onClose={onClose}>
       <MovementHistory supplyId={supply.id} />
-    </Modal>
-  );
-}
-
-interface EditSupplyModalProps {
-  editing: SupplyDto | 'new' | null;
-  onClose: () => void;
-  onSaved: () => void;
-}
-
-function EditSupplyModal({ editing, onClose, onSaved }: EditSupplyModalProps) {
-  if (!editing) {
-    return null;
-  }
-  return (
-    <Modal
-      title={editing === 'new' ? 'Novo insumo' : 'Editar insumo'}
-      onClose={onClose}
-    >
-      <SupplyForm
-        initial={editing === 'new' ? undefined : editing}
-        onSaved={onSaved}
-      />
     </Modal>
   );
 }

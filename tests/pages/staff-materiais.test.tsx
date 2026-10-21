@@ -512,6 +512,31 @@ describe('Feature: Materiais e estoque', () => {
       expect(screen.getByText('Insumo ativo')).toBeInTheDocument();
     });
 
+    it('Dado clique em Editar, Quando a ficha abre ao lado da lista, Então a lista continua visível e sem janela', async () => {
+      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
+
+      renderWithToast(<SuppliesPage />);
+      await screen.findByText('Bolsa de colostomia');
+      fireEvent.click(screen.getByText('Editar'));
+
+      expect(screen.getByText('Editar insumo')).toBeInTheDocument();
+      expect(screen.getAllByText('Bolsa de colostomia').length).toBeGreaterThan(
+        0,
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('Dado a ficha aberta, Quando clicar em Fechar ficha, Então ela some sem salvar', async () => {
+      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
+
+      renderWithToast(<SuppliesPage />);
+      await screen.findByText('Bolsa de colostomia');
+      fireEvent.click(screen.getByText('Editar'));
+      fireEvent.click(screen.getByRole('button', { name: 'Fechar ficha' }));
+
+      expect(screen.queryByText('Editar insumo')).not.toBeInTheDocument();
+    });
+
     it('Dado edição de um insumo existente, Quando desmarcar ativo e submeter, Então envia PUT com os dados atualizados', async () => {
       let sentUrl: string | undefined;
       let sentBody: string | undefined;

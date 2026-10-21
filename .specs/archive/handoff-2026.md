@@ -1666,3 +1666,8 @@ Pedido do Kalléo: no login, logo do sistema (não da clínica), bonita, minimal
 Exceção pontual de @KalleoPinheiro para editar `scripts/gate/` e `.husky/pre-push`. `check:testes`, mutação do `gate:local` e `check:changeset` passam a comparar com a release aberta de que a branch descende (ADR-058); `release/*`, `hotfix/*` e `main` seguem contra `origin/main`; `GATE_BASE` vence. `pre-push` busca as releases. Regra 8 e recibo do PR release→main intactos.
 - **Testes novos**: `tests/scripts/gate-base.test.ts`. Nenhum teste existente alterado.
 - **Next step**: aguardar revisão. **Blockers**: nenhum.
+
+## Materiais em lista + ficha (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 8, canvas aprovada (Cadastros). `/materiais`: Editar abre a ficha ao lado da lista (`lg:`) ou a folha de baixo no celular, via `SheetPanel`; Novo insumo, Movimentar e Histórico seguem em janela (são ações de estoque, não ficha). Nenhum teste existente alterado.
+- **Next step**: hub de Configurações. **Blockers**: nenhum.
