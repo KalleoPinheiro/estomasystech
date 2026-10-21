@@ -9,6 +9,7 @@ import {
   BottomSheetTitle,
   useMediaQuery,
 } from '@still-void/ui/react/client';
+import { useEffect, useState } from 'react';
 
 interface SheetPanelProps {
   title: string;
@@ -21,11 +22,25 @@ interface SheetPanelProps {
  * celular sobe como folha de baixo (`BottomSheet`), em vez de empilhar abaixo
  * da lista onde a pessoa nem a vê abrir.
  *
+ * O foco volta ao gatilho ao fechar por um efeito próprio, como no `Modal`: o
+ * pai desmonta a ficha direto, então a Radix não vê a transição `open → false`.
+ *
  * A consulta é `max-width` de propósito: sem `matchMedia` (SSR, testes) o
  * `useMediaQuery` responde `false`, e o padrão seguro é a ficha ao lado.
  */
 export function SheetPanel({ title, onClose, children }: SheetPanelProps) {
   const isMobile = useMediaQuery('(max-width: 1023px)');
+  const [previouslyFocused] = useState<HTMLElement | null>(() =>
+    typeof document === 'undefined'
+      ? null
+      : (document.activeElement as HTMLElement | null),
+  );
+
+  useEffect(() => {
+    return () => {
+      previouslyFocused?.focus();
+    };
+  }, [previouslyFocused]);
 
   if (isMobile) {
     return (

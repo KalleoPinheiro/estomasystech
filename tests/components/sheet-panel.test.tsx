@@ -74,4 +74,24 @@ describe('Feature: Ficha ao lado da lista no computador e folha de baixo no celu
       expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('Scenario: foco', () => {
+    it('Dado a ficha aberta a partir de um botão, Quando for fechada, Então o foco volta ao botão', () => {
+      stubViewport(true);
+      const gatilho = document.createElement('button');
+      document.body.append(gatilho);
+      gatilho.focus();
+
+      const { unmount } = render(
+        <SheetPanel title="Editar item" onClose={() => undefined}>
+          <p>Conteúdo da ficha</p>
+        </SheetPanel>,
+      );
+      (document.activeElement as HTMLElement | null)?.blur();
+      unmount();
+
+      expect(gatilho).toHaveFocus();
+      gatilho.remove();
+    });
+  });
 });
