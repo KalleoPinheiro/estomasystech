@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { abbreviatePatientName } from "../src/lib/patient-name";
 import { createCondition, unique } from "./support/api";
 import { expectToast } from "./support/assertions";
 import { goToMonth } from "./support/calendar";
@@ -30,7 +31,7 @@ test.describe("profissional", () => {
 
     // A lista do Profissional só traz pacientes vinculados (R4).
     await page.goto("/pacientes");
-    await page.getByRole("row", { name: new RegExp(linkedPatientName) }).getByRole("link", { name: "Prontuário" }).click();
+    await page.getByRole("row", { name: new RegExp(abbreviatePatientName(linkedPatientName)) }).getByRole("link", { name: "Prontuário" }).click();
 
     await expect(page.getByRole("heading", { name: linkedPatientName })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Anamnese/ })).toBeVisible();
@@ -52,7 +53,7 @@ test.describe("profissional", () => {
     await goToMonth(page, slot.ymd);
 
     await expect(
-      page.getByRole("button", { name: `${slot.startTimeInput} ${linkedPatientName}`, exact: true }),
+      page.getByRole("button", { name: `${slot.startTimeInput} ${abbreviatePatientName(linkedPatientName)}`, exact: true }),
     ).toBeVisible();
     expect(failures.list()).toEqual([]);
   });

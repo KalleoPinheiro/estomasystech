@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { abbreviatePatientName } from "../src/lib/patient-name";
 import { apiGet, createPatient, unique } from "./support/api";
 import { expectToast } from "./support/assertions";
 import { goToMonth } from "./support/calendar";
@@ -52,7 +53,7 @@ test.describe("atendente", () => {
     await expectToast(page, "Consulta criada");
     await goToMonth(page, slot.ymd);
     await expect(
-      page.getByRole("button", { name: `${slot.startTimeInput} ${patient.fullName}`, exact: true }),
+      page.getByRole("button", { name: `${slot.startTimeInput} ${abbreviatePatientName(patient.fullName)}`, exact: true }),
     ).toBeVisible();
 
     const from = new Date(new Date(slot.startsAt).getTime() - 60_000).toISOString();
@@ -87,7 +88,7 @@ test.describe("atendente", () => {
     await dialog.getByRole("button", { name: "Adicionar à lista" }).click();
 
     await expectToast(page, "Adicionado à lista de espera");
-    const row = page.getByRole("listitem").filter({ hasText: patient.fullName });
+    const row = page.getByRole("listitem").filter({ hasText: abbreviatePatientName(patient.fullName) });
     await expect(row).toContainText(CATALOG_PROCEDURE);
     await expect(row).toContainText(SEED_PROFESSIONAL);
     expect(failures.list()).toEqual([]);
