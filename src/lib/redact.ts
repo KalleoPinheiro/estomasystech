@@ -168,6 +168,17 @@ export function redactValue(
   if (seen.has(value)) return '[circular]';
   if (depth >= MAX_DEPTH) return '[profundo]';
   seen.add(value);
+  const clean = redactObject(value, seen, depth);
+  // `seen` é o caminho até aqui: o mesmo objeto em dois galhos não é ciclo.
+  seen.delete(value);
+  return clean;
+}
+
+function redactObject(
+  value: object,
+  seen: WeakSet<object>,
+  depth: number,
+): unknown {
   if (value instanceof Error) {
     return { name: value.name, message: scrubText(value.message) };
   }

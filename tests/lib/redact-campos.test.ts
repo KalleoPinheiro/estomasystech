@@ -119,6 +119,15 @@ describe('Feature: redação central de campos de log (#381, ADR-060)', () => {
     });
   });
 
+  it('Dado o mesmo objeto em dois campos, Quando redigir, Então não é tratado como ciclo', () => {
+    const compartilhado = { id: 'a', cpf: '12345678909' };
+
+    expect(redactFields({ um: compartilhado, dois: [compartilhado] })).toEqual({
+      um: { id: 'a', cpf: REDACTED },
+      dois: [{ id: 'a', cpf: REDACTED }],
+    });
+  });
+
   it('Dado listas e objetos enormes, Quando redigir, Então limita a 50 itens', () => {
     const lista = Array.from({ length: 80 }, (_, i) => i);
     const objeto = Object.fromEntries(lista.map((i) => [`k${i}`, i]));
