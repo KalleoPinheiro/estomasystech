@@ -36,8 +36,9 @@ import {
 /**
  * Massa fictícia de homologação (ADR-041): sucesso e erro. Passa pelos
  * repositórios da aplicação, então o dado clínico sai cifrado com a
- * `DATA_ENCRYPTION_KEY` do ambiente. Idempotente por clínica: se a clínica
- * principal já existe, só reaplica a senha das contas fictícias.
+ * `DATA_ENCRYPTION_KEY` do ambiente. Idempotente e aditivo: cria só o que falta
+ * (clínica, conta, profissional, parceiro, paciente da vizinha), nunca apaga nem
+ * duplica, e reaplica a senha das contas fictícias de banco já semeado.
  */
 export const MAIN_CLINIC_ID = "hml-clinica-principal";
 export const SUSPENDED_CLINIC_ID = "hml-clinica-suspensa";
@@ -65,10 +66,18 @@ function isWeekend(date: Date): boolean {
   return date.getUTCDay() === 0 || date.getUTCDay() === 6;
 }
 
-async function seedClinics(now: Date): Promise<void> {
+async function seedClinics(now: Date): Promise<number> {
   const { clinics } = await getRepositories(systemScope());
   const base = { createdBy: "homologacao-seed", createdAt: now } as const;
-  await clinics.create(
+  let created = 0;
+  const createMissing = async (clinic: Clinic): Promise<void> => {
+    if (await clinics.findById(clinic.id)) {
+      return;
+    }
+    await clinics.create(clinic);
+    created += 1;
+  };
+  await createMissing(
     Clinic.restore({
       ...base,
       id: MAIN_CLINIC_ID,
@@ -88,8 +97,8 @@ async function seedClinics(now: Date): Promise<void> {
     contactEmail: "suspensa@homologacao.invalid",
     status: "active",
   }).suspend("homologacao-seed", now, { reason: "non_payment" });
-  await clinics.create(suspended);
-  await clinics.create(
+  await createMissing(suspended);
+  await createMissing(
     Clinic.restore({
       ...base,
       id: NEIGHBOR_CLINIC_ID,
@@ -102,6 +111,7 @@ async function seedClinics(now: Date): Promise<void> {
       themeAccent: "amber",
     }),
   );
+  return created;
 }
 
 /** Equipe e cenários de erro de acesso. A matriz conta × cenário está em `docs/engineering/homologacao-cenarios.md`. */
@@ -134,19 +144,27 @@ async function seedStaffAccounts(
     { email: "admin-vizinha@homologacao.invalid", role: "company_admin", clinicId: NEIGHBOR_CLINIC_ID },
   ] as const;
   const { userAccounts } = await getRepositories(systemScope());
+  let created = 0;
   for (const account of accounts) {
+    if (await userAccounts.findByEmail(account.email)) {
+      continue;
+    }
     await userAccounts.save(UserAccount.create({ ...account, passwordHash }));
+    created += 1;
   }
   // Cenário de erro: conta desativada não entra (401, sem revelar o motivo).
-  await userAccounts.save(
-    UserAccount.create({
-      email: "inativo@homologacao.invalid",
-      passwordHash,
-      role: "atendente",
-      clinicId: MAIN_CLINIC_ID,
-    }).deactivate(),
-  );
-  return accounts.length + 1;
+  if (!(await userAccounts.findByEmail("inativo@homologacao.invalid"))) {
+    await userAccounts.save(
+      UserAccount.create({
+        email: "inativo@homologacao.invalid",
+        passwordHash,
+        role: "atendente",
+        clinicId: MAIN_CLINIC_ID,
+      }).deactivate(),
+    );
+    created += 1;
+  }
+  return created;
 }
 
 /** Marca o aceite dos termos como o portal grava (texto e versão vigentes). */
@@ -166,42 +184,64 @@ async function acceptTerms(patientId: string, purposes: ("treatment" | "image")[
 /**
  * Portais: paciente com os dois termos aceitos (agenda, foto), paciente novo
  * sem termo (fluxo de aceite, foto bloqueada), responsável de menor e parceiro.
- * Usa pacientes do seed: o 0 é menor (tem responsável), o 1 e o 2 são adultos com e-mail.
+ * Usa pacientes do seed: o primeiro menor (tem responsável) e os dois primeiros
+ * adultos com e-mail que ainda não têm conta de portal.
  */
 async function seedPortalAccounts(passwordHash: string, patients: Patient[]): Promise<number> {
-  const [minor, withTerms, withoutTerms] = patients;
-  const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
-  const partner = Partner.create({
-    fullName: "Dra. Parceira (fictícia)",
-    email: "parceira.contato@homologacao.invalid",
-    phone: fakePhone(),
-    specialty: "Cirurgia vascular",
-  });
-  await repos.partners.save(partner);
-  await acceptTerms(withTerms.id, ["treatment", "image"]);
   const { userAccounts } = await getRepositories(systemScope());
-  const accounts = [
-    { email: "paciente@homologacao.invalid", role: "patient", patientId: withTerms.id },
-    { email: "paciente-novo@homologacao.invalid", role: "patient", patientId: withoutTerms.id },
-    { email: "responsavel@homologacao.invalid", role: "guardian", guardianId: minor.guardianId },
-    { email: "parceiro@homologacao.invalid", role: "partner", partnerId: partner.id },
-  ] as const;
-  for (const account of accounts) {
-    await userAccounts.save(
-      UserAccount.create({ ...account, passwordHash, clinicId: MAIN_CLINIC_ID }),
-    );
+  const taken = new Set((await userAccounts.findAll()).map((account) => account.patientId));
+  const adults = patients.filter((patient) => !patient.guardianId && patient.email && !taken.has(patient.id));
+  const minor = patients.find((patient) => patient.guardianId);
+  const [withTerms, withoutTerms] = adults;
+  const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
+  const partnerEmail = "parceira.contato@homologacao.invalid";
+  let partner = await repos.partners.findByEmail(partnerEmail);
+  if (!partner) {
+    partner = Partner.create({
+      fullName: "Dra. Parceira (fictícia)",
+      email: partnerEmail,
+      phone: fakePhone(),
+      specialty: "Cirurgia vascular",
+    });
+    await repos.partners.save(partner);
   }
-  return accounts.length;
+  const create = async (
+    email: string,
+    link: { patientId: string } | { guardianId: string } | { partnerId: string } | null,
+  ): Promise<number> => {
+    if (!link || (await userAccounts.findByEmail(email))) {
+      return 0;
+    }
+    const role = "patientId" in link ? "patient" : "guardianId" in link ? "guardian" : "partner";
+    await userAccounts.save(UserAccount.create({ email, role, ...link, passwordHash, clinicId: MAIN_CLINIC_ID }));
+    return 1;
+  };
+  let created = 0;
+  if (withTerms && !(await userAccounts.findByEmail("paciente@homologacao.invalid"))) {
+    await acceptTerms(withTerms.id, ["treatment", "image"]);
+  }
+  created += await create("paciente@homologacao.invalid", withTerms ? { patientId: withTerms.id } : null);
+  created += await create("paciente-novo@homologacao.invalid", withoutTerms ? { patientId: withoutTerms.id } : null);
+  created += await create("responsavel@homologacao.invalid", minor?.guardianId ? { guardianId: minor.guardianId } : null);
+  created += await create("parceiro@homologacao.invalid", { partnerId: partner.id });
+  return created;
 }
 
 /** Massa mínima da clínica vizinha: prova que cada empresa só enxerga o que é seu. */
 async function seedNeighborClinic(): Promise<number> {
   const repos = await getRepositories(clinicScope(NEIGHBOR_CLINIC_ID));
-  await repos.professionals.save(
-    Professional.create({ fullName: "Carla Dias (fictícia)", registry: "COREN-SP 000003" }),
-  );
+  if ((await repos.professionals.findAll()).length === 0) {
+    await repos.professionals.save(
+      Professional.create({ fullName: "Carla Dias (fictícia)", registry: "COREN-SP 000003" }),
+    );
+  }
+  const existing = new Set((await repos.patients.findAll()).map((patient) => patient.fullName));
   const names = ["Paciente Vizinho Um", "Paciente Vizinho Dois", "Paciente Vizinho Três"];
+  let created = 0;
   for (const [index, fullName] of names.entries()) {
+    if (existing.has(fullName)) {
+      continue;
+    }
     await repos.patients.save(
       Patient.create({
         fullName,
@@ -211,12 +251,18 @@ async function seedNeighborClinic(): Promise<number> {
         birthDate: birthDateForAge(40 + index, new Date()),
       }),
     );
+    created += 1;
   }
-  return names.length;
+  return created;
 }
 
-async function seedPatients(now: Date) {
+/** Cria os 40 pacientes só em clínica sem paciente; com paciente, reaproveita os que existem. */
+async function seedPatients(now: Date): Promise<{ patients: Patient[]; created: boolean }> {
   const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
+  const existing = await repos.patients.findAll();
+  if (existing.length > 0) {
+    return { patients: existing, created: false };
+  }
   const patients: Patient[] = [];
   for (let index = 0; index < PATIENT_COUNT; index += 1) {
     const name = fakePersonName();
@@ -244,12 +290,14 @@ async function seedPatients(now: Date) {
     await repos.patients.save(patient);
     patients.push(patient);
   }
-  return patients;
+  return { patients, created: true };
 }
 
 async function seedCatalog() {
   const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
-  const professionals = [
+  const existing = await repos.professionals.findAll();
+  const professionals: Professional[] = [];
+  const wanted = [
     Professional.create({ fullName: "Ana Souza (fictícia)", registry: "COREN-SP 000001" }),
     Professional.create({
       fullName: "Bruno Lima (fictício)",
@@ -258,12 +306,19 @@ async function seedCatalog() {
       commissionFixedCents: 3000,
     }),
   ];
-  for (const professional of professionals) {
-    await repos.professionals.save(professional);
+  for (const professional of wanted) {
+    const found = existing.find((item) => item.registry === professional.registry);
+    if (!found) {
+      await repos.professionals.save(professional);
+    }
+    professionals.push(found ?? professional);
   }
-  const procedures = PROCEDURES.map((procedure) => Procedure.create(procedure));
-  for (const procedure of procedures) {
-    await repos.procedures.save(procedure);
+  let procedures = await repos.procedures.findAll();
+  if (procedures.length === 0) {
+    procedures = PROCEDURES.map((procedure) => Procedure.create(procedure));
+    for (const procedure of procedures) {
+      await repos.procedures.save(procedure);
+    }
   }
   return { professionals, procedures };
 }
@@ -410,34 +465,36 @@ async function syncAccountPasswords(password: string): Promise<number> {
 
 export async function seedHomologation(options: SeedOptions): Promise<SeedReport> {
   const now = options.now ?? new Date();
-  const { clinics } = await getRepositories(systemScope());
-  if (await clinics.findById(MAIN_CLINIC_ID)) {
-    return { skipped: true, counts: { passwordsSynced: await syncAccountPasswords(options.password) } };
-  }
   initFaker(now);
-  await seedClinics(now);
+  const clinics = await seedClinics(now);
   const { professionals, procedures } = await seedCatalog();
   const passwordHash = await hashPassword(options.password);
   const staffAccounts = await seedStaffAccounts(passwordHash, professionals);
-  const patients = await seedPatients(now);
+  const { patients, created: patientsCreated } = await seedPatients(now);
   const portalAccounts = await seedPortalAccounts(passwordHash, patients);
   const neighborPatients = await seedNeighborClinic();
-  const { appointments, invoices } = await seedAppointments(now, patients, professionals, procedures);
-  const assessments = await seedClinical(now, patients);
-  const batches = await seedInventory(now);
-  return {
-    skipped: false,
-    counts: {
-      clinics: 3,
-      accounts: staffAccounts + portalAccounts,
-      neighborPatients,
+  const counts: Record<string, number> = {
+    clinics,
+    accounts: staffAccounts + portalAccounts,
+    neighborPatients,
+  };
+  if (patientsCreated) {
+    // Massa pesada só em clínica nova: banco já semeado não recebe agenda, avaliação nem estoque de novo.
+    const { appointments, invoices } = await seedAppointments(now, patients, professionals, procedures);
+    Object.assign(counts, {
       professionals: professionals.length,
       procedures: procedures.length,
       patients: patients.length,
       appointments,
       invoices,
-      assessments,
-      supplyBatches: batches,
-    },
-  };
+      assessments: await seedClinical(now, patients),
+      supplyBatches: await seedInventory(now),
+    });
+    return { skipped: false, counts };
+  }
+  const passwordsSynced = await syncAccountPasswords(options.password);
+  const added = clinics + staffAccounts + portalAccounts + neighborPatients;
+  return added === 0
+    ? { skipped: true, counts: { passwordsSynced } }
+    : { skipped: false, counts: { ...counts, passwordsSynced } };
 }

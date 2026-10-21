@@ -88,7 +88,7 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 
 ## 4. Contas fictícias do seed
 
-Senha de todas: `STAGING_SEED_PASSWORD`. Se a variável mudar, o próximo deploy reaplica a nova senha às contas (o seed não recria banco já semeado). Com `STAGING_DISABLE_MFA=true` (ADR-054) ninguém cadastra nem digita segundo fator; sem a variável, o fator é cadastrado no primeiro login (QR no app). Conta nova só aparece em banco novo: reinicie o branch de banco (§ 1).
+Senha de todas: `STAGING_SEED_PASSWORD`. Se a variável mudar, o próximo deploy reaplica a nova senha às contas. O seed é aditivo: em banco já semeado cria só o que falta (conta, clínica vizinha, parceiro) e não apaga nem duplica. Com `STAGING_DISABLE_MFA=true` (ADR-054) ninguém cadastra nem digita segundo fator; sem a variável, o fator é cadastrado no primeiro login (QR no app). Conta nova de um PR aparece no próximo deploy, sem reiniciar o branch de banco.
 
 | E-mail | Papel / clínica | Para testar |
 | --- | --- | --- |
@@ -115,8 +115,8 @@ piorando) e estoque com lote vencido, estoque baixo e estoque zerado. Cenários 
 erro: destinatário `erro@homologacao.invalid` (e-mail 500) e chave S3 com `__erro__` (403).
 
 Toda feature nova acrescenta seus cenários (sucesso **e** erro) em `scripts/seed/seed.ts` no mesmo PR.
-Como o seed é idempotente por clínica, cenário novo só aparece em banco novo: previews (branch de banco
-novo) já nascem com ele; no `staging`, reinicie o branch de banco (§ 1).
+O seed é aditivo (ADR-059): contas, clínicas, profissionais, parceiro e pacientes da vizinha que faltam são criados em banco já semeado,
+sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações, estoque) só nasce em banco novo: para ela, reinicie o branch de banco (§ 1).
 
 ## 5. Passo a passo no painel (uma vez, por Kalléo)
 
