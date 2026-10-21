@@ -22,6 +22,7 @@ import {
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
+import { SheetPanel } from '@/components/sheet-panel';
 import { StatusBadge } from '@/components/status-badge';
 import type { CommissionType } from '@/domain/professional/professional';
 import { apiFetch } from '@/lib/client';
@@ -53,6 +54,7 @@ export default function ProfessionalsPage() {
     refresh,
   } = useApiQuery<ProfessionalDto[]>('/api/professionals');
   const [editing, setEditing] = useState<ProfessionalDto | 'new' | null>(null);
+  const selected = editing && editing !== 'new' ? editing : null;
   const [editingHours, setEditingHours] = useState<ProfessionalDto | null>(
     null,
   );
@@ -98,95 +100,125 @@ export default function ProfessionalsPage() {
         <ErrorAlert message={actionError ?? error ?? ''} />
       )}
 
-      <Card>
-        {!professionals ? (
-          <LoadingIndicator />
-        ) : professionals.length === 0 ? (
-          <EmptyState message="Nenhum profissional cadastrado. Consultas e evoluções podem ser atribuídas após o cadastro." />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table stack className="w-full text-left text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="px-4 py-3">Nome</TableHead>
-                  <TableHead className="px-4 py-3">Registro</TableHead>
-                  <TableHead className="px-4 py-3">Repasse</TableHead>
-                  <TableHead className="px-4 py-3">Situação</TableHead>
-                  <TableHead className="px-4 py-3 text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {professionals.map((professional) => (
-                  <TableRow
-                    key={professional.id}
-                    className={professional.active ? '' : 'bg-surface-2/60'}
-                  >
-                    <TableCell label="Nome" className="px-4 py-3 font-medium">
-                      {professional.fullName}
-                    </TableCell>
-                    <TableCell
-                      label="Registro"
-                      className="px-4 py-3 text-ink-2"
+      <div
+        className={
+          selected
+            ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]'
+            : ''
+        }
+      >
+        <Card>
+          {!professionals ? (
+            <LoadingIndicator />
+          ) : professionals.length === 0 ? (
+            <EmptyState message="Nenhum profissional cadastrado. Consultas e evoluções podem ser atribuídas após o cadastro." />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table stack className="w-full text-left text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-4 py-3">Nome</TableHead>
+                    <TableHead className="px-4 py-3">Registro</TableHead>
+                    <TableHead className="px-4 py-3">Repasse</TableHead>
+                    <TableHead className="px-4 py-3">Situação</TableHead>
+                    <TableHead className="px-4 py-3 text-right">
+                      Ações
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {professionals.map((professional) => (
+                    <TableRow
+                      key={professional.id}
+                      className={professional.active ? '' : 'bg-surface-2/60'}
                     >
-                      {professional.registry ?? '—'}
-                    </TableCell>
-                    <TableCell label="Repasse" className="px-4 py-3 text-ink-2">
-                      {formatCommissionRule(ruleOf(professional))}
-                    </TableCell>
-                    <TableCell label="Situação" className="px-4 py-3">
-                      <StatusBadge
-                        status={professional.active ? 'confirmed' : 'cancelled'}
-                        label={professional.active ? 'Ativo' : 'Inativo'}
-                      />
-                    </TableCell>
-                    <TableCell label="Ações" className="px-4 py-3 text-right">
-                      <Button
-                        type="button"
-                        onClick={() => setEditing(professional)}
-                        variant="ghost"
-                        size="sm"
+                      <TableCell label="Nome" className="px-4 py-3 font-medium">
+                        {professional.fullName}
+                      </TableCell>
+                      <TableCell
+                        label="Registro"
+                        className="px-4 py-3 text-ink-2"
                       >
-                        Editar
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => setEditingHours(professional)}
-                        variant="ghost"
-                        size="sm"
+                        {professional.registry ?? '—'}
+                      </TableCell>
+                      <TableCell
+                        label="Repasse"
+                        className="px-4 py-3 text-ink-2"
                       >
-                        Horários
-                      </Button>
-                      {professional.active ? (
-                        <ConfirmAction
-                          trigger={
-                            <Button type="button" variant="ghost" size="sm">
-                              Desativar
-                            </Button>
+                        {formatCommissionRule(ruleOf(professional))}
+                      </TableCell>
+                      <TableCell label="Situação" className="px-4 py-3">
+                        <StatusBadge
+                          status={
+                            professional.active ? 'confirmed' : 'cancelled'
                           }
-                          title="Desativar profissional?"
-                          description="O profissional para de estar disponível pra agendar."
-                          confirmLabel="Confirmar"
-                          variant="danger"
-                          onConfirm={() => toggleActive(professional)}
+                          label={professional.active ? 'Ativo' : 'Inativo'}
                         />
-                      ) : (
+                      </TableCell>
+                      <TableCell label="Ações" className="px-4 py-3 text-right">
                         <Button
                           type="button"
-                          onClick={() => void toggleActive(professional)}
+                          onClick={() => setEditing(professional)}
                           variant="ghost"
                           size="sm"
                         >
-                          Reativar
+                          Editar
                         </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                        <Button
+                          type="button"
+                          onClick={() => setEditingHours(professional)}
+                          variant="ghost"
+                          size="sm"
+                        >
+                          Horários
+                        </Button>
+                        {professional.active ? (
+                          <ConfirmAction
+                            trigger={
+                              <Button type="button" variant="ghost" size="sm">
+                                Desativar
+                              </Button>
+                            }
+                            title="Desativar profissional?"
+                            description="O profissional para de estar disponível pra agendar."
+                            confirmLabel="Confirmar"
+                            variant="danger"
+                            onConfirm={() => toggleActive(professional)}
+                          />
+                        ) : (
+                          <Button
+                            type="button"
+                            onClick={() => void toggleActive(professional)}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            Reativar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </Card>
+        {selected && (
+          <SheetPanel
+            key={selected.id}
+            title="Editar profissional"
+            onClose={() => setEditing(null)}
+          >
+            <ProfessionalForm
+              initial={selected}
+              onSaved={() => {
+                setEditing(null);
+                refresh();
+              }}
+            />
+          </SheetPanel>
         )}
-      </Card>
+      </div>
 
       {editingHours && (
         <Modal
@@ -200,15 +232,9 @@ export default function ProfessionalsPage() {
         </Modal>
       )}
 
-      {editing && (
-        <Modal
-          title={
-            editing === 'new' ? 'Novo profissional' : 'Editar profissional'
-          }
-          onClose={() => setEditing(null)}
-        >
+      {editing === 'new' && (
+        <Modal title="Novo profissional" onClose={() => setEditing(null)}>
           <ProfessionalForm
-            initial={editing === 'new' ? undefined : editing}
             onSaved={() => {
               setEditing(null);
               refresh();
