@@ -8,7 +8,7 @@
 - Project: em uso (produção no ar) e homologação no ar desde 2026-10-19 (ADR-041, `docs/engineering/homologacao.md`).
 - Decision: comprometida por @KalleoPinheiro, 2026-10-21, ao abrir esta sessão: login facilitado **somente** na staging, sem 2FA, "baseado totalmente em mocks".
 - In flight: `release/v0.2.0` é a release aberta (ADR-052); a feature nasce dela. Nada em andamento toca `src/app/api/auth/login`.
-- At stake: caro se errado. Um atalho de login sem senha que vaze para produção entrega `super_admin` a qualquer um com dado de saúde (LGPD) atrás. Em contrapartida, ligar/desligar é reversível em minutos (variável de ambiente).
+- At stake: caro se errado. Desligar o segundo fator por engano em produção enfraquece a defesa de `super_admin` e `company_admin` sobre dado de saúde (LGPD). Em contrapartida, ligar/desligar é reversível em minutos (variável de ambiente).
 
 ## Problem
 
@@ -42,15 +42,15 @@ Cheaper paths considered: atalho "Entrar como…" sem senha (descartado pelo Kal
 
 ## Success
 
-- Worked if: validar uma release na staging passa a começar em "clicar na conta" - por ~2026-11-30.
-- Early signal: o roteiro `## Homologação` do próximo PR de feature roda sem o passo de login manual; se alguém ainda recadastra autenticador na staging, o atalho não está pegando.
+- Worked if: validar uma release na staging passa a começar em "entrar com e-mail e senha da conta certa" - por ~2026-11-30.
+- Early signal: o roteiro `## Homologação` do próximo PR de feature roda sem o passo de login manual; se alguém ainda recadastra autenticador na staging, a variável não está ligada.
 - Review: na abertura da próxima release (`release/v0.3.0`) - Kalléo.
 - Não mensurável hoje (tempo de login): proxy observável é o passo "entrar com senha e cadastrar 2FA" sair do `homologacao.md` § 4.
 
 ## Boundary
 
-In: staging (`APP_ENV=staging`) apenas; as 5 contas fictícias do seed; pular o 2FA em qualquer login nesse ambiente; doc e ADR.
-Out: preview por PR - fica de fora porque o Kalléo pediu "somente staging" e o preview já é protegido pela Vercel Authentication; identidade em memória sem banco - ver Shape; troca de papel em um clique; qualquer mudança no login de produção, no portal do paciente ou nas regras de papel.
+In: staging (`APP_ENV=staging`) apenas; as 13 contas fictícias do seed; pular o 2FA em qualquer login nesse ambiente; doc e ADR.
+Out: preview por PR - fica de fora porque o Kalléo pediu "somente staging" e o preview já é protegido pela Vercel Authentication; atalho sem senha e identidade em memória - ver Verdict; qualquer mudança no login de produção, no portal do paciente ou nas regras de papel.
 
 ## Prior art
 
