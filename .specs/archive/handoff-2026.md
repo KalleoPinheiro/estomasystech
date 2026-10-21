@@ -1550,3 +1550,11 @@ Issue #428, parte 2 (a parte 1, barra inferior e Mais, foi o PR #437).
 - **TESTE-ALTERADO**: o nome da tela mudou de "Dashboard" para "Hoje" (aprovado pelo dono na canvas): `tests/pages/staff-nav-role.test.tsx`, `tests/pages/staff-dashboard.test.tsx` e os títulos em `e2e/{auth,followup,plataforma,plataforma-suspensao}.spec.ts`. Só o rótulo mudou.
 - **Decisão não crítica**: o estado "sem permissão para o resumo financeiro" já existe (o bloco de KPIs some para quem não tem `/api/summary`); o bloco de KPIs do mês segue abaixo.
 - **Next step**: #429 (listas em cartões). **Blockers**: nenhum.
+
+
+## Nome abreviado nas listas (2026-10-21) — EM REVISÃO
+
+Issue #429 (primeira fatia). As tabelas das telas já viram cartões no celular (`Table stack` do Still Void 3.4.0, provado em `e2e/responsive-tables.spec.ts`), então esta fatia aplica a regra de exibição do nome do CONTEXT.md.
+- **Feito**: `abbreviatePatientName` (`src/lib/patient-name.ts`): primeiro e último nome inteiros e iniciais dos do meio; partículas (de, da, do, das, dos, e) não viram inicial. Aplicado nas listas de Pacientes, Faturamento, Hoje (consultas e retornos), Agenda (grade e mês no celular) e lista de espera. Testes novos: `tests/lib/patient-name.test.ts` e um cenário em `tests/pages/dashboard-role.test.tsx`. **TESTE-ALTERADO**: `e2e/{agenda,faturamento,followup,layout-mobile-first,lista-espera,pacientes,responsive-tables}.spec.ts` passam a procurar o nome já abreviado nas listas (helper `e2e/support/patient-name.ts` reutiliza `abbreviatePatientName`); a verificação é a mesma, só o texto esperado muda por causa da regra nova.
+- **Decisão não crítica**: pedidos do titular, auditoria, detalhes, formulários e confirmações mantêm o nome completo (identificam o titular ou a ação). Homônimos com o mesmo nome abreviado: a lista de Pacientes já mostra o nascimento em coluna; nas demais listas fica a pergunta aberta do doc de descoberta (padrão sugerido: nascimento no segundo).
+- **Next step**: telas restantes do #429, uma por PR (Procedimentos/Materiais/Profissionais/Parceiros como lista + ficha, Minha conta, login), depois da trava de acessibilidade (#424). **Blockers**: nenhum.

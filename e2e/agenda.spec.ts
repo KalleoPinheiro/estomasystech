@@ -5,6 +5,7 @@ import { DEFAULT_SCHEDULE_CONFIG } from "./support/constants";
 import { goToMonth } from "./support/calendar";
 import { businessDay, slotForAttempt, outsideBusinessHoursSlot } from "./support/dates";
 import { pickPatient } from "./support/patient-picker";
+import { shown } from "./support/patient-name";
 
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: describe agrupa 6 fluxos e2e independentes da agenda
 test.describe("agenda", () => {
@@ -26,7 +27,7 @@ test.describe("agenda", () => {
 
     await goToMonth(page, slot.ymd);
     await expect(
-      page.getByRole("button", { name: `${slot.startTimeInput} ${patient.fullName}`, exact: true }),
+      page.getByRole("button", { name: `${slot.startTimeInput} ${shown(patient.fullName)}`, exact: true }),
     ).toBeVisible();
   });
 
@@ -115,7 +116,7 @@ test.describe("agenda", () => {
     await page.goto("/agenda");
     await goToMonth(page, original.ymd);
     await page
-      .getByRole("button", { name: `${original.startTimeInput} ${patient.fullName}`, exact: true })
+      .getByRole("button", { name: `${original.startTimeInput} ${shown(patient.fullName)}`, exact: true })
       .click();
 
     await expect(page.getByRole("heading", { name: "Detalhes da consulta" })).toBeVisible();
@@ -128,7 +129,7 @@ test.describe("agenda", () => {
 
     await goToMonth(page, target.ymd);
     await expect(
-      page.getByRole("button", { name: `${target.startTimeInput} ${patient.fullName}`, exact: true }),
+      page.getByRole("button", { name: `${target.startTimeInput} ${shown(patient.fullName)}`, exact: true }),
     ).toBeVisible();
   });
 

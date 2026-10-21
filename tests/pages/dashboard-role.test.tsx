@@ -165,3 +165,44 @@ describe('Feature: tela Hoje (#428)', () => {
     expect(screen.getByText('0 de 1 concluídas')).toBeInTheDocument();
   });
 });
+
+/** Nome do paciente (CONTEXT.md): completo onde identifica, abreviado nas listas. */
+describe('Feature: nome do paciente na tela Hoje (#429)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Dado paciente com 4 nomes, Quando abrir Hoje, Então a lista abrevia e o próximo atendimento mostra o nome completo', async () => {
+    const appointment = {
+      ...todayAppointment,
+      patientName: 'Mateus Paulo Costa Silva',
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.startsWith('/api/auth/identity')) {
+          return ok(identityFor('atendente'));
+        }
+        if (url.startsWith('/api/appointments')) return ok([appointment]);
+        if (url.startsWith('/api/follow-ups')) return ok([]);
+        if (url.startsWith('/api/guardians/majority')) return ok([]);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    renderWithToast(
+      <WithStaffIdentity>
+        <DashboardPage />
+      </WithStaffIdentity>,
+    );
+
+    expect(await screen.findByText('Mateus P. C. Silva')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', {
+        name: /^Mateus Paulo Costa Silva · \d{2}:\d{2}$/,
+      }),
+    ).toBeInTheDocument();
+  });
+});

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
+import { abbreviatePatientName } from '@/lib/patient-name';
 import { buildMonthDays, dayKey, WEEKDAY_LABELS } from './calendar-days';
 
 interface MobileMonthProps {
@@ -162,7 +163,9 @@ export function MobileMonth({
                   <span className="font-semibold tabular-nums">
                     {formatTime(appointment.startsAt)}
                   </span>
-                  <span className="truncate">{appointment.patientName}</span>
+                  <span className="truncate">
+                    {abbreviatePatientName(appointment.patientName)}
+                  </span>
                   <span className="truncate text-ink-3 text-sm">
                     {appointment.procedure}
                   </span>
