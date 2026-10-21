@@ -99,22 +99,101 @@ interface ScheduleConfigDto {
  */
 export default function SettingsPage() {
   const can = useStaffAccess();
+  const canClinic = can('/api/settings/clinic-info');
+  const sections = [
+    { id: 'dados', label: 'Dados cadastrais', show: canClinic },
+    { id: 'identidade', label: 'Identidade', show: true },
+    { id: 'privacidade', label: 'Contato de privacidade', show: canClinic },
+    {
+      id: 'horarios',
+      label: 'Horários e agenda',
+      show: can('/api/settings/schedule'),
+    },
+    { id: 'feriados', label: 'Feriados e ausências', show: true },
+    {
+      id: 'google-agenda',
+      label: 'Google Agenda',
+      show: can('/api/integrations/google-calendar'),
+    },
+    { id: 'email', label: 'Canal de e-mail', show: true },
+    {
+      id: 'contas',
+      label: 'Contas de acesso',
+      // A seção lê o cadastro completo de profissionais (administrativo).
+      show: can('/api/professionals'),
+    },
+  ].filter((section) => section.show);
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <PageHeader title="Configurações" />
-      {can('/api/settings/clinic-info') && <ClinicInfoSection />}
-      {can('/api/settings/clinic-info') && <LogoSection />}
-      <IdentitySection />
-      {can('/api/settings/clinic-info') && <PrivacyContactSection />}
-      {can('/api/settings/schedule') && <ScheduleSection />}
-      <ClosuresSection />
-      {can('/api/integrations/google-calendar') && (
-        <CalendarIntegrationSection />
-      )}
-      <EmailChannelSection />
-      {/* A seção lê o cadastro completo de profissionais (administrativo). */}
-      {can('/api/professionals') && <AccountsSection />}
+      <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <SectionNav sections={sections} />
+        <div className="flex min-w-0 flex-col gap-8">
+          {canClinic && (
+            <div id="dados" className="scroll-mt-4">
+              <ClinicInfoSection />
+            </div>
+          )}
+          <div id="identidade" className="flex scroll-mt-4 flex-col gap-8">
+            {canClinic && <LogoSection />}
+            <IdentitySection />
+          </div>
+          {canClinic && (
+            <div id="privacidade" className="scroll-mt-4">
+              <PrivacyContactSection />
+            </div>
+          )}
+          {can('/api/settings/schedule') && (
+            <div id="horarios" className="scroll-mt-4">
+              <ScheduleSection />
+            </div>
+          )}
+          <div id="feriados" className="scroll-mt-4">
+            <ClosuresSection />
+          </div>
+          {can('/api/integrations/google-calendar') && (
+            <div id="google-agenda" className="scroll-mt-4">
+              <CalendarIntegrationSection />
+            </div>
+          )}
+          <div id="email" className="scroll-mt-4">
+            <EmailChannelSection />
+          </div>
+          {can('/api/professionals') && (
+            <div id="contas" className="scroll-mt-4">
+              <AccountsSection />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+/**
+ * Atalhos para as seções da página: no computador ficam numa coluna fixa ao
+ * lado; no celular, numa lista no topo (o hub), e tocar leva à seção.
+ */
+function SectionNav({
+  sections,
+}: {
+  sections: Array<{ id: string; label: string }>;
+}) {
+  return (
+    <nav
+      aria-label="Seções da configuração"
+      className="flex flex-col gap-1 lg:sticky lg:top-4"
+    >
+      {sections.map((section) => (
+        <a
+          key={section.id}
+          href={`#${section.id}`}
+          className="rounded-lg px-3 py-2 font-semibold text-ink-2 text-sm hover:bg-accent-soft hover:text-ink"
+        >
+          {section.label}
+        </a>
+      ))}
+    </nav>
   );
 }
 

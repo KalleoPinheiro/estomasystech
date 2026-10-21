@@ -1671,3 +1671,10 @@ Exceção pontual de @KalleoPinheiro para editar `scripts/gate/` e `.husky/pre-p
 
 Issue #429, fatia 8, canvas aprovada (Cadastros). `/materiais`: Editar abre a ficha ao lado da lista (`lg:`) ou a folha de baixo no celular, via `SheetPanel`; Novo insumo, Movimentar e Histórico seguem em janela (são ações de estoque, não ficha). Nenhum teste existente alterado.
 - **Next step**: hub de Configurações. **Blockers**: nenhum.
+
+## Hub de Configurações (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 9, canvas aprovada (Configurações). `/configuracoes` ganha `SectionNav`: coluna de atalhos fixa ao lado (computador) e lista no topo (celular), por âncora, só com as seções que o papel vê (mesma matriz `useStaffAccess`). As seções seguem todas na mesma página.
+- **Decisão**: a canvas mostra o celular como hub com telas por seção (navegar para cada uma). Fiz âncoras na mesma página porque as telas por seção mudariam rotas e quebrariam vários E2E existentes (feriados, canal de e-mail, grade de horários), que não podem ser alterados por regra 8. Se o Kalléo quiser uma tela por seção, vira um PR próprio com migração desses testes.
+- Teste novo `tests/pages/configuracoes-secoes.test.tsx`; nenhum teste existente alterado.
+- **Fechando o #429**: restam só o favicon/ícone do app (decisão do Kalléo) e a pergunta da tela por seção. **Blockers**: nenhum.
