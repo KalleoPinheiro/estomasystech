@@ -22,6 +22,7 @@ import {
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
+import { SheetPanel } from '@/components/sheet-panel';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { ProcedureDto, SupplyDto } from '@/lib/dto';
@@ -190,7 +191,7 @@ function NewProcedureModal({
   );
 }
 
-/** Ficha ao lado da lista: o procedimento escolhido se edita sem sair da lista. */
+/** Ficha ao lado da lista (folha de baixo no celular): edita sem sair da lista. */
 function ProcedureSheet({
   procedure,
   onClose,
@@ -201,15 +202,9 @@ function ProcedureSheet({
   onSaved: () => void;
 }) {
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-semibold text-lg">Editar procedimento</h2>
-        <Button type="button" onClick={onClose} variant="ghost" size="sm">
-          Fechar ficha
-        </Button>
-      </div>
+    <SheetPanel title="Editar procedimento" onClose={onClose}>
       <ProcedureForm initial={procedure} onSaved={onSaved} />
-    </Card>
+    </SheetPanel>
   );
 }
 
