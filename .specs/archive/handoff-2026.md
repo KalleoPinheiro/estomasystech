@@ -1592,3 +1592,10 @@ Issue #429, fatia 3 (critério de pronto: axe sem violação séria). `e2e/acess
 - **TESTE-ALTERADO**: `tests/pages/staff-dashboard.test.tsx` procura os links dos KPIs pelo texto visível (`/^Recebido no mês/`, `/^Consultas no mês/`) em vez do `aria-label` "Ver …" (critério WCAG 2.5.3: o nome acessível contém o rótulo visível).
 - **Ainda fora do axe**: definir senha (precisa de token), portal do paciente e Plataforma (sessões próprias); entram numa fatia com helper de sessão. O redesenho "lista + ficha" de Procedimentos, Materiais, Profissionais e Parceiros e o hub de Configurações dependem do desenho da canvas (decisão de UX do dono) e ficam como pergunta aberta.
 - **Next step**: definir/portal/plataforma no axe. **Blockers**: nenhum.
+
+## Acessibilidade: definir senha, portal e Plataforma (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 4. `e2e/acessibilidade-portal-plataforma.spec.ts` roda o axe (WCAG 2.2 AA), claro e escuro, a 390px: definir senha (link inválido), início do portal do paciente (sessão de paciente com `linkPortalAccount` + `sessionCookie`) e 5 telas da Plataforma (início, nova clínica, taxonomia, auditoria, minha conta; sessão do super_admin).
+- **Achado e correção**: portal, `scrollable-region-focusable` nos textos de termo (`consent-card.tsx`, `partner-consent-card.tsx`): o `Prose` com `overflow-y-auto` não era focável por teclado; ganhou `tabIndex={0}`, `role="region"` e `aria-label`. As demais telas já passavam. Sem teste existente alterado.
+- **Fora do axe**: definir senha com token válido (estado de formulário) e telas internas do portal além do início; ficam para quando houver helper de token.
+- **Next step**: "lista + ficha" e login redesenhado seguem pausados até o Kalléo ver a canvas. **Blockers**: nenhum.
