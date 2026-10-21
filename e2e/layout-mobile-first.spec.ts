@@ -303,8 +303,9 @@ test.describe("casca e padrões compartilhados", () => {
     });
   }
 
-  // #199: o e-mail truncado ("ad…") não identificava quem estava logado.
-  test("e-mail da sidebar inteiro, sem cortar", async ({ page, request }) => {
+  // #199 (revisto a pedido do Kalléo, 2026-10-21): o bloco da clínica na barra lateral
+  // fica em uma linha com reticências; o endereço inteiro vai no `title`.
+  test("e-mail da sidebar em uma linha com reticências e endereço inteiro no title", async ({ page, request }) => {
     await world(request);
     await page.setViewportSize(DESKTOP);
     await page.goto("/");
@@ -318,8 +319,7 @@ test.describe("casca e padrões compartilhados", () => {
       title: el.getAttribute("title"),
       text: el.textContent,
     }));
-    expect(metrics.overflow).not.toBe("ellipsis");
-    expect(metrics.scroll).toBeLessThanOrEqual(metrics.client);
+    expect(metrics.overflow).toBe("ellipsis");
     expect(metrics.title).toBe(metrics.text);
   });
 

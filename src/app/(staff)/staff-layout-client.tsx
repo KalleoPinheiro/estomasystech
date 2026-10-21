@@ -32,38 +32,43 @@ export function SidebarIdentity() {
   const data = shared ? shared.identity : own;
 
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-col gap-3">
       <BrandLogo />
-      <div className="mt-2 flex min-w-0 items-center gap-2">
-        {data && (
+      {data && (
+        <div className="flex min-w-0 items-center gap-2.5">
           <IdentityImage
             kind="logo"
             url={data.clinicLogoUrl}
             name={data.clinicLabel}
-            size={28}
+            size={32}
           />
-        )}
-        <p className="min-w-0 text-ink-3 text-xs">{data?.clinicLabel ?? ''}</p>
-      </div>
+          <p
+            className="min-w-0 truncate font-semibold text-ink-2 text-sm"
+            title={data.clinicLabel}
+          >
+            {data.clinicLabel}
+          </p>
+        </div>
+      )}
       {data?.account && (
-        // E-mail inteiro, quebrando linha (#199): truncado ficava "ad…" e
-        // ninguém sabia quem estava logado — o objetivo da #126.
-        <div className="mt-1 flex min-w-0 items-start gap-2">
+        // Uma linha com reticências: o e-mail inteiro fica no `title` (passar o
+        // mouse) e a lista de contas mostra o endereço completo (#199).
+        <div className="flex min-w-0 items-center gap-2.5">
           <IdentityImage
             kind="avatar"
             url={data.account.avatarUrl}
             name={data.account.email.split('@')[0].replace(/[._-]+/g, ' ')}
-            size={28}
+            size={32}
           />
-          <p className="min-w-0 text-ink-3 text-xs">
+          <p className="flex min-w-0 flex-col text-ink-2 text-xs">
             <span
-              className="block break-all"
+              className="block truncate"
               title={data.account.email}
               data-sidebar-email
             >
               {data.account.email}
             </span>
-            <span className="block">{data.account.roleLabel}</span>
+            <span className="block truncate">{data.account.roleLabel}</span>
           </p>
         </div>
       )}

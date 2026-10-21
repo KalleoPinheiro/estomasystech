@@ -102,7 +102,7 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('C42 e-mail da sidebar quebra linha em vez de truncar', async () => {
+  it('C42 e-mail da sidebar fica em uma linha com reticências e traz o endereço inteiro no title', async () => {
     mockIdentityFetch({
       clinicLabel: 'Clínica EstomaSysTech Ltda',
       account: {
@@ -118,7 +118,11 @@ describe('Feature: Identidade de sessão na sidebar (issue #126)', () => {
     const email = await screen.findByText(
       'recepcao.turno.manha@clinica-estomaterapia.com.br',
     );
-    expect(email).not.toHaveClass('truncate');
-    expect(email).toHaveClass('break-all');
+    expect(email).toHaveClass('truncate');
+    expect(email).not.toHaveClass('break-all');
+    expect(email).toHaveAttribute(
+      'title',
+      'recepcao.turno.manha@clinica-estomaterapia.com.br',
+    );
   });
 });
