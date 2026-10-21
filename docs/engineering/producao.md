@@ -703,6 +703,32 @@ Roda **uma vez**, depois da migração `0063`. **Manual**. Regras: ACE-RN-57, [A
 2. `npm run clinics:cnpj-review -- --confirmar` — marca cada uma (o número não muda) e audita.
    Reexecutar é seguro. Avise as clínicas listadas: o aviso aparece em *Configurações → Dados da clínica*.
 
+### 7.4 Rotina mensal (1º sábado)
+
+Manutenção feita à mão no 1º sábado de cada mês, com lembrete na agenda do operador (#381). Não é
+automática: o Coolify só é atualizado pela interface, depois de conferir o backup.
+
+1. **Backup:** confirme que o backup `age` do dia anterior chegou ao R2 (§ 5.3). Se falhou, resolva
+   antes de qualquer atualização.
+2. **Coolify:** atualize pela interface do Coolify. Não rode atualização às cegas nem em horário de uso.
+3. **Host (`ssh vps`):** `sudo apt update && apt list --upgradable`; verifique `/var/run/reboot-required`.
+   Reinicie só em janela combinada, porque o app cai junto.
+4. **fail2ban:** `sudo fail2ban-client status sshd` (há bans ativos? algum IP conhecido?).
+5. **Firewall local:** `systemctl status fw-estomasystech --no-pager` (ativo e sem erro).
+6. **Monitores:** UptimeRobot verde em `/api/health/ready`; sem falha em *Scheduled Tasks → Executions* (§ 7).
+7. **Registro:** anote data, versões e resultado no handoff do mês (`.specs/archive/handoff-2026.md`).
+
+O lembrete existe em `.github/workflows/rotina-mensal.yml`, mas **desligado**: só roda por
+`workflow_dispatch` (Actions → *Rotina mensal* → *Run workflow*) e, sem `schedule`, não consome a cota
+do Actions. Cada execução abre uma issue «Rotina mensal de manutenção — AAAA-MM» com este checklist
+(não duplica se já houver uma aberta). Para ativar:
+
+1. Descomente o bloco `schedule` do workflow (cron de todo sábado às 11:00 UTC; o passo «Só no 1º
+   sábado» descarta os que caem depois do dia 7).
+2. Abra PR `feat/* → release/*` com a mudança; por tocar `.yml`, ele não é só documentação, então
+   siga o fluxo do ADR-052 (changeset e `## Homologação`).
+3. Confirme a cota do Actions antes (o job é de poucos segundos, sem checkout).
+
 ## 8. Primeiro acesso
 
 Já feito em produção (2026-10-18): o Super Admin foi criado e o token removido. O roteiro vale para
@@ -826,9 +852,13 @@ docker logs <container-do-app> 2>&1 | grep '"requestId":"<id>"' | jq .
 docker logs <container-do-app> 2>&1 | jq -c 'select(.level == "error")'
 ```
 
-Os logs não carregam dado pessoal (`logError`,
-[#202](https://github.com/KalleoPinheiro/estomasystech/issues/202); e-mail e número longo viram
-`[e-mail]`/`[número]`). O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
+Os logs não carregam dado pessoal: `logError` limpa o erro
+([#202](https://github.com/KalleoPinheiro/estomasystech/issues/202)) e o logger redige **todo** campo e
+mensagem antes de escrever (campo sensível vira `[redigido]`; e-mail, número longo, URL com query e
+credencial viram marcador; [ADR-060](../adr/060-redacao-central-de-pii-nos-logs.md)). A auditoria dos
+pontos de log, sempre com dado mascarado, está em
+[`auditoria-logs-pii-2026-10.md`](auditoria-logs-pii-2026-10.md); repita-a na rotina mensal e **nunca
+cole linha crua de log em chat, issue ou PR**. O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
 mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
 ### 9.5 GlitchTip (error tracking)

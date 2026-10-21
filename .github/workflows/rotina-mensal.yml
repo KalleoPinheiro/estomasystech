@@ -1,0 +1,60 @@
+name: Rotina mensal
+
+# Lembrete da manutenção do 1º sábado (producao.md § 7.4, #381). Abre uma issue com o checklist;
+# não executa nada no servidor. Está DESLIGADO de propósito: sem `schedule`, só roda por
+# `workflow_dispatch` e não consome a cota do Actions. Para ativar, veja producao.md § 7.4.
+on:
+  # schedule:
+  #   # Todo sábado às 11:00 UTC (08:00 em Brasília). O cron une dia do mês e dia da semana com OU,
+  #   # então a restrição ao 1º sábado (dia 1-7) fica no passo "Só no 1º sábado".
+  #   - cron: "0 11 * * 6"
+  workflow_dispatch:
+
+concurrency:
+  group: rotina-mensal
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+
+jobs:
+  lembrete:
+    name: Abrir issue-lembrete
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Só no 1º sábado
+        id: dia
+        run: |
+          # Disparo manual sempre abre; agendado só quando o sábado cai nos dias 1 a 7.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u +%-d)" -le 7 ]; then
+            echo "rodar=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rodar=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Abrir a issue do mês
+        if: steps.dia.outputs.rodar == 'true'
+        run: |
+          titulo="Rotina mensal de manutenção — $(date -u +%Y-%m)"
+          aberta="$(gh issue list --state open --search "\"$titulo\" in:title" --json number --jq 'length')"
+          if [ "$aberta" != "0" ]; then
+            echo "Já existe issue aberta: $titulo"
+            exit 0
+          fi
+          cat > corpo.md <<'CHECKLIST'
+          Checklist de `docs/engineering/producao.md` § 7.4. Faça pela ordem; marque cada item e
+          feche a issue ao final.
+
+          - [ ] **Backup:** o backup `age` do dia anterior chegou ao R2 (§ 5.3). Se falhou, resolva antes de atualizar qualquer coisa.
+          - [ ] **Coolify:** atualizado pela interface (não às cegas, nem em horário de uso).
+          - [ ] **Host (`ssh vps`):** `sudo apt update && apt list --upgradable`; conferido `/var/run/reboot-required` (reinício só em janela combinada).
+          - [ ] **fail2ban:** `sudo fail2ban-client status sshd` sem ban estranho.
+          - [ ] **Firewall local:** `systemctl status fw-estomasystech --no-pager` ativo e sem erro.
+          - [ ] **Monitores:** UptimeRobot verde em `/api/health/ready`; sem falha em *Scheduled Tasks → Executions*.
+          - [ ] **Registro:** data, versões e resultado anotados em `.specs/archive/handoff-2026.md`.
+          CHECKLIST
+          gh issue create --title "$titulo" --body-file corpo.md

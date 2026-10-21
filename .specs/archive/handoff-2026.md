@@ -1684,3 +1684,36 @@ Issue #429, fatia 9, canvas aprovada (Configurações). `/configuracoes` ganha `
 Pedido do Kalléo (opção A): a staging usa a branch `main` do Neon, sem reset, então as 8 contas novas do #434 e a clínica vizinha nunca entravam. `scripts/seed/seed.ts` passa a criar só o que falta (clínica por id, conta por e-mail, profissional por registro, parceiro por e-mail, pacientes da vizinha por nome), sem apagar nem duplicar; massa pesada só em clínica sem paciente; senha reaplicada em banco já semeado; travas de `APP_ENV` e banco de produção intactas. ADR-059; `homologacao.md` § 4 atualizado.
 - **Testes novos**: `tests/scripts/seed-aditivo.test.ts` (banco vazio, já completo, semeado antes do #434, termos do portal, senha trocada). Nenhum teste existente alterado.
 - **Next step**: após o merge, Kalléo roda `git checkout release/v0.2.0 && git pull && npm run staging:rebuild -- --release --push` no WSL. **Blockers**: nenhum.
+## Rotina mensal e checklist (#381) (2026-10-21) — EM REVISÃO
+
+Decisões do Kalléo em 2026-10-21 sobre a #381: logs com PII mascarada (thread própria), segurança adiada (Tailscale no lugar de Proton VPN; Cloudflare só com usuários reais) e rotina mensal em opção A (checklist no runbook).
+- **Feito:** `producao.md` § 7.4 com o checklist do 1º sábado. Só `.md`, então pela regra do ADR-053 não exige recibo do gate local.
+- **Próximo passo (outro PR, com recibo):** workflow de lembrete mensal desligado (sem `schedule`), que abre uma issue de lembrete. Ativar depois, com o recibo do gate local.
+- **Atenção:** `mutacao-mensal.yml` já tem `schedule` (último dia do mês) e vai rodar em 2026-10-31, consumindo cota; decidir se o mantém ou desliga até o reset.
+- **Blockers:** nenhum.
+## Favicon e ícone do app com a logo nova (2026-10-21) — EM REVISÃO
+
+Escolha do Kalléo: opções C (branca) e D (grafite) da prévia, uma para cada cenário claro/escuro. `public/brand/favicon-grafite.svg` (aba clara) e `favicon-branco.svg` (aba escura) entram em `metadata.icons` com `media: prefers-color-scheme`, e viram caminhos públicos (`access-policy.ts`). Ícone do app instalado (manifesto 192/512/maskable) e `apple-touch-icon.png`: grafite, já que o manifesto não troca por tema. `src/app/favicon.ico`: grafite, de reserva.
+- **Decisão minha**: associei grafite à aba clara e branco à aba escura (contraste com a aba). Se o Kalléo quiser o oposto, é trocar o `media` de cada um.
+- Teste novo `tests/lib/favicon-por-tema.test.ts`; nenhum teste existente alterado.
+- **Next step**: nenhum no #429. **Blockers**: nenhum.
+
+## Barra lateral: bloco da clínica e do usuário (2026-10-21) — EM REVISÃO
+
+Correção pedida pelo Kalléo (staging f42666e, desktop): avatar cortado ("C(" e "A") e nome da clínica e e-mail quebrando em várias linhas. `SidebarIdentity` agora tem logo e avatar de 32 px (iniciais com fundo `bg-accent-soft`, antes invisível sobre o painel), nome da clínica, e-mail e perfil em uma linha com reticências, e o e-mail inteiro no `title`. Teste novo `e2e/sidebar-identidade.spec.ts` (medidas e axe em claro e escuro a 1280 px).
+- **TESTE-ALTERADO**: `tests/pages/staff-layout-client.test.tsx` (C42) e `e2e/layout-mobile-first.spec.ts` ("e-mail da sidebar"): o requisito de #199 (e-mail inteiro quebrando linha) mudou a pedido do Kalléo para uma linha com reticências; o endereço completo fica no `title`.
+- Não consegui ver o "C(" da staging (o E2E usa iniciais "CE"); a causa provável é o logo/avatar sem `shrink-0` ou sem fundo; o novo teste mede 32x32 para travar isso. Se persistir com imagem real, preciso de uma captura.
+- **Next step**: nenhum. **Blockers**: nenhum.
+
+## Workflow do lembrete mensal (#381) (2026-10-21) — EM REVISÃO
+
+Segundo passo da rotina mensal: `.github/workflows/rotina-mensal.yml` abre a issue «Rotina mensal de manutenção — AAAA-MM» com o checklist do `producao.md` § 7.4. **Desligado**: só `workflow_dispatch`, com o `schedule` (sábados 11:00 UTC, filtrado para o 1º sábado) comentado; job de poucos segundos, sem checkout, sem duplicar issue aberta. `producao.md` § 7.4 ganhou o passo a passo de ativação.
+- **Decisão minha**: `ubuntu-24.04` (como os demais workflows) em vez de `ubuntu-latest`; sem label na issue (label inexistente faria o `gh issue create` falhar).
+- **Next step**: ativar depois do reset da cota (~2026-11-01), descomentando o `schedule`. **Blockers**: nenhum.
+## Mascarar dados pessoais nos logs (2026-10-21) — EM REVISÃO
+
+Issue #381 (item logs/LGPD), decisão do Kalléo: mascarar PII nos logs e auditar/documentar sempre com dado mascarado. `emit` do logger passa `msg` por `scrubText` e os campos por `redactFields` (`src/lib/redact.ts`): chave sensível (CPF, e-mail, telefone, nome de pessoa, anamnese/diagnóstico/notas, senha, token, corpo de mensagem…) vira `[redigido]`; URL com query, Bearer/JWT, sequência opaca, e-mail e número longo viram marcador. GlitchTip: contexto, mensagem, `transaction` e tags também. ADR-060; auditoria dos 56 pontos de log em `docs/engineering/auditoria-logs-pii-2026-10.md`; runbook § 9.4 e `glitchtip.md` atualizados.
+- **Decisão**: única exceção é o `link` de definição de senha fora de produção (dry-run do `NullEmailGateway`; o E2E depende dele). Teste de arquitetura C17 proíbe nome/e-mail/CPF/telefone crus em mensagem de log.
+- **Testes novos**: `redact-campos`, `logger-redacao`, `error-tracker-redacao`, `log-pii-architecture`. Nenhum teste existente alterado.
+- **Pergunta aberta**: o log de acesso do Traefik/Coolify pode guardar `?token=` de convite/reset; não verificado (exige olhar o servidor, via RC). Entra na rotina mensal.
+- **Next step**: aguardar revisão. **Blockers**: nenhum.

@@ -70,6 +70,18 @@ const DROPPED_FIELDS = [
   'sdkProcessingMetadata',
 ] as const;
 
+/** Tags são valores curtos; o `requestId` já foi validado pelo proxy. */
+function scrubTags(tags: NonNullable<Event['tags']>): Event['tags'] {
+  return Object.fromEntries(
+    Object.entries(tags).map(([key, value]) => [
+      key,
+      key === 'requestId' || typeof value !== 'string'
+        ? value
+        : scrubText(value),
+    ]),
+  );
+}
+
 /** Segunda barreira: remove o que não é da lista e limpa texto livre. */
 export function scrubEvent<T extends Event>(event: T): T {
   const clean = { ...event } as Record<string, unknown>;
@@ -78,6 +90,12 @@ export function scrubEvent<T extends Event>(event: T): T {
   }
   if (typeof event.message === 'string') {
     clean.message = scrubText(event.message);
+  }
+  if (typeof event.transaction === 'string') {
+    clean.transaction = scrubText(event.transaction);
+  }
+  if (event.tags) {
+    clean.tags = scrubTags(event.tags);
   }
   if (event.exception?.values) {
     clean.exception = {
@@ -146,12 +164,12 @@ export function buildEvent(captured: CapturedError): Event {
   const frames = error.stack ? parser(error.stack) : [];
   return {
     level: 'error',
-    message: context,
+    message: scrubText(context),
     exception: {
       values: [
         {
           type: error.name,
-          value: error.message ?? error.code ?? error.name,
+          value: scrubText(error.message ?? error.code ?? error.name),
           ...(frames.length > 0 ? { stacktrace: { frames } } : {}),
         },
       ],

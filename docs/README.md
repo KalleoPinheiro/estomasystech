@@ -125,6 +125,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/057-instalar-na-tela-inicial-sem-service-worker.md`](adr/057-instalar-na-tela-inicial-sem-service-worker.md) | instalar na tela inicial: manifesto da plataforma sem service worker; logo nos documentos |
 | [`adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md`](adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md) | base do diff dos gates locais: a release aberta, não a main |
 | [`adr/059-seed-de-homologacao-aditivo.md`](adr/059-seed-de-homologacao-aditivo.md) | seed de homologação aditivo: cria o que falta, sem apagar nem duplicar |
+| [`adr/060-redacao-central-de-pii-nos-logs.md`](adr/060-redacao-central-de-pii-nos-logs.md) | logger redige PII por campo e por padrão de texto antes de escrever (stdout e GlitchTip); teste contra PII em mensagem; auditoria sempre mascarada |
 | [`adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md`](adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) | produção em PostgreSQL 18 (Dockerfile + banco do Coolify); compose e CI em 16 até um PR com Docker alinhar |
 | [`adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md`](adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md) | alertas, lembretes e retenção como Scheduled Tasks do Coolify, com `wget` e `CRON_SECRET` do ambiente |
 | [`adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md`](adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md) | deploy manual depois do backup; rollback por redeploy ou restauração |
@@ -139,6 +140,7 @@ Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — v
 | --- | --- |
 | [`audits/analise-seguranca-escalabilidade.md`](audits/analise-seguranca-escalabilidade.md) | segurança e escalabilidade |
 | [`audits/auditoria-ux-2026-08.md`](audits/auditoria-ux-2026-08.md) | UX, agosto 2026 |
+| [`engineering/auditoria-logs-pii-2026-10.md`](engineering/auditoria-logs-pii-2026-10.md) | logs e dado pessoal, outubro 2026 (dado sempre mascarado) |
 | [`audits/auditoria-design-system-2026-08.md`](audits/auditoria-design-system-2026-08.md) | design system, agosto 2026 |
 
 Auditoria é **entrada** de planejamento, nunca pedido de trabalho por si só.
