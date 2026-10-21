@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
+
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
@@ -32,6 +33,7 @@ import {
   INVOICE_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
 } from '@/lib/format';
+import { abbreviatePatientName } from '@/lib/patient-name';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 import {
@@ -140,7 +142,7 @@ function InvoicesTable({
                 label="Paciente"
                 className="px-3 py-3 font-medium sm:min-w-44"
               >
-                {invoice.patientName}
+                {abbreviatePatientName(invoice.patientName)}
               </TableCell>
               <TableCell
                 label="Descrição"

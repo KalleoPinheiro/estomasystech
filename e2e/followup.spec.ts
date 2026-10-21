@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { createFollowUp, createPatient, unique } from "./support/api";
 import { rx } from "./support/regexp";
+import { shown } from "./support/patient-name";
 
 const inDays = (days: number): string =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -15,7 +16,7 @@ test.describe("retornos (follow-ups)", () => {
     await expect(page.getByRole("heading", { name: "Hoje", exact: true })).toBeVisible();
     const item = page.locator("li", { hasText: reason });
     await expect(item).toBeVisible();
-    await expect(item.getByText(patient.fullName)).toBeVisible();
+    await expect(item.getByText(shown(patient.fullName))).toBeVisible();
 
     await item.getByRole("button", { name: "Concluir" }).click();
     await expect(page.locator("li", { hasText: reason })).toHaveCount(0);

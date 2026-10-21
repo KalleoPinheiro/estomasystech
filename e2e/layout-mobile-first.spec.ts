@@ -27,6 +27,7 @@ import {
 } from "./support/api";
 import { type SlotSeed, slotForAttempt } from "./support/dates";
 import { sessionCookie } from "./support/session-token";
+import { shown } from "./support/patient-name";
 
 /**
  * Layout mobile-first (.specs/features/layout-mobile-first/checks.md): prova o
@@ -533,7 +534,7 @@ test.describe("agenda", () => {
     const list = page.locator("[data-day-list]");
     await expect(list.getByText(slot.startTimeInput)).toBeVisible();
     const w = await world(request);
-    await expect(list.getByText(/Maria Aparecida Layout/).first()).toBeVisible();
+    await expect(list.getByText(/Maria A\. L\./).first()).toBeVisible();
     await expect(list.getByText(/Avaliação agenda/).first()).toBeVisible();
     await expect(list.getByText("Agendada").first()).toBeVisible();
     const listTop = (await list.boundingBox())!.y;
@@ -575,7 +576,7 @@ test.describe("agenda", () => {
     await agendaToMonth(page, dayKey);
     await expect(page.locator("[data-mobile-month]")).toHaveCount(0);
     const chip = page.getByRole("button", {
-      name: new RegExp(`^${slot.startTimeInput} Maria Aparecida Layout`),
+      name: new RegExp(`^${slot.startTimeInput} Maria A\\. L\\.`),
     });
     await expect(chip.first()).toBeVisible();
     // O chip mora dentro da célula do dia da consulta.

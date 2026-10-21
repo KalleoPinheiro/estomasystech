@@ -22,6 +22,7 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/format';
+import { abbreviatePatientName } from '@/lib/patient-name';
 import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useTriageQueue } from '@/lib/use-triage-queue';
@@ -265,7 +266,9 @@ function TodayAppointmentsCard({
               {formatTime(appointment.endsAt)}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{appointment.patientName}</p>
+              <p className="truncate font-medium">
+                {abbreviatePatientName(appointment.patientName)}
+              </p>
               <p className="truncate text-ink-3 text-sm">
                 {appointment.procedure}
               </p>
@@ -342,7 +345,7 @@ function FollowUpsCard({
                     href={`/pacientes/${followUp.patientId}`}
                     className="hover:underline"
                   >
-                    {followUp.patientName}
+                    {abbreviatePatientName(followUp.patientName)}
                   </Link>
                 </p>
                 <p className="break-words text-ink-3 sm:truncate">

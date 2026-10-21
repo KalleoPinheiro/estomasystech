@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { createPatient, unique } from "./support/api";
 import { literal, rx } from "./support/regexp";
+import { shown } from "./support/patient-name";
 
 test.describe("pacientes", () => {
   test("cria um paciente pela UI", async ({ page }) => {
@@ -13,7 +14,7 @@ test.describe("pacientes", () => {
     await page.getByRole("button", { name: "Salvar" }).click();
 
     await expect(page.getByRole("heading", { name: "Novo paciente" })).not.toBeVisible();
-    await expect(page.getByRole("cell", { name })).toBeVisible();
+    await expect(page.getByRole("cell", { name: shown(name) })).toBeVisible();
   });
 
   test("cria um paciente sem e-mail, e outro com o mesmo e-mail de contato (#325)", async ({ page }) => {
@@ -28,7 +29,7 @@ test.describe("pacientes", () => {
       }
       await page.getByLabel("Telefone *").fill("11977776666");
       await page.getByRole("button", { name: "Salvar" }).click();
-      await expect(page.getByRole("cell", { name })).toBeVisible();
+      await expect(page.getByRole("cell", { name: shown(name) })).toBeVisible();
     }
   });
 
@@ -66,7 +67,7 @@ test.describe("pacientes", () => {
     await page.getByLabel("Telefone *").fill("(011) 97777-6666");
     await page.getByRole("button", { name: "Salvar" }).click();
     await expect(page.getByRole("heading", { name: "Novo paciente" })).not.toBeVisible();
-    await expect(page.getByRole("row", { name: literal(name) })).toContainText("(11) 97777-6666");
+    await expect(page.getByRole("row", { name: literal(shown(name)) })).toContainText("(11) 97777-6666");
   });
 
   test("edita um paciente existente", async ({ page, request }) => {
@@ -75,10 +76,10 @@ test.describe("pacientes", () => {
 
     await page.goto("/pacientes");
     await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(patient.fullName);
-    await expect(page.getByRole("cell", { name: patient.fullName })).toBeVisible();
+    await expect(page.getByRole("cell", { name: shown(patient.fullName) })).toBeVisible();
 
     await page
-      .getByRole("row", { name: literal(patient.fullName) })
+      .getByRole("row", { name: literal(shown(patient.fullName)) })
       .getByRole("button", { name: "Editar" })
       .click();
     await page.getByLabel("Nome completo *").fill(newName);
@@ -86,7 +87,7 @@ test.describe("pacientes", () => {
 
     await expect(page.getByRole("heading", { name: "Editar paciente" })).not.toBeVisible();
     await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(newName);
-    await expect(page.getByRole("cell", { name: newName })).toBeVisible();
+    await expect(page.getByRole("cell", { name: shown(newName) })).toBeVisible();
   });
 
   test("inativa um paciente e bloqueia novo agendamento para ele", async ({ page, request }) => {
@@ -95,12 +96,12 @@ test.describe("pacientes", () => {
     await page.goto("/pacientes");
     await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(patient.fullName);
     await page
-      .getByRole("row", { name: literal(patient.fullName) })
+      .getByRole("row", { name: literal(shown(patient.fullName)) })
       .getByRole("button", { name: "Desativar" })
       .click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Confirmar" }).click();
     await expect(
-      page.getByRole("row", { name: literal(patient.fullName) }).getByText("Inativo"),
+      page.getByRole("row", { name: literal(shown(patient.fullName)) }).getByText("Inativo"),
     ).toBeVisible();
 
     // Paciente inativo não aparece no seletor de novo agendamento.
@@ -131,7 +132,7 @@ test.describe("pacientes", () => {
     await page.goto("/pacientes");
     await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(target.fullName);
 
-    await expect(page.getByRole("cell", { name: target.fullName })).toBeVisible();
+    await expect(page.getByRole("cell", { name: shown(target.fullName) })).toBeVisible();
   });
 
   test("abre o prontuário do paciente", async ({ page, request }) => {
@@ -140,7 +141,7 @@ test.describe("pacientes", () => {
     await page.goto("/pacientes");
     await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(patient.fullName);
     await page
-      .getByRole("row", { name: literal(patient.fullName) })
+      .getByRole("row", { name: literal(shown(patient.fullName)) })
       .getByRole("link", { name: "Prontuário" })
       .click();
 

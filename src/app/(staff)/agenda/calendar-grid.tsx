@@ -8,6 +8,7 @@ import {
 } from '@/domain/scheduling/schedule-config';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
+import { abbreviatePatientName } from '@/lib/patient-name';
 import {
   buildMonthDays,
   dayKey,
@@ -187,7 +188,7 @@ export function CalendarGrid({
                           }`}
                         >
                           {formatTime(appointment.startsAt)}{' '}
-                          {appointment.patientName}
+                          {abbreviatePatientName(appointment.patientName)}
                         </Button>
                       ))}
                       {hiddenCount > 0 && (
