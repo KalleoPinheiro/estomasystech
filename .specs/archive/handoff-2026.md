@@ -1678,3 +1678,10 @@ Issue #429, fatia 9, canvas aprovada (Configurações). `/configuracoes` ganha `
 - **Decisão**: a canvas mostra o celular como hub com telas por seção (navegar para cada uma). Fiz âncoras na mesma página porque as telas por seção mudariam rotas e quebrariam vários E2E existentes (feriados, canal de e-mail, grade de horários), que não podem ser alterados por regra 8. Se o Kalléo quiser uma tela por seção, vira um PR próprio com migração desses testes.
 - Teste novo `tests/pages/configuracoes-secoes.test.tsx`; nenhum teste existente alterado.
 - **Fechando o #429**: restam só o favicon/ícone do app (decisão do Kalléo) e a pergunta da tela por seção. **Blockers**: nenhum.
+
+## Favicon e ícone do app com a logo nova (2026-10-21) — EM REVISÃO
+
+Escolha do Kalléo: opções C (branca) e D (grafite) da prévia, uma para cada cenário claro/escuro. `public/brand/favicon-grafite.svg` (aba clara) e `favicon-branco.svg` (aba escura) entram em `metadata.icons` com `media: prefers-color-scheme`, e viram caminhos públicos (`access-policy.ts`). Ícone do app instalado (manifesto 192/512/maskable) e `apple-touch-icon.png`: grafite, já que o manifesto não troca por tema. `src/app/favicon.ico`: grafite, de reserva.
+- **Decisão minha**: associei grafite à aba clara e branco à aba escura (contraste com a aba). Se o Kalléo quiser o oposto, é trocar o `media` de cada um.
+- Teste novo `tests/lib/favicon-por-tema.test.ts`; nenhum teste existente alterado.
+- **Next step**: nenhum no #429. **Blockers**: nenhum.
