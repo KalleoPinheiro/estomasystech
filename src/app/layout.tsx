@@ -1,6 +1,13 @@
+import { ThemeScript } from '@still-void/ui/react';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import { headers } from 'next/headers';
 import { StagingBanner } from '@/components/staging-banner';
+import {
+  DEFAULT_THEME_ACCENT,
+  DEFAULT_THEME_MODE,
+  THEME_STORAGE_KEY,
+} from '@/lib/theme';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -41,20 +48,28 @@ export const metadata: Metadata = {
 // de desativar essa otimização.
 export const dynamic = 'force-dynamic';
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Nonce da CSP (src/proxy.ts): sem ele o script inline do tema é bloqueado
+  // por `strict-dynamic` e a página pisca no tema errado.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html
       lang="pt-BR"
-      data-theme="light"
-      data-accent="violet"
+      data-theme={DEFAULT_THEME_MODE}
+      data-accent={DEFAULT_THEME_ACCENT}
+      suppressHydrationWarning
       className={`${sora.variable} ${manrope.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       {/* sv-body é o seletor base do Still Void: background, cor, família,
           escala tipográfica e antialiasing vêm todos do design system. */}
+      <head>
+        <ThemeScript storageKey={THEME_STORAGE_KEY} nonce={nonce} />
+      </head>
       <body className="sv-body min-h-screen">
         <StagingBanner />
         <Providers>{children}</Providers>
