@@ -1630,7 +1630,7 @@ Issue #430 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-057; sem migr
 
 ## Procedimentos em lista + ficha (2026-10-21) — EM REVISÃO
 
-Issue #429, fatia 5, desenho aprovado pelo Kalléo na canvas (Cadastros). `/procedimentos`: título "Procedimentos"; Editar abre a ficha ao lado da lista (`lg:` duas colunas; abaixo da lista no celular), linha escolhida com `aria-selected`; Novo procedimento e Kit seguem em janela. Nenhum teste existente alterado; testes novos na página e `e2e/procedimentos-ficha.spec.ts`.
+Issue #429, fatia 5, desenho aprovado pelo Kalléo na canvas (Cadastros). `/procedimentos`: título "Procedimentos"; Editar abre a ficha ao lado da lista (`lg:` duas colunas; folha de baixo no celular desde o upgrade 3.5.0), linha escolhida com `aria-selected`; Novo procedimento e Kit seguem em janela. Nenhum teste existente alterado; testes novos na página e `e2e/procedimentos-ficha.spec.ts`.
 - **Pergunta aberta (regra 5)**: no celular a canvas mostra o formulário em folha de baixo; aqui a ficha empilha abaixo da lista. A folha de baixo pede um componente do Still Void (ou `sv-gap`); decidir antes de Materiais/Profissionais/Parceiros, que seguem o mesmo padrão.
 - **Next step**: Materiais, Profissionais, Parceiros no mesmo padrão. **Blockers**: nenhum.
 
@@ -1639,3 +1639,11 @@ Issue #429, fatia 5, desenho aprovado pelo Kalléo na canvas (Cadastros). `/proc
 Issue #429, fatia 6, canvas aprovada (Entrar). `/login`: moldura em dois painéis a partir de `md` (marca do produto + formulário), só formulário no celular, botão Mostrar/Ocultar senha (fora do `<label>`, para não mudar o nome do campo), frase da LGPD junto do link de privacidade. Passos de segundo fator usam a mesma moldura. Nenhum teste existente alterado; o axe de `/login` (claro e escuro) já cobre a tela.
 - **Pergunta aberta (regra 5)**: a canvas mostra logo e nome da clínica no login, mas o login não sabe a clínica de quem entra (e-mail e senha, sem subdomínio). Ficou a marca do produto. Mostrar a clínica exigiria decidir como identificá-la (subdomínio, link do convite ou depois do e-mail).
 - **Next step**: hub de Configurações; Materiais/Profissionais/Parceiros depois da folha de baixo. **Blockers**: nenhum.
+## Folha de baixo nas fichas (2026-10-21) — EM REVISÃO
+
+Resolve a pergunta aberta de "Procedimentos em lista + ficha". `@still-void/ui` 3.4.1 → 3.5.0 (traz `BottomSheet` e o token `--sv-control-border`, bordas de campo mais fortes). Novo `src/components/sheet-panel.tsx`: ficha ao lado da lista a partir de 1024 px, `BottomSheet` (`closeLabel="Cancelar"`) abaixo disso; só `/procedimentos` usa por ora, é a única lista+ficha mergeada.
+- **Decisão**: consulta `max-width: 1023px`; sem `matchMedia` (SSR, testes) o padrão é a ficha ao lado, o que mantém os testes existentes intactos.
+- **Coordenação**: a thread de tema troca Materiais, Profissionais e Parceiros para `SheetPanel` depois que este PR entrar na release.
+- **Testes novos**: `tests/components/sheet-panel.test.tsx`, `e2e/procedimentos-folha.spec.ts` (390 px). Nenhum teste existente alterado.
+- **Next step**: adoção nas demais fichas. **Blockers**: nenhum.
+
