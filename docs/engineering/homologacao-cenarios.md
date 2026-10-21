@@ -24,6 +24,27 @@ Contas (abreviadas, todas `@homologacao.invalid`): **super**, **admin** e **admi
 **atendente**, **profissional** (Ana) e **profissional2** (Bruno), **inativo**, **admin-suspensa**,
 **admin-vizinha** (clínica vizinha), **paciente**, **paciente-novo**, **responsavel**, **parceiro**.
 
+## Roteiro prioritário (fumaça de ~30 min)
+
+Ordem pensada para pegar primeiro o que seria incidente em produção: vazamento entre empresas, papel
+acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada linha aponta a seção com o detalhe.
+
+| # | Cenário | Conta | Resultado esperado | Seção |
+| --- | --- | --- | --- | --- |
+| 1 | Entrar sem segundo fator na staging | **admin** | entra só com e-mail e senha | ADR-054 |
+| 2 | Conta inativa e clínica suspensa | **inativo**, **admin-suspensa** | 401 e 403 com a mensagem de suspensão | 1 |
+| 3 | Isolamento entre empresas | **admin-vizinha** | só vê os 3 pacientes e a profissional da vizinha; nenhum id da principal abre | 1, 3, 4 |
+| 4 | Papel sem permissão | **atendente**, **profissional** | 403 em financeiro, estoque, grade e exportação LGPD | 1, 2, 4, 5 |
+| 5 | Último admin | **admin-vizinha**, depois **admin** e **admin2** | desativar o único admin: 409; com dois, um sai | 1 |
+| 6 | Vínculo do profissional | **profissional**, **profissional2** | cada um só abre o paciente que atendeu | 3 |
+| 7 | Consentimento no portal | **paciente-novo**, **paciente** | sem termo: foto bloqueada e aceite pedido; com termo: foto enviada | 8 |
+| 8 | Portal: prazo e teto | **paciente** | cancelar em < 24 h recusado; 3ª consulta futura recusada | 8 |
+| 9 | Responsável de menor | **responsavel** | vê o portal do menor, não de adulto | 8 |
+| 10 | Conflito de agenda | **atendente** | mesmo horário e profissional: conflito; fim de semana e almoço recusados | 2 |
+| 11 | Pagamento e recibo | **admin**, **admin-vizinha** | pagar mais que o saldo recusado; recibo da vizinha bloqueado (sem CNPJ) | 4 |
+| 12 | Estoque | **admin** | saída maior que o saldo recusada; lote vencido e item zerado visíveis | 5 |
+| 13 | Falhas de integração simuladas | **admin** | convite ou teste de canal para `erro@homologacao.invalid` cria a conta e devolve o link | 1, 6 |
+
 ## 1. Acesso ([excecoes](../domains/acesso/excecoes.md))
 
 | Caso | Regra | Conta / dado | Reproduz |
