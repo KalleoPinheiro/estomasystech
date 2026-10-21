@@ -3,7 +3,7 @@ title: "Domínio: Acesso, empresas e auditoria"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-10-21
 domain: acesso
 ---
 
@@ -132,4 +132,5 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 - [ADR-008](../../adr/008-segundo-fator-do-super-admin.md) — segundo fator TOTP obrigatório para o Super Admin
 - [ADR-009](../../adr/009-recuperacao-de-emergencia-do-super-admin.md) — recuperação de emergência do Super Admin por script no servidor
 - [ADR-019](../../adr/019-gestao-de-contas-senha-propria-e-reset-de-2fa.md) — senha só pela própria pessoa, trava do último admin (409) e reset de 2º fator
+- [ADR-054](../../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md) — staging sem 2FA (`STAGING_DISABLE_MFA`) e contas fictícias por cenário
 - Integração: [Resend](../../engineering/integrations/resend.md) (convite e reset)

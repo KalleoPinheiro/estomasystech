@@ -49,6 +49,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | --- | --- |
 | [`engineering/onboarding.md`](engineering/onboarding.md) | requisitos, Docker, Node local, **variáveis de ambiente**, testes, gates |
 | [`engineering/homologacao.md`](engineering/homologacao.md) | **homologação**: Vercel + Neon + MSW + faker, fluxo de git com branch `staging`, contas fictícias |
+| [`engineering/homologacao-cenarios.md`](engineering/homologacao-cenarios.md) | **casos de validação** de cada domínio × conta fictícia e dado do seed que os reproduz na staging |
 | [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Traefik do Coolify, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
 | [`engineering/backup-passo-a-passo.md`](engineering/backup-passo-a-passo.md) | **backup cifrado do zero**, para leigo: chave `age`, R2 na UE, scripts, alerta por e-mail, primeiro backup e teste de restauração, com as armadilhas da instalação real |
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
@@ -118,6 +119,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md`](adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md) | mutação por arquivo alterado no `gate:local` e rodada completa mensal |
 | [`adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md`](adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md) | fluxo de git: `feat → release/vX.Y.Z → main` (merge commit), `staging` = release aberta, tag no commit de merge; substitui o git do ADR-041 e o release do ADR-043 |
 | [`adr/053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md`](adr/053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md) | PR que toca só `.md` de documentação dispensa o recibo do `gate:local` (o gate rápido e a regra 8 seguem); ajusta o ADR-042 |
+| [`adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md`](adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md) | staging sem segundo fator (`STAGING_DISABLE_MFA`, só com `APP_ENV=staging`) e 13 contas fictícias por cenário |
 | [`adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md`](adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) | produção em PostgreSQL 18 (Dockerfile + banco do Coolify); compose e CI em 16 até um PR com Docker alinhar |
 | [`adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md`](adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md) | alertas, lembretes e retenção como Scheduled Tasks do Coolify, com `wget` e `CRON_SECRET` do ambiente |
 | [`adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md`](adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md) | deploy manual depois do backup; rollback por redeploy ou restauração |
