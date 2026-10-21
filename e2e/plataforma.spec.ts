@@ -173,7 +173,7 @@ test.describe("área da plataforma", () => {
       await page.goto("/plataforma");
 
       await expect(page).toHaveURL("/");
-      await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Hoje", exact: true })).toBeVisible();
     });
 
     test("rota antiga de importação responde 404", async ({ request }) => {

@@ -12,7 +12,7 @@ test.describe("retornos (follow-ups)", () => {
     await createFollowUp(request, { patientId: patient.id, dueDate: inDays(10), reason });
 
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Hoje", exact: true })).toBeVisible();
     const item = page.locator("li", { hasText: reason });
     await expect(item).toBeVisible();
     await expect(item.getByText(patient.fullName)).toBeVisible();

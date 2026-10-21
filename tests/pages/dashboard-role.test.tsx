@@ -135,3 +135,33 @@ describe('Feature: dashboard por papel (#199)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+/** Tela "Hoje" (#428): o próximo atendimento e os números do dia ficam no topo da agenda. */
+describe('Feature: tela Hoje (#428)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Dado uma consulta aberta hoje, Então destaca o próximo atendimento e a contagem do dia', async () => {
+    mockApi('atendente');
+
+    renderWithToast(
+      <WithStaffIdentity>
+        <DashboardPage />
+      </WithStaffIdentity>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Hoje' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Próximo atendimento')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /^Maria Souza · \d{2}:\d{2}$/ }),
+    ).toHaveAttribute('href', '/pacientes/pat-1');
+    expect(
+      screen.getByText('Procedimento: Troca de bolsa'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('0 de 1 concluídas')).toBeInTheDocument();
+  });
+});

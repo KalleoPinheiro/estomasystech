@@ -1541,3 +1541,12 @@ Issue #428 (parte 1 de 2; a tela "Hoje" vai em PR separado). Base: `.design/iden
 - **Decisões não críticas**: drawer do menu lateral mantido no celular (trocá-lo exigiria mexer em 5 E2E existentes; fica para o PR que fechar o shell); "Mais" é rota real (o voltar do aparelho funciona); "Ajuda e suporte" fora (não há tela; pergunta aberta ao dono); sem axe (`@axe-core/playwright` entra com a trava #424).
 - **Pendente (spike do issue)**: rodapé fixo com teclado aberto e gesto de voltar em iPhone e Android reais; só se mede no aparelho.
 - **Next step**: PR "Hoje" (#428 parte 2) e listas em cartões (#429). **Blockers**: nenhum.
+
+
+## Tela Hoje (2026-10-21) — EM REVISÃO
+
+Issue #428, parte 2 (a parte 1, barra inferior e Mais, foi o PR #437).
+- **Feito**: a tela inicial e o item de menu "Dashboard" viram "Hoje" (com a data); a agenda de hoje ganha o bloco "Próximo atendimento" (nome completo do paciente, horário e procedimento, por `nextAppointment`) e a contagem "N de M concluídas" (`dayCounts`), em `src/lib/day-summary.ts`. Sem chamada de API nova: usa a lista do dia que a tela já busca (resumo para o Admin, agenda para os demais; o Profissional já vem restrito à própria agenda). Testes novos: `tests/lib/day-summary.test.ts` e um cenário em `tests/pages/dashboard-role.test.tsx`.
+- **TESTE-ALTERADO**: o nome da tela mudou de "Dashboard" para "Hoje" (aprovado pelo dono na canvas): `tests/pages/staff-nav-role.test.tsx`, `tests/pages/staff-dashboard.test.tsx` e os títulos em `e2e/{auth,followup,plataforma,plataforma-suspensao}.spec.ts`. Só o rótulo mudou.
+- **Decisão não crítica**: o estado "sem permissão para o resumo financeiro" já existe (o bloco de KPIs some para quem não tem `/api/summary`); o bloco de KPIs do mês segue abaixo.
+- **Next step**: #429 (listas em cartões). **Blockers**: nenhum.

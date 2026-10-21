@@ -14,6 +14,7 @@ import { TriagePhotoList } from '@/components/triage-photo-list';
 import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
 import { apiFetch } from '@/lib/client';
+import { dayCounts, nextAppointment } from '@/lib/day-summary';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -94,7 +95,10 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" />
+      <PageHeader
+        title="Hoje"
+        description={formatDate(new Date().toISOString())}
+      />
 
       {showFinance && (
         <KpiGrid summary={summaryQuery.data} error={summaryQuery.error} />
@@ -193,6 +197,34 @@ function KpiGrid({
   );
 }
 
+/** Próximo atendimento e números do dia, no topo da agenda de hoje (#428). */
+function DayHighlights({ today }: { today: AppointmentDto[] }) {
+  const next = nextAppointment(today, new Date());
+  const counts = dayCounts(today);
+
+  return (
+    <div data-day-highlights className="mb-3 border-border border-b pb-3">
+      {next && (
+        <div data-next-appointment>
+          <p className="text-ink-3 text-xs">Próximo atendimento</p>
+          <p className="font-semibold">
+            <Link
+              href={`/pacientes/${next.patientId}`}
+              className="hover:underline"
+            >
+              {`${next.patientName} · ${formatTime(next.startsAt)}`}
+            </Link>
+          </p>
+          <p className="text-ink-2 text-sm">{`Procedimento: ${next.procedure}`}</p>
+        </div>
+      )}
+      <p className="mt-2 text-ink-3 text-sm" data-day-counts>
+        {`${counts.completed} de ${counts.total} concluídas`}
+      </p>
+    </div>
+  );
+}
+
 /**
  * Consultas de hoje: do resumo, para quem o recebe (Admin); senão, da agenda
  * do dia — que para o Profissional já vem restrita à própria agenda (R4).
@@ -224,6 +256,7 @@ function TodayAppointmentsCard({
       emptyMessage="Nenhuma consulta agendada para hoje."
       emptyIcon="check-circle"
     >
+      <DayHighlights today={today ?? []} />
       <ul className="divide-y divide-border">
         {(today ?? []).map((appointment) => (
           <li key={appointment.id} className="flex items-center gap-4 py-3">

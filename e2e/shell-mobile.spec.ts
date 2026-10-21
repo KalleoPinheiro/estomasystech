@@ -19,7 +19,7 @@ test.describe("Shell mobile (#428)", () => {
     for (const name of ["Hoje", "Agenda", "Pacientes", "Faturas", "Mais"]) {
       await expect(bar.getByRole("link", { name })).toBeVisible();
     }
-    await expect(bar.getByRole("link", { name: "Hoje" })).toHaveAttribute("aria-current", "page");
+    await expect(bar.getByRole("link", { name: "Hoje", exact: true })).toHaveAttribute("aria-current", "page");
 
     const box = await bar.boundingBox();
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeCloseTo(MOBILE.height, 0);
@@ -45,7 +45,7 @@ test.describe("Shell mobile (#428)", () => {
   test("Dado o desktop, Então não há barra inferior (o menu lateral cuida)", async ({ page }) => {
     await page.setViewportSize(DESKTOP);
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Hoje", exact: true })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Atalhos" })).toBeHidden();
   });
 
