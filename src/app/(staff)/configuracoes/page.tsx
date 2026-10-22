@@ -73,6 +73,21 @@ const ACCOUNT_ROLE_OPTIONS: { value: AccountRole; label: string }[] = [
   { value: 'guardian', label: 'Responsável do paciente' },
 ];
 
+/** Rótulo do papel na tabela de contas (#475): sem a coluna só se distinguia pela de profissional. */
+const accountRoleLabel = (role: AccountRole | string): string =>
+  ACCOUNT_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
+
+type EmailChannelState = 'configured' | 'none' | 'unknown';
+
+/** O convite sai por e-mail só com canal; sem ele a tela devolve o link (ACE-RN-33). */
+const INVITE_HINT: Record<EmailChannelState, string> = {
+  configured:
+    'A pessoa recebe um e-mail de convite e define a própria senha — ninguém digita senha por ela.',
+  none: 'Esta clínica não tem canal de e-mail: ao criar a conta, o link de convite aparece aqui para você copiar e enviar. A pessoa define a própria senha — ninguém digita senha por ela.',
+  unknown:
+    'A pessoa define a própria senha pelo link do convite. Ele sai por e-mail quando a clínica tem canal configurado; sem canal, o link aparece aqui para você copiar.',
+};
+
 const WEEKDAYS = [
   { value: 0, label: 'Dom' },
   { value: 1, label: 'Seg' },
@@ -518,6 +533,15 @@ function AccountsSection() {
   } = useApiQuery<UserAccountDto[]>('/api/accounts');
   const { data: professionals } =
     useApiQuery<ProfessionalDto[]>('/api/professionals');
+  const can = useStaffAccess();
+  const { data: channelData } = useApiQuery<{ channel: unknown | null }>(
+    can('/api/settings/email-channel') ? '/api/settings/email-channel' : null,
+  );
+  const emailChannel: EmailChannelState = channelData
+    ? channelData.channel
+      ? 'configured'
+      : 'none'
+    : 'unknown';
   const [creating, setCreating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -639,6 +663,7 @@ function AccountsSection() {
         <Modal title="Nova conta de acesso" onClose={() => setCreating(false)}>
           <AccountForm
             professionals={(professionals ?? []).filter((p) => p.active)}
+            emailChannel={emailChannel}
             onSaved={({ email, inviteUrl }) => {
               setCreating(false);
               setManualLink(inviteUrl ? { email, url: inviteUrl } : null);
@@ -715,6 +740,7 @@ function AccountsTable({
         <TableHeader>
           <TableRow>
             <TableHead className="py-2 pr-3">Email</TableHead>
+            <TableHead className="py-2 pr-3">Papel</TableHead>
             <TableHead className="py-2 pr-3">Profissional vinculado</TableHead>
             <TableHead className="py-2 pr-3">Situação</TableHead>
             <TableHead className="py-2 text-right">Ações</TableHead>
@@ -771,6 +797,9 @@ function AccountRow({
     <TableRow className={account.active ? '' : 'bg-surface-2/60'}>
       <TableCell label="Email" className="py-2 pr-3 font-medium">
         {account.email}
+      </TableCell>
+      <TableCell label="Papel" className="py-2 pr-3 text-ink-2">
+        {accountRoleLabel(account.role)}
       </TableCell>
       <TableCell
         label="Profissional vinculado"
@@ -888,14 +917,17 @@ function missingLinkMessage(
 
 function AccountForm({
   professionals,
+  emailChannel,
   onSaved,
 }: {
   professionals: ProfessionalDto[];
+  emailChannel: EmailChannelState;
   onSaved: (created: { email: string } & AccessLinkResult) => void;
 }) {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<AccountRole>('company_admin');
+  // Menor privilégio da equipe como padrão: o Admin de Empresa é escolha consciente (#475).
+  const [role, setRole] = useState<AccountRole>('atendente');
   const [professionalId, setProfessionalId] = useState('');
   // Cadastro de paciente/parceiro dono da conta de portal (#196).
   const [recordId, setRecordId] = useState('');
@@ -971,10 +1003,7 @@ function AccountForm({
           className="mt-1"
         />
       </label>
-      <p className="text-ink-3 text-sm">
-        A pessoa recebe um e-mail de convite e define a própria senha — ninguém
-        digita senha por ela.
-      </p>
+      <p className="text-ink-3 text-sm">{INVITE_HINT[emailChannel]}</p>
       <label className="font-medium text-sm">
         Papel *
         <NativeSelect
