@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { dayKey } from './calendar-days';
 
-export type AgendaView = 'month' | 'week';
+export type AgendaView = 'month' | 'week' | 'day';
 
 /** Domingo da semana de `date` (a grade do mês também começa no domingo). */
 export function startOfWeek(date: Date): Date {
@@ -38,6 +38,23 @@ export function weekLabel(weekStart: Date): string {
     : `${day(weekStart)} de ${month(weekStart)} a ${day(last)} de ${month(last)} de ${tail}`;
 }
 
+/** "Quinta-feira, 22 de outubro de 2026". */
+export function dayLabel(date: Date): string {
+  const raw = date.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+/** Dia em que a visão entra: hoje, se cair no período exibido; senão o primeiro dia dele. */
+function entryDay(from: Date, to: Date): Date {
+  const today = new Date();
+  return today >= from && today < to ? today : from;
+}
+
 export interface AgendaPeriod {
   view: AgendaView;
   setView: (view: AgendaView) => void;
@@ -45,6 +62,8 @@ export interface AgendaPeriod {
   monthDate: Date;
   /** Domingo da semana exibida (visão semanal). */
   weekStart: Date;
+  /** Dia exibido (visão diária). */
+  dayDate: Date;
   /** Janela das consultas: `from` incluso, `to` exclusivo. */
   from: Date;
   to: Date;
@@ -55,7 +74,7 @@ export interface AgendaPeriod {
   shift: (delta: number) => void;
 }
 
-/** Período da agenda: mês (padrão) ou semana, com navegação para frente e para trás. */
+/** Período da agenda: mês (padrão), semana ou dia, com navegação para frente e para trás. */
 export function useAgendaPeriod(initial: Date): AgendaPeriod {
   const [view, setViewState] = useState<AgendaView>('month');
   const [anchor, setAnchor] = useState(
@@ -65,29 +84,40 @@ export function useAgendaPeriod(initial: Date): AgendaPeriod {
   return useMemo(() => {
     const monthDate = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
     const weekStart = startOfWeek(anchor);
-    const isWeek = view === 'week';
-    const from = isWeek ? weekStart : monthDate;
-    const to = isWeek
-      ? addDays(weekStart, 7)
-      : new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
-    const closuresFrom = isWeek
-      ? weekStart
-      : new Date(monthDate.getFullYear(), monthDate.getMonth(), -6);
-    const closuresTo = isWeek
-      ? addDays(weekStart, 6)
-      : new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 7);
+    const dayDate = new Date(
+      anchor.getFullYear(),
+      anchor.getMonth(),
+      anchor.getDate(),
+    );
+    const monthEnd = new Date(
+      monthDate.getFullYear(),
+      monthDate.getMonth() + 1,
+      1,
+    );
+    const span = {
+      month: { from: monthDate, to: monthEnd },
+      week: { from: weekStart, to: addDays(weekStart, 7) },
+      day: { from: dayDate, to: addDays(dayDate, 1) },
+    }[view];
+    const closuresFrom =
+      view === 'month'
+        ? new Date(monthDate.getFullYear(), monthDate.getMonth(), -6)
+        : span.from;
+    const closuresTo =
+      view === 'month'
+        ? new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 7)
+        : addDays(span.to, -1);
 
     const setView = (next: AgendaView) => {
       if (next === view) return;
-      if (next === 'week') {
-        // Semana de hoje, se hoje está no mês exibido; senão a do dia 1.
-        const today = new Date();
-        const sameMonth =
-          today.getFullYear() === monthDate.getFullYear() &&
-          today.getMonth() === monthDate.getMonth();
-        setAnchor(sameMonth ? today : monthDate);
-      } else {
+      if (next === 'month') {
         setAnchor(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+      } else if (view === 'month') {
+        // De mês para semana/dia: hoje, se está no mês exibido; senão o dia 1.
+        setAnchor(entryDay(monthDate, monthEnd));
+      } else if (next === 'day') {
+        // De semana para dia: hoje, se está na semana exibida; senão o domingo.
+        setAnchor(entryDay(weekStart, addDays(weekStart, 7)));
       }
       setViewState(next);
     };
@@ -97,17 +127,22 @@ export function useAgendaPeriod(initial: Date): AgendaPeriod {
       setView,
       monthDate,
       weekStart,
-      from,
-      to,
+      dayDate,
+      from: span.from,
+      to: span.to,
       closuresFrom: dayKey(closuresFrom),
       closuresTo: dayKey(closuresTo),
-      label: isWeek ? weekLabel(weekStart) : monthLabel(monthDate),
+      label: {
+        month: monthLabel(monthDate),
+        week: weekLabel(weekStart),
+        day: dayLabel(dayDate),
+      }[view],
       shift: (delta: number) =>
-        setAnchor((prev) =>
-          isWeek
-            ? addDays(prev, delta * 7)
-            : new Date(prev.getFullYear(), prev.getMonth() + delta, 1),
-        ),
+        setAnchor((prev) => {
+          if (view === 'day') return addDays(prev, delta);
+          if (view === 'week') return addDays(prev, delta * 7);
+          return new Date(prev.getFullYear(), prev.getMonth() + delta, 1);
+        }),
     };
   }, [anchor, view]);
 }

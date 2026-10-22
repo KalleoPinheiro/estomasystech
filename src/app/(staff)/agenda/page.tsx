@@ -375,9 +375,10 @@ export default function AgendaPage() {
 
       {!appointments ? (
         <LoadingIndicator />
-      ) : period.view === 'week' && !compact ? (
+      ) : period.view !== 'month' && !compact ? (
         <WeekView
-          weekStart={period.weekStart}
+          weekStart={period.view === 'day' ? period.dayDate : period.weekStart}
+          dayCount={period.view === 'day' ? 1 : 7}
           appointments={appointments}
           scheduleConfig={scheduleConfig}
           closures={closures ?? []}
