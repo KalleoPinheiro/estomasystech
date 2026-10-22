@@ -1764,3 +1764,10 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Alerta de infecção na triagem e coerência do TIME (2026-10-22) — EM REVISÃO
+
+Decisões clínicas do PO sobre as perguntas abertas do ADR-062 (#464/#463), registradas no ADR-063: infecção local ou pior na avaliação mais recente gera selo na fila de triagem (`infectionAlert`, sem migração); percentual de tecido fica fora do PUSH (já era assim, agora decisão); coerência nível × sinais vira aviso não bloqueante no formulário (`infectionCoherenceWarnings`); vocabulário atual aceito. PRO-RN-25.
+- **Decisão minha**: agrupei os sinais em local, disseminação (eritema em expansão, linfangite, linfadenopatia) e sistêmico (febre, mal-estar) para os avisos; o estomaterapeuta pode ajustar por ADR novo.
+- **Testes novos**: `wound-time-alerta-coerencia`, casos novos em `triage-photo-list`, `avaliacao-time-form` e `audit-lgpd-routes` (só acréscimo); nenhum teste existente alterado.
+- **Next step**: validar na staging o selo na triagem. **Blockers**: nenhum.

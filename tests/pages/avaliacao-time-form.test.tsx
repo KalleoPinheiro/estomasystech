@@ -207,3 +207,27 @@ describe('Feature: TIME completo no formulário e na tabela de avaliações (#46
     expect(await screen.findByText('Inflamação')).toBeInTheDocument();
   });
 });
+
+describe('Feature: aviso de coerência nível × sinais no formulário (ADR-063)', () => {
+  it('Dado febre marcada com nível local, Quando preencher, Então avisa sem bloquear o registro', async () => {
+    const fetchMock = stubFetch([]);
+    renderSection();
+    fireEvent.click(screen.getByText('+ Avaliação'));
+
+    fireEvent.change(screen.getByLabelText('Nível'), {
+      target: { value: 'local' },
+    });
+    fireEvent.click(screen.getByText('Febre'));
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Há sinais sistêmicos (febre ou mal-estar)',
+    );
+
+    fireEvent.click(screen.getByText('Registrar avaliação'));
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([, options]) => options?.method === 'POST'),
+      ).toBe(true);
+    });
+  });
+});

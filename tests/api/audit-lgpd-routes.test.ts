@@ -552,6 +552,45 @@ describe('Feature: Rotas de auditoria, export LGPD, fotos (staff) e cron de lemb
 
       expect(entry?.latestScore).toEqual({ kind: 'push', value: 9 });
     });
+
+    it('Dado condição sem avaliação com infecção, Quando GET triage, Então infectionAlert é null (ADR-063)', async () => {
+      const photoId = await uploadPatientOriginPhoto('sem infecção');
+
+      const response = await triageRoute.GET(
+        jsonRequest('/api/photos/triage', 'GET'),
+      );
+      const body = (await response.json()) as Envelope<
+        Array<{ id: string; infectionAlert: string | null }>
+      >;
+
+      expect(
+        body.data.find((item) => item.id === photoId)?.infectionAlert,
+      ).toBeNull();
+    });
+
+    it('Dado última avaliação com infecção local, Quando GET triage, Então infectionAlert traz o nível (ADR-063)', async () => {
+      await assessmentsRoute.POST(
+        jsonRequest(`/api/conditions/${conditionId}/assessments`, 'POST', {
+          lengthMm: 20,
+          widthMm: 15,
+          infectionLevel: 'local',
+          infectionSigns: 'erythema',
+        }),
+        context(conditionId),
+      );
+      const photoId = await uploadPatientOriginPhoto('com infecção');
+
+      const response = await triageRoute.GET(
+        jsonRequest('/api/photos/triage', 'GET'),
+      );
+      const body = (await response.json()) as Envelope<
+        Array<{ id: string; infectionAlert: string | null }>
+      >;
+
+      expect(
+        body.data.find((item) => item.id === photoId)?.infectionAlert,
+      ).toBe('local');
+    });
   });
 
   describe('POST /api/reminders/run', () => {

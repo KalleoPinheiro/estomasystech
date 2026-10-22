@@ -127,3 +127,87 @@ export function validateWoundTime(props: WoundTimeProps): void {
   validateSigns(props.infectionSigns);
   validateTissuePercents(props);
 }
+
+/** Níveis que pedem atenção da equipe: infecção local ou pior (ADR-063). */
+const INFECTION_ALERT_LEVELS: readonly string[] = [
+  'local',
+  'spreading',
+  'systemic',
+];
+
+/** Infecção local, com disseminação ou sistêmica gera alerta na triagem (ADR-063). */
+export function isInfectionAlertLevel(level: string | null | undefined) {
+  return level != null && INFECTION_ALERT_LEVELS.includes(level);
+}
+
+const LOCAL_SIGNS: readonly string[] = [
+  'erythema',
+  'heat',
+  'edema',
+  'increased_exudate',
+  'purulent_exudate',
+  'malodor',
+  'local_pain',
+  'friable_granulation',
+  'delayed_healing',
+  'biofilm_suspected',
+];
+const SPREADING_SIGNS: readonly string[] = [
+  'spreading_erythema',
+  'lymphangitis',
+  'lymphadenopathy',
+];
+const SYSTEMIC_SIGNS: readonly string[] = ['fever', 'malaise'];
+
+const LEVEL_RANK: Record<InfectionLevel, number> = {
+  none: 0,
+  inflammation: 1,
+  local: 2,
+  spreading: 3,
+  systemic: 4,
+};
+
+function parseSigns(csv: string | null | undefined): string[] {
+  return (csv ?? '')
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Avisos de coerência entre o nível de infecção e os sinais marcados. Nunca
+ * bloqueia a gravação: a combinação é juízo clínico (ADR-063).
+ */
+export function infectionCoherenceWarnings(
+  level: string | null | undefined,
+  signsCsv: string | null | undefined,
+): string[] {
+  if (!level || !(level in LEVEL_RANK)) {
+    return [];
+  }
+  const rank = LEVEL_RANK[level as InfectionLevel];
+  const signs = parseSigns(signsCsv);
+  const has = (group: readonly string[]) =>
+    signs.some((sign) => group.includes(sign));
+  const anyInfectionSign =
+    has(LOCAL_SIGNS) || has(SPREADING_SIGNS) || has(SYSTEMIC_SIGNS);
+  const rules: Array<[boolean, string]> = [
+    [
+      rank === 0 && signs.length > 0,
+      'Há sinais marcados, mas o nível é «sem sinais de infecção».',
+    ],
+    [
+      rank >= 2 && !anyInfectionSign,
+      'O nível indica infecção, mas nenhum sinal foi marcado.',
+    ],
+    [
+      rank < 3 && has(SPREADING_SIGNS),
+      'Há sinais de disseminação; confira se o nível não deveria ser «infecção com disseminação» ou pior.',
+    ],
+    [
+      rank < 4 && has(SYSTEMIC_SIGNS),
+      'Há sinais sistêmicos (febre ou mal-estar); confira se o nível não deveria ser «infecção sistêmica».',
+    ],
+  ];
+  return rules.filter(([applies]) => applies).map(([, message]) => message);
+}
