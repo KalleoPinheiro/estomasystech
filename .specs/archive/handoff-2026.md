@@ -1765,6 +1765,13 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## Margem sem kit e confirmação do pagamento (2026-10-22) — EM REVISÃO
+
+Issue #472 e pendência do #466 (QA staging v0.2.0, filhas de #463). Relatório: `ProcedureMargin` ganhou `supplyCostKnown` (há saída de insumo vinculada a consultas do procedimento); sem isso a tela mostra «Não apurado» em Insumos, «—» na Margem e uma nota, e o rodapé soma só os procedimentos apurados. Recebimento: a forma de pagamento só seleciona; «Confirmar recebimento» mostra valor, forma, pagador e saldo restante e então grava (decisão do PO, 2026-10-22).
+- **Decisão**: `marginCents` continua número na API (compatibilidade); o sinal de custo apurado é o novo campo.
+- **TESTE-ALTERADO**: o requisito de negócio mudou (pagamento passou a exigir confirmação); testes que clicavam na forma e esperavam gravar ganharam o clique em «Confirmar recebimento» (`invoice-payments-ui`, `invoice-payment-in-flight`, `staff-faturamento`, `e2e/faturamento.spec.ts`); fixtures de relatório ganharam `supplyCostKnown`. Nenhuma asserção foi afrouxada.
+- **Testes novos**: etapa de confirmação (resumo e não grava antes) e relatório «Não apurado».
+- **Next step**: Kalléo valida na staging (rebuild). **Blockers**: nenhum.
 ## Auditoria sem emissão falsa (#468) (2026-10-22) — EM REVISÃO
 
 QA da staging v0.2.0: abrir o atestado de uma clínica sem responsável técnico gravava "emissão de documento" na auditoria, embora a tela bloqueasse. **Causa raiz**: as seis páginas de documento chamam `useDocumentIssuance` (que faz `POST /api/documents/issue`, idempotente e auditado) antes de saber se podem renderizar. Correção no cliente: a página só pede a emissão com a clínica apta (`isClinicInfoComplete`) e, no atestado, com a consulta realizada; recibo já esperava o `receipt`.
