@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import type { ClinicalCondition } from '@/domain/clinical/clinical-condition';
 import type { ConditionAssessment } from '@/domain/clinical/condition-assessment';
+import { isInfectionAlertLevel } from '@/domain/clinical/wound-time';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { linkedPatientFilter } from '@/lib/auth/clinical-resource-scope';
@@ -23,6 +24,14 @@ function latestScoreFor(
     return null;
   }
   return { kind: condition.kind === 'wound' ? 'push' : 'det', value };
+}
+
+/** Nível de infecção da última avaliação quando é local ou pior (ADR-063). */
+function infectionAlertFor(
+  assessment: ConditionAssessment | undefined,
+): string | null {
+  const level = assessment?.infectionLevel;
+  return isInfectionAlertLevel(level) ? (level ?? null) : null;
 }
 
 /** Fila de triagem (staff): fotos enviadas por pacientes aguardando avaliação. */
@@ -92,6 +101,10 @@ export async function GET(request: NextRequest) {
         ),
         latestScore: latestScoreFor(
           condition,
+          latestByCondition.get(photo.conditionId),
+        ),
+        // ADR-063: infecção local ou pior na última avaliação pede atenção na fila.
+        infectionAlert: infectionAlertFor(
           latestByCondition.get(photo.conditionId),
         ),
       };

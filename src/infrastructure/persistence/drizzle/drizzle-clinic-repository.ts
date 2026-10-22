@@ -68,6 +68,8 @@ export class DrizzleClinicRepository implements ClinicRepository {
       createdAt: clinic.createdAt,
       ...infoColumns(clinic),
       ...statusColumns(clinic),
+      themeMode: clinic.theme.mode,
+      themeAccent: clinic.theme.accent,
     });
   }
 

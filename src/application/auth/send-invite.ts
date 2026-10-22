@@ -14,6 +14,17 @@ export interface InviteServices {
 const DEV_APP_URL = 'http://localhost:3000';
 
 /**
+ * Na Vercel (homologação) o domínio público vem pronto em
+ * `VERCEL_PROJECT_PRODUCTION_URL` (host, sempre servido em https). Só vale
+ * quando `APP_URL` não foi configurada: sem isto, `APP_URL` esquecida derrubava
+ * todo convite com 500, depois de a conta já criada (#467).
+ */
+const vercelProductionUrl = (): string | undefined => {
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  return process.env.VERCEL && host ? `https://${host}` : undefined;
+};
+
+/**
  * Base pública da aplicação, usada para montar os links de convite e reset.
  *
  * Em produção é obrigatória e precisa ser HTTPS: o link carrega um segredo de
@@ -23,7 +34,7 @@ const DEV_APP_URL = 'http://localhost:3000';
  * configuração de autenticação.
  */
 export const appUrlFromEnv = (): string => {
-  const configured = process.env.APP_URL;
+  const configured = process.env.APP_URL || vercelProductionUrl();
   if (process.env.NODE_ENV !== 'production') {
     return configured ?? DEV_APP_URL;
   }
