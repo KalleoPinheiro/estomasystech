@@ -1771,3 +1771,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **#475**: coluna Papel; papel padrão Atendente (menor privilégio, decisão minha, sem pergunta aberta: Admin de Empresa continua a um clique); texto do formulário conforme o canal de e-mail (configurado, sem canal, desconhecido). O vínculo ao cadastro nas contas de portal já existia (#196): a issue estava defasada.
 - Testes novos: `account-invite-app-url`, `configuracoes-contas-papel`; nenhum teste existente alterado.
 - **Next step**: Kalléo confere `APP_URL` na Vercel; retestar convite `erro@` na vizinha. **Blockers**: nenhum.
+## Parceiro sem CRM: "·" solto no portal (QA #463, domínio administração/plataforma)
+- **O que mudou**: `src/app/portal/partner-view.tsx` monta CRM e especialidade com `partnerCredentials`, juntando com "·" só o que existe e omitindo o traço quando não há nenhum.
+- **Teste novo**: `tests/pages/portal-parceiro-sem-crm.test.tsx` (4 cenários); nenhum teste existente alterado.
+- **Staging (Kalléo)**: abrir o portal de um parceiro sem CRM e conferir que o cabeçalho começa em "Estomaterapia — acompanhamento…" sem "·".
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
