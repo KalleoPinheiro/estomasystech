@@ -127,6 +127,16 @@ const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 
 /** #195/#206: preparação para Vercel + Supabase e para VPS + compose. */
 describe('Feature: configuração de deploy dos P1 de produção (#195, #206)', () => {
+  it('vercel: só a branch staging gera deploy (ADR-061), as demais ficam desligadas', () => {
+    const config = JSON.parse(read('vercel.json')) as {
+      git?: { deploymentEnabled?: Record<string, boolean> };
+    };
+    expect(config.git?.deploymentEnabled).toEqual({
+      '**': false,
+      staging: true,
+    });
+  });
+
   it('vercel cron: vercel.json agenda GET dos lembretes e da retenção (#294) uma vez por dia', () => {
     const config = JSON.parse(read('vercel.json')) as {
       crons: { path: string; schedule: string }[];
