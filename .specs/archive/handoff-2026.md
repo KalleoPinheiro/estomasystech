@@ -1764,3 +1764,8 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Perguntas abertas do portal (#481, #483) (2026-10-22)
+
+Duas sub-issues do QA da staging v0.2.0 são decisão de produto e não foram implementadas: #483 (autoagendamento livre ou só de retorno; a documentação dizia «entregue» sem a limitação, agora corrigida) e #481 (aceite do termo com marcação explícita; muda o fluxo coberto por testes de unidade e E2E, então vai junto com a revisão jurídica #376). Ambas ficam registradas em `docs/domains/portal/README.md` § Perguntas abertas.
+- **Next step**: o PO responde as duas perguntas. **Blockers**: nenhum.
