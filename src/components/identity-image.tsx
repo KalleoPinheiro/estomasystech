@@ -1,10 +1,17 @@
 import Image from 'next/image';
 
-/** Duas primeiras iniciais do nome (clínica ou pessoa); vazio vira "?". */
+/**
+ * Primeira letra do primeiro e do último termo do nome (clínica ou pessoa).
+ * Pontuação e parênteses não contam: "Clínica Homologação (fictícia)" dá "CF",
+ * não "C(". Vazio, ou sem nenhuma letra, vira "?".
+ */
 export function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = [parts[0], parts.length > 1 ? parts[parts.length - 1] : '']
-    .map((part) => part?.[0] ?? '')
+  const parts = name
+    .split(/\s+/)
+    .map((part) => part.match(/[\p{L}\p{N}]/u)?.[0])
+    .filter((letter): letter is string => letter !== undefined);
+  const letters = [parts[0], parts.length > 1 ? parts.at(-1) : '']
+    .map((letter) => letter ?? '')
     .join('');
   return (letters || '?').toUpperCase();
 }
