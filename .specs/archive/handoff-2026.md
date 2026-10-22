@@ -1765,6 +1765,13 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## Auditoria sem emissão falsa (#468) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: abrir o atestado de uma clínica sem responsável técnico gravava "emissão de documento" na auditoria, embora a tela bloqueasse. **Causa raiz**: as seis páginas de documento chamam `useDocumentIssuance` (que faz `POST /api/documents/issue`, idempotente e auditado) antes de saber se podem renderizar. Correção no cliente: a página só pede a emissão com a clínica apta (`isClinicInfoComplete`) e, no atestado, com a consulta realizada; recibo já esperava o `receipt`.
+- **Por que não no servidor**: `tests/api/documents-issue.test.ts` (regra 8, intocável) emite com ids soltos em clínicas de teste sem CNPJ; validar a clínica na rota o quebraria. Registro: quem chamar a rota direto ainda consegue emitir sem as guardas da tela (o recibo continua protegido no servidor, FIN-RN-15). Pergunta aberta para o PO: endurecer a rota também (exigiria TESTE-ALTERADO).
+- Eventos falsos já gravados na staging ficam (auditoria é imutável).
+- Teste novo: `tests/pages/documentos-bloqueado-sem-emissao.test.tsx` (5 dos 6 casos falham sem a correção); nenhum teste existente alterado.
+- **Next step**: nenhum. **Blockers**: nenhum.
 ## Convite e contas de acesso (#467, #475) (2026-10-22) — EM REVISÃO
 
 QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depois montava o link; `appUrlFromEnv()` lança em produção sem `APP_URL` https, daí 500 com conta criada, sem link e e-mail duplicado no retry. O fluxo com `APP_URL` válida e e-mail falhando já respondia 200 com o link (teste existente), então a causa na staging é a configuração. **Não consegui ler as variáveis da Vercel** (sem permissão): é hipótese forte, não confirmada; Kalléo confere `APP_URL` no painel. Correção: a checagem da URL vem antes de gravar (convite da equipe e convite de admin pela plataforma), e na Vercel, sem `APP_URL`, vale `https://$VERCEL_PROJECT_PRODUCTION_URL`.
