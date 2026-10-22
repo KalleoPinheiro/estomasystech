@@ -127,6 +127,7 @@ describe('Feature: Custo de insumos por atendimento e margem por procedimento', 
     );
     expect(row?.totalCents).toBe(25000);
     expect(row?.supplyCostCents).toBe(8000);
+    expect(row?.supplyCostKnown).toBe(true);
     expect(row?.marginCents).toBe(17000);
     expect(report.unattributedSupplyCostCents).toBe(0);
   });
@@ -158,6 +159,7 @@ describe('Feature: Custo de insumos por atendimento e margem por procedimento', 
       (r) => r.procedure === 'Troca de bolsa',
     );
     expect(row?.supplyCostCents).toBe(0);
+    expect(row?.supplyCostKnown).toBe(false);
     expect(report.unattributedSupplyCostCents).toBe(4000);
     expect(report.totalSupplyCostCents).toBe(4000);
   });
