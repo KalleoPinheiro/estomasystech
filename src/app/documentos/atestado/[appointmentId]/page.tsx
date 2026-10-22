@@ -79,9 +79,15 @@ export default function AttendanceDocumentPage({
   const { data: patient } = useApiQuery<PatientDto>(
     appointment ? `/api/patients/${appointment.patientId}` : null,
   );
+  // Só emite (e grava na auditoria) com a clínica apta e a consulta realizada:
+  // página bloqueada não é emissão (#468).
+  const canIssue =
+    !!clinic &&
+    isClinicInfoComplete(clinic) &&
+    appointment?.status === 'completed';
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'atestado',
-    appointmentId,
+    canIssue ? appointmentId : null,
   );
 
   const guard = guardBlock(

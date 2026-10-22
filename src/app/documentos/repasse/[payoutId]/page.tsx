@@ -134,9 +134,10 @@ export default function PayoutReceiptPage({
   const { data: receipt, error: receiptError } = useApiQuery<PayoutReceiptDto>(
     identity ? endpoint : null,
   );
+  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'repasse',
-    payoutId,
+    clinic && isClinicInfoComplete(clinic) ? payoutId : null,
   );
 
   const guard = guardBlock(

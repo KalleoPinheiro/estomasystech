@@ -103,6 +103,10 @@ export default function ReportsPage() {
     `/api/reports?month=${shiftMonth(month, -1)}`,
   );
 
+  const knownRows = (report?.revenueByProcedure ?? []).filter(
+    (row) => row.supplyCostKnown,
+  );
+
   return (
     <div>
       <PageHeader
@@ -207,17 +211,23 @@ export default function ReportsPage() {
                               label="Insumos"
                               className="py-2 text-right text-ink-3"
                             >
-                              {formatCurrency(row.supplyCostCents)}
+                              {row.supplyCostKnown
+                                ? formatCurrency(row.supplyCostCents)
+                                : 'Não apurado'}
                             </TableCell>
                             <TableCell
                               label="Margem"
                               className={`py-2 text-right font-medium ${
-                                row.marginCents >= 0
-                                  ? 'text-success'
-                                  : 'text-danger'
+                                row.supplyCostKnown
+                                  ? row.marginCents >= 0
+                                    ? 'text-success'
+                                    : 'text-danger'
+                                  : 'text-ink-3'
                               }`}
                             >
-                              {formatCurrency(row.marginCents)}
+                              {row.supplyCostKnown
+                                ? formatCurrency(row.marginCents)
+                                : '—'}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -251,28 +261,39 @@ export default function ReportsPage() {
                             label="Insumos"
                             className="py-2 text-right font-semibold"
                           >
-                            {formatCurrency(
-                              report.revenueByProcedure.reduce(
-                                (sum, row) => sum + row.supplyCostCents,
-                                0,
-                              ),
-                            )}
+                            {knownRows.length > 0
+                              ? formatCurrency(
+                                  knownRows.reduce(
+                                    (sum, row) => sum + row.supplyCostCents,
+                                    0,
+                                  ),
+                                )
+                              : 'Não apurado'}
                           </TableCell>
                           <TableCell
                             label="Margem"
                             className="py-2 text-right font-semibold"
                           >
-                            {formatCurrency(
-                              report.revenueByProcedure.reduce(
-                                (sum, row) => sum + row.marginCents,
-                                0,
-                              ),
-                            )}
+                            {knownRows.length > 0
+                              ? formatCurrency(
+                                  knownRows.reduce(
+                                    (sum, row) => sum + row.marginCents,
+                                    0,
+                                  ),
+                                )
+                              : '—'}
                           </TableCell>
                         </TableRow>
                       </TableFooter>
                     </Table>
                   </div>
+                  {knownRows.length < report.revenueByProcedure.length && (
+                    <p className="mt-3 text-ink-3 text-xs">
+                      Procedimento sem saída de insumo vinculada às consultas:
+                      custo e margem não apurados (a margem não é igual à
+                      receita). Vincule o kit ou as saídas para apurar.
+                    </p>
+                  )}
                   {report.unattributedSupplyCostCents > 0 && (
                     <p className="mt-3 text-warning text-xs">
                       Custo de insumos não vinculado a consulta no mês:{' '}

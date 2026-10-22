@@ -52,9 +52,10 @@ export default function ConsentDocumentPage({
   // Clínica e encarregado que entram nos termos (#216): sem eles, `409`.
   const { data: controller, error: controllerError } =
     useApiQuery<LegalController>('/api/clinic-info/legal-controller');
+  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'consentimento',
-    patientId,
+    clinic && isClinicInfoComplete(clinic) ? patientId : null,
   );
 
   const guard = guardBlock(
