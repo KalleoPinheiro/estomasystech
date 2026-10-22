@@ -1765,6 +1765,13 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## Agenda por semana e "+N mais" (#471) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: a agenda só tinha o mês, "+N mais" era um `<span>` sem ação (a 4ª consulta do dia só aparecia filtrando por profissional) e consulta cancelada ocupava uma das 3 linhas. Entregue: visão **Semana** (desktop; o celular segue no mês compacto) com blocos proporcionais à duração, sobreposição em raias, almoço sombreado, feriados/ausências, clique no bloco abre a consulta e clique na coluna começa nova consulta; no mês, "+N mais" abre diálogo com todas as consultas do dia (inclusive canceladas) e a cancelada sai das 3 linhas.
+- **Decisões minhas (sem pergunta aberta)**: mês continua o padrão; semana começa no domingo como a grade do mês; cancelada não vira bloco na semana (não ocupa horário), só um aviso "N cancelada(s)" na coluna; "visão de dia" não foi feita (a semana cobre o pedido "dia/semana" e o dia seria a mesma tela com 1 coluna: fica no backlog se o PO quiser).
+- Refator para caber no limite de linhas do `.tsx`: período (mês/semana) em `agenda-period.ts`, navegação em `period-nav.tsx`, cores em `status-colors.ts`.
+- Testes novos: `tests/pages/agenda-visao-semana.test.tsx`; nenhum teste existente alterado (os de `staff-agenda` passam).
+- **Next step**: validar a semana na staging com 4 consultas no mesmo dia. **Blockers**: nenhum.
 ## Margem sem kit e confirmação do pagamento (2026-10-22) — EM REVISÃO
 
 Issue #472 e pendência do #466 (QA staging v0.2.0, filhas de #463). Relatório: `ProcedureMargin` ganhou `supplyCostKnown` (há saída de insumo vinculada a consultas do procedimento); sem isso a tela mostra «Não apurado» em Insumos, «—» na Margem e uma nota, e o rodapé soma só os procedimentos apurados. Recebimento: a forma de pagamento só seleciona; «Confirmar recebimento» mostra valor, forma, pagador e saldo restante e então grava (decisão do PO, 2026-10-22).
