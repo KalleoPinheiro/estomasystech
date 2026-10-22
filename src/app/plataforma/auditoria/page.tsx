@@ -19,6 +19,8 @@ import { PageHeader } from '@/components/page-header';
 import { PagedList } from '@/components/paged-list';
 import {
   ACTION_LABELS,
+  ACTOR_ROLE_LABELS,
+  formatAuditDetail,
   formatDateTimeWithSeconds,
   RESOURCE_LABELS,
 } from '@/lib/audit-labels';
@@ -149,7 +151,9 @@ function PlatformAuditTable({
                 {clinicLabel(event)}
               </TableCell>
               <TableCell label="Ator" className="px-4 py-2">
-                <span className="font-medium">{event.actorRole}</span>
+                <span className="font-medium">
+                  {ACTOR_ROLE_LABELS[event.actorRole] ?? event.actorRole}
+                </span>
                 <span className="block text-ink-3 text-xs">
                   {event.actorId}
                 </span>
@@ -161,7 +165,7 @@ function PlatformAuditTable({
                 {RESOURCE_LABELS[event.resourceType] ?? event.resourceType}
               </TableCell>
               <TableCell label="Detalhe" className="px-4 py-2 text-ink-3">
-                {event.detail ?? '—'}
+                {formatAuditDetail(event.resourceType, event.detail)}
               </TableCell>
             </TableRow>
           ))}

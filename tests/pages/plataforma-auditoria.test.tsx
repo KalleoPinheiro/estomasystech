@@ -71,7 +71,7 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
       screen.getByRole('heading', { level: 1, name: 'Trilha da plataforma' }),
     ).toBeInTheDocument();
     const platformRow = (
-      await screen.findByText('invalid_credentials')
+      await screen.findByText('Credenciais inválidas')
     ).closest('tr') as HTMLElement;
     expect(within(platformRow).getByText('Plataforma')).toBeInTheDocument();
     const clinicRow = screen
@@ -126,7 +126,7 @@ describe('Feature: Tela da trilha da plataforma (B6)', () => {
       'href',
       '/plataforma',
     );
-    await screen.findByText('invalid_credentials');
+    await screen.findByText('Credenciais inválidas');
     expect(
       screen.getAllByRole('columnheader').map((th) => th.textContent),
     ).toEqual(['Quando', 'Clínica', 'Ator', 'Ação', 'Recurso', 'Detalhe']);

@@ -18,6 +18,8 @@ import { PagedList } from '@/components/paged-list';
 import { PatientPicker } from '@/components/patient-picker';
 import {
   ACTION_LABELS,
+  ACTOR_ROLE_LABELS,
+  formatAuditDetail,
   formatDateTimeWithSeconds,
   RESOURCE_LABELS,
 } from '@/lib/audit-labels';
@@ -116,7 +118,10 @@ export default function AuditPage() {
                         {formatDateTimeWithSeconds(event.occurredAt)}
                       </TableCell>
                       <TableCell label="Ator" className="px-4 py-2">
-                        <span className="font-medium">{event.actorRole}</span>
+                        <span className="font-medium">
+                          {ACTOR_ROLE_LABELS[event.actorRole] ??
+                            event.actorRole}
+                        </span>
                         <span className="block text-ink-3 text-xs">
                           {event.actorId}
                         </span>
@@ -140,7 +145,7 @@ export default function AuditPage() {
                         label="Detalhe"
                         className="px-4 py-2 text-ink-3"
                       >
-                        {event.detail ?? '—'}
+                        {formatAuditDetail(event.resourceType, event.detail)}
                       </TableCell>
                     </TableRow>
                   ))}

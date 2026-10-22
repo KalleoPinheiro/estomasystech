@@ -59,6 +59,20 @@ export const EXUDATE_LABELS: Record<string, string> = {
   high: 'Alto',
 };
 
+/** Tecido predominante (PUSH 3.0). Texto livre legado não está aqui: mostra-se como foi gravado. */
+export const TISSUE_TYPE_LABELS: Record<string, string> = {
+  closed: 'Fechado',
+  epithelial: 'Epitelização',
+  granulation: 'Granulação',
+  slough: 'Esfacelo',
+  necrotic: 'Necrose',
+};
+
+/** Rótulo do tecido; código desconhecido (texto livre legado) aparece como foi gravado. */
+export function tissueTypeLabel(code: string): string {
+  return TISSUE_TYPE_LABELS[code] ?? code;
+}
+
 export const INFECTION_LEVEL_LABELS: Record<string, string> = {
   none: 'Sem sinais de infecção',
   inflammation: 'Inflamação',

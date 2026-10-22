@@ -19,6 +19,7 @@ import {
   EXUDATE_LABELS,
   formatDate,
   STOMA_TYPE_LABELS,
+  tissueTypeLabel,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useDocumentIssuance } from '@/lib/use-document-issuance';
@@ -204,7 +205,7 @@ function ReportContent({
                 </TableCell>
                 <TableCell className="py-1 pr-2">{a.areaMm2 ?? '—'}</TableCell>
                 <TableCell className="py-1 pr-2">
-                  {a.tissueType ?? '—'}
+                  {a.tissueType ? tissueTypeLabel(a.tissueType) : '—'}
                 </TableCell>
                 <TableCell className="py-1 pr-2">
                   {a.exudate ? (EXUDATE_LABELS[a.exudate] ?? a.exudate) : '—'}

@@ -112,8 +112,16 @@ function buildChartModel(assessments: ChartAssessment[]): ChartModel | null {
   const spanT = maxT - minT || 1;
   const first = areaSeries[0];
   const last = areaSeries[areaSeries.length - 1];
+  // Duas medições no mesmo instante nas pontas: não se sabe qual veio antes, e a
+  // mensagem "reduziu/aumentou" poderia contradizer a tabela (#473).
+  const orderIsAmbiguous =
+    areaSeries.length >= MIN_MEASURED_POINTS &&
+    (areaSeries[0].date.getTime() === areaSeries[1].date.getTime() ||
+      last.date.getTime() === areaSeries[areaSeries.length - 2].date.getTime());
   const trend =
-    areaSeries.length >= MIN_MEASURED_POINTS && first.value > 0
+    areaSeries.length >= MIN_MEASURED_POINTS &&
+    first.value > 0 &&
+    !orderIsAmbiguous
       ? Math.round(((last.value - first.value) / first.value) * 100)
       : null;
 
