@@ -75,7 +75,7 @@ acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada lin
 | Mesmo horário e profissional: conflito; mesmo horário em outra clínica não conflita | AGE-RN-02 | **admin** e **admin-vizinha** no mesmo horário | UI + massa |
 | Profissional inativo ou de outra empresa | AGE-RN-12 | **admin** com profissional de outra clínica (não aparece) | UI |
 | Atendente na configuração da grade; profissional cadastra ausência de colega ou remove feriado | AGE-RN-13 | **atendente**, **profissional** | UI |
-| Profissional cria retorno ou fila para paciente sem vínculo | AGE-RN-17 | **profissional** com paciente que só o Bruno atendeu | UI + massa |
+| Profissional cria retorno ou fila para paciente sem vínculo | AGE-RN-17 | **profissional** com paciente sem consulta na agenda (Ana e Bruno atendem os mesmos 20 pacientes; os outros 20 não têm consulta, #465) | UI + massa |
 | Lista de espera: janela maior que 180 dias; repetir o pedido não duplica; resolvida não aceita vaga | AGE-RN-08 | **atendente** em Lista de espera | UI |
 | Consulta cancelada não confirma, conclui nem remarca; concluída não cancela nem marca falta | AGE-RN-04 | consultas passadas já concluídas/canceladas/falta do seed (últimas 5 semanas) | UI + massa |
 | Concluir de novo não duplica a fatura; retorno concluído não cancela | AGE-RN-05 | **admin** concluindo consulta futura duas vezes | UI |
@@ -90,7 +90,7 @@ acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada lin
 | Paciente sem e-mail (lembrete impossível) e sem CPF (recibo bloqueado); menor com responsável; idoso | PRO-RN-18, PRO-RN-20 | massa de 40 pacientes (1 em 7 sem e-mail, 1 em 5 sem CPF, 1 em 13 menor) | UI + massa |
 | Evolução SOAP sem campo; estomia sem tipo; evolução registrada não se altera | PRO-RN-02, PRO-RN-04 | **profissional** em paciente vinculado | UI |
 | Condição resolvida não recebe avaliação; avaliações seriadas melhorando e piorando | PRO-RN-05 | 20 pacientes com condição e 5 avaliações cada | UI + massa |
-| Profissional sem vínculo não abre o paciente | PRO-RN-08 | **profissional2** abrindo paciente da Ana (e o inverso) | UI + massa |
+| Profissional sem vínculo não abre o paciente | PRO-RN-08 | **profissional** ou **profissional2** abrindo, por id, paciente sem consulta com ele; quem está na própria agenda abre normalmente (#465) | UI + massa |
 | Atendente exporta dados do titular; profissional/atendente na fila de pedidos do titular | PRO-RN-11, PRO-RN-16 | **atendente**, **profissional** | UI |
 | Profissional vincula ou edita responsável | PRO-RN-21 | **profissional** em paciente menor | UI |
 | Paciente de outra empresa por id ou na lista | PRO-RN-08, PRO-RN-12 | **admin-vizinha** (3 pacientes próprios) | UI + massa |

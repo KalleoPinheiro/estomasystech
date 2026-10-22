@@ -115,7 +115,7 @@ piorando) e estoque com lote vencido, estoque baixo e estoque zerado. Cenários 
 erro: destinatário `erro@homologacao.invalid` (e-mail 500) e chave S3 com `__erro__` (403).
 
 Toda feature nova acrescenta seus cenários (sucesso **e** erro) em `scripts/seed/seed.ts` no mesmo PR.
-O seed é aditivo (ADR-059): contas, clínicas, profissionais, parceiro e pacientes da vizinha que faltam são criados em banco já semeado,
+O seed é aditivo (ADR-059): contas, clínicas, profissionais, parceiro, pacientes da vizinha e o vínculo de cada profissional com os pacientes da própria agenda (PRO-RN-08, #465) que faltam são criados em banco já semeado,
 sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações, estoque) só nasce em banco novo: para ela, reinicie o branch de banco (§ 1).
 
 ## 5. Passo a passo no painel (uma vez, por Kalléo)
