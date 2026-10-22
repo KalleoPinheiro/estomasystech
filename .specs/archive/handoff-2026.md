@@ -1727,9 +1727,40 @@ Staging mostrava "C(" no logo da clínica "Clínica Homologação (fictícia)": 
 
 ## TIME completo na avaliação de ferida (2026-10-22) — EM REVISÃO
 
-Issue #464 (QA staging v0.2.0, mãe #463): a avaliação de ferida não tinha Infecção/Inflamação nem Bordas/epitelização. Migração aditiva `0069` (oito colunas nulas + `CHECK`): `infection_level`, `infection_signs`, `wound_edges`, `exudate_type` e percentuais de granulação, epitelização, esfacelo e necrose. Vocabulário fechado em `src/domain/clinical/wound-time.ts` (contínuo de infecção da IWII; bordas em valor único), validação no domínio e na API, formulário com `TimeFields`, coluna "Infecção / Bordas" na tabela e no relatório impresso, seed com TIME. ADR-061, PRO-RN-24.
-- **Decisão minha**: PUSH inalterado, sem regra cruzada nível × sinais, portal e parceiro sem os campos novos, pele perilesional reaproveita `skin_condition`. As 4 perguntas abertas (vocabulário, alerta de infecção, % de tecido no PUSH, conferência nível × sinais) estão no ADR-061 para o estomaterapeuta.
+Issue #464 (QA staging v0.2.0, mãe #463): a avaliação de ferida não tinha Infecção/Inflamação nem Bordas/epitelização. Migração aditiva `0069` (oito colunas nulas + `CHECK`): `infection_level`, `infection_signs`, `wound_edges`, `exudate_type` e percentuais de granulação, epitelização, esfacelo e necrose. Vocabulário fechado em `src/domain/clinical/wound-time.ts` (contínuo de infecção da IWII; bordas em valor único), validação no domínio e na API, formulário com `TimeFields`, coluna "Infecção / Bordas" na tabela e no relatório impresso, seed com TIME. ADR-062, PRO-RN-24.
+- **Decisão minha**: PUSH inalterado, sem regra cruzada nível × sinais, portal e parceiro sem os campos novos, pele perilesional reaproveita `skin_condition`. As 4 perguntas abertas (vocabulário, alerta de infecção, % de tecido no PUSH, conferência nível × sinais) estão no ADR-062 para o estomaterapeuta.
 - **Tipo do DTO**: campos novos opcionais em `AssessmentDto` para não editar fixtures de teste existentes (regra 8).
 - **Testes novos**: `wound-time`, `avaliacao-time-routes` (PGlite, roda a migração), `avaliacao-time-form`, `wound-time-summary`; nenhum teste existente alterado.
 - **Seed**: a massa pesada só nasce em banco vazio (ADR-059); a staging só mostra TIME nas avaliações do seed em banco novo.
-- **Next step**: Kalléo/estomaterapeuta responderem as perguntas do ADR-061. **Blockers**: nenhum.
+- **Next step**: Kalléo/estomaterapeuta responderem as perguntas do ADR-062. **Blockers**: nenhum.
+
+## Pagamento acima do saldo (2026-10-22) — EM REVISÃO
+
+Issue #466 (QA staging v0.2.0, filha de #463): no diálogo «Registrar pagamento», valor acima do saldo (ex.: 999 para saldo de R$ 120) virava `PATCH {action:"pay"}` e quitava sem aviso. O domínio e a API já recusavam `pay_partial` acima do saldo (FIN-RN-02); o furo era só a UI, que mandava `pay` para qualquer valor ≥ saldo. `PaymentForm` agora mostra «Valor maior que o saldo: o máximo é R$ X» e desabilita as formas de pagamento (também para zero e negativo); `handlePay` só usa `pay` quando o valor é exatamente o saldo, então qualquer valor fora disso chega ao servidor como parcial e é recusado.
+- **Decisão**: sem crédito automático (recomendação do orquestrador). Não adicionei etapa de confirmação para o clique no meio de pagamento (agravante da issue): é mudança de UX que fica como pergunta aberta.
+- **Testes novos** em `invoice-payments-ui.test.tsx`; nenhum teste existente alterado. Linha nova na matriz de exceções do financeiro.
+- **Next step**: nenhum. **Blockers**: nenhum.
+## Rebuild da staging dispara deploy (2026-10-22) — EM REVISÃO
+
+A Vercel não cria deploy de Production para um SHA já construído (ex.: prévia da release), e a `staging` local herdava upstream em `origin/release/v0.2.0`, então um `git push` simples ia para a release. `scripts/staging/rebuild.sh` ganhou `--deploy` (commit vazio `chore(staging): dispara deploy de homologação` quando algum ref remoto já aponta para o SHA final), cria a `staging` com `--no-track` e publica sempre com `git push --force-with-lease --set-upstream origin HEAD:staging`.
+- **Decisão**: `--deploy` é opt-in no script e padrão no `npm run staging:rebuild` e no `staging.yml`, porque `tests/scripts/release-fluxo.test.ts` (regra 8, intocável) exige staging == release ao chamar o script direto.
+- **Testes novos**: `tests/scripts/staging-rebuild.test.ts`; nenhum teste existente alterado. `scripts/staging` não está sob `GATE_OWNER_EDIT` (só testes e `scripts/gate`). Runbook `homologacao.md` atualizado.
+- **Next step**: Kalléo roda `npm run staging:rebuild -- --release --push` e confere o deploy de Production. **Blockers**: nenhum.
+- **Desvio de processo (2026-10-22)**: o #487 foi mergeado sem the-judge e sem `gate:local`. Verificado depois, sem achados: the-judge sem problemas e `E2E-GATE: 796884b542022d46d2bd7a986ff6b8e7090bc62c pass e2e=321 etapas=typecheck,lint,sv,docs,integridade-de-testes,cobertura,build,e2e-producao,e2e-dev puladas=docker,backup min=18.9`. O `tsc` precisa de `NODE_OPTIONS=--max-old-space-size=4096` na nuvem. Regra daqui em diante: the-judge antes de todo merge e recibo em PR que não seja só `.md`.
+## Profissional abre paciente da agenda (#465) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: Ana via 23 consultas de 20 pacientes e só 1 na lista; Bruno recebia 404 no paciente que atende hoje. **Causa raiz**: o vínculo profissional↔paciente (PRO-RN-08) só nasce nas rotas (`POST /api/appointments`, paciente e evolução), e o seed grava a consulta direto no repositório, sem vínculo. A regra de acesso não mudou (sem ADR): continua o mínimo necessário, por empresa.
+- **Seed** (`seedProfessionalLinks`): cria o vínculo de cada par profissional/paciente da agenda; aditivo (ADR-059), em banco já semeado completa só o que falta, sem recriar a agenda. A staging corrige no próximo `staging:rebuild`.
+- **Bug de código achado no caminho**: `POST /api/appointments/recurring` não concedia o vínculo (a avulsa concedia; AGE-RN-12 já pressupunha). Corrigido em melhor esforço, como a avulsa, e só quando ao menos uma ocorrência é criada. Produção ainda sem paciente real, então não há backfill de vínculos lá.
+- Ana e Bruno atendem os mesmos 20 pacientes no seed; os cenários "sem vínculo" (AGE-RN-17, PRO-RN-08) passam a usar paciente sem consulta (`homologacao-cenarios.md`). Paciente exclusivo de um profissional fica para a #477.
+- Testes novos: `tests/api/professional-patient-link-on-recurring.test.ts`, `tests/scripts/seed-vinculos.test.ts`. Nenhum teste existente alterado.
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Vercel constrói só a staging (2026-10-22) — EM REVISÃO
+
+Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branches do Neon: a integração criava um branch de banco por prévia). `vercel.json` ganhou `git.deploymentEnabled` `{"**": false, "staging": true}`; ADR-062 e runbook `homologacao.md` (§ 1, § 2, § 5) atualizados.
+- **Investigação do commit vazio da staging**: não há `ignoreCommand` no repo nem Ignored Build Step visível no projeto; a Vercel não tem nenhum deploy (nem `ERROR`/`CANCELED`) para o SHA `8304683`, então a causa está fora do repositório (webhook/fila). Não corrigido por código.
+- **Decisão**: prévia por PR deixa de existir (ADR-062, complementa o ADR-041). `vercel.json` vale a partir do commit empurrado: branch antiga só obedece depois de trazer a release.
+- **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
+- **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.

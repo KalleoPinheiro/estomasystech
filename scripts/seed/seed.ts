@@ -413,6 +413,34 @@ function seedTime(worsening: boolean, visit: number) {
   };
 }
 
+/**
+ * Vínculo profissional↔paciente de cada consulta semeada (PRO-RN-08, #465): o
+ * seed grava a consulta direto no repositório, sem a rota que concede o vínculo,
+ * então o Profissional não abria o prontuário de quem está na própria agenda.
+ * Aditivo: em banco já semeado completa só os pares que faltam.
+ */
+async function seedProfessionalLinks(patients: Patient[]): Promise<number> {
+  const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
+  const pairs = new Map<string, Set<string>>();
+  for (const appointment of await repos.appointments.findByPatientIds(patients.map((p) => p.id))) {
+    if (appointment.professionalId) {
+      const linked = pairs.get(appointment.professionalId) ?? new Set<string>();
+      pairs.set(appointment.professionalId, linked.add(appointment.patientId));
+    }
+  }
+  let created = 0;
+  for (const [professionalId, patientIds] of pairs) {
+    const existing = new Set(await repos.professionalPatientLinks.findLinkedPatientIds(professionalId));
+    for (const patientId of patientIds) {
+      if (!existing.has(patientId)) {
+        await repos.professionalPatientLinks.ensureLink(professionalId, patientId);
+        created += 1;
+      }
+    }
+  }
+  return created;
+}
+
 async function seedClinical(now: Date, patients: Patient[]): Promise<number> {
   const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
   let assessments = 0;
@@ -508,6 +536,7 @@ export async function seedHomologation(options: SeedOptions): Promise<SeedReport
     // Massa pesada só em clínica nova: banco já semeado não recebe agenda, avaliação nem estoque de novo.
     const { appointments, invoices } = await seedAppointments(now, patients, professionals, procedures);
     Object.assign(counts, {
+      professionalLinks: await seedProfessionalLinks(patients),
       professionals: professionals.length,
       procedures: procedures.length,
       patients: patients.length,
@@ -518,8 +547,12 @@ export async function seedHomologation(options: SeedOptions): Promise<SeedReport
     });
     return { skipped: false, counts };
   }
+  const professionalLinks = await seedProfessionalLinks(patients);
+  if (professionalLinks > 0) {
+    counts.professionalLinks = professionalLinks;
+  }
   const passwordsSynced = await syncAccountPasswords(options.password);
-  const added = clinics + staffAccounts + portalAccounts + neighborPatients;
+  const added = clinics + staffAccounts + portalAccounts + neighborPatients + professionalLinks;
   return added === 0
     ? { skipped: true, counts: { passwordsSynced } }
     : { skipped: false, counts: { ...counts, passwordsSynced } };

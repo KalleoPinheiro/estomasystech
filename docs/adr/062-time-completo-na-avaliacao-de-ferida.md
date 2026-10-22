@@ -1,5 +1,5 @@
 ---
-title: "ADR 061 — TIME completo na avaliação de ferida: vocabulário fechado e colunas aditivas"
+title: "ADR 062 — TIME completo na avaliação de ferida: vocabulário fechado e colunas aditivas"
 status: frozen
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
@@ -7,7 +7,7 @@ last_reviewed: 2026-10-22
 related: [docs/domains/pacientes-prontuario/README.md, docs/adr/006-chave-de-dados-clinicos.md]
 ---
 
-# ADR 061 — TIME completo na avaliação de ferida: vocabulário fechado e colunas aditivas
+# ADR 062 — TIME completo na avaliação de ferida: vocabulário fechado e colunas aditivas
 
 - **Data:** 2026-10-22
 - **Status:** aceito (decisão do orquestrador como Product Owner, mandato de @KalleoPinheiro de 2026-10-21; vocabulário a validar com o enfermeiro estomaterapeuta).
