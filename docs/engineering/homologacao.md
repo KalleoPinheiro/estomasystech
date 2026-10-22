@@ -130,6 +130,8 @@ cancelamento tardio e falta, faturas pagas e vencidas, avaliações seriadas (fe
 piorando) e estoque com lote vencido, estoque baixo e estoque zerado. Cenários de integração com
 erro: destinatário `erro@homologacao.invalid` (e-mail 500) e chave S3 com `__erro__` (403).
 
+Cenários do roteiro com dado específico (`scripts/seed/cenarios.ts`, #477), aditivos e idempotentes (rodam também em banco já semeado): pausa de almoço 12:00–13:00 na grade da principal; repasse percentual (40%) da Ana; kits de *Curativo simples* e *Troca de bolsa de estomia*; responsável técnico da principal (documentos clínicos liberados); consulta concluída e fatura paga na vizinha (recibo bloqueado por CNPJ); histórico de `paciente@` (consulta daqui a ~2 h, outra daqui a ~10 dias, uma concluída com fatura pendente, condição com 3 avaliações e retorno pendente, uma vez por banco); a parceira indica 2 pacientes e um deles já aceitou compartilhar. Já a vizinha nasce escura e âmbar (#476). Em banco novo a massa pesada também traz anamnese com alergia e uma evolução SOAP por paciente com condição, avaliações semanais com curvas diferentes, fatura emitida na data da consulta (pagamento nunca antes da emissão) e quadro de criança sem pé diabético; em banco antigo isso só vem reiniciando o branch (§ 1).
+
 Toda feature nova acrescenta seus cenários (sucesso **e** erro) em `scripts/seed/seed.ts` no mesmo PR.
 O seed é aditivo (ADR-059): contas, clínicas, profissionais, parceiro, pacientes da vizinha e o vínculo de cada profissional com os pacientes da própria agenda (PRO-RN-08, #465) que faltam são criados em banco já semeado,
 sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações, estoque) só nasce em banco novo: para ela, reinicie o branch de banco (§ 1).
