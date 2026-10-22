@@ -66,6 +66,7 @@
 
 - Point-in-time clinical snapshot of a condition.
 - Measurements: length/width/depth (mm), tissue type, exudate, pain scale.
+- Wounds follow the full **TIME** protocol (ADR-062): tissue (predominant type and % per tissue), infection/inflammation (level and signs), moisture (exudate amount and type) and edges (attached, rolled/epíbole, macerated…).
 - DET scale (for ostomies): discoloration, erosion, overgrowth areas and severities.
 - Complications: free-text or canonical codes.
 

@@ -29,10 +29,18 @@ import type { AssessmentDto, ConditionDto } from '@/lib/dto';
 import {
   CONDITION_KIND_LABELS,
   EXUDATE_LABELS,
+  EXUDATE_TYPE_LABELS,
   formatDate,
   formatDateTime,
   STOMA_TYPE_LABELS,
 } from '@/lib/format';
+import { timeSummary, tissueProfile } from '@/lib/wound-time-summary';
+import {
+  EMPTY_TIME_VALUES,
+  TimeFields,
+  type TimeFormValues,
+  toTimePayload,
+} from './assessment-time-fields';
 import { ConditionPhotos } from './condition-photos';
 
 interface ConditionsSectionProps {
@@ -220,6 +228,9 @@ export function ConditionsSection({
                               <TableHead className="py-1 pr-3">
                                 Exsudato
                               </TableHead>
+                              <TableHead className="py-1 pr-3">
+                                Infecção / Bordas
+                              </TableHead>
                               <TableHead className="py-1 pr-3">Dor</TableHead>
                               <TableHead className="py-1 pr-3">
                                 PUSH/DET
@@ -257,12 +268,29 @@ export function ConditionsSection({
                                   className="py-1.5 pr-3"
                                 >
                                   {a.tissueType ?? '—'}
+                                  {tissueProfile(a) && (
+                                    <span className="block text-ink-3">
+                                      {tissueProfile(a)}
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell
                                   label="Exsudato"
                                   className="py-1.5 pr-3"
                                 >
                                   {a.exudate ? EXUDATE_LABELS[a.exudate] : '—'}
+                                  {a.exudateType && (
+                                    <span className="block text-ink-3">
+                                      {EXUDATE_TYPE_LABELS[a.exudateType] ??
+                                        a.exudateType}
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell
+                                  label="Infecção / Bordas"
+                                  className={infectionCellClass(a)}
+                                >
+                                  {timeSummary(a)}
                                 </TableCell>
                                 <TableCell
                                   label="Dor"
@@ -453,6 +481,14 @@ function painCellClass(painScale: number | null): string {
   return `py-1.5 pr-3 ${abnormal ? ABNORMAL_CELL_CLASS : ''}`;
 }
 
+/** Infecção local ou pior ganha destaque, como a dor alta. */
+function infectionCellClass(assessment: AssessmentDto): string {
+  const abnormal =
+    assessment.infectionLevel != null &&
+    ['local', 'spreading', 'systemic'].includes(assessment.infectionLevel);
+  return `py-1.5 pr-3 ${abnormal ? ABNORMAL_CELL_CLASS : ''}`;
+}
+
 function complicationsCellClass(assessment: AssessmentDto): string {
   const abnormal = complicationsCellText(assessment) !== '—';
   return `py-1.5 ${abnormal ? ABNORMAL_CELL_CLASS : ''}`;
@@ -465,7 +501,7 @@ function scoreLabel(assessment: AssessmentDto): string {
   return '—';
 }
 
-interface AssessmentFormValues {
+interface AssessmentFormValues extends TimeFormValues {
   lengthMm: string;
   widthMm: string;
   depthMm: string;
@@ -532,6 +568,7 @@ const toAssessmentPayload = (values: AssessmentFormValues) => ({
   detErosionSeverity: toNumberOrNull(values.detErosionSeverity),
   detOvergrowthArea: toNumberOrNull(values.detOvergrowthArea),
   detOvergrowthSeverity: toNumberOrNull(values.detOvergrowthSeverity),
+  ...toTimePayload(values),
   notes: toTextOrNull(values.notes),
 });
 
@@ -560,6 +597,7 @@ function AssessmentForm({
     detErosionSeverity: '',
     detOvergrowthArea: '',
     detOvergrowthSeverity: '',
+    ...EMPTY_TIME_VALUES,
     notes: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -567,6 +605,9 @@ function AssessmentForm({
 
   const set = (key: keyof typeof values) => (value: string) =>
     setValues((prev) => ({ ...prev, [key]: value }));
+
+  const setTime = (patch: Partial<TimeFormValues>) =>
+    setValues((prev) => ({ ...prev, ...patch }));
 
   const toggleComplication = (code: string) =>
     setValues((prev) => ({
@@ -666,6 +707,16 @@ function AssessmentForm({
               </NativeSelect>
             </label>
           </div>
+          <TimeFields values={values} onChange={setTime} />
+          <label className="font-medium text-sm">
+            Pele perilesional
+            <Input
+              value={values.skinCondition}
+              onChange={(e) => set('skinCondition')(e.target.value)}
+              placeholder="Ex.: íntegra, macerada, eritema, descamação…"
+              className="mt-1"
+            />
+          </label>
         </>
       )}
       {!isWound && (

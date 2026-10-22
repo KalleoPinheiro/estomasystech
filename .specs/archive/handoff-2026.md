@@ -1725,6 +1725,15 @@ Staging mostrava "C(" no logo da clínica "Clínica Homologação (fictícia)": 
 - O E2E pegou (só na suíte completa, por causa de uma foto pendente criada por outro spec) contraste insuficiente em `.text-xs.truncate` da lista de triagem sobre o aviso âmbar do "Hoje": `triage-photo-list.tsx` trocou `text-ink-3` por `text-ink-2`. Falha anterior a este PR, corrigida aqui porque o gate precisa ficar verde (regra 7).
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## TIME completo na avaliação de ferida (2026-10-22) — EM REVISÃO
+
+Issue #464 (QA staging v0.2.0, mãe #463): a avaliação de ferida não tinha Infecção/Inflamação nem Bordas/epitelização. Migração aditiva `0069` (oito colunas nulas + `CHECK`): `infection_level`, `infection_signs`, `wound_edges`, `exudate_type` e percentuais de granulação, epitelização, esfacelo e necrose. Vocabulário fechado em `src/domain/clinical/wound-time.ts` (contínuo de infecção da IWII; bordas em valor único), validação no domínio e na API, formulário com `TimeFields`, coluna "Infecção / Bordas" na tabela e no relatório impresso, seed com TIME. ADR-062, PRO-RN-24.
+- **Decisão minha**: PUSH inalterado, sem regra cruzada nível × sinais, portal e parceiro sem os campos novos, pele perilesional reaproveita `skin_condition`. As 4 perguntas abertas (vocabulário, alerta de infecção, % de tecido no PUSH, conferência nível × sinais) estão no ADR-062 para o estomaterapeuta.
+- **Tipo do DTO**: campos novos opcionais em `AssessmentDto` para não editar fixtures de teste existentes (regra 8).
+- **Testes novos**: `wound-time`, `avaliacao-time-routes` (PGlite, roda a migração), `avaliacao-time-form`, `wound-time-summary`; nenhum teste existente alterado.
+- **Seed**: a massa pesada só nasce em banco vazio (ADR-059); a staging só mostra TIME nas avaliações do seed em banco novo.
+- **Next step**: Kalléo/estomaterapeuta responderem as perguntas do ADR-062. **Blockers**: nenhum.
+
 ## Pagamento acima do saldo (2026-10-22) — EM REVISÃO
 
 Issue #466 (QA staging v0.2.0, filha de #463): no diálogo «Registrar pagamento», valor acima do saldo (ex.: 999 para saldo de R$ 120) virava `PATCH {action:"pay"}` e quitava sem aviso. O domínio e a API já recusavam `pay_partial` acima do saldo (FIN-RN-02); o furo era só a UI, que mandava `pay` para qualquer valor ≥ saldo. `PaymentForm` agora mostra «Valor maior que o saldo: o máximo é R$ X» e desabilita as formas de pagamento (também para zero e negativo); `handlePay` só usa `pay` quando o valor é exatamente o saldo, então qualquer valor fora disso chega ao servidor como parcial e é recusado.
@@ -1749,9 +1758,9 @@ QA da staging v0.2.0: Ana via 23 consultas de 20 pacientes e só 1 na lista; Bru
 
 ## Vercel constrói só a staging (2026-10-22) — EM REVISÃO
 
-Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branches do Neon: a integração criava um branch de banco por prévia). `vercel.json` ganhou `git.deploymentEnabled` `{"**": false, "staging": true}`; ADR-061 e runbook `homologacao.md` (§ 1, § 2, § 5) atualizados.
+Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branches do Neon: a integração criava um branch de banco por prévia). `vercel.json` ganhou `git.deploymentEnabled` `{"**": false, "staging": true}`; ADR-062 e runbook `homologacao.md` (§ 1, § 2, § 5) atualizados.
 - **Investigação do commit vazio da staging**: não há `ignoreCommand` no repo nem Ignored Build Step visível no projeto; a Vercel não tem nenhum deploy (nem `ERROR`/`CANCELED`) para o SHA `8304683`, então a causa está fora do repositório (webhook/fila). Não corrigido por código.
-- **Decisão**: prévia por PR deixa de existir (ADR-061, complementa o ADR-041). `vercel.json` vale a partir do commit empurrado: branch antiga só obedece depois de trazer a release.
+- **Decisão**: prévia por PR deixa de existir (ADR-062, complementa o ADR-041). `vercel.json` vale a partir do commit empurrado: branch antiga só obedece depois de trazer a release.
 - **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.

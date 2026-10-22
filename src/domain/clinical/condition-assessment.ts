@@ -1,5 +1,13 @@
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
+import {
+  type ExudateType,
+  type InfectionLevel,
+  type InfectionSign,
+  validateWoundTime,
+  type WoundEdge,
+  type WoundTimeProps,
+} from './wound-time';
 
 export const EXUDATE_LEVELS = ['none', 'low', 'moderate', 'high'] as const;
 export type ExudateLevel = (typeof EXUDATE_LEVELS)[number];
@@ -65,7 +73,7 @@ function pushAreaScore(areaCm2: number): number {
   return step ? step[1] : 10;
 }
 
-export interface ConditionAssessmentProps {
+export interface ConditionAssessmentProps extends WoundTimeProps {
   conditionId: string;
   lengthMm?: number | null;
   widthMm?: number | null;
@@ -118,6 +126,7 @@ export class ConditionAssessment {
       );
     }
     ConditionAssessment.validateDet(props);
+    validateWoundTime(props);
     ConditionAssessment.validateComplicationCodes(props.complicationCodes);
   }
 
@@ -181,6 +190,19 @@ export class ConditionAssessment {
     };
   }
 
+  private static normalizeTime(props: ConditionAssessmentProps) {
+    return {
+      infectionLevel: props.infectionLevel ?? null,
+      infectionSigns: ConditionAssessment.normalizeText(props.infectionSigns),
+      woundEdges: props.woundEdges ?? null,
+      exudateType: props.exudateType ?? null,
+      granulationPct: props.granulationPct ?? null,
+      epithelialPct: props.epithelialPct ?? null,
+      sloughPct: props.sloughPct ?? null,
+      necroticPct: props.necroticPct ?? null,
+    };
+  }
+
   static create(props: ConditionAssessmentProps): ConditionAssessment {
     ConditionAssessment.validate(props);
     return new ConditionAssessment({
@@ -197,6 +219,7 @@ export class ConditionAssessment {
         props.complicationCodes,
       ),
       ...ConditionAssessment.normalizeDet(props),
+      ...ConditionAssessment.normalizeTime(props),
       notes: ConditionAssessment.normalizeText(props.notes),
       id: newId(),
       createdAt: new Date(),
@@ -325,6 +348,42 @@ export class ConditionAssessment {
 
   get detOvergrowthSeverity(): number | null {
     return this.state.detOvergrowthSeverity ?? null;
+  }
+
+  get infectionLevel(): InfectionLevel | null {
+    return (this.state.infectionLevel as InfectionLevel | null) ?? null;
+  }
+
+  get infectionSigns(): InfectionSign[] {
+    const raw = this.state.infectionSigns?.trim();
+    if (!raw) {
+      return [];
+    }
+    return raw.split(',').map((token) => token.trim() as InfectionSign);
+  }
+
+  get woundEdges(): WoundEdge | null {
+    return (this.state.woundEdges as WoundEdge | null) ?? null;
+  }
+
+  get exudateType(): ExudateType | null {
+    return (this.state.exudateType as ExudateType | null) ?? null;
+  }
+
+  get granulationPct(): number | null {
+    return this.state.granulationPct ?? null;
+  }
+
+  get epithelialPct(): number | null {
+    return this.state.epithelialPct ?? null;
+  }
+
+  get sloughPct(): number | null {
+    return this.state.sloughPct ?? null;
+  }
+
+  get necroticPct(): number | null {
+    return this.state.necroticPct ?? null;
   }
 
   get notes(): string | null {

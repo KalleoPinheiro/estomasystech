@@ -22,6 +22,7 @@ import {
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useDocumentIssuance } from '@/lib/use-document-issuance';
+import { timeSummary } from '@/lib/wound-time-summary';
 
 function guardLoading(
   clinic: ClinicInfoDto | null,
@@ -184,6 +185,9 @@ function ReportContent({
               <TableHead className="py-1 pr-2 text-black">Área (mm²)</TableHead>
               <TableHead className="py-1 pr-2 text-black">Tecido</TableHead>
               <TableHead className="py-1 pr-2 text-black">Exsudato</TableHead>
+              <TableHead className="py-1 pr-2 text-black">
+                Infecção / Bordas
+              </TableHead>
               <TableHead className="py-1 text-black">Dor</TableHead>
             </TableRow>
           </TableHeader>
@@ -205,6 +209,7 @@ function ReportContent({
                 <TableCell className="py-1 pr-2">
                   {a.exudate ? (EXUDATE_LABELS[a.exudate] ?? a.exudate) : '—'}
                 </TableCell>
+                <TableCell className="py-1 pr-2">{timeSummary(a)}</TableCell>
                 <TableCell className="py-1">
                   {a.painScale != null ? `${a.painScale}/10` : '—'}
                 </TableCell>
