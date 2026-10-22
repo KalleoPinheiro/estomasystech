@@ -64,6 +64,15 @@ function NotSharedPatientCard({
   );
 }
 
+/** CRM e especialidade só entram quando existem, sem separador solto. */
+function partnerCredentials(partner: {
+  crm?: string | null;
+  specialty?: string | null;
+}): string {
+  const parts = [partner.crm, partner.specialty].filter(Boolean);
+  return parts.length > 0 ? `${parts.join(' · ')} — ` : '';
+}
+
 export function PartnerPortalView() {
   const { data, error } = useApiQuery<PartnerPortalDto>('/api/portal/partner');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -77,9 +86,7 @@ export function PartnerPortalView() {
         className="pt-0 pb-2"
         eyebrow="Portal do parceiro"
         title={data.partner.fullName}
-        description={`${data.partner.crm ?? ''} ${
-          data.partner.specialty ? `· ${data.partner.specialty}` : ''
-        } — acompanhamento dos pacientes que você indicou. A evolução clínica aparece só com a autorização do paciente e cobre os últimos 24 meses.`}
+        description={`${partnerCredentials(data.partner)}acompanhamento dos pacientes que você indicou. A evolução clínica aparece só com a autorização do paciente e cobre os últimos 24 meses.`}
       />
 
       {data.referredPatients.length === 0 ? (
