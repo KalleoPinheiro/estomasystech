@@ -208,7 +208,7 @@ describe('Feature: Relatório gerencial', () => {
       );
     });
 
-    it('Dado procedimento sem custo de insumo apurado, Quando renderizar, Então mostra "Não apurado" e não uma margem igual à receita', async () => {
+    it('Dado procedimento sem custo de insumo apurado, Quando renderizar, Então mostra Não apurado e não uma margem igual à receita', async () => {
       mockFetch(() =>
         jsonResponse({
           ...baseReport,
