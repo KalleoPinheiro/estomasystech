@@ -191,4 +191,6 @@ export interface TriagePhotoDto {
   createdAt: string;
   waitingHours: number;
   latestScore: { kind: 'push' | 'det'; value: number } | null;
+  /** Nível de infecção da última avaliação quando local ou pior (ADR-063). */
+  infectionAlert?: string | null;
 }

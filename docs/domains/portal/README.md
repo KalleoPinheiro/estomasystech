@@ -58,7 +58,7 @@ indicou. O papel da sessão escolhe a visão.
 | --- | --- | --- |
 | Próximas consultas, retornos, evolução, histórico e faturas | entregue | `/portal` (paciente) |
 | Confirmar, cancelar e remarcar | entregue | `/portal` |
-| Auto-agendamento (até 2 consultas futuras, 60 dias à frente) e lista de espera | entregue (limites: #213) | `/portal` |
+| Auto-agendamento (até 2 consultas futuras, 60 dias à frente) e lista de espera | entregue (limites: #213); na tela, o paciente só agenda a partir de um retorno pendente (`schedule-return.tsx`), ver pergunta aberta 1 | `/portal` |
 | Envio de foto para monitoramento remoto (10 por 24 h) e consentimento | entregue (cota: #213) | `/portal` |
 | Responsável acessa em nome do paciente (aviso, escolha do paciente, trilha) | entregue (#351) | `/portal` (responsável) |
 | Paciente vê quem tem acesso em nome dele e o último acesso | entregue (#351) | `/portal` (paciente) |
@@ -68,6 +68,11 @@ indicou. O papel da sessão escolhe a visão.
 | Consentimento em papel registrado pela equipe, com origem e autoria na auditoria | entregue (#310) | ficha `/pacientes/[id]` (Admin de Empresa e Atendente) |
 | Meus dados (LGPD): baixar a cópia dos próprios dados e pedir correção ou eliminação (pelo menor, o representante baixa a cópia e pede correção, POR-RN-28). O texto do aviso está em vigor, com revisão jurídica pendente ([#216](https://github.com/KalleoPinheiro/estomasystech/issues/216), POR-RN-25) | entregue | `/portal` ([#293](https://github.com/KalleoPinheiro/estomasystech/issues/293)) |
 | Uso no celular: sem scroll horizontal e alvo de toque ≥ 44x44px em 390 e 375px | entregue | `/portal` ([#127](https://github.com/KalleoPinheiro/estomasystech/issues/127)) |
+
+## Perguntas abertas (decisão de produto, não são requisito)
+
+1. **Auto-agendamento livre ou só de retorno?** (#483) A tela do paciente só oferece «Agendar retorno», ligado a um retorno pendente; sem retorno aparece «Entre em contato com a clínica». Querem autoagendamento livre (qualquer procedimento da grade) ou só retorno? Muda UI, regra de anti-conflito do portal e o cenário 8 do roteiro de homologação.
+2. **Aceite do termo com confirmação explícita?** (#481) Hoje um clique em «Li e aceito o termo» grava o consentimento; o termo está na mesma caixa e a revogação é de um passo. A sugestão do QA é exigir uma marcação «Li e concordo» antes do botão. Não foi feito porque muda o fluxo que os testes de unidade e E2E já cobrem (exigiria `TESTE-ALTERADO`); a revisão jurídica (#376) deve opinar.
 
 Specs de execução: `.specs/features/{fase-4-portal-auto-agendamento,login-portal-p0-p3-pontuais,direitos-titular-293}/`.
 

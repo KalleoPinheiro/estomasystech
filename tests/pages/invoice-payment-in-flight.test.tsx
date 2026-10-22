@@ -30,9 +30,12 @@ describe('Feature: pagamento em voo (#192)', () => {
     );
     render(<PaymentForm invoice={invoice} onPay={onPay} />);
 
-    const pix = screen.getByRole('button', { name: 'Pix' });
-    fireEvent.click(pix);
-    fireEvent.click(pix);
+    fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
+    const confirm = screen.getByRole('button', {
+      name: 'Confirmar recebimento',
+    });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
 
     expect(onPay).toHaveBeenCalledTimes(1);
     for (const button of screen.getAllByRole('button')) {

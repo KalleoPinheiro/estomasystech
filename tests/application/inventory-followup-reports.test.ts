@@ -341,6 +341,7 @@ describe('Feature: Relatório gerencial mensal', () => {
         count: 2,
         totalCents: 50000,
         supplyCostCents: 0,
+        supplyCostKnown: false,
         marginCents: 50000,
       },
       {
@@ -348,6 +349,7 @@ describe('Feature: Relatório gerencial mensal', () => {
         count: 1,
         totalCents: 15000,
         supplyCostCents: 0,
+        supplyCostKnown: false,
         marginCents: 15000,
       },
     ]);
