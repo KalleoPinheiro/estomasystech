@@ -5,7 +5,7 @@ import {
   assertCanGrantGuardianAccess,
   MINOR_PATIENT_ACCOUNT_MESSAGE,
 } from '@/application/auth/grant-guardian-access';
-import { sendInvite } from '@/application/auth/send-invite';
+import { appUrlFromEnv, sendInvite } from '@/application/auth/send-invite';
 import { visibleAccounts } from '@/domain/auth/account-management';
 import { USER_ROLES } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
@@ -63,6 +63,9 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = createSchema.parse(await request.json());
+    // Antes de gravar a conta: `APP_URL` inválida em produção falha aqui, em
+    // vez de deixar uma conta criada sem link e um e-mail duplicado no retry (#467).
+    appUrlFromEnv();
     // A conta nasce sempre na empresa da sessão: o super_admin convida pela
     // plataforma (`/api/platform/clinics/[id]/admins`, ADR-007).
     const targetClinicId = writeClinicId(guard.session);

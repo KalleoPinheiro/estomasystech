@@ -2,6 +2,7 @@ import { CreateAccount } from '@/application/auth/create-account';
 import { resetAccountMfa } from '@/application/auth/reset-account-mfa';
 import {
   type AccessLinkResult,
+  appUrlFromEnv,
   type InviteServices,
   issueAccessLink,
   sendInvite,
@@ -125,6 +126,8 @@ export class ManageClinicAdmins {
     if (!clinic.isRegistrationComplete()) {
       throw new ValidationError(INCOMPLETE_REGISTRATION_MESSAGE);
     }
+    // Antes de gravar a conta: sem `APP_URL` válida em produção não há link (#467).
+    appUrlFromEnv();
     const account = await this.services.transactions.run(
       async ({ userAccounts, auditEvents }) => {
         const created = await new CreateAccount(userAccounts)
