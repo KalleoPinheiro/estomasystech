@@ -97,7 +97,7 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 | `STAGING_SEED_PASSWORD` | senha (≥ 10 caracteres) das contas fictícias |
 | `MOCK_INTEGRATIONS` | `true` |
 | `STAGING_DISABLE_MFA` | `true` só em Production (a staging); nunca em Preview. Dispensa o 2FA no login por e-mail e senha ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)); com `APP_ENV` diferente de `staging` o app recusa subir |
-| `APP_URL` | URL pública do ambiente |
+| `APP_URL` | URL pública do ambiente. Se faltar na Vercel, o convite usa `https://$VERCEL_PROJECT_PRODUCTION_URL` (#467); em outro ambiente de produção, sem `APP_URL` o convite é recusado |
 | `TRUSTED_PROXY_HOPS` | `1` (a Vercel acrescenta o IP real ao fim do `x-forwarded-for`; confira no primeiro deploy) |
 | `PHOTO_STORAGE`, `S3_*` | bucket R2 só de homologação (obrigatório: a Vercel não tem disco) |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `GLITCHTIP_DSN` | **não definir** |
