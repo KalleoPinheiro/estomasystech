@@ -105,7 +105,7 @@ export function TriagePhotoList({
                   </Tooltip>
                 )}
               </p>
-              <p className="truncate text-ink-3 text-xs">
+              <p className="truncate text-ink-2 text-xs">
                 {photo.patientNote ?? 'sem observação'} ·{' '}
                 {formatDate(photo.createdAt)} ·{' '}
                 <span
