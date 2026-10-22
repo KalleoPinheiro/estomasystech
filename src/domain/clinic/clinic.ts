@@ -110,6 +110,22 @@ export function isClinicInfoComplete(
   );
 }
 
+/** Quais dados cadastrais faltam para emitir documento (a ordem é a da tela de Configurações). */
+export function missingClinicInfoFields(
+  info: Pick<
+    ClinicInfoFields,
+    'cnpj' | 'professionalName' | 'professionalRegistry'
+  > | null,
+): string[] {
+  const missing: string[] = [];
+  if (!info?.cnpj?.trim()) missing.push('CNPJ');
+  if (!info?.professionalName?.trim()) missing.push('responsável técnico');
+  if (!info?.professionalRegistry?.trim()) {
+    missing.push('registro profissional');
+  }
+  return missing;
+}
+
 const CONTACT_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const trimToNull = (value: string | null | undefined): string | null => {

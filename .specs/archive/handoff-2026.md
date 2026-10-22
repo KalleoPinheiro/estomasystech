@@ -1764,3 +1764,11 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Documento bloqueado sem emissão (#468, #474, #485) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: abrir a declaração de comparecimento com a clínica incompleta gravava «emissão de documento» na auditoria (o hook de emissão rodava na montagem, mesmo com a página bloqueada); o link aparecia para consulta futura; a mensagem não dizia o campo que faltava nem linkava Configurações. Agora as 6 páginas de documento só chamam `POST /api/documents/issue` com a clínica completa (e, na declaração, com a consulta realizada); `ClinicInfoIncompleteAlert` lista o que falta (`missingClinicInfoFields`) com link para `/configuracoes#dados` e «Voltar ao início»; o detalhe da consulta só mostra o link da declaração se `completed`. AGE-RN-21.
+- **Decisão minha**: correção no cliente; a rota de emissão não confere o status da consulta porque `tests/api/documents-issue.test.ts` (regra 8) emite atestado de ids inexistentes. Fica como pergunta aberta (validar também no servidor, com ajuste de teste).
+- **Não tratado**: o «Carregando…» de ~5 s no primeiro quadro (#485) é do carregamento da página, não do bloqueio.
+- **Testes novos**: `declaracao-comparecimento-condicoes`, `missingClinicInfoFields` em `clinic.test.ts` (só acréscimo); nenhum teste existente alterado.
+- **Next step**: nenhum. **Blockers**: nenhum.
