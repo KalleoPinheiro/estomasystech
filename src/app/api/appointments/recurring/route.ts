@@ -8,6 +8,7 @@ import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
+import { ensureLinkBestEffort } from '@/lib/patient-link';
 
 const recurringSchema = z.object({
   patientId: z.string().min(1),
@@ -50,6 +51,15 @@ export async function POST(request: NextRequest) {
       occurrences: body.occurrences,
       weeksInterval: body.weeksInterval,
     });
+
+    // Série com profissional concede o vínculo, como o agendamento avulso (PRO-RN-08, #465).
+    if (body.professionalId && result.created.length > 0) {
+      await ensureLinkBestEffort(
+        services.professionalPatientLinks,
+        body.professionalId,
+        body.patientId,
+      );
+    }
 
     for (const appointment of result.created) {
       scheduleCalendarSync(services, (sync) => sync.created(appointment.id));

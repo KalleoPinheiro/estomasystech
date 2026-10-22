@@ -1731,3 +1731,11 @@ A Vercel não cria deploy de Production para um SHA já construído (ex.: prévi
 - **Decisão**: `--deploy` é opt-in no script e padrão no `npm run staging:rebuild` e no `staging.yml`, porque `tests/scripts/release-fluxo.test.ts` (regra 8, intocável) exige staging == release ao chamar o script direto.
 - **Testes novos**: `tests/scripts/staging-rebuild.test.ts`; nenhum teste existente alterado. `scripts/staging` não está sob `GATE_OWNER_EDIT` (só testes e `scripts/gate`). Runbook `homologacao.md` atualizado.
 - **Next step**: Kalléo roda `npm run staging:rebuild -- --release --push` e confere o deploy de Production. **Blockers**: nenhum.
+## Profissional abre paciente da agenda (#465) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: Ana via 23 consultas de 20 pacientes e só 1 na lista; Bruno recebia 404 no paciente que atende hoje. **Causa raiz**: o vínculo profissional↔paciente (PRO-RN-08) só nasce nas rotas (`POST /api/appointments`, paciente e evolução), e o seed grava a consulta direto no repositório, sem vínculo. A regra de acesso não mudou (sem ADR): continua o mínimo necessário, por empresa.
+- **Seed** (`seedProfessionalLinks`): cria o vínculo de cada par profissional/paciente da agenda; aditivo (ADR-059), em banco já semeado completa só o que falta, sem recriar a agenda. A staging corrige no próximo `staging:rebuild`.
+- **Bug de código achado no caminho**: `POST /api/appointments/recurring` não concedia o vínculo (a avulsa concedia; AGE-RN-12 já pressupunha). Corrigido em melhor esforço, como a avulsa, e só quando ao menos uma ocorrência é criada. Produção ainda sem paciente real, então não há backfill de vínculos lá.
+- Ana e Bruno atendem os mesmos 20 pacientes no seed; os cenários "sem vínculo" (AGE-RN-17, PRO-RN-08) passam a usar paciente sem consulta (`homologacao-cenarios.md`). Paciente exclusivo de um profissional fica para a #477.
+- Testes novos: `tests/api/professional-patient-link-on-recurring.test.ts`, `tests/scripts/seed-vinculos.test.ts`. Nenhum teste existente alterado.
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
