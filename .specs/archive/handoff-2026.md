@@ -1725,6 +1725,12 @@ Staging mostrava "C(" no logo da clínica "Clínica Homologação (fictícia)": 
 - O E2E pegou (só na suíte completa, por causa de uma foto pendente criada por outro spec) contraste insuficiente em `.text-xs.truncate` da lista de triagem sobre o aviso âmbar do "Hoje": `triage-photo-list.tsx` trocou `text-ink-3` por `text-ink-2`. Falha anterior a este PR, corrigida aqui porque o gate precisa ficar verde (regra 7).
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## Rebuild da staging dispara deploy (2026-10-22) — EM REVISÃO
+
+A Vercel não cria deploy de Production para um SHA já construído (ex.: prévia da release), e a `staging` local herdava upstream em `origin/release/v0.2.0`, então um `git push` simples ia para a release. `scripts/staging/rebuild.sh` ganhou `--deploy` (commit vazio `chore(staging): dispara deploy de homologação` quando algum ref remoto já aponta para o SHA final), cria a `staging` com `--no-track` e publica sempre com `git push --force-with-lease --set-upstream origin HEAD:staging`.
+- **Decisão**: `--deploy` é opt-in no script e padrão no `npm run staging:rebuild` e no `staging.yml`, porque `tests/scripts/release-fluxo.test.ts` (regra 8, intocável) exige staging == release ao chamar o script direto.
+- **Testes novos**: `tests/scripts/staging-rebuild.test.ts`; nenhum teste existente alterado. `scripts/staging` não está sob `GATE_OWNER_EDIT` (só testes e `scripts/gate`). Runbook `homologacao.md` atualizado.
+- **Next step**: Kalléo roda `npm run staging:rebuild -- --release --push` e confere o deploy de Production. **Blockers**: nenhum.
 ## Profissional abre paciente da agenda (#465) (2026-10-22) — EM REVISÃO
 
 QA da staging v0.2.0: Ana via 23 consultas de 20 pacientes e só 1 na lista; Bruno recebia 404 no paciente que atende hoje. **Causa raiz**: o vínculo profissional↔paciente (PRO-RN-08) só nasce nas rotas (`POST /api/appointments`, paciente e evolução), e o seed grava a consulta direto no repositório, sem vínculo. A regra de acesso não mudou (sem ADR): continua o mínimo necessário, por empresa.

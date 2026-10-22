@@ -78,7 +78,7 @@ jobs:
           flag=""
           if [ "$USE_RELEASE" = "true" ]; then flag="--release"; fi
           # shellcheck disable=SC2086
-          bash scripts/staging/rebuild.sh $flag --push $BRANCHES
+          bash scripts/staging/rebuild.sh $flag --deploy --push $BRANCHES
 
   smoke:
     name: Fumaça da homologação publicada
