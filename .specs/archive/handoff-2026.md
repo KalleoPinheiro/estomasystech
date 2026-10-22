@@ -1717,3 +1717,9 @@ Issue #381 (item logs/LGPD), decisão do Kalléo: mascarar PII nos logs e audita
 - **Testes novos**: `redact-campos`, `logger-redacao`, `error-tracker-redacao`, `log-pii-architecture`. Nenhum teste existente alterado.
 - **Pergunta aberta**: o log de acesso do Traefik/Coolify pode guardar `?token=` de convite/reset; não verificado (exige olhar o servidor, via RC). Entra na rotina mensal.
 - **Next step**: aguardar revisão. **Blockers**: nenhum.
+
+## Avatar com iniciais quebradas (2026-10-22) — EM REVISÃO
+
+Staging mostrava "C(" no logo da clínica "Clínica Homologação (fictícia)": `initialsOf` pegava o primeiro caractere da última palavra, que era o parêntese. Agora cada termo contribui com a primeira letra ou número (`\p{L}\p{N}`), termos sem letra são ignorados, e nome sem nenhuma letra dá "?". Layout: logo e avatar já têm tamanho fixo (`style` width/height) e `shrink-0` desde o PR #458; o recorte vinha só do texto, não do layout.
+- Teste novo `tests/components/identity-image-iniciais.test.tsx` (parênteses, acentos, uma palavra, vazio); nenhum teste existente alterado.
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
