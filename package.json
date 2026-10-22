@@ -18,7 +18,7 @@
     "ambiente:local": "tsx scripts/ambiente/local.ts up",
     "ambiente:local:down": "tsx scripts/ambiente/local.ts down",
     "test:integracao": "tsx scripts/ambiente/local.ts integracao",
-    "staging:rebuild": "bash scripts/staging/rebuild.sh",
+    "staging:rebuild": "bash scripts/staging/rebuild.sh --deploy",
     "admin:recover": "tsx scripts/recover-super-admin.ts",
     "clinics:cnpj-review": "tsx scripts/flag-invalid-clinic-cnpjs.ts",
     "calendar:minimize": "tsx scripts/minimize-calendar-events.ts",

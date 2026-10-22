@@ -36,7 +36,7 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação do `gate:local` já comparam com a release aberta de que a branch saiu (ADR-058; `GATE_BASE` força outra base) |
 | Cada PR ganha um **Preview** sozinho | a Vercel cria `https://<projeto>-git-<branch>-….vercel.app` com banco Neon próprio |
 | `main` mudou (hotfix) | `npm run release:sync` **mergeia** a `main` na release aberta (nunca rebase); conflito aborta e avisa: resolva na release |
-| Testar o lote na staging | `npm run staging:rebuild -- --release --push` (staging = release aberta; branches extras opcionais no fim da linha) |
+| Testar o lote na staging | `npm run staging:rebuild -- --release --push` (staging = release aberta; branches extras opcionais no fim da linha). O script já passa `--deploy` e empurra sempre para `origin HEAD:staging`; veja a nota abaixo |
 | `staging` é reconstruída, não consertada | conflito ou migração colidente: reconstrua; nunca resolva em `staging` |
 | Staging aprovada | `npm run release:prepare -- --rollback=redeploy\|backup` **na release** (versão + CHANGELOG + Release em rascunho) |
 | Entrar na `main` | PR `release/vX.Y.Z → main` com `gate:local` no head e recibo no corpo; merge **commit** (nunca squash nem rebase) |
@@ -48,6 +48,15 @@ outra renumera antes do merge. Reconstruir a `staging` expõe a colisão cedo.
 
 Ao reconstruir com um conjunto de migrações diferente, **reinicie o branch de banco `staging`** no
 Neon (*Reset from parent*, ou apague e crie de novo). O build migra e semeia sozinho.
+
+**Por que o rebuild cria um commit vazio e fixa o destino do push.** A Vercel só cria deploy de
+Production para um SHA que ainda não construiu; se a `staging` ficar igual ao SHA da release (já
+construído como prévia), nada é implantado. Com `--deploy` (padrão do `npm run staging:rebuild`),
+quando algum ref remoto já aponta para o SHA final o script acrescenta o commit vazio
+`chore(staging): dispara deploy de homologação`. A `staging` local é criada com `--no-track` e o
+push é sempre `git push --force-with-lease --set-upstream origin HEAD:staging`, então o upstream
+fica em `origin/staging` e um `git push` simples nunca vai para a release. Chamando
+`scripts/staging/rebuild.sh` direto, sem `--deploy`, a staging continua igual à base.
 
 Os scripts rodam no seu computador (`rebuild.sh`, `sync-main.sh`, sem `gh` nem Actions). O
 `staging.yml` repete tudo a cada push na `main` (e por `workflow_dispatch`) quando houver cota
