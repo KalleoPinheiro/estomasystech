@@ -85,7 +85,7 @@ afterEach(() => {
 });
 
 describe('Feature: TIME completo no formulário e na tabela de avaliações (#464)', () => {
-  it('Dado ferida, Quando abrir + Avaliação, Então mostra Infecção/Inflamação, Bordas, tipo de exsudato e tecido em %', () => {
+  it('Dado ferida, Quando abrir + Avaliação, Então mostra Infecção/Inflamação, Bordas, aspecto da drenagem e tecido em %', () => {
     stubFetch([]);
     renderSection();
 
@@ -94,7 +94,7 @@ describe('Feature: TIME completo no formulário e na tabela de avaliações (#46
     expect(screen.getByText('Infecção / Inflamação')).toBeInTheDocument();
     expect(screen.getByLabelText('Nível')).toBeInTheDocument();
     expect(screen.getByLabelText('Bordas')).toBeInTheDocument();
-    expect(screen.getByLabelText('Tipo de exsudato')).toBeInTheDocument();
+    expect(screen.getByLabelText('Aspecto da drenagem')).toBeInTheDocument();
     expect(screen.getByLabelText('Granulação (%)')).toBeInTheDocument();
     expect(screen.getByLabelText('Pele perilesional')).toBeInTheDocument();
   });
@@ -114,7 +114,7 @@ describe('Feature: TIME completo no formulário e na tabela de avaliações (#46
     fireEvent.change(screen.getByLabelText('Bordas'), {
       target: { value: 'macerated' },
     });
-    fireEvent.change(screen.getByLabelText('Tipo de exsudato'), {
+    fireEvent.change(screen.getByLabelText('Aspecto da drenagem'), {
       target: { value: 'purulent' },
     });
     fireEvent.change(screen.getByLabelText('Granulação (%)'), {

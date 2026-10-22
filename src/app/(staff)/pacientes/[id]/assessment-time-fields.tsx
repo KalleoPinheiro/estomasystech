@@ -130,7 +130,7 @@ export function TimeFields({ values, onChange }: TimeFieldsProps) {
       </fieldset>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="font-medium text-sm">
-          Tipo de exsudato
+          Aspecto da drenagem
           <NativeSelect
             value={values.exudateType}
             onChange={(e) => onChange({ exudateType: e.target.value })}
