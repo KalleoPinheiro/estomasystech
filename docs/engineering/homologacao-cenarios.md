@@ -38,9 +38,9 @@ acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada lin
 | 5 | Último admin | **admin-vizinha**, depois **admin** e **admin2** | desativar o único admin: 409; com dois, um sai | 1 |
 | 6 | Vínculo do profissional | **profissional**, **profissional2** | cada um só abre o paciente que atendeu | 3 |
 | 7 | Consentimento no portal | **paciente-novo**, **paciente** | sem termo: foto bloqueada e aceite pedido; com termo: foto enviada | 8 |
-| 8 | Portal: prazo e teto | **paciente** | cancelar em < 24 h recusado; 3ª consulta futura recusada | 8 |
-| 9 | Responsável de menor | **responsavel** | vê o portal do menor, não de adulto | 8 |
-| 10 | Conflito de agenda | **atendente** | mesmo horário e profissional: conflito; fim de semana e almoço recusados | 2 |
+| 8 | Portal: prazo e teto | **paciente** (tem uma consulta a < 24 h e outra daqui a ~10 dias; retorno pendente para "Agendar retorno") | cancelar a de < 24 h recusado; 3ª consulta futura recusada | 8 |
+| 9 | Responsável de menor | **responsavel** | vê o portal do menor (único paciente ligado a ele); o seed não liga responsável a adulto: o teste de "adulto negado" é por URL (8) | 8 |
+| 10 | Conflito de agenda | **atendente** | mesmo horário e profissional: conflito; fim de semana e almoço (12:00–13:00, ligado no seed) recusados | 2 |
 | 11 | Pagamento e recibo | **admin**, **admin-vizinha** | pagar mais que o saldo recusado; recibo da vizinha bloqueado (sem CNPJ) | 4 |
 | 12 | Estoque | **admin** | saída maior que o saldo recusada; lote vencido e item zerado visíveis | 5 |
 | 13 | Falhas de integração simuladas | **admin** | convite ou teste de canal para `erro@homologacao.invalid` cria a conta e devolve o link | 1, 6 |
@@ -109,7 +109,7 @@ acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada lin
 | Recibo sem CNPJ da empresa ou sem CPF do paciente: bloqueado com orientação | FIN-RN-15 | **admin-vizinha** (clínica sem CNPJ); paciente sem CPF da principal | UI + massa |
 | Pagador sem CPF válido | FIN-RN-15 | **admin** | UI |
 | Atendente 403 em faturamento e repasses; profissional só vê o próprio extrato | FIN-RN-08, FIN-RN-14 | **atendente**, **profissional**, **profissional2** | UI |
-| Fechamento de repasse: mês inválido, mês corrente, sem regra, sem saldo, mês já fechado | FIN-RN-08 | **admin** (Ana: percentual; Bruno: fixo de R$ 30,00) | UI + massa |
+| Fechamento de repasse: mês inválido, mês corrente, sem regra, sem saldo, mês já fechado | FIN-RN-08 | **admin** (Ana: 40%; Bruno: fixo de R$ 30,00) | UI + massa |
 | Cancelar repasse (só o último ativo) e ler comprovante alheio negados | FIN-RN-10 | **profissional**, **atendente**, **admin-vizinha** | UI |
 | Fatura/pacote/recibo de outra clínica: 404 | FIN-RN-01, FIN-RN-08, FIN-RN-11 | **admin-vizinha** | UI |
 | Pagamentos simultâneos, locks, atomicidade da venda de pacote, estorno uma vez | FIN-RN-09, FIN-RN-11, FIN-RN-12 | — | auto |
@@ -121,7 +121,7 @@ acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada lin
 | Saída maior que o saldo; movimentação sem motivo ou preço negativo; unidade vazia | EST-RN-01, EST-RN-02 | **admin** em Estoque | UI |
 | Só o Admin movimenta: atendente, profissional e paciente recebem 403 | — | **atendente**, **profissional** | UI |
 | Insumo com lote vencido, estoque baixo e estoque zerado | EST-RN-06 | 5 insumos do seed, um por situação | UI + massa |
-| Kit com insumo repetido recusado; insumo inativo no kit só avisa na conclusão | EST-RN-05 | **admin** editando kit e concluindo consulta | UI |
+| Kit com insumo repetido recusado; insumo inativo no kit só avisa na conclusão | EST-RN-05 | **admin** editando o kit de *Curativo simples* ou *Troca de bolsa de estomia* (já têm kit no seed) e concluindo consulta | UI + massa |
 | Insumo de outra clínica não aparece | — | **admin-vizinha** | UI |
 | Baixas simultâneas, edição concorrente | EST-RN-01, EST-RN-06 | — | auto |
 
