@@ -1764,3 +1764,9 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Parceiro sem CRM: "·" solto no portal (QA #463, domínio administração/plataforma)
+- **O que mudou**: `src/app/portal/partner-view.tsx` monta CRM e especialidade com `partnerCredentials`, juntando com "·" só o que existe e omitindo o traço quando não há nenhum.
+- **Teste novo**: `tests/pages/portal-parceiro-sem-crm.test.tsx` (4 cenários); nenhum teste existente alterado.
+- **Staging (Kalléo)**: abrir o portal de um parceiro sem CRM e conferir que o cabeçalho começa em "Estomaterapia — acompanhamento…" sem "·".
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
