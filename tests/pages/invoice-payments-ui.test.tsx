@@ -140,6 +140,29 @@ describe('Feature: Recebimento e desconto (formulários)', () => {
     expect(screen.getByRole('button', { name: 'Pix' })).toBeDisabled();
   });
 
+  it('Dado valor acima do saldo, Então avisa o máximo e não deixa registrar', () => {
+    const onPay = vi.fn();
+    render(<PaymentForm invoice={base} onPay={onPay} />);
+    fireEvent.change(screen.getByLabelText('Valor recebido (R$)'), {
+      target: { value: '999' },
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /Valor maior que o saldo: o máximo é R\$ 200,00/,
+    );
+    const pix = screen.getByRole('button', { name: 'Pix' });
+    expect(pix).toBeDisabled();
+    fireEvent.click(pix);
+    expect(onPay).not.toHaveBeenCalled();
+  });
+
+  it('Dado valor negativo, Então as formas de pagamento ficam desabilitadas', () => {
+    render(<PaymentForm invoice={base} onPay={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Valor recebido (R$)'), {
+      target: { value: '-5' },
+    });
+    expect(screen.getByRole('button', { name: 'Pix' })).toBeDisabled();
+  });
+
   it('Dado desconto com motivo, Quando aplicar, Então mostra o valor a cobrar e envia centavos; erro fica no formulário', async () => {
     const onSave = vi
       .fn()
