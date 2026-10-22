@@ -299,8 +299,10 @@ export default function BillingPage() {
     const payerFields = payer
       ? { payerName: payer.name, payerCpf: payer.cpf }
       : {};
-    // Saldo inteiro = quitar (fluxo histórico); menos que isso = parcial.
-    const partial = amountCents < invoice.balanceCents;
+    // Saldo inteiro = quitar (fluxo histórico); qualquer outro valor vai como
+    // parcial e o servidor recusa o que passa do saldo (FIN-RN-02), nunca
+    // vira quitação silenciosa (#466).
+    const partial = amountCents !== invoice.balanceCents;
     try {
       await apiFetch<InvoiceDto>(`/api/invoices/${invoice.id}`, {
         method: 'PATCH',

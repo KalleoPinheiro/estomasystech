@@ -1725,6 +1725,12 @@ Staging mostrava "C(" no logo da clínica "Clínica Homologação (fictícia)": 
 - O E2E pegou (só na suíte completa, por causa de uma foto pendente criada por outro spec) contraste insuficiente em `.text-xs.truncate` da lista de triagem sobre o aviso âmbar do "Hoje": `triage-photo-list.tsx` trocou `text-ink-3` por `text-ink-2`. Falha anterior a este PR, corrigida aqui porque o gate precisa ficar verde (regra 7).
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## Pagamento acima do saldo (2026-10-22) — EM REVISÃO
+
+Issue #466 (QA staging v0.2.0, filha de #463): no diálogo «Registrar pagamento», valor acima do saldo (ex.: 999 para saldo de R$ 120) virava `PATCH {action:"pay"}` e quitava sem aviso. O domínio e a API já recusavam `pay_partial` acima do saldo (FIN-RN-02); o furo era só a UI, que mandava `pay` para qualquer valor ≥ saldo. `PaymentForm` agora mostra «Valor maior que o saldo: o máximo é R$ X» e desabilita as formas de pagamento (também para zero e negativo); `handlePay` só usa `pay` quando o valor é exatamente o saldo, então qualquer valor fora disso chega ao servidor como parcial e é recusado.
+- **Decisão**: sem crédito automático (recomendação do orquestrador). Não adicionei etapa de confirmação para o clique no meio de pagamento (agravante da issue): é mudança de UX que fica como pergunta aberta.
+- **Testes novos** em `invoice-payments-ui.test.tsx`; nenhum teste existente alterado. Linha nova na matriz de exceções do financeiro.
+- **Next step**: nenhum. **Blockers**: nenhum.
 ## Rebuild da staging dispara deploy (2026-10-22) — EM REVISÃO
 
 A Vercel não cria deploy de Production para um SHA já construído (ex.: prévia da release), e a `staging` local herdava upstream em `origin/release/v0.2.0`, então um `git push` simples ia para a release. `scripts/staging/rebuild.sh` ganhou `--deploy` (commit vazio `chore(staging): dispara deploy de homologação` quando algum ref remoto já aponta para o SHA final), cria a `staging` com `--no-track` e publica sempre com `git push --force-with-lease --set-upstream origin HEAD:staging`.

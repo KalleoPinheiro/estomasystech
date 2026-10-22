@@ -38,6 +38,8 @@ export function PaymentForm({
   const [payerError, setPayerError] = useState<string | null>(null);
   const cents = toCents(amount);
   const partial = cents > 0 && cents < invoice.balanceCents;
+  const overBalance = cents > invoice.balanceCents;
+  const invalidAmount = !(cents > 0) || overBalance;
 
   const pay = async (method: string) => {
     const payer = otherPayer ? { name: payerName, cpf: payerCpf } : null;
@@ -78,6 +80,12 @@ export function PaymentForm({
           className="mt-1"
         />
       </label>
+      {overBalance && (
+        <p role="alert" className="text-danger text-xs">
+          Valor maior que o saldo: o máximo é{' '}
+          {formatCurrency(invoice.balanceCents)}.
+        </p>
+      )}
       {partial && (
         <p className="text-warning text-xs">
           Pagamento parcial: fica faltando{' '}
@@ -125,7 +133,7 @@ export function PaymentForm({
           <Button
             key={method}
             type="button"
-            disabled={busy || cents <= 0}
+            disabled={busy || invalidAmount}
             onClick={() => void pay(method)}
             variant="outline"
             className="hover:bg-accent-soft"
