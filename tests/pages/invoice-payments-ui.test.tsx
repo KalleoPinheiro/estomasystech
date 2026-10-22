@@ -129,6 +129,15 @@ describe('Feature: Recebimento e desconto (formulários)', () => {
     });
     expect(screen.getByText(/fica faltando R\$ 100,00/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
+    expect(onPay).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('region', { name: 'Confirmar recebimento' }),
+    ).toHaveTextContent(
+      /Receber R\$ 30,00 em Pix de Maria Souza; fica faltando R\$ 100,00/,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Confirmar recebimento' }),
+    );
     await waitFor(() => expect(onPay).toHaveBeenCalledWith(3000, 'pix', null));
   });
 
@@ -213,6 +222,9 @@ describe('Feature: Faturamento com parcial, desconto e recibos', () => {
       target: { value: '50' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Confirmar recebimento' }),
+    );
 
     expect(
       await screen.findByText('Pagamento parcial registrado'),
@@ -514,8 +526,12 @@ describe('Feature: Fatura parcial no portal do paciente', () => {
 });
 
 describe('Feature: Pagador distinto do paciente no recebimento (#326)', () => {
-  const clickPix = () =>
+  const clickPix = () => {
     fireEvent.click(screen.getByRole('button', { name: 'Pix' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Confirmar recebimento' }),
+    );
+  };
 
   it('Dado "quem pagou não é o paciente" com nome e CPF, Quando receber, Então envia o pagador junto', async () => {
     const onPay = vi.fn(async () => {});

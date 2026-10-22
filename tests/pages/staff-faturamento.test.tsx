@@ -336,6 +336,7 @@ describe('Feature: Faturamento', () => {
         await screen.findByText('Registrar pagamento'),
       ).toBeInTheDocument();
       fireEvent.click(screen.getByText('Pix'));
+      fireEvent.click(screen.getByText('Confirmar recebimento'));
 
       await waitFor(() => {
         expect(fetchMock.mock.calls).toContainEqual([
@@ -366,6 +367,7 @@ describe('Feature: Faturamento', () => {
 
       fireEvent.click(screen.getByText('Receber'));
       fireEvent.click(await screen.findByText('Dinheiro'));
+      fireEvent.click(screen.getByText('Confirmar recebimento'));
 
       expect(
         await screen.findByText('Erro ao registrar pagamento'),
@@ -413,6 +415,7 @@ describe('Feature: Faturamento', () => {
 
       fireEvent.click(screen.getByText('Receber'));
       fireEvent.click(await screen.findByText('Pix'));
+      fireEvent.click(screen.getByText('Confirmar recebimento'));
 
       await waitFor(() => {
         expect(screen.getByText('Pagamento registrado')).toBeInTheDocument();
