@@ -1724,3 +1724,12 @@ Staging mostrava "C(" no logo da clínica "Clínica Homologação (fictícia)": 
 - Teste novo `tests/components/identity-image-iniciais.test.tsx` (parênteses, acentos, uma palavra, vazio); nenhum teste existente alterado.
 - O E2E pegou (só na suíte completa, por causa de uma foto pendente criada por outro spec) contraste insuficiente em `.text-xs.truncate` da lista de triagem sobre o aviso âmbar do "Hoje": `triage-photo-list.tsx` trocou `text-ink-3` por `text-ink-2`. Falha anterior a este PR, corrigida aqui porque o gate precisa ficar verde (regra 7).
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## TIME completo na avaliação de ferida (2026-10-22) — EM REVISÃO
+
+Issue #464 (QA staging v0.2.0, mãe #463): a avaliação de ferida não tinha Infecção/Inflamação nem Bordas/epitelização. Migração aditiva `0069` (oito colunas nulas + `CHECK`): `infection_level`, `infection_signs`, `wound_edges`, `exudate_type` e percentuais de granulação, epitelização, esfacelo e necrose. Vocabulário fechado em `src/domain/clinical/wound-time.ts` (contínuo de infecção da IWII; bordas em valor único), validação no domínio e na API, formulário com `TimeFields`, coluna "Infecção / Bordas" na tabela e no relatório impresso, seed com TIME. ADR-061, PRO-RN-24.
+- **Decisão minha**: PUSH inalterado, sem regra cruzada nível × sinais, portal e parceiro sem os campos novos, pele perilesional reaproveita `skin_condition`. As 4 perguntas abertas (vocabulário, alerta de infecção, % de tecido no PUSH, conferência nível × sinais) estão no ADR-061 para o estomaterapeuta.
+- **Tipo do DTO**: campos novos opcionais em `AssessmentDto` para não editar fixtures de teste existentes (regra 8).
+- **Testes novos**: `wound-time`, `avaliacao-time-routes` (PGlite, roda a migração), `avaliacao-time-form`, `wound-time-summary`; nenhum teste existente alterado.
+- **Seed**: a massa pesada só nasce em banco vazio (ADR-059); a staging só mostra TIME nas avaliações do seed em banco novo.
+- **Next step**: Kalléo/estomaterapeuta responderem as perguntas do ADR-061. **Blockers**: nenhum.

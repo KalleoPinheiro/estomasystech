@@ -388,6 +388,31 @@ async function seedAppointments(
   return { appointments, invoices };
 }
 
+/** TIME das avaliações da massa: piora = infecção local e bordas maceradas; melhora = bordas em epitelização. */
+function seedTime(worsening: boolean, visit: number) {
+  if (worsening) {
+    return {
+      infectionLevel: "local",
+      infectionSigns: "erythema,heat,malodor",
+      woundEdges: "macerated",
+      exudateType: "purulent",
+      granulationPct: 30,
+      sloughPct: 60,
+      necroticPct: 10,
+    };
+  }
+  const sloughPct = Math.max(0, 60 - visit * 20);
+  const epithelialPct = visit * 10;
+  return {
+    infectionLevel: "none",
+    woundEdges: visit > 2 ? "epithelializing" : "attached",
+    exudateType: "serous",
+    granulationPct: 100 - sloughPct - epithelialPct,
+    epithelialPct,
+    sloughPct,
+  };
+}
+
 async function seedClinical(now: Date, patients: Patient[]): Promise<number> {
   const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
   let assessments = 0;
@@ -413,6 +438,7 @@ async function seedClinical(now: Date, patients: Patient[]): Promise<number> {
           depthMm: isStoma ? null : 4,
           tissueType: isStoma ? null : worsening ? "slough" : visit > 2 ? "granulation" : "slough",
           exudate: worsening ? "high" : "low",
+          ...(isStoma ? {} : seedTime(worsening, visit)),
           painScale: worsening ? 8 : int(1, 4),
           notes: "Avaliação fictícia gerada pelo seed de homologação.",
         }),

@@ -6,9 +6,10 @@ import {
   ConditionAssessment,
   type ExudateLevel,
 } from '@/domain/clinical/condition-assessment';
+import type { WoundTimeProps } from '@/domain/clinical/wound-time';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 
-export interface AddConditionAssessmentInput {
+export interface AddConditionAssessmentInput extends WoundTimeProps {
   conditionId: string;
   lengthMm?: number | null;
   widthMm?: number | null;

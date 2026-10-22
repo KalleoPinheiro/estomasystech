@@ -484,6 +484,13 @@
       "when": 1792563546028,
       "tag": "0068_clinic-theme",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792687284687,
+      "tag": "0069_time-completo-avaliacao",
+      "breakpoints": true
     }
   ]
 }

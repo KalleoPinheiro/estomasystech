@@ -709,6 +709,16 @@ export const conditionAssessments = pgTable(
     detErosionSeverity: integer('det_erosion_severity'),
     detOvergrowthArea: integer('det_overgrowth_area'),
     detOvergrowthSeverity: integer('det_overgrowth_severity'),
+    // TIME completo (#464): infecção/inflamação, bordas, tipo de exsudato e % de tecido.
+    // Todos nulos nas avaliações anteriores; vocabulário em domain/clinical/wound-time.ts.
+    infectionLevel: text('infection_level'),
+    infectionSigns: text('infection_signs'),
+    woundEdges: text('wound_edges'),
+    exudateType: text('exudate_type'),
+    granulationPct: integer('granulation_pct'),
+    epithelialPct: integer('epithelial_pct'),
+    sloughPct: integer('slough_pct'),
+    necroticPct: integer('necrotic_pct'),
     notes: text('notes'),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -718,6 +728,22 @@ export const conditionAssessments = pgTable(
   (table) => [
     index('idx_condition_assessments_condition').on(table.conditionId),
     index('idx_condition_assessments_clinic').on(table.clinicId),
+    check(
+      'condition_assessments_infection_level_check',
+      sql`${table.infectionLevel} IN ('none', 'inflammation', 'local', 'spreading', 'systemic')`,
+    ),
+    check(
+      'condition_assessments_wound_edges_check',
+      sql`${table.woundEdges} IN ('attached', 'detached', 'rolled', 'macerated', 'undermined', 'hyperkeratotic', 'epithelializing')`,
+    ),
+    check(
+      'condition_assessments_exudate_type_check',
+      sql`${table.exudateType} IN ('serous', 'serosanguineous', 'sanguineous', 'purulent')`,
+    ),
+    check(
+      'condition_assessments_tissue_pct_check',
+      sql`coalesce(${table.granulationPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.epithelialPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.sloughPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.necroticPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.granulationPct}, 0) + coalesce(${table.epithelialPct}, 0) + coalesce(${table.sloughPct}, 0) + coalesce(${table.necroticPct}, 0) <= 100`,
+    ),
   ],
 );
 
