@@ -34,7 +34,7 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | Toda feature nasce da release aberta | `git fetch origin && git switch -c feat/x origin/release/vX.Y.Z` |
 | O PR da feature vai contra a **release**, em squash | CI rápido; sem recibo do gate. Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
 | Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação do `gate:local` já comparam com a release aberta de que a branch saiu (ADR-058; `GATE_BASE` força outra base) |
-| Cada PR ganha um **Preview** sozinho | a Vercel cria `https://<projeto>-git-<branch>-….vercel.app` com banco Neon próprio |
+| Só a `staging` vira deploy | a Vercel **não** constrói prévia de `feat/*`, `release/*` nem de branch de agente (`git.deploymentEnabled` no `vercel.json`, [ADR-061](../adr/061-vercel-constroi-so-a-staging.md)); para ver uma feature, reconstrua a staging |
 | `main` mudou (hotfix) | `npm run release:sync` **mergeia** a `main` na release aberta (nunca rebase); conflito aborta e avisa: resolva na release |
 | Testar o lote na staging | `npm run staging:rebuild -- --release --push` (staging = release aberta; branches extras opcionais no fim da linha). O script já passa `--deploy` e empurra sempre para `origin HEAD:staging`; veja a nota abaixo |
 | `staging` é reconstruída, não consertada | conflito ou migração colidente: reconstrua; nunca resolva em `staging` |
@@ -63,13 +63,20 @@ Os scripts rodam no seu computador (`rebuild.sh`, `sync-main.sh`, sem `gh` nem A
 (até ~2026-11-01 o fluxo é à mão). O workflow só empurra para `release/*` se o ruleset deixar
 (ADR-052, Consequências).
 
+**Prévia de PR não existe mais (ADR-061).** O `vercel.json` desliga o deploy automático de toda branch
+(`"**": false`) exceto `staging`. O `vercel.json` vale a partir do commit empurrado: branch antiga, criada
+antes desta regra, só obedece depois de trazer a release. Efeitos: o check "Vercel" some dos PRs (nada o exige
+como obrigatório; se o ruleset exigir, tire-o da lista) e a integração Neon deixa de criar branch de banco por
+push. Se aparecer "Resource provisioning failed" / "Branch limit reached" num deploy, apague os branches de
+preview antigos no Neon (painel § 5) e confira que a integração não está criando branch por preview.
+
 ## 2. Ambientes
 
 | | Produção | Staging | Preview (por PR) | Dev local |
 | --- | --- | --- | --- | --- |
 | Onde | VPS + Coolify | Vercel (branch `staging`) | Vercel (branch do PR) | `npm run dev` |
 | `APP_ENV` | `production` (ou ausente com `NODE_ENV=production`) | `staging` | `preview` | `development` |
-| Banco | Postgres 18 privado | Neon branch `staging` | Neon branch por preview | docker compose (`npm run ambiente:local`, [ADR-044](../adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md)) |
+| Banco | Postgres 18 privado | Neon branch `staging` | Neon branch por preview (desligado por padrão, ADR-061) | docker compose (`npm run ambiente:local`, [ADR-044](../adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md)) |
 | Dados | reais | fictícios (seed) | fictícios (seed) | seed opcional |
 | Integrações | reais | MSW (`MOCK_INTEGRATIONS=true`) | MSW | opcional |
 | Faixa de aviso e `noindex` | não | sim | sim | não |
@@ -133,15 +140,16 @@ sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações,
    Branch* = `staging` (Settings → Git). *Build Command* já vem do `vercel.json`.
 2. **Neon**: criar o projeto (região São Paulo), ativar `pg_trgm` e `btree_gist` (as migrações
    fazem `CREATE EXTENSION`). Criar o branch `staging`.
-3. **Integração Neon–Vercel** (Marketplace): escolher *Create a branch for every preview deployment*
-   e ligar ao projeto; ela injeta `DATABASE_URL` e `DATABASE_URL_UNPOOLED`.
+3. **Integração Neon–Vercel** (Marketplace): ligar ao projeto para injetar `DATABASE_URL` e
+   `DATABASE_URL_UNPOOLED`. **Deixe desligado** *Create a branch for every preview deployment* (o plano
+   grátis do Neon tem limite de branches e só a `staging` é construída, ADR-061).
 4. **Variáveis** da seção 3; gerar `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` e `CRON_SECRET` novos.
 5. **Vercel Authentication** nos previews (Settings → Deployment Protection → Standard).
 6. **GitHub**: criar o branch `staging` (`git push origin origin/main:refs/heads/staging`) e proteger
    (sem push direto de humanos, force-push só do rebuild). Para o fluxo do ADR-052: *Allow merge
    commits* em Settings → General e um ruleset em `release/**` (PR obrigatório, CI rápido exigido,
    force push bloqueado, bypass para quem roda `release:sync`).
-7. Abrir um PR qualquer, conferir o Preview, entrar com `admin@homologacao.invalid`.
+7. Reconstruir a staging (§ 1), conferir o deploy de Production e entrar com `admin@homologacao.invalid`.
 
 ## 6. Limites e cuidados
 

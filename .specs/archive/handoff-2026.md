@@ -1739,3 +1739,12 @@ QA da staging v0.2.0: Ana via 23 consultas de 20 pacientes e só 1 na lista; Bru
 - Ana e Bruno atendem os mesmos 20 pacientes no seed; os cenários "sem vínculo" (AGE-RN-17, PRO-RN-08) passam a usar paciente sem consulta (`homologacao-cenarios.md`). Paciente exclusivo de um profissional fica para a #477.
 - Testes novos: `tests/api/professional-patient-link-on-recurring.test.ts`, `tests/scripts/seed-vinculos.test.ts`. Nenhum teste existente alterado.
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Vercel constrói só a staging (2026-10-22) — EM REVISÃO
+
+Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branches do Neon: a integração criava um branch de banco por prévia). `vercel.json` ganhou `git.deploymentEnabled` `{"**": false, "staging": true}`; ADR-061 e runbook `homologacao.md` (§ 1, § 2, § 5) atualizados.
+- **Investigação do commit vazio da staging**: não há `ignoreCommand` no repo nem Ignored Build Step visível no projeto; a Vercel não tem nenhum deploy (nem `ERROR`/`CANCELED`) para o SHA `8304683`, então a causa está fora do repositório (webhook/fila). Não corrigido por código.
+- **Decisão**: prévia por PR deixa de existir (ADR-061, complementa o ADR-041). `vercel.json` vale a partir do commit empurrado: branch antiga só obedece depois de trazer a release.
+- **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
+- **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
