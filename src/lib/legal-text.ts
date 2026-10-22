@@ -19,7 +19,7 @@ export interface LegalController {
   dpoContact: string;
 }
 
-const FALLBACKS = {
+export const FALLBACKS = {
   address: 'endereço constante do cadastro da clínica',
   technicalLead: 'responsável técnico da clínica',
   dpoName: 'Responsável pela privacidade da clínica',
@@ -69,6 +69,28 @@ export const GENERIC_CONTROLLER: LegalController = {
   dpoContact: 'informado no seu Termo de Consentimento e no portal',
 };
 
+/**
+ * Cadastro sem responsável técnico ou sem nome do encarregado traz um texto de
+ * preenchimento (`FALLBACKS`): ele nunca vai impresso num documento legal. O
+ * rótulo do responsável técnico some; o encarregado fica só com o canal.
+ */
+function withoutPlaceholderLabels(
+  template: string,
+  controller: LegalController,
+): string {
+  let text = template;
+  if (controller.technicalLead === FALLBACKS.technicalLead) {
+    text = text
+      .split('\n')
+      .filter((line) => !line.includes('{{RESPONSAVEL_TECNICO}}'))
+      .join('\n');
+  }
+  if (controller.dpoName === FALLBACKS.dpoName) {
+    text = text.replaceAll('{{ENCARREGADO_NOME}}, ', '');
+  }
+  return text;
+}
+
 const PLACEHOLDER = /\{\{([A-Z_]+)\}\}/g;
 
 /**
@@ -90,13 +112,16 @@ export function renderLegalText(
     ENCARREGADO_NOME: controller.dpoName,
     ENCARREGADO_CONTATO: controller.dpoContact,
   };
-  return template.replace(PLACEHOLDER, (_match, key: string) => {
-    const value = values[key];
-    if (value === undefined) {
-      throw new Error(`Marcador desconhecido no texto legal: ${key}`);
-    }
-    return value;
-  });
+  return withoutPlaceholderLabels(template, controller).replace(
+    PLACEHOLDER,
+    (_match, key: string) => {
+      const value = values[key];
+      if (value === undefined) {
+        throw new Error(`Marcador desconhecido no texto legal: ${key}`);
+      }
+      return value;
+    },
+  );
 }
 
 /** Evidência do aceite: quem era o controlador e o canal do encarregado quando o paciente leu. */
