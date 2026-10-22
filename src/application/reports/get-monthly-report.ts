@@ -18,6 +18,11 @@ export type { ProcedureRevenue };
 
 export interface ProcedureMargin extends ProcedureRevenue {
   supplyCostCents: number;
+  /**
+   * Há saída de insumo vinculada a consultas do procedimento. Sem isso o custo
+   * não foi apurado e a margem (= receita) não deve ser lida como margem real.
+   */
+  supplyCostKnown: boolean;
   marginCents: number;
 }
 
@@ -153,6 +158,7 @@ export class GetMonthlyReport {
         return {
           ...entry,
           supplyCostCents,
+          supplyCostKnown: costByProcedure.has(entry.procedure),
           marginCents: entry.totalCents - supplyCostCents,
         };
       }),

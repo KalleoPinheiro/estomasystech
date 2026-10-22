@@ -1772,3 +1772,35 @@ QA da staging v0.2.0: a clínica vizinha abria violeta/sistema, igual à princip
 - **Fora do seed (decisão minha)**: plano SAE e pacotes (domínios de outra thread) e responsável ligado a adulto (o domínio liga responsável só a menor); o roteiro (cenário 9) passa a dizer isso. Massa pesada só em banco novo: para as correções de datas e prontuário na staging, reiniciar o branch do Neon.
 - **TESTE-ALTERADO**: `tests/scripts/seed-aditivo.test.ts` (helper `regressToOldSeed`): o seed agora indica pacientes pela parceira e dá consulta/fatura à vizinha; o helper que simula o seed antigo precisa limpar esses vínculos antes de apagar parceiro e pacientes. As asserções não mudaram.
 - Testes novos: `seed-tema-vizinha`, `seed-roteiro-qa`. **Next step**: staging:rebuild e conferir a vizinha escura/âmbar. **Blockers**: nenhum.
+## Agenda por semana e "+N mais" (#471) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: a agenda só tinha o mês, "+N mais" era um `<span>` sem ação (a 4ª consulta do dia só aparecia filtrando por profissional) e consulta cancelada ocupava uma das 3 linhas. Entregue: visão **Semana** (desktop; o celular segue no mês compacto) com blocos proporcionais à duração, sobreposição em raias, almoço sombreado, feriados/ausências, clique no bloco abre a consulta e clique na coluna começa nova consulta; no mês, "+N mais" abre diálogo com todas as consultas do dia (inclusive canceladas) e a cancelada sai das 3 linhas.
+- **Decisões minhas (sem pergunta aberta)**: mês continua o padrão; semana começa no domingo como a grade do mês; cancelada não vira bloco na semana (não ocupa horário), só um aviso "N cancelada(s)" na coluna; "visão de dia" não foi feita (a semana cobre o pedido "dia/semana" e o dia seria a mesma tela com 1 coluna: fica no backlog se o PO quiser).
+- Refator para caber no limite de linhas do `.tsx`: período (mês/semana) em `agenda-period.ts`, navegação em `period-nav.tsx`, cores em `status-colors.ts`.
+- Testes novos: `tests/pages/agenda-visao-semana.test.tsx`; nenhum teste existente alterado (os de `staff-agenda` passam).
+- **Next step**: validar a semana na staging com 4 consultas no mesmo dia. **Blockers**: nenhum.
+## Margem sem kit e confirmação do pagamento (2026-10-22) — EM REVISÃO
+
+Issue #472 e pendência do #466 (QA staging v0.2.0, filhas de #463). Relatório: `ProcedureMargin` ganhou `supplyCostKnown` (há saída de insumo vinculada a consultas do procedimento); sem isso a tela mostra «Não apurado» em Insumos, «—» na Margem e uma nota, e o rodapé soma só os procedimentos apurados. Recebimento: a forma de pagamento só seleciona; «Confirmar recebimento» mostra valor, forma, pagador e saldo restante e então grava (decisão do PO, 2026-10-22).
+- **Decisão**: `marginCents` continua número na API (compatibilidade); o sinal de custo apurado é o novo campo.
+- **TESTE-ALTERADO**: o requisito de negócio mudou (pagamento passou a exigir confirmação); testes que clicavam na forma e esperavam gravar ganharam o clique em «Confirmar recebimento» (`invoice-payments-ui`, `invoice-payment-in-flight`, `staff-faturamento`, `e2e/faturamento.spec.ts`); fixtures de relatório ganharam `supplyCostKnown`. Nenhuma asserção foi afrouxada.
+- **Testes novos**: etapa de confirmação (resumo e não grava antes) e relatório «Não apurado».
+- **Next step**: Kalléo valida na staging (rebuild). **Blockers**: nenhum.
+## Auditoria sem emissão falsa (#468) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: abrir o atestado de uma clínica sem responsável técnico gravava "emissão de documento" na auditoria, embora a tela bloqueasse. **Causa raiz**: as seis páginas de documento chamam `useDocumentIssuance` (que faz `POST /api/documents/issue`, idempotente e auditado) antes de saber se podem renderizar. Correção no cliente: a página só pede a emissão com a clínica apta (`isClinicInfoComplete`) e, no atestado, com a consulta realizada; recibo já esperava o `receipt`.
+- **Por que não no servidor**: `tests/api/documents-issue.test.ts` (regra 8, intocável) emite com ids soltos em clínicas de teste sem CNPJ; validar a clínica na rota o quebraria. Registro: quem chamar a rota direto ainda consegue emitir sem as guardas da tela (o recibo continua protegido no servidor, FIN-RN-15). Pergunta aberta para o PO: endurecer a rota também (exigiria TESTE-ALTERADO).
+- Eventos falsos já gravados na staging ficam (auditoria é imutável).
+- Teste novo: `tests/pages/documentos-bloqueado-sem-emissao.test.tsx` (5 dos 6 casos falham sem a correção); nenhum teste existente alterado.
+- **Next step**: nenhum. **Blockers**: nenhum.
+## Convite e contas de acesso (#467, #475) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depois montava o link; `appUrlFromEnv()` lança em produção sem `APP_URL` https, daí 500 com conta criada, sem link e e-mail duplicado no retry. O fluxo com `APP_URL` válida e e-mail falhando já respondia 200 com o link (teste existente), então a causa na staging é a configuração. **Não consegui ler as variáveis da Vercel** (sem permissão): é hipótese forte, não confirmada; Kalléo confere `APP_URL` no painel. Correção: a checagem da URL vem antes de gravar (convite da equipe e convite de admin pela plataforma), e na Vercel, sem `APP_URL`, vale `https://$VERCEL_PROJECT_PRODUCTION_URL`.
+- **#475**: coluna Papel; papel padrão Atendente (menor privilégio, decisão minha, sem pergunta aberta: Admin de Empresa continua a um clique); texto do formulário conforme o canal de e-mail (configurado, sem canal, desconhecido). O vínculo ao cadastro nas contas de portal já existia (#196): a issue estava defasada.
+- Testes novos: `account-invite-app-url`, `configuracoes-contas-papel`; nenhum teste existente alterado.
+- **Next step**: Kalléo confere `APP_URL` na Vercel; retestar convite `erro@` na vizinha. **Blockers**: nenhum.
+## Parceiro sem CRM: "·" solto no portal (QA #463, domínio administração/plataforma)
+- **O que mudou**: `src/app/portal/partner-view.tsx` monta CRM e especialidade com `partnerCredentials`, juntando com "·" só o que existe e omitindo o traço quando não há nenhum.
+- **Teste novo**: `tests/pages/portal-parceiro-sem-crm.test.tsx` (4 cenários); nenhum teste existente alterado.
+- **Staging (Kalléo)**: abrir o portal de um parceiro sem CRM e conferir que o cabeçalho começa em "Estomaterapia — acompanhamento…" sem "·".
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
