@@ -207,7 +207,9 @@ export function ConsentCard({
         {status.consentText}
       </Prose>
       <label className="mb-3 flex items-start gap-2 text-sm">
+        {/* 44px: alvo de toque mínimo no celular (#127), o próprio input é medido. */}
         <Checkbox
+          className="size-11 shrink-0"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
         />
