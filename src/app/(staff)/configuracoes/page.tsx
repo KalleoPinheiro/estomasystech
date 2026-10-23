@@ -130,7 +130,12 @@ export default function SettingsPage() {
       label: 'Google Agenda',
       show: can('/api/integrations/google-calendar'),
     },
-    { id: 'email', label: 'Canal de e-mail', show: true },
+    {
+      id: 'email',
+      label: 'Canal de e-mail',
+      // A seção se esconde sem esta rota; o índice acompanha (#482).
+      show: can('/api/settings/email-channel'),
+    },
     {
       id: 'contas',
       label: 'Contas de acesso',

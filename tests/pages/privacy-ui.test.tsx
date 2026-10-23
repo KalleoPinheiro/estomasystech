@@ -95,6 +95,9 @@ describe('Feature: Cartão do termo de imagem (#216)', () => {
     expect(
       screen.getByText('Termo de autorização de imagem pendente'),
     ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByLabelText('Li e concordo com o termo de imagem'),
+    );
     fireEvent.click(screen.getByText('Li e aceito o termo de imagem'));
 
     await waitFor(() => expect(onAccepted).toHaveBeenCalled());

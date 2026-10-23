@@ -23,6 +23,7 @@ import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
 import { SheetPanel } from '@/components/sheet-panel';
 import { StatusBadge } from '@/components/status-badge';
+import { displayBrazilianPhone } from '@/domain/shared/phone';
 import { apiFetch } from '@/lib/client';
 import type { PartnerDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -132,7 +133,7 @@ export default function PartnersPage() {
                             href={`tel:${partner.phone}`}
                             className="hover:underline"
                           >
-                            {partner.phone}
+                            {displayBrazilianPhone(partner.phone)}
                           </a>
                         </div>
                       </TableCell>

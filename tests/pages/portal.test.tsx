@@ -841,6 +841,9 @@ describe('Feature: Visão do paciente no portal', () => {
       );
       expect(document.querySelector('input[type="file"]')).toBeNull();
 
+      fireEvent.click(
+        screen.getByLabelText('Li e concordo com o termo de imagem'),
+      );
       fireEvent.click(screen.getByText('Li e aceito o termo de imagem'));
 
       expect(
@@ -904,6 +907,9 @@ describe('Feature: Visão do paciente no portal', () => {
       renderWithToast(<PatientPortalView />);
 
       const button = await screen.findByText('Li e aceito o termo de imagem');
+      fireEvent.click(
+        screen.getByLabelText('Li e concordo com o termo de imagem'),
+      );
       fireEvent.click(button);
 
       await waitFor(() => expect(consentReads).toBe(2));
@@ -1300,6 +1306,9 @@ describe('Feature: Cartão de consentimento', () => {
       ).toBeInTheDocument();
       expect(screen.getByText(TERMO)).toBeInTheDocument();
 
+      fireEvent.click(
+        screen.getByLabelText('Li e concordo com o termo de tratamento'),
+      );
       fireEvent.click(screen.getByText('Li e aceito o termo de tratamento'));
 
       await waitFor(() => {
@@ -1328,6 +1337,9 @@ describe('Feature: Cartão de consentimento', () => {
         />,
       );
 
+      fireEvent.click(
+        screen.getByLabelText('Li e concordo com o termo de tratamento'),
+      );
       fireEvent.click(screen.getByText('Li e aceito o termo de tratamento'));
 
       await waitFor(() => {

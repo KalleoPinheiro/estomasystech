@@ -88,7 +88,6 @@ describe('Feature: atalhos das seções em Configurações', () => {
     expect(links.map(([label]) => label)).toEqual([
       'Identidade',
       'Feriados e ausências',
-      'Canal de e-mail',
     ]);
   });
 });

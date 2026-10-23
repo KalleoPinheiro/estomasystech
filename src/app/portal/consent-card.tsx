@@ -5,6 +5,7 @@ import {
   AlertDescription,
   Button,
   Card,
+  Checkbox,
   FileInput,
   Icon,
   Input,
@@ -39,6 +40,7 @@ const COPY: Record<
     acceptedLabel: string;
     pendingTitle: string;
     acceptButton: string;
+    agreeLabel: string;
     revokeButton: string;
     revokeTitle: string;
     revokeDescription: string;
@@ -48,6 +50,7 @@ const COPY: Record<
     acceptedLabel: 'Termo de consentimento do tratamento aceito',
     pendingTitle: 'Termo de consentimento do tratamento pendente',
     acceptButton: 'Li e aceito o termo de tratamento',
+    agreeLabel: 'Li e concordo com o termo de tratamento',
     revokeButton: 'Revogar consentimento do tratamento',
     revokeTitle: 'Revogar consentimento do tratamento',
     revokeDescription:
@@ -57,6 +60,7 @@ const COPY: Record<
     acceptedLabel: 'Termo de autorização de imagem aceito',
     pendingTitle: 'Termo de autorização de imagem pendente',
     acceptButton: 'Li e aceito o termo de imagem',
+    agreeLabel: 'Li e concordo com o termo de imagem',
     revokeButton: 'Revogar autorização de imagem',
     revokeTitle: 'Revogar autorização de imagem',
     revokeDescription:
@@ -85,6 +89,8 @@ export function ConsentCard({
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
+  // Consentimento explícito (#481, LGPD art. 8º): o botão só libera depois de marcar.
+  const [agreed, setAgreed] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
   if (!status) return null;
@@ -200,9 +206,16 @@ export function ConsentCard({
       >
         {status.consentText}
       </Prose>
+      <label className="mb-3 flex items-start gap-2 text-sm">
+        <Checkbox
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+        />
+        {copy.agreeLabel}
+      </label>
       <Button
         type="button"
-        disabled={accepting}
+        disabled={accepting || !agreed}
         onClick={() => void accept()}
         variant="accent"
       >

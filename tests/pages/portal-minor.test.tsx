@@ -102,6 +102,9 @@ describe('Feature: Representante legal assina pelo menor (#372)', () => {
       await screen.findByText(/Como representante legal, você lê e aceita/),
     ).toBeInTheDocument();
     fireEvent.click(
+      screen.getByLabelText('Li e concordo com o termo de tratamento'),
+    );
+    fireEvent.click(
       screen.getByRole('button', { name: 'Li e aceito o termo de tratamento' }),
     );
     await waitFor(() => expect(calls).toEqual(['treatment']));

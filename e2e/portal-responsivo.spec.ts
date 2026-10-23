@@ -199,9 +199,11 @@ for (const viewport of VIEWPORTS) {
       await expectMobileFriendly(page, viewport.width, "agendar retorno");
 
       // Consentimento aceito: revogação + envio de foto com prévia.
+      await page.getByLabel("Li e concordo com o termo de tratamento").check();
       await page.getByRole("button", { name: "Li e aceito o termo de tratamento" }).click();
       await expect(page.getByRole("button", { name: "Revogar consentimento do tratamento" })).toBeVisible();
       await waitToastGone(page, "Termo de consentimento do tratamento aceito");
+      await page.getByLabel("Li e concordo com o termo de imagem").check();
       await page.getByRole("button", { name: "Li e aceito o termo de imagem" }).click();
       await expect(page.getByRole("button", { name: "Revogar autorização de imagem" })).toBeVisible();
       await waitToastGone(page, "Termo de autorização de imagem aceito");
