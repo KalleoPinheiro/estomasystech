@@ -33,6 +33,12 @@ const PAGE_SIZE_DESKTOP = 50;
 
 type Filters = { patientId: string; from: string; to: string };
 
+/** Data da URL só vale se existir no calendário: `?de=abc` não pode derrubar a tela. */
+function validDateParam(value: string | null | undefined): string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+  return Number.isNaN(new Date(`${value}T00:00:00`).getTime()) ? '' : value;
+}
+
 /** Filtros na URL (`?paciente=&de=&ate=`): a tela compartilha e recarrega o mesmo recorte. */
 function writeFiltersToUrl({ patientId, from, to }: Filters) {
   const params = new URLSearchParams();
@@ -52,8 +58,10 @@ export default function AuditPage() {
   const [patientId, setPatientId] = useState(
     () => searchParams?.get('paciente') ?? '',
   );
-  const [from, setFrom] = useState(() => searchParams?.get('de') ?? '');
-  const [to, setTo] = useState(() => searchParams?.get('ate') ?? '');
+  const [from, setFrom] = useState(() =>
+    validDateParam(searchParams?.get('de')),
+  );
+  const [to, setTo] = useState(() => validDateParam(searchParams?.get('ate')));
   const compact = useMediaQuery('(max-width: 767px)');
   const pageSize = compact ? PAGE_SIZE_MOBILE : PAGE_SIZE_DESKTOP;
   const updateFilters = (next: Partial<Filters>) => {

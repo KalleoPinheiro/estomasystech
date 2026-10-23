@@ -106,6 +106,23 @@ describe('Feature: Auditoria paginada e com filtros na URL (#521)', () => {
       expect(url).toContain('to=');
     });
 
+    it('Dado datas inválidas na URL, Quando a página carrega, Então ignora o filtro em vez de quebrar', async () => {
+      stubViewport(false);
+      currentSearch = 'de=abc&ate=2026-13-45';
+      const fetchMock = stubFetch();
+
+      render(<AuditPage />);
+
+      expect(await screen.findByRole('table')).toBeInTheDocument();
+      const url = String(
+        fetchMock.mock.calls
+          .map(([u]) => String(u))
+          .find((u) => u.startsWith('/api/audit')),
+      );
+      expect(url).not.toContain('from=');
+      expect(url).not.toContain('to=');
+    });
+
     it('Dado alteração de período, Quando o usuário escolhe as datas, Então a URL passa a refletir os filtros', async () => {
       stubViewport(false);
       stubFetch();
