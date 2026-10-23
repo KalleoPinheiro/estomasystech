@@ -39,4 +39,35 @@ describe('Feature: Dados da release gravada no banco (ADR-066)', () => {
   it('Dada uma nota longa, Quando valida, Então corta em 500 caracteres', () => {
     expect(parseReleaseNotes(`  ${'a'.repeat(600)}`)).toHaveLength(500);
   });
+
+  it.each(['1.0.0x', 'x1.0.0', '1.0.0 extra', '1.0.0-', '1..0'])(
+    'Dada a versão %j com sobra ou falta, Quando valida, Então recusa',
+    (value) => {
+      expect(isSemver(value)).toBe(false);
+    },
+  );
+
+  it('Dada uma versão com vários dígitos, Quando valida, Então aceita', () => {
+    expect(parseReleaseVersion('10.20.30')).toBe('10.20.30');
+  });
+
+  it('Dada uma versão inválida, Quando valida, Então a mensagem cita o valor recebido', () => {
+    expect(() => parseReleaseVersion('latest')).toThrow(
+      'Versão de release inválida: "latest"',
+    );
+    expect(() => parseReleaseVersion(undefined)).toThrow(
+      'Versão de release inválida: "undefined"',
+    );
+  });
+
+  it('Dado um SHA com espaços, Quando valida, Então aceita o SHA limpo', () => {
+    expect(parseGitSha('  abcdef1  ')).toBe('abcdef1');
+  });
+
+  it.each(['zzabcdef1', 'abcdef1zz', 'abcdef1 abcdef1'])(
+    'Dado o SHA %j com sobra, Quando valida, Então vira nulo',
+    (value) => {
+      expect(parseGitSha(value)).toBeNull();
+    },
+  );
 });

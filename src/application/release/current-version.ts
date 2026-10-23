@@ -50,8 +50,8 @@ export class CurrentVersionReader {
   }
 
   private fromBuild(): CurrentVersion | null {
-    const version = this.build.version?.trim() ?? '';
-    return isSemver(version)
+    const version = this.build.version?.trim();
+    return version && isSemver(version)
       ? this.shape(version, null, parseGitSha(this.build.sha))
       : null;
   }

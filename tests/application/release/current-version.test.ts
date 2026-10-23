@@ -127,4 +127,24 @@ describe('Feature: Versão atual do sistema vinda do banco (ADR-066)', () => {
     clock += 30_000;
     expect((await reader.read())?.releasedAt).toEqual(gravada.releasedAt);
   });
+
+  it('Dado exatamente 5 minutos de cache, Quando lê, Então já consulta de novo', async () => {
+    let clock = 1_000;
+    const latest = vi.fn(async () => gravada);
+    const reader = readerOf(latest, { now: () => clock });
+
+    await reader.read();
+    clock += 5 * 60_000;
+    await reader.read();
+
+    expect(latest).toHaveBeenCalledTimes(2);
+  });
+
+  it('Dada a versão do build com espaços, Quando o banco está vazio, Então usa a versão limpa', async () => {
+    const reader = readerOf(async () => null, {
+      build: { version: ' 0.2.0 ' },
+    });
+
+    expect(await reader.read()).toEqual({ version: '0.2.0', releasedAt: null });
+  });
 });

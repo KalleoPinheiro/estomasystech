@@ -8,17 +8,17 @@ export const isSemver = (value: string): boolean => SEMVER.test(value);
 
 /** Versão semver válida (`1.2.3`); recusa o resto para nunca gravar lixo no banco. */
 export function parseReleaseVersion(value: string | undefined): string {
-  const version = value?.trim() ?? '';
-  if (!isSemver(version)) {
-    throw new ValidationError(`Versão de release inválida: "${version}"`);
+  const version = value?.trim();
+  if (!version || !isSemver(version)) {
+    throw new ValidationError(`Versão de release inválida: "${value}"`);
   }
   return version;
 }
 
 /** SHA hexadecimal de 7 a 40 caracteres, em minúsculas; qualquer outra coisa vira `null`. */
 export function parseGitSha(value: string | undefined): string | null {
-  const sha = value?.trim() ?? '';
-  return GIT_SHA.test(sha) ? sha.toLowerCase() : null;
+  const sha = value?.trim();
+  return sha && GIT_SHA.test(sha) ? sha.toLowerCase() : null;
 }
 
 /** Nota curta e opcional: vazia vira `null` e o excesso é cortado. Nunca dado de paciente. */
