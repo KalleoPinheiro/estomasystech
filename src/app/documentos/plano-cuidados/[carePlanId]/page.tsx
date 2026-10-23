@@ -91,11 +91,10 @@ export default function CarePlanDocumentPage({
   const { data: detail, error } = useApiQuery<CarePlanDetailDto>(
     `/api/care-plans/${carePlanId}`,
   );
-  // #468: documento bloqueado não é emitido, então não entra na trilha.
-  const clinicReady = clinic !== null && isClinicInfoComplete(clinic);
+  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'plano-cuidados',
-    clinicReady ? carePlanId : null,
+    clinic && isClinicInfoComplete(clinic) ? carePlanId : null,
   );
 
   const guard = guardBlock(clinic, detail, error, issuance, issuanceError);

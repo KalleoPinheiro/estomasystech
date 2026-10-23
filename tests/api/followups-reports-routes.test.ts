@@ -52,6 +52,7 @@ interface MonthlyReportDto {
     count: number;
     totalCents: number;
     supplyCostCents: number;
+    supplyCostKnown: boolean;
     marginCents: number;
   }>;
   unattributedSupplyCostCents: number;

@@ -1772,3 +1772,68 @@ QA da staging v0.2.0: abrir a declaração de comparecimento com a clínica inco
 - **Não tratado**: o «Carregando…» de ~5 s no primeiro quadro (#485) é do carregamento da página, não do bloqueio.
 - **Testes novos**: `declaracao-comparecimento-condicoes`, `missingClinicInfoFields` em `clinic.test.ts` (só acréscimo); nenhum teste existente alterado.
 - **Next step**: nenhum. **Blockers**: nenhum.
+
+## Termos de consentimento em nome de quem assina (#469) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: o termo imprimia «Responsável técnico: responsável técnico da clínica» e seguia em primeira pessoa quando o representante legal assina pelo menor. `renderLegalText` agora omite a linha do responsável técnico e o nome do encarregado quando são o texto de preenchimento; os textos-base e seus hashes não mudaram. Cada termo ganhou variante do representante (`v2-representante`, `v1-representante`) com hash próprio; `ConsentRecord.resolveStatus/covers` aceitam lista de textos, então aceites antigos e o gate de foto seguem valendo. ADR-064, POR-RN-29.
+- **Decisão minha**: variante separada em vez de reescrever o texto original (preserva aceites e os testes existentes, regra 8); sem revisão jurídica ainda (#376 deve cobrir os quatro textos).
+- **Testes novos**: `consent-representative-text` (API), `consentimento-representante` (tela), `legal-text-sem-preenchimento`, `consent-record-multiplos-textos`; nenhum teste existente alterado.
+- **Next step**: revisão jurídica dos quatro textos. **Blockers**: nenhum.
+
+## Perguntas abertas do portal (#481, #483) (2026-10-22)
+
+Duas sub-issues do QA da staging v0.2.0 são decisão de produto e não foram implementadas: #483 (autoagendamento livre ou só de retorno; a documentação dizia «entregue» sem a limitação, agora corrigida) e #481 (aceite do termo com marcação explícita; muda o fluxo coberto por testes de unidade e E2E, então vai junto com a revisão jurídica #376). Ambas ficam registradas em `docs/domains/portal/README.md` § Perguntas abertas.
+- **Next step**: o PO responde as duas perguntas. **Blockers**: nenhum.
+
+## Alerta de infecção na triagem e coerência do TIME (2026-10-22) — EM REVISÃO
+
+Decisões clínicas do PO sobre as perguntas abertas do ADR-062 (#464/#463), registradas no ADR-063: infecção local ou pior na avaliação mais recente gera selo na fila de triagem (`infectionAlert`, sem migração); percentual de tecido fica fora do PUSH (já era assim, agora decisão); coerência nível × sinais vira aviso não bloqueante no formulário (`infectionCoherenceWarnings`); vocabulário atual aceito. PRO-RN-25.
+- **Decisão minha**: agrupei os sinais em local, disseminação (eritema em expansão, linfangite, linfadenopatia) e sistêmico (febre, mal-estar) para os avisos; o estomaterapeuta pode ajustar por ADR novo.
+- **Testes novos**: `wound-time-alerta-coerencia`, casos novos em `triage-photo-list`, `avaliacao-time-form` e `audit-lgpd-routes` (só acréscimo); nenhum teste existente alterado.
+- **Next step**: validar na staging o selo na triagem. **Blockers**: nenhum.
+
+## Tema da vizinha e cenários do seed (#476, #477) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: a clínica vizinha abria violeta/sistema, igual à principal, e 9 cenários do roteiro não tinham dado no seed. **#476 não era vazamento**: a gravação do tema é `UPDATE ... WHERE id` (isolada por empresa); a causa raiz era `DrizzleClinicRepository.create`, que não gravava `theme_mode`/`theme_accent`, então a vizinha do seed nunca nasceu âmbar. `create` agora grava o tema e o seed acerta a vizinha que já existe no padrão (sem desfazer uma escolha feita pela tela).
+- **#477** (`scripts/seed/cenarios.ts`, aditivo, ADR-059): pausa de almoço 12:00–13:00, repasse de 40% da Ana, kits de dois procedimentos, responsável técnico da principal, consulta+fatura paga na vizinha, histórico de `paciente@` (consulta < 24 h, outra em ~10 dias, concluída com fatura pendente, condição e retorno pendente), indicação de 2 pacientes pela parceira (um com aceite). Em banco novo: anamnese com alergia e evolução SOAP, avaliações semanais com curvas distintas, fatura emitida na data da consulta, criança sem pé diabético.
+- **Fora do seed (decisão minha)**: plano SAE e pacotes (domínios de outra thread) e responsável ligado a adulto (o domínio liga responsável só a menor); o roteiro (cenário 9) passa a dizer isso. Massa pesada só em banco novo: para as correções de datas e prontuário na staging, reiniciar o branch do Neon.
+- **TESTE-ALTERADO**: `tests/scripts/seed-aditivo.test.ts` (helper `regressToOldSeed`): o seed agora indica pacientes pela parceira e dá consulta/fatura à vizinha; o helper que simula o seed antigo precisa limpar esses vínculos antes de apagar parceiro e pacientes. As asserções não mudaram.
+- Testes novos: `seed-tema-vizinha`, `seed-roteiro-qa`. **Next step**: staging:rebuild e conferir a vizinha escura/âmbar. **Blockers**: nenhum.
+## Agenda por semana e "+N mais" (#471) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: a agenda só tinha o mês, "+N mais" era um `<span>` sem ação (a 4ª consulta do dia só aparecia filtrando por profissional) e consulta cancelada ocupava uma das 3 linhas. Entregue: visão **Semana** (desktop; o celular segue no mês compacto) com blocos proporcionais à duração, sobreposição em raias, almoço sombreado, feriados/ausências, clique no bloco abre a consulta e clique na coluna começa nova consulta; no mês, "+N mais" abre diálogo com todas as consultas do dia (inclusive canceladas) e a cancelada sai das 3 linhas.
+- **Decisões minhas (sem pergunta aberta)**: mês continua o padrão; semana começa no domingo como a grade do mês; cancelada não vira bloco na semana (não ocupa horário), só um aviso "N cancelada(s)" na coluna; "visão de dia" não foi feita (a semana cobre o pedido "dia/semana" e o dia seria a mesma tela com 1 coluna: fica no backlog se o PO quiser).
+- Refator para caber no limite de linhas do `.tsx`: período (mês/semana) em `agenda-period.ts`, navegação em `period-nav.tsx`, cores em `status-colors.ts`.
+- Testes novos: `tests/pages/agenda-visao-semana.test.tsx`; nenhum teste existente alterado (os de `staff-agenda` passam).
+- **Next step**: validar a semana na staging com 4 consultas no mesmo dia. **Blockers**: nenhum.
+## Margem sem kit e confirmação do pagamento (2026-10-22) — EM REVISÃO
+
+Issue #472 e pendência do #466 (QA staging v0.2.0, filhas de #463). Relatório: `ProcedureMargin` ganhou `supplyCostKnown` (há saída de insumo vinculada a consultas do procedimento); sem isso a tela mostra «Não apurado» em Insumos, «—» na Margem e uma nota, e o rodapé soma só os procedimentos apurados. Recebimento: a forma de pagamento só seleciona; «Confirmar recebimento» mostra valor, forma, pagador e saldo restante e então grava (decisão do PO, 2026-10-22).
+- **Decisão**: `marginCents` continua número na API (compatibilidade); o sinal de custo apurado é o novo campo.
+- **TESTE-ALTERADO**: o requisito de negócio mudou (pagamento passou a exigir confirmação); testes que clicavam na forma e esperavam gravar ganharam o clique em «Confirmar recebimento» (`invoice-payments-ui`, `invoice-payment-in-flight`, `staff-faturamento`, `e2e/faturamento.spec.ts`); fixtures de relatório ganharam `supplyCostKnown`. Nenhuma asserção foi afrouxada.
+- **Testes novos**: etapa de confirmação (resumo e não grava antes) e relatório «Não apurado».
+- **Next step**: Kalléo valida na staging (rebuild). **Blockers**: nenhum.
+## Auditoria sem emissão falsa (#468) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: abrir o atestado de uma clínica sem responsável técnico gravava "emissão de documento" na auditoria, embora a tela bloqueasse. **Causa raiz**: as seis páginas de documento chamam `useDocumentIssuance` (que faz `POST /api/documents/issue`, idempotente e auditado) antes de saber se podem renderizar. Correção no cliente: a página só pede a emissão com a clínica apta (`isClinicInfoComplete`) e, no atestado, com a consulta realizada; recibo já esperava o `receipt`.
+- **Por que não no servidor**: `tests/api/documents-issue.test.ts` (regra 8, intocável) emite com ids soltos em clínicas de teste sem CNPJ; validar a clínica na rota o quebraria. Registro: quem chamar a rota direto ainda consegue emitir sem as guardas da tela (o recibo continua protegido no servidor, FIN-RN-15). Pergunta aberta para o PO: endurecer a rota também (exigiria TESTE-ALTERADO).
+- Eventos falsos já gravados na staging ficam (auditoria é imutável).
+- Teste novo: `tests/pages/documentos-bloqueado-sem-emissao.test.tsx` (5 dos 6 casos falham sem a correção); nenhum teste existente alterado.
+- **Next step**: nenhum. **Blockers**: nenhum.
+## Convite e contas de acesso (#467, #475) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depois montava o link; `appUrlFromEnv()` lança em produção sem `APP_URL` https, daí 500 com conta criada, sem link e e-mail duplicado no retry. O fluxo com `APP_URL` válida e e-mail falhando já respondia 200 com o link (teste existente), então a causa na staging é a configuração. **Não consegui ler as variáveis da Vercel** (sem permissão): é hipótese forte, não confirmada; Kalléo confere `APP_URL` no painel. Correção: a checagem da URL vem antes de gravar (convite da equipe e convite de admin pela plataforma), e na Vercel, sem `APP_URL`, vale `https://$VERCEL_PROJECT_PRODUCTION_URL`.
+- **#475**: coluna Papel; papel padrão Atendente (menor privilégio, decisão minha, sem pergunta aberta: Admin de Empresa continua a um clique); texto do formulário conforme o canal de e-mail (configurado, sem canal, desconhecido). O vínculo ao cadastro nas contas de portal já existia (#196): a issue estava defasada.
+- Testes novos: `account-invite-app-url`, `configuracoes-contas-papel`; nenhum teste existente alterado.
+- **Next step**: Kalléo confere `APP_URL` na Vercel; retestar convite `erro@` na vizinha. **Blockers**: nenhum.
+## Parceiro sem CRM: "·" solto no portal (QA #463, domínio administração/plataforma)
+- **O que mudou**: `src/app/portal/partner-view.tsx` monta CRM e especialidade com `partnerCredentials`, juntando com "·" só o que existe e omitindo o traço quando não há nenhum.
+- **Teste novo**: `tests/pages/portal-parceiro-sem-crm.test.tsx` (4 cenários); nenhum teste existente alterado.
+- **Staging (Kalléo)**: abrir o portal de um parceiro sem CRM e conferir que o cabeçalho começa em "Estomaterapia — acompanhamento…" sem "·".
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Agenda: visão Dia (decisão do PO em 2026-10-22, sequência do #471)
+- **O que mudou**: `AgendaView` ganha `'day'`; `useAgendaPeriod` calcula janela de 1 dia, rótulo ("Quinta-feira, 22 de outubro de 2026") e navegação por dia; `WeekView` aceita `dayCount` (1 ou 7) e reaproveita a grade; `PeriodNav` ganha o botão Dia. No celular segue o mês compacto.
+- **Teste novo**: `tests/pages/agenda-visao-dia.test.tsx`; nenhum teste existente alterado.
+- **Staging (Kalléo)**: na agenda, escolher Dia, navegar por dia, voltar para Semana/Mês e abrir uma consulta pelo bloco.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.

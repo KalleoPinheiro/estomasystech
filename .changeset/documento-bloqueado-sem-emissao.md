@@ -2,4 +2,4 @@
 "estomasystech": patch
 ---
 
-A declaração de comparecimento só é oferecida para consulta realizada. Quando um documento clínico está bloqueado (consulta não realizada ou clínica sem CNPJ, responsável técnico ou registro profissional), a página deixa de registrar uma "emissão de documento" na auditoria, diz exatamente o que falta cadastrar e leva direto para Configurações → Dados cadastrais.
+Abrir a página de um documento que está bloqueado (clínica sem CNPJ ou responsável técnico, ou declaração de comparecimento de consulta que não foi realizada) não registra mais "emissão de documento" na auditoria. A trilha passa a mostrar emissão só quando o documento foi de fato emitido.

@@ -1,6 +1,7 @@
 'use client';
 
 import { Button, Input, NativeSelect } from '@still-void/ui/react';
+import { infectionCoherenceWarnings } from '@/domain/clinical/wound-time';
 import {
   EXUDATE_TYPE_LABELS,
   INFECTION_LEVEL_LABELS,
@@ -67,6 +68,11 @@ export function TimeFields({ values, onChange }: TimeFieldsProps) {
         : [...values.infectionSigns, code],
     });
 
+  const warnings = infectionCoherenceWarnings(
+    values.infectionLevel,
+    values.infectionSigns.join(','),
+  );
+
   return (
     <>
       <fieldset className="rounded-lg border border-border p-3">
@@ -127,6 +133,16 @@ export function TimeFields({ values, onChange }: TimeFieldsProps) {
             </Button>
           ))}
         </div>
+        {warnings.length > 0 && (
+          <ul
+            role="status"
+            className="mt-3 list-disc rounded bg-warning-soft py-2 pr-3 pl-7 text-sm text-warning"
+          >
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        )}
       </fieldset>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="font-medium text-sm">

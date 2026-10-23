@@ -83,11 +83,10 @@ export default function PartnerReportPage({
   const { data: assessments } = useApiQuery<AssessmentDto[]>(
     `/api/conditions/${conditionId}/assessments`,
   );
-  // #468: documento bloqueado não é emitido, então não entra na trilha.
-  const clinicReady = clinic !== null && isClinicInfoComplete(clinic);
+  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'relatorio',
-    clinicReady ? conditionId : null,
+    clinic && isClinicInfoComplete(clinic) ? conditionId : null,
   );
 
   const guard = guardBlock(
