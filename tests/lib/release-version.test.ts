@@ -23,6 +23,12 @@ describe('Feature: Versão da release em andamento (ADR-066)', () => {
     );
   });
 
+  it('Dado um pacote de nível menor depois de um maior, Quando lê, Então continua o maior', () => {
+    expect(changesetBump('---\n"a": minor\n"b": patch\n---\nTexto')).toBe(
+      'minor',
+    );
+  });
+
   it('Dado 0.1.0 e changesets patch e minor, Quando calcula, Então a release é 0.2.0', () => {
     expect(
       nextReleaseVersion('0.1.0', [changeset('patch'), changeset('minor')]),
