@@ -101,7 +101,7 @@ export function AppointmentDetail({
     null,
   );
   const hasFee = cancellationPolicy.lateFeeCents > 0;
-  const [followUpInDays, setFollowUpInDays] = useState(30);
+  const [followUpInDays, setFollowUpInDays] = useState(0);
   const [newDate, setNewDate] = useState(appointment.startsAt.slice(0, 10));
   const [newTime, setNewTime] = useState(formatTime(appointment.startsAt));
 

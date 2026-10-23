@@ -1852,3 +1852,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `staff-shell-acessibilidade`, `feedback-erro-visivel`, `patient-form-erros`, `hydration-mark`, `consulta-sem-desfecho`, `consultas-sem-desfecho-ui`; nenhum existente alterado.
 - **Staging (Kalléo)**: conferir título da aba em cada tela, Tab no início da página, paciente novo com telefone e CPF inválidos, consulta passada em Hoje/agenda, menu em janela baixa, legenda em Repasses.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA P3: itens com TESTE-ALTERADO (#480, #481, #482, #483) (2026-10-23) — EM REVISÃO
+- **O que mudou**: caixa «Li e concordo» obrigatória no aceite do termo (POR-RN-30, `consent-card.tsx`); padrão «Sem retorno» ao concluir (`appointment-detail.tsx`); telefone de parceiro mascarado (`displayBrazilianPhone`); índice de Configurações sem «Canal de e-mail» para quem não tem a seção; #483 decidido: portal só agenda retorno, agendamento livre vira roadmap pós-v0.2.0 (docs do portal e cenário 8).
+- **TESTE-ALTERADO** (autorizado pelo Kalléo em 2026-10-23): `portal.test.tsx`, `portal-minor.test.tsx`, `privacy-ui.test.tsx`, `e2e/portal-paciente.spec.ts`, `e2e/portal-responsivo.spec.ts` ganharam o passo de marcar «Li e concordo» antes de clicar no botão; `staff-agenda.test.tsx` escolhe «Retorno em 30 dias» explicitamente antes de concluir; `staff-operations.test.tsx` busca o link pelo telefone mascarado; `configuracoes-secoes.test.tsx` não espera mais «Canal de e-mail» para o Atendente. Nenhuma asserção foi afrouxada.
+- **Testes novos**: `portal-aceite-explicito`, `agenda-concluir-sem-retorno`, `phone-exibicao`.
+- **Staging (Kalléo)**: portal com paciente-novo (caixa antes do botão), concluir consulta sem mexer no retorno, lista de parceiros com máscara, Configurações como Atendente.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.

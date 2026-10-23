@@ -742,7 +742,7 @@ describe('Feature: Página de agenda', () => {
           '/api/appointments/appt-1',
           expect.objectContaining({
             method: 'PATCH',
-            body: JSON.stringify({ action: 'complete', followUpInDays: 30 }),
+            body: JSON.stringify({ action: 'complete', followUpInDays: null }),
           }),
         );
       });
@@ -1480,6 +1480,9 @@ describe('Feature: Detalhe de consulta', () => {
         />,
       );
 
+      fireEvent.change(screen.getByLabelText(/programar retorno/), {
+        target: { value: '30' },
+      });
       fireEvent.click(screen.getByText('Concluir + faturar'));
 
       await waitFor(() => {

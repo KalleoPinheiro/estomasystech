@@ -2233,10 +2233,9 @@ describe('Feature: PartnersPage', () => {
       expect(
         screen.getByRole('link', { name: 'igor@parceiro.com' }),
       ).toHaveAttribute('href', 'mailto:igor@parceiro.com');
-      expect(screen.getByRole('link', { name: '11955554444' })).toHaveAttribute(
-        'href',
-        'tel:11955554444',
-      );
+      expect(
+        screen.getByRole('link', { name: '(11) 95555-4444' }),
+      ).toHaveAttribute('href', 'tel:11955554444');
     });
 
     it('Dado um parceiro ativo, Quando renderizar as ações, Então usam Button ghost/sm', async () => {

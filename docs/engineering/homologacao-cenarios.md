@@ -38,7 +38,7 @@ acessando o que não deve, dado de saúde sem consentimento e dinheiro. Cada lin
 | 5 | Último admin | **admin-vizinha**, depois **admin** e **admin2** | desativar o único admin: 409; com dois, um sai | 1 |
 | 6 | Vínculo do profissional | **profissional**, **profissional2** | cada um só abre o paciente que atendeu | 3 |
 | 7 | Consentimento no portal | **paciente-novo**, **paciente** | sem termo: foto bloqueada e aceite pedido; com termo: foto enviada | 8 |
-| 8 | Portal: prazo e teto | **paciente** (tem uma consulta a < 24 h e outra daqui a ~10 dias; retorno pendente para "Agendar retorno") | cancelar a de < 24 h recusado; 3ª consulta futura recusada | 8 |
+| 8 | Portal: prazo e teto | **paciente** (tem uma consulta a < 24 h e outra daqui a ~10 dias; retorno pendente para "Agendar retorno"; o portal agenda só retorno, #483) | cancelar a de < 24 h recusado; 3ª consulta futura recusada | 8 |
 | 9 | Responsável de menor | **responsavel** | vê o portal do menor (único paciente ligado a ele); o seed não liga responsável a adulto: o teste de "adulto negado" é por URL (8) | 8 |
 | 10 | Conflito de agenda | **atendente** | mesmo horário e profissional: conflito; fim de semana e almoço (12:00–13:00, ligado no seed) recusados | 2 |
 | 11 | Pagamento e recibo | **admin**, **admin-vizinha** | pagar mais que o saldo recusado; recibo da vizinha bloqueado (sem CNPJ) | 4 |
