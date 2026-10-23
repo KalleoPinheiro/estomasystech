@@ -1,9 +1,10 @@
 'use client';
 
-import { Button, FileInput } from '@still-void/ui/react';
+import { Button } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
+import { FilePicker } from '@/components/file-picker';
 import { IdentityImage } from '@/components/identity-image';
 
 /** Formatos que o servidor aceita. HEIC fica de fora: o iPhone converte para JPEG ao escolher da galeria. */
@@ -97,7 +98,7 @@ export function IdentityImageField({
       <div className="flex items-center gap-4">
         <IdentityImage url={url} name={name} kind={kind} size={64} />
         <div className="flex min-w-0 flex-col gap-2">
-          <FileInput
+          <FilePicker
             aria-label={kind === 'logo' ? 'Enviar logo' : 'Enviar foto'}
             accept={IDENTITY_ACCEPT}
             disabled={disabled}

@@ -1859,3 +1859,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `portal-aceite-explicito`, `agenda-concluir-sem-retorno`, `phone-exibicao`.
 - **Staging (Kalléo)**: portal com paciente-novo (caixa antes do botão), concluir consulta sem mexer no retorno, lista de parceiros com máscara, Configurações como Atendente.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA mobile R2: alvos de toque no tablet e seletor de arquivo em português (#518, #519, #520) (2026-10-23) — EM REVISÃO
+- **O que mudou**: `globals.css` estende a regra de 44px da lib (`.sv-btn`, `.sv-field`, abas, paginação) e dos links até `64rem`, e dá 44px ao `.sv-dialog__close` (recuando `top`/`right` para o ícone não mudar de lugar), ao `.sv-logo` e ao rótulo que envolve caixa de seleção/rádio (o desenho de 16px não muda; o alvo é o rótulo, como o `layout-mobile-first.spec.ts` já aceita). Seção `touch-target-size` de `docs/still-void-gaps.md` atualizada: a lib deveria subir o breakpoint de toque. Novo `FilePicker` (`src/components/file-picker.tsx`) em cima do `FileInput` do Still Void: botão «Escolher arquivo» + «Nenhum arquivo selecionado», usado em logo/foto da conta, fotos de evolução e foto do portal.
+- **Testes novos**: `tests/components/file-picker.test.tsx`, `e2e/alvos-de-toque-tablet.spec.ts`; nenhum existente alterado.
+- **Staging (Kalléo)**: em 768 px, medir botões da Agenda, Faturamento, Configurações e portal; abrir «Nova consulta» e ver o Fechar; Configurações → Logo e portal → foto mostram o seletor em português.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
