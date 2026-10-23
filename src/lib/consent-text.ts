@@ -8,12 +8,11 @@
  *
  * Texto redigido sem revisão jurídica (`LEGAL_REVIEW_PENDING`).
  */
-export const CONSENT_TEXT_VERSION = 'v2';
+export const CONSENT_TEXT_VERSION = 'v3';
 
 export const CONSENT_TEXT = `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO: TRATAMENTO (${CONSENT_TEXT_VERSION})
 
 Clínica: {{CLINICA_NOME}}, CNPJ {{CLINICA_CNPJ}}
-Responsável técnico: {{RESPONSAVEL_TECNICO}}
 Encarregado pelos dados: {{ENCARREGADO_NOME}}, {{ENCARREGADO_CONTATO}}
 
 1. Sobre o tratamento

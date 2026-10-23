@@ -177,7 +177,7 @@ describe('Feature: Termos em nome de quem assina e sem texto de preenchimento (#
 
     const { consentRecords } = await getRepositories(clinicScope(CLINIC_A_ID));
     const [record] = await consentRecords.findByPatientId(patientId);
-    expect(record.textVersion).toBe('v2-representante');
+    expect(record.textVersion).toBe('v3-representante');
     expect(record.textHash).toBe(hashConsentText(CONSENT_REPRESENTATIVE_TEXT));
     expect((await readConsent(headers)).accepted).toBe(true);
   });

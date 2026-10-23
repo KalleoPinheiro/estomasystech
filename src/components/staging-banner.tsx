@@ -1,4 +1,5 @@
 import { Alert, AlertDescription } from '@still-void/ui/react';
+import { StagingBannerOffset } from '@/components/staging-banner-offset';
 import { resolveAppEnv } from '@/lib/runtime-env';
 
 /**
@@ -16,10 +17,12 @@ export function StagingBanner({
     return null;
   }
   return (
-    <Alert>
-      <AlertDescription>
-        Homologação ({appEnv}): dados fictícios. Não cadastre pessoas reais.
-      </AlertDescription>
-    </Alert>
+    <StagingBannerOffset>
+      <Alert>
+        <AlertDescription>
+          Homologação ({appEnv}): dados fictícios. Não cadastre pessoas reais.
+        </AlertDescription>
+      </Alert>
+    </StagingBannerOffset>
   );
 }
