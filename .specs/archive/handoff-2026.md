@@ -1845,3 +1845,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Teste novo**: `tests/pages/agenda-visao-dia.test.tsx`; nenhum teste existente alterado.
 - **Staging (Kalléo)**: na agenda, escolher Dia, navegar por dia, voltar para Semana/Mês e abrir uma consulta pelo bloco.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA P3: acabamentos de interface (#478, #479, #480, #482, #484) (2026-10-23) — EM REVISÃO
+- **O que mudou**: título por tela e link de salto (`use-staff-document-title`, `skip-link`); `ErrorAlert` rola até o erro; paciente lista todos os erros e marca campos; faixa de horário da consulta não duplica o erro; menu lateral com esqueleto enquanto o papel carrega e rolagem só no menu; legenda de Repasses; consultas passadas sem desfecho (anel na agenda, aviso no detalhe, cartão em Hoje); `data-hydrated` com cursor de espera (#484, mitigação: a causa em rede lenta não foi reproduzida aqui).
+- **Não feito por conflitar com teste existente (regra 8, precisa de TESTE-ALTERADO do Kalléo)**: (1) padrão «Sem retorno» ao concluir (`staff-agenda.test.tsx`, `followUpInDays: 30`); (2) telefone de parceiro com máscara (`staff-operations.test.tsx:2236`, link com nome `11955554444`); (3) índice de Configurações sem «Canal de e-mail» para Atendente (`configuracoes-secoes.test.tsx`, asserção explícita dos três atalhos).
+- **Testes novos**: `staff-shell-acessibilidade`, `feedback-erro-visivel`, `patient-form-erros`, `hydration-mark`, `consulta-sem-desfecho`, `consultas-sem-desfecho-ui`; nenhum existente alterado.
+- **Staging (Kalléo)**: conferir título da aba em cada tela, Tab no início da página, paciente novo com telefone e CPF inválidos, consulta passada em Hoje/agenda, menu em janela baixa, legenda em Repasses.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.

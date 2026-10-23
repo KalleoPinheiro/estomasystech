@@ -130,10 +130,13 @@ export function AppointmentForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} variant={errorVariant} />}
-      <p className="rounded-lg bg-accent-soft px-3 py-2 text-accent-ink text-xs">
-        Atendimento de {describeSchedule(scheduleConfig)}, com intervalo mínimo
-        de {scheduleConfig.minGapMinutes} minutos entre consultas.
-      </p>
+      {/* Com erro de regra na tela, a faixa de erro já traz o horário: evita a mensagem em dobro (#478). */}
+      {!error && (
+        <p className="rounded-lg bg-accent-soft px-3 py-2 text-accent-ink text-xs">
+          Atendimento de {describeSchedule(scheduleConfig)}, com intervalo
+          mínimo de {scheduleConfig.minGapMinutes} minutos entre consultas.
+        </p>
+      )}
       <PatientPicker
         label="Paciente *"
         value={values.patientId}

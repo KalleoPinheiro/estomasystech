@@ -52,6 +52,9 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
     toFormValues(initial),
   );
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<'phone' | 'cpf', string>>
+  >({});
   const [saving, setSaving] = useState(false);
 
   const set = (field: keyof PatientFormValues) => (value: string) =>
@@ -59,16 +62,22 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    // Mostra todos os erros de uma vez e marca os campos (#478).
+    const found: Partial<Record<'phone' | 'cpf', string>> = {};
     const phoneChanged = values.phone.trim() !== initial?.phone;
     const phoneCheck = parseBrazilianPhone(values.phone);
     if (phoneChanged && !phoneCheck.ok) {
-      setError(phoneCheck.reason);
-      return;
+      found.phone = phoneCheck.reason;
     }
     try {
       normalizeOptionalCpf(values.cpf);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'CPF inválido');
+      found.cpf = err instanceof Error ? err.message : 'CPF inválido';
+    }
+    setFieldErrors(found);
+    const messages = Object.values(found);
+    if (messages.length > 0) {
+      setError(messages.join(' '));
       return;
     }
     setSaving(true);
@@ -108,6 +117,7 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
         <Input
           required
           type="tel"
+          aria-invalid={fieldErrors.phone ? true : undefined}
           inputMode="tel"
           autoComplete="tel"
           placeholder="(11) 99999-0000"
@@ -124,6 +134,7 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
       <label className="font-medium text-sm">
         CPF
         <Input
+          aria-invalid={fieldErrors.cpf ? true : undefined}
           inputMode="numeric"
           autoComplete="off"
           placeholder="000.000.000-00"

@@ -7,6 +7,8 @@ import {
   SidebarTrigger,
 } from '@still-void/ui/react/client';
 import { BottomNav } from '@/components/app-shell/bottom-nav';
+import { MAIN_CONTENT_ID, SkipLink } from '@/components/app-shell/skip-link';
+import { useStaffDocumentTitle } from '@/components/app-shell/use-staff-document-title';
 import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
 import { IdentityImage } from '@/components/identity-image';
@@ -77,6 +79,7 @@ export function SidebarIdentity() {
 }
 
 export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
+  useStaffDocumentTitle();
   return (
     // defaultOpen=false: o default da lib é `true` (pensado pro rail de
     // desktop, que fica visível independente de `open`) — sem essa prop,
@@ -86,6 +89,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
     // renderiza incondicionalmente, sem olhar pra `open`.
     <StaffIdentityProvider>
       <SidebarProvider defaultOpen={false}>
+        <SkipLink />
         <SidebarAutoClose />
         {/* min-w-0: `SidebarProvider` já embrulha isto num `.sv-app-shell` flex
           (ver node_modules/@still-void/ui/dist/style.css) — sem `min-w-0`, este
@@ -95,20 +99,25 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
         <div className="flex min-h-dvh w-full min-w-0 flex-1">
           {/* O <main> não usa o <Layout> do pacote de propósito: `.sv-layout` limita
             a 1120px e as telas do staff são tabelas largas. */}
-          <SidebarPanel className="w-56 shrink-0 justify-between border-border border-r p-5">
-            <div className="flex flex-col gap-8">
+          <SidebarPanel className="max-h-dvh w-56 shrink-0 justify-between border-border border-r p-5">
+            {/* Só o menu rola em tela baixa; Tema, Sair e versão ficam sempre à vista (#482). */}
+            <div className="flex min-h-0 flex-col gap-8 overflow-y-auto">
               <SidebarIdentity />
               <SidebarSection title="Navegação">
                 <StaffNav />
               </SidebarSection>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex shrink-0 flex-col gap-2 pt-4">
               <ThemeToggle />
               <LogoutButton />
               <AppVersion />
             </div>
           </SidebarPanel>
-          <SidebarInset className="min-w-0 flex-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6 lg:p-8">
+          <SidebarInset
+            id={MAIN_CONTENT_ID}
+            tabIndex={-1}
+            className="min-w-0 outline-none flex-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6 lg:p-8"
+          >
             <div className="mb-4 flex items-center gap-3 lg:hidden">
               {/* min-h-11/min-w-11 (44px): o padding padrão do still-void
                 (--sv-space-2 = 8px) rende um alvo de toque de ~38px — abaixo do

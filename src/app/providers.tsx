@@ -7,6 +7,7 @@ import {
 } from '@still-void/ui/react/client';
 import type { ReactNode } from 'react';
 import { ClinicThemeSync } from '@/components/clinic-theme-sync';
+import { HydrationMark } from '@/components/hydration-mark';
 import type { ClinicTheme } from '@/domain/clinic/clinic-identity';
 import {
   DEFAULT_THEME_ACCENT,
@@ -27,6 +28,7 @@ export function Providers({
       defaultAccent={DEFAULT_THEME_ACCENT}
       storageKey={THEME_STORAGE_KEY}
     >
+      <HydrationMark />
       {theme && <ClinicThemeSync theme={theme} />}
       <ToastProvider>
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>

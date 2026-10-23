@@ -140,3 +140,11 @@ html {
     font-size: max(1rem, var(--sv-text-base));
   }
 }
+
+/* Antes da hidratação (marca em components/hydration-mark.tsx) os botões ainda
+   não respondem ao clique: o cursor de espera evita a impressão de botão
+   quebrado (#484). */
+html:not([data-hydrated]) button:not(:disabled),
+html:not([data-hydrated]) [role="button"] {
+  cursor: progress;
+}
