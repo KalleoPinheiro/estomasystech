@@ -45,23 +45,19 @@ Conferida contra `dist/style.css` da `@still-void/ui@3.4.0`. O workaround mora e
 
 ### `touch-target-size`
 
-**Lacuna.** A `3.4.0` dá 44px de toque a `.sv-btn` e `.sv-field` em
-`(width < 40rem), (pointer: coarse)`, mas link de texto não tem tamanho de toque na lib: "Ver
+**Lacuna.** A `3.5.1` dá 44px de toque a `.sv-btn`, `.sv-field`, abas, paginação, rótulos de caixa de
+seleção e aos botões Fechar (área de 44×44 por pseudo-elemento) em `(width < 64rem), (pointer:
+coarse)`, mas link de texto e a marca (`.sv-logo`, 24px) não têm tamanho de toque na lib: "Ver
 agenda", "Prontuário" e os links de documento medem a altura da linha (~20px).
 
-Além disso, a regra de 44px da lib para em `40rem`: no tablet (768px, sem ponteiro grosso) botão,
-campo, aba e paginação voltam a 36–40px (#519), e o botão Fechar do diálogo mede 28px (#520).
-
-**Workaround local.** A mesma conta de 44px vale em `(width < 64rem), (pointer: coarse)` para
-`.sv-btn`, `.sv-field`, `.sv-tabs__trigger`, `.sv-pagination__link`, o link da marca (`.sv-logo`), o
-rótulo que envolve caixa de seleção/rádio e o `.sv-dialog__close` (que recua `top`/`right` para o ícone
-não mudar de lugar). Na mesma media query, todo `a[href]` dentro de `main` (telas da equipe) e de
-`.portal-shell` ganha `min-height`/`min-width` de `calc(var(--sv-space-10) + var(--sv-space-1))`
-(44px) e vira `inline-flex`. Desktop com mouse fica como está.
+**Workaround local.** Na mesma media query, `.sv-logo` ganha `min-height` de 44px e todo `a[href]`
+dentro de `main` (telas da equipe) e de `.portal-shell` ganha `min-height`/`min-width` de
+`calc(var(--sv-space-10) + var(--sv-space-1))` (44px) e vira `inline-flex`. Desktop com mouse fica
+como está. Provado por [e2e/alvos-de-toque-tablet.spec.ts](../e2e/alvos-de-toque-tablet.spec.ts).
 
 **Correção sugerida na lib (minor).** Estender a regra de toque da `3.4.0` a um seletor de link
-(ex.: `.sv-link`, ou `a[href]` dentro de `.sv-app-shell`), e subir o breakpoint de toque de `40rem`
-para `64rem`, incluindo `.sv-dialog__close` e `.sv-logo`, para o app não precisar da regra própria.
+(ex.: `.sv-link`, ou `a[href]` dentro de `.sv-app-shell`) e a `.sv-logo`, para o app não precisar da
+regra própria.
 
 ### `field-font-16`
 
