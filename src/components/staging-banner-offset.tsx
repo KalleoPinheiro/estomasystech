@@ -29,10 +29,14 @@ export function StagingBannerOffset({
         `${element.getBoundingClientRect().height}px`,
       );
     publish();
-    const observer = new ResizeObserver(publish);
-    observer.observe(element);
+    // Navegador sem ResizeObserver: fica a medida inicial.
+    const observer =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(publish);
+    observer?.observe(element);
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       root.style.removeProperty(STAGING_BANNER_HEIGHT_VAR);
     };
   }, []);

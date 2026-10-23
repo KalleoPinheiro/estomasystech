@@ -56,3 +56,23 @@ describe('Feature: menu desconta a faixa de homologação (QA staging)', () => {
     spy.mockRestore();
   });
 });
+
+describe('Feature: faixa de homologação sem ResizeObserver', () => {
+  it('Dado navegador sem ResizeObserver, Quando montar, Então mede uma vez e não quebra', () => {
+    vi.stubGlobal('ResizeObserver', undefined);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      height: 40,
+    } as DOMRect);
+
+    const { unmount } = render(
+      <StagingBannerOffset>faixa</StagingBannerOffset>,
+    );
+    expect(
+      document.documentElement.style.getPropertyValue(
+        STAGING_BANNER_HEIGHT_VAR,
+      ),
+    ).toBe('40px');
+    unmount();
+    vi.restoreAllMocks();
+  });
+});
