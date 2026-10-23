@@ -1,5 +1,5 @@
 ---
-title: "ADR 066 — Configurações: página única com índice fixo no celular; sub-rotas ficam para depois da v0.2.0"
+title: "ADR 067 — Configurações: página única com índice fixo no celular; sub-rotas ficam para depois da v0.2.0"
 status: frozen
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
@@ -7,7 +7,7 @@ last_reviewed: 2026-10-23
 related: [docs/domains/acesso/README.md, docs/adr/002-autorizacao-em-duas-camadas.md]
 ---
 
-# ADR 066 — Configurações: página única com índice fixo no celular; sub-rotas ficam para depois da v0.2.0
+# ADR 067 — Configurações: página única com índice fixo no celular; sub-rotas ficam para depois da v0.2.0
 
 - **Data:** 2026-10-23
 - **Status:** aceito (decisão do orquestrador como Product Owner, mandato de @KalleoPinheiro de 2026-10-21).
