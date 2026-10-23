@@ -36,3 +36,33 @@ async function expectNoHorizontalScroll(page: import("@playwright/test").Page) {
   );
   expect(overflowing).toBe(0);
 }
+
+test.describe("gaveta do menu em celular baixo (#524)", () => {
+  for (const height of [568, 640, 740]) {
+    test(`360x${height}: rodapé fixo, lista rola e nada se sobrepõe`, async ({ page }) => {
+      await page.setViewportSize({ width: 360, height });
+      await page.goto("/agenda");
+      await page.locator("button[aria-expanded]").first().click();
+
+      const sair = page.getByRole("button", { name: "Sair" });
+      const minhaConta = page.getByRole("link", { name: "Minha conta" });
+      await expect(sair).toBeInViewport({ ratio: 1 });
+
+      // Sem sobrepor: o item mais baixo da lista termina antes do rodapé.
+      await minhaConta.scrollIntoViewIfNeeded();
+      await expect(minhaConta).toBeInViewport({ ratio: 1 });
+      const link = await minhaConta.boundingBox();
+      const exit = await sair.boundingBox();
+      expect(link && exit && link.y + link.height <= exit.y).toBe(true);
+    });
+  }
+
+  test("360x568: a lista avisa com fade que há itens abaixo", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 568 });
+    await page.goto("/agenda");
+    await page.locator("button[aria-expanded]").first().click();
+
+    const fade = await page.locator(".scroll-fade").evaluate((el) => (el as HTMLElement).style.getPropertyValue("--fade-bottom"));
+    expect(fade).toBe("1.5rem");
+  });
+});

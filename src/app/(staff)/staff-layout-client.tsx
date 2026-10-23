@@ -18,6 +18,7 @@ import type { SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { RoleGate } from './role-gate';
+import { ScrollFade } from './scroll-fade';
 import { SidebarAutoClose } from './sidebar-auto-close';
 import { StaffNav } from './staff-nav';
 
@@ -105,12 +106,12 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
             {/* Só o menu rola em tela baixa; Tema, Sair e versão ficam sempre à vista (#482). */}
             {/* overflow-x-hidden: com overflow-y o x vira auto e aparecia barra horizontal
                 sob «Minha conta»; -mx-1/px-1 preservam o anel de foco dos links. */}
-            <div className="-mx-1 flex min-h-0 flex-col gap-8 overflow-y-auto overflow-x-hidden px-1">
+            <ScrollFade className="-mx-1 flex min-h-0 flex-col gap-8 overflow-y-auto overflow-x-hidden px-1">
               <SidebarIdentity />
               <SidebarSection title="Navegação">
                 <StaffNav />
               </SidebarSection>
-            </div>
+            </ScrollFade>
             <div className="flex shrink-0 flex-col gap-2 pt-4">
               <ThemeToggle />
               <LogoutButton />

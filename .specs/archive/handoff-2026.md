@@ -1868,3 +1868,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `staff-titles`, `use-hydrated`, `audit-labels-consentimento`, `configuracoes-conta-recem-convidada`, ampliação de `healing-chart-ordem-ambigua`, E2E `sidebar-janela-baixa`, `contas-convite-lista` e o clique do botão em `papeis-profissional`.
 - **Staging (Kalléo)**: título de cada aba; menu em janela de ~800 px com a faixa de homologação; portal do paciente-novo sem «Área reduziu 89%»; termo sem «Responsável técnico» (aceitar de novo); Auditoria com «Acesso do responsável»; convidar conta e ver na lista; «+ Nova consulta» no Mês e na Semana.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA mobile: gaveta do menu em celular baixo (#524) (2026-10-23) — EM REVISÃO
+- **O que mudou**: a lista do menu (gaveta e rail) virou `ScrollFade`, que esmaece a borda com itens escondidos; o rodapé (Tema, Sair, versão) segue fixo embaixo (estrutura do #526) e nada sobrepõe o Sair em 568, 640 e 740 px de altura (360 px de largura).
+- **Testes novos**: `scroll-fade` (unidade) e 4 casos em `e2e/sidebar-janela-baixa.spec.ts`; nenhum existente alterado.
+- **Staging (Kalléo)**: gaveta em celular 360x568 e 360x640: fade na base da lista, Minha conta alcançável rolando, Sair visível.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
