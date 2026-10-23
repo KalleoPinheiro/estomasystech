@@ -15,7 +15,11 @@ export async function register(): Promise<void> {
     const { warmUpDatabase } = await import(
       '@/infrastructure/persistence/drizzle/db'
     );
-    void warmUpDatabase();
+    const { recordCurrentRelease } = await import(
+      '@/infrastructure/release/app-release-service'
+    );
+    // Grava a release deste build depois da migração (ADR-066); falha só vai para o log.
+    void warmUpDatabase().then(recordCurrentRelease);
   }
 }
 

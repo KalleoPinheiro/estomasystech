@@ -145,6 +145,7 @@ npm run dev                   # http://localhost:3000
 | `PRODUCTION_DB_HOSTS` | homologação | hosts de banco de produção, separados por vírgula | `DATABASE_URL` com esse host é recusada fora de `production` |
 | `STAGING_SEED_PASSWORD` | `npm run seed:staging` | senha (≥ 10 caracteres) das contas fictícias | [homologacao.md](homologacao.md) § 4 |
 | `NEXT_PUBLIC_APP_VERSION` | não | versão exibida às clínicas; o `next.config.ts` a embute no build a partir do `package.json` | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
+| `NEXT_PUBLIC_RELEASE_VERSION` | não | versão da release em andamento (`package.json` + changesets pendentes); o `next.config.ts` a calcula no build e ela vale antes de `NEXT_PUBLIC_APP_VERSION` | [ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md) |
 | `NEXT_PUBLIC_APP_COMMIT` | não | SHA curto exibido junto da versão; só em homologação e preview | vem de `VERCEL_GIT_COMMIT_SHA` |
 | `VERCEL_GIT_COMMIT_SHA` | Vercel | injetada pela Vercel no build | origem de `NEXT_PUBLIC_APP_COMMIT` |
 | `CHANGESET_BASE` | não | base do `npm run check:changeset` (padrão `origin/main`; o CI usa a base do PR) | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |

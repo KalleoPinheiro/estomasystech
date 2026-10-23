@@ -82,6 +82,16 @@ preview antigos no Neon (painel § 5) e confira que a integração não está cr
 | Faixa de aviso e `noindex` | não | sim | sim | não |
 | Deploy | manual | push na `staging` (= release aberta) | push no PR | — |
 
+### Versão exibida na homologação (ADR-066)
+
+O rodapé da barra lateral e do portal mostra `v<versão> (<sha curto>)`. A versão é a **da release em andamento**
+(o `package.json` mais os changesets pendentes: `0.2.0` enquanto a `release/v0.2.0` está aberta), e não a
+do `package.json`, que só sobe no `release:prepare`. Ela vem de `GET /api/version` (equipe) e
+`GET /api/portal/version` (portal): `{ version, releasedAt }` e, só em `staging` e `preview`, `sha`.
+Exigem sessão, têm cache de 5 minutos e, se o banco falhar, o rodapé usa a versão do build. A linha em
+`app_releases` é gravada no primeiro cold start depois do deploy. Para conferir à mão:
+`curl -b "estomasystech_session=…" $URL/api/version`.
+
 ## 3. Variáveis na Vercel
 
 Todas só para `Preview` e `Production` do projeto de homologação (nunca valores de produção).

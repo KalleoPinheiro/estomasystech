@@ -1680,3 +1680,19 @@ export const jobRuns = pgTable('job_runs', {
     mode: 'date',
   }).notNull(),
 });
+
+/**
+ * Releases implantadas (ADR-066): uma linha por versão semver, gravada de forma idempotente no
+ * boot de cada implantação. Tabela de plataforma, sem empresa; `notes` é texto curto e nunca
+ * leva dado de paciente.
+ */
+export const appReleases = pgTable('app_releases', {
+  id: text('id').primaryKey(),
+  version: text('version').notNull().unique(),
+  gitSha: text('git_sha'),
+  releasedAt: timestamp('released_at', {
+    withTimezone: true,
+    mode: 'date',
+  }).notNull(),
+  notes: text('notes'),
+});

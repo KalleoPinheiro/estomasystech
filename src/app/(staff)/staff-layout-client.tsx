@@ -9,10 +9,10 @@ import {
 import { BottomNav } from '@/components/app-shell/bottom-nav';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/app-shell/skip-link';
 import { useStaffDocumentTitle } from '@/components/app-shell/use-staff-document-title';
-import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
 import { IdentityImage } from '@/components/identity-image';
 import { LogoutButton } from '@/components/logout-button';
+import { ReleaseVersion } from '@/components/release-version';
 import { ThemeToggle } from '@/components/theme-toggle';
 import type { SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider, useStaffIdentity } from '@/lib/staff-access';
@@ -115,7 +115,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
             <div className="flex shrink-0 flex-col gap-2 pt-4">
               <ThemeToggle />
               <LogoutButton />
-              <AppVersion />
+              <ReleaseVersion />
             </div>
           </SidebarPanel>
           <SidebarInset

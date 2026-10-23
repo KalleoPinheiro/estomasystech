@@ -17,9 +17,20 @@ export function formatAppVersion(
   return sha && SHORT_SHA.test(sha) ? `v${v} (${sha.slice(0, 7)})` : `v${v}`;
 }
 
+/**
+ * Versão do build. `NEXT_PUBLIC_RELEASE_VERSION` é a release em andamento (o `package.json` só
+ * sobe no `release:prepare`, ADR-066) e vale antes de `NEXT_PUBLIC_APP_VERSION`.
+ */
+export function buildAppVersion(): string | undefined {
+  return (
+    process.env.NEXT_PUBLIC_RELEASE_VERSION ||
+    process.env.NEXT_PUBLIC_APP_VERSION
+  );
+}
+
 export function currentAppVersion(): string | null {
   return formatAppVersion(
-    process.env.NEXT_PUBLIC_APP_VERSION,
+    buildAppVersion(),
     process.env.NEXT_PUBLIC_APP_COMMIT,
   );
 }
