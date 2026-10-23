@@ -1859,3 +1859,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `portal-aceite-explicito`, `agenda-concluir-sem-retorno`, `phone-exibicao`.
 - **Staging (Kalléo)**: portal com paciente-novo (caixa antes do botão), concluir consulta sem mexer no retorno, lista de parceiros com máscara, Configurações como Atendente.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA mobile: avaliação, ficha e evolução no portal (#523, #525, #517) (2026-10-23) — EM REVISÃO
+- **O que mudou**: `FormSheet` (diálogo no computador, folha de tela cheia abaixo de 768px com rodapé fixo e confirmação ao descartar) usado na avaliação de ferida/estomia, cujo estado do formulário subiu para `AssessmentSheet` para sobreviver à rotação; barra de atalhos de `z-40` para `z-20` (abaixo do fundo e da janela, vale para todas as telas); abas da ficha com `useScrollEdges` (borda esmaecida), `scroll-snap` e aba ativa centralizada (o efeito antigo não rodava porque a lista ainda não existia no primeiro render); «Termo de consentimento» e «Exportar dados» em «Mais ações» no celular e links com 44px; `HealingChart` com geometria compacta (≤ 479px), legenda com chaves e lista de medições com variação da área; rótulo visível no campo de observação da foto. Regras PRO-RN-27 e POR-RN-31.
+- **Decisão minha**: a confirmação de descarte vale só no celular, como a decisão do PO descreve; no computador o `Modal` segue como estava.
+- **Testes novos**: `form-sheet`, `use-scroll-edges`, `healing-chart-compacto`, `condition-progress-medicoes` e `e2e/mobile-prontuario-portal.spec.ts` (360 e 390px); nenhum teste existente alterado.
+- **Staging (Kalléo)**: no celular, abrir «+ Avaliação» numa ferida (botão sempre visível, tocar Cancelar com dado preenchido), ficha com `?aba=pacotes`, menu «Mais ações», portal do paciente com duas avaliações.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
