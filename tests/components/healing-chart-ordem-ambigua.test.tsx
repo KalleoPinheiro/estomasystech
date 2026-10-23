@@ -62,4 +62,22 @@ describe('Feature: tendência só quando a ordem das medições é certa (#473)'
       screen.queryByText(/Área (reduziu|aumentou)/),
     ).not.toBeInTheDocument();
   });
+
+  it('Dado cinco medições lançadas no mesmo dia em instantes ligeiramente diferentes, Quando renderizar, Então não afirma a tendência (#473, portal)', () => {
+    render(
+      <HealingChart
+        assessments={[
+          at('a', '2026-10-19T19:24:00.000Z', 2520),
+          at('b', '2026-10-19T19:24:01.000Z', 1800),
+          at('c', '2026-10-19T19:24:02.000Z', 900),
+          at('d', '2026-10-19T19:24:03.000Z', 500),
+          at('e', '2026-10-19T19:24:04.000Z', 280),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.queryByText(/Área (reduziu|aumentou)/),
+    ).not.toBeInTheDocument();
+  });
 });
