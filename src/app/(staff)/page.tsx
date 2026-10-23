@@ -14,7 +14,7 @@ import { TriagePhotoList } from '@/components/triage-photo-list';
 import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
 import { apiFetch } from '@/lib/client';
-import { dayCounts, nextAppointment } from '@/lib/day-summary';
+import { dayCounts, nextAppointment, pendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -32,6 +32,14 @@ interface SummaryData {
   billing: BillingSummary;
   appointmentsInMonth: number;
   today: AppointmentDto[];
+}
+
+/** Janela dos últimos 30 dias até agora — onde procurar consulta sem desfecho. */
+function closurePendingRange(): string {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 30);
+  return `from=${start.toISOString()}&to=${end.toISOString()}`;
 }
 
 /** Início e fim do dia local — janela de "Consultas de hoje" sem o resumo. */
@@ -108,6 +116,8 @@ export default function DashboardPage() {
       {showTriage && <TriageQueue />}
 
       {showMajority && <MajorityReviewCard />}
+
+      <PendingClosureCard />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TodayAppointmentsCard
@@ -193,6 +203,54 @@ function KpiGrid({
     </div>
   );
 }
+
+/**
+ * Consultas dos últimos 30 dias que seguem "Agendada"/"Confirmada" (#480).
+ * Só aparece quando há pendência; erro ou carga não ocupam espaço na tela.
+ */
+function PendingClosureCard() {
+  const { data } = useApiQuery<AppointmentDto[]>(
+    `/api/appointments?${closurePendingRange()}`,
+  );
+  const pending = pendingClosure(data ?? [], new Date());
+  if (pending.length === 0) return null;
+  const homonyms = homonymPatientIds(pending);
+
+  return (
+    <Card data-pending-closure className="mb-6 border-warning p-5">
+      <h2 className="font-semibold text-lg">
+        {`Consultas sem desfecho (${pending.length})`}
+      </h2>
+      <p className="mb-3 text-ink-3 text-sm">
+        Já passaram e seguem agendadas ou confirmadas: conclua, registre a falta
+        ou cancele.
+      </p>
+      <ul className="divide-y divide-border">
+        {pending.slice(0, PENDING_CLOSURE_CAP).map((appointment) => (
+          <li key={appointment.id} className="flex items-center gap-4 py-2">
+            <span className="w-32 shrink-0 font-mono text-ink-2 text-sm">
+              {`${formatDate(appointment.startsAt)} ${formatTime(appointment.startsAt)}`}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-medium">
+              {listPatientName(appointment, homonyms)}
+            </span>
+            <span className="hidden truncate text-ink-3 text-sm sm:block">
+              {appointment.procedure}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Link
+        href="/agenda"
+        className="mt-3 inline-flex min-h-11 items-center font-medium text-accent-ink text-sm hover:underline"
+      >
+        Abrir a agenda para dar o desfecho
+      </Link>
+    </Card>
+  );
+}
+
+const PENDING_CLOSURE_CAP = 8;
 
 /** Próximo atendimento e números do dia, no topo da agenda de hoje (#428). */
 function DayHighlights({ today }: { today: AppointmentDto[] }) {

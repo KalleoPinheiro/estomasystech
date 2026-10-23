@@ -8,6 +8,7 @@ import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
+import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
 import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
@@ -18,7 +19,11 @@ import {
   WEEKDAY_LABELS,
 } from './calendar-days';
 import { MobileMonth } from './mobile-month';
-import { STATUS_COLORS } from './status-colors';
+import {
+  PENDING_CLOSURE_CLASS,
+  PENDING_CLOSURE_LABEL,
+  STATUS_COLORS,
+} from './status-colors';
 
 export { dayKey } from './calendar-days';
 
@@ -33,6 +38,12 @@ function StatusLegend() {
           {APPOINTMENT_STATUS_LABELS[status] ?? status}
         </span>
       ))}
+      <span className="inline-flex items-center gap-1.5">
+        <span
+          className={`h-2.5 w-2.5 rounded-full border border-border ${PENDING_CLOSURE_CLASS}`}
+        />
+        {PENDING_CLOSURE_LABEL} (já passou)
+      </span>
     </div>
   );
 }
@@ -65,7 +76,8 @@ export function CalendarGrid({
   onAppointmentClick,
 }: CalendarGridProps) {
   const days = buildMonthDays(monthDate);
-  const todayKey = dayKey(new Date());
+  const now = new Date();
+  const todayKey = dayKey(now);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const byDay = new Map<string, AppointmentDto[]>();
@@ -182,11 +194,11 @@ export function CalendarGrid({
                             event.stopPropagation();
                             onAppointmentClick(appointment);
                           }}
-                          title={`${formatTime(appointment.startsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}`}
+                          title={`${formatTime(appointment.startsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`}
                           variant="outline"
                           className={`h-auto w-full truncate rounded border-0 px-1.5 py-0.5 text-left font-normal text-xs ${
                             STATUS_COLORS[appointment.status] ?? 'bg-surface-2'
-                          }`}
+                          } ${isPendingClosure(appointment, now) ? PENDING_CLOSURE_CLASS : ''}`}
                         >
                           {formatTime(appointment.startsAt)}{' '}
                           {listPatientName(appointment, homonyms)}

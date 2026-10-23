@@ -3,11 +3,16 @@
 import { Button, Card } from '@still-void/ui/react';
 import { EmptyState } from '@/components/feedback';
 import type { ScheduleConfig } from '@/domain/scheduling/schedule-config';
+import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { formatTime } from '@/lib/format';
 import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { dayKey, isInvalidDay, WEEKDAY_LABELS } from './calendar-days';
-import { STATUS_COLORS } from './status-colors';
+import {
+  PENDING_CLOSURE_CLASS,
+  PENDING_CLOSURE_LABEL,
+  STATUS_COLORS,
+} from './status-colors';
 import { layoutDay, verticalSpan, visibleHours } from './week-layout';
 
 /** Altura de uma hora na coluna; a duração real da consulta vira altura do bloco. */
@@ -71,7 +76,8 @@ export function WeekView({
   const days = weekDays(weekStart, dayCount);
   const isDay = dayCount === 1;
   const columns = `3.5rem repeat(${dayCount},minmax(0,1fr))`;
-  const todayKey = dayKey(new Date());
+  const now = new Date();
+  const todayKey = dayKey(now);
   const range = visibleHours(scheduleConfig, appointments);
   const hours = Array.from(
     { length: range.endHour - range.startHour },
@@ -204,10 +210,10 @@ export function WeekView({
                           type="button"
                           variant="outline"
                           onClick={() => onAppointmentClick(appointment)}
-                          title={`${formatTime(appointment.startsAt)}–${formatTime(appointment.endsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}`}
+                          title={`${formatTime(appointment.startsAt)}–${formatTime(appointment.endsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`}
                           className={`absolute h-auto flex-col items-start justify-start overflow-hidden rounded border-0 px-1.5 py-0.5 text-left font-normal text-xs ${
                             STATUS_COLORS[appointment.status] ?? 'bg-surface-2'
-                          }`}
+                          } ${isPendingClosure(appointment, now) ? PENDING_CLOSURE_CLASS : ''}`}
                           style={{
                             top: `${top}%`,
                             height: `${height}%`,

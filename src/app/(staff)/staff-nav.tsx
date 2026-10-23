@@ -1,9 +1,16 @@
 'use client';
 
-import { headerClasses } from '@still-void/ui/react';
+import { headerClasses, Skeleton } from '@still-void/ui/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { STAFF_PAGES, useStaffAccess } from '@/lib/staff-access';
+import {
+  STAFF_PAGES,
+  useStaffAccess,
+  useStaffIdentity,
+} from '@/lib/staff-access';
+
+/** Itens do menu mais longo (Admin) — o espaço reservado enquanto o papel carrega. */
+const LOADING_ITEMS = 14;
 
 function isActive(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -18,6 +25,21 @@ function isActive(pathname: string, href: string) {
 export function StaffNav() {
   const pathname = usePathname();
   const can = useStaffAccess();
+  const loading = useStaffIdentity()?.loading ?? false;
+
+  // Até saber o papel, reserva o espaço do menu em vez de mostrar 6 itens e
+  // depois acrescentar o resto, o que empurrava a barra toda (#482).
+  if (loading) {
+    return (
+      <nav className="flex flex-col gap-3" aria-busy="true">
+        {Array.from({ length: LOADING_ITEMS }, (_, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: placeholders idênticos e estáticos
+          <Skeleton key={i} className="h-6 w-full" aria-hidden="true" />
+        ))}
+        <span className="sr-only">Carregando menu…</span>
+      </nav>
+    );
+  }
 
   return (
     <nav className="flex flex-col gap-3">

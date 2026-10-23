@@ -36,3 +36,29 @@ export function dayCounts(today: readonly AppointmentDto[]): DayCounts {
     completed: kept.filter((a) => a.status === 'completed').length,
   };
 }
+
+/**
+ * Consultas que já terminaram e seguem sem desfecho (agendada ou confirmada):
+ * a equipe precisa concluir, registrar falta ou cancelar (#480). Mais antigas
+ * primeiro.
+ */
+export function pendingClosure(
+  appointments: readonly AppointmentDto[],
+  now: Date,
+): AppointmentDto[] {
+  return appointments
+    .filter((a) => isPendingClosure(a, now))
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
+}
+
+export function isPendingClosure(
+  appointment: Pick<AppointmentDto, 'status' | 'endsAt'>,
+  now: Date,
+): boolean {
+  return (
+    OPEN_STATUSES.includes(appointment.status) &&
+    new Date(appointment.endsAt).getTime() < now.getTime()
+  );
+}

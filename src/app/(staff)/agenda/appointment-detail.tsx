@@ -1,6 +1,12 @@
 'use client';
 
-import { Button, Input, NativeSelect } from '@still-void/ui/react';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Input,
+  NativeSelect,
+} from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
@@ -9,6 +15,7 @@ import {
   type CancellationPolicy,
   DEFAULT_CANCELLATION_POLICY,
 } from '@/domain/scheduling/schedule-config';
+import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto } from '@/lib/dto';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -175,6 +182,15 @@ export function AppointmentDetail({
           {formatTime(appointment.cancelledAt)}
           {appointment.cancelReason && ` — ${appointment.cancelReason}`}
         </p>
+      )}
+
+      {isPendingClosure(appointment, new Date()) && (
+        <Alert variant="warning" data-pending-closure>
+          <AlertDescription>
+            Esta consulta já passou e segue sem desfecho. Conclua, registre a
+            falta ou cancele.
+          </AlertDescription>
+        </Alert>
       )}
 
       {canSendWhatsApp && (
