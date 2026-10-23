@@ -117,7 +117,7 @@ describe('Feature: termo impresso em nome de quem assina (#469)', () => {
     expect(document.body.textContent).toContain(
       'ASSINADO PELO REPRESENTANTE LEGAL',
     );
-    expect(screen.getAllByText(/v2-representante/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/v3-representante/).length).toBeGreaterThan(0);
   });
 
   it('Dado adulto com cuidador cadastrado, Quando abrir o termo, Então segue em primeira pessoa', async () => {

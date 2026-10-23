@@ -53,6 +53,8 @@ function toPoints(
   });
 }
 
+/** Intervalo mínimo entre a primeira e a última medição para falar em tendência. */
+const MIN_TREND_SPAN_MS = 24 * 60 * 60 * 1000;
 const CLINICAL_SCORE_MAX = 17; // PUSH 0–17 (DET 0–15 compartilha o eixo)
 
 /**
@@ -114,9 +116,12 @@ function buildChartModel(assessments: ChartAssessment[]): ChartModel | null {
   const last = areaSeries[areaSeries.length - 1];
   // Duas medições no mesmo instante nas pontas: não se sabe qual veio antes, e a
   // mensagem "reduziu/aumentou" poderia contradizer a tabela (#473).
+  // Medições com menos de um dia entre a primeira e a última (ex.: lote lançado
+  // de uma vez) também não têm ordem confiável: "reduziu 89%" seria ruído.
   const orderIsAmbiguous =
     areaSeries.length >= MIN_MEASURED_POINTS &&
-    (areaSeries[0].date.getTime() === areaSeries[1].date.getTime() ||
+    (last.date.getTime() - first.date.getTime() < MIN_TREND_SPAN_MS ||
+      areaSeries[0].date.getTime() === areaSeries[1].date.getTime() ||
       last.date.getTime() === areaSeries[areaSeries.length - 2].date.getTime());
   const trend =
     areaSeries.length >= MIN_MEASURED_POINTS &&

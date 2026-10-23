@@ -1859,3 +1859,12 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `portal-aceite-explicito`, `agenda-concluir-sem-retorno`, `phone-exibicao`.
 - **Staging (Kalléo)**: portal com paciente-novo (caixa antes do botão), concluir consulta sem mexer no retorno, lista de parceiros com máscara, Configurações como Atendente.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA da staging, rodada 2: F1–F5, O2–O4 (#508–#515) (2026-10-23) — EM REVISÃO
+- **O que mudou**: título da aba por segmento no servidor (`staffMetadata`, #508); botão «+ Nova consulta» desabilitado até hidratar (`useHydrated`, #509); tendência do `HealingChart` exige 24 h entre primeira e última medição, vale no portal e no prontuário (#510); termo de tratamento sem «Responsável técnico», `v3` e `v3-representante` (ADR-065, POR-RN-31, #511); menu lateral sticky com altura descontando a faixa de homologação e sem rolagem horizontal (#512, #513); auditoria traduz `guardian-access*` e o detalhe do aceite (#514); conta recém-criada entra na lista na hora (#515).
+- **#509 (causa)**: não reproduzi em Chromium com build de produção (admin, Mês/Semana/Dia, 1265x952, faixa de homologação ligada) nem como profissional no `next dev`; o clique abre o modal. Provável clique antes da hidratação ou artefato da automação (a #484 já dizia «pode ser artefato»). Fica o botão desabilitado até responder e o teste E2E do clique como profissional.
+- **O1 (rodapé v0.1.0)** retirado do escopo: virou a #516 (versão vinda do banco).
+- **TESTE-ALTERADO** (autorizado pelo Kalléo em 2026-10-23): `consent-text.test.ts`, `consent-representative-text.test.ts`, `consentimento-representante.test.tsx`, `legal-text-sem-preenchimento.test.ts` (v3 e sem a linha do responsável técnico).
+- **Testes novos**: `staff-titles`, `use-hydrated`, `audit-labels-consentimento`, `configuracoes-conta-recem-convidada`, ampliação de `healing-chart-ordem-ambigua`, E2E `sidebar-janela-baixa`, `contas-convite-lista` e o clique do botão em `papeis-profissional`.
+- **Staging (Kalléo)**: título de cada aba; menu em janela de ~800 px com a faixa de homologação; portal do paciente-novo sem «Área reduziu 89%»; termo sem «Responsável técnico» (aceitar de novo); Auditoria com «Acesso do responsável»; convidar conta e ver na lista; «+ Nova consulta» no Mês e na Semana.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
