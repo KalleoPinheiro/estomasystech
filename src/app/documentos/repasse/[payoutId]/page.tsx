@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@still-void/ui/react';
 import { type ReactNode, use } from 'react';
+import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
@@ -40,9 +41,7 @@ function guardBlock(
   if (error) return <ErrorAlert message={error} />;
   if (!clinic || !receipt) return <LoadingIndicator />;
   if (!isClinicInfoComplete(clinic)) {
-    return (
-      <ErrorAlert message="Clínica sem CNPJ ou responsável técnico cadastrados — cadastre em Configurações antes de emitir este documento." />
-    );
+    return <ClinicInfoIncompleteAlert clinic={clinic} />;
   }
   // Sem emissão persistida, não renderiza: a data do rodapé nunca é `new Date()`.
   if (!issuance) return <LoadingIndicator />;

@@ -21,7 +21,7 @@ test.describe("auditoria de prontuário", () => {
 
     const row = page.getByRole("row", { name: /Criação/ }).filter({ hasText: "Condição" });
     await expect(row).toBeVisible();
-    await expect(row.getByText("company_admin")).toBeVisible();
+    await expect(row.getByText("Admin de Empresa")).toBeVisible();
     await expect(row.getByText(patient.fullName)).toBeVisible();
   });
 

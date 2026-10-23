@@ -3,6 +3,7 @@
 import { Table, TableBody, TableCell, TableRow } from '@still-void/ui/react';
 import Link from 'next/link';
 import { type ReactNode, use } from 'react';
+import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import {
@@ -54,9 +55,7 @@ function guardBlock(
     return <ErrorAlert message="Pagamento não encontrado nesta fatura." />;
   }
   if (!isClinicInfoComplete(clinic)) {
-    return (
-      <ErrorAlert message="Clínica sem CNPJ ou responsável técnico cadastrados — cadastre em Configurações antes de emitir este documento." />
-    );
+    return <ClinicInfoIncompleteAlert clinic={clinic} />;
   }
   // Sem emissão persistida, não renderiza: a data do rodapé nunca é `new Date()`.
   if (!issuance) return <LoadingIndicator />;
@@ -128,9 +127,11 @@ export default function PaymentReceiptPage({
   const { data: parties, error: partiesError } = useApiQuery<ReceiptParties>(
     `/api/invoices/${invoiceId}/payments/${paymentId}/receipt`,
   );
+  // #468: documento bloqueado não é emitido, então não entra na trilha.
+  const clinicReady = clinic !== null && isClinicInfoComplete(clinic);
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'recibo',
-    parties ? paymentId : null,
+    clinicReady && parties ? paymentId : null,
     invoiceId,
   );
   const payment = invoice?.payments.find((p) => p.id === paymentId) ?? null;

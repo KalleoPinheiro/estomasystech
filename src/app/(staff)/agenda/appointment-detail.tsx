@@ -186,12 +186,14 @@ export function AppointmentDetail({
         />
       )}
 
-      <a
-        href={`/documentos/atestado/${appointment.id}`}
-        className="font-medium text-accent-ink text-xs hover:underline"
-      >
-        Declaração de comparecimento
-      </a>
+      {appointment.status === 'completed' && (
+        <a
+          href={`/documentos/atestado/${appointment.id}`}
+          className="font-medium text-accent-ink text-xs hover:underline"
+        >
+          Declaração de comparecimento
+        </a>
+      )}
 
       {visibleActions.includes('complete') && (
         <label className="mt-1 font-medium text-ink-2 text-xs">
