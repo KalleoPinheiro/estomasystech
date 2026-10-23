@@ -18,10 +18,11 @@ const controller = (extra: Partial<LegalController> = {}): LegalController => ({
 });
 
 describe('Feature: texto de preenchimento não vai impresso no termo (#469)', () => {
-  it('Dado cadastro completo, Quando renderizar, Então imprime responsável técnico e encarregado', () => {
+  it('Dado cadastro completo, Quando renderizar, Então imprime o encarregado e não o responsável técnico', () => {
     const text = renderLegalText(CONSENT_TEXT, controller());
 
-    expect(text).toContain('Responsável técnico: Enf. Ana');
+    expect(text).not.toContain('Responsável técnico');
+    expect(text).not.toContain('Enf. Ana');
     expect(text).toContain(
       'Encarregado pelos dados: Beatriz Lima, privacidade@aurora.test',
     );

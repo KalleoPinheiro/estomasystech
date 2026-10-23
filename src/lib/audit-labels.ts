@@ -55,6 +55,10 @@ export const RESOURCE_LABELS: Record<string, string> = {
   'clinic-cnpj-review': 'Revisão do CNPJ da clínica',
   'calendar-minimization': 'Minimização da agenda',
   'guardian-acting-for': 'Responsável em nome do paciente',
+  'guardian-access': 'Acesso do responsável',
+  'guardian-access-revocation': 'Encerramento do acesso do responsável',
+  'guardian-access-revocation-notice':
+    'Aviso de encerramento do acesso do responsável',
   'professional-availability': 'Disponibilidade do profissional',
   retention: 'Retenção de dados',
   'schedule-closure': 'Fechamento de agenda',
@@ -115,6 +119,19 @@ function retentionSummary(detail: string): string {
   }
 }
 
+const CONSENT_PURPOSE_LABELS: Record<string, string> = {
+  treatment: 'Termo de tratamento',
+  image: 'Termo de imagem',
+};
+
+/** «treatment · hash ab12…» do aceite vira «Termo de tratamento · código do texto ab12…». */
+function consentSummary(detail: string): string {
+  const match = /^(\w+) · hash (.+)$/.exec(detail);
+  if (!match) return detail;
+  const [, purpose, rest] = match;
+  return `${CONSENT_PURPOSE_LABELS[purpose] ?? purpose} · código do texto ${rest}`;
+}
+
 /** Detalhe da trilha em português: códigos viram rótulo e o JSON da retenção vira resumo. */
 export function formatAuditDetail(
   resourceType: string,
@@ -122,6 +139,7 @@ export function formatAuditDetail(
 ): string {
   if (!detail) return '—';
   if (resourceType === 'retention') return retentionSummary(detail);
+  if (resourceType === 'consent') return consentSummary(detail);
   return DETAIL_LABELS[detail] ?? detail;
 }
 

@@ -35,6 +35,7 @@ export function ConditionProgress({
   photos,
   photoUrlBase,
 }: ConditionWithAssessmentsDto) {
+  const trends = areaTrends(assessments);
   return (
     <Card>
       <CardContent className="p-4">
@@ -64,20 +65,78 @@ export function ConditionProgress({
         )}
         <PortalPhotoGallery photos={photos} photoUrlBase={photoUrlBase} />
         {assessments.length > 0 && (
-          <ul className="flex flex-col gap-2 text-sm">
-            {assessments.map((assessment) => (
-              <li key={assessment.id} className="rounded bg-bg px-3 py-2">
-                <span className="mr-2 font-medium text-ink-3 text-xs">
-                  {formatDate(assessment.createdAt)}
-                </span>
-                {describeAssessment(assessment)}
-              </li>
-            ))}
+          // Lista textual das medições: é também a alternativa acessível ao
+          // gráfico, que o leitor de tela e o celular pequeno não leem bem (#517).
+          <ul
+            aria-label="Medições registradas"
+            className="flex flex-col gap-2 text-sm"
+          >
+            {assessments.map((assessment) => {
+              const trend = trends.get(assessment.id);
+              return (
+                <li key={assessment.id} className="rounded bg-bg px-3 py-2">
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3 text-xs">
+                    <span className="font-medium text-ink-3">
+                      {formatDate(assessment.createdAt)}
+                    </span>
+                    {trend != null && (
+                      <span
+                        className={
+                          trend <= 0
+                            ? 'font-medium text-success'
+                            : 'font-medium text-warning'
+                        }
+                      >
+                        {trendLabel(trend)}
+                      </span>
+                    )}
+                  </div>
+                  <p>{describeAssessment(assessment)}</p>
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>
     </Card>
   );
+}
+
+/**
+ * Variação da área em relação à medição anterior com área, em %, por avaliação.
+ * Sem variação (primeira medição, área zerada ou duas medições no mesmo
+ * instante, em que não se sabe qual veio antes — mesmo critério do gráfico, #473)
+ * a avaliação fica fora do mapa.
+ */
+function areaTrends(assessments: PortalAssessmentDto[]): Map<string, number> {
+  const measured = assessments
+    .filter((a) => a.areaMm2 != null)
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  const trends = new Map<string, number>();
+  for (let i = 1; i < measured.length; i++) {
+    const previous = measured[i - 1];
+    const current = measured[i];
+    const sameInstant =
+      new Date(previous.createdAt).getTime() ===
+      new Date(current.createdAt).getTime();
+    if (!sameInstant && (previous.areaMm2 as number) > 0) {
+      const delta =
+        ((current.areaMm2 as number) - (previous.areaMm2 as number)) /
+        (previous.areaMm2 as number);
+      trends.set(current.id, Math.round(delta * 100));
+    }
+  }
+  return trends;
+}
+
+function trendLabel(trend: number): string {
+  if (trend === 0) return 'Área igual à anterior';
+  return trend < 0
+    ? `Área ↓ ${Math.abs(trend)}% desde a anterior`
+    : `Área ↑ ${trend}% desde a anterior`;
 }
 
 function PortalPhotoGallery({
