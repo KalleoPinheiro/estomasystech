@@ -6,24 +6,29 @@ import type { AgendaPeriod, AgendaView } from './agenda-period';
 const VIEWS: { value: AgendaView; label: string }[] = [
   { value: 'month', label: 'Mês' },
   { value: 'week', label: 'Semana' },
+  { value: 'day', label: 'Dia' },
 ];
 
-/** Navegação do período (anterior, rótulo, próximo) e, no desktop, a escolha mês/semana. */
+/** Navegação do período (anterior, rótulo, próximo) e, no desktop, a escolha mês/semana/dia. */
 export function PeriodNav({
   period,
   showViewToggle,
 }: {
   period: AgendaPeriod;
-  /** Celular: só o mês compacto, sem a visão semanal. */
+  /** Celular: só o mês compacto, sem as visões semanal e diária. */
   showViewToggle: boolean;
 }) {
-  const isWeek = period.view === 'week';
+  const unit = {
+    month: { prev: 'Mês anterior', next: 'Próximo mês' },
+    week: { prev: 'Semana anterior', next: 'Próxima semana' },
+    day: { prev: 'Dia anterior', next: 'Próximo dia' },
+  }[period.view];
   return (
     <div className="flex items-center gap-3">
       <Button
         type="button"
         onClick={() => period.shift(-1)}
-        aria-label={isWeek ? 'Semana anterior' : 'Mês anterior'}
+        aria-label={unit.prev}
         variant="outline"
         className="hover:bg-surface-2"
       >
@@ -35,7 +40,7 @@ export function PeriodNav({
       <Button
         type="button"
         onClick={() => period.shift(1)}
-        aria-label={isWeek ? 'Próxima semana' : 'Próximo mês'}
+        aria-label={unit.next}
         variant="outline"
         className="hover:bg-surface-2"
       >

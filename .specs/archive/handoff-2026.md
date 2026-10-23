@@ -1823,3 +1823,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Teste novo**: `tests/pages/portal-parceiro-sem-crm.test.tsx` (4 cenários); nenhum teste existente alterado.
 - **Staging (Kalléo)**: abrir o portal de um parceiro sem CRM e conferir que o cabeçalho começa em "Estomaterapia — acompanhamento…" sem "·".
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Agenda: visão Dia (decisão do PO em 2026-10-22, sequência do #471)
+- **O que mudou**: `AgendaView` ganha `'day'`; `useAgendaPeriod` calcula janela de 1 dia, rótulo ("Quinta-feira, 22 de outubro de 2026") e navegação por dia; `WeekView` aceita `dayCount` (1 ou 7) e reaproveita a grade; `PeriodNav` ganha o botão Dia. No celular segue o mês compacto.
+- **Teste novo**: `tests/pages/agenda-visao-dia.test.tsx`; nenhum teste existente alterado.
+- **Staging (Kalléo)**: na agenda, escolher Dia, navegar por dia, voltar para Semana/Mês e abrir uma consulta pelo bloco.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.

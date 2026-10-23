@@ -14,7 +14,10 @@ import { layoutDay, verticalSpan, visibleHours } from './week-layout';
 const HOUR_REM = 3.5;
 
 interface WeekViewProps {
+  /** Primeiro dia exibido: o domingo da semana, ou o próprio dia na visão diária. */
   weekStart: Date;
+  /** 7 (semana, padrão) ou 1 (dia). */
+  dayCount?: 1 | 7;
   appointments: AppointmentDto[];
   scheduleConfig: ScheduleConfig;
   closures: ScheduleClosureDto[];
@@ -23,9 +26,9 @@ interface WeekViewProps {
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }
 
-const weekDays = (weekStart: Date): Date[] =>
+const weekDays = (weekStart: Date, dayCount: number): Date[] =>
   Array.from(
-    { length: 7 },
+    { length: dayCount },
     (_, index) =>
       new Date(
         weekStart.getFullYear(),
@@ -50,13 +53,14 @@ function lunchSpan(
 }
 
 /**
- * Visão semanal (#471): cada consulta é um bloco do tamanho da duração do
+ * Visão semanal e diária (#471): cada consulta é um bloco do tamanho da duração do
  * procedimento, no horário em que acontece; consultas que se sobrepõem ficam
  * lado a lado e o almoço da clínica aparece sombreado, então dá para ver o que
  * cabe antes de marcar. A grade mensal segue como visão geral.
  */
 export function WeekView({
   weekStart,
+  dayCount = 7,
   appointments,
   scheduleConfig,
   closures,
@@ -64,7 +68,9 @@ export function WeekView({
   onDayClick,
   onAppointmentClick,
 }: WeekViewProps) {
-  const days = weekDays(weekStart);
+  const days = weekDays(weekStart, dayCount);
+  const isDay = dayCount === 1;
+  const columns = `3.5rem repeat(${dayCount},minmax(0,1fr))`;
   const todayKey = dayKey(new Date());
   const range = visibleHours(scheduleConfig, appointments);
   const hours = Array.from(
@@ -78,11 +84,18 @@ export function WeekView({
   return (
     <div>
       {appointments.length === 0 && (
-        <EmptyState message="Nenhuma consulta agendada nesta semana." />
+        <EmptyState
+          message={`Nenhuma consulta agendada ${isDay ? 'neste dia' : 'nesta semana'}.`}
+        />
       )}
       <div className="overflow-x-auto">
-        <Card className="min-w-[840px] overflow-hidden">
-          <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-border border-b bg-bg">
+        <Card
+          className={`${isDay ? 'min-w-[320px]' : 'min-w-[840px]'} overflow-hidden`}
+        >
+          <div
+            className="grid border-border border-b bg-bg"
+            style={{ gridTemplateColumns: columns }}
+          >
             <div />
             {days.map((day) => (
               <div
@@ -100,7 +113,7 @@ export function WeekView({
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]">
+          <div className="grid" style={{ gridTemplateColumns: columns }}>
             <div className="relative" style={{ height: columnHeight }}>
               {hours.map((hour, index) => (
                 <span
