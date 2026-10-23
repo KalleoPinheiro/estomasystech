@@ -124,32 +124,13 @@
 }
 
 /* sv-gap: touch-target-size
-   A regra de 44px da lib para botão, campo, aba e paginação para em 40rem: no
-   tablet (768px) tudo volta a 36–40px (#519). Aqui a mesma conta vale até 64rem
-   e em ponteiro grosso. A caixa de seleção continua com o desenho de 16px; o
-   alvo é o rótulo que a envolve. O Fechar do diálogo cresce para 44px e recua o
-   que sobra, para o ícone ficar no mesmo lugar (#520). O link da marca (24px)
-   ganha a mesma altura. */
+   O link da marca (`.sv-logo`, 24px) não tem alvo de toque na lib: abaixo de 64rem
+   ou com ponteiro grosso ganha a mesma altura de 44px (#519). Botão, campo, aba,
+   paginação, rótulo de caixa de seleção e os botões Fechar já chegam a 44px pela
+   `@still-void/ui@3.5.1`. */
 @media (width < 64rem), (pointer: coarse) {
-  .sv-btn,
-  .sv-field,
-  .sv-tabs__trigger,
-  .sv-pagination__link,
-  .sv-logo,
-  label:has(> .sv-check),
-  label:has(> .sv-radio) {
+  .sv-logo {
     min-height: calc(var(--sv-space-10) + var(--sv-space-1));
-  }
-  .sv-btn,
-  .sv-tabs__trigger,
-  .sv-pagination__link {
-    min-width: calc(var(--sv-space-10) + var(--sv-space-1));
-  }
-  .sv-dialog__close {
-    min-height: calc(var(--sv-space-10) + var(--sv-space-1));
-    min-width: calc(var(--sv-space-10) + var(--sv-space-1));
-    top: var(--sv-space-2);
-    right: var(--sv-space-2);
   }
 }
 

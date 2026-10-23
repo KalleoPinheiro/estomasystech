@@ -1902,3 +1902,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `tests/pages/configuracoes-indice-mobile.test.tsx`; nenhum existente alterado.
 - **Staging (Kalléo)**: Configurações em 360 px: faixa fixa, tocar numa seção, «Voltar ao índice», Atendente sem «Canal de e-mail».
 - **Pendente**: sub-rotas no roadmap pós-v0.2.0 (#522 fica aberta só com isso). **Blockers**: nenhum.
+
+## Still Void 3.5.1: área de toque de 44px vem da lib (2026-10-23) — EM REVISÃO
+- **O que mudou**: `@still-void/ui` `^3.5.0` → `^3.5.1`. Saiu de `globals.css` o contorno de 44px para botão, campo, aba, paginação, rótulo de caixa de seleção e Fechar do diálogo (a lib cobre abaixo de `64rem` ou ponteiro grosso, Fechar por `::after`); ficou só `.sv-logo` e os links (`a[href]`), que a lib não dimensiona. `docs/still-void-gaps.md` (`touch-target-size`) atualizado.
+- **TESTE-ALTERADO**: `e2e/alvos-de-toque-tablet.spec.ts` (da #531, desta mesma entrega): o Fechar agora é medido pelo `::after` de 44×44, não pela caixa do botão, porque a lib estende a área por pseudo-elemento.
+- **Staging (Kalléo)**: em 768 px, botões, campos e o Fechar de «Nova consulta» continuam com 44px.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.

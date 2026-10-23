@@ -63,14 +63,18 @@ test.describe("alvos de toque no tablet (768px)", () => {
     });
   }
 
-  test("modal Nova consulta: botão Fechar com 44x44px", async ({ page }) => {
+  test("modal Nova consulta: botão Fechar com área de 44x44px", async ({ page }) => {
     await page.goto("/agenda");
     await settle(page);
     await page.getByRole("button", { name: /nova consulta/i }).first().click();
     const fechar = page.getByRole("button", { name: "Fechar" });
     await expect(fechar).toBeVisible();
-    const box = await fechar.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(MIN_TOUCH_PX - TOLERANCE);
-    expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_PX - TOLERANCE);
+    // Desde a @still-void/ui 3.5.1 o ícone mantém o desenho e os 44px vêm de um ::after.
+    const area = await fechar.evaluate((el) => {
+      const style = getComputedStyle(el, "::after");
+      return { width: Number.parseFloat(style.width), height: Number.parseFloat(style.height) };
+    });
+    expect(area.width).toBeGreaterThanOrEqual(MIN_TOUCH_PX - TOLERANCE);
+    expect(area.height).toBeGreaterThanOrEqual(MIN_TOUCH_PX - TOLERANCE);
   });
 });
