@@ -2,6 +2,9 @@ import { Appointment } from "@/domain/scheduling/appointment";
 import { UserAccount } from "@/domain/auth/user-account";
 import { Procedure } from "@/domain/catalog/procedure";
 import { Clinic } from "@/domain/clinic/clinic";
+import type { ClinicRepository } from "@/domain/clinic/clinic-repository";
+import { Anamnesis } from "@/domain/clinical/anamnesis";
+import { EvolutionNote } from "@/domain/clinical/evolution-note";
 import { ClinicalCondition } from "@/domain/clinical/clinical-condition";
 import { ConditionAssessment } from "@/domain/clinical/condition-assessment";
 import { ConsentRecord } from "@/domain/consent/consent-record";
@@ -15,6 +18,7 @@ import { Professional } from "@/domain/professional/professional";
 import { Money } from "@/domain/shared/money";
 import { TimeSlot } from "@/domain/shared/time-slot";
 import { getRepositories } from "@/infrastructure/container";
+import { backdateAssessment, backdateInvoice, seedScenarios } from "./cenarios";
 import { hashPassword } from "@/lib/auth/password";
 import { CONSENT_TEXT, CONSENT_TEXT_VERSION } from "@/lib/consent-text";
 import { IMAGE_CONSENT_TEXT, IMAGE_CONSENT_TEXT_VERSION } from "@/lib/image-consent-text";
@@ -111,7 +115,25 @@ async function seedClinics(now: Date): Promise<number> {
       themeAccent: "amber",
     }),
   );
+  created += await applyNeighborTheme(clinics);
   return created;
+}
+
+/**
+ * Clínica vizinha criada antes do tema por clínica (#426) nasceu no padrão e o
+ * `createMissing` não a recria: sem isto o roteiro ("já nasce escura e âmbar")
+ * não se reproduz na staging (#476). Só acerta quem ainda está no padrão; uma
+ * escolha feita pela tela não é desfeita.
+ */
+async function applyNeighborTheme(clinics: ClinicRepository): Promise<number> {
+  const neighbor = await clinics.findById(NEIGHBOR_CLINIC_ID);
+  const isDefault =
+    neighbor?.theme.mode === "system" && neighbor.theme.accent === "violet";
+  if (!neighbor || !isDefault) {
+    return 0;
+  }
+  await clinics.saveTheme(neighbor.withTheme({ mode: "dark", accent: "amber" }));
+  return 1;
 }
 
 /** Equipe e cenários de erro de acesso. A matriz conta × cenário está em `docs/engineering/homologacao-cenarios.md`. */
@@ -381,6 +403,8 @@ async function seedAppointments(
               })
             : invoice,
         );
+        // A emissão acompanha a consulta: o pagamento nunca antecede a fatura (#477).
+        await backdateInvoice(invoice.id, end);
         invoices += 1;
       }
     }
@@ -441,6 +465,39 @@ async function seedProfessionalLinks(patients: Patient[]): Promise<number> {
   return created;
 }
 
+/** Anamnese (com alergia, para o alerta de adesivo/látex) e uma evolução SOAP: prontuário não nasce vazio (#477). */
+async function seedProntuario(
+  repos: Awaited<ReturnType<typeof getRepositories>>,
+  patient: Patient,
+  index: number,
+  isStoma: boolean,
+): Promise<void> {
+  await repos.anamneses.save(
+    Anamnesis.create({
+      patientId: patient.id,
+      comorbidities: patient.guardianId ? "Sem comorbidades conhecidas." : pick(["Diabetes mellitus tipo 2", "Hipertensão arterial", "Insuficiência venosa crônica"] as const),
+      allergies: index % 3 === 0 ? "Alergia a adesivo (esparadrapo) e látex." : "Nega alergias conhecidas.",
+      medications: patient.guardianId ? "" : "Uso contínuo conforme prescrição médica.",
+    }),
+  );
+  await repos.evolutions.save(
+    EvolutionNote.create({
+      patientId: patient.id,
+      subjective: isStoma ? "Refere bom manejo da bolsa; sem vazamentos." : "Refere dor leve ao curativo.",
+      objective: isStoma ? "Estoma róseo, pele periestomal íntegra." : "Leito com tecido de granulação; exsudato seroso.",
+      assessment: isStoma ? "Estomia funcionante, sem complicações." : "Lesão em evolução favorável.",
+      plan: isStoma ? "Manter cuidados e retorno em 30 dias." : "Manter cobertura e reavaliar em 7 dias.",
+    }),
+  );
+}
+
+/** Criança não recebe o quadro de adulto (pé diabético): o seed precisa ser clinicamente plausível. */
+function woundTitle(patient: Patient): string {
+  return patient.guardianId
+    ? "Queimadura de segundo grau"
+    : pick(["Lesão por pressão", "Úlcera venosa", "Pé diabético"] as const);
+}
+
 async function seedClinical(now: Date, patients: Patient[]): Promise<number> {
   const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
   let assessments = 0;
@@ -450,16 +507,19 @@ async function seedClinical(now: Date, patients: Patient[]): Promise<number> {
       patientId: patient.id,
       kind: isStoma ? "stoma" : "wound",
       stomaType: isStoma ? pick(["colostomia", "ileostomia", "urostomia"] as const) : null,
-      title: isStoma ? "Estomia de eliminação" : pick(["Lesão por pressão", "Úlcera venosa", "Pé diabético"] as const),
+      title: isStoma ? "Estomia de eliminação" : woundTitle(patient),
       startedAt: new Date(now.getTime() - 60 * DAY_MS),
     });
     await repos.conditions.save(condition);
+    await seedProntuario(repos, patient, index, isStoma);
     // Evolução seriada: melhora (área menor) ou piora, cenário de alerta.
     const worsening = index % 5 === 1;
     for (let visit = 0; visit < 5; visit += 1) {
-      const size = worsening ? 20 + visit * 8 : 60 - visit * 10;
-      await repos.assessments.save(
-        ConditionAssessment.create({
+      // Curva própria por paciente (início e passo variam) e uma visita por semana, não tudo no mesmo instante (#477).
+      const start = 40 + ((index * 7) % 30);
+      const step = 6 + (index % 5);
+      const size = worsening ? 20 + visit * 8 : Math.max(10, start - visit * step);
+      const assessment = ConditionAssessment.create({
           conditionId: condition.id,
           lengthMm: isStoma ? null : size,
           widthMm: isStoma ? null : Math.round(size * 0.7),
@@ -469,8 +529,9 @@ async function seedClinical(now: Date, patients: Patient[]): Promise<number> {
           ...(isStoma ? {} : seedTime(worsening, visit)),
           painScale: worsening ? 8 : int(1, 4),
           notes: "Avaliação fictícia gerada pelo seed de homologação.",
-        }),
-      );
+        });
+      await repos.assessments.save(assessment);
+      await backdateAssessment(assessment.id, new Date(now.getTime() - (28 - visit * 7 + (index % 3)) * DAY_MS));
       assessments += 1;
     }
   }
@@ -517,6 +578,28 @@ async function syncAccountPasswords(password: string): Promise<number> {
   return seeded.length;
 }
 
+async function scenarioContext(
+  now: Date,
+  patients: Patient[],
+  professionals: Professional[],
+  procedures: Procedure[],
+) {
+  const { userAccounts } = await getRepositories(systemScope());
+  const repos = await getRepositories(clinicScope(MAIN_CLINIC_ID));
+  const portal = await userAccounts.findByEmail("paciente@homologacao.invalid");
+  const partnerAccount = await userAccounts.findByEmail("parceiro@homologacao.invalid");
+  return {
+    now,
+    mainClinicId: MAIN_CLINIC_ID,
+    neighborClinicId: NEIGHBOR_CLINIC_ID,
+    patients,
+    professionals,
+    procedures,
+    portalPatient: patients.find((patient) => patient.id === portal?.patientId) ?? null,
+    partner: (await repos.partners.findAll()).find((partner) => partner.id === partnerAccount?.partnerId) ?? null,
+  };
+}
+
 export async function seedHomologation(options: SeedOptions): Promise<SeedReport> {
   const now = options.now ?? new Date();
   initFaker(now);
@@ -532,9 +615,14 @@ export async function seedHomologation(options: SeedOptions): Promise<SeedReport
     accounts: staffAccounts + portalAccounts,
     neighborPatients,
   };
+  // Depois da massa pesada: os cenários desviam dos horários que ela ocupa.
+  const runScenarios = async () => seedScenarios(await scenarioContext(now, patients, professionals, procedures));
   if (patientsCreated) {
     // Massa pesada só em clínica nova: banco já semeado não recebe agenda, avaliação nem estoque de novo.
     const { appointments, invoices } = await seedAppointments(now, patients, professionals, procedures);
+    const assessments = await seedClinical(now, patients);
+    const supplyBatches = await seedInventory(now);
+    counts.scenarios = await runScenarios();
     Object.assign(counts, {
       professionalLinks: await seedProfessionalLinks(patients),
       professionals: professionals.length,
@@ -542,17 +630,21 @@ export async function seedHomologation(options: SeedOptions): Promise<SeedReport
       patients: patients.length,
       appointments,
       invoices,
-      assessments: await seedClinical(now, patients),
-      supplyBatches: await seedInventory(now),
+      assessments,
+      supplyBatches,
     });
     return { skipped: false, counts };
+  }
+  const scenarios = await runScenarios();
+  if (scenarios > 0) {
+    counts.scenarios = scenarios;
   }
   const professionalLinks = await seedProfessionalLinks(patients);
   if (professionalLinks > 0) {
     counts.professionalLinks = professionalLinks;
   }
   const passwordsSynced = await syncAccountPasswords(options.password);
-  const added = clinics + staffAccounts + portalAccounts + neighborPatients + professionalLinks;
+  const added = clinics + staffAccounts + portalAccounts + neighborPatients + professionalLinks + scenarios;
   return added === 0
     ? { skipped: true, counts: { passwordsSynced } }
     : { skipped: false, counts: { ...counts, passwordsSynced } };

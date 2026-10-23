@@ -50,6 +50,7 @@ const baseReport: MonthlyReport = {
       count: 10,
       totalCents: 100000,
       supplyCostCents: 20000,
+      supplyCostKnown: true,
       marginCents: 80000,
     },
   ],
@@ -192,6 +193,7 @@ describe('Feature: Relatório gerencial', () => {
               count: 1,
               totalCents: 5000,
               supplyCostCents: 8000,
+              supplyCostKnown: true,
               marginCents: -3000,
             },
           ],
@@ -204,6 +206,32 @@ describe('Feature: Relatório gerencial', () => {
       expect(margins.some((el) => el.className.includes('text-danger'))).toBe(
         true,
       );
+    });
+
+    it('Dado procedimento sem custo de insumo apurado, Quando renderizar, Então mostra Não apurado e não uma margem igual à receita', async () => {
+      mockFetch(() =>
+        jsonResponse({
+          ...baseReport,
+          revenueByProcedure: [
+            {
+              procedure: 'Curativo com desbridamento',
+              count: 2,
+              totalCents: 176000,
+              supplyCostCents: 0,
+              supplyCostKnown: false,
+              marginCents: 176000,
+            },
+          ],
+        }),
+      );
+
+      render(<ReportsPage />);
+
+      expect((await screen.findAllByText('Não apurado')).length).toBe(2);
+      expect(
+        screen.getByText(/custo e margem não apurados/),
+      ).toBeInTheDocument();
+      expect(screen.getAllByText('R$ 1.760,00')).toHaveLength(2);
     });
 
     it('Dado produção por profissional, Quando renderizar, Então lista nome, contagem, receita e repasse', async () => {

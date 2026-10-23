@@ -136,6 +136,7 @@ npm run dev                   # http://localhost:3000
 | `DATA_ENCRYPTION_KEY` | sim em produção | cifra o texto clínico e o token do Google em repouso ([ADR-006](../adr/006-chave-de-dados-clinicos.md)) | `openssl rand -hex 32` (≥ 32 caracteres); fora de produção, sem ela, usa chave de desenvolvimento. Perdê-la é perder o prontuário: guarde no cofre |
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |
 | `APP_URL` | sim em produção | links de convite/reset, redirect do OAuth, link do recall | — |
+| `VERCEL_PROJECT_PRODUCTION_URL` | não (injetada pela Vercel) | base dos links de convite na homologação quando `APP_URL` não está definida | não defina à mão |
 | `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | não | e-mail **da plataforma** (contas sem clínica: bootstrap e reset do Super Admin); cada clínica usa a chave que cadastra ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | [resend.md](integrations/resend.md) |
 | `APP_ENV` | obrigatória na Vercel | `production`, `staging`, `preview` ou `development` | ausente fora da Vercel: `NODE_ENV=production` é produção, o resto é desenvolvimento ([ADR-041](../adr/041-homologacao-na-vercel-e-branch-staging.md)) |

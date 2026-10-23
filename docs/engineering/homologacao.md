@@ -97,7 +97,7 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 | `STAGING_SEED_PASSWORD` | senha (≥ 10 caracteres) das contas fictícias |
 | `MOCK_INTEGRATIONS` | `true` |
 | `STAGING_DISABLE_MFA` | `true` só em Production (a staging); nunca em Preview. Dispensa o 2FA no login por e-mail e senha ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)); com `APP_ENV` diferente de `staging` o app recusa subir |
-| `APP_URL` | URL pública do ambiente |
+| `APP_URL` | URL pública do ambiente. Se faltar na Vercel, o convite usa `https://$VERCEL_PROJECT_PRODUCTION_URL` (#467); em outro ambiente de produção, sem `APP_URL` o convite é recusado |
 | `TRUSTED_PROXY_HOPS` | `1` (a Vercel acrescenta o IP real ao fim do `x-forwarded-for`; confira no primeiro deploy) |
 | `PHOTO_STORAGE`, `S3_*` | bucket R2 só de homologação (obrigatório: a Vercel não tem disco) |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `GLITCHTIP_DSN` | **não definir** |
@@ -129,6 +129,8 @@ menor com responsável), 2 profissionais, 6 procedimentos, agenda de 7 semanas c
 cancelamento tardio e falta, faturas pagas e vencidas, avaliações seriadas (ferida melhorando e
 piorando) e estoque com lote vencido, estoque baixo e estoque zerado. Cenários de integração com
 erro: destinatário `erro@homologacao.invalid` (e-mail 500) e chave S3 com `__erro__` (403).
+
+Cenários do roteiro com dado específico (`scripts/seed/cenarios.ts`, #477), aditivos e idempotentes (rodam também em banco já semeado): pausa de almoço 12:00–13:00 na grade da principal; repasse percentual (40%) da Ana; kits de *Curativo simples* e *Troca de bolsa de estomia*; responsável técnico da principal (documentos clínicos liberados); consulta concluída e fatura paga na vizinha (recibo bloqueado por CNPJ); histórico de `paciente@` (consulta daqui a ~2 h, outra daqui a ~10 dias, uma concluída com fatura pendente, condição com 3 avaliações e retorno pendente, uma vez por banco); a parceira indica 2 pacientes e um deles já aceitou compartilhar. Já a vizinha nasce escura e âmbar (#476). Em banco novo a massa pesada também traz anamnese com alergia e uma evolução SOAP por paciente com condição, avaliações semanais com curvas diferentes, fatura emitida na data da consulta (pagamento nunca antes da emissão) e quadro de criança sem pé diabético; em banco antigo isso só vem reiniciando o branch (§ 1).
 
 Toda feature nova acrescenta seus cenários (sucesso **e** erro) em `scripts/seed/seed.ts` no mesmo PR.
 O seed é aditivo (ADR-059): contas, clínicas, profissionais, parceiro, pacientes da vizinha e o vínculo de cada profissional com os pacientes da própria agenda (PRO-RN-08, #465) que faltam são criados em banco já semeado,

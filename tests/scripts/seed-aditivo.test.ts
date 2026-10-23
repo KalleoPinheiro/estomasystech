@@ -33,9 +33,25 @@ async function regressToOldSeed(): Promise<void> {
   await db
     .delete(schema.userAccounts)
     .where(inArray(schema.userAccounts.email, NEW_ACCOUNTS));
+  // TESTE-ALTERADO: o seed agora indica pacientes pela parceira; o seed antigo não tinha indicação.
+  await db
+    .update(schema.patients)
+    .set({ referredByPartnerId: null })
+    .where(eq(schema.patients.clinicId, MAIN_CLINIC_ID));
+  await db
+    .delete(schema.partnerShareConsents)
+    .where(eq(schema.partnerShareConsents.clinicId, MAIN_CLINIC_ID));
   await db
     .delete(schema.partners)
     .where(eq(schema.partners.clinicId, MAIN_CLINIC_ID));
+  // TESTE-ALTERADO: a vizinha agora tem consulta e fatura paga (recibo bloqueado por CNPJ); o seed antigo não tinha.
+  for (const table of [
+    schema.invoicePayments,
+    schema.invoices,
+    schema.appointments,
+  ]) {
+    await db.delete(table).where(eq(table.clinicId, NEIGHBOR_CLINIC_ID));
+  }
   for (const table of [schema.patients, schema.professionals]) {
     await db.delete(table).where(eq(table.clinicId, NEIGHBOR_CLINIC_ID));
   }

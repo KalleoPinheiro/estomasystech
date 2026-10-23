@@ -47,6 +47,7 @@ test.describe("faturamento", () => {
     await row.getByRole("button", { name: "Receber" }).click();
     await expect(page.getByRole("heading", { name: "Registrar pagamento" })).toBeVisible();
     await page.getByRole("button", { name: "Pix", exact: true }).click();
+    await page.getByRole("button", { name: "Confirmar recebimento" }).click();
 
     await expect(page.getByRole("heading", { name: "Registrar pagamento" })).not.toBeVisible();
     await page.getByRole("button", { name: "Pagas" }).click();
@@ -70,6 +71,7 @@ test.describe("faturamento", () => {
     await row.getByRole("button", { name: "Receber" }).click();
     await page.getByLabel("Valor recebido (R$)").fill("50");
     await page.getByRole("button", { name: "Pix", exact: true }).click();
+    await page.getByRole("button", { name: "Confirmar recebimento" }).click();
     await expect(row).toContainText("falta R$ 150,00");
     await expect(row.getByRole("link", { name: "Recibo" })).toBeVisible();
 
@@ -83,6 +85,7 @@ test.describe("faturamento", () => {
     // Quita o saldo em dinheiro.
     await row.getByRole("button", { name: "Receber" }).click();
     await page.getByRole("button", { name: "Dinheiro", exact: true }).click();
+    await page.getByRole("button", { name: "Confirmar recebimento" }).click();
     await page.getByRole("button", { name: "Pagas" }).click();
     const paidRow = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await expect(paidRow.getByRole("link", { name: "Recibo" })).toHaveCount(2);
