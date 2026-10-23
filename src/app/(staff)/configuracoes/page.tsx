@@ -150,38 +150,49 @@ export default function SettingsPage() {
         <SectionNav sections={sections} />
         <div className="flex min-w-0 flex-col gap-8">
           {canClinic && (
-            <div id="dados" className="scroll-mt-4">
+            <div id="dados" className="scroll-mt-20 lg:scroll-mt-4">
               <ClinicInfoSection />
+              <BackToIndex />
             </div>
           )}
-          <div id="identidade" className="flex scroll-mt-4 flex-col gap-8">
+          <div
+            id="identidade"
+            className="flex scroll-mt-20 flex-col gap-8 lg:scroll-mt-4"
+          >
             {canClinic && <LogoSection />}
             <IdentitySection />
+            <BackToIndex />
           </div>
           {canClinic && (
-            <div id="privacidade" className="scroll-mt-4">
+            <div id="privacidade" className="scroll-mt-20 lg:scroll-mt-4">
               <PrivacyContactSection />
+              <BackToIndex />
             </div>
           )}
           {can('/api/settings/schedule') && (
-            <div id="horarios" className="scroll-mt-4">
+            <div id="horarios" className="scroll-mt-20 lg:scroll-mt-4">
               <ScheduleSection />
+              <BackToIndex />
             </div>
           )}
-          <div id="feriados" className="scroll-mt-4">
+          <div id="feriados" className="scroll-mt-20 lg:scroll-mt-4">
             <ClosuresSection />
+            <BackToIndex />
           </div>
           {can('/api/integrations/google-calendar') && (
-            <div id="google-agenda" className="scroll-mt-4">
+            <div id="google-agenda" className="scroll-mt-20 lg:scroll-mt-4">
               <CalendarIntegrationSection />
+              <BackToIndex />
             </div>
           )}
-          <div id="email" className="scroll-mt-4">
+          <div id="email" className="scroll-mt-20 lg:scroll-mt-4">
             <EmailChannelSection />
+            {can('/api/settings/email-channel') && <BackToIndex />}
           </div>
           {can('/api/professionals') && (
-            <div id="contas" className="scroll-mt-4">
+            <div id="contas" className="scroll-mt-20 lg:scroll-mt-4">
               <AccountsSection />
+              <BackToIndex />
             </div>
           )}
         </div>
@@ -201,19 +212,33 @@ function SectionNav({
 }) {
   return (
     <nav
+      id="indice-secoes"
       aria-label="Seções da configuração"
-      className="flex flex-col gap-1 lg:sticky lg:top-4"
+      className="sticky top-0 z-10 -mx-4 flex gap-1 overflow-x-auto border-border border-b bg-bg px-4 py-2 sm:-mx-6 sm:px-6 lg:top-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0"
     >
+      <p className="sr-only lg:hidden">Ir para a seção</p>
       {sections.map((section) => (
         <a
           key={section.id}
           href={`#${section.id}`}
-          className="rounded-lg px-3 py-2 font-semibold text-ink-2 text-sm hover:bg-accent-soft hover:text-ink"
+          className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 font-semibold text-ink-2 text-sm hover:bg-accent-soft hover:text-ink lg:whitespace-normal"
         >
           {section.label}
         </a>
       ))}
     </nav>
+  );
+}
+
+/** Só no celular: volta ao índice fixo, que já não está à vista no fim de uma seção longa. */
+function BackToIndex() {
+  return (
+    <a
+      href="#indice-secoes"
+      className="mt-3 inline-flex font-medium text-accent-ink text-sm hover:underline lg:hidden"
+    >
+      Voltar ao índice
+    </a>
   );
 }
 
