@@ -1,9 +1,9 @@
 import { Alert, AlertDescription, Header, Layout } from '@still-void/ui/react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { AppVersion } from '@/components/app-version';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
+import { ReleaseVersion } from '@/components/release-version';
 
 export const metadata: Metadata = {
   title: 'Portal — EstomaSysTech',
@@ -53,7 +53,7 @@ export default function PortalLayout({
             </Link>
           </p>
           <div className="text-center">
-            <AppVersion />
+            <ReleaseVersion url="/api/portal/version" />
           </div>
         </main>
       </Layout>

@@ -1888,3 +1888,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `tests/components/file-picker.test.tsx`, `e2e/alvos-de-toque-tablet.spec.ts`; nenhum existente alterado.
 - **Staging (Kalléo)**: em 768 px, medir botões da Agenda, Faturamento, Configurações e portal; abrir «Nova consulta» e ver o Fechar; Configurações → Logo e portal → foto mostram o seletor em português.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Versão do sistema vinda do banco (#516) (2026-10-23) — EM REVISÃO
+- **O que mudou**: tabela `app_releases` (migração 0070, ADR-066) gravada de forma idempotente no boot (`instrumentation.ts` → `recordCurrentRelease`, depois da migração); `GET /api/version` (equipe) e `GET /api/portal/version` (portal) com `{ version, releasedAt }` e `sha` só em staging/preview, cache de 5 min no processo e `Cache-Control` privado; `ReleaseVersion` no rodapé da sidebar e do portal, com fallback para o build. Causa do `v0.1.0`: o `package.json` só sobe no `release:prepare`; o build agora calcula `NEXT_PUBLIC_RELEASE_VERSION` (package.json + changesets pendentes), `0.2.0` na staging.
+- **Desvio da decisão**: duas rotas, não uma. `route-guard-conformance` exige que toda rota fora de `/api/portal` seja exclusiva da equipe, e teste existente não se altera (regra 8); `/api/portal/version` serve o portal com o mesmo leitor.
+- **Testes novos**: `release-version` (domain e lib), `record-release`, `current-version`, `drizzle-app-release-repository`, `app-release-service`, `api/version`, `release-version` (componente), `next-config-release`; nenhum existente alterado.
+- **Pergunta aberta**: rollback por redeploy mantém a versão mais nova no rodapé até remover a linha (ADR-066, `producao.md` § 3.1). Gravar o rollback como evento?
+- **Staging (Kalléo)**: rodapé da sidebar e do portal mostrando `v0.2.0 (sha)`; `GET /api/version` com sessão; sem sessão, 401.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.

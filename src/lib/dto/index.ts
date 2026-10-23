@@ -20,6 +20,7 @@ export * from './patient-export';
 export * from './payout';
 export * from './procedure';
 export * from './professional';
+export * from './release';
 export * from './schedule';
 export * from './staff';
 export * from './taxonomy';

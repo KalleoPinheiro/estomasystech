@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import type { NextConfig } from "next";
+import { nextReleaseVersion } from "./src/lib/release-version";
 
 // Content-Security-Policy saiu daqui (issue #76): precisa de um nonce por
 // request, gerado em `src/proxy.ts` — headers() estáticos do next.config não
@@ -42,10 +43,25 @@ export const APP_VERSION: string = JSON.parse(
   readFileSync("package.json", "utf8"),
 ).version;
 
+/**
+ * Changesets pendentes (`.changeset/*.md`, menos o README): sem eles a release já foi versionada e
+ * vale o `package.json`.
+ */
+function pendingChangesets(dir = ".changeset"): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((file) => file.endsWith(".md") && file !== "README.md")
+    .map((file) => readFileSync(`${dir}/${file}`, "utf8"));
+}
+
+/** Release em andamento (ADR-066): o `package.json` só sobe no `release:prepare`. */
+export const RELEASE_VERSION: string = nextReleaseVersion(APP_VERSION, pendingChangesets());
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   env: {
     NEXT_PUBLIC_APP_VERSION: APP_VERSION,
+    NEXT_PUBLIC_RELEASE_VERSION: RELEASE_VERSION,
     NEXT_PUBLIC_APP_COMMIT: isHomologation
       ? (process.env.VERCEL_GIT_COMMIT_SHA ?? "")
       : "",
