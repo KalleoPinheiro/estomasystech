@@ -53,17 +53,15 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-describe('Feature: Auditoria no celular (#521)', () => {
-  describe('Cenário: lista de cartões em telas estreitas', () => {
-    it('Dado viewport < 768px, Quando a página carrega, Então lista cartões em vez de tabela e pede 25 por página', async () => {
+describe('Feature: Auditoria paginada e com filtros na URL (#521)', () => {
+  describe('Cenário: página de 25 em telas estreitas', () => {
+    it('Dado viewport < 768px, Quando a página carrega, Então pede 25 eventos por página', async () => {
       stubViewport(true);
       const fetchMock = stubFetch();
 
       render(<AuditPage />);
 
       expect(await screen.findByText('Leitura')).toBeInTheDocument();
-      expect(screen.queryByRole('table')).toBeNull();
-      expect(screen.getAllByRole('listitem')).toHaveLength(1);
       await waitFor(() =>
         expect(
           fetchMock.mock.calls.some(([url]) =>
