@@ -1859,3 +1859,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `portal-aceite-explicito`, `agenda-concluir-sem-retorno`, `phone-exibicao`.
 - **Staging (Kalléo)**: portal com paciente-novo (caixa antes do botão), concluir consulta sem mexer no retorno, lista de parceiros com máscara, Configurações como Atendente.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA mobile R2: Auditoria paginada e em cartões (#521) (2026-10-23) — EM REVISÃO
+- **O que mudou**: `/auditoria` pede 25 eventos por página abaixo de 768 px e 50 acima (cursor de `/api/audit`, sem mudar a rota); abaixo de 768 px mostra cartões em vez da tabela; filtros (`paciente`, `de`, `ate`) ficam na URL via `history.replaceState` e são lidos de `useSearchParams` ao abrir; contador de eventos. Docs: ACE-RN-64.
+- **Testes novos**: `tests/pages/auditoria-mobile.test.tsx`; nenhum existente alterado.
+- **Staging (Kalléo)**: Auditoria em 360 px (cartões, Carregar mais), filtrar por período e recarregar a página (filtro permanece).
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.

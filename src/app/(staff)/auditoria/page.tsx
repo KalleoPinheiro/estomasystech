@@ -10,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
+import { useMediaQuery } from '@still-void/ui/react/client';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { LoadMoreButton } from '@/components/load-more-button';
@@ -26,12 +28,64 @@ import {
 import type { AuditEventDto } from '@/lib/dto';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE_MOBILE = 25;
+const PAGE_SIZE_DESKTOP = 50;
+
+type Filters = { patientId: string; from: string; to: string };
+
+/** Filtros na URL (`?paciente=&de=&ate=`): a tela compartilha e recarrega o mesmo recorte. */
+function writeFiltersToUrl({ patientId, from, to }: Filters) {
+  const params = new URLSearchParams();
+  if (patientId) params.set('paciente', patientId);
+  if (from) params.set('de', from);
+  if (to) params.set('ate', to);
+  const search = params.toString();
+  window.history.replaceState(
+    null,
+    '',
+    `${window.location.pathname}${search ? `?${search}` : ''}`,
+  );
+}
+
+function AuditCard({ event }: { event: AuditEventDto }) {
+  const detail = formatAuditDetail(event.resourceType, event.detail);
+  return (
+    <li className="px-4 py-3">
+      <p className="text-ink-3 text-xs">
+        {formatDateTimeWithSeconds(event.occurredAt)}
+      </p>
+      <p className="font-medium text-ink">
+        {ACTION_LABELS[event.action] ?? event.action}
+        <span className="font-normal text-ink-2">
+          {' · '}
+          {RESOURCE_LABELS[event.resourceType] ?? event.resourceType}
+        </span>
+      </p>
+      <p className="text-ink-2 text-sm">
+        {ACTOR_ROLE_LABELS[event.actorRole] ?? event.actorRole}
+        {event.patientId ? ` · ${event.patientName ?? event.patientId}` : ''}
+      </p>
+      {detail && <p className="text-ink-3 text-xs">{detail}</p>}
+    </li>
+  );
+}
 
 export default function AuditPage() {
-  const [patientId, setPatientId] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const searchParams = useSearchParams();
+  const [patientId, setPatientId] = useState(
+    () => searchParams?.get('paciente') ?? '',
+  );
+  const [from, setFrom] = useState(() => searchParams?.get('de') ?? '');
+  const [to, setTo] = useState(() => searchParams?.get('ate') ?? '');
+  const compact = useMediaQuery('(max-width: 767px)');
+  const pageSize = compact ? PAGE_SIZE_MOBILE : PAGE_SIZE_DESKTOP;
+  const updateFilters = (next: Partial<Filters>) => {
+    const filters = { patientId, from, to, ...next };
+    setPatientId(filters.patientId);
+    setFrom(filters.from);
+    setTo(filters.to);
+    writeFiltersToUrl(filters);
+  };
 
   const params = new URLSearchParams();
   if (patientId) params.set('patientId', patientId);
@@ -44,7 +98,7 @@ export default function AuditPage() {
     error,
     isLoading,
     loadMore,
-  } = useCursorPagedQuery<AuditEventDto>(`/api/audit${query}`, PAGE_SIZE);
+  } = useCursorPagedQuery<AuditEventDto>(`/api/audit${query}`, pageSize);
 
   return (
     <div>
@@ -57,7 +111,7 @@ export default function AuditPage() {
               <Input
                 type="date"
                 value={from}
-                onChange={(e) => setFrom(e.target.value)}
+                onChange={(e) => updateFilters({ from: e.target.value })}
               />
             </label>
             <label className="flex flex-col gap-1 text-ink-2 text-sm">
@@ -65,14 +119,14 @@ export default function AuditPage() {
               <Input
                 type="date"
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
+                onChange={(e) => updateFilters({ to: e.target.value })}
               />
             </label>
             <div className="min-w-64">
               <PatientPicker
                 label="Filtrar por paciente"
                 value={patientId}
-                onChange={setPatientId}
+                onChange={(id) => updateFilters({ patientId: id })}
                 includeInactive
               />
             </div>
@@ -91,70 +145,88 @@ export default function AuditPage() {
         <PagedList
           items={events}
           emptyMessage="Nenhum evento de auditoria registrado."
-          render={(list) => (
-            <div className="overflow-x-auto">
-              <Table
-                stack
-                className={`w-full text-left text-sm ${isLoading ? 'opacity-60' : ''}`}
+          render={(list) =>
+            compact ? (
+              <ul
+                className={`divide-y divide-border ${isLoading ? 'opacity-60' : ''}`}
                 aria-busy={isLoading}
               >
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="px-4 py-3">Quando</TableHead>
-                    <TableHead className="px-4 py-3">Ator</TableHead>
-                    <TableHead className="px-4 py-3">Ação</TableHead>
-                    <TableHead className="px-4 py-3">Recurso</TableHead>
-                    <TableHead className="px-4 py-3">Paciente</TableHead>
-                    <TableHead className="px-4 py-3">Detalhe</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {list.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell
-                        label="Quando"
-                        className="whitespace-nowrap px-4 py-2 text-ink-2"
-                      >
-                        {formatDateTimeWithSeconds(event.occurredAt)}
-                      </TableCell>
-                      <TableCell label="Ator" className="px-4 py-2">
-                        <span className="font-medium">
-                          {ACTOR_ROLE_LABELS[event.actorRole] ??
-                            event.actorRole}
-                        </span>
-                        <span className="block text-ink-3 text-xs">
-                          {event.actorId}
-                        </span>
-                      </TableCell>
-                      <TableCell label="Ação" className="px-4 py-2">
-                        {ACTION_LABELS[event.action] ?? event.action}
-                      </TableCell>
-                      <TableCell label="Recurso" className="px-4 py-2">
-                        {RESOURCE_LABELS[event.resourceType] ??
-                          event.resourceType}
-                      </TableCell>
-                      <TableCell
-                        label="Paciente"
-                        className="px-4 py-2 text-ink-2"
-                      >
-                        {event.patientId
-                          ? (event.patientName ?? event.patientId)
-                          : '—'}
-                      </TableCell>
-                      <TableCell
-                        label="Detalhe"
-                        className="px-4 py-2 text-ink-3"
-                      >
-                        {formatAuditDetail(event.resourceType, event.detail)}
-                      </TableCell>
+                {list.map((event) => (
+                  <AuditCard key={event.id} event={event} />
+                ))}
+              </ul>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table
+                  stack
+                  className={`w-full text-left text-sm ${isLoading ? 'opacity-60' : ''}`}
+                  aria-busy={isLoading}
+                >
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-4 py-3">Quando</TableHead>
+                      <TableHead className="px-4 py-3">Ator</TableHead>
+                      <TableHead className="px-4 py-3">Ação</TableHead>
+                      <TableHead className="px-4 py-3">Recurso</TableHead>
+                      <TableHead className="px-4 py-3">Paciente</TableHead>
+                      <TableHead className="px-4 py-3">Detalhe</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {list.map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell
+                          label="Quando"
+                          className="whitespace-nowrap px-4 py-2 text-ink-2"
+                        >
+                          {formatDateTimeWithSeconds(event.occurredAt)}
+                        </TableCell>
+                        <TableCell label="Ator" className="px-4 py-2">
+                          <span className="font-medium">
+                            {ACTOR_ROLE_LABELS[event.actorRole] ??
+                              event.actorRole}
+                          </span>
+                          <span className="block text-ink-3 text-xs">
+                            {event.actorId}
+                          </span>
+                        </TableCell>
+                        <TableCell label="Ação" className="px-4 py-2">
+                          {ACTION_LABELS[event.action] ?? event.action}
+                        </TableCell>
+                        <TableCell label="Recurso" className="px-4 py-2">
+                          {RESOURCE_LABELS[event.resourceType] ??
+                            event.resourceType}
+                        </TableCell>
+                        <TableCell
+                          label="Paciente"
+                          className="px-4 py-2 text-ink-2"
+                        >
+                          {event.patientId
+                            ? (event.patientName ?? event.patientId)
+                            : '—'}
+                        </TableCell>
+                        <TableCell
+                          label="Detalhe"
+                          className="px-4 py-2 text-ink-3"
+                        >
+                          {formatAuditDetail(event.resourceType, event.detail)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
+          }
         />
       </Card>
+
+      {events && events.length > 0 && (
+        <p className="mt-3 text-center text-ink-3 text-sm">
+          {events.length} {events.length === 1 ? 'evento' : 'eventos'}{' '}
+          {hasMore ? 'carregados' : 'no total'}
+        </p>
+      )}
 
       <LoadMoreButton visible={Boolean(events) && hasMore} onClick={loadMore} />
     </div>
