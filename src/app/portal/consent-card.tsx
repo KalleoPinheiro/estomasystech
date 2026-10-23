@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   Checkbox,
-  FileInput,
   Icon,
   Input,
   Prose,
@@ -16,6 +15,7 @@ import Image from 'next/image';
 import { useId, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
+import { FilePicker } from '@/components/file-picker';
 import { apiFetch } from '@/lib/client';
 import { formatDateTime } from '@/lib/format';
 
@@ -379,14 +379,14 @@ export function PatientPhotoUpload({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Observação (opcional): dor, vazamento, vermelhidão…"
-          className="h-8 min-w-0 flex-1 text-xs"
+          className="h-8 min-w-48 flex-1 text-xs"
         />
-        {/* Afordância nativa do FileInput, visível — mesmo padrão de
+        {/* Seletor em português (FilePicker, #518) — mesmo padrão de
             condition-photos.tsx (T16). `aria-label` preserva o nome acessível
             que o texto do <label> antigo dava ("Enviar foto"). PORT-06 (#93):
             escolher o arquivo só monta a prévia abaixo — não envia mais
             direto no `onChange`. */}
-        <FileInput
+        <FilePicker
           accept="image/jpeg,image/png,image/webp"
           aria-label="Enviar foto"
           disabled={sending}

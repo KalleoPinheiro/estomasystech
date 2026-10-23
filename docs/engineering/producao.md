@@ -245,11 +245,18 @@ proposital enquanto as migrações não têm `down`
    na hora (`sudo systemctl start estomasystech-backup.service`) e confira que terminou sem erro.
    Sem backup do mesmo dia, não deploye migração.
 3. **Deploy:** *Deploy* no recurso do app. O container novo migra no boot (advisory lock) e o
-   `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois.
+   `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois. No mesmo boot o app grava a
+   versão em `app_releases` ([ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md)); sem
+   passo manual.
 4. **Verificar:** `curl -fsS https://estomasystech.kalleopinheiro.com.br/api/health/ready` (`200`,
-   `database` e `migrations` `ok`) e a fumaça do § 9.6. Se o lote traz script manual (§ 4, § 7.2,
+   `database` e `migrations` `ok`), a **versão no rodapé** (`GET /api/version`, com sessão, deve trazer a
+   da tag) e a fumaça do § 9.6. Se o lote traz script manual (§ 4, § 7.2,
    § 7.3), rode-o agora, primeiro em simulação.
-5. **Rollback sem migração nova:** *Deployments* → *Redeploy* do commit anterior. Rápido e seguro.
+5. **Rollback sem migração nova:** *Deployments* → *Redeploy* do commit anterior. Rápido e seguro. A
+   versão do rodapé é a **mais recente gravada** em `app_releases`: depois do redeploy, remova a linha
+   da versão revertida (`DELETE FROM app_releases WHERE version = 'X.Y.Z';`, por `psql` no servidor)
+   para o rodapé voltar à versão que está de fato no ar. O rollback por backup restaura a tabela e a
+   versão volta junto.
 6. **Rollback com migração nova:** redeploy do commit anterior **não** desfaz o esquema; só serve se
    a migração for aditiva (coluna, tabela ou índice novo, o caso quase sempre) e o código antigo
    ignorar o que foi adicionado. Do contrário, restaure o backup do passo 2 (perde o que foi escrito
