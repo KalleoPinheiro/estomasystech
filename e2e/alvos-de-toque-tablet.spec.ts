@@ -33,8 +33,6 @@ async function tooSmallControls(page: Page): Promise<string[]> {
         root.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea"),
       )
         .filter((el) => el.checkVisibility({ visibilityProperty: true }))
-        // Campo de arquivo escondido (FilePicker): o alvo é o botão ao lado.
-        .filter((el) => !el.classList.contains("sr-only"))
         .map((el) => {
           // Checkbox/radio: o alvo de toque é o rótulo que o envolve.
           const isToggle = el instanceof HTMLInputElement && ["checkbox", "radio"].includes(el.type);

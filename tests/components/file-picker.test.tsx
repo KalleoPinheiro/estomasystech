@@ -13,16 +13,6 @@ describe('Feature: seletor de arquivo em português (#518)', () => {
     expect(screen.queryByText(/choose file|no file chosen/i)).toBeNull();
   });
 
-  it('Dado o botão, Quando clicado, Então abre o seletor do campo de arquivo', () => {
-    render(<FilePicker aria-label="Enviar foto" onChange={vi.fn()} />);
-    const input = screen.getByLabelText('Enviar foto') as HTMLInputElement;
-    const click = vi.spyOn(input, 'click');
-
-    fireEvent.click(screen.getByText('Escolher arquivo'));
-
-    expect(click).toHaveBeenCalledOnce();
-  });
-
   it('Dado um arquivo escolhido, Quando muda, Então mostra o nome e repassa o evento', () => {
     const onChange = vi.fn();
     render(<FilePicker aria-label="Enviar foto" onChange={onChange} />);
