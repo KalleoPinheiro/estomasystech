@@ -34,7 +34,7 @@ const stubViewport = (mobile: boolean) => {
 };
 
 const stubFetch = () => {
-  const fn = vi.fn(async () => ({
+  const fn = vi.fn(async (_url: string) => ({
     ok: true,
     json: async () => ({
       success: true,
