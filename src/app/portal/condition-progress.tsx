@@ -15,6 +15,7 @@ import {
   EXUDATE_LABELS,
   formatDate,
   STOMA_TYPE_LABELS,
+  TISSUE_TYPE_LABELS,
 } from '@/lib/format';
 
 export interface ConditionWithAssessmentsDto {
@@ -140,7 +141,10 @@ function describeAssessment(assessment: PortalAssessmentDto): string {
       `ferida ${assessment.lengthMm}×${assessment.widthMm}mm (área ${assessment.areaMm2}mm²)`,
     );
   }
-  if (assessment.tissueType) parts.push(`tecido: ${assessment.tissueType}`);
+  if (assessment.tissueType)
+    parts.push(
+      `tecido: ${TISSUE_TYPE_LABELS[assessment.tissueType]?.toLowerCase() ?? assessment.tissueType}`,
+    );
   if (assessment.exudate)
     parts.push(
       `exsudato: ${EXUDATE_LABELS[assessment.exudate] ?? assessment.exudate}`,

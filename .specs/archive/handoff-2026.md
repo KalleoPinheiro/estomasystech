@@ -1765,6 +1765,14 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## Termos em português e ordem das medições (#470, #473) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: «granulation»/«slough» em inglês na tabela da equipe, no relatório e no portal; auditoria com `company_admin`, `invoice`, `mfa_required` e JSON cru da retenção; mensagem «Área reduziu 89%» contradizendo a tabela quando as medições têm o mesmo horário. `tissueTypeLabel` (texto livre legado fica como gravado), `ACTOR_ROLE_LABELS`, mais recursos em `RESOURCE_LABELS`, `formatAuditDetail` (códigos e resumo da retenção). O gráfico não afirma tendência quando a primeira ou a última medição de área empata em horário com a vizinha (ordem ambígua). PRO-RN-26, ACE-RN-62.
+- **Decisão minha**: esconder a mensagem em vez de desempatar por id (id aleatório não é cronologia).
+- **TESTE-ALTERADO**: `tests/pages/plataforma-auditoria.test.tsx` (2 asserções): a trilha agora mostra «Credenciais inválidas» no lugar do código `invalid_credentials`; o requisito mudou (#470).
+- **Testes novos**: `healing-chart-ordem-ambigua`, `audit-labels-pt`.
+- **Next step**: o seed repete o mesmo carimbo nas 5 avaliações; a #477 (seed) deve dar horários distintos. **Blockers**: nenhum.
+
 ## Documento bloqueado sem emissão (#468, #474, #485) (2026-10-22) — EM REVISÃO
 
 QA da staging v0.2.0: abrir a declaração de comparecimento com a clínica incompleta gravava «emissão de documento» na auditoria (o hook de emissão rodava na montagem, mesmo com a página bloqueada); o link aparecia para consulta futura; a mensagem não dizia o campo que faltava nem linkava Configurações. Agora as 6 páginas de documento só chamam `POST /api/documents/issue` com a clínica completa (e, na declaração, com a consulta realizada); `ClinicInfoIncompleteAlert` lista o que falta (`missingClinicInfoFields`) com link para `/configuracoes#dados` e «Voltar ao início»; o detalhe da consulta só mostra o link da declaração se `completed`. AGE-RN-21.

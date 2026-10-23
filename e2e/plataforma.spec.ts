@@ -136,7 +136,7 @@ test.describe("área da plataforma", () => {
       await expect(page.getByRole("heading", { level: 1, name: "Trilha da plataforma" })).toBeVisible();
       const row = page.getByRole("row").filter({ hasText: name }).filter({ hasText: "Criação" });
       await expect(row.filter({ has: page.getByRole("cell", { name: "Clínica", exact: true }) })).toHaveCount(1);
-      await expect(row.first().getByText("super_admin")).toBeVisible();
+      await expect(row.first().getByText("Super Admin")).toBeVisible();
     });
 
     test("tela da clínica leva o super_admin a /plataforma", async ({ page }) => {

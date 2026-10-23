@@ -33,6 +33,7 @@ import {
   formatDate,
   formatDateTime,
   STOMA_TYPE_LABELS,
+  tissueTypeLabel,
 } from '@/lib/format';
 import { timeSummary, tissueProfile } from '@/lib/wound-time-summary';
 import {
@@ -267,7 +268,9 @@ export function ConditionsSection({
                                   label="Tecido"
                                   className="py-1.5 pr-3"
                                 >
-                                  {a.tissueType ?? '—'}
+                                  {a.tissueType
+                                    ? tissueTypeLabel(a.tissueType)
+                                    : '—'}
                                   {tissueProfile(a) && (
                                     <span className="block text-ink-3">
                                       {tissueProfile(a)}
