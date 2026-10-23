@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@still-void/ui/react';
 import { type ReactNode, use } from 'react';
+import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { HealingChart } from '@/components/healing-chart';
@@ -34,9 +35,7 @@ function guardLoading(
   if (!clinic || condition === undefined || !assessments)
     return <LoadingIndicator />;
   if (!isClinicInfoComplete(clinic)) {
-    return (
-      <ErrorAlert message="Clínica sem CNPJ ou responsável técnico cadastrados — cadastre em Configurações antes de emitir este documento." />
-    );
+    return <ClinicInfoIncompleteAlert clinic={clinic} />;
   }
   if (condition === null)
     return <ErrorAlert message="Condição não encontrada" />;

@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, use } from 'react';
+import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
@@ -39,9 +40,7 @@ function guardBlock(
     return <ErrorAlert message={error ?? issuanceError ?? ''} />;
   if (!clinic || !patient || !controller) return <LoadingIndicator />;
   if (!isClinicInfoComplete(clinic)) {
-    return (
-      <ErrorAlert message="Clínica sem CNPJ ou responsável técnico cadastrados — cadastre em Configurações antes de emitir este documento." />
-    );
+    return <ClinicInfoIncompleteAlert clinic={clinic} />;
   }
   // #94, DOC-01: sem emissão persistida ainda, não renderiza.
   if (!issuance) return <LoadingIndicator />;
