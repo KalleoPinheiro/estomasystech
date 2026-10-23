@@ -1879,3 +1879,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `scroll-fade` (unidade) e 4 casos em `e2e/sidebar-janela-baixa.spec.ts`; nenhum existente alterado.
 - **Staging (Kalléo)**: gaveta em celular 360x568 e 360x640: fade na base da lista, Minha conta alcançável rolando, Sair visível.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA mobile R2: Configurações com índice fixo no celular (#522) (2026-10-23) — EM REVISÃO
+- **Decisão do PO**: sub-rotas `/configuracoes/[secao]` adiadas para pós-v0.2.0 (custo em testes existentes, regra 8). ADR-066. Fica: página única, mesmos ids/âncoras, índice fixo no topo abaixo de `lg` (chips de 44 px), «Voltar ao índice» ao fim de cada seção, `scroll-mt-20`. ACE-RN-64.
+- **Testes novos**: `tests/pages/configuracoes-indice-mobile.test.tsx`; nenhum existente alterado.
+- **Staging (Kalléo)**: Configurações em 360 px: faixa fixa, tocar numa seção, «Voltar ao índice», Atendente sem «Canal de e-mail».
+- **Pendente**: sub-rotas no roadmap pós-v0.2.0 (#522 fica aberta só com isso). **Blockers**: nenhum.
