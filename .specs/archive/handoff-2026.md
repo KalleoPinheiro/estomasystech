@@ -1878,6 +1878,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **O que mudou**: a lista do menu (gaveta e rail) virou `ScrollFade`, que esmaece a borda com itens escondidos; o rodapé (Tema, Sair, versão) segue fixo embaixo (estrutura do #526) e nada sobrepõe o Sair em 568, 640 e 740 px de altura (360 px de largura).
 - **Testes novos**: `scroll-fade` (unidade) e 4 casos em `e2e/sidebar-janela-baixa.spec.ts`; nenhum existente alterado.
 - **Staging (Kalléo)**: gaveta em celular 360x568 e 360x640: fade na base da lista, Minha conta alcançável rolando, Sair visível.
+
+## QA mobile R2: Auditoria paginada e em cartões (#521) (2026-10-23) — EM REVISÃO
+- **O que mudou**: `/auditoria` pede 25 eventos por página abaixo de 768 px e 50 acima (cursor de `/api/audit`, sem mudar a rota); a tabela empilhada (cartão) já existente continua no celular porque `layout-tabelas.spec.ts` e `responsive-tables.spec.ts` a exigem (regra 8); filtros (`paciente`, `de`, `ate`) ficam na URL via `history.replaceState` e são lidos de `useSearchParams` ao abrir; contador de eventos. Docs: ACE-RN-64.
+- **Testes novos**: `tests/pages/auditoria-mobile.test.tsx`; nenhum existente alterado.
+- **Staging (Kalléo)**: Auditoria em 360 px (25 eventos, Carregar mais), filtrar por período e recarregar a página (filtro permanece).
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
 
 ## Versão do sistema vinda do banco (#516) (2026-10-23) — EM REVISÃO
