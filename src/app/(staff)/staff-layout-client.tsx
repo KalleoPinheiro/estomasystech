@@ -18,6 +18,7 @@ import type { SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { RoleGate } from './role-gate';
+import { ScrollFade } from './scroll-fade';
 import { SidebarAutoClose } from './sidebar-auto-close';
 import { StaffNav } from './staff-nav';
 
@@ -99,14 +100,18 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
         <div className="flex min-h-dvh w-full min-w-0 flex-1">
           {/* O <main> não usa o <Layout> do pacote de propósito: `.sv-layout` limita
             a 1120px e as telas do staff são tabelas largas. */}
-          <SidebarPanel className="max-h-dvh w-56 shrink-0 justify-between border-border border-r p-5">
+          {/* Colado ao topo e com a altura da janela menos a faixa de homologação (#482):
+              Tema e Sair ficam sempre à vista, inclusive em janela baixa. */}
+          <SidebarPanel className="flex max-h-[calc(100dvh-var(--staging-banner-h,0px))] flex-col [&>.sv-app-sidebar__body]:max-h-full [&>.sv-app-sidebar__body]:min-h-0 [&>.sv-app-sidebar__body]:flex-1 [&>.sv-app-sidebar__body]:justify-between w-56 shrink-0 justify-between border-border border-r p-5 lg:sticky lg:top-0 lg:h-[calc(100dvh-var(--staging-banner-h,0px))] lg:self-start">
             {/* Só o menu rola em tela baixa; Tema, Sair e versão ficam sempre à vista (#482). */}
-            <div className="flex min-h-0 flex-col gap-8 overflow-y-auto">
+            {/* overflow-x-hidden: com overflow-y o x vira auto e aparecia barra horizontal
+                sob «Minha conta»; -mx-1/px-1 preservam o anel de foco dos links. */}
+            <ScrollFade className="-mx-1 flex min-h-0 flex-col gap-8 overflow-y-auto overflow-x-hidden px-1">
               <SidebarIdentity />
               <SidebarSection title="Navegação">
                 <StaffNav />
               </SidebarSection>
-            </div>
+            </ScrollFade>
             <div className="flex shrink-0 flex-col gap-2 pt-4">
               <ThemeToggle />
               <LogoutButton />

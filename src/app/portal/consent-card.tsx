@@ -12,7 +12,7 @@ import {
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { FilePicker } from '@/components/file-picker';
@@ -290,6 +290,7 @@ export function PatientPhotoUpload({
 }) {
   const { toast } = useToast();
   const [note, setNote] = useState('');
+  const noteId = useId();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -365,8 +366,16 @@ export function PatientPhotoUpload({
           sua consulta.
         </p>
       )}
+      {/* Rótulo visível: o placeholder some ao digitar e não é rótulo (WCAG 3.3.2, #517). */}
+      <label
+        htmlFor={noteId}
+        className="mb-1 block font-medium text-ink-2 text-xs"
+      >
+        Observação (opcional)
+      </label>
       <div className="flex flex-wrap items-center gap-2">
         <Input
+          id={noteId}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Observação (opcional): dor, vazamento, vermelhidão…"

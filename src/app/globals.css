@@ -178,3 +178,15 @@ html:not([data-hydrated]) button:not(:disabled),
 html:not([data-hydrated]) [role="button"] {
   cursor: progress;
 }
+
+/* Área rolável que esmaece a borda com conteúdo escondido (#524):
+   app/(staff)/scroll-fade.tsx escreve --fade-top e --fade-bottom. */
+.scroll-fade {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-top, 0px),
+    #000 calc(100% - var(--fade-bottom, 0px)),
+    transparent 100%
+  );
+}

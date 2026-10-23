@@ -551,6 +551,16 @@ function AccountsSection() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [manualLink, setManualLink] = useState<ManualLink | null>(null);
+  // Contas criadas nesta sessão: a lista as mostra na hora, mesmo que a nova
+  // busca ainda traga a versão antiga (o convite demora e a lista não pode
+  // parecer vazia dele; nada de recarregar a página).
+  const [justCreated, setJustCreated] = useState<UserAccountDto[]>([]);
+  const visibleAccounts = accounts
+    ? [
+        ...accounts,
+        ...justCreated.filter((c) => !accounts.some((a) => a.id === c.id)),
+      ]
+    : null;
 
   const professionalName = (id: string | null) =>
     (professionals ?? []).find((p) => p.id === id)?.fullName ?? '—';
@@ -656,7 +666,7 @@ function AccountsSection() {
       />
 
       <AccountsTable
-        accounts={accounts}
+        accounts={visibleAccounts}
         professionalName={professionalName}
         onToggleActive={(account) => void toggleActive(account)}
         onResendInvite={(account) => void issueLink(account, 'resend-invite')}
@@ -669,8 +679,17 @@ function AccountsSection() {
           <AccountForm
             professionals={(professionals ?? []).filter((p) => p.active)}
             emailChannel={emailChannel}
-            onSaved={({ email, inviteUrl }) => {
+            onSaved={({
+              email,
+              inviteUrl,
+              delivered: _delivered,
+              ...account
+            }) => {
               setCreating(false);
+              setJustCreated((current) => [
+                ...current,
+                { email, ...account } as UserAccountDto,
+              ]);
               setManualLink(inviteUrl ? { email, url: inviteUrl } : null);
               setActionNotice(null);
               toast({ description: 'Conta criada', variant: 'success' });
@@ -927,7 +946,7 @@ function AccountForm({
 }: {
   professionals: ProfessionalDto[];
   emailChannel: EmailChannelState;
-  onSaved: (created: { email: string } & AccessLinkResult) => void;
+  onSaved: (created: UserAccountDto & AccessLinkResult) => void;
 }) {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
@@ -980,11 +999,7 @@ function AccountForm({
           }),
         },
       );
-      onSaved({
-        email: created.email,
-        delivered: created.delivered,
-        inviteUrl: created.inviteUrl,
-      });
+      onSaved(created);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Erro ao criar conta';

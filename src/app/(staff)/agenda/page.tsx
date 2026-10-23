@@ -8,6 +8,7 @@ import {
 } from '@still-void/ui/react';
 import { useMediaQuery, useToast } from '@still-void/ui/react/client';
 import { useEffect, useMemo, useState } from 'react';
+import { useHydrated } from '@/components/app-shell/use-hydrated';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
@@ -150,6 +151,7 @@ export default function AgendaPage() {
   // Abaixo de `md` a grade de 7 colunas com chips não cabe: vira mês compacto.
   const compact = useMediaQuery('(max-width: 767px)');
   const { toast } = useToast();
+  const hydrated = useHydrated();
   const [consultationLink] = useState(readConsultationLink);
   const period = useAgendaPeriod(consultationLink?.startsAt ?? new Date());
   const [recall] = useState(readRecallParams);
@@ -350,6 +352,9 @@ export default function AgendaPage() {
           <Button
             type="button"
             onClick={() => setCreatingFor(new Date())}
+            // Antes da hidratação o clique se perderia (#484): o botão fica
+            // desabilitado até responder.
+            disabled={!hydrated}
             variant="accent"
           >
             + Nova consulta

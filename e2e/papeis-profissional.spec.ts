@@ -58,6 +58,29 @@ test.describe("profissional", () => {
     expect(failures.list()).toEqual([]);
   });
 
+  test("profissional abre o modal pelo botão + Nova consulta (#484)", async ({ page }) => {
+    const failures = trackApiFailures(page);
+    await page.setViewportSize({ width: 1265, height: 952 });
+
+    const { linkedPatientName } = loadSeedData();
+    const slot = slotFromSeed("papeis-vinculo-profissional");
+
+    await page.goto("/agenda");
+    await goToMonth(page, slot.ymd);
+    await expect(
+      page.getByRole("button", { name: `${slot.startTimeInput} ${abbreviatePatientName(linkedPatientName)}`, exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "+ Nova consulta" }).click();
+    await expect(page.getByRole("dialog", { name: "Nova consulta" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Semana" }).click();
+    await page.getByRole("button", { name: "+ Nova consulta" }).click();
+    await expect(page.getByRole("dialog", { name: "Nova consulta" })).toBeVisible();
+    expect(failures.list()).toEqual([]);
+  });
+
   test("profissional registra evolução no paciente vinculado", async ({ page }) => {
     const failures = trackApiFailures(page);
     const subjective = `Dor leve ao trocar a placa ${unique()}`;

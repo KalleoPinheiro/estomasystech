@@ -1,6 +1,12 @@
 'use client';
 
-import { Alert, AlertDescription, Card, Icon } from '@still-void/ui/react';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  Icon,
+} from '@still-void/ui/react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,18 +16,24 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
+  useMediaQuery,
 } from '@still-void/ui/react/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { use, useEffect, useRef, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { PatientPhone } from '@/components/patient-phone';
 import { StatusBadge } from '@/components/status-badge';
+import { scrollFadeMask, useScrollEdges } from '@/components/use-scroll-edges';
 import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
 import type {
   AnamnesisDto,
@@ -112,6 +124,74 @@ function useCanExport(exportPath: string): boolean {
   );
 }
 
+const EXPORT_TITLE = 'Exportação completa dos dados do titular (LGPD art. 18)';
+
+/**
+ * Ações secundárias da ficha. No celular (< 768px) viram o menu "Mais ações":
+ * dois links soltos em linha tinham ~20px de altura e o de exportação parecia
+ * desabilitado (#525). No computador seguem como links, com altura de toque
+ * para quem usa a tela sensível ao toque.
+ *
+ * A consulta é `max-width` de propósito: sem `matchMedia` (SSR, testes) o
+ * `useMediaQuery` responde `false`, e o padrão seguro são os links.
+ */
+function PatientHeaderActions({
+  consentHref,
+  exportHref,
+}: {
+  consentHref: string;
+  /** `null` quando o papel não pode exportar: o item some. */
+  exportHref: string | null;
+}) {
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  if (isMobile) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline">
+            Mais ações <Icon name="chevron-down" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem asChild className="min-h-11">
+            <a href={consentHref}>Termo de consentimento</a>
+          </DropdownMenuItem>
+          {exportHref ? (
+            <DropdownMenuItem asChild className="min-h-11">
+              <a
+                href={exportHref}
+                target="_blank"
+                rel="noreferrer"
+                title={EXPORT_TITLE}
+              >
+                Exportar dados (LGPD)
+              </a>
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+  return (
+    <span className="flex flex-wrap gap-x-4 gap-y-1 font-medium text-sm">
+      <a href={consentHref} className="text-accent-ink hover:underline">
+        Termo de consentimento
+      </a>
+      {exportHref ? (
+        <a
+          href={exportHref}
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent-ink hover:underline"
+          title={EXPORT_TITLE}
+        >
+          Exportar dados (LGPD)
+        </a>
+      ) : null}
+    </span>
+  );
+}
+
 function PatientHeader({ patient }: { patient: PatientDto }) {
   const exportPath = `/api/patients/${patient.id}/export`;
   const canExport = useCanExport(exportPath);
@@ -120,7 +200,7 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
       leading={
         <Link
           href="/pacientes"
-          className="inline-flex items-center gap-1 text-accent-ink text-sm hover:underline"
+          className="inline-flex min-h-11 items-center gap-1 text-accent-ink text-sm hover:underline"
         >
           <Icon name="chevron-left" /> Pacientes
         </Link>
@@ -144,25 +224,10 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
         </span>
       }
       actions={
-        <span className="flex flex-wrap gap-x-4 gap-y-1 font-medium text-sm">
-          <a
-            href={`/documentos/consentimento/${patient.id}`}
-            className="text-accent-ink hover:underline"
-          >
-            Termo de consentimento
-          </a>
-          {canExport ? (
-            <a
-              href={exportPath}
-              target="_blank"
-              rel="noreferrer"
-              className="text-ink-3 hover:underline"
-              title="Exportação completa dos dados do titular (LGPD art. 18)"
-            >
-              Exportar dados (LGPD)
-            </a>
-          ) : null}
-        </span>
+        <PatientHeaderActions
+          consentHref={`/documentos/consentimento/${patient.id}`}
+          exportHref={canExport ? exportPath : null}
+        />
       }
     />
   );
@@ -282,14 +347,18 @@ export default function PatientRecordPage({
   const activeTab: TabKey | undefined = visibleTabs.some((t) => t.key === tab)
     ? tab
     : visibleTabs[0]?.key;
-  const tabListRef = useRef<HTMLDivElement>(null);
+  // Estado, não `ref`: a lista só existe depois da ficha carregar, e os efeitos
+  // precisam rodar quando ela aparece.
+  const [tabListEl, setTabListEl] = useState<HTMLDivElement | null>(null);
   // No celular a lista de abas rola na horizontal (#198): a aba ativa sempre
   // entra na área visível, inclusive quando vem de `?aba=` na URL.
   useEffect(() => {
-    tabListRef.current
+    tabListEl
       ?.querySelector<HTMLElement>(`[data-tab-key="${activeTab}"]`)
-      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-  }, [activeTab]);
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'center' });
+  }, [activeTab, tabListEl]);
+  const tabEdges = useScrollEdges(tabListEl);
+  const tabMask = scrollFadeMask(tabEdges);
   const {
     pendingTab,
     setEvolutionsDirty,
@@ -352,7 +421,18 @@ export default function PatientRecordPage({
           value={activeTab}
           onValueChange={(next) => requestTabChange(next as TabKey, setTab)}
         >
-          <TabsList ref={tabListRef} aria-label="Seções do prontuário">
+          <TabsList
+            ref={setTabListEl}
+            aria-label="Seções do prontuário"
+            // Indício de rolagem (#525): borda esmaecida onde há mais abas
+            // escondidas e `scroll-snap` para a rolagem parar numa aba inteira.
+            className="snap-x snap-proximity"
+            style={
+              tabMask
+                ? { maskImage: tabMask, WebkitMaskImage: tabMask }
+                : undefined
+            }
+          >
             {visibleTabs.map((item) => (
               <TabsTrigger
                 key={item.key}
@@ -362,7 +442,9 @@ export default function PatientRecordPage({
                 // nowrap — em 390px os rótulos encolhiam e se sobrepunham em
                 // vez de a lista rolar.
                 className={
-                  item.key === 'pacotes' ? 'ml-auto shrink-0' : 'shrink-0'
+                  item.key === 'pacotes'
+                    ? 'ml-auto shrink-0 snap-start'
+                    : 'shrink-0 snap-start'
                 }
               >
                 {tabLabel(

@@ -28,6 +28,11 @@ function TriageCount() {
  * Barra de atalhos do celular (#428), fixa no rodapé abaixo de `md`. Atalhos
  * por papel; "Mais" abre a lista do resto. `padding-bottom` com a área segura
  * do iOS/Android (barra de gestos) e alvos de 44px.
+ *
+ * `z-20` (degrau `sticky` da escala do Still Void) fica abaixo do fundo (30) e
+ * da janela (40): com qualquer modal ou folha aberta a barra fica coberta e
+ * inerte (a Radix ainda a marca `aria-hidden`), e um toque fora do lugar não
+ * sai do formulário em preenchimento (#523).
  */
 export function BottomNav() {
   const pathname = usePathname();
@@ -41,7 +46,7 @@ export function BottomNav() {
     <nav
       aria-label="Atalhos"
       data-bottom-nav
-      className="fixed inset-x-0 bottom-0 z-40 border-border border-t bg-bg-elev pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 border-border border-t bg-bg-elev pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="flex">
         {items.map((item) => {
