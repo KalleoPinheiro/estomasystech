@@ -8,7 +8,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { CalendarGrid } from '@/app/(staff)/agenda/calendar-grid';
 import AgendaPage from '@/app/(staff)/agenda/page';
@@ -26,9 +26,17 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/agenda',
 }));
 
+beforeEach(() => {
+  // Os cenários usam a semana de 18/10/2026: sem fixar o relógio, o dia 22
+  // vira "passado" quando a data real avança e o teste quebra sozinho.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 9, 15, 9, 0));
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 // Domingo 18/10/2026: a semana de 18 a 24 (quinta = 22).
