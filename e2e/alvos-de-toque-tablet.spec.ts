@@ -33,6 +33,8 @@ async function tooSmallControls(page: Page): Promise<string[]> {
         root.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea"),
       )
         .filter((el) => el.checkVisibility({ visibilityProperty: true }))
+        // O link «Pular para o conteúdo» só aparece com foco de teclado.
+        .filter((el) => !(el instanceof HTMLAnchorElement && el.getAttribute("href")?.startsWith("#conteudo-principal")))
         .map((el) => {
           // Checkbox/radio: o alvo de toque é o rótulo que o envolve.
           const isToggle = el instanceof HTMLInputElement && ["checkbox", "radio"].includes(el.type);

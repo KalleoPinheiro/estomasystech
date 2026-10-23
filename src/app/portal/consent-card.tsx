@@ -379,7 +379,7 @@ export function PatientPhotoUpload({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Observação (opcional): dor, vazamento, vermelhidão…"
-          className="h-8 min-w-0 flex-1 text-xs"
+          className="h-8 min-w-48 flex-1 text-xs"
         />
         {/* Seletor em português (FilePicker, #518) — mesmo padrão de
             condition-photos.tsx (T16). `aria-label` preserva o nome acessível
