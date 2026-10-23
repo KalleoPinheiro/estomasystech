@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 /**
  * Versão do sistema no rodapé (#516, ADR-066): o que a barra lateral mostra é o que
- * `GET /api/version` devolve, em formato `v<versão>`; a equipe logada lê a rota, sem sessão é 401.
+ * `GET /api/version` devolve, em formato `v<versão>`; o 401 sem sessão é coberto em `tests/api/version.test.ts`.
  */
 test.describe("versão do sistema no rodapé", () => {
   test("a barra lateral mostra a versão que a API devolve", async ({ page }) => {
@@ -15,12 +15,5 @@ test.describe("versão do sistema no rodapé", () => {
     expect(data.version).toMatch(/^\d+\.\d+\.\d+/);
 
     await expect(page.locator("aside [data-app-version]")).toContainText(`v${data.version}`);
-  });
-
-  test("sem sessão a rota responde 401", async ({ playwright, baseURL }) => {
-    const anon = await playwright.request.newContext({ baseURL });
-    const response = await anon.get("/api/version");
-    expect(response.status()).toBe(401);
-    await anon.dispose();
   });
 });
