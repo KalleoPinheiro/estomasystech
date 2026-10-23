@@ -160,7 +160,7 @@ export class ConsentRecord {
    */
   static resolveStatus(
     allRecords: readonly ConsentRecord[],
-    consentText: string,
+    consentText: string | readonly string[],
     purpose: ConsentPurpose = 'treatment',
     holder?: ConsentHolder,
     now: Date = new Date(),
@@ -203,9 +203,11 @@ export class ConsentRecord {
     };
   }
 
-  /** O aceite cobre este texto? (hash idêntico) */
-  covers(consentText: string): boolean {
-    return this.state.textHash === hashConsentText(consentText);
+  /** O aceite cobre este texto (ou um dos textos vigentes)? (hash idêntico) */
+  covers(consentText: string | readonly string[]): boolean {
+    return [consentText]
+      .flat()
+      .some((text) => this.state.textHash === hashConsentText(text));
   }
 
   get id(): string {

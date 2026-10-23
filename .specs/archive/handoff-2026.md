@@ -1765,6 +1765,13 @@ Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branche
 - **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
+## Termos de consentimento em nome de quem assina (#469) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: o termo imprimia «Responsável técnico: responsável técnico da clínica» e seguia em primeira pessoa quando o representante legal assina pelo menor. `renderLegalText` agora omite a linha do responsável técnico e o nome do encarregado quando são o texto de preenchimento; os textos-base e seus hashes não mudaram. Cada termo ganhou variante do representante (`v2-representante`, `v1-representante`) com hash próprio; `ConsentRecord.resolveStatus/covers` aceitam lista de textos, então aceites antigos e o gate de foto seguem valendo. ADR-064, POR-RN-29.
+- **Decisão minha**: variante separada em vez de reescrever o texto original (preserva aceites e os testes existentes, regra 8); sem revisão jurídica ainda (#376 deve cobrir os quatro textos).
+- **Testes novos**: `consent-representative-text` (API), `consentimento-representante` (tela), `legal-text-sem-preenchimento`, `consent-record-multiplos-textos`; nenhum teste existente alterado.
+- **Next step**: revisão jurídica dos quatro textos. **Blockers**: nenhum.
+
 ## Perguntas abertas do portal (#481, #483) (2026-10-22)
 
 Duas sub-issues do QA da staging v0.2.0 são decisão de produto e não foram implementadas: #483 (autoagendamento livre ou só de retorno; a documentação dizia «entregue» sem a limitação, agora corrigida) e #481 (aceite do termo com marcação explícita; muda o fluxo coberto por testes de unidade e E2E, então vai junto com a revisão jurídica #376). Ambas ficam registradas em `docs/domains/portal/README.md` § Perguntas abertas.
