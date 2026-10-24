@@ -83,6 +83,6 @@ console.log(
     : `⚠ não consegui deixar o rascunho com \`gh\` (${draft.out.split('\n')[0]}). Crie o rascunho ${tag} no GitHub com o texto:\n\n${body}`,
 );
 console.log(
-  `\nPróximo: \`npm run gate:local\` no head, PR "chore(release): ${tag}" contra a main com o recibo no corpo,\n` +
+  `\nPróximo (o \`release:cut\` faz sozinho, ADR-071): gate da release no head, PR "chore(release): ${tag}" contra a main com o recibo no corpo,\n` +
     `the-judge, merge com **merge commit**. Logo depois: \`npm run release:publish -- --rollback=${rollback}\`.`,
 );

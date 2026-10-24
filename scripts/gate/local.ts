@@ -9,19 +9,16 @@
  *
  * Docker é opcional só quando o daemon não existe (ex.: thread na nuvem); a etapa
  * pulada fica registrada no recibo e o CI roda o job Docker quando o que ele valida muda.
+ *
+ * Perfil `release` (ADR-071, `release/*` ou `GATE_PERFIL=release`): sem mutação e com Docker
+ * obrigatório. O ambiente (fuso, porta, memória, segredos, sobras) é fixado em `ambiente.ts` (#571).
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dockerEnv, disposableSecrets, type Env, gateEnv, gatePostgresPort, LEFTOVERS } from './ambiente';
 import { detectBase } from './base';
+import { planFor, profileFor, type Step } from './plano';
 import { formatReceipt, mutationTargets } from './receipt';
-
-interface Step {
-  name: string;
-  cmd: string;
-  args: string[];
-  /** Soma ao total de testes E2E o "N passed" do Playwright. */
-  countsE2e?: boolean;
-}
 
 const STEPS: Step[] = [
   { name: 'typecheck', cmd: 'npm', args: ['run', 'typecheck'] },
@@ -36,8 +33,8 @@ const STEPS: Step[] = [
 ];
 
 const DOCKER_STEPS: Step[] = [
-  { name: 'docker', cmd: 'bash', args: ['scripts/gate/docker-step.sh'] },
-  { name: 'backup', cmd: 'bash', args: ['scripts/backup-smoke.sh'] },
+  { name: 'docker', cmd: 'bash', args: ['scripts/gate/docker-step.sh'], docker: true },
+  { name: 'backup', cmd: 'bash', args: ['scripts/backup-smoke.sh'], docker: true },
 ];
 
 function git(...args: string[]): string {
@@ -54,10 +51,10 @@ function dockerAvailable(): boolean {
   return spawnSync('docker', ['info'], { stdio: 'ignore' }).status === 0;
 }
 
-function run(step: Step): Promise<{ ok: boolean; passed: number }> {
+function run(step: Step, env: Env): Promise<{ ok: boolean; passed: number }> {
   return new Promise((resolve) => {
     let out = '';
-    const child = spawn(step.cmd, step.args, { env: { ...process.env, CI: '1' } });
+    const child = spawn(step.cmd, step.args, { env: env as NodeJS.ProcessEnv });
     for (const stream of [child.stdout, child.stderr]) {
       stream.on('data', (chunk: Buffer) => {
         process.stdout.write(chunk);
@@ -71,53 +68,64 @@ function run(step: Step): Promise<{ ok: boolean; passed: number }> {
   });
 }
 
-async function main(): Promise<void> {
-  if (git('status', '--porcelain') !== '') {
-    console.error('✗ árvore suja: faça commit antes. O recibo vale para o SHA do HEAD.');
-    process.exit(1);
-  }
-  // Sobras de rodadas anteriores (mutação, relatórios) não podem cair no lint nem no recibo.
-  for (const dir of ['.stryker-tmp', 'reports']) rmSync(dir, { recursive: true, force: true });
-  console.log(`Base do diff: ${detectBase()}`);
-  const sha = git('rev-parse', 'HEAD');
-  const started = Date.now();
-  const done: string[] = [];
-  const skipped: string[] = [];
-  let e2eTests = 0;
-  let passed = true;
+function fail(message: string): never {
+  console.error(`✗ ${message}`);
+  process.exit(1);
+}
 
-  const hasDocker = dockerAvailable();
-  const rules = changedRuleFiles();
-  const mutation: Step[] = rules.length
-    ? [{ name: 'mutacao', cmd: 'npm', args: ['run', 'test:mutacao', '--', '--mutate', rules.join(',')] }]
-    : [];
-  const plan = [...STEPS, ...mutation, ...(hasDocker ? DOCKER_STEPS : [])];
-  if (!hasDocker) skipped.push('docker', 'backup');
+interface Outcome {
+  passed: boolean;
+  done: string[];
+  e2eTests: number;
+}
 
-  for (const step of plan) {
+async function runAll(steps: Step[], env: Env): Promise<Outcome> {
+  const docker = dockerEnv(env, disposableSecrets());
+  const outcome: Outcome = { passed: true, done: [], e2eTests: 0 };
+  for (const step of steps) {
     console.log(`\n▶ ${step.name}`);
-    const r = await run(step);
+    const r = await run(step, step.docker ? docker : env);
     if (!r.ok) {
       console.error(`✗ falhou em ${step.name}`);
-      passed = false;
+      outcome.passed = false;
       break;
     }
-    done.push(step.name);
-    if (step.countsE2e) e2eTests += r.passed;
+    outcome.done.push(step.name);
+    if (step.countsE2e) outcome.e2eTests += r.passed;
   }
+  return outcome;
+}
+
+async function main(): Promise<void> {
+  if (git('status', '--porcelain') !== '') fail('árvore suja: faça commit antes. O recibo vale para o SHA do HEAD.');
+  for (const dir of LEFTOVERS) rmSync(dir, { recursive: true, force: true });
+  const profile = profileFor(git('rev-parse', '--abbrev-ref', 'HEAD'), process.env.GATE_PERFIL);
+  const plan = planFor({
+    profile,
+    steps: STEPS,
+    dockerSteps: DOCKER_STEPS,
+    hasDocker: dockerAvailable(),
+    rules: profile === 'release' ? [] : changedRuleFiles(),
+  });
+  if (!plan.ok) fail(plan.reason);
+  const env = gateEnv(process.env, await gatePostgresPort(process.env));
+  console.log(`Perfil: ${profile} · base do diff: ${detectBase()} · TZ=UTC · POSTGRES_PORT=${env.POSTGRES_PORT}`);
+  const sha = git('rev-parse', 'HEAD');
+  const started = Date.now();
+  const outcome = await runAll(plan.steps, env);
 
   const line = formatReceipt({
     sha,
-    passed,
-    e2eTests,
-    steps: done,
-    skipped,
+    passed: outcome.passed,
+    e2eTests: outcome.e2eTests,
+    steps: outcome.done,
+    skipped: plan.skipped,
     minutes: (Date.now() - started) / 60_000,
   });
   mkdirSync('.gate', { recursive: true });
   writeFileSync('.gate/recibo.txt', `${line}\n`);
   console.log(`\nCole no corpo do PR:\n${line}`);
-  process.exit(passed ? 0 : 1);
+  process.exit(outcome.passed ? 0 : 1);
 }
 
 void main();
