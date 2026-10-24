@@ -224,7 +224,7 @@ export function WeekView({
                         appointment.endsAt,
                         range,
                       );
-                      const label = `${formatTime(appointment.startsAt)}–${formatTime(appointment.endsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`;
+                      const label = `${formatTime(appointment.startsAt)}–${formatTime(appointment.endsAt)} ${listPatientName(appointment, homonyms)} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`;
                       const density = blockDensity(
                         appointment.startsAt,
                         appointment.endsAt,
