@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { SummaryCard } from '@/components/summary-card';
 import { TriagePhotoList } from '@/components/triage-photo-list';
 import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
+import { startOfZonedDayAfter } from '@/domain/shared/time-zone';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
 import { apiFetch } from '@/lib/client';
 import { dayCounts, nextAppointment, pendingClosure } from '@/lib/day-summary';
@@ -37,17 +38,14 @@ interface SummaryData {
 /** Janela dos últimos 30 dias até agora — onde procurar consulta sem desfecho. */
 function closurePendingRange(): string {
   const end = new Date();
-  const start = new Date(end);
-  start.setDate(start.getDate() - 30);
+  const start = startOfZonedDayAfter(end, -30);
   return `from=${start.toISOString()}&to=${end.toISOString()}`;
 }
 
-/** Início e fim do dia local — janela de "Consultas de hoje" sem o resumo. */
+/** Início e fim do dia da clínica — janela de "Consultas de hoje" sem o resumo. */
 function todayRange(): string {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const start = startOfZonedDayAfter(new Date(), 0);
+  const end = startOfZonedDayAfter(new Date());
   return `from=${start.toISOString()}&to=${end.toISOString()}`;
 }
 

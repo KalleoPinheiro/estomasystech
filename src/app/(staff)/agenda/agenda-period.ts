@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { clinicDayCell } from '@/lib/clinic-calendar';
 import { dayKey } from './calendar-days';
 
 export type AgendaView = 'month' | 'week' | 'day';
@@ -51,7 +52,7 @@ export function dayLabel(date: Date): string {
 
 /** Dia em que a visão entra: hoje, se cair no período exibido; senão o primeiro dia dele. */
 function entryDay(from: Date, to: Date): Date {
-  const today = new Date();
+  const today = clinicDayCell();
   return today >= from && today < to ? today : from;
 }
 
@@ -77,9 +78,10 @@ export interface AgendaPeriod {
 /** Período da agenda: mês (padrão), semana ou dia, com navegação para frente e para trás. */
 export function useAgendaPeriod(initial: Date): AgendaPeriod {
   const [view, setViewState] = useState<AgendaView>('month');
-  const [anchor, setAnchor] = useState(
-    () => new Date(initial.getFullYear(), initial.getMonth(), 1),
-  );
+  const [anchor, setAnchor] = useState(() => {
+    const day = clinicDayCell(initial);
+    return new Date(day.getFullYear(), day.getMonth(), 1);
+  });
 
   return useMemo(() => {
     const monthDate = new Date(anchor.getFullYear(), anchor.getMonth(), 1);

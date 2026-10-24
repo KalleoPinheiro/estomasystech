@@ -1,6 +1,7 @@
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 import type { TimeSlot } from '../shared/time-slot';
+import { appTimeZone, zonedDateKey, zonedParts } from '../shared/time-zone';
 import { formatMinuteOfDay } from './schedule-config';
 
 /**
@@ -47,9 +48,12 @@ const WEEKDAY_NAMES = [
   'sábado',
 ];
 
-/** Data local AAAA-MM-DD de um instante (o servidor roda no fuso da clínica). */
-export function localDateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+/** Data AAAA-MM-DD de um instante no fuso da clínica (#563), não no do processo. */
+export function localDateKey(
+  date: Date,
+  timeZone: string = appTimeZone(),
+): string {
+  return zonedDateKey(date, timeZone);
 }
 
 function parseDateKey(value: string): number | null {
@@ -194,13 +198,16 @@ export function describeWeeklyWindows(
 export function assertWithinProfessionalHours(
   slot: TimeSlot,
   windows: readonly WeeklyWindow[],
+  timeZone: string = appTimeZone(),
 ): void {
   if (windows.length === 0) {
     return;
   }
-  const weekday = slot.start.getDay();
-  const start = slot.start.getHours() * 60 + slot.start.getMinutes();
-  const end = slot.end.getHours() * 60 + slot.end.getMinutes() || 24 * 60;
+  const from = zonedParts(slot.start, timeZone);
+  const to = zonedParts(slot.end, timeZone);
+  const weekday = from.weekday;
+  const start = from.hour * 60 + from.minute;
+  const end = to.hour * 60 + to.minute || 24 * 60;
   const fits = windows.some(
     (w) =>
       w.weekday === weekday && w.startMinute <= start && end <= w.endMinute,

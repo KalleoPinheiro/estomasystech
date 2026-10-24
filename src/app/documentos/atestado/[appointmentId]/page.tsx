@@ -6,7 +6,7 @@ import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import type { AppointmentDto, PatientDto } from '@/lib/dto';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import {
   type DocumentIssuance,
@@ -101,11 +101,6 @@ export default function AttendanceDocumentPage({
   if (guard) return guard;
   if (!clinic || !appointment || !issuance) return null;
 
-  const start = new Date(appointment.startsAt);
-  const end = new Date(appointment.endsAt);
-  const time = (d: Date) =>
-    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
   return (
     <DocumentFrame
       clinic={clinic}
@@ -120,9 +115,10 @@ export default function AttendanceDocumentPage({
           ? ` (nascido(a) em ${formatDate(patient.birthDate)})`
           : ''}{' '}
         compareceu a atendimento de estomaterapia nesta clínica no dia{' '}
-        <strong>{start.toLocaleDateString('pt-BR')}</strong>, no período de{' '}
-        <strong>{time(start)}</strong> às <strong>{time(end)}</strong>, para
-        realização de: <strong>{appointment.procedure}</strong>.
+        <strong>{formatDate(appointment.startsAt)}</strong>, no período de{' '}
+        <strong>{formatTime(appointment.startsAt)}</strong> às{' '}
+        <strong>{formatTime(appointment.endsAt)}</strong>, para realização de:{' '}
+        <strong>{appointment.procedure}</strong>.
       </p>
       <p>Por ser verdade, firmo a presente declaração.</p>
     </DocumentFrame>

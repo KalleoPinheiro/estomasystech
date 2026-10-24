@@ -1,6 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { ListAppointments } from '@/application/appointments/list-appointments';
 import { GetBillingSummary } from '@/application/billing/get-billing-summary';
+import {
+  startOfZonedDay,
+  startOfZonedDayAfter,
+  startOfZonedMonth,
+  zonedParts,
+} from '@/domain/shared/time-zone';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -20,22 +26,19 @@ export async function GET(request: NextRequest) {
 
   return handleRequest(async () => {
     const now = new Date();
-    const [year, monthIndex] = month
-      ? [Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1]
-      : [now.getFullYear(), now.getMonth()];
-    const from = new Date(year, monthIndex, 1);
-    const to = new Date(year, monthIndex + 1, 1);
+    const current = zonedParts(now);
+    const [year, monthNumber] = month
+      ? [Number(month.slice(0, 4)), Number(month.slice(5, 7))]
+      : [current.year, current.month];
+    const from = startOfZonedMonth(year, monthNumber);
+    const to = startOfZonedMonth(year, monthNumber + 1);
 
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
+    const startOfToday = startOfZonedDay(
+      current.year,
+      current.month,
+      current.day,
     );
-    const endOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1,
-    );
+    const endOfToday = startOfZonedDayAfter(now);
 
     // Escopo da sessão: o painel de uma empresa nunca soma faturamento nem
     // lista consultas (com nome de paciente) de outra.

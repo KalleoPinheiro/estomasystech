@@ -10,11 +10,11 @@ import { useApiQuery } from '@/lib/use-api-query';
 
 const WAIT_WINDOW_DAYS = 30;
 
-/** AAAA-MM-DD + n dias (datas locais). */
+/** AAAA-MM-DD + n dias (calendário puro, sem fuso). */
 function addDays(day: string, days: number): string {
   const [y, m, d] = day.split('-').map(Number);
-  const date = new Date(y, m - 1, d + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const date = new Date(Date.UTC(y, m - 1, d + days));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 }
 
 /**

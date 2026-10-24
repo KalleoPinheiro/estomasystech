@@ -3,6 +3,7 @@
 import { Button, Card } from '@still-void/ui/react';
 import { useState } from 'react';
 import { StatusBadge } from '@/components/status-badge';
+import { clinicDayCell, instantDayKey } from '@/lib/clinic-calendar';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
 import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
@@ -21,7 +22,7 @@ interface MobileMonthProps {
 
 /** Hoje, se estiver no mês exibido; senão o dia 1 do mês. */
 function initialDay(monthDate: Date): string {
-  const today = new Date();
+  const today = clinicDayCell();
   return today.getMonth() === monthDate.getMonth() &&
     today.getFullYear() === monthDate.getFullYear()
     ? dayKey(today)
@@ -49,12 +50,12 @@ export function MobileMonth({
   });
   const selectedKey =
     selection.monthKey === monthKey ? selection.day : initialDay(monthDate);
-  const todayKey = dayKey(new Date());
+  const todayKey = dayKey(clinicDayCell());
 
   const byDay = new Map<string, AppointmentDto[]>();
   const homonyms = homonymPatientIds(appointments);
   for (const appointment of appointments) {
-    const key = dayKey(new Date(appointment.startsAt));
+    const key = instantDayKey(appointment.startsAt);
     byDay.set(key, [...(byDay.get(key) ?? []), appointment]);
   }
 

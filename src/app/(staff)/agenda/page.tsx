@@ -24,12 +24,14 @@ import {
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { apiFetch } from '@/lib/client';
+import { cellStart, clinicDayCell, clinicInstant } from '@/lib/clinic-calendar';
 import type {
   AppointmentDto,
   ProfessionalOptionDto,
   ScheduleClosureDto,
   WaitlistEntryDto,
 } from '@/lib/dto';
+import { formatDate } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useAgendaPeriod } from './agenda-period';
 import { type ActionExtras, AppointmentDetail } from './appointment-detail';
@@ -114,8 +116,7 @@ function AgendaNotices({
 function waitlistStartDay(fromDate: string): Date {
   const [year, month, day] = fromDate.split('-').map(Number);
   const from = new Date(year, month - 1, day);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = clinicDayCell();
   return from < today ? today : from;
 }
 
@@ -194,7 +195,7 @@ export default function AgendaPage() {
   const period = useAgendaPeriod(consultationLink?.startsAt ?? new Date());
   const [recall] = useState(readRecallParams);
   const [creatingFor, setCreatingFor] = useState<Date | null>(() =>
-    readRecallParams() ? new Date() : null,
+    readRecallParams() ? clinicDayCell() : null,
   );
   const [selected, setSelected] = useState<AppointmentDto | null>(null);
   // Entrada da lista de espera sendo agendada pelo formulário de consulta.
@@ -211,7 +212,7 @@ export default function AgendaPage() {
     const filter = professionalFilter
       ? `&professionalId=${encodeURIComponent(professionalFilter)}`
       : '';
-    return `from=${period.from.toISOString()}&to=${period.to.toISOString()}${filter}`;
+    return `from=${cellStart(period.from).toISOString()}&to=${cellStart(period.to).toISOString()}${filter}`;
   }, [period.from, period.to, professionalFilter]);
   // O filtro vai ao servidor (AGE-FLT-03); `status=` vazio pede nenhum status.
   const appointmentsUrl = `/api/appointments?${periodQuery}&status=${statuses.join(',')}`;
@@ -258,7 +259,7 @@ export default function AgendaPage() {
   } | null>(null);
 
   const handleCreate = async (values: AppointmentFormValues) => {
-    const startsAt = new Date(`${values.date}T${values.startTime}:00`);
+    const startsAt = clinicInstant(values.date, values.startTime);
     const endsAt = new Date(
       startsAt.getTime() + values.durationMinutes * 60_000,
     );
@@ -284,9 +285,7 @@ export default function AgendaPage() {
         text:
           result.skipped.length > 0
             ? `Série criada: ${result.created.length} sessão(ões); ${result.skipped.length} pulada(s) — ` +
-              result.skipped
-                .map((s) => new Date(s.startsAt).toLocaleDateString('pt-BR'))
-                .join(', ')
+              result.skipped.map((s) => formatDate(s.startsAt)).join(', ')
             : `Série criada: ${result.created.length} sessões.`,
         variant: result.skipped.length > 0 ? 'warning' : 'success',
       });
@@ -399,7 +398,7 @@ export default function AgendaPage() {
         actions={
           <Button
             type="button"
-            onClick={() => setCreatingFor(new Date())}
+            onClick={() => setCreatingFor(clinicDayCell())}
             // Antes da hidratação o clique se perderia (#484): o botão fica
             // desabilitado até responder.
             disabled={!hydrated}

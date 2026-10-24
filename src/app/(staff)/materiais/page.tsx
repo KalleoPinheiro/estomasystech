@@ -28,9 +28,15 @@ import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
 import { SheetPanel } from '@/components/sheet-panel';
 import { StatusBadge } from '@/components/status-badge';
+import { startOfZonedDayAfter } from '@/domain/shared/time-zone';
 import { apiFetch } from '@/lib/client';
 import type { AppointmentDto, StockMovementDto, SupplyDto } from '@/lib/dto';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import {
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 
 interface SupplyInsightDto {
@@ -612,8 +618,8 @@ function SupplyForm({
 
 const todayRange = () => {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const start = startOfZonedDayAfter(now, 0);
+  const end = startOfZonedDayAfter(now);
   return { from: start.toISOString(), to: end.toISOString() };
 };
 
@@ -729,11 +735,8 @@ function OutMovementFields({
         <option value="">— sem vínculo —</option>
         {appointments.map((appointment) => (
           <option key={appointment.id} value={appointment.id}>
-            {new Date(appointment.startsAt).toLocaleTimeString('pt-BR', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}{' '}
-            — {appointment.patientName ?? 'Paciente'} ({appointment.procedure})
+            {formatTime(appointment.startsAt)} —{' '}
+            {appointment.patientName ?? 'Paciente'} ({appointment.procedure})
           </option>
         ))}
       </NativeSelect>

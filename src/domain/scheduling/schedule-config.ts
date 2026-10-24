@@ -26,7 +26,7 @@ export const DEFAULT_CANCELLATION_POLICY: CancellationPolicy = {
 const MAX_NOTICE_HOURS = 168;
 const MAX_LATE_FEE_CENTS = 1_000_000;
 
-/** Dias da semana como em Date.getDay(): 0=domingo … 6=sábado. */
+/** Dias da semana mesma convenção de `weekday` do fuso: 0=domingo … 6=sábado. */
 export interface ScheduleConfig {
   weekdays: number[];
   startHour: number;

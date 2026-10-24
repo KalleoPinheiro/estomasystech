@@ -3,6 +3,7 @@
 import { Button, Card } from '@still-void/ui/react';
 import { EmptyState } from '@/components/feedback';
 import type { ScheduleConfig } from '@/domain/scheduling/schedule-config';
+import { clinicDayCell, instantDayKey } from '@/lib/clinic-calendar';
 import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { formatTime } from '@/lib/format';
@@ -100,7 +101,7 @@ export function WeekView({
   const isDay = dayCount === 1;
   const columns = `3.5rem repeat(${dayCount},minmax(0,1fr))`;
   const now = new Date();
-  const todayKey = dayKey(now);
+  const todayKey = dayKey(clinicDayCell(now));
   const range = visibleHours(scheduleConfig, appointments, showCancelled);
   const hours = Array.from(
     { length: range.endHour - range.startHour },
@@ -165,7 +166,7 @@ export function WeekView({
               const invalid =
                 isInvalidDay(day, scheduleConfig) || Boolean(clinicClosure);
               const dayAppointments = appointments.filter(
-                (appointment) => dayKey(new Date(appointment.startsAt)) === key,
+                (appointment) => instantDayKey(appointment.startsAt) === key,
               );
               const cancelled = showCancelled
                 ? 0

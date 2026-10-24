@@ -1,4 +1,5 @@
 import type { ScheduleConfig } from '@/domain/scheduling/schedule-config';
+import { clinicMinutesOfDay } from '@/lib/clinic-calendar';
 import type { AppointmentDto } from '@/lib/dto';
 
 /** Consulta posicionada na coluna do dia: `lane` de `lanes` raias lado a lado. */
@@ -58,10 +59,7 @@ export function layoutDay(
   return placed;
 }
 
-const minutesOfDay = (iso: string): number => {
-  const date = new Date(iso);
-  return date.getHours() * 60 + date.getMinutes();
-};
+const minutesOfDay = clinicMinutesOfDay;
 
 /**
  * Faixa de horas exibida: a da grade da clínica, ampliada para caber qualquer

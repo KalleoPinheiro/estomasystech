@@ -156,6 +156,7 @@ npm run dev                   # http://localhost:3000
 | `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
+| `NEXT_PUBLIC_APP_TIMEZONE` | não | fuso da clínica no navegador (ADR-073) | derivada de `APP_TIMEZONE` por `next.config.ts` no build; não defina à mão |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | não | sync de agenda via OAuth (nunca login) | [google-calendar.md](integrations/google-calendar.md) |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_CALENDAR_ID` | não | sync via service account (alternativa) | idem |
 | `CRON_SECRET` | sim para os lembretes e a retenção | header `x-cron-secret` de `POST /api/reminders/run` e `POST /api/retention/run` (ou `Authorization: Bearer` do Vercel Cron em `GET`); sem ele, 503 | [cron.md](integrations/cron.md), [retencao.md](integrations/retencao.md) |

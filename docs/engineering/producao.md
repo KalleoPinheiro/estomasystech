@@ -165,7 +165,7 @@ Produção continua nesta VPS. Um banco de produção nunca é apontado para lá
   do Coolify são inertes com Traefik. O rate limit do app (`TRUSTED_PROXY_HOPS`) continua valendo.
 - **Checklist de deploy no Coolify (Dockerfile)** — verificado contra o código em 2026-10-18:
   - *Imagem*: `Dockerfile` já roda como `nextjs` (não-root), `PORT=3000`, `HOSTNAME=0.0.0.0`,
-    `HEALTHCHECK` em `/api/health` (liveness, sem banco) e `TZ`/`APP_TIMEZONE=America/Sao_Paulo`.
+    `HEALTHCHECK` em `/api/health` (liveness, sem banco) e `TZ`/`APP_TIMEZONE=America/Sao_Paulo`. O cliente recebe o mesmo fuso no build (`NEXT_PUBLIC_APP_TIMEZONE`, derivado de `APP_TIMEZONE`; ADR-073); sem variável nova obrigatória.
     No Coolify use a porta 3000 e, como verificação do recurso, `/api/health/ready`.
   - *Memória do build*: o `Dockerfile` define `ENV NODE_OPTIONS=--max-old-space-size=4096` no
     estágio `builder` (só nele; o `runner` não herda). O `--max-old-space-size` do script

@@ -1,4 +1,4 @@
-import { appTimeZone } from '@/domain/shared/time-zone';
+import { appTimeZone, isValidTimeZone } from '@/domain/shared/time-zone';
 import { logger } from '@/lib/observability/logger';
 
 /** Fuso efetivo do processo Node (`TZ`), como o `Date` local o enxerga. */
@@ -37,6 +37,11 @@ export function assertProcessTimeZone(): void {
  */
 export function alignProcessTimeZone(): void {
   const expected = appTimeZone();
+  if (!isValidTimeZone(expected)) {
+    throw new Error(
+      `APP_TIMEZONE (${expected}) não é um fuso IANA válido (ex.: America/Sao_Paulo).`,
+    );
+  }
   if (processTimeZone() !== expected) {
     process.env.TZ = expected;
     logger.warn(

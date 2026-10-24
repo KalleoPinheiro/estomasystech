@@ -62,6 +62,8 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: APP_VERSION,
     NEXT_PUBLIC_RELEASE_VERSION: RELEASE_VERSION,
+    // Fuso da clínica para o cliente (#543): sem segredo, igual ao do servidor.
+    NEXT_PUBLIC_APP_TIMEZONE: process.env.APP_TIMEZONE?.trim() || "America/Sao_Paulo",
     NEXT_PUBLIC_APP_COMMIT: isHomologation
       ? (process.env.VERCEL_GIT_COMMIT_SHA ?? "")
       : "",

@@ -10,6 +10,7 @@ import {
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { ApiError } from '@/lib/client';
+import { clinicDayCell } from '@/lib/clinic-calendar';
 import type { ProcedureOptionDto, ProfessionalOptionDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 import { dayKey } from './calendar-grid';
@@ -68,7 +69,7 @@ export function AppointmentForm({
 }: AppointmentFormProps) {
   const [values, setValues] = useState<AppointmentFormValues>({
     patientId: defaultPatientId ?? '',
-    date: defaultDate ? dayKey(defaultDate) : dayKey(new Date()),
+    date: defaultDate ? dayKey(defaultDate) : dayKey(clinicDayCell()),
     startTime: '09:00',
     durationMinutes: 60,
     procedure: defaultProcedure ?? '',

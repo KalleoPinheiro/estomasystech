@@ -12,6 +12,7 @@ import {
 } from '@/domain/scheduling/schedule-config';
 import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 import { Money } from '@/domain/shared/money';
+import { zonedParts } from '@/domain/shared/time-zone';
 
 export interface StaffAbsenceResult {
   appointment: Appointment;
@@ -19,8 +20,10 @@ export interface StaffAbsenceResult {
   feeInvoice: Invoice | null;
 }
 
-const dayMonth = (date: Date): string =>
-  `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+const dayMonth = (date: Date): string => {
+  const { day, month } = zonedParts(date);
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+};
 
 /**
  * Taxa de cancelamento tardio/falta: fatura pendente comum, ligada à consulta

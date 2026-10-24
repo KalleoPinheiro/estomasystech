@@ -7,14 +7,14 @@ import type {
   PayoutMethod,
   PayoutStatus,
 } from '@/domain/billing/commission-payout';
+import { zonedMonthKey } from '@/domain/shared/time-zone';
 
 /** Mês de fechamento (AAAA-MM). */
 export const PAYOUT_PERIOD_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /** Mês anterior ao atual — o próximo a ser fechado. */
 export function previousPeriod(now: Date): string {
-  const date = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  return zonedMonthKey(now, -1);
 }
 
 export interface PayoutItemDto {
