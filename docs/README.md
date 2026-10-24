@@ -53,6 +53,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Traefik do Coolify, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
 | [`engineering/backup-passo-a-passo.md`](engineering/backup-passo-a-passo.md) | **backup cifrado do zero**, para leigo: chave `age`, R2 na UE, scripts, alerta por e-mail, primeiro backup e teste de restauração, com as armadilhas da instalação real |
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
+| [`engineering/performance-front-linha-de-base-2026-10.md`](engineering/performance-front-linha-de-base-2026-10.md) | **linha de base do front** (Next.js): JS por rota, FCP/LCP/CLS e chamadas `/api` em 360/390/768/1280, auditoria de recursos do Next e da hidratação (retrato de 2026-10-24) |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
 | [`engineering/api.md`](engineering/api.md) | rotas REST centrais |
@@ -131,6 +132,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/065-termo-de-tratamento-sem-responsavel-tecnico.md`](adr/065-termo-de-tratamento-sem-responsavel-tecnico.md) | termo de tratamento sem a linha do responsável técnico; versão v3 |
 | [`adr/066-versao-do-sistema-registrada-no-banco.md`](adr/066-versao-do-sistema-registrada-no-banco.md) | versão do sistema gravada em `app_releases` a cada implantação; `GET /api/version`; rodapé com fallback |
 | [`adr/068-codigo-do-commit-so-na-homologacao-e-sha-acompanha-o-deploy.md`](adr/068-codigo-do-commit-so-na-homologacao-e-sha-acompanha-o-deploy.md) | código do commit só na homologação; SHA de `app_releases` atualiza a cada deploy da mesma versão |
+| [`adr/069-dados-no-servidor-e-politica-de-cache.md`](adr/069-dados-no-servidor-e-politica-de-cache.md) | telas carregam dados em Server Components e escrevem por Server Actions; nenhum dado de clínica em cache compartilhado; foto autenticada fora do otimizador; sem PPR enquanto a CSP usar nonce (proposto) |
 | [`adr/067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md`](adr/067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md) | Configurações em página única com índice fixo no celular; sub-rotas adiadas |
 | [`adr/063-alerta-de-infeccao-e-aviso-de-coerencia-no-time.md`](adr/063-alerta-de-infeccao-e-aviso-de-coerencia-no-time.md) | decisões clínicas sobre o TIME: infecção local ou pior alerta na triagem, % de tecido fora do PUSH, coerência nível × sinais como aviso |
 | [`adr/061-vercel-constroi-so-a-staging.md`](adr/061-vercel-constroi-so-a-staging.md) | a Vercel só constrói a `staging` (`git.deploymentEnabled`); sem prévia por PR nem branch Neon por deploy; complementa o ADR-041 |
