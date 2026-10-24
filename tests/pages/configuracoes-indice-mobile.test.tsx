@@ -78,11 +78,11 @@ describe('Feature: índice de Configurações em sub-rotas (#522)', () => {
         .map((link) => link.getAttribute('href')),
     ).toEqual(sections.map((slug) => `/configuracoes/${slug}`));
 
-    for (const slug of sections) {
+    for (const slug of SETTINGS_SECTIONS.map((section) => section.slug)) {
       cleanup();
       renderWithToast(
         <WithStaffIdentity>
-          <SettingsSectionPage slug={slug as never}>
+          <SettingsSectionPage slug={slug}>
             <p>conteúdo</p>
           </SettingsSectionPage>
         </WithStaffIdentity>,

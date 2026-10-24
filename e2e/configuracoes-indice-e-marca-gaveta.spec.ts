@@ -48,6 +48,18 @@ test.describe("Configurações em sub-rotas (#522)", () => {
     await expect(page).toHaveURL(/\/configuracoes$/);
   });
 
+  test("a rolagem da página não vira rolagem interna do conteúdo (1280px)", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/configuracoes/contas");
+    await settle(page);
+    const overflow = await page
+      .locator("main")
+      .first()
+      .evaluate((el) => getComputedStyle(el).overflowY);
+    expect(overflow).not.toBe("auto");
+    expect(overflow).not.toBe("scroll");
+  });
+
   test("link antigo com âncora leva à sub-rota da seção", async ({ page }) => {
     await page.goto("/configuracoes#horarios");
     await expect(page).toHaveURL(/\/configuracoes\/horarios$/);
