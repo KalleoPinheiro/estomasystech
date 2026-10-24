@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -221,5 +222,49 @@ describe('Feature: Canceladas pedidas pelo filtro aparecem na grade (#538)', () 
     render(<WeekView {...props} showCancelled />);
     expect(screen.queryByText('1 cancelada')).toBeNull();
     expect(screen.getByRole('button', { name: /Paciente/ })).toBeTruthy();
+  });
+});
+
+describe('Feature: A URL é a única fonte do filtro de status (#538)', () => {
+  it('Dado ?status=cancelled aberto, Quando o roteador navega para /agenda sem parâmetros (clique em «Agenda» no menu), Então volta ao padrão', async () => {
+    window.history.replaceState(null, '', '/agenda?status=cancelled');
+    mockFetch();
+    renderWithToast(<AgendaPage />);
+    expect(
+      await screen.findByRole('button', { name: 'Cancelada, 4 consultas' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    // O roteador do Next navega com history.pushState, sem popstate.
+    act(() => {
+      window.history.pushState(null, '', '/agenda');
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
+      ).toHaveAttribute('aria-pressed', 'true'),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Cancelada, 4 consultas' }),
+    ).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('Dado o padrão, Quando o roteador navega para ?status=no_show, Então só Faltou fica marcada', async () => {
+    mockFetch();
+    renderWithToast(<AgendaPage />);
+    await screen.findByRole('button', { name: 'Agendada, 3 consultas' });
+
+    act(() => {
+      window.history.pushState(null, '', '/agenda?status=no_show');
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Faltou, 2 consultas' }),
+      ).toHaveAttribute('aria-pressed', 'true'),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
+    ).toHaveAttribute('aria-pressed', 'false');
   });
 });

@@ -160,22 +160,36 @@ function readConsultationLink() {
   return id && !Number.isNaN(startsAt.getTime()) ? { id, startsAt } : null;
 }
 
-const URL_CHANGE_EVENT = 'agenda-url-change';
-
+/**
+ * Avisa quem lê a URL de qualquer mudança dela: voltar/avançar (`popstate`) e
+ * as navegações do roteador do Next, que usam `history.pushState`/`replaceState`
+ * e não disparam evento (ex.: clicar em «Agenda» no menu com `?status=` aberto).
+ */
 const subscribeToUrl = (onChange: () => void) => {
+  const { history } = window;
+  const { pushState, replaceState } = history;
+  history.pushState = (...args) => {
+    pushState.apply(history, args);
+    onChange();
+  };
+  history.replaceState = (...args) => {
+    replaceState.apply(history, args);
+    onChange();
+  };
   window.addEventListener('popstate', onChange);
-  window.addEventListener(URL_CHANGE_EVENT, onChange);
   return () => {
+    // Só desfaz o que esta assinatura instalou, sem derrubar o patch de outra.
     window.removeEventListener('popstate', onChange);
-    window.removeEventListener(URL_CHANGE_EVENT, onChange);
+    history.pushState = pushState;
+    history.replaceState = replaceState;
   };
 };
 
 /**
  * Filtro de status na URL (`?status=`, AGE-FLT-04): o link compartilhado e o
  * recarregar mantêm o recorte. Lê `window.location` por `useSyncExternalStore`
- * (no servidor, sem parâmetro) para a hidratação não divergir; grava com
- * `history.replaceState`, sem navegar nem refazer a página.
+ * (no servidor, sem parâmetro) para a hidratação não divergir; a URL é a
+ * única fonte, sem estado local espelhado. Grava com `history.replaceState`.
  */
 function useStatusFilter() {
   const search = useSyncExternalStore(
@@ -196,7 +210,6 @@ function useStatusFilter() {
       url.searchParams.set('status', value);
     }
     window.history.replaceState(window.history.state, '', url);
-    window.dispatchEvent(new Event(URL_CHANGE_EVENT));
   }, []);
   return { statuses, setStatuses };
 }

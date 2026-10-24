@@ -104,6 +104,18 @@ test.describe("agenda: filtro por status (#538)", () => {
     await expect(chip(page, /^Cancelada/)).toHaveAttribute("aria-pressed", "false");
   });
 
+  test("clicar em «Agenda» no menu limpa o recorte da URL e volta ao padrão", async ({ page }) => {
+    await page.goto("/agenda?status=cancelled");
+    await expect(chip(page, /^Cancelada/)).toHaveAttribute("aria-pressed", "true");
+    await expect(chip(page, /^Agendada/)).toHaveAttribute("aria-pressed", "false");
+
+    await page.getByRole("link", { name: "Agenda", exact: true }).first().click();
+
+    await expect(page).not.toHaveURL(/status=/);
+    await expect(chip(page, /^Agendada/)).toHaveAttribute("aria-pressed", "true");
+    await expect(chip(page, /^Cancelada/)).toHaveAttribute("aria-pressed", "false");
+  });
+
   for (const width of [360, 390]) {
     test(`sem rolagem horizontal da página em ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
