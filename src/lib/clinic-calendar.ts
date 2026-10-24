@@ -56,3 +56,13 @@ export function clinicMinutesOfDay(iso: string): number {
   const { hour, minute } = zonedParts(new Date(iso));
   return hour * 60 + minute;
 }
+
+/** Primeiro instante do dia `AAAA-MM-DD` escolhido num formulário, no fuso da clínica. */
+export function clinicDayStart(date: string): Date {
+  return clinicInstant(date, '00:00');
+}
+
+/** Último instante do dia `AAAA-MM-DD` (23:59:59 + `ms`), no fuso da clínica. */
+export function clinicDayEnd(date: string, ms = 0): Date {
+  return new Date(clinicInstant(date, '23:59').getTime() + 59_000 + ms);
+}

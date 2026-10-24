@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const ROOTS = ['src/domain', 'src/application', 'src/app/api', 'src/lib'];
+const ROOTS = ['src/domain', 'src/application', 'src/app', 'src/lib'];
 
 /**
  * Allowlist com justificativa (ADR-073): estes arquivos usam getters locais
@@ -16,7 +16,10 @@ const ALLOWLIST: Record<string, string> = {
 };
 
 const BANNED =
-  /\.(getHours|getMinutes|getDay|getDate|getMonth|getFullYear|setHours|setDate|setMonth|setMinutes|setFullYear)\(|\bnew Date\(\s*\w+(\.\w+\(\))?,\s*[\w.() +-]+,|toLocale(Date|Time)?String\(\s*'pt-BR'\s*\)/;
+  /new Date\(`\$\{[^}]+\}T|\.(getHours|getMinutes|getDay|getDate|getMonth|getFullYear|setHours|setDate|setMonth|setMinutes|setFullYear)\(|\bnew Date\(\s*\w+(\.\w+\(\))?,\s*[\w.() +-]+,|toLocale(Date|Time)?String\(\s*'pt-BR'\s*\)/;
+
+/** A agenda desenha células de calendário (meia-noite do aparelho), sem instante. */
+const ALLOWED_DIRS = ['src/app/(staff)/agenda/'];
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -33,6 +36,7 @@ describe('Feature: regras de data não leem o fuso do processo (ADR-073)', () =>
   it('Dado src/domain, application, api e lib, Quando varre, Então nenhum getter/setter local nem toLocale sem timeZone', () => {
     const offenders = ROOTS.flatMap(walk)
       .filter((file) => !ALLOWLIST[file.split(path.sep).join('/')])
+      .filter((file) => !ALLOWED_DIRS.some((dir) => file.startsWith(dir)))
       .filter((file) => BANNED.test(readFileSync(file, 'utf8')))
       .sort();
     expect(offenders).toEqual([]);

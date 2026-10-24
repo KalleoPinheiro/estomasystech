@@ -25,6 +25,7 @@ import {
   formatDateTimeWithSeconds,
   RESOURCE_LABELS,
 } from '@/lib/audit-labels';
+import { clinicDayEnd, clinicDayStart } from '@/lib/clinic-calendar';
 import type { AuditEventDto } from '@/lib/dto';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 
@@ -36,7 +37,7 @@ type Filters = { patientId: string; from: string; to: string };
 /** Data da URL só vale se existir no calendário: `?de=abc` não pode derrubar a tela. */
 function validDateParam(value: string | null | undefined): string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
-  return Number.isNaN(new Date(`${value}T00:00:00`).getTime()) ? '' : value;
+  return Number.isNaN(clinicDayStart(value).getTime()) ? '' : value;
 }
 
 /** Filtros na URL (`?paciente=&de=&ate=`): a tela compartilha e recarrega o mesmo recorte. */
@@ -74,8 +75,8 @@ export default function AuditPage() {
 
   const params = new URLSearchParams();
   if (patientId) params.set('patientId', patientId);
-  if (from) params.set('from', new Date(`${from}T00:00:00`).toISOString());
-  if (to) params.set('to', new Date(`${to}T23:59:59.999`).toISOString());
+  if (from) params.set('from', clinicDayStart(from).toISOString());
+  if (to) params.set('to', clinicDayEnd(to, 999).toISOString());
   const query = params.toString() ? `?${params.toString()}` : '';
   const {
     items: events,

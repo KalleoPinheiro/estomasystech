@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ClosePayout, GetPayoutOverview } from '@/application/billing/payouts';
 import { PAYOUT_METHODS } from '@/domain/billing/commission-payout';
+import { zonedInstant } from '@/domain/shared/time-zone';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
@@ -80,8 +81,11 @@ export async function POST(request: NextRequest) {
     }).execute({
       professionalId: body.professionalId,
       period: body.period,
-      // Data do pagamento ao meio-dia local: não "volta" um dia em UTC.
-      paidAt: new Date(`${body.paidAt}T12:00:00`),
+      // Data do pagamento ao meio-dia da clínica: não "volta" um dia em UTC.
+      paidAt: zonedInstant(
+        ...(body.paidAt.split('-').map(Number) as [number, number, number]),
+        12,
+      ),
       paymentMethod: body.paymentMethod,
       notes: body.notes,
       createdBy: session.subject,
