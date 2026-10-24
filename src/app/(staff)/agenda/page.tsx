@@ -7,11 +7,18 @@ import {
   NativeSelect,
 } from '@still-void/ui/react';
 import { useMediaQuery, useToast } from '@still-void/ui/react/client';
-import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHydrated } from '@/components/app-shell/use-hydrated';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
+import type { AppointmentStatus } from '@/domain/scheduling/appointment';
+import {
+  parseStatusFilter,
+  serializeStatusFilter,
+  toggleStatus,
+} from '@/domain/scheduling/appointment-status-filter';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
@@ -32,6 +39,7 @@ import {
 } from './appointment-form';
 import { CalendarGrid } from './calendar-grid';
 import { PeriodNav } from './period-nav';
+import { StatusFilter } from './status-filter';
 import { WaitlistPanel } from './waitlist-panel';
 import { WeekView } from './week-view';
 
@@ -147,6 +155,36 @@ function readConsultationLink() {
   return id && !Number.isNaN(startsAt.getTime()) ? { id, startsAt } : null;
 }
 
+/**
+ * Filtro de status na URL (`?status=`, AGE-FLT-04): o link compartilhado e o
+ * recarregar mantêm o recorte, e a URL é a única fonte da seleção (sem estado
+ * local espelhado): navegar para `/agenda` sem parâmetros volta ao padrão.
+ */
+function useStatusFilter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const raw = searchParams.get('status');
+  const statuses = useMemo(() => parseStatusFilter(raw), [raw]);
+  const setStatuses = useCallback(
+    (next: readonly AppointmentStatus[]) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const value = serializeStatusFilter(next);
+      if (value === null) {
+        params.delete('status');
+      } else {
+        params.set('status', value);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams],
+  );
+  return { statuses, setStatuses };
+}
+
 export default function AgendaPage() {
   // Abaixo de `md` a grade de 7 colunas com chips não cabe: vira mês compacto.
   const compact = useMediaQuery('(max-width: 767px)');
@@ -165,21 +203,31 @@ export default function AgendaPage() {
   );
   const [waitlistVersion, setWaitlistVersion] = useState(0);
   const [professionalFilter, setProfessionalFilter] = useState('');
+  const { statuses, setStatuses } = useStatusFilter();
 
   const [linkOpened, setLinkOpened] = useState(false);
 
-  const appointmentsUrl = useMemo(() => {
+  const periodQuery = useMemo(() => {
     const filter = professionalFilter
       ? `&professionalId=${encodeURIComponent(professionalFilter)}`
       : '';
-    return `/api/appointments?from=${period.from.toISOString()}&to=${period.to.toISOString()}${filter}`;
+    return `from=${period.from.toISOString()}&to=${period.to.toISOString()}${filter}`;
   }, [period.from, period.to, professionalFilter]);
+  // O filtro vai ao servidor (AGE-FLT-03); `status=` vazio pede nenhum status.
+  const appointmentsUrl = `/api/appointments?${periodQuery}&status=${statuses.join(',')}`;
+  const { data: statusCounts, refresh: refreshCounts } = useApiQuery<
+    Record<AppointmentStatus, number>
+  >(`/api/appointments/status-counts?${periodQuery}`);
 
   const {
     data: appointments,
     error,
-    refresh,
+    refresh: refreshAppointments,
   } = useApiQuery<AppointmentDto[]>(appointmentsUrl);
+  const refresh = () => {
+    refreshAppointments();
+    refreshCounts();
+  };
   useEffect(() => {
     if (!consultationLink || linkOpened || !appointments) {
       return;
@@ -378,7 +426,24 @@ export default function AgendaPage() {
         />
       </div>
 
-      {!appointments ? (
+      <StatusFilter
+        selected={statuses}
+        counts={statusCounts}
+        onToggle={(status) => setStatuses(toggleStatus(statuses, status))}
+      />
+
+      {statuses.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-8 text-center text-ink-3 text-sm">
+          <p>Nenhum status marcado.</p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setStatuses(parseStatusFilter(null))}
+          >
+            Mostrar padrão
+          </Button>
+        </div>
+      ) : !appointments ? (
         <LoadingIndicator />
       ) : period.view !== 'month' && !compact ? (
         <WeekView
@@ -388,6 +453,7 @@ export default function AgendaPage() {
           scheduleConfig={scheduleConfig}
           closures={closures ?? []}
           professionalName={professionalName}
+          showCancelled={statuses.includes('cancelled')}
           onDayClick={(day) => setCreatingFor(day)}
           onAppointmentClick={setSelected}
         />
@@ -399,6 +465,7 @@ export default function AgendaPage() {
           closures={closures ?? []}
           professionalName={professionalName}
           compact={compact}
+          showCancelled={statuses.includes('cancelled')}
           onDayClick={(day) => setCreatingFor(day)}
           onAppointmentClick={setSelected}
         />

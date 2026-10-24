@@ -26,6 +26,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
   useParams: () => ({}),
   usePathname: () => '/agenda',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function jsonResponse(

@@ -51,6 +51,27 @@ type AppointmentRow = typeof appointments.$inferSelect;
 
 const ACTIVE_STATUSES = ['scheduled', 'confirmed'];
 
+/** Consultas que tocam o período, com os filtros opcionais de profissional e status. */
+function rangeFilter(
+  start: Date,
+  end: Date,
+  options?: {
+    professionalId?: string;
+    statuses?: readonly AppointmentStatus[];
+  },
+): SQL | undefined {
+  return and(
+    lt(appointments.startsAt, end),
+    gt(appointments.endsAt, start),
+    options?.professionalId
+      ? eq(appointments.professionalId, options.professionalId)
+      : undefined,
+    options?.statuses
+      ? inArray(appointments.status, [...options.statuses])
+      : undefined,
+  );
+}
+
 const toAppointment = (row: AppointmentRow, cipher: FieldCipher): Appointment =>
   Appointment.restore({
     id: row.id,
@@ -245,12 +266,11 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
   async findInRange(
     start: Date,
     end: Date,
-    options?: { professionalId?: string },
+    options?: {
+      professionalId?: string;
+      statuses?: readonly AppointmentStatus[];
+    },
   ): Promise<Appointment[]> {
-    const base = and(
-      lt(appointments.startsAt, end),
-      gt(appointments.endsAt, start),
-    );
     const rows = await this.db
       .select()
       .from(appointments)
@@ -258,13 +278,39 @@ export class DrizzleAppointmentRepository implements AppointmentRepository {
         withTenant(
           appointments,
           this.clinicId,
-          options?.professionalId
-            ? and(base, eq(appointments.professionalId, options.professionalId))
-            : base,
+          rangeFilter(start, end, options),
         ),
       )
       .orderBy(asc(appointments.startsAt));
     return rows.map((row) => toAppointment(row, this.cipher));
+  }
+
+  async countByStatusInRange(
+    start: Date,
+    end: Date,
+    options?: { professionalId?: string },
+  ): Promise<Record<AppointmentStatus, number>> {
+    const rows = await this.db
+      .select({
+        status: appointments.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(appointments)
+      .where(
+        withTenant(
+          appointments,
+          this.clinicId,
+          rangeFilter(start, end, options),
+        ),
+      )
+      .groupBy(appointments.status);
+    const counts = Object.fromEntries(
+      APPOINTMENT_STATUSES.map((status) => [status, 0]),
+    ) as Record<AppointmentStatus, number>;
+    for (const row of rows) {
+      counts[row.status as AppointmentStatus] = Number(row.count);
+    }
+    return counts;
   }
 
   async getStatsInRange(

@@ -35,6 +35,8 @@ interface WeekViewProps {
   professionalName: (professionalId: string) => string;
   onDayClick: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
+  /** Filtro de status pede as canceladas: viram blocos, em vez do resumo "N canceladas" (#538). */
+  showCancelled?: boolean;
 }
 
 const weekDays = (weekStart: Date, dayCount: number): Date[] =>
@@ -92,13 +94,14 @@ export function WeekView({
   professionalName,
   onDayClick,
   onAppointmentClick,
+  showCancelled = false,
 }: WeekViewProps) {
   const days = weekDays(weekStart, dayCount);
   const isDay = dayCount === 1;
   const columns = `3.5rem repeat(${dayCount},minmax(0,1fr))`;
   const now = new Date();
   const todayKey = dayKey(now);
-  const range = visibleHours(scheduleConfig, appointments);
+  const range = visibleHours(scheduleConfig, appointments, showCancelled);
   const hours = Array.from(
     { length: range.endHour - range.startHour },
     (_, index) => range.startHour + index,
@@ -164,9 +167,11 @@ export function WeekView({
               const dayAppointments = appointments.filter(
                 (appointment) => dayKey(new Date(appointment.startsAt)) === key,
               );
-              const cancelled = dayAppointments.filter(
-                (appointment) => appointment.status === 'cancelled',
-              ).length;
+              const cancelled = showCancelled
+                ? 0
+                : dayAppointments.filter(
+                    (appointment) => appointment.status === 'cancelled',
+                  ).length;
               return (
                 <div
                   key={key}
@@ -217,7 +222,7 @@ export function WeekView({
                           : `${cancelled} cancelada${cancelled === 1 ? '' : 's'}`}
                     </p>
                   )}
-                  {layoutDay(dayAppointments).map(
+                  {layoutDay(dayAppointments, showCancelled).map(
                     ({ appointment, lane, lanes }) => {
                       const { top, height } = verticalSpan(
                         appointment.startsAt,
