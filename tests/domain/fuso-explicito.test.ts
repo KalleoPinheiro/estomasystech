@@ -10,6 +10,7 @@ import {
 import { ValidationError } from '@/domain/shared/errors';
 import { TimeSlot } from '@/domain/shared/time-slot';
 import {
+  appTimeZone,
   isValidTimeZone,
   shiftZonedMonths,
   startOfZonedDay,
@@ -151,5 +152,17 @@ describe('Feature: fuso com horário de verão', () => {
   it('valida identificador IANA', () => {
     expect(isValidTimeZone('America/Sao_Paulo')).toBe(true);
     expect(isValidTimeZone('Fuso/Inexistente')).toBe(false);
+  });
+});
+
+describe('Feature: fuso no navegador', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('Dado só NEXT_PUBLIC_APP_TIMEZONE (cliente), Quando lê o fuso, Então usa o dela; sem nenhuma, o padrão', () => {
+    vi.stubEnv('APP_TIMEZONE', undefined);
+    vi.stubEnv('NEXT_PUBLIC_APP_TIMEZONE', 'America/Manaus');
+    expect(appTimeZone()).toBe('America/Manaus');
+    vi.stubEnv('NEXT_PUBLIC_APP_TIMEZONE', undefined);
+    expect(appTimeZone()).toBe('America/Sao_Paulo');
   });
 });
