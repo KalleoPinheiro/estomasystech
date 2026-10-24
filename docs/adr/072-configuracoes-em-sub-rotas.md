@@ -1,5 +1,5 @@
 ---
-title: "ADR 071 — Configurações em sub-rotas /configuracoes/<seção>, com índice em cartões"
+title: "ADR 072 — Configurações em sub-rotas /configuracoes/<seção>, com índice em cartões"
 status: frozen
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
@@ -7,7 +7,7 @@ last_reviewed: 2026-10-24
 related: [docs/domains/acesso/README.md, docs/adr/002-autorizacao-em-duas-camadas.md, docs/adr/067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md, docs/adr/069-dados-no-servidor-e-politica-de-cache.md]
 ---
 
-# ADR 071 — Configurações em sub-rotas /configuracoes/<seção>, com índice em cartões
+# ADR 072 — Configurações em sub-rotas /configuracoes/<seção>, com índice em cartões
 
 - **Data:** 2026-10-24
 - **Status:** aceito (decisão do orquestrador como Product Owner, com aval de @KalleoPinheiro em 2026-10-24). Substitui o [ADR-067](067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md).
