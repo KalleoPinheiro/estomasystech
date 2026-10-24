@@ -14,7 +14,7 @@ import { recordAudit } from '@/lib/audit';
 import { portalActorNoun } from '@/lib/auth/portal-actor';
 import { requirePatientPortalSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
-import { IMAGE_CONSENT_TEXT } from '@/lib/image-consent-text';
+import { acceptedTemplates, CONSENT_DOCUMENTS } from '@/lib/consent-documents';
 
 /**
  * Monitoramento remoto (O4.2): paciente envia foto da própria condição ativa.
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (
       !ConsentRecord.resolveStatus(
         consents,
-        IMAGE_CONSENT_TEXT,
+        acceptedTemplates(CONSENT_DOCUMENTS.image),
         'image',
         patient,
       ).accepted

@@ -312,6 +312,17 @@ export class DrizzleConditionAssessmentRepository
       detErosionSeverity: assessment.detErosionSeverity,
       detOvergrowthArea: assessment.detOvergrowthArea,
       detOvergrowthSeverity: assessment.detOvergrowthSeverity,
+      infectionLevel: assessment.infectionLevel,
+      infectionSigns:
+        assessment.infectionSigns.length > 0
+          ? assessment.infectionSigns.join(',')
+          : null,
+      woundEdges: assessment.woundEdges,
+      exudateType: assessment.exudateType,
+      granulationPct: assessment.granulationPct,
+      epithelialPct: assessment.epithelialPct,
+      sloughPct: assessment.sloughPct,
+      necroticPct: assessment.necroticPct,
       notes: this.cipher.encryptNullable(assessment.notes),
       createdAt: assessment.createdAt,
     });

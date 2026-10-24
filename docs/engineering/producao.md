@@ -26,6 +26,7 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | Servidor | Hetzner `ubuntu-8gb-fsn1-1` (Alemanha), Ubuntu 26.04 LTS, 8 GB de RAM, 4 GB de swap; acesso por `ssh vps` |
 | Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup agendado do banco pelo Coolify **desligado** em 2026-10-18 (era em claro; o cifrado do § 5 o substitui) |
 | Proxy | Traefik do Coolify, único na borda ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)); middlewares `rate-limit-app`, `rate-limit-strict` e `security-headers` (`@file`, sem CSP: o app usa nonce) |
+| Versão em produção | `v0.1.0` = commit `1aa5b27` (`docs(producao): avisos por e-mail do GlitchTip pelo Resend`, #399), deploy manual de 2026-10-19 (conferido no *Deployments* do Coolify em 2026-10-24). É a tag-base do lote da v0.2.0 (`release:prepare` lista só as migrações depois dela) e o alvo do *Redeploy* de rollback (§ 3.1) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
 | Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18). Compose, CI e smoke rodam no mesmo major ([ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md)); os testes de unidade usam PGlite |
 | Variáveis | 10 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`, `GLITCHTIP_DSN` (desde 2026-10-19). `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
@@ -245,11 +246,18 @@ proposital enquanto as migrações não têm `down`
    na hora (`sudo systemctl start estomasystech-backup.service`) e confira que terminou sem erro.
    Sem backup do mesmo dia, não deploye migração.
 3. **Deploy:** *Deploy* no recurso do app. O container novo migra no boot (advisory lock) e o
-   `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois.
+   `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois. No mesmo boot o app grava a
+   versão em `app_releases` ([ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md)); sem
+   passo manual.
 4. **Verificar:** `curl -fsS https://estomasystech.kalleopinheiro.com.br/api/health/ready` (`200`,
-   `database` e `migrations` `ok`) e a fumaça do § 9.6. Se o lote traz script manual (§ 4, § 7.2,
+   `database` e `migrations` `ok`), a **versão no rodapé** (`GET /api/version`, com sessão, deve trazer a
+   da tag) e a fumaça do § 9.6. Se o lote traz script manual (§ 4, § 7.2,
    § 7.3), rode-o agora, primeiro em simulação.
-5. **Rollback sem migração nova:** *Deployments* → *Redeploy* do commit anterior. Rápido e seguro.
+5. **Rollback sem migração nova:** *Deployments* → *Redeploy* do commit anterior. Rápido e seguro. A
+   versão do rodapé é a **mais recente gravada** em `app_releases`: depois do redeploy, remova a linha
+   da versão revertida (`DELETE FROM app_releases WHERE version = 'X.Y.Z';`, por `psql` no servidor)
+   para o rodapé voltar à versão que está de fato no ar. O rollback por backup restaura a tabela e a
+   versão volta junto.
 6. **Rollback com migração nova:** redeploy do commit anterior **não** desfaz o esquema; só serve se
    a migração for aditiva (coluna, tabela ou índice novo, o caso quase sempre) e o código antigo
    ignorar o que foi adicionado. Do contrário, restaure o backup do passo 2 (perde o que foi escrito
@@ -703,6 +711,32 @@ Roda **uma vez**, depois da migração `0063`. **Manual**. Regras: ACE-RN-57, [A
 2. `npm run clinics:cnpj-review -- --confirmar` — marca cada uma (o número não muda) e audita.
    Reexecutar é seguro. Avise as clínicas listadas: o aviso aparece em *Configurações → Dados da clínica*.
 
+### 7.4 Rotina mensal (1º sábado)
+
+Manutenção feita à mão no 1º sábado de cada mês, com lembrete na agenda do operador (#381). Não é
+automática: o Coolify só é atualizado pela interface, depois de conferir o backup.
+
+1. **Backup:** confirme que o backup `age` do dia anterior chegou ao R2 (§ 5.3). Se falhou, resolva
+   antes de qualquer atualização.
+2. **Coolify:** atualize pela interface do Coolify. Não rode atualização às cegas nem em horário de uso.
+3. **Host (`ssh vps`):** `sudo apt update && apt list --upgradable`; verifique `/var/run/reboot-required`.
+   Reinicie só em janela combinada, porque o app cai junto.
+4. **fail2ban:** `sudo fail2ban-client status sshd` (há bans ativos? algum IP conhecido?).
+5. **Firewall local:** `systemctl status fw-estomasystech --no-pager` (ativo e sem erro).
+6. **Monitores:** UptimeRobot verde em `/api/health/ready`; sem falha em *Scheduled Tasks → Executions* (§ 7).
+7. **Registro:** anote data, versões e resultado no handoff do mês (`.specs/archive/handoff-2026.md`).
+
+O lembrete existe em `.github/workflows/rotina-mensal.yml`, mas **desligado**: só roda por
+`workflow_dispatch` (Actions → *Rotina mensal* → *Run workflow*) e, sem `schedule`, não consome a cota
+do Actions. Cada execução abre uma issue «Rotina mensal de manutenção — AAAA-MM» com este checklist
+(não duplica se já houver uma aberta). Para ativar:
+
+1. Descomente o bloco `schedule` do workflow (cron de todo sábado às 11:00 UTC; o passo «Só no 1º
+   sábado» descarta os que caem depois do dia 7).
+2. Abra PR `feat/* → release/*` com a mudança; por tocar `.yml`, ele não é só documentação, então
+   siga o fluxo do ADR-052 (changeset e `## Homologação`).
+3. Confirme a cota do Actions antes (o job é de poucos segundos, sem checkout).
+
 ## 8. Primeiro acesso
 
 Já feito em produção (2026-10-18): o Super Admin foi criado e o token removido. O roteiro vale para
@@ -826,9 +860,13 @@ docker logs <container-do-app> 2>&1 | grep '"requestId":"<id>"' | jq .
 docker logs <container-do-app> 2>&1 | jq -c 'select(.level == "error")'
 ```
 
-Os logs não carregam dado pessoal (`logError`,
-[#202](https://github.com/KalleoPinheiro/estomasystech/issues/202); e-mail e número longo viram
-`[e-mail]`/`[número]`). O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
+Os logs não carregam dado pessoal: `logError` limpa o erro
+([#202](https://github.com/KalleoPinheiro/estomasystech/issues/202)) e o logger redige **todo** campo e
+mensagem antes de escrever (campo sensível vira `[redigido]`; e-mail, número longo, URL com query e
+credencial viram marcador; [ADR-060](../adr/060-redacao-central-de-pii-nos-logs.md)). A auditoria dos
+pontos de log, sempre com dado mascarado, está em
+[`auditoria-logs-pii-2026-10.md`](auditoria-logs-pii-2026-10.md); repita-a na rotina mensal e **nunca
+cole linha crua de log em chat, issue ou PR**. O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
 mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
 ### 9.5 GlitchTip (error tracking)

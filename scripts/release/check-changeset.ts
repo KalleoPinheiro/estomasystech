@@ -1,10 +1,11 @@
 /**
  * `npm run check:changeset` — PR que toca `src/`, `drizzle/` ou `Dockerfile` precisa de um
- * `.changeset/*.md` novo (ADR-043). PR só de docs ou CI passa sem. Compara com `origin/main`.
+ * `.changeset/*.md` novo (ADR-043). PR só de docs ou CI passa sem. Compara com a release aberta ou `origin/main` (ADR-058).
  */
+import { detectBase } from '../gate/base';
 import { hasChangesetFile, must, requiresChangeset } from './lib';
 
-const BASE = process.env.CHANGESET_BASE ?? 'origin/main';
+const BASE = detectBase(process.env.CHANGESET_BASE || undefined);
 
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 

@@ -297,6 +297,23 @@ export class DrizzleRetentionRepository implements RetentionRepository {
     return rows.length;
   }
 
+  async findInactiveAvatarKeys(cutoff: Date): Promise<string[]> {
+    const rows = await this.db
+      .select({ key: userAccounts.avatarKey })
+      .from(userAccounts)
+      .where(
+        and(
+          eq(userAccounts.clinicId, this.clinic()),
+          eq(userAccounts.active, false),
+          isNull(userAccounts.anonymizedAt),
+          lt(userAccounts.deactivatedAt, cutoff),
+          inArray(userAccounts.role, ACCOUNT_ROLES),
+          isNotNull(userAccounts.avatarKey),
+        ),
+      );
+    return rows.map((row) => row.key as string); // isNotNull no filtro
+  }
+
   async anonymizeInactiveAccounts(cutoff: Date, now: Date): Promise<number> {
     const clinicId = this.clinic();
     return this.db.transaction(async (tx) => {
@@ -613,6 +630,9 @@ async function anonymizeAccounts(
       // Idem para o responsável (ADR-027): solta o cadastro, que pode ser
       // apagado quando nenhum paciente o usa.
       guardianId: null,
+      // Avatar (#427): foto de rosto é dado pessoal; a conta anonimizada
+      // deixa de apontar para ela e o arquivo some do alcance da API.
+      avatarKey: null,
       anonymizedAt: now,
     })
     .where(

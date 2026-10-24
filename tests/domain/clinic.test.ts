@@ -385,3 +385,35 @@ describe('Feature: CNPJ antigo marcado para correção (#355, ACE-RN-57)', () =>
     expect(fixed.cnpjReviewSince).toBeNull();
   });
 });
+
+describe('Feature: dados cadastrais que faltam para emitir documento (#485)', () => {
+  it('Dado cadastro vazio, Quando listar o que falta, Então vêm CNPJ, responsável técnico e registro', async () => {
+    const { missingClinicInfoFields } = await import('@/domain/clinic/clinic');
+    expect(
+      missingClinicInfoFields({
+        cnpj: ' ',
+        professionalName: null,
+        professionalRegistry: '',
+      }),
+    ).toEqual(['CNPJ', 'responsável técnico', 'registro profissional']);
+    expect(missingClinicInfoFields(null)).toHaveLength(3);
+  });
+
+  it('Dado só o responsável técnico em branco, Quando listar, Então vem só ele', async () => {
+    const { missingClinicInfoFields } = await import('@/domain/clinic/clinic');
+    expect(
+      missingClinicInfoFields({
+        cnpj: '12.345.678/0001-95',
+        professionalName: '',
+        professionalRegistry: 'COREN',
+      }),
+    ).toEqual(['responsável técnico']);
+    expect(
+      missingClinicInfoFields({
+        cnpj: '12.345.678/0001-95',
+        professionalName: 'Ana',
+        professionalRegistry: 'COREN',
+      }),
+    ).toEqual([]);
+  });
+});

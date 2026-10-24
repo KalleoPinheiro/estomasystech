@@ -4,7 +4,7 @@ import { Button, CardSkeleton, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { AuthCard } from '@/components/auth-card';
+import { BrandMark } from '@/components/brand-mark';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 import {
@@ -54,15 +54,17 @@ function LoginCard() {
 
   if (step.kind !== 'password') {
     return (
-      <AuthCard>
+      <LoginShell>
+        <BrandMark size={40} className="mb-3 md:hidden" />
         <h1 className="sv-display mb-4 font-bold text-xl">EstomaSysTech</h1>
         <SecondFactor step={step} onStep={setStep} />
-      </AuthCard>
+      </LoginShell>
     );
   }
 
   return (
-    <AuthCard>
+    <LoginShell>
+      <BrandMark size={40} className="mb-3 md:hidden" />
       <h1 className="sv-display font-bold text-xl">EstomaSysTech</h1>
       <p className="mt-1 mb-6 text-ink-3 text-sm">
         Entre com seu e-mail e sua senha
@@ -80,7 +82,35 @@ function LoginCard() {
       ) : (
         <CardSkeleton />
       )}
-    </AuthCard>
+    </LoginShell>
+  );
+}
+
+/**
+ * Moldura do login: no computador, painel da marca à esquerda e formulário à
+ * direita; no celular, só o formulário. A marca é a do produto: o login ainda
+ * não sabe a clínica de quem entra (logo e nome da clínica aparecem depois).
+ */
+function LoginShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="flex min-h-dvh">
+      <div
+        aria-hidden="true"
+        className="hidden flex-1 flex-col justify-center gap-3 bg-sv-surface px-16 md:flex"
+      >
+        <BrandMark size={72} />
+        <p className="sv-display font-bold text-3xl">EstomaSysTech</p>
+        <p className="max-w-sm text-ink-3">
+          Agenda, prontuário e acompanhamento de feridas e estomias em um só
+          lugar.
+        </p>
+      </div>
+      <div className="flex w-full items-center justify-center px-4 py-10 md:max-w-xl md:px-12">
+        <div className="sv-gradient-border w-full max-w-sm p-6 sm:p-8">
+          {children}
+        </div>
+      </div>
+    </main>
   );
 }
 
@@ -119,6 +149,7 @@ function PasswordForm({
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -165,7 +196,7 @@ function PasswordForm({
         Senha
         <Input
           required
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           name="password"
           autoComplete="current-password"
           value={password}
@@ -173,6 +204,16 @@ function PasswordForm({
           className="mt-1"
         />
       </label>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-pressed={showPassword}
+        onClick={() => setShowPassword((shown) => !shown)}
+        className="mt-1"
+      >
+        {showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+      </Button>
       <Button
         type="submit"
         disabled={submitting}
@@ -186,8 +227,9 @@ function PasswordForm({
           Esqueci minha senha
         </Link>
       </p>
-      <p className="mt-2 text-center text-sm">
-        <Link href="/privacidade" className="text-accent-ink hover:underline">
+      <p className="mt-2 text-center text-ink-3 text-sm">
+        Seus dados de saúde são protegidos pela LGPD.{' '}
+        <Link href="/privacidade" className="text-accent-ink underline">
           Aviso de privacidade
         </Link>
       </p>

@@ -243,6 +243,12 @@ export function ClinicStatementsTable({
   }
   return (
     <div className="overflow-x-auto">
+      <p className="mb-2 text-ink-3 text-xs" data-payout-legend>
+        <strong className="font-medium text-ink-2">A pagar:</strong> comissão já
+        liberada (fatura paga, ou 60 dias após o vencimento).{' '}
+        <strong className="font-medium text-ink-2">A liberar:</strong> comissão
+        de sessões concluídas cuja fatura ainda não foi paga.
+      </p>
       <Table stack className="w-full text-left text-sm">
         <TableHeader>
           <TableRow>

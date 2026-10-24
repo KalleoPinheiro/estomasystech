@@ -5,16 +5,17 @@ import {
   AlertDescription,
   Button,
   Card,
-  FileInput,
+  Checkbox,
   Icon,
   Input,
   Prose,
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
+import { FilePicker } from '@/components/file-picker';
 import { apiFetch } from '@/lib/client';
 import { formatDateTime } from '@/lib/format';
 
@@ -39,6 +40,7 @@ const COPY: Record<
     acceptedLabel: string;
     pendingTitle: string;
     acceptButton: string;
+    agreeLabel: string;
     revokeButton: string;
     revokeTitle: string;
     revokeDescription: string;
@@ -48,6 +50,7 @@ const COPY: Record<
     acceptedLabel: 'Termo de consentimento do tratamento aceito',
     pendingTitle: 'Termo de consentimento do tratamento pendente',
     acceptButton: 'Li e aceito o termo de tratamento',
+    agreeLabel: 'Li e concordo com o termo de tratamento',
     revokeButton: 'Revogar consentimento do tratamento',
     revokeTitle: 'Revogar consentimento do tratamento',
     revokeDescription:
@@ -57,6 +60,7 @@ const COPY: Record<
     acceptedLabel: 'Termo de autorização de imagem aceito',
     pendingTitle: 'Termo de autorização de imagem pendente',
     acceptButton: 'Li e aceito o termo de imagem',
+    agreeLabel: 'Li e concordo com o termo de imagem',
     revokeButton: 'Revogar autorização de imagem',
     revokeTitle: 'Revogar autorização de imagem',
     revokeDescription:
@@ -85,6 +89,8 @@ export function ConsentCard({
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
+  // Consentimento explícito (#481, LGPD art. 8º): o botão só libera depois de marcar.
+  const [agreed, setAgreed] = useState(false);
   const [revoking, setRevoking] = useState(false);
 
   if (!status) return null;
@@ -192,12 +198,26 @@ export function ConsentCard({
         </p>
       )}
       {error && <ErrorAlert message={error} />}
-      <Prose className="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-warning-soft bg-sv-surface p-3 text-sm">
+      <Prose
+        tabIndex={0}
+        role="region"
+        aria-label="Texto do termo de consentimento"
+        className="mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-warning-soft bg-sv-surface p-3 text-sm"
+      >
         {status.consentText}
       </Prose>
+      <label className="mb-3 flex items-start gap-2 text-sm">
+        {/* 44px: alvo de toque mínimo no celular (#127), o próprio input é medido. */}
+        <Checkbox
+          className="size-11 shrink-0"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+        />
+        {copy.agreeLabel}
+      </label>
       <Button
         type="button"
-        disabled={accepting}
+        disabled={accepting || !agreed}
         onClick={() => void accept()}
         variant="accent"
       >
@@ -270,6 +290,7 @@ export function PatientPhotoUpload({
 }) {
   const { toast } = useToast();
   const [note, setNote] = useState('');
+  const noteId = useId();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -345,19 +366,27 @@ export function PatientPhotoUpload({
           sua consulta.
         </p>
       )}
+      {/* Rótulo visível: o placeholder some ao digitar e não é rótulo (WCAG 3.3.2, #517). */}
+      <label
+        htmlFor={noteId}
+        className="mb-1 block font-medium text-ink-2 text-xs"
+      >
+        Observação (opcional)
+      </label>
       <div className="flex flex-wrap items-center gap-2">
         <Input
+          id={noteId}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Observação (opcional): dor, vazamento, vermelhidão…"
-          className="h-8 min-w-0 flex-1 text-xs"
+          className="h-8 min-w-48 flex-1 text-xs"
         />
-        {/* Afordância nativa do FileInput, visível — mesmo padrão de
+        {/* Seletor em português (FilePicker, #518) — mesmo padrão de
             condition-photos.tsx (T16). `aria-label` preserva o nome acessível
             que o texto do <label> antigo dava ("Enviar foto"). PORT-06 (#93):
             escolher o arquivo só monta a prévia abaixo — não envia mais
             direto no `onChange`. */}
-        <FileInput
+        <FilePicker
           accept="image/jpeg,image/png,image/webp"
           aria-label="Enviar foto"
           disabled={sending}

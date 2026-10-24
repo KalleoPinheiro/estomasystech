@@ -70,6 +70,15 @@ export interface AssessmentDto {
   complicationCodes: string[];
   detScore: number | null;
   pushScore: number | null;
+  // TIME completo (#464): opcionais no tipo porque avaliações anteriores não os trazem.
+  infectionLevel?: string | null;
+  infectionSigns?: string[];
+  woundEdges?: string | null;
+  exudateType?: string | null;
+  granulationPct?: number | null;
+  epithelialPct?: number | null;
+  sloughPct?: number | null;
+  necroticPct?: number | null;
   notes: string | null;
   createdAt: string;
 }
@@ -91,6 +100,14 @@ export const toAssessmentDto = (
   complicationCodes: assessment.complicationCodes,
   detScore: assessment.detScore,
   pushScore: assessment.pushScore,
+  infectionLevel: assessment.infectionLevel,
+  infectionSigns: assessment.infectionSigns,
+  woundEdges: assessment.woundEdges,
+  exudateType: assessment.exudateType,
+  granulationPct: assessment.granulationPct,
+  epithelialPct: assessment.epithelialPct,
+  sloughPct: assessment.sloughPct,
+  necroticPct: assessment.necroticPct,
   notes: assessment.notes,
   createdAt: assessment.createdAt.toISOString(),
 });
@@ -174,4 +191,6 @@ export interface TriagePhotoDto {
   createdAt: string;
   waitingHours: number;
   latestScore: { kind: 'push' | 'det'; value: number } | null;
+  /** Nível de infecção da última avaliação quando local ou pior (ADR-063). */
+  infectionAlert?: string | null;
 }

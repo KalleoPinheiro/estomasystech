@@ -36,10 +36,14 @@ export function PaymentForm({
   const [payerName, setPayerName] = useState('');
   const [payerCpf, setPayerCpf] = useState('');
   const [payerError, setPayerError] = useState<string | null>(null);
+  const [method, setMethod] = useState<string | null>(null);
   const cents = toCents(amount);
   const partial = cents > 0 && cents < invoice.balanceCents;
+  const overBalance = cents > invoice.balanceCents;
+  const invalidAmount = !(cents > 0) || overBalance;
 
-  const pay = async (method: string) => {
+  const pay = async () => {
+    if (!method) return;
     const payer = otherPayer ? { name: payerName, cpf: payerCpf } : null;
     if (payer) {
       try {
@@ -78,6 +82,12 @@ export function PaymentForm({
           className="mt-1"
         />
       </label>
+      {overBalance && (
+        <p role="alert" className="text-danger text-xs">
+          Valor maior que o saldo: o máximo é{' '}
+          {formatCurrency(invoice.balanceCents)}.
+        </p>
+      )}
       {partial && (
         <p className="text-warning text-xs">
           Pagamento parcial: fica faltando{' '}
@@ -121,22 +131,48 @@ export function PaymentForm({
         </>
       )}
       <div className="grid grid-cols-2 gap-2">
-        {Object.entries(PAYMENT_METHOD_LABELS).map(([method, label]) => (
+        {Object.entries(PAYMENT_METHOD_LABELS).map(([key, label]) => (
           <Button
-            key={method}
+            key={key}
             type="button"
-            disabled={busy || cents <= 0}
-            onClick={() => void pay(method)}
-            variant="outline"
+            disabled={busy || invalidAmount}
+            aria-pressed={method === key}
+            onClick={() => setMethod(key)}
+            variant={method === key ? 'accent' : 'outline'}
             className="hover:bg-accent-soft"
           >
             {label}
           </Button>
         ))}
       </div>
+      {method && !invalidAmount && (
+        <section
+          aria-label="Confirmar recebimento"
+          className="flex flex-col gap-2 rounded-md border border-border p-3 text-sm"
+        >
+          <p>
+            Receber <strong>{formatCurrency(cents)}</strong> em{' '}
+            <strong>{PAYMENT_METHOD_LABELS[method] ?? method}</strong> de{' '}
+            {payerLabel(
+              otherPayer,
+              payerName,
+              invoice.patientName ?? 'paciente',
+            )}
+            {partial
+              ? `; fica faltando ${formatCurrency(invoice.balanceCents - cents)}.`
+              : ' e quitar a fatura.'}
+          </p>
+          <Button type="button" disabled={busy} onClick={() => void pay()}>
+            Confirmar recebimento
+          </Button>
+        </section>
+      )}
     </div>
   );
 }
+
+const payerLabel = (otherPayer: boolean, payerName: string, patient: string) =>
+  otherPayer && payerName.trim() ? payerName.trim() : patient;
 
 /** Desconto com motivo (substitui o anterior; zero remove). */
 export function DiscountForm({

@@ -1,5 +1,6 @@
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
+import { type ClinicTheme, themeFromStored } from './clinic-identity';
 import { normalizeCnpj } from './cnpj';
 
 /**
@@ -81,6 +82,11 @@ export interface ClinicState extends ClinicInfoFields {
    */
   dpoName?: string | null;
   dpoContact?: string | null;
+  /** Chave da logo no armazenamento (#427); `null` = sem logo, valem as iniciais. */
+  logoKey?: string | null;
+  /** Tema da clínica (#426) como gravado; fora da lista vale o padrão (`theme`). */
+  themeMode?: string | null;
+  themeAccent?: string | null;
 }
 
 /** Limites do cadastro do encarregado. */
@@ -102,6 +108,22 @@ export function isClinicInfoComplete(
       info?.professionalName?.trim() &&
       info?.professionalRegistry?.trim(),
   );
+}
+
+/** Quais dados cadastrais faltam para emitir documento (a ordem é a da tela de Configurações). */
+export function missingClinicInfoFields(
+  info: Pick<
+    ClinicInfoFields,
+    'cnpj' | 'professionalName' | 'professionalRegistry'
+  > | null,
+): string[] {
+  const missing: string[] = [];
+  if (!info?.cnpj?.trim()) missing.push('CNPJ');
+  if (!info?.professionalName?.trim()) missing.push('responsável técnico');
+  if (!info?.professionalRegistry?.trim()) {
+    missing.push('registro profissional');
+  }
+  return missing;
 }
 
 const CONTACT_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -221,6 +243,7 @@ export class Clinic {
       cnpjReviewSince: state.cnpjReviewSince ?? null,
       dpoName: state.dpoName ?? null,
       dpoContact: state.dpoContact ?? null,
+      logoKey: state.logoKey ?? null,
     });
   }
 
@@ -274,6 +297,29 @@ export class Clinic {
 
   get dpoContact(): string | null {
     return this.state.dpoContact ?? null;
+  }
+
+  get logoKey(): string | null {
+    return this.state.logoKey ?? null;
+  }
+
+  /** Tema da clínica (#426); valor ausente ou fora da lista vale o padrão. */
+  get theme(): ClinicTheme {
+    return themeFromStored(this.state.themeMode, this.state.themeAccent);
+  }
+
+  /** Outra instância com o tema trocado. */
+  withTheme(theme: ClinicTheme): Clinic {
+    return new Clinic({
+      ...this.state,
+      themeMode: theme.mode,
+      themeAccent: theme.accent,
+    });
+  }
+
+  /** Outra instância com a logo trocada (ou removida, com `null`). */
+  withLogoKey(logoKey: string | null): Clinic {
+    return new Clinic({ ...this.state, logoKey });
   }
 
   get status(): ClinicStatus {

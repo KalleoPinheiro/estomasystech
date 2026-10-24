@@ -49,9 +49,11 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | --- | --- |
 | [`engineering/onboarding.md`](engineering/onboarding.md) | requisitos, Docker, Node local, **variáveis de ambiente**, testes, gates |
 | [`engineering/homologacao.md`](engineering/homologacao.md) | **homologação**: Vercel + Neon + MSW + faker, fluxo de git com branch `staging`, contas fictícias |
+| [`engineering/homologacao-cenarios.md`](engineering/homologacao-cenarios.md) | **casos de validação** de cada domínio × conta fictícia e dado do seed que os reproduz na staging |
 | [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Traefik do Coolify, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
 | [`engineering/backup-passo-a-passo.md`](engineering/backup-passo-a-passo.md) | **backup cifrado do zero**, para leigo: chave `age`, R2 na UE, scripts, alerta por e-mail, primeiro backup e teste de restauração, com as armadilhas da instalação real |
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
+| [`engineering/performance-front-linha-de-base-2026-10.md`](engineering/performance-front-linha-de-base-2026-10.md) | **linha de base do front** (Next.js): JS por rota, FCP/LCP/CLS e chamadas `/api` em 360/390/768/1280, auditoria de recursos do Next e da hidratação (retrato de 2026-10-24) |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
 | [`engineering/api.md`](engineering/api.md) | rotas REST centrais |
@@ -117,6 +119,23 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/050-limiar-100-por-camada-e-ui-medida.md`](adr/050-limiar-100-por-camada-e-ui-medida.md) | limiar de 100% por camada de regra; UI segue medida com piso de 90% |
 | [`adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md`](adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md) | mutação por arquivo alterado no `gate:local` e rodada completa mensal |
 | [`adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md`](adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md) | fluxo de git: `feat → release/vX.Y.Z → main` (merge commit), `staging` = release aberta, tag no commit de merge; substitui o git do ADR-041 e o release do ADR-043 |
+| [`adr/053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md`](adr/053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md) | PR que toca só `.md` de documentação dispensa o recibo do `gate:local` (o gate rápido e a regra 8 seguem); ajusta o ADR-042 |
+| [`adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md`](adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md) | staging sem segundo fator (`STAGING_DISABLE_MFA`, só com `APP_ENV=staging`) e 13 contas fictícias por cenário |
+| [`adr/055-logo-e-avatar-com-svg-sanitizado-e-raster-recodificado.md`](adr/055-logo-e-avatar-com-svg-sanitizado-e-raster-recodificado.md) | logo da clínica e avatar da equipe: SVG por allowlist e rejeição de conteúdo ativo, raster recodificado em WebP sem EXIF, mesmo armazenamento das fotos |
+| [`adr/056-tema-da-clinica-modo-padrao-cor-e-escolha-do-aparelho.md`](adr/056-tema-da-clinica-modo-padrao-cor-e-escolha-do-aparelho.md) | tema da clínica: modo padrão e cor definidos pelo Admin, `system` resolvido no aparelho, claro/escuro escolhido por aparelho |
+| [`adr/057-instalar-na-tela-inicial-sem-service-worker.md`](adr/057-instalar-na-tela-inicial-sem-service-worker.md) | instalar na tela inicial: manifesto da plataforma sem service worker; logo nos documentos |
+| [`adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md`](adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md) | base do diff dos gates locais: a release aberta, não a main |
+| [`adr/059-seed-de-homologacao-aditivo.md`](adr/059-seed-de-homologacao-aditivo.md) | seed de homologação aditivo: cria o que falta, sem apagar nem duplicar |
+| [`adr/060-redacao-central-de-pii-nos-logs.md`](adr/060-redacao-central-de-pii-nos-logs.md) | logger redige PII por campo e por padrão de texto antes de escrever (stdout e GlitchTip); teste contra PII em mensagem; auditoria sempre mascarada |
+| [`adr/062-time-completo-na-avaliacao-de-ferida.md`](adr/062-time-completo-na-avaliacao-de-ferida.md) | avaliação de ferida com TIME completo: infecção/inflamação, bordas, tipo de exsudato e % de tecido; vocabulário fechado, colunas aditivas (migração 0069) |
+| [`adr/064-termos-em-nome-do-representante-e-sem-texto-de-preenchimento.md`](adr/064-termos-em-nome-do-representante-e-sem-texto-de-preenchimento.md) | termos de consentimento: variante em nome do representante legal e omissão de texto de preenchimento |
+| [`adr/065-termo-de-tratamento-sem-responsavel-tecnico.md`](adr/065-termo-de-tratamento-sem-responsavel-tecnico.md) | termo de tratamento sem a linha do responsável técnico; versão v3 |
+| [`adr/066-versao-do-sistema-registrada-no-banco.md`](adr/066-versao-do-sistema-registrada-no-banco.md) | versão do sistema gravada em `app_releases` a cada implantação; `GET /api/version`; rodapé com fallback |
+| [`adr/068-codigo-do-commit-so-na-homologacao-e-sha-acompanha-o-deploy.md`](adr/068-codigo-do-commit-so-na-homologacao-e-sha-acompanha-o-deploy.md) | código do commit só na homologação; SHA de `app_releases` atualiza a cada deploy da mesma versão |
+| [`adr/069-dados-no-servidor-e-politica-de-cache.md`](adr/069-dados-no-servidor-e-politica-de-cache.md) | telas carregam dados em Server Components e escrevem por Server Actions; nenhum dado de clínica em cache compartilhado; foto autenticada fora do otimizador; sem PPR enquanto a CSP usar nonce (proposto) |
+| [`adr/067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md`](adr/067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md) | Configurações em página única com índice fixo no celular; sub-rotas adiadas |
+| [`adr/063-alerta-de-infeccao-e-aviso-de-coerencia-no-time.md`](adr/063-alerta-de-infeccao-e-aviso-de-coerencia-no-time.md) | decisões clínicas sobre o TIME: infecção local ou pior alerta na triagem, % de tecido fora do PUSH, coerência nível × sinais como aviso |
+| [`adr/061-vercel-constroi-so-a-staging.md`](adr/061-vercel-constroi-so-a-staging.md) | a Vercel só constrói a `staging` (`git.deploymentEnabled`); sem prévia por PR nem branch Neon por deploy; complementa o ADR-041 |
 | [`adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md`](adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md) | produção em PostgreSQL 18 (Dockerfile + banco do Coolify); compose e CI em 16 até um PR com Docker alinhar |
 | [`adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md`](adr/038-scheduled-tasks-do-coolify-no-lugar-do-crontab.md) | alertas, lembretes e retenção como Scheduled Tasks do Coolify, com `wget` e `CRON_SECRET` do ambiente |
 | [`adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md`](adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md) | deploy manual depois do backup; rollback por redeploy ou restauração |
@@ -131,6 +150,7 @@ Decisões de execução (não arquiteturais) ficam em `../.specs/STATE.md` — v
 | --- | --- |
 | [`audits/analise-seguranca-escalabilidade.md`](audits/analise-seguranca-escalabilidade.md) | segurança e escalabilidade |
 | [`audits/auditoria-ux-2026-08.md`](audits/auditoria-ux-2026-08.md) | UX, agosto 2026 |
+| [`engineering/auditoria-logs-pii-2026-10.md`](engineering/auditoria-logs-pii-2026-10.md) | logs e dado pessoal, outubro 2026 (dado sempre mascarado) |
 | [`audits/auditoria-design-system-2026-08.md`](audits/auditoria-design-system-2026-08.md) | design system, agosto 2026 |
 
 Auditoria é **entrada** de planejamento, nunca pedido de trabalho por si só.

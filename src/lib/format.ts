@@ -59,6 +59,63 @@ export const EXUDATE_LABELS: Record<string, string> = {
   high: 'Alto',
 };
 
+/** Tecido predominante (PUSH 3.0). Texto livre legado não está aqui: mostra-se como foi gravado. */
+export const TISSUE_TYPE_LABELS: Record<string, string> = {
+  closed: 'Fechado',
+  epithelial: 'Epitelização',
+  granulation: 'Granulação',
+  slough: 'Esfacelo',
+  necrotic: 'Necrose',
+};
+
+/** Rótulo do tecido; código desconhecido (texto livre legado) aparece como foi gravado. */
+export function tissueTypeLabel(code: string): string {
+  return TISSUE_TYPE_LABELS[code] ?? code;
+}
+
+export const INFECTION_LEVEL_LABELS: Record<string, string> = {
+  none: 'Sem sinais de infecção',
+  inflammation: 'Inflamação',
+  local: 'Infecção local',
+  spreading: 'Infecção com disseminação',
+  systemic: 'Infecção sistêmica',
+};
+
+export const INFECTION_SIGN_LABELS: Record<string, string> = {
+  erythema: 'Eritema',
+  heat: 'Calor local',
+  edema: 'Edema',
+  increased_exudate: 'Aumento do exsudato',
+  purulent_exudate: 'Exsudato purulento',
+  malodor: 'Odor fétido',
+  local_pain: 'Dor local nova ou aumentada',
+  friable_granulation: 'Granulação friável',
+  delayed_healing: 'Cicatrização estagnada',
+  biofilm_suspected: 'Suspeita de biofilme',
+  spreading_erythema: 'Eritema em expansão',
+  lymphangitis: 'Linfangite',
+  lymphadenopathy: 'Linfadenopatia',
+  fever: 'Febre',
+  malaise: 'Mal-estar',
+};
+
+export const WOUND_EDGE_LABELS: Record<string, string> = {
+  attached: 'Aderidas',
+  detached: 'Descoladas',
+  rolled: 'Epíbole (enroladas)',
+  macerated: 'Maceradas',
+  undermined: 'Solapadas',
+  hyperkeratotic: 'Hiperqueratósicas',
+  epithelializing: 'Em epitelização',
+};
+
+export const EXUDATE_TYPE_LABELS: Record<string, string> = {
+  serous: 'Seroso',
+  serosanguineous: 'Serossanguinolento',
+  sanguineous: 'Sanguinolento',
+  purulent: 'Purulento',
+};
+
 export const FOLLOW_UP_STATUS_LABELS: Record<string, string> = {
   pending: 'Pendente',
   done: 'Concluído',

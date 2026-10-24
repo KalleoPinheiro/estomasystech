@@ -7,6 +7,8 @@ export interface AppointmentDto {
   id: string;
   patientId: string;
   patientName?: string;
+  /** Só nas listas: desambigua homônimos (ISO) ou `null` sem data. */
+  patientBirthDate?: string | null;
   startsAt: string;
   endsAt: string;
   procedure: string;
@@ -24,10 +26,12 @@ export interface AppointmentDto {
 export const toAppointmentDto = (
   appointment: Appointment,
   patientName?: string,
+  patientBirthDate?: Date | null,
 ): AppointmentDto => ({
   id: appointment.id,
   patientId: appointment.patientId,
   patientName,
+  patientBirthDate: patientBirthDate?.toISOString(),
   startsAt: appointment.slot.start.toISOString(),
   endsAt: appointment.slot.end.toISOString(),
   procedure: appointment.procedure,

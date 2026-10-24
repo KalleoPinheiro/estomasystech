@@ -29,8 +29,8 @@ describe('Feature: Seed de homologação com faker (ADR-041)', () => {
 
     expect(report.skipped).toBe(false);
     expect(report.counts).toMatchObject({
-      clinics: 2,
-      accounts: 5,
+      clinics: 3,
+      accounts: 13,
       professionals: 2,
       procedures: 6,
       patients: PATIENT_COUNT,
@@ -73,7 +73,7 @@ describe('Feature: Seed de homologação com faker (ADR-041)', () => {
       now: NOW,
     });
 
-    expect(report).toEqual({ skipped: true, counts: { passwordsSynced: 5 } });
+    expect(report).toEqual({ skipped: true, counts: { passwordsSynced: 13 } });
     const after = (
       await (
         await getRepositories(clinicScope(MAIN_CLINIC_ID))

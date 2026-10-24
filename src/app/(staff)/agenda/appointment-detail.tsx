@@ -1,6 +1,12 @@
 'use client';
 
-import { Button, Input, NativeSelect } from '@still-void/ui/react';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Input,
+  NativeSelect,
+} from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
@@ -9,6 +15,7 @@ import {
   type CancellationPolicy,
   DEFAULT_CANCELLATION_POLICY,
 } from '@/domain/scheduling/schedule-config';
+import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto } from '@/lib/dto';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -94,7 +101,7 @@ export function AppointmentDetail({
     null,
   );
   const hasFee = cancellationPolicy.lateFeeCents > 0;
-  const [followUpInDays, setFollowUpInDays] = useState(30);
+  const [followUpInDays, setFollowUpInDays] = useState(0);
   const [newDate, setNewDate] = useState(appointment.startsAt.slice(0, 10));
   const [newTime, setNewTime] = useState(formatTime(appointment.startsAt));
 
@@ -177,6 +184,15 @@ export function AppointmentDetail({
         </p>
       )}
 
+      {isPendingClosure(appointment, new Date()) && (
+        <Alert variant="warning" data-pending-closure>
+          <AlertDescription>
+            Esta consulta já passou e segue sem desfecho. Conclua, registre a
+            falta ou cancele.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {canSendWhatsApp && (
         <WhatsAppReminderButton
           kind="confirmation"
@@ -186,12 +202,14 @@ export function AppointmentDetail({
         />
       )}
 
-      <a
-        href={`/documentos/atestado/${appointment.id}`}
-        className="font-medium text-accent-ink text-xs hover:underline"
-      >
-        Declaração de comparecimento
-      </a>
+      {appointment.status === 'completed' && (
+        <a
+          href={`/documentos/atestado/${appointment.id}`}
+          className="font-medium text-accent-ink text-xs hover:underline"
+        >
+          Declaração de comparecimento
+        </a>
+      )}
 
       {visibleActions.includes('complete') && (
         <label className="mt-1 font-medium text-ink-2 text-xs">

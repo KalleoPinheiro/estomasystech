@@ -1,6 +1,7 @@
 'use client';
 
 import { type ReactNode, use } from 'react';
+import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
@@ -24,9 +25,7 @@ function guardAppointment(
   if (!clinic || appointmentLoading) return <LoadingIndicator />;
   if (!appointment) return <ErrorAlert message="Consulta não encontrada" />;
   if (!isClinicInfoComplete(clinic)) {
-    return (
-      <ErrorAlert message="Clínica sem CNPJ ou responsável técnico cadastrados — cadastre em Configurações antes de emitir este documento." />
-    );
+    return <ClinicInfoIncompleteAlert clinic={clinic} />;
   }
   if (appointment.status !== 'completed') {
     return (
@@ -79,9 +78,15 @@ export default function AttendanceDocumentPage({
   const { data: patient } = useApiQuery<PatientDto>(
     appointment ? `/api/patients/${appointment.patientId}` : null,
   );
+  // Só emite (e grava na auditoria) com a clínica apta e a consulta realizada:
+  // página bloqueada não é emissão (#468).
+  const canIssue =
+    !!clinic &&
+    isClinicInfoComplete(clinic) &&
+    appointment?.status === 'completed';
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'atestado',
-    appointmentId,
+    canIssue ? appointmentId : null,
   );
 
   const guard = guardBlock(

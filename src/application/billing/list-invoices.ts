@@ -8,6 +8,8 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 export interface InvoiceWithPatient {
   invoice: Invoice;
   patientName: string;
+  /** Para desambiguar homônimos nas listas (CONTEXT.md). */
+  patientBirthDate: Date | null;
 }
 
 export class ListInvoices {
@@ -24,11 +26,13 @@ export class ListInvoices {
     const patients = await this.patients.findByIds(
       invoices.map((i) => i.patientId),
     );
-    const namesById = new Map(patients.map((p) => [p.id, p.fullName]));
+    const byId = new Map(patients.map((p) => [p.id, p]));
 
     return invoices.map((invoice) => ({
       invoice,
-      patientName: namesById.get(invoice.patientId) ?? 'Paciente desconhecido',
+      patientName:
+        byId.get(invoice.patientId)?.fullName ?? 'Paciente desconhecido',
+      patientBirthDate: byId.get(invoice.patientId)?.birthDate ?? null,
     }));
   }
 }

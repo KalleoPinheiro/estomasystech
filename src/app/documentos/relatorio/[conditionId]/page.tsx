@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '@still-void/ui/react';
 import { type ReactNode, use } from 'react';
+import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
 import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { HealingChart } from '@/components/healing-chart';
@@ -19,9 +20,11 @@ import {
   EXUDATE_LABELS,
   formatDate,
   STOMA_TYPE_LABELS,
+  tissueTypeLabel,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useDocumentIssuance } from '@/lib/use-document-issuance';
+import { timeSummary } from '@/lib/wound-time-summary';
 
 function guardLoading(
   clinic: ClinicInfoDto | null,
@@ -33,9 +36,7 @@ function guardLoading(
   if (!clinic || condition === undefined || !assessments)
     return <LoadingIndicator />;
   if (!isClinicInfoComplete(clinic)) {
-    return (
-      <ErrorAlert message="Clínica sem CNPJ ou responsável técnico cadastrados — cadastre em Configurações antes de emitir este documento." />
-    );
+    return <ClinicInfoIncompleteAlert clinic={clinic} />;
   }
   if (condition === null)
     return <ErrorAlert message="Condição não encontrada" />;
@@ -83,9 +84,10 @@ export default function PartnerReportPage({
   const { data: assessments } = useApiQuery<AssessmentDto[]>(
     `/api/conditions/${conditionId}/assessments`,
   );
+  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
   const { issuance, error: issuanceError } = useDocumentIssuance(
     'relatorio',
-    conditionId,
+    clinic && isClinicInfoComplete(clinic) ? conditionId : null,
   );
 
   const guard = guardBlock(
@@ -184,6 +186,9 @@ function ReportContent({
               <TableHead className="py-1 pr-2 text-black">Área (mm²)</TableHead>
               <TableHead className="py-1 pr-2 text-black">Tecido</TableHead>
               <TableHead className="py-1 pr-2 text-black">Exsudato</TableHead>
+              <TableHead className="py-1 pr-2 text-black">
+                Infecção / Bordas
+              </TableHead>
               <TableHead className="py-1 text-black">Dor</TableHead>
             </TableRow>
           </TableHeader>
@@ -200,11 +205,12 @@ function ReportContent({
                 </TableCell>
                 <TableCell className="py-1 pr-2">{a.areaMm2 ?? '—'}</TableCell>
                 <TableCell className="py-1 pr-2">
-                  {a.tissueType ?? '—'}
+                  {a.tissueType ? tissueTypeLabel(a.tissueType) : '—'}
                 </TableCell>
                 <TableCell className="py-1 pr-2">
                   {a.exudate ? (EXUDATE_LABELS[a.exudate] ?? a.exudate) : '—'}
                 </TableCell>
+                <TableCell className="py-1 pr-2">{timeSummary(a)}</TableCell>
                 <TableCell className="py-1">
                   {a.painScale != null ? `${a.painScale}/10` : '—'}
                 </TableCell>

@@ -9,8 +9,8 @@ import {
 const flat = (text: string) => text.replace(/\s+/g, ' ');
 
 describe('Feature: Texto-base do TCLE de tratamento (#216, ADR-030)', () => {
-  it("Dado o texto do consentimento, Quando ler a versão, Então é 'v2' (v1 misturava imagem e tratamento)", () => {
-    expect(CONSENT_TEXT_VERSION).toBe('v2');
+  it("Dado o texto do consentimento, Quando ler a versão, Então é 'v3' (v1 misturava imagem e tratamento)", () => {
+    expect(CONSENT_TEXT_VERSION).toBe('v3');
   });
 
   it('Dado o texto do consentimento, Quando ler o conteúdo, Então inclui a versão no cabeçalho e os marcadores da clínica', () => {
@@ -21,7 +21,6 @@ describe('Feature: Texto-base do TCLE de tratamento (#216, ADR-030)', () => {
     for (const marker of [
       '{{CLINICA_NOME}}',
       '{{CLINICA_CNPJ}}',
-      '{{RESPONSAVEL_TECNICO}}',
       '{{ENCARREGADO_NOME}}',
       '{{ENCARREGADO_CONTATO}}',
     ]) {

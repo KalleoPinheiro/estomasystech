@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
+
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
@@ -32,6 +33,7 @@ import {
   INVOICE_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
 } from '@/lib/format';
+import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 import {
@@ -116,6 +118,7 @@ function InvoicesTable({
   onDiscount,
   onCancel,
 }: InvoicesTableProps) {
+  const homonyms = homonymPatientIds(invoices);
   return (
     <div className="overflow-x-auto">
       <Table stack className="w-full text-left text-sm">
@@ -140,7 +143,7 @@ function InvoicesTable({
                 label="Paciente"
                 className="px-3 py-3 font-medium sm:min-w-44"
               >
-                {invoice.patientName}
+                {listPatientName(invoice, homonyms)}
               </TableCell>
               <TableCell
                 label="Descrição"
@@ -296,8 +299,10 @@ export default function BillingPage() {
     const payerFields = payer
       ? { payerName: payer.name, payerCpf: payer.cpf }
       : {};
-    // Saldo inteiro = quitar (fluxo histórico); menos que isso = parcial.
-    const partial = amountCents < invoice.balanceCents;
+    // Saldo inteiro = quitar (fluxo histórico); qualquer outro valor vai como
+    // parcial e o servidor recusa o que passa do saldo (FIN-RN-02), nunca
+    // vira quitação silenciosa (#466).
+    const partial = amountCents !== invoice.balanceCents;
     try {
       await apiFetch<InvoiceDto>(`/api/invoices/${invoice.id}`, {
         method: 'PATCH',
@@ -406,7 +411,7 @@ export default function BillingPage() {
             aria-pressed={statusFilter === filter.value}
             className={`rounded-full px-3 py-1.5 font-medium text-sm ${
               statusFilter === filter.value
-                ? 'bg-accent-ink text-white'
+                ? 'bg-accent-ink text-bg'
                 : 'border border-border-strong text-ink-2 hover:bg-surface-2'
             }`}
           >

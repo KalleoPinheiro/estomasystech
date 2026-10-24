@@ -12,6 +12,7 @@ import {
 import { slotForAttempt } from "./support/dates";
 import { literal } from "./support/regexp";
 import { pickPatient } from "./support/patient-picker";
+import { shown } from "./support/patient-name";
 
 test.describe("faturamento", () => {
   test("concluir consulta gera fatura pendente", async ({ page, request }) => {
@@ -28,7 +29,7 @@ test.describe("faturamento", () => {
 
     await page.goto("/faturamento");
     await page.getByRole("button", { name: "Pendentes" }).click();
-    const row = page.getByRole("row", { name: literal(patient.fullName) });
+    const row = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await expect(row).toBeVisible();
     await expect(row.getByText("R$ 234,00")).toBeVisible();
   });
@@ -42,14 +43,15 @@ test.describe("faturamento", () => {
     });
 
     await page.goto("/faturamento");
-    const row = page.getByRole("row", { name: literal(patient.fullName) });
+    const row = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await row.getByRole("button", { name: "Receber" }).click();
     await expect(page.getByRole("heading", { name: "Registrar pagamento" })).toBeVisible();
     await page.getByRole("button", { name: "Pix", exact: true }).click();
+    await page.getByRole("button", { name: "Confirmar recebimento" }).click();
 
     await expect(page.getByRole("heading", { name: "Registrar pagamento" })).not.toBeVisible();
     await page.getByRole("button", { name: "Pagas" }).click();
-    await expect(page.getByRole("row", { name: literal(patient.fullName) })).toContainText(
+    await expect(page.getByRole("row", { name: literal(shown(patient.fullName)) })).toContainText(
       "Pix",
     );
   });
@@ -63,12 +65,13 @@ test.describe("faturamento", () => {
     });
 
     await page.goto("/faturamento");
-    const row = page.getByRole("row", { name: literal(patient.fullName) });
+    const row = page.getByRole("row", { name: literal(shown(patient.fullName)) });
 
     // Recebe R$ 50 de R$ 200: continua pendente, com saldo.
     await row.getByRole("button", { name: "Receber" }).click();
     await page.getByLabel("Valor recebido (R$)").fill("50");
     await page.getByRole("button", { name: "Pix", exact: true }).click();
+    await page.getByRole("button", { name: "Confirmar recebimento" }).click();
     await expect(row).toContainText("falta R$ 150,00");
     await expect(row.getByRole("link", { name: "Recibo" })).toBeVisible();
 
@@ -82,8 +85,9 @@ test.describe("faturamento", () => {
     // Quita o saldo em dinheiro.
     await row.getByRole("button", { name: "Receber" }).click();
     await page.getByRole("button", { name: "Dinheiro", exact: true }).click();
+    await page.getByRole("button", { name: "Confirmar recebimento" }).click();
     await page.getByRole("button", { name: "Pagas" }).click();
-    const paidRow = page.getByRole("row", { name: literal(patient.fullName) });
+    const paidRow = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await expect(paidRow.getByRole("link", { name: "Recibo" })).toHaveCount(2);
   });
 
@@ -128,7 +132,7 @@ test.describe("faturamento", () => {
 
     await page.goto("/faturamento");
     await page.getByRole("button", { name: "Pagas" }).click();
-    const row = page.getByRole("row", { name: literal(patient.fullName) });
+    const row = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await expect(row).toBeVisible();
     await expect(row.getByRole("button", { name: "Cancelar" })).toHaveCount(0);
   });
@@ -177,7 +181,7 @@ test.describe("faturamento", () => {
     await page.goto("/faturamento");
     await page.getByRole("button", { name: "Pendentes" }).click();
     const pendingRowsForPatient = page.getByRole("row", {
-      name: literal(patient.fullName),
+      name: literal(shown(patient.fullName)),
     });
     const packageSaleInvoice = pendingRowsForPatient.filter({
       has: page.getByRole("cell", {

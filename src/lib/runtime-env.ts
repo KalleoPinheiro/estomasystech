@@ -85,3 +85,19 @@ export function assertNotProductionDatabase(
     throw new Error('Banco de produção recusado fora de production.');
   }
 }
+
+/**
+ * Staging sem segundo fator (ADR-054): o login por e-mail e senha das contas
+ * fictícias não pede TOTP. Só vale com `APP_ENV=staging` e opt-in explícito;
+ * qualquer outra combinação devolve `false` (falha fechado).
+ */
+export function stagingMfaDisabled(env: Env = process.env): boolean {
+  return env.STAGING_DISABLE_MFA === 'true' && resolveAppEnv(env) === 'staging';
+}
+
+/** Boot: `STAGING_DISABLE_MFA=true` fora da staging derruba o app, como `MOCK_INTEGRATIONS`. */
+export function assertStagingMfaFlagSafe(env: Env = process.env): void {
+  if (env.STAGING_DISABLE_MFA === 'true' && resolveAppEnv(env) !== 'staging') {
+    throw new Error('STAGING_DISABLE_MFA só pode ficar ligado na staging.');
+  }
+}

@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
+
 import { useToast } from '@still-void/ui/react/client';
 import { useEffect, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
@@ -24,6 +25,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { PartnerDto, PatientDto } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
+import { abbreviatePatientName } from '@/lib/patient-name';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 import { PatientForm, type PatientFormValues } from './patient-form';
@@ -67,7 +69,7 @@ function PatientsTable({
               className={patient.active ? '' : 'bg-surface-2/60'}
             >
               <TableCell label="Nome" className="px-4 py-3 font-medium">
-                {patient.fullName}
+                {abbreviatePatientName(patient.fullName)}
               </TableCell>
               <TableCell label="Contato" className="px-4 py-3 text-ink-2">
                 {patient.email && <div>{patient.email}</div>}

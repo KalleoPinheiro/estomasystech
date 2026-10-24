@@ -21,6 +21,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { FormSheet } from '@/components/form-sheet';
 import { HealingChart } from '@/components/healing-chart';
 import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
@@ -29,10 +30,19 @@ import type { AssessmentDto, ConditionDto } from '@/lib/dto';
 import {
   CONDITION_KIND_LABELS,
   EXUDATE_LABELS,
+  EXUDATE_TYPE_LABELS,
   formatDate,
   formatDateTime,
   STOMA_TYPE_LABELS,
+  tissueTypeLabel,
 } from '@/lib/format';
+import { timeSummary, tissueProfile } from '@/lib/wound-time-summary';
+import {
+  EMPTY_TIME_VALUES,
+  TimeFields,
+  type TimeFormValues,
+  toTimePayload,
+} from './assessment-time-fields';
 import { ConditionPhotos } from './condition-photos';
 
 interface ConditionsSectionProps {
@@ -220,6 +230,9 @@ export function ConditionsSection({
                               <TableHead className="py-1 pr-3">
                                 Exsudato
                               </TableHead>
+                              <TableHead className="py-1 pr-3">
+                                Infecção / Bordas
+                              </TableHead>
                               <TableHead className="py-1 pr-3">Dor</TableHead>
                               <TableHead className="py-1 pr-3">
                                 PUSH/DET
@@ -256,13 +269,32 @@ export function ConditionsSection({
                                   label="Tecido"
                                   className="py-1.5 pr-3"
                                 >
-                                  {a.tissueType ?? '—'}
+                                  {a.tissueType
+                                    ? tissueTypeLabel(a.tissueType)
+                                    : '—'}
+                                  {tissueProfile(a) && (
+                                    <span className="block text-ink-3">
+                                      {tissueProfile(a)}
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell
                                   label="Exsudato"
                                   className="py-1.5 pr-3"
                                 >
                                   {a.exudate ? EXUDATE_LABELS[a.exudate] : '—'}
+                                  {a.exudateType && (
+                                    <span className="block text-ink-3">
+                                      {EXUDATE_TYPE_LABELS[a.exudateType] ??
+                                        a.exudateType}
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell
+                                  label="Infecção / Bordas"
+                                  className={infectionCellClass(a)}
+                                >
+                                  {timeSummary(a)}
                                 </TableCell>
                                 <TableCell
                                   label="Dor"
@@ -317,19 +349,15 @@ export function ConditionsSection({
       )}
 
       {assessing && (
-        <Modal
-          title={`Avaliação — ${assessing.title}`}
+        <AssessmentSheet
+          condition={assessing}
           onClose={() => setAssessing(null)}
-        >
-          <AssessmentForm
-            condition={assessing}
-            onSaved={() => {
-              void loadAssessments(assessing.id).catch(() => undefined);
-              setExpanded(assessing.id);
-              setAssessing(null);
-            }}
-          />
-        </Modal>
+          onSaved={() => {
+            void loadAssessments(assessing.id).catch(() => undefined);
+            setExpanded(assessing.id);
+            setAssessing(null);
+          }}
+        />
       )}
     </div>
   );
@@ -453,6 +481,14 @@ function painCellClass(painScale: number | null): string {
   return `py-1.5 pr-3 ${abnormal ? ABNORMAL_CELL_CLASS : ''}`;
 }
 
+/** Infecção local ou pior ganha destaque, como a dor alta. */
+function infectionCellClass(assessment: AssessmentDto): string {
+  const abnormal =
+    assessment.infectionLevel != null &&
+    ['local', 'spreading', 'systemic'].includes(assessment.infectionLevel);
+  return `py-1.5 pr-3 ${abnormal ? ABNORMAL_CELL_CLASS : ''}`;
+}
+
 function complicationsCellClass(assessment: AssessmentDto): string {
   const abnormal = complicationsCellText(assessment) !== '—';
   return `py-1.5 ${abnormal ? ABNORMAL_CELL_CLASS : ''}`;
@@ -465,7 +501,7 @@ function scoreLabel(assessment: AssessmentDto): string {
   return '—';
 }
 
-interface AssessmentFormValues {
+interface AssessmentFormValues extends TimeFormValues {
   lengthMm: string;
   widthMm: string;
   depthMm: string;
@@ -532,41 +568,85 @@ const toAssessmentPayload = (values: AssessmentFormValues) => ({
   detErosionSeverity: toNumberOrNull(values.detErosionSeverity),
   detOvergrowthArea: toNumberOrNull(values.detOvergrowthArea),
   detOvergrowthSeverity: toNumberOrNull(values.detOvergrowthSeverity),
+  ...toTimePayload(values),
   notes: toTextOrNull(values.notes),
 });
 
-function AssessmentForm({
+const INITIAL_ASSESSMENT_VALUES: AssessmentFormValues = {
+  lengthMm: '',
+  widthMm: '',
+  depthMm: '',
+  tissueType: '',
+  exudate: '',
+  painScale: '',
+  skinCondition: '',
+  complications: '',
+  complicationCodes: [],
+  detDiscolorationArea: '',
+  detDiscolorationSeverity: '',
+  detErosionArea: '',
+  detErosionSeverity: '',
+  detOvergrowthArea: '',
+  detOvergrowthSeverity: '',
+  ...EMPTY_TIME_VALUES,
+  notes: '',
+};
+
+/**
+ * Janela da avaliação. O estado do formulário mora aqui, acima da troca
+ * `Modal` ↔ folha de tela cheia: girar o celular atravessa o ponto de corte e
+ * remonta a janela, e o que foi digitado não pode se perder (#523).
+ */
+function AssessmentSheet({
   condition,
+  onClose,
   onSaved,
 }: {
   condition: ConditionDto;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [values, setValues] = useState(INITIAL_ASSESSMENT_VALUES);
+  const dirty =
+    JSON.stringify(values) !== JSON.stringify(INITIAL_ASSESSMENT_VALUES);
+  return (
+    <FormSheet
+      title={`Avaliação — ${condition.title}`}
+      onClose={onClose}
+      dirty={dirty}
+      discardTitle="Descartar avaliação?"
+    >
+      <AssessmentForm
+        condition={condition}
+        values={values}
+        setValues={setValues}
+        onSaved={onSaved}
+      />
+    </FormSheet>
+  );
+}
+
+function AssessmentForm({
+  condition,
+  values,
+  setValues,
+  onSaved,
+}: {
+  condition: ConditionDto;
+  values: AssessmentFormValues;
+  setValues: React.Dispatch<React.SetStateAction<AssessmentFormValues>>;
   onSaved: () => void;
 }) {
   const { toast } = useToast();
   const isWound = condition.kind === 'wound';
-  const [values, setValues] = useState<AssessmentFormValues>({
-    lengthMm: '',
-    widthMm: '',
-    depthMm: '',
-    tissueType: '',
-    exudate: '',
-    painScale: '',
-    skinCondition: '',
-    complications: '',
-    complicationCodes: [],
-    detDiscolorationArea: '',
-    detDiscolorationSeverity: '',
-    detErosionArea: '',
-    detErosionSeverity: '',
-    detOvergrowthArea: '',
-    detOvergrowthSeverity: '',
-    notes: '',
-  });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const set = (key: keyof typeof values) => (value: string) =>
     setValues((prev) => ({ ...prev, [key]: value }));
+
+  const setTime = (patch: Partial<TimeFormValues>) =>
+    setValues((prev) => ({ ...prev, ...patch }));
 
   const toggleComplication = (code: string) =>
     setValues((prev) => ({
@@ -597,170 +677,193 @@ function AssessmentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      {error && <ErrorAlert message={error} />}
-      {isWound && (
-        <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <label className="font-medium text-sm">
-              Comprimento (mm)
-              <Input
-                type="number"
-                min="0"
-                value={values.lengthMm}
-                onChange={(e) => set('lengthMm')(e.target.value)}
-                className="mt-1"
-              />
-            </label>
-            <label className="font-medium text-sm">
-              Largura (mm)
-              <Input
-                type="number"
-                min="0"
-                value={values.widthMm}
-                onChange={(e) => set('widthMm')(e.target.value)}
-                className="mt-1"
-              />
-            </label>
-            <label className="font-medium text-sm">
-              Profundidade (mm)
-              <Input
-                type="number"
-                min="0"
-                value={values.depthMm}
-                onChange={(e) => set('depthMm')(e.target.value)}
-                className="mt-1"
-              />
-            </label>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="font-medium text-sm">
-              Tecido predominante
-              <NativeSelect
-                value={values.tissueType}
-                onChange={(e) => set('tissueType')(e.target.value)}
-                className="mt-1"
-              >
-                <option value="">—</option>
-                {/* Valores canônicos do PUSH 3.0 — texto livre legado permanece no histórico. */}
-                <option value="closed">Fechado (0)</option>
-                <option value="epithelial">Epitelização (1)</option>
-                <option value="granulation">Granulação (2)</option>
-                <option value="slough">Esfacelo (3)</option>
-                <option value="necrotic">Necrose (4)</option>
-              </NativeSelect>
-            </label>
-            <label className="font-medium text-sm">
-              Exsudato
-              <NativeSelect
-                value={values.exudate}
-                onChange={(e) => set('exudate')(e.target.value)}
-                className="mt-1"
-              >
-                <option value="">—</option>
-                {Object.entries(EXUDATE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-          </div>
-        </>
-      )}
-      {!isWound && (
-        <>
-          <fieldset className="rounded-lg border border-border p-3">
-            <legend className="px-1 font-semibold text-ink-3 text-xs uppercase">
-              Escala DET (0–15) — área 0–3 · severidade 0–2
-            </legend>
-            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-              <DetDomainInputs
-                label="Descoloração"
-                area={values.detDiscolorationArea}
-                severity={values.detDiscolorationSeverity}
-                onArea={set('detDiscolorationArea')}
-                onSeverity={set('detDiscolorationSeverity')}
-              />
-              <DetDomainInputs
-                label="Erosão"
-                area={values.detErosionArea}
-                severity={values.detErosionSeverity}
-                onArea={set('detErosionArea')}
-                onSeverity={set('detErosionSeverity')}
-              />
-              <DetDomainInputs
-                label="Hiperplasia"
-                area={values.detOvergrowthArea}
-                severity={values.detOvergrowthSeverity}
-                onArea={set('detOvergrowthArea')}
-                onSeverity={set('detOvergrowthSeverity')}
-              />
+    <form
+      onSubmit={handleSubmit}
+      className="flex min-h-0 flex-1 flex-col gap-3"
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        {error && <ErrorAlert message={error} />}
+        {isWound && (
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="font-medium text-sm">
+                Comprimento (mm)
+                <Input
+                  type="number"
+                  min="0"
+                  value={values.lengthMm}
+                  onChange={(e) => set('lengthMm')(e.target.value)}
+                  className="mt-1"
+                />
+              </label>
+              <label className="font-medium text-sm">
+                Largura (mm)
+                <Input
+                  type="number"
+                  min="0"
+                  value={values.widthMm}
+                  onChange={(e) => set('widthMm')(e.target.value)}
+                  className="mt-1"
+                />
+              </label>
+              <label className="font-medium text-sm">
+                Profundidade (mm)
+                <Input
+                  type="number"
+                  min="0"
+                  value={values.depthMm}
+                  onChange={(e) => set('depthMm')(e.target.value)}
+                  className="mt-1"
+                />
+              </label>
             </div>
-          </fieldset>
-          <div>
-            <p className="mb-1 font-medium text-sm">Complicações</p>
-            <div className="flex flex-wrap gap-2">
-              {COMPLICATION_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  onClick={() => toggleComplication(option.value)}
-                  className={`rounded-full px-2.5 py-1 font-medium text-xs ${
-                    values.complicationCodes.includes(option.value)
-                      ? 'bg-danger text-white'
-                      : 'border border-border-strong text-ink-2 hover:bg-surface-2'
-                  }`}
-                  variant="outline"
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="font-medium text-sm">
+                Tecido predominante
+                <NativeSelect
+                  value={values.tissueType}
+                  onChange={(e) => set('tissueType')(e.target.value)}
+                  className="mt-1"
                 >
-                  {option.label}
-                </Button>
-              ))}
+                  <option value="">—</option>
+                  {/* Valores canônicos do PUSH 3.0 — texto livre legado permanece no histórico. */}
+                  <option value="closed">Fechado (0)</option>
+                  <option value="epithelial">Epitelização (1)</option>
+                  <option value="granulation">Granulação (2)</option>
+                  <option value="slough">Esfacelo (3)</option>
+                  <option value="necrotic">Necrose (4)</option>
+                </NativeSelect>
+              </label>
+              <label className="font-medium text-sm">
+                Exsudato
+                <NativeSelect
+                  value={values.exudate}
+                  onChange={(e) => set('exudate')(e.target.value)}
+                  className="mt-1"
+                >
+                  <option value="">—</option>
+                  {Object.entries(EXUDATE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </label>
             </div>
-          </div>
-          <label className="font-medium text-sm">
-            Pele periestomal
-            <Input
-              value={values.skinCondition}
-              onChange={(e) => set('skinCondition')(e.target.value)}
-              placeholder="Ex.: íntegra, dermatite leve…"
-              className="mt-1"
-            />
-          </label>
-          <label className="font-medium text-sm">
-            Observação de complicações (texto livre)
-            <Input
-              value={values.complications}
-              onChange={(e) => set('complications')(e.target.value)}
-              placeholder="Detalhe as complicações selecionadas…"
-              className="mt-1"
-            />
-          </label>
-        </>
-      )}
-      <label className="font-medium text-sm">
-        Dor (0–10)
-        <Input
-          type="number"
-          min="0"
-          max="10"
-          value={values.painScale}
-          onChange={(e) => set('painScale')(e.target.value)}
-          className="mt-1"
-        />
-      </label>
-      <label className="font-medium text-sm">
-        Observações
-        <Textarea
-          rows={2}
-          value={values.notes}
-          onChange={(e) => set('notes')(e.target.value)}
-          className="mt-1"
-        />
-      </label>
-      <Button type="submit" disabled={saving} variant="accent" className="mt-1">
-        {saving ? 'Registrando…' : 'Registrar avaliação'}
-      </Button>
+            <TimeFields values={values} onChange={setTime} />
+            <label className="font-medium text-sm">
+              Pele perilesional
+              <Input
+                value={values.skinCondition}
+                onChange={(e) => set('skinCondition')(e.target.value)}
+                placeholder="Ex.: íntegra, macerada, eritema, descamação…"
+                className="mt-1"
+              />
+            </label>
+          </>
+        )}
+        {!isWound && (
+          <>
+            <fieldset className="rounded-lg border border-border p-3">
+              <legend className="px-1 font-semibold text-ink-3 text-xs uppercase">
+                Escala DET (0–15) — área 0–3 · severidade 0–2
+              </legend>
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                <DetDomainInputs
+                  label="Descoloração"
+                  area={values.detDiscolorationArea}
+                  severity={values.detDiscolorationSeverity}
+                  onArea={set('detDiscolorationArea')}
+                  onSeverity={set('detDiscolorationSeverity')}
+                />
+                <DetDomainInputs
+                  label="Erosão"
+                  area={values.detErosionArea}
+                  severity={values.detErosionSeverity}
+                  onArea={set('detErosionArea')}
+                  onSeverity={set('detErosionSeverity')}
+                />
+                <DetDomainInputs
+                  label="Hiperplasia"
+                  area={values.detOvergrowthArea}
+                  severity={values.detOvergrowthSeverity}
+                  onArea={set('detOvergrowthArea')}
+                  onSeverity={set('detOvergrowthSeverity')}
+                />
+              </div>
+            </fieldset>
+            <div>
+              <p className="mb-1 font-medium text-sm">Complicações</p>
+              <div className="flex flex-wrap gap-2">
+                {COMPLICATION_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggleComplication(option.value)}
+                    className={`rounded-full px-2.5 py-1 font-medium text-xs ${
+                      values.complicationCodes.includes(option.value)
+                        ? 'bg-danger text-white'
+                        : 'border border-border-strong text-ink-2 hover:bg-surface-2'
+                    }`}
+                    variant="outline"
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <label className="font-medium text-sm">
+              Pele periestomal
+              <Input
+                value={values.skinCondition}
+                onChange={(e) => set('skinCondition')(e.target.value)}
+                placeholder="Ex.: íntegra, dermatite leve…"
+                className="mt-1"
+              />
+            </label>
+            <label className="font-medium text-sm">
+              Observação de complicações (texto livre)
+              <Input
+                value={values.complications}
+                onChange={(e) => set('complications')(e.target.value)}
+                placeholder="Detalhe as complicações selecionadas…"
+                className="mt-1"
+              />
+            </label>
+          </>
+        )}
+        <label className="font-medium text-sm">
+          Dor (0–10)
+          <Input
+            type="number"
+            min="0"
+            max="10"
+            value={values.painScale}
+            onChange={(e) => set('painScale')(e.target.value)}
+            className="mt-1"
+          />
+        </label>
+        <label className="font-medium text-sm">
+          Observações
+          <Textarea
+            rows={2}
+            value={values.notes}
+            onChange={(e) => set('notes')(e.target.value)}
+            className="mt-1"
+          />
+        </label>
+      </div>
+      {/* Rodapé fora da rolagem: no celular o botão fica sempre à vista (#523). */}
+      <div className="border-border border-t pt-3">
+        <Button
+          type="submit"
+          disabled={saving}
+          variant="accent"
+          className="w-full sm:w-auto"
+        >
+          {saving ? 'Registrando…' : 'Registrar avaliação'}
+        </Button>
+      </div>
     </form>
   );
 }

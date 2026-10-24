@@ -1,6 +1,6 @@
 {
   "name": "estomasystech",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "prepare": "husky",
@@ -18,7 +18,7 @@
     "ambiente:local": "tsx scripts/ambiente/local.ts up",
     "ambiente:local:down": "tsx scripts/ambiente/local.ts down",
     "test:integracao": "tsx scripts/ambiente/local.ts integracao",
-    "staging:rebuild": "bash scripts/staging/rebuild.sh",
+    "staging:rebuild": "bash scripts/staging/rebuild.sh --deploy",
     "admin:recover": "tsx scripts/recover-super-admin.ts",
     "clinics:cnpj-review": "tsx scripts/flag-invalid-clinic-cnpjs.ts",
     "calendar:minimize": "tsx scripts/minimize-calendar-events.ts",
@@ -26,7 +26,7 @@
     "test:watch": "vitest",
     "test:changed": "vitest run --changed",
     "test:coverage": "vitest run --coverage",
-    "test:mutacao": "stryker run",
+    "test:mutacao": "TZ=UTC stryker run",
     "test:e2e": "npm run build && npm run test:e2e:prod && npm run test:e2e:dev",
     "test:e2e:prod": "playwright test -c playwright.prod.config.ts",
     "test:e2e:dev": "playwright test",
@@ -48,7 +48,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",
     "@sentry/core": "10.75.3",
-    "@still-void/ui": "^3.4.0",
+    "@still-void/ui": "^3.5.1",
     "drizzle-orm": "^0.45.2",
     "googleapis": "^173.0.0",
     "next": "^16.3.6",
@@ -56,9 +56,11 @@
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sharp": "^0.35.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@biomejs/biome": "2.5.12",
     "@changesets/cli": "^3.0.3",
     "@electric-sql/pglite": "^0.5.4",

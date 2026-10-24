@@ -2,6 +2,7 @@
 
 import { Button, Icon } from '@still-void/ui/react';
 import type { ReactNode } from 'react';
+import { IdentityImage } from '@/components/identity-image';
 import { appTimeZone } from '@/domain/shared/time-zone';
 import type { ClinicInfoDto } from '@/lib/dto';
 
@@ -173,6 +174,16 @@ export function DocumentFrame({
       </div>
 
       <header className="mb-8 border-black border-b-2 pb-4 text-center">
+        {clinic.logoUrl && (
+          <div className="mb-2 flex justify-center">
+            <IdentityImage
+              kind="logo"
+              url={clinic.logoUrl}
+              name={clinic.name}
+              size={64}
+            />
+          </div>
+        )}
         <h1 className="font-bold text-xl">{clinic.name}</h1>
         {clinic.cnpj && <p className="text-sm">CNPJ: {clinic.cnpj}</p>}
         {clinic.address && <p className="text-sm">{clinic.address}</p>}

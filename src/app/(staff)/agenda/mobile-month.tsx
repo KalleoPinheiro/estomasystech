@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
+import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { buildMonthDays, dayKey, WEEKDAY_LABELS } from './calendar-days';
 
 interface MobileMonthProps {
@@ -51,6 +52,7 @@ export function MobileMonth({
   const todayKey = dayKey(new Date());
 
   const byDay = new Map<string, AppointmentDto[]>();
+  const homonyms = homonymPatientIds(appointments);
   for (const appointment of appointments) {
     const key = dayKey(new Date(appointment.startsAt));
     byDay.set(key, [...(byDay.get(key) ?? []), appointment]);
@@ -96,12 +98,12 @@ export function MobileMonth({
                 data-has-appointments={hasAppointments || undefined}
                 onClick={() => setSelection({ monthKey, day: key })}
                 className={`relative h-auto min-h-11 w-full min-w-0 flex-col gap-0.5 p-0 font-medium text-sm ${
-                  inMonth ? '' : 'text-ink-3 opacity-60'
+                  inMonth ? '' : 'text-ink-3'
                 } ${isSelected ? 'bg-accent-soft text-accent-ink' : ''}`}
               >
                 <span
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${
-                    key === todayKey ? 'bg-accent-ink text-white' : ''
+                    key === todayKey ? 'bg-accent-ink text-bg' : ''
                   }`}
                 >
                   {day.getDate()}
@@ -162,7 +164,9 @@ export function MobileMonth({
                   <span className="font-semibold tabular-nums">
                     {formatTime(appointment.startsAt)}
                   </span>
-                  <span className="truncate">{appointment.patientName}</span>
+                  <span className="truncate">
+                    {listPatientName(appointment, homonyms)}
+                  </span>
                   <span className="truncate text-ink-3 text-sm">
                     {appointment.procedure}
                   </span>

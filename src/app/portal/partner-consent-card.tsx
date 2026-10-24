@@ -111,7 +111,12 @@ export function PartnerConsentSection({
           />
         ) : (
           <>
-            <Prose className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-border bg-sv-surface p-3 text-sm">
+            <Prose
+              tabIndex={0}
+              role="region"
+              aria-label="Texto do termo de compartilhamento"
+              className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded border border-border bg-sv-surface p-3 text-sm"
+            >
               {consent.consentText}
             </Prose>
             <Button

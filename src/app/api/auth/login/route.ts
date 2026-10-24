@@ -27,6 +27,7 @@ import {
 } from '@/lib/auth/session';
 import { systemScope } from '@/lib/auth/tenant-scope';
 import { logError } from '@/lib/log-error';
+import { stagingMfaDisabled } from '@/lib/runtime-env';
 
 const LOGIN_RATE_LIMIT = new SharedRateLimiter('login', 5, 60_000);
 /**
@@ -298,6 +299,8 @@ async function filterByValidPassword(
 async function pendingSecondFactor(authSecret: string, account: UserAccount) {
   // Portal nem monta o cifrador: login de paciente não depende da chave de dados.
   if (mfaPolicy(account.role) === 'none') return null;
+  // Staging sem segundo fator (ADR-054): só com APP_ENV=staging e opt-in explícito.
+  if (stagingMfaDisabled()) return null;
   const { userAccounts, mfa } = await getRepositories(systemScope());
   return startMfaLogin(
     {

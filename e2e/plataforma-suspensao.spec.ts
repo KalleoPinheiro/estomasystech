@@ -67,7 +67,7 @@ test.describe("clínica suspensa", () => {
     await memberPage.getByRole("button", { name: "Confirmar" }).click();
     await expect(memberPage.getByRole("list", { name: "Códigos de recuperação" }).getByRole("listitem")).toHaveCount(10);
     await memberPage.getByRole("button", { name: "Continuar" }).click();
-    await expect(memberPage.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(memberPage.getByRole("heading", { name: "Hoje", exact: true })).toBeVisible();
     await member.close();
   });
 });

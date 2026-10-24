@@ -7,6 +7,7 @@ import {
   NativeSelect,
   Textarea,
 } from '@still-void/ui/react';
+
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
@@ -20,6 +21,7 @@ import type {
   ProfessionalOptionDto,
   WaitlistEntryDto,
 } from '@/lib/dto';
+import { abbreviatePatientName } from '@/lib/patient-name';
 import { useApiQuery } from '@/lib/use-api-query';
 
 interface WaitlistPanelProps {
@@ -94,7 +96,9 @@ export function WaitlistPanel({
             >
               <div className="min-w-0 flex-1">
                 <p className="font-medium">
-                  {entry.patientName ?? 'Paciente'}
+                  {entry.patientName
+                    ? abbreviatePatientName(entry.patientName)
+                    : 'Paciente'}
                   {entry.source === 'patient' && (
                     <span className="ml-2 text-ink-3 text-xs">
                       (pelo portal)

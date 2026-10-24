@@ -143,7 +143,7 @@ describe('Feature: Configurações por papel (#215)', () => {
         within(screen.getByLabelText('Quem')).getAllByRole('option'),
       ).toHaveLength(3),
     );
-    expect(headings()).toEqual(['Feriados e ausências']);
+    expect(headings()).toEqual(['Identidade visual', 'Feriados e ausências']);
     expect(removeButtonIn('Natal')).not.toBeNull();
     expect(removeButtonIn('Congresso da Bia')).not.toBeNull();
     // Nenhuma chamada a rota administrativa (403 na API).
@@ -166,7 +166,7 @@ describe('Feature: Configurações por papel (#215)', () => {
           .map((o) => o.textContent),
       ).toEqual(['Dra. Ana']),
     );
-    expect(headings()).toEqual(['Feriados e ausências']);
+    expect(headings()).toEqual(['Identidade visual', 'Feriados e ausências']);
     expect(removeButtonIn('Férias da Ana')).not.toBeNull();
     expect(removeButtonIn('Natal')).toBeNull();
     expect(removeButtonIn('Congresso da Bia')).toBeNull();

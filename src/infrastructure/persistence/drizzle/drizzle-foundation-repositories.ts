@@ -216,6 +216,13 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .where(withTenant(userAccounts, this.clinicId, eq(userAccounts.id, id)));
   }
 
+  async saveAvatarKey(id: string, avatarKey: string | null): Promise<void> {
+    await this.db
+      .update(userAccounts)
+      .set({ avatarKey })
+      .where(withTenant(userAccounts, this.clinicId, eq(userAccounts.id, id)));
+  }
+
   async upgradePasswordHash(
     id: string,
     currentHash: string,

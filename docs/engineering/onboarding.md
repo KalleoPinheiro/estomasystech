@@ -136,17 +136,21 @@ npm run dev                   # http://localhost:3000
 | `DATA_ENCRYPTION_KEY` | sim em produção | cifra o texto clínico e o token do Google em repouso ([ADR-006](../adr/006-chave-de-dados-clinicos.md)) | `openssl rand -hex 32` (≥ 32 caracteres); fora de produção, sem ela, usa chave de desenvolvimento. Perdê-la é perder o prontuário: guarde no cofre |
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |
 | `APP_URL` | sim em produção | links de convite/reset, redirect do OAuth, link do recall | — |
+| `VERCEL_PROJECT_PRODUCTION_URL` | não (injetada pela Vercel) | base dos links de convite na homologação quando `APP_URL` não está definida | não defina à mão |
 | `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | não | e-mail **da plataforma** (contas sem clínica: bootstrap e reset do Super Admin); cada clínica usa a chave que cadastra ([ADR-011](../adr/011-canal-de-comunicacao-por-clinica.md)) | [resend.md](integrations/resend.md) |
 | `APP_ENV` | obrigatória na Vercel | `production`, `staging`, `preview` ou `development` | ausente fora da Vercel: `NODE_ENV=production` é produção, o resto é desenvolvimento ([ADR-041](../adr/041-homologacao-na-vercel-e-branch-staging.md)) |
 | `MOCK_INTEGRATIONS` | não | `true` liga o MSW (Resend, Google, S3/R2 simulados) | recusado em `production` |
+| `STAGING_DISABLE_MFA` | não | `true` dispensa o segundo fator no login | só com `APP_ENV=staging`; em qualquer outro ambiente o app recusa subir ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)) |
 | `PRODUCTION_DB_HOSTS` | homologação | hosts de banco de produção, separados por vírgula | `DATABASE_URL` com esse host é recusada fora de `production` |
 | `STAGING_SEED_PASSWORD` | `npm run seed:staging` | senha (≥ 10 caracteres) das contas fictícias | [homologacao.md](homologacao.md) § 4 |
 | `NEXT_PUBLIC_APP_VERSION` | não | versão exibida às clínicas; o `next.config.ts` a embute no build a partir do `package.json` | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
+| `NEXT_PUBLIC_RELEASE_VERSION` | não | versão da release em andamento (`package.json` + changesets pendentes); o `next.config.ts` a calcula no build e ela vale antes de `NEXT_PUBLIC_APP_VERSION` | [ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md) |
 | `NEXT_PUBLIC_APP_COMMIT` | não | SHA curto exibido junto da versão; só em homologação e preview | vem de `VERCEL_GIT_COMMIT_SHA` |
 | `VERCEL_GIT_COMMIT_SHA` | Vercel | injetada pela Vercel no build | origem de `NEXT_PUBLIC_APP_COMMIT` |
+| `SOURCE_COMMIT` | Coolify | injetada pelo Coolify no container; SHA gravado em `app_releases` no boot (opcional) | [ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md) |
 | `CHANGESET_BASE` | não | base do `npm run check:changeset` (padrão `origin/main`; o CI usa a base do PR) | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
-| `GATE_BASE` | não | base do diff com que o `npm run gate:local` escolhe os arquivos de domain/application a mutar (padrão `origin/main`) | [ADR-051](../adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md) |
+| `GATE_BASE` | não | base do diff de `gate:local`, `check:testes` e `check:changeset` (padrão: a release aberta de que a branch saiu; `release/*`, `hotfix/*` e `main` usam `origin/main`) | [ADR-058](../adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md) |
 | `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |

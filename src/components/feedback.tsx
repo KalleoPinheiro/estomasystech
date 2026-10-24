@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Alert,
   AlertDescription,
@@ -7,6 +9,7 @@ import {
   type IconName,
 } from '@still-void/ui/react';
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 
 interface ErrorAlertProps {
   message: string;
@@ -33,8 +36,15 @@ export function ErrorAlert({
   onRetry,
   variant = 'danger',
 }: ErrorAlertProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  // Em formulário longo (modal rolado até o Salvar) o alerta fica no topo,
+  // fora da tela: traz o erro à vista quando ele aparece ou muda (#478).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refaz a rolagem a cada mensagem nova
+  useEffect(() => {
+    ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [message]);
   return (
-    <Alert variant={variant} className="mb-4">
+    <Alert ref={ref} variant={variant} className="mb-4">
       <AlertDescription>{message}</AlertDescription>
       {onRetry && (
         <Button

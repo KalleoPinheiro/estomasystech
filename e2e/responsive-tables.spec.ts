@@ -16,6 +16,7 @@ import {
 } from "./support/api";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
+import { shown } from "./support/patient-name";
 
 /**
  * Cobre FASEA-06/07/09: 11 telas do staff embrulharam sua tabela em
@@ -107,7 +108,7 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
     });
 
     await page.goto("/faturamento");
-    await expect(page.getByText(patient.fullName)).toBeVisible();
+    await expect(page.getByText(shown(patient.fullName))).toBeVisible();
     await expectTableWrappedInOverflowContainer(page);
     await expectNoHorizontalScroll(page);
   });
@@ -146,7 +147,7 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
     const patient = await createPatient(request, { fullName: `Paciente Responsivo ${unique()}` });
 
     await page.goto("/pacientes");
-    await expect(page.getByText(patient.fullName)).toBeVisible();
+    await expect(page.getByText(shown(patient.fullName))).toBeVisible();
     await expectTableWrappedInOverflowContainer(page);
     await expectNoHorizontalScroll(page);
   });

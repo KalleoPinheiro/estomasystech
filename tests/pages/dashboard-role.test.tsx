@@ -135,3 +135,74 @@ describe('Feature: dashboard por papel (#199)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+/** Tela "Hoje" (#428): o próximo atendimento e os números do dia ficam no topo da agenda. */
+describe('Feature: tela Hoje (#428)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Dado uma consulta aberta hoje, Então destaca o próximo atendimento e a contagem do dia', async () => {
+    mockApi('atendente');
+
+    renderWithToast(
+      <WithStaffIdentity>
+        <DashboardPage />
+      </WithStaffIdentity>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Hoje' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Próximo atendimento')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /^Maria Souza · \d{2}:\d{2}$/ }),
+    ).toHaveAttribute('href', '/pacientes/pat-1');
+    expect(
+      screen.getByText('Procedimento: Troca de bolsa'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('0 de 1 concluídas')).toBeInTheDocument();
+  });
+});
+
+/** Nome do paciente (CONTEXT.md): completo onde identifica, abreviado nas listas. */
+describe('Feature: nome do paciente na tela Hoje (#429)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Dado paciente com 4 nomes, Quando abrir Hoje, Então a lista abrevia e o próximo atendimento mostra o nome completo', async () => {
+    const appointment = {
+      ...todayAppointment,
+      patientName: 'Mateus Paulo Costa Silva',
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.startsWith('/api/auth/identity')) {
+          return ok(identityFor('atendente'));
+        }
+        if (url.startsWith('/api/appointments')) return ok([appointment]);
+        if (url.startsWith('/api/follow-ups')) return ok([]);
+        if (url.startsWith('/api/guardians/majority')) return ok([]);
+        throw new Error(`unexpected fetch: ${url}`);
+      }),
+    );
+
+    renderWithToast(
+      <WithStaffIdentity>
+        <DashboardPage />
+      </WithStaffIdentity>,
+    );
+
+    expect(await screen.findByText('Mateus P. C. Silva')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', {
+        name: /^Mateus Paulo Costa Silva · \d{2}:\d{2}$/,
+      }),
+    ).toBeInTheDocument();
+  });
+});

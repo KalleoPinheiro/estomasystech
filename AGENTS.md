@@ -65,7 +65,7 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
 7. **Merge só com CI verde e recibo do gate local.** `feat/*` entra na `release/vX.Y.Z` (squash, sem recibo, com `## Homologação`); só `release/*` e `hotfix/*` vão para a `main` (merge commit na release), e é nesse PR que o recibo vale; nunca rebase da `release/*` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md)). O Actions roda o gate rápido (typecheck, lint,
    sv, docs, cobertura, build) e o E2E roda localmente por `npm run gate:local`, que imprime a linha
    `E2E-GATE: <sha> pass ...` no corpo do PR; o CI reprova recibo ausente, de outro commit ou sem
-   etapas. Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
+   etapas, exceto em PR que toca só `.md` de documentação, que dispensa o recibo ([ADR-053](docs/adr/053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md)). Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
    não é do PR: corrija primeiro. Decisões de @KalleoPinheiro, 2026-09-25 e 2026-10-19. → [ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)
 8. **Teste é intocável.** Nunca edite, afrouxe, apague ou desligue teste (`skip`/`only`/`fixme`),
    nem reduza limiar de cobertura, nem aumente `retries`/`timeout`, para resolver problema de
@@ -73,6 +73,19 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
    requisito de negócio mudou, com `TESTE-ALTERADO: <motivo>` no PR. Imposto por script, não por
    confiança: hook do Claude Code, `pre-push` e CI (`npm run check:testes`). Teste verifica
    comportamento de negócio (cenário Given/When/Then), não a implementação. → [ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)
+
+## Branch e PR de agentes (ADR-052)
+
+Todo agente, antes de criar branch, confere estas decisões (o orquestrador as repete no brief da thread):
+
+- **Base sempre a release aberta**, nunca a `main`: `git fetch origin && git switch -c <tipo>/<slug> origin/release/vX.Y.Z`. Ache a release com `git ls-remote --heads origin 'release/*'` (uma por vez).
+- **Nome**: `feat/<slug>` para funcionalidade, `fix/<slug>` para correção, `docs/<slug>` para só documentação. `main` só recebe `release/*` e `hotfix/*`, por merge commit.
+- **PR em squash com base `release/vX.Y.Z`**, com `## Homologação` no corpo (`Seed:` e cenários Dado/Quando/Então, ou `n/a — <motivo>`). Sem recibo do gate local nesse PR.
+- **Changeset**: PR que toca `src/`, `drizzle/` ou `Dockerfile` leva `npm run changeset`; se nada muda para a clínica, `--empty`. PR só de documentação não precisa de changeset.
+- **Handoff** da issue em `.specs/archive/handoff-2026.md`, na mesma PR.
+- **Validação antes do PR**: `npm run test:changed -- origin/release/vX.Y.Z`, `typecheck`, `lint`, `check:docs` (se tocou `.md`). Gate completo (`gate:local`) só no PR `release/*` → `main`.
+
+Se a release aberta não estiver clara ou a branch já nasceu da `main`, pergunte ao orquestrador antes de seguir. Detalhe: [`docs/engineering/homologacao.md`](docs/engineering/homologacao.md) § 1.
 
 ## Mapa de contexto
 

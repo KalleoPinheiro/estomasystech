@@ -1,9 +1,10 @@
 'use client';
 
-import { Button, FileInput } from '@still-void/ui/react';
+import { Button } from '@still-void/ui/react';
 import Image from 'next/image';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
+import { FilePicker } from '@/components/file-picker';
 import { formatDate } from '@/lib/format';
 import { useConditionPhotos } from '@/lib/use-condition-photos';
 
@@ -35,7 +36,7 @@ export function ConditionPhotos({
           Fotos de evolução
         </h4>
         {canUpload && (
-          <FileInput
+          <FilePicker
             accept="image/jpeg,image/png,image/webp"
             disabled={uploading}
             onChange={(e) => {

@@ -148,6 +148,23 @@ describe('Feature: Página de login', () => {
     });
   });
 
+  describe('Cenário: mostrar a senha', () => {
+    it('Dado a senha oculta, Quando tocar em Mostrar senha, Então o campo vira texto e o botão passa a Ocultar senha', async () => {
+      mockProviders({ password: true });
+
+      render(<LoginPage />);
+
+      const senha = (await screen.findByLabelText('Senha')) as HTMLInputElement;
+      expect(senha.type).toBe('password');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Mostrar senha' }));
+      expect(senha.type).toBe('text');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Ocultar senha' }));
+      expect(senha.type).toBe('password');
+    });
+  });
+
   describe('Cenário: recuperação de senha', () => {
     it('Dado a tela de login, Quando renderizar, Então oferece o link para esqueci minha senha', async () => {
       mockProviders({ password: true });

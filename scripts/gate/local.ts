@@ -11,7 +11,8 @@
  * pulada fica registrada no recibo e o CI roda o job Docker quando o que ele valida muda.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { detectBase } from './base';
 import { formatReceipt, mutationTargets } from './receipt';
 
 interface Step {
@@ -35,7 +36,7 @@ const STEPS: Step[] = [
 ];
 
 const DOCKER_STEPS: Step[] = [
-  { name: 'docker', cmd: 'bash', args: ['-c', 'docker compose build && bash scripts/docker-smoke.sh'] },
+  { name: 'docker', cmd: 'bash', args: ['scripts/gate/docker-step.sh'] },
   { name: 'backup', cmd: 'bash', args: ['scripts/backup-smoke.sh'] },
 ];
 
@@ -43,10 +44,9 @@ function git(...args: string[]): string {
   return spawnSync('git', args, { encoding: 'utf8' }).stdout.trim();
 }
 
-/** Arquivos alterados contra a base (`GATE_BASE`, padrão `origin/main`) que a mutação cobre. */
+/** Arquivos alterados contra a base (`GATE_BASE`, senão a release aberta, senão `origin/main`: ADR-058) que a mutação cobre. */
 function changedRuleFiles(): string[] {
-  const base = process.env.GATE_BASE ?? 'origin/main';
-  const out = git('diff', '--name-only', '--diff-filter=d', `${base}...HEAD`);
+  const out = git('diff', '--name-only', '--diff-filter=d', `${detectBase()}...HEAD`);
   return mutationTargets(out.split('\n').filter(Boolean));
 }
 
@@ -76,6 +76,9 @@ async function main(): Promise<void> {
     console.error('✗ árvore suja: faça commit antes. O recibo vale para o SHA do HEAD.');
     process.exit(1);
   }
+  // Sobras de rodadas anteriores (mutação, relatórios) não podem cair no lint nem no recibo.
+  for (const dir of ['.stryker-tmp', 'reports']) rmSync(dir, { recursive: true, force: true });
+  console.log(`Base do diff: ${detectBase()}`);
   const sha = git('rev-parse', 'HEAD');
   const started = Date.now();
   const done: string[] = [];

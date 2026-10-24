@@ -114,11 +114,60 @@
    grosso, todo `a[href]` do conteúdo (`main`) e do portal ganha 44px (a mesma
    conta que a lib usa em `.sv-btn`). `inline-flex` porque `min-height` não se
    aplica a elemento inline. Desktop com mouse fica como está. */
-@media (width < 40rem), (pointer: coarse) {
+@media (width < 64rem), (pointer: coarse) {
   :is(main, .portal-shell) a[href] {
     display: inline-flex;
     align-items: center;
     min-height: calc(var(--sv-space-10) + var(--sv-space-1));
     min-width: calc(var(--sv-space-10) + var(--sv-space-1));
   }
+}
+
+/* sv-gap: touch-target-size
+   O link da marca (`.sv-logo`, 24px) não tem alvo de toque na lib: abaixo de 64rem
+   ou com ponteiro grosso ganha a mesma altura de 44px (#519). Botão, campo, aba,
+   paginação, rótulo de caixa de seleção e os botões Fechar já chegam a 44px pela
+   `@still-void/ui@3.5.1`. */
+@media (width < 64rem), (pointer: coarse) {
+  .sv-logo {
+    min-height: calc(var(--sv-space-10) + var(--sv-space-1));
+  }
+}
+
+/* --- Shell mobile (#428) ---
+   Sem destaque azul ao tocar e sem "puxar para atualizar" do navegador por cima
+   do app. A animação reduzida já vem do Still Void (prefers-reduced-motion). */
+html {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* sv-gap: field-font-16
+   O `.sv-field` da lib usa 15px em tela estreita; o Safari do iOS dá zoom ao
+   focar campo abaixo de 16px e a tela fica deslocada. Em tela estreita ou
+   ponteiro grosso, todo campo sobe para no mínimo 1rem. */
+@media (width < 40rem), (pointer: coarse) {
+  .sv-field {
+    font-size: max(1rem, var(--sv-text-base));
+  }
+}
+
+/* Antes da hidratação (marca em components/hydration-mark.tsx) os botões ainda
+   não respondem ao clique: o cursor de espera evita a impressão de botão
+   quebrado (#484). */
+html:not([data-hydrated]) button:not(:disabled),
+html:not([data-hydrated]) [role="button"] {
+  cursor: progress;
+}
+
+/* Área rolável que esmaece a borda com conteúdo escondido (#524):
+   app/(staff)/scroll-fade.tsx escreve --fade-top e --fade-bottom. */
+.scroll-fade {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--fade-top, 0px),
+    #000 calc(100% - var(--fade-bottom, 0px)),
+    transparent 100%
+  );
 }

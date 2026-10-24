@@ -14,7 +14,7 @@ import { useApiQuery } from '@/lib/use-api-query';
  * papel duplicada aqui. Esconder é só UX (ADR-003): a API continua barrando.
  */
 export const STAFF_PAGES = [
-  { href: '/', label: 'Dashboard', api: '/api/appointments' },
+  { href: '/', label: 'Hoje', api: '/api/appointments' },
   { href: '/agenda', label: 'Agenda', api: '/api/appointments' },
   { href: '/triagem', label: 'Triagem', api: '/api/photos/triage' },
   { href: '/pacientes', label: 'Pacientes', api: '/api/patients' },

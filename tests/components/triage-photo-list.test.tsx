@@ -81,3 +81,41 @@ describe('TriagePhotoList — cor do badge de score por severidade', () => {
     expect(screen.queryByRole('button', { name: /PUSH|DET/ })).toBeNull();
   });
 });
+
+describe('TriagePhotoList — alerta de infecção (ADR-063)', () => {
+  it('Dado infecção local na última avaliação, Quando listar, Então mostra o alerta', () => {
+    renderWithToast(
+      <TriagePhotoList
+        queue={[fixture({ infectionAlert: 'local' })]}
+        actionError={null}
+        submittingId={null}
+        onTriage={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Infecção local')).toBeInTheDocument();
+  });
+
+  it('Dado código de infecção desconhecido, Quando listar, Então mostra o código', () => {
+    renderWithToast(
+      <TriagePhotoList
+        queue={[fixture({ infectionAlert: 'novo' })]}
+        actionError={null}
+        submittingId={null}
+        onTriage={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('novo')).toBeInTheDocument();
+  });
+
+  it('Dado sem infecção, Quando listar, Então não mostra alerta', () => {
+    renderWithToast(
+      <TriagePhotoList
+        queue={[fixture({ infectionAlert: null })]}
+        actionError={null}
+        submittingId={null}
+        onTriage={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText('Infecção local')).toBeNull();
+  });
+});

@@ -25,6 +25,8 @@ last_reviewed: 2026-09-26
 
 - Proibidos: `<button>`, `<input>`, `<select>`, `<textarea>`, `<table>` crus e utilitários de cor Tailwind crus.
 - Exceção deliberada: `// sv-gap: <slug>` + seção em [`docs/still-void-gaps.md`](../still-void-gaps.md). `npm run check:sv` mantém os dois em sincronia.
+- Tema (#425): `<html>` nasce com `data-theme`/`data-accent` de `src/lib/theme.ts` (padrão claro + violeta); `ThemeScript` (com o nonce da CSP) e `ThemeProvider` usam a chave `estomasystech:modo`, a preferência claro/escuro do **aparelho**. O Still Void persiste modo **e** acento nessa chave: quando a cor vier da clínica (#426), chame `setAccent` na montagem para a cor da clínica vencer o valor guardado. Só as 4 cores calibradas do Still Void (sem hex livre).
+- Shell mobile (#428): abaixo de `md` a equipe usa a barra inferior (`src/components/app-shell/bottom-nav.tsx`, atalhos por papel em `src/lib/staff-shortcuts.ts`, máx. 5) e a rota `/mais` com o resto, filtrado por `canRoleAccess`; a partir de `md`, o menu lateral. O drawer do menu lateral segue disponível no celular até o bloco "Hoje"/listas decidir removê-lo. Regras de iOS/Android: `viewport-fit=cover` e `theme-color` em `layout.tsx`, `env(safe-area-inset-*)` nas bordas fixas, `min-h-dvh` (nunca `100vh`), campo ≥ 16px (`sv-gap: field-font-16`), alvo ≥ 44px, sem `maximum-scale`.
 - Histórico da adoção: [`backlog-design-system.md`](../backlog-design-system.md), `.specs/features/still-void-*`.
 
 ## Dados e escopo

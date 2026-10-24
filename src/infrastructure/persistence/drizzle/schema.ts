@@ -54,8 +54,21 @@ export const clinics = pgTable(
     // Encarregado pelos dados (#216, ADR-030): nulos valem o contato da clínica.
     dpoName: text('dpo_name'),
     dpoContact: text('dpo_contact'),
+    // Logo da clínica (#427): chave no mesmo armazenamento das fotos clínicas.
+    logoKey: text('logo_key'),
+    // Tema da clínica (#426): modo padrão e cor de acento, lista fechada.
+    themeMode: text('theme_mode').notNull().default('system'),
+    themeAccent: text('theme_accent').notNull().default('violet'),
   },
   (table) => [
+    check(
+      'clinics_theme_mode_check',
+      sql`${table.themeMode} IN ('light', 'dark', 'system')`,
+    ),
+    check(
+      'clinics_theme_accent_check',
+      sql`${table.themeAccent} IN ('cyan', 'violet', 'mint', 'amber')`,
+    ),
     check(
       'clinics_status_check',
       sql`${table.status} IN ('active', 'suspended')`,
@@ -196,6 +209,8 @@ export const userAccounts = pgTable(
       withTimezone: true,
       mode: 'date',
     }),
+    // Avatar da equipe (#427): chave no armazenamento; paciente nunca (#376).
+    avatarKey: text('avatar_key'),
   },
   (table) => [
     // Um acesso de portal por cadastro, dentro da empresa (#196).
@@ -694,6 +709,16 @@ export const conditionAssessments = pgTable(
     detErosionSeverity: integer('det_erosion_severity'),
     detOvergrowthArea: integer('det_overgrowth_area'),
     detOvergrowthSeverity: integer('det_overgrowth_severity'),
+    // TIME completo (#464): infecção/inflamação, bordas, tipo de exsudato e % de tecido.
+    // Todos nulos nas avaliações anteriores; vocabulário em domain/clinical/wound-time.ts.
+    infectionLevel: text('infection_level'),
+    infectionSigns: text('infection_signs'),
+    woundEdges: text('wound_edges'),
+    exudateType: text('exudate_type'),
+    granulationPct: integer('granulation_pct'),
+    epithelialPct: integer('epithelial_pct'),
+    sloughPct: integer('slough_pct'),
+    necroticPct: integer('necrotic_pct'),
     notes: text('notes'),
     createdAt: timestamp('created_at', {
       withTimezone: true,
@@ -703,6 +728,22 @@ export const conditionAssessments = pgTable(
   (table) => [
     index('idx_condition_assessments_condition').on(table.conditionId),
     index('idx_condition_assessments_clinic').on(table.clinicId),
+    check(
+      'condition_assessments_infection_level_check',
+      sql`${table.infectionLevel} IN ('none', 'inflammation', 'local', 'spreading', 'systemic')`,
+    ),
+    check(
+      'condition_assessments_wound_edges_check',
+      sql`${table.woundEdges} IN ('attached', 'detached', 'rolled', 'macerated', 'undermined', 'hyperkeratotic', 'epithelializing')`,
+    ),
+    check(
+      'condition_assessments_exudate_type_check',
+      sql`${table.exudateType} IN ('serous', 'serosanguineous', 'sanguineous', 'purulent')`,
+    ),
+    check(
+      'condition_assessments_tissue_pct_check',
+      sql`coalesce(${table.granulationPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.epithelialPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.sloughPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.necroticPct}, 0) BETWEEN 0 AND 100 AND coalesce(${table.granulationPct}, 0) + coalesce(${table.epithelialPct}, 0) + coalesce(${table.sloughPct}, 0) + coalesce(${table.necroticPct}, 0) <= 100`,
+    ),
   ],
 );
 
@@ -1638,4 +1679,20 @@ export const jobRuns = pgTable('job_runs', {
     withTimezone: true,
     mode: 'date',
   }).notNull(),
+});
+
+/**
+ * Releases implantadas (ADR-066): uma linha por versão semver, gravada de forma idempotente no
+ * boot de cada implantação. Tabela de plataforma, sem empresa; `notes` é texto curto e nunca
+ * leva dado de paciente.
+ */
+export const appReleases = pgTable('app_releases', {
+  id: text('id').primaryKey(),
+  version: text('version').notNull().unique(),
+  gitSha: text('git_sha'),
+  releasedAt: timestamp('released_at', {
+    withTimezone: true,
+    mode: 'date',
+  }).notNull(),
+  notes: text('notes'),
 });

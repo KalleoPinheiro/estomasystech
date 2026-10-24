@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
         },
         { limit, cursor: parsedPage.cursor },
       );
-      return result.map(({ invoice, patientName }) =>
-        toInvoiceDto(invoice, patientName),
+      return result.map(({ invoice, patientName, patientBirthDate }) =>
+        toInvoiceDto(invoice, patientName, patientBirthDate),
       );
     },
     (result) => ({ nextCursor: nextInvoiceCursor(result, limit) }),

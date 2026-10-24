@@ -3,6 +3,7 @@ import { createPatient, unique } from "./support/api";
 import { expectToast } from "./support/assertions";
 import { businessDay, ymdToDateInput } from "./support/dates";
 import { pickPatient } from "./support/patient-picker";
+import { shown } from "./support/patient-name";
 
 test.describe("lista de espera", () => {
   test("recepção põe paciente na lista de espera pela agenda e remove", async ({ page, request }) => {
@@ -20,11 +21,11 @@ test.describe("lista de espera", () => {
     await dialog.getByRole("button", { name: "Adicionar à lista" }).click();
     await expectToast(page, "Adicionado à lista de espera");
 
-    const item = page.locator("li", { hasText: patient.fullName });
+    const item = page.locator("li", { hasText: shown(patient.fullName) });
     await expect(item).toContainText("Só de manhã");
     await item.getByRole("button", { name: "Remover" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Remover" }).click();
     await expectToast(page, "Removido da lista de espera");
-    await expect(page.locator("li", { hasText: patient.fullName })).toHaveCount(0);
+    await expect(page.locator("li", { hasText: shown(patient.fullName) })).toHaveCount(0);
   });
 });

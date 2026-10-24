@@ -12,6 +12,7 @@ import type {
   EmailProvider,
 } from '@/domain/clinic/clinic-channel';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
+import { clinicLogoUrl } from './identity';
 
 /** Dados cadastrais da clínica — cabeçalho/rodapé de documentos emitidos (#61/#62). */
 export interface ClinicInfoDto {
@@ -21,6 +22,8 @@ export interface ClinicInfoDto {
   city: string | null;
   professionalName: string | null;
   professionalRegistry: string | null;
+  /** Logo no cabeçalho dos documentos (#430); ausente quando a clínica não enviou. */
+  logoUrl?: string;
 }
 
 export const toClinicInfoDto = (clinic: Clinic): ClinicInfoDto => ({
@@ -30,6 +33,9 @@ export const toClinicInfoDto = (clinic: Clinic): ClinicInfoDto => ({
   city: clinic.city,
   professionalName: clinic.professionalName,
   professionalRegistry: clinic.professionalRegistry,
+  ...(clinic.logoKey
+    ? { logoUrl: clinicLogoUrl(clinic.logoKey) as string }
+    : {}),
 });
 
 /**

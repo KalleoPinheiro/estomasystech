@@ -1522,3 +1522,411 @@ Pedido do Kalléo (thread "Implantar fluxo de release"), fluxo acordado em `/mnt
 - **Fica com o Kalléo (painel)**: *Allow merge commits* no repositório; ruleset de `release/**` (PR obrigatório, CI rápido exigido, force push bloqueado, bypass para quem roda `release:sync`/Actions); depois do reset da cota, provar `staging.yml` com um push na `main`.
 - **Pergunta aberta**: o `GITHUB_TOKEN` consegue dar push em `release/*` com PR obrigatório? Se o bypass do GitHub Actions não existir na lista do ruleset, usar segredo próprio ou rodar `release:sync` à mão.
 - **Next step**: abrir a primeira `release/vX.Y.Z` pelo fluxo novo. **Blockers**: nenhum.
+
+
+## Fundação de tema (2026-10-21) — EM REVISÃO
+
+Issue #425, primeiro bloco da identidade visual (`.design/identidade-visual-e-tema.md`).
+- **Feito**: `src/lib/theme.ts` (padrão claro + violeta, chave `estomasystech:modo`, rótulo pt-BR); `layout.tsx` renderiza `data-theme`/`data-accent` e o `ThemeScript` com o nonce da CSP (`x-nonce`); `Providers` ganha `ThemeProvider`; `ThemeToggle` (pt-BR) na barra lateral da equipe. Testes novos: `tests/lib/theme.test.ts`, `tests/components/theme-toggle.test.tsx`. Nenhum teste existente editado.
+- **Decisão não crítica**: componente próprio em vez do `ThemeToggle` do pacote (texto em inglês); `package.json` segue em `^3.4.0` (o teste de versão fixa o intervalo; a 3.4.1 entra com a trava de contraste #424).
+- **Atenção para #426**: o Still Void guarda modo e acento na mesma chave do `localStorage` e o valor guardado vence o do servidor; ao ligar a cor da clínica, chamar `setAccent` na montagem. O modo "automático" (`system`) não existe no pacote: #426 decide como mapeá-lo.
+- **Next step**: #426 (identidade da clínica) e #428. **Blockers**: nenhum.
+
+
+## Shell mobile: barra inferior e Mais (2026-10-21) — EM REVISÃO
+
+Issue #428 (parte 1 de 2; a tela "Hoje" vai em PR separado). Base: `.design/identidade-visual-e-tema.md`.
+- **Feito**: `BottomNav` (abaixo de `md`, atalhos por papel: Admin Hoje/Agenda/Pacientes/Faturas/Mais, Atendente sem Faturas, Profissional com Triagem e contador), rota `/mais` (grupos Atendimento, Gestão e Conta filtrados por `canRoleAccess`, com tema e Sair), `viewport` com `viewport-fit=cover` e `theme-color` claro/escuro, `min-h-dvh`, safe-area na barra e no conteúdo, `sv-gap: field-font-16` (campo ≥ 16px), `overscroll-behavior` e tap-highlight. Testes novos: `tests/lib/staff-shortcuts.test.ts`, `tests/components/bottom-nav.test.tsx`, `e2e/shell-mobile.spec.ts`.
+- **TESTE-ALTERADO**: `e2e/sidebar-responsive.spec.ts` — o seletor `nav a` pegava os links da barra inferior (nova `<nav>`), cobertos pelo drawer; agora escopado ao `dialog` do drawer. Comportamento testado igual.
+- **Decisões não críticas**: drawer do menu lateral mantido no celular (trocá-lo exigiria mexer em 5 E2E existentes; fica para o PR que fechar o shell); "Mais" é rota real (o voltar do aparelho funciona); "Ajuda e suporte" fora (não há tela; pergunta aberta ao dono); sem axe (`@axe-core/playwright` entra com a trava #424).
+- **Pendente (spike do issue)**: rodapé fixo com teclado aberto e gesto de voltar em iPhone e Android reais; só se mede no aparelho.
+- **Next step**: PR "Hoje" (#428 parte 2) e listas em cartões (#429). **Blockers**: nenhum.
+
+
+## Tela Hoje (2026-10-21) — EM REVISÃO
+
+Issue #428, parte 2 (a parte 1, barra inferior e Mais, foi o PR #437).
+- **Feito**: a tela inicial e o item de menu "Dashboard" viram "Hoje" (com a data); a agenda de hoje ganha o bloco "Próximo atendimento" (nome completo do paciente, horário e procedimento, por `nextAppointment`) e a contagem "N de M concluídas" (`dayCounts`), em `src/lib/day-summary.ts`. Sem chamada de API nova: usa a lista do dia que a tela já busca (resumo para o Admin, agenda para os demais; o Profissional já vem restrito à própria agenda). Testes novos: `tests/lib/day-summary.test.ts` e um cenário em `tests/pages/dashboard-role.test.tsx`.
+- **TESTE-ALTERADO**: o nome da tela mudou de "Dashboard" para "Hoje" (aprovado pelo dono na canvas): `tests/pages/staff-nav-role.test.tsx`, `tests/pages/staff-dashboard.test.tsx` e os títulos em `e2e/{auth,followup,plataforma,plataforma-suspensao}.spec.ts`. Só o rótulo mudou.
+- **Decisão não crítica**: o estado "sem permissão para o resumo financeiro" já existe (o bloco de KPIs some para quem não tem `/api/summary`); o bloco de KPIs do mês segue abaixo.
+- **Next step**: #429 (listas em cartões). **Blockers**: nenhum.
+
+
+## Nome abreviado nas listas (2026-10-21) — EM REVISÃO
+
+Issue #429 (primeira fatia). As tabelas das telas já viram cartões no celular (`Table stack` do Still Void 3.4.0, provado em `e2e/responsive-tables.spec.ts`), então esta fatia aplica a regra de exibição do nome do CONTEXT.md.
+- **Feito**: `abbreviatePatientName` (`src/lib/patient-name.ts`): primeiro e último nome inteiros e iniciais dos do meio; partículas (de, da, do, das, dos, e) não viram inicial. Aplicado nas listas de Pacientes, Faturamento, Hoje (consultas e retornos), Agenda (grade e mês no celular) e lista de espera. Testes novos: `tests/lib/patient-name.test.ts` e um cenário em `tests/pages/dashboard-role.test.tsx`. **TESTE-ALTERADO**: `e2e/{agenda,faturamento,followup,layout-mobile-first,lista-espera,pacientes,responsive-tables}.spec.ts` passam a procurar o nome já abreviado nas listas (helper `e2e/support/patient-name.ts` reutiliza `abbreviatePatientName`); a verificação é a mesma, só o texto esperado muda por causa da regra nova.
+- **Decisão não crítica**: pedidos do titular, auditoria, detalhes, formulários e confirmações mantêm o nome completo (identificam o titular ou a ação). Homônimos com o mesmo nome abreviado: a lista de Pacientes já mostra o nascimento em coluna; nas demais listas fica a pergunta aberta do doc de descoberta (padrão sugerido: nascimento no segundo).
+- **Next step**: telas restantes do #429, uma por PR (Procedimentos/Materiais/Profissionais/Parceiros como lista + ficha, Minha conta, login), depois da trava de acessibilidade (#424). **Blockers**: nenhum.
+
+
+## Homônimos nas listas (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 2. Decisão do orquestrador por segurança do paciente (dois identificadores): quando dois nomes abreviados colidem na mesma lista, todos os que colidem mostram o nascimento (`Maria S. Lima · nasc. 12/03/1980`); registrado no CONTEXT.md.
+- **Feito**: `ListAppointments`, `ListInvoices` e `ListFollowUps` devolvem `patientBirthDate`; `AppointmentDto`, `InvoiceDto` e `FollowUpDto` ganham `patientBirthDate?` só nas listas (rotas de agenda, resumo, faturas e retornos); `homonymPatientIds` e `listPatientName` (`src/lib/patient-name.ts`) aplicados em Hoje, Faturamento, grade e mês da agenda. Testes novos: `tests/lib/patient-name.test.ts` (homônimos), `tests/application/follow-ups-birth-date.test.ts`, `e2e/homonimos.spec.ts`. Nenhum teste existente editado.
+- **Fora desta fatia**: lista de espera (a API não traz nascimento) e a lista de Pacientes (já tem coluna de nascimento). Dado de saúde: a data de nascimento já é visível à equipe na lista de Pacientes; as rotas continuam atrás das mesmas guardas e o Profissional só recebe a própria agenda.
+- **Next step**: aguardar #427 e #424 para as telas restantes do #429. **Blockers**: nenhum.
+
+## Logo da clínica e avatar da equipe (2026-10-21) — CONCLUÍDO (PR #441 mergeado na release/v0.2.0)
+
+Issue #427 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-055; migração `0067`.
+- **Feito**: `clinics.logo_key` e `user_accounts.avatar_key`; `POST|DELETE /api/settings/clinic-logo` (só o Admin, família administrativa; diverge do nome `/api/clinic/logo` da issue porque a família de rota é por caminho) e `GET /api/clinic/logo` e `POST|DELETE /api/account/avatar` + `GET /api/account/avatar/[id]` (mesma clínica, conta ativa); `identity: { logoUrl, imageUploadAvailable }` em `GET /api/settings/clinic-info`, `imageUploadAvailable` também em `/api/me`, `avatarUrl` em `/api/me`, `clinicLogoUrl`/`account.avatarUrl` em `/api/auth/identity`; telas em Configurações, Minha conta e menu da equipe. SVG: `src/domain/clinic/svg-sanitizer.ts` (allowlist, reconstrói o arquivo, rejeita conteúdo ativo; 70 casos com payloads de XSS), entrega com `nosniff` + CSP `sandbox` (o proxy aplica a CSP isolada nessas rotas). Raster: `sharp` recodifica em WebP sem EXIF.
+- **Spike HEIC**: o `sharp` pré-compilado não decodifica HEIC; o servidor recusa com orientação e o `accept` omite HEIC (o Safari do iOS converte para JPEG no seletor). Se quiser HEIC de verdade, `heic-convert` entra atrás do `ImageProcessor` (decisão registrada no ADR-055).
+- **Testes novos** (nenhum existente editado): `tests/domain/{svg-sanitizer,identity-image}.test.ts`, `tests/application/manage-identity-image.test.ts`, `tests/infrastructure/{sharp-image-processor,identity-images-persistence}.test.ts`, `tests/api/identity-images.test.ts`, `tests/proxy-identity-images.test.ts`.
+- **Pendências**: (1) varredura de arquivos de avatar órfãos no bucket após a anonimização (a chave é limpa no banco, o arquivo fica; bucket privado, nome UUID); (2) logo no login, nos comprovantes e nos e-mails é a fatia seguinte (roadmap "Logo em login e comprovantes"); (3) migração `0067` e ADR-055 conferidos contra a release no momento do merge (#426 também previa `0067`: quem mergear depois renumera).
+- **Next step**: #430 depende deste. **Blockers**: nenhum.
+
+## Identidade visual: trava de acessibilidade (#424, 2026-10-21) — EM REVISÃO
+
+Bloco 0 da descoberta `.design/identidade-visual-e-tema.md` (release v0.2.0, ADR-052).
+- **Feito**: `@still-void/ui` sobe para `^3.4.1` (tintas de texto do modo claro com folga sobre fundo tingido, still-void#28); `tests/lib/contraste-tema.test.ts` lê o `theme.css` publicado e confere, nas 4 cores × 2 modos, texto e texto secundário sobre as 4 superfícies, acento e estado como texto (superfície lisa e tinta de 10%) e `#0a0a0c` sobre o acento; `@axe-core/playwright` com `e2e/acessibilidade.spec.ts` (login e esqueci-senha, com `prefers-color-scheme` claro e escuro, 0 violações séria/crítica; o app só segue o esquema do sistema depois do #425).
+- **Testes novos**, mais um ajuste com `TESTE-ALTERADO`: `tests/app/still-void-version.test.ts` passa a exigir a 3.4.1 (o #425 deixou a 3.4.0 para esta entrega). Rodado contra o build de produção.
+- **Fora do escopo, pendente no Still Void**: borda de controle a 3:1 (hoje `--sv-border-strong` fica perto de 1,5:1); o teste não cobre bordas até existir um token próprio.
+- **Next step**: telas novas (Hoje, Identidade, Aparência) somam rotas ao spec do axe quando chegarem (#425 a #429). **Blockers**: nenhum.
+
+
+## Acessibilidade das telas da equipe (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 3 (critério de pronto: axe sem violação séria). `e2e/acessibilidade-equipe.spec.ts` roda o axe (WCAG 2.2 AA) em 16 telas da equipe (Hoje, Mais, Pacientes, Agenda, Faturamento, Procedimentos, Materiais, Profissionais, Parceiros, Minha conta, Configurações, Relatórios, Repasses, Auditoria, Triagem, Pedidos do titular), no claro e no escuro, a 390px.
+- **Achados e correções**: Hoje, `label-content-name-mismatch` nos cartões de KPI (o `aria-label` "Ver …" não continha o texto visível; agora o nome vem do conteúdo); Agenda e Faturamento, `color-contrast` do "hoje" e do filtro ativo (`text-white` sobre `bg-accent-ink` no escuro; agora `text-bg`, o mesmo par do `sv-btn--accent`) e dos dias de outros meses no calendário do celular (`opacity-60` removido, fica `text-ink-3`). As demais telas já passavam.
+- **TESTE-ALTERADO**: `tests/pages/staff-dashboard.test.tsx` procura os links dos KPIs pelo texto visível (`/^Recebido no mês/`, `/^Consultas no mês/`) em vez do `aria-label` "Ver …" (critério WCAG 2.5.3: o nome acessível contém o rótulo visível).
+- **Ainda fora do axe**: definir senha (precisa de token), portal do paciente e Plataforma (sessões próprias); entram numa fatia com helper de sessão. O redesenho "lista + ficha" de Procedimentos, Materiais, Profissionais e Parceiros e o hub de Configurações dependem do desenho da canvas (decisão de UX do dono) e ficam como pergunta aberta.
+- **Next step**: definir/portal/plataforma no axe. **Blockers**: nenhum.
+
+## Acessibilidade: definir senha, portal e Plataforma (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 4. `e2e/acessibilidade-portal-plataforma.spec.ts` roda o axe (WCAG 2.2 AA), claro e escuro, a 390px: definir senha (link inválido), início do portal do paciente (sessão de paciente com `linkPortalAccount` + `sessionCookie`) e 5 telas da Plataforma (início, nova clínica, taxonomia, auditoria, minha conta; sessão do super_admin).
+- **Achado e correção**: portal, `scrollable-region-focusable` nos textos de termo (`consent-card.tsx`, `partner-consent-card.tsx`): o `Prose` com `overflow-y-auto` não era focável por teclado; ganhou `tabIndex={0}`, `role="region"` e `aria-label`. As demais telas já passavam. Sem teste existente alterado.
+- **Fora do axe**: definir senha com token válido (estado de formulário) e telas internas do portal além do início; ficam para quando houver helper de token.
+- **Next step**: "lista + ficha" e login redesenhado seguem pausados até o Kalléo ver a canvas. **Blockers**: nenhum.
+
+## Tema e cor por clínica (2026-10-21) — EM REVISÃO
+
+Issue #426 (bloco 2 de `.design/identidade-visual-e-tema.md`), ADR-056; migração `0068`.
+- **Feito**: `clinics.theme_mode` (`light|dark|system`) e `clinics.theme_accent` (`cyan|violet|mint|amber`) com `CHECK`; `src/domain/clinic/clinic-identity.ts` (lista fechada, validação, padrão `system` + `violet`); `UpdateClinicTheme`; `PUT /api/settings/clinic-identity` (só o Admin, auditoria `clinic-theme`; diverge do `/api/clinic/identity` da issue pelo mesmo motivo do ADR-055: família de rota por caminho); tema em `identity.theme` de `clinic-info` e `clinicTheme` de `/api/auth/identity`; seção "Identidade visual" em Configurações com prévia (Atendente e Profissional veem, não editam); o layout raiz lê a sessão e escreve `data-theme`/`data-accent`; `ClinicThemeSync` reaplica a cor da clínica a cada montagem (o valor guardado pelo pacote vencia o do servidor) e resolve `system` por `prefers-color-scheme`, ao vivo; botão claro/escuro grava a escolha do aparelho em chave própria (`estomasystech:modo-escolhido`), com cópia em memória. Seed: a clínica vizinha nasce escura e âmbar.
+- **Decisão `system`**: o pacote só tem `light` e `dark`. O servidor entrega claro, o script inline (nonce da CSP) resolve antes de pintar. Aparelhos que já tinham a chave do pacote da #425 seguem o padrão da clínica até o primeiro clique.
+- **TESTE-ALTERADO**: `tests/pages/configuracoes-role.test.tsx` (2 asserções): a lista de títulos do Atendente e do Profissional em Configurações ganhou "Identidade visual", porque o requisito da issue é que eles vejam a seção. Nenhum outro teste existente foi editado.
+- **Testes novos**: `tests/domain/clinic-identity.test.ts`, `tests/application/update-clinic-theme.test.ts`, `tests/infrastructure/clinic-theme-persistence.test.ts`, `tests/api/clinic-theme.test.ts`, `tests/lib/{theme-clinic,clinic-theme-server,device-mode}.test.ts`, `tests/components/clinic-theme-sync.test.tsx`, `tests/pages/identity-section.test.tsx`.
+- **Pendências**: a consulta da clínica a cada renderização não tem cache; limpeza de avatar órfão (fatia seguinte, LGPD) e logo em login e comprovantes seguem abertas.
+- **Next step**: limpeza de avatar órfão, depois #430. **Blockers**: nenhum.
+
+## Limpeza de avatar órfão na retenção (2026-10-21) — EM REVISÃO
+
+Pendência do #427 (LGPD: foto de rosto é dado pessoal), sem ADR novo (completa o ADR-055).
+- **Feito**: `RetentionRepository.findInactiveAvatarKeys(cutoff)` (mesmo filtro de `anonymizeInactiveAccounts`) e `RunRetention.removeAvatars`: apaga os arquivos antes de anonimizar, porque a anonimização zera a chave; falha de um arquivo vai ao log com a chave e não trava a anonimização. `ACE-RN-60` atualizada.
+- **Edição em teste existente (não enfraquece)**: o helper `fakeRetention` de `tests/application/run-retention.test.ts` ganhou `findInactiveAvatarKeys`, porque o contrato `RetentionRepository` ganhou o método. Nenhuma asserção mudou.
+- **Testes novos**: `tests/application/retention-avatars.test.ts`, `tests/infrastructure/retention-avatars-persistence.test.ts`.
+- **Next step**: #430. **Blockers**: nenhum.
+
+
+## Instalar na tela inicial e logo nos documentos (2026-10-21) — EM REVISÃO
+
+Issue #430 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-057; sem migração.
+- **Feito**: `src/app/manifest.ts` (`standalone`, `pt-BR`, ícones 192/512/maskable) e ícone do iOS no `metadata` do layout; ícones gerados por `scripts/brand/generate-icons.ts` com tokens do Still Void; os cinco caminhos entram em `PUBLIC_PATHS` (exatos); `ClinicInfoDto.logoUrl` opcional e logo no cabeçalho de `DocumentFrame` só quando a clínica enviou.
+- **Decisões**: sem service worker (nada de prontuário em cache no aparelho); manifesto e ícones são da plataforma, iguais para todas as clínicas (rota pública não sabe a clínica).
+- **Perguntas abertas (produto)**: logo no login (como identificar a clínica antes de entrar, sem expor quem é cliente?) e logo em e-mail (precisa de URL pública da imagem). HEIC já respondido no ADR-055.
+- **Testes novos**: `tests/lib/instalar-na-tela-inicial.test.ts`, `tests/components/document-frame-logo.test.tsx`. Nenhum teste existente alterado.
+- **Next step**: aguardar decisão de produto sobre login/e-mail. **Blockers**: nenhum.
+
+## Procedimentos em lista + ficha (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 5, desenho aprovado pelo Kalléo na canvas (Cadastros). `/procedimentos`: título "Procedimentos"; Editar abre a ficha ao lado da lista (`lg:` duas colunas; folha de baixo no celular desde o upgrade 3.5.0), linha escolhida com `aria-selected`; Novo procedimento e Kit seguem em janela. Nenhum teste existente alterado; testes novos na página e `e2e/procedimentos-ficha.spec.ts`.
+- **Pergunta aberta (regra 5)**: no celular a canvas mostra o formulário em folha de baixo; aqui a ficha empilha abaixo da lista. A folha de baixo pede um componente do Still Void (ou `sv-gap`); decidir antes de Materiais/Profissionais/Parceiros, que seguem o mesmo padrão.
+- **Next step**: Materiais, Profissionais, Parceiros no mesmo padrão. **Blockers**: nenhum.
+
+## Login redesenhado (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 6, canvas aprovada (Entrar). `/login`: moldura em dois painéis a partir de `md` (marca do produto + formulário), só formulário no celular, botão Mostrar/Ocultar senha (fora do `<label>`, para não mudar o nome do campo), frase da LGPD junto do link de privacidade. Passos de segundo fator usam a mesma moldura. Nenhum teste existente alterado; o axe de `/login` (claro e escuro) já cobre a tela.
+- **Pergunta aberta (regra 5)**: a canvas mostra logo e nome da clínica no login, mas o login não sabe a clínica de quem entra (e-mail e senha, sem subdomínio). Ficou a marca do produto. Mostrar a clínica exigiria decidir como identificá-la (subdomínio, link do convite ou depois do e-mail).
+- **Next step**: hub de Configurações; Materiais/Profissionais/Parceiros depois da folha de baixo. **Blockers**: nenhum.
+## Folha de baixo nas fichas (2026-10-21) — EM REVISÃO
+
+Resolve a pergunta aberta de "Procedimentos em lista + ficha". `@still-void/ui` 3.4.1 → 3.5.0 (traz `BottomSheet` e o token `--sv-control-border`, bordas de campo mais fortes). Novo `src/components/sheet-panel.tsx`: ficha ao lado da lista a partir de 1024 px, `BottomSheet` (`closeLabel="Cancelar"`) abaixo disso; só `/procedimentos` usa por ora, é a única lista+ficha mergeada.
+- **Decisão**: consulta `max-width: 1023px`; sem `matchMedia` (SSR, testes) o padrão é a ficha ao lado, o que mantém os testes existentes intactos.
+- **Coordenação**: a thread de tema troca Materiais, Profissionais e Parceiros para `SheetPanel` depois que este PR entrar na release.
+- **Testes novos**: `tests/components/sheet-panel.test.tsx`, `e2e/procedimentos-folha.spec.ts` (390 px). Nenhum teste existente alterado.
+- **Next step**: adoção nas demais fichas. **Blockers**: nenhum.
+
+
+## Parceiros e Profissionais em lista + ficha (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 7, canvas aprovada (Cadastros). Mesmo padrão de Procedimentos, com o `SheetPanel` compartilhado: Editar abre a ficha ao lado da lista (`lg:`) ou a folha de baixo no celular; Novo parceiro/profissional segue em janela.
+- **TESTE-ALTERADO**: `tests/pages/staff-operations.test.tsx` (2 testes de "fechar sem salvar"): o botão de fechar a edição passa a se chamar "Fechar ficha" (ficha ao lado da lista, desenho aprovado), em vez do "Fechar" da janela.
+- Sem destaque da linha escolhida nestas duas telas (só em Procedimentos), para não ampliar a mudança.
+- **Next step**: Materiais (945 linhas, estoque e movimentos, pede olhar à parte) e hub de Configurações. **Blockers**: nenhum.
+
+## Logo do EstomaSysTech (2026-10-21) — EM REVISÃO
+
+Pedido do Kalléo: no login, logo do sistema (não da clínica), bonita, minimalista e moderna. `src/components/brand-mark.tsx`: "E" de três barras arredondadas sobre quadrado de cantos suaves, com ponto à direita; usa `--sv-accent-ink` e `--sv-bg` (par do botão de acento, AA em todos os modos). Login: marca grande no painel (computador) e pequena acima do título (celular). `public/brand/estomasystech.svg`: arquivo estático (violeta fixo) para quem precisar fora do app.
+- **Pergunta aberta (regra 5)**: ícone do app (`public/icons`, favicon, apple-touch) segue o antigo; trocar pela nova marca exige gerar PNGs e decidir cor fixa. Não feito.
+- **Next step**: Materiais e hub de Configurações. **Blockers**: nenhum.
+
+## Base do gate local na release (2026-10-21) — EM REVISÃO
+
+Exceção pontual de @KalleoPinheiro para editar `scripts/gate/` e `.husky/pre-push`. `check:testes`, mutação do `gate:local` e `check:changeset` passam a comparar com a release aberta de que a branch descende (ADR-058); `release/*`, `hotfix/*` e `main` seguem contra `origin/main`; `GATE_BASE` vence. `pre-push` busca as releases. Regra 8 e recibo do PR release→main intactos.
+- **Testes novos**: `tests/scripts/gate-base.test.ts`. Nenhum teste existente alterado.
+- **Next step**: aguardar revisão. **Blockers**: nenhum.
+
+## Materiais em lista + ficha (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 8, canvas aprovada (Cadastros). `/materiais`: Editar abre a ficha ao lado da lista (`lg:`) ou a folha de baixo no celular, via `SheetPanel`; Novo insumo, Movimentar e Histórico seguem em janela (são ações de estoque, não ficha). Nenhum teste existente alterado.
+- **Next step**: hub de Configurações. **Blockers**: nenhum.
+
+## Hub de Configurações (2026-10-21) — EM REVISÃO
+
+Issue #429, fatia 9, canvas aprovada (Configurações). `/configuracoes` ganha `SectionNav`: coluna de atalhos fixa ao lado (computador) e lista no topo (celular), por âncora, só com as seções que o papel vê (mesma matriz `useStaffAccess`). As seções seguem todas na mesma página.
+- **Decisão**: a canvas mostra o celular como hub com telas por seção (navegar para cada uma). Fiz âncoras na mesma página porque as telas por seção mudariam rotas e quebrariam vários E2E existentes (feriados, canal de e-mail, grade de horários), que não podem ser alterados por regra 8. Se o Kalléo quiser uma tela por seção, vira um PR próprio com migração desses testes.
+- Teste novo `tests/pages/configuracoes-secoes.test.tsx`; nenhum teste existente alterado.
+- **Fechando o #429**: restam só o favicon/ícone do app (decisão do Kalléo) e a pergunta da tela por seção. **Blockers**: nenhum.
+
+## Seed de staging aditivo (2026-10-21) — EM REVISÃO
+
+Pedido do Kalléo (opção A): a staging usa a branch `main` do Neon, sem reset, então as 8 contas novas do #434 e a clínica vizinha nunca entravam. `scripts/seed/seed.ts` passa a criar só o que falta (clínica por id, conta por e-mail, profissional por registro, parceiro por e-mail, pacientes da vizinha por nome), sem apagar nem duplicar; massa pesada só em clínica sem paciente; senha reaplicada em banco já semeado; travas de `APP_ENV` e banco de produção intactas. ADR-059; `homologacao.md` § 4 atualizado.
+- **Testes novos**: `tests/scripts/seed-aditivo.test.ts` (banco vazio, já completo, semeado antes do #434, termos do portal, senha trocada). Nenhum teste existente alterado.
+- **Next step**: após o merge, Kalléo roda `git checkout release/v0.2.0 && git pull && npm run staging:rebuild -- --release --push` no WSL. **Blockers**: nenhum.
+## Rotina mensal e checklist (#381) (2026-10-21) — EM REVISÃO
+
+Decisões do Kalléo em 2026-10-21 sobre a #381: logs com PII mascarada (thread própria), segurança adiada (Tailscale no lugar de Proton VPN; Cloudflare só com usuários reais) e rotina mensal em opção A (checklist no runbook).
+- **Feito:** `producao.md` § 7.4 com o checklist do 1º sábado. Só `.md`, então pela regra do ADR-053 não exige recibo do gate local.
+- **Próximo passo (outro PR, com recibo):** workflow de lembrete mensal desligado (sem `schedule`), que abre uma issue de lembrete. Ativar depois, com o recibo do gate local.
+- **Atenção:** `mutacao-mensal.yml` já tem `schedule` (último dia do mês) e vai rodar em 2026-10-31, consumindo cota; decidir se o mantém ou desliga até o reset.
+- **Blockers:** nenhum.
+## Favicon e ícone do app com a logo nova (2026-10-21) — EM REVISÃO
+
+Escolha do Kalléo: opções C (branca) e D (grafite) da prévia, uma para cada cenário claro/escuro. `public/brand/favicon-grafite.svg` (aba clara) e `favicon-branco.svg` (aba escura) entram em `metadata.icons` com `media: prefers-color-scheme`, e viram caminhos públicos (`access-policy.ts`). Ícone do app instalado (manifesto 192/512/maskable) e `apple-touch-icon.png`: grafite, já que o manifesto não troca por tema. `src/app/favicon.ico`: grafite, de reserva.
+- **Decisão minha**: associei grafite à aba clara e branco à aba escura (contraste com a aba). Se o Kalléo quiser o oposto, é trocar o `media` de cada um.
+- Teste novo `tests/lib/favicon-por-tema.test.ts`; nenhum teste existente alterado.
+- **Next step**: nenhum no #429. **Blockers**: nenhum.
+
+## Barra lateral: bloco da clínica e do usuário (2026-10-21) — EM REVISÃO
+
+Correção pedida pelo Kalléo (staging f42666e, desktop): avatar cortado ("C(" e "A") e nome da clínica e e-mail quebrando em várias linhas. `SidebarIdentity` agora tem logo e avatar de 32 px (iniciais com fundo `bg-accent-soft`, antes invisível sobre o painel), nome da clínica, e-mail e perfil em uma linha com reticências, e o e-mail inteiro no `title`. Teste novo `e2e/sidebar-identidade.spec.ts` (medidas e axe em claro e escuro a 1280 px).
+- **TESTE-ALTERADO**: `tests/pages/staff-layout-client.test.tsx` (C42) e `e2e/layout-mobile-first.spec.ts` ("e-mail da sidebar"): o requisito de #199 (e-mail inteiro quebrando linha) mudou a pedido do Kalléo para uma linha com reticências; o endereço completo fica no `title`.
+- Não consegui ver o "C(" da staging (o E2E usa iniciais "CE"); a causa provável é o logo/avatar sem `shrink-0` ou sem fundo; o novo teste mede 32x32 para travar isso. Se persistir com imagem real, preciso de uma captura.
+- **Next step**: nenhum. **Blockers**: nenhum.
+
+## Workflow do lembrete mensal (#381) (2026-10-21) — EM REVISÃO
+
+Segundo passo da rotina mensal: `.github/workflows/rotina-mensal.yml` abre a issue «Rotina mensal de manutenção — AAAA-MM» com o checklist do `producao.md` § 7.4. **Desligado**: só `workflow_dispatch`, com o `schedule` (sábados 11:00 UTC, filtrado para o 1º sábado) comentado; job de poucos segundos, sem checkout, sem duplicar issue aberta. `producao.md` § 7.4 ganhou o passo a passo de ativação.
+- **Decisão minha**: `ubuntu-24.04` (como os demais workflows) em vez de `ubuntu-latest`; sem label na issue (label inexistente faria o `gh issue create` falhar).
+- **Next step**: ativar depois do reset da cota (~2026-11-01), descomentando o `schedule`. **Blockers**: nenhum.
+## Mascarar dados pessoais nos logs (2026-10-21) — EM REVISÃO
+
+Issue #381 (item logs/LGPD), decisão do Kalléo: mascarar PII nos logs e auditar/documentar sempre com dado mascarado. `emit` do logger passa `msg` por `scrubText` e os campos por `redactFields` (`src/lib/redact.ts`): chave sensível (CPF, e-mail, telefone, nome de pessoa, anamnese/diagnóstico/notas, senha, token, corpo de mensagem…) vira `[redigido]`; URL com query, Bearer/JWT, sequência opaca, e-mail e número longo viram marcador. GlitchTip: contexto, mensagem, `transaction` e tags também. ADR-060; auditoria dos 56 pontos de log em `docs/engineering/auditoria-logs-pii-2026-10.md`; runbook § 9.4 e `glitchtip.md` atualizados.
+- **Decisão**: única exceção é o `link` de definição de senha fora de produção (dry-run do `NullEmailGateway`; o E2E depende dele). Teste de arquitetura C17 proíbe nome/e-mail/CPF/telefone crus em mensagem de log.
+- **Testes novos**: `redact-campos`, `logger-redacao`, `error-tracker-redacao`, `log-pii-architecture`. Nenhum teste existente alterado.
+- **Pergunta aberta**: o log de acesso do Traefik/Coolify pode guardar `?token=` de convite/reset; não verificado (exige olhar o servidor, via RC). Entra na rotina mensal.
+- **Next step**: aguardar revisão. **Blockers**: nenhum.
+
+## Avatar com iniciais quebradas (2026-10-22) — EM REVISÃO
+
+Staging mostrava "C(" no logo da clínica "Clínica Homologação (fictícia)": `initialsOf` pegava o primeiro caractere da última palavra, que era o parêntese. Agora cada termo contribui com a primeira letra ou número (`\p{L}\p{N}`), termos sem letra são ignorados, e nome sem nenhuma letra dá "?". Layout: logo e avatar já têm tamanho fixo (`style` width/height) e `shrink-0` desde o PR #458; o recorte vinha só do texto, não do layout.
+- Teste novo `tests/components/identity-image-iniciais.test.tsx` (parênteses, acentos, uma palavra, vazio); nenhum teste existente alterado.
+- O E2E pegou (só na suíte completa, por causa de uma foto pendente criada por outro spec) contraste insuficiente em `.text-xs.truncate` da lista de triagem sobre o aviso âmbar do "Hoje": `triage-photo-list.tsx` trocou `text-ink-3` por `text-ink-2`. Falha anterior a este PR, corrigida aqui porque o gate precisa ficar verde (regra 7).
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## TIME completo na avaliação de ferida (2026-10-22) — EM REVISÃO
+
+Issue #464 (QA staging v0.2.0, mãe #463): a avaliação de ferida não tinha Infecção/Inflamação nem Bordas/epitelização. Migração aditiva `0069` (oito colunas nulas + `CHECK`): `infection_level`, `infection_signs`, `wound_edges`, `exudate_type` e percentuais de granulação, epitelização, esfacelo e necrose. Vocabulário fechado em `src/domain/clinical/wound-time.ts` (contínuo de infecção da IWII; bordas em valor único), validação no domínio e na API, formulário com `TimeFields`, coluna "Infecção / Bordas" na tabela e no relatório impresso, seed com TIME. ADR-062, PRO-RN-24.
+- **Decisão minha**: PUSH inalterado, sem regra cruzada nível × sinais, portal e parceiro sem os campos novos, pele perilesional reaproveita `skin_condition`. As 4 perguntas abertas (vocabulário, alerta de infecção, % de tecido no PUSH, conferência nível × sinais) estão no ADR-062 para o estomaterapeuta.
+- **Tipo do DTO**: campos novos opcionais em `AssessmentDto` para não editar fixtures de teste existentes (regra 8).
+- **Testes novos**: `wound-time`, `avaliacao-time-routes` (PGlite, roda a migração), `avaliacao-time-form`, `wound-time-summary`; nenhum teste existente alterado.
+- **Seed**: a massa pesada só nasce em banco vazio (ADR-059); a staging só mostra TIME nas avaliações do seed em banco novo.
+- **Next step**: Kalléo/estomaterapeuta responderem as perguntas do ADR-062. **Blockers**: nenhum.
+
+## Pagamento acima do saldo (2026-10-22) — EM REVISÃO
+
+Issue #466 (QA staging v0.2.0, filha de #463): no diálogo «Registrar pagamento», valor acima do saldo (ex.: 999 para saldo de R$ 120) virava `PATCH {action:"pay"}` e quitava sem aviso. O domínio e a API já recusavam `pay_partial` acima do saldo (FIN-RN-02); o furo era só a UI, que mandava `pay` para qualquer valor ≥ saldo. `PaymentForm` agora mostra «Valor maior que o saldo: o máximo é R$ X» e desabilita as formas de pagamento (também para zero e negativo); `handlePay` só usa `pay` quando o valor é exatamente o saldo, então qualquer valor fora disso chega ao servidor como parcial e é recusado.
+- **Decisão**: sem crédito automático (recomendação do orquestrador). Não adicionei etapa de confirmação para o clique no meio de pagamento (agravante da issue): é mudança de UX que fica como pergunta aberta.
+- **Testes novos** em `invoice-payments-ui.test.tsx`; nenhum teste existente alterado. Linha nova na matriz de exceções do financeiro.
+- **Next step**: nenhum. **Blockers**: nenhum.
+## Rebuild da staging dispara deploy (2026-10-22) — EM REVISÃO
+
+A Vercel não cria deploy de Production para um SHA já construído (ex.: prévia da release), e a `staging` local herdava upstream em `origin/release/v0.2.0`, então um `git push` simples ia para a release. `scripts/staging/rebuild.sh` ganhou `--deploy` (commit vazio `chore(staging): dispara deploy de homologação` quando algum ref remoto já aponta para o SHA final), cria a `staging` com `--no-track` e publica sempre com `git push --force-with-lease --set-upstream origin HEAD:staging`.
+- **Decisão**: `--deploy` é opt-in no script e padrão no `npm run staging:rebuild` e no `staging.yml`, porque `tests/scripts/release-fluxo.test.ts` (regra 8, intocável) exige staging == release ao chamar o script direto.
+- **Testes novos**: `tests/scripts/staging-rebuild.test.ts`; nenhum teste existente alterado. `scripts/staging` não está sob `GATE_OWNER_EDIT` (só testes e `scripts/gate`). Runbook `homologacao.md` atualizado.
+- **Next step**: Kalléo roda `npm run staging:rebuild -- --release --push` e confere o deploy de Production. **Blockers**: nenhum.
+- **Desvio de processo (2026-10-22)**: o #487 foi mergeado sem the-judge e sem `gate:local`. Verificado depois, sem achados: the-judge sem problemas e `E2E-GATE: 796884b542022d46d2bd7a986ff6b8e7090bc62c pass e2e=321 etapas=typecheck,lint,sv,docs,integridade-de-testes,cobertura,build,e2e-producao,e2e-dev puladas=docker,backup min=18.9`. O `tsc` precisa de `NODE_OPTIONS=--max-old-space-size=4096` na nuvem. Regra daqui em diante: the-judge antes de todo merge e recibo em PR que não seja só `.md`.
+## Profissional abre paciente da agenda (#465) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: Ana via 23 consultas de 20 pacientes e só 1 na lista; Bruno recebia 404 no paciente que atende hoje. **Causa raiz**: o vínculo profissional↔paciente (PRO-RN-08) só nasce nas rotas (`POST /api/appointments`, paciente e evolução), e o seed grava a consulta direto no repositório, sem vínculo. A regra de acesso não mudou (sem ADR): continua o mínimo necessário, por empresa.
+- **Seed** (`seedProfessionalLinks`): cria o vínculo de cada par profissional/paciente da agenda; aditivo (ADR-059), em banco já semeado completa só o que falta, sem recriar a agenda. A staging corrige no próximo `staging:rebuild`.
+- **Bug de código achado no caminho**: `POST /api/appointments/recurring` não concedia o vínculo (a avulsa concedia; AGE-RN-12 já pressupunha). Corrigido em melhor esforço, como a avulsa, e só quando ao menos uma ocorrência é criada. Produção ainda sem paciente real, então não há backfill de vínculos lá.
+- Ana e Bruno atendem os mesmos 20 pacientes no seed; os cenários "sem vínculo" (AGE-RN-17, PRO-RN-08) passam a usar paciente sem consulta (`homologacao-cenarios.md`). Paciente exclusivo de um profissional fica para a #477.
+- Testes novos: `tests/api/professional-patient-link-on-recurring.test.ts`, `tests/scripts/seed-vinculos.test.ts`. Nenhum teste existente alterado.
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Vercel constrói só a staging (2026-10-22) — EM REVISÃO
+
+Deploys da Vercel falhavam com `Resource provisioning failed` (limite de branches do Neon: a integração criava um branch de banco por prévia). `vercel.json` ganhou `git.deploymentEnabled` `{"**": false, "staging": true}`; ADR-062 e runbook `homologacao.md` (§ 1, § 2, § 5) atualizados.
+- **Investigação do commit vazio da staging**: não há `ignoreCommand` no repo nem Ignored Build Step visível no projeto; a Vercel não tem nenhum deploy (nem `ERROR`/`CANCELED`) para o SHA `8304683`, então a causa está fora do repositório (webhook/fila). Não corrigido por código.
+- **Decisão**: prévia por PR deixa de existir (ADR-062, complementa o ADR-041). `vercel.json` vale a partir do commit empurrado: branch antiga só obedece depois de trazer a release.
+- **Teste novo**: `tests/infrastructure/deploy-config.test.ts` (regra do deploymentEnabled); nenhum teste existente alterado.
+- **Painel (Kalléo)**: apagar branches de preview no Neon e desligar *Create a branch for every preview deployment* na integração; conferir se algum ruleset exige o check "Vercel".
+- **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
+
+## Termos em português e ordem das medições (#470, #473) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: «granulation»/«slough» em inglês na tabela da equipe, no relatório e no portal; auditoria com `company_admin`, `invoice`, `mfa_required` e JSON cru da retenção; mensagem «Área reduziu 89%» contradizendo a tabela quando as medições têm o mesmo horário. `tissueTypeLabel` (texto livre legado fica como gravado), `ACTOR_ROLE_LABELS`, mais recursos em `RESOURCE_LABELS`, `formatAuditDetail` (códigos e resumo da retenção). O gráfico não afirma tendência quando a primeira ou a última medição de área empata em horário com a vizinha (ordem ambígua). PRO-RN-26, ACE-RN-62.
+- **Decisão minha**: esconder a mensagem em vez de desempatar por id (id aleatório não é cronologia).
+- **TESTE-ALTERADO**: `tests/pages/plataforma-auditoria.test.tsx` (2 asserções): a trilha agora mostra «Credenciais inválidas» no lugar do código `invalid_credentials`; o requisito mudou (#470).
+- **Testes novos**: `healing-chart-ordem-ambigua`, `audit-labels-pt`.
+- **Next step**: o seed repete o mesmo carimbo nas 5 avaliações; a #477 (seed) deve dar horários distintos. **Blockers**: nenhum.
+
+## Documento bloqueado sem emissão (#468, #474, #485) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: abrir a declaração de comparecimento com a clínica incompleta gravava «emissão de documento» na auditoria (o hook de emissão rodava na montagem, mesmo com a página bloqueada); o link aparecia para consulta futura; a mensagem não dizia o campo que faltava nem linkava Configurações. Agora as 6 páginas de documento só chamam `POST /api/documents/issue` com a clínica completa (e, na declaração, com a consulta realizada); `ClinicInfoIncompleteAlert` lista o que falta (`missingClinicInfoFields`) com link para `/configuracoes#dados` e «Voltar ao início»; o detalhe da consulta só mostra o link da declaração se `completed`. AGE-RN-21.
+- **Decisão minha**: correção no cliente; a rota de emissão não confere o status da consulta porque `tests/api/documents-issue.test.ts` (regra 8) emite atestado de ids inexistentes. Fica como pergunta aberta (validar também no servidor, com ajuste de teste).
+- **Não tratado**: o «Carregando…» de ~5 s no primeiro quadro (#485) é do carregamento da página, não do bloqueio.
+- **Testes novos**: `declaracao-comparecimento-condicoes`, `missingClinicInfoFields` em `clinic.test.ts` (só acréscimo); nenhum teste existente alterado.
+- **Next step**: nenhum. **Blockers**: nenhum.
+
+## Termos de consentimento em nome de quem assina (#469) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: o termo imprimia «Responsável técnico: responsável técnico da clínica» e seguia em primeira pessoa quando o representante legal assina pelo menor. `renderLegalText` agora omite a linha do responsável técnico e o nome do encarregado quando são o texto de preenchimento; os textos-base e seus hashes não mudaram. Cada termo ganhou variante do representante (`v2-representante`, `v1-representante`) com hash próprio; `ConsentRecord.resolveStatus/covers` aceitam lista de textos, então aceites antigos e o gate de foto seguem valendo. ADR-064, POR-RN-29.
+- **Decisão minha**: variante separada em vez de reescrever o texto original (preserva aceites e os testes existentes, regra 8); sem revisão jurídica ainda (#376 deve cobrir os quatro textos).
+- **Testes novos**: `consent-representative-text` (API), `consentimento-representante` (tela), `legal-text-sem-preenchimento`, `consent-record-multiplos-textos`; nenhum teste existente alterado.
+- **Next step**: revisão jurídica dos quatro textos. **Blockers**: nenhum.
+
+## Perguntas abertas do portal (#481, #483) (2026-10-22)
+
+Duas sub-issues do QA da staging v0.2.0 são decisão de produto e não foram implementadas: #483 (autoagendamento livre ou só de retorno; a documentação dizia «entregue» sem a limitação, agora corrigida) e #481 (aceite do termo com marcação explícita; muda o fluxo coberto por testes de unidade e E2E, então vai junto com a revisão jurídica #376). Ambas ficam registradas em `docs/domains/portal/README.md` § Perguntas abertas.
+- **Next step**: o PO responde as duas perguntas. **Blockers**: nenhum.
+
+## Alerta de infecção na triagem e coerência do TIME (2026-10-22) — EM REVISÃO
+
+Decisões clínicas do PO sobre as perguntas abertas do ADR-062 (#464/#463), registradas no ADR-063: infecção local ou pior na avaliação mais recente gera selo na fila de triagem (`infectionAlert`, sem migração); percentual de tecido fica fora do PUSH (já era assim, agora decisão); coerência nível × sinais vira aviso não bloqueante no formulário (`infectionCoherenceWarnings`); vocabulário atual aceito. PRO-RN-25.
+- **Decisão minha**: agrupei os sinais em local, disseminação (eritema em expansão, linfangite, linfadenopatia) e sistêmico (febre, mal-estar) para os avisos; o estomaterapeuta pode ajustar por ADR novo.
+- **Testes novos**: `wound-time-alerta-coerencia`, casos novos em `triage-photo-list`, `avaliacao-time-form` e `audit-lgpd-routes` (só acréscimo); nenhum teste existente alterado.
+- **Next step**: validar na staging o selo na triagem. **Blockers**: nenhum.
+
+## Tema da vizinha e cenários do seed (#476, #477) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: a clínica vizinha abria violeta/sistema, igual à principal, e 9 cenários do roteiro não tinham dado no seed. **#476 não era vazamento**: a gravação do tema é `UPDATE ... WHERE id` (isolada por empresa); a causa raiz era `DrizzleClinicRepository.create`, que não gravava `theme_mode`/`theme_accent`, então a vizinha do seed nunca nasceu âmbar. `create` agora grava o tema e o seed acerta a vizinha que já existe no padrão (sem desfazer uma escolha feita pela tela).
+- **#477** (`scripts/seed/cenarios.ts`, aditivo, ADR-059): pausa de almoço 12:00–13:00, repasse de 40% da Ana, kits de dois procedimentos, responsável técnico da principal, consulta+fatura paga na vizinha, histórico de `paciente@` (consulta < 24 h, outra em ~10 dias, concluída com fatura pendente, condição e retorno pendente), indicação de 2 pacientes pela parceira (um com aceite). Em banco novo: anamnese com alergia e evolução SOAP, avaliações semanais com curvas distintas, fatura emitida na data da consulta, criança sem pé diabético.
+- **Fora do seed (decisão minha)**: plano SAE e pacotes (domínios de outra thread) e responsável ligado a adulto (o domínio liga responsável só a menor); o roteiro (cenário 9) passa a dizer isso. Massa pesada só em banco novo: para as correções de datas e prontuário na staging, reiniciar o branch do Neon.
+- **TESTE-ALTERADO**: `tests/scripts/seed-aditivo.test.ts` (helper `regressToOldSeed`): o seed agora indica pacientes pela parceira e dá consulta/fatura à vizinha; o helper que simula o seed antigo precisa limpar esses vínculos antes de apagar parceiro e pacientes. As asserções não mudaram.
+- Testes novos: `seed-tema-vizinha`, `seed-roteiro-qa`. **Next step**: staging:rebuild e conferir a vizinha escura/âmbar. **Blockers**: nenhum.
+## Agenda por semana e "+N mais" (#471) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: a agenda só tinha o mês, "+N mais" era um `<span>` sem ação (a 4ª consulta do dia só aparecia filtrando por profissional) e consulta cancelada ocupava uma das 3 linhas. Entregue: visão **Semana** (desktop; o celular segue no mês compacto) com blocos proporcionais à duração, sobreposição em raias, almoço sombreado, feriados/ausências, clique no bloco abre a consulta e clique na coluna começa nova consulta; no mês, "+N mais" abre diálogo com todas as consultas do dia (inclusive canceladas) e a cancelada sai das 3 linhas.
+- **Decisões minhas (sem pergunta aberta)**: mês continua o padrão; semana começa no domingo como a grade do mês; cancelada não vira bloco na semana (não ocupa horário), só um aviso "N cancelada(s)" na coluna; "visão de dia" não foi feita (a semana cobre o pedido "dia/semana" e o dia seria a mesma tela com 1 coluna: fica no backlog se o PO quiser).
+- Refator para caber no limite de linhas do `.tsx`: período (mês/semana) em `agenda-period.ts`, navegação em `period-nav.tsx`, cores em `status-colors.ts`.
+- Testes novos: `tests/pages/agenda-visao-semana.test.tsx`; nenhum teste existente alterado (os de `staff-agenda` passam).
+- **Next step**: validar a semana na staging com 4 consultas no mesmo dia. **Blockers**: nenhum.
+## Margem sem kit e confirmação do pagamento (2026-10-22) — EM REVISÃO
+
+Issue #472 e pendência do #466 (QA staging v0.2.0, filhas de #463). Relatório: `ProcedureMargin` ganhou `supplyCostKnown` (há saída de insumo vinculada a consultas do procedimento); sem isso a tela mostra «Não apurado» em Insumos, «—» na Margem e uma nota, e o rodapé soma só os procedimentos apurados. Recebimento: a forma de pagamento só seleciona; «Confirmar recebimento» mostra valor, forma, pagador e saldo restante e então grava (decisão do PO, 2026-10-22).
+- **Decisão**: `marginCents` continua número na API (compatibilidade); o sinal de custo apurado é o novo campo.
+- **TESTE-ALTERADO**: o requisito de negócio mudou (pagamento passou a exigir confirmação); testes que clicavam na forma e esperavam gravar ganharam o clique em «Confirmar recebimento» (`invoice-payments-ui`, `invoice-payment-in-flight`, `staff-faturamento`, `e2e/faturamento.spec.ts`); fixtures de relatório ganharam `supplyCostKnown`. Nenhuma asserção foi afrouxada.
+- **Testes novos**: etapa de confirmação (resumo e não grava antes) e relatório «Não apurado».
+- **Next step**: Kalléo valida na staging (rebuild). **Blockers**: nenhum.
+## Auditoria sem emissão falsa (#468) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0: abrir o atestado de uma clínica sem responsável técnico gravava "emissão de documento" na auditoria, embora a tela bloqueasse. **Causa raiz**: as seis páginas de documento chamam `useDocumentIssuance` (que faz `POST /api/documents/issue`, idempotente e auditado) antes de saber se podem renderizar. Correção no cliente: a página só pede a emissão com a clínica apta (`isClinicInfoComplete`) e, no atestado, com a consulta realizada; recibo já esperava o `receipt`.
+- **Por que não no servidor**: `tests/api/documents-issue.test.ts` (regra 8, intocável) emite com ids soltos em clínicas de teste sem CNPJ; validar a clínica na rota o quebraria. Registro: quem chamar a rota direto ainda consegue emitir sem as guardas da tela (o recibo continua protegido no servidor, FIN-RN-15). Pergunta aberta para o PO: endurecer a rota também (exigiria TESTE-ALTERADO).
+- Eventos falsos já gravados na staging ficam (auditoria é imutável).
+- Teste novo: `tests/pages/documentos-bloqueado-sem-emissao.test.tsx` (5 dos 6 casos falham sem a correção); nenhum teste existente alterado.
+- **Next step**: nenhum. **Blockers**: nenhum.
+## Convite e contas de acesso (#467, #475) (2026-10-22) — EM REVISÃO
+
+QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depois montava o link; `appUrlFromEnv()` lança em produção sem `APP_URL` https, daí 500 com conta criada, sem link e e-mail duplicado no retry. O fluxo com `APP_URL` válida e e-mail falhando já respondia 200 com o link (teste existente), então a causa na staging é a configuração. **Não consegui ler as variáveis da Vercel** (sem permissão): é hipótese forte, não confirmada; Kalléo confere `APP_URL` no painel. Correção: a checagem da URL vem antes de gravar (convite da equipe e convite de admin pela plataforma), e na Vercel, sem `APP_URL`, vale `https://$VERCEL_PROJECT_PRODUCTION_URL`.
+- **#475**: coluna Papel; papel padrão Atendente (menor privilégio, decisão minha, sem pergunta aberta: Admin de Empresa continua a um clique); texto do formulário conforme o canal de e-mail (configurado, sem canal, desconhecido). O vínculo ao cadastro nas contas de portal já existia (#196): a issue estava defasada.
+- Testes novos: `account-invite-app-url`, `configuracoes-contas-papel`; nenhum teste existente alterado.
+- **Next step**: Kalléo confere `APP_URL` na Vercel; retestar convite `erro@` na vizinha. **Blockers**: nenhum.
+## Parceiro sem CRM: "·" solto no portal (QA #463, domínio administração/plataforma)
+- **O que mudou**: `src/app/portal/partner-view.tsx` monta CRM e especialidade com `partnerCredentials`, juntando com "·" só o que existe e omitindo o traço quando não há nenhum.
+- **Teste novo**: `tests/pages/portal-parceiro-sem-crm.test.tsx` (4 cenários); nenhum teste existente alterado.
+- **Staging (Kalléo)**: abrir o portal de um parceiro sem CRM e conferir que o cabeçalho começa em "Estomaterapia — acompanhamento…" sem "·".
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Agenda: visão Dia (decisão do PO em 2026-10-22, sequência do #471)
+- **O que mudou**: `AgendaView` ganha `'day'`; `useAgendaPeriod` calcula janela de 1 dia, rótulo ("Quinta-feira, 22 de outubro de 2026") e navegação por dia; `WeekView` aceita `dayCount` (1 ou 7) e reaproveita a grade; `PeriodNav` ganha o botão Dia. No celular segue o mês compacto.
+- **Teste novo**: `tests/pages/agenda-visao-dia.test.tsx`; nenhum teste existente alterado.
+- **Staging (Kalléo)**: na agenda, escolher Dia, navegar por dia, voltar para Semana/Mês e abrir uma consulta pelo bloco.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA P3: acabamentos de interface (#478, #479, #480, #482, #484) (2026-10-23) — EM REVISÃO
+- **O que mudou**: título por tela e link de salto (`use-staff-document-title`, `skip-link`); `ErrorAlert` rola até o erro; paciente lista todos os erros e marca campos; faixa de horário da consulta não duplica o erro; menu lateral com esqueleto enquanto o papel carrega e rolagem só no menu; legenda de Repasses; consultas passadas sem desfecho (anel na agenda, aviso no detalhe, cartão em Hoje); `data-hydrated` com cursor de espera (#484, mitigação: a causa em rede lenta não foi reproduzida aqui).
+- **Não feito por conflitar com teste existente (regra 8, precisa de TESTE-ALTERADO do Kalléo)**: (1) padrão «Sem retorno» ao concluir (`staff-agenda.test.tsx`, `followUpInDays: 30`); (2) telefone de parceiro com máscara (`staff-operations.test.tsx:2236`, link com nome `11955554444`); (3) índice de Configurações sem «Canal de e-mail» para Atendente (`configuracoes-secoes.test.tsx`, asserção explícita dos três atalhos).
+- **Testes novos**: `staff-shell-acessibilidade`, `feedback-erro-visivel`, `patient-form-erros`, `hydration-mark`, `consulta-sem-desfecho`, `consultas-sem-desfecho-ui`; nenhum existente alterado.
+- **Staging (Kalléo)**: conferir título da aba em cada tela, Tab no início da página, paciente novo com telefone e CPF inválidos, consulta passada em Hoje/agenda, menu em janela baixa, legenda em Repasses.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA P3: itens com TESTE-ALTERADO (#480, #481, #482, #483) (2026-10-23) — EM REVISÃO
+- **O que mudou**: caixa «Li e concordo» obrigatória no aceite do termo (POR-RN-30, `consent-card.tsx`); padrão «Sem retorno» ao concluir (`appointment-detail.tsx`); telefone de parceiro mascarado (`displayBrazilianPhone`); índice de Configurações sem «Canal de e-mail» para quem não tem a seção; #483 decidido: portal só agenda retorno, agendamento livre vira roadmap pós-v0.2.0 (docs do portal e cenário 8).
+- **TESTE-ALTERADO** (autorizado pelo Kalléo em 2026-10-23): `portal.test.tsx`, `portal-minor.test.tsx`, `privacy-ui.test.tsx`, `e2e/portal-paciente.spec.ts`, `e2e/portal-responsivo.spec.ts` ganharam o passo de marcar «Li e concordo» antes de clicar no botão; `staff-agenda.test.tsx` escolhe «Retorno em 30 dias» explicitamente antes de concluir; `staff-operations.test.tsx` busca o link pelo telefone mascarado; `configuracoes-secoes.test.tsx` não espera mais «Canal de e-mail» para o Atendente. Nenhuma asserção foi afrouxada.
+- **Testes novos**: `portal-aceite-explicito`, `agenda-concluir-sem-retorno`, `phone-exibicao`.
+- **Staging (Kalléo)**: portal com paciente-novo (caixa antes do botão), concluir consulta sem mexer no retorno, lista de parceiros com máscara, Configurações como Atendente.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA da staging, rodada 2: F1–F5, O2–O4 (#508–#515) (2026-10-23) — EM REVISÃO
+- **O que mudou**: título da aba por segmento no servidor (`staffMetadata`, #508); botão «+ Nova consulta» desabilitado até hidratar (`useHydrated`, #509); tendência do `HealingChart` exige 24 h entre primeira e última medição, vale no portal e no prontuário (#510); termo de tratamento sem «Responsável técnico», `v3` e `v3-representante` (ADR-065, POR-RN-31, #511); menu lateral sticky com altura descontando a faixa de homologação e sem rolagem horizontal (#512, #513); auditoria traduz `guardian-access*` e o detalhe do aceite (#514); conta recém-criada entra na lista na hora (#515).
+- **#509 (causa)**: não reproduzi em Chromium com build de produção (admin, Mês/Semana/Dia, 1265x952, faixa de homologação ligada) nem como profissional no `next dev`; o clique abre o modal. Provável clique antes da hidratação ou artefato da automação (a #484 já dizia «pode ser artefato»). Fica o botão desabilitado até responder e o teste E2E do clique como profissional.
+- **O1 (rodapé v0.1.0)** retirado do escopo: virou a #516 (versão vinda do banco).
+- **TESTE-ALTERADO** (autorizado pelo Kalléo em 2026-10-23): `consent-text.test.ts`, `consent-representative-text.test.ts`, `consentimento-representante.test.tsx`, `legal-text-sem-preenchimento.test.ts` (v3 e sem a linha do responsável técnico).
+- **Testes novos**: `staff-titles`, `use-hydrated`, `audit-labels-consentimento`, `configuracoes-conta-recem-convidada`, ampliação de `healing-chart-ordem-ambigua`, E2E `sidebar-janela-baixa`, `contas-convite-lista` e o clique do botão em `papeis-profissional`.
+- **Staging (Kalléo)**: título de cada aba; menu em janela de ~800 px com a faixa de homologação; portal do paciente-novo sem «Área reduziu 89%»; termo sem «Responsável técnico» (aceitar de novo); Auditoria com «Acesso do responsável»; convidar conta e ver na lista; «+ Nova consulta» no Mês e na Semana.
+## QA mobile: avaliação, ficha e evolução no portal (#523, #525, #517) (2026-10-23) — EM REVISÃO
+- **O que mudou**: `FormSheet` (diálogo no computador, folha de tela cheia abaixo de 768px com rodapé fixo e confirmação ao descartar) usado na avaliação de ferida/estomia, cujo estado do formulário subiu para `AssessmentSheet` para sobreviver à rotação; barra de atalhos de `z-40` para `z-20` (abaixo do fundo e da janela, vale para todas as telas); abas da ficha com `useScrollEdges` (borda esmaecida), `scroll-snap` e aba ativa centralizada (o efeito antigo não rodava porque a lista ainda não existia no primeiro render); «Termo de consentimento» e «Exportar dados» em «Mais ações» no celular e links com 44px; `HealingChart` com geometria compacta (≤ 479px), legenda com chaves e lista de medições com variação da área; rótulo visível no campo de observação da foto. Regras PRO-RN-27 e POR-RN-32.
+- **Decisão minha**: a confirmação de descarte vale só no celular, como a decisão do PO descreve; no computador o `Modal` segue como estava.
+- **Testes novos**: `form-sheet`, `use-scroll-edges`, `healing-chart-compacto`, `condition-progress-medicoes` e `e2e/mobile-prontuario-portal.spec.ts` (360 e 390px); nenhum teste existente alterado.
+- **Staging (Kalléo)**: no celular, abrir «+ Avaliação» numa ferida (botão sempre visível, tocar Cancelar com dado preenchido), ficha com `?aba=pacotes`, menu «Mais ações», portal do paciente com duas avaliações.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA mobile: gaveta do menu em celular baixo (#524) (2026-10-23) — EM REVISÃO
+- **O que mudou**: a lista do menu (gaveta e rail) virou `ScrollFade`, que esmaece a borda com itens escondidos; o rodapé (Tema, Sair, versão) segue fixo embaixo (estrutura do #526) e nada sobrepõe o Sair em 568, 640 e 740 px de altura (360 px de largura).
+- **Testes novos**: `scroll-fade` (unidade) e 4 casos em `e2e/sidebar-janela-baixa.spec.ts`; nenhum existente alterado.
+- **Staging (Kalléo)**: gaveta em celular 360x568 e 360x640: fade na base da lista, Minha conta alcançável rolando, Sair visível.
+
+## QA mobile R2: Auditoria paginada e em cartões (#521) (2026-10-23) — EM REVISÃO
+- **O que mudou**: `/auditoria` pede 25 eventos por página abaixo de 768 px e 50 acima (cursor de `/api/audit`, sem mudar a rota); a tabela empilhada (cartão) já existente continua no celular porque `layout-tabelas.spec.ts` e `responsive-tables.spec.ts` a exigem (regra 8); filtros (`paciente`, `de`, `ate`) ficam na URL via `history.replaceState` e são lidos de `useSearchParams` ao abrir; contador de eventos. Docs: ACE-RN-64.
+- **Testes novos**: `tests/pages/auditoria-mobile.test.tsx`; nenhum existente alterado.
+- **Staging (Kalléo)**: Auditoria em 360 px (25 eventos, Carregar mais), filtrar por período e recarregar a página (filtro permanece).
+## QA mobile R2: alvos de toque no tablet e seletor de arquivo em português (#518, #519, #520) (2026-10-23) — EM REVISÃO
+- **O que mudou**: `globals.css` estende a regra de 44px da lib (`.sv-btn`, `.sv-field`, abas, paginação) e dos links até `64rem`, e dá 44px ao `.sv-dialog__close` (recuando `top`/`right` para o ícone não mudar de lugar), ao `.sv-logo` e ao rótulo que envolve caixa de seleção/rádio (o desenho de 16px não muda; o alvo é o rótulo, como o `layout-mobile-first.spec.ts` já aceita). Seção `touch-target-size` de `docs/still-void-gaps.md` atualizada: a lib deveria subir o breakpoint de toque. Novo `FilePicker` (`src/components/file-picker.tsx`) em cima do `FileInput` do Still Void: botão «Escolher arquivo» + «Nenhum arquivo selecionado», usado em logo/foto da conta, fotos de evolução e foto do portal.
+- **Testes novos**: `tests/components/file-picker.test.tsx`, `e2e/alvos-de-toque-tablet.spec.ts`; nenhum existente alterado.
+- **Staging (Kalléo)**: em 768 px, medir botões da Agenda, Faturamento, Configurações e portal; abrir «Nova consulta» e ver o Fechar; Configurações → Logo e portal → foto mostram o seletor em português.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Versão do sistema vinda do banco (#516) (2026-10-23) — EM REVISÃO
+- **O que mudou**: tabela `app_releases` (migração 0070, ADR-066) gravada de forma idempotente no boot (`instrumentation.ts` → `recordCurrentRelease`, depois da migração); `GET /api/version` (equipe) e `GET /api/portal/version` (portal) com `{ version, releasedAt }` e `sha` só em staging/preview, cache de 5 min no processo e `Cache-Control` privado; `ReleaseVersion` no rodapé da sidebar e do portal, com fallback para o build. Causa do `v0.1.0`: o `package.json` só sobe no `release:prepare`; o build agora calcula `NEXT_PUBLIC_RELEASE_VERSION` (package.json + changesets pendentes), `0.2.0` na staging.
+- **Desvio da decisão**: duas rotas, não uma. `route-guard-conformance` exige que toda rota fora de `/api/portal` seja exclusiva da equipe, e teste existente não se altera (regra 8); `/api/portal/version` serve o portal com o mesmo leitor.
+- **Testes novos**: `release-version` (domain e lib), `record-release`, `current-version`, `drizzle-app-release-repository`, `app-release-service`, `api/version`, `release-version` (componente), `next-config-release`; nenhum existente alterado.
+- **Pergunta aberta**: rollback por redeploy mantém a versão mais nova no rodapé até remover a linha (ADR-066, `producao.md` § 3.1). Gravar o rollback como evento?
+- **Staging (Kalléo)**: rodapé da sidebar e do portal mostrando `v0.2.0 (sha)`; `GET /api/version` com sessão; sem sessão, 401.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA mobile R2: Configurações com índice fixo no celular (#522) (2026-10-23) — EM REVISÃO
+- **Decisão do PO**: sub-rotas `/configuracoes/[secao]` adiadas para pós-v0.2.0 (custo em testes existentes, regra 8). ADR-067. Fica: página única, mesmos ids/âncoras, índice fixo no topo abaixo de `lg` (chips de 44 px), «Voltar ao índice» ao fim de cada seção, `scroll-mt-20`. ACE-RN-64.
+- **Testes novos**: `tests/pages/configuracoes-indice-mobile.test.tsx`; nenhum existente alterado.
+- **Staging (Kalléo)**: Configurações em 360 px: faixa fixa, tocar numa seção, «Voltar ao índice», Atendente sem «Canal de e-mail».
+- **Pendente**: sub-rotas no roadmap pós-v0.2.0 (#522 fica aberta só com isso). **Blockers**: nenhum.
+
+## Still Void 3.5.1: área de toque de 44px vem da lib (2026-10-23) — EM REVISÃO
+- **O que mudou**: `@still-void/ui` `^3.5.0` → `^3.5.1`. Saiu de `globals.css` o contorno de 44px para botão, campo, aba, paginação, rótulo de caixa de seleção e Fechar do diálogo (a lib cobre abaixo de `64rem` ou ponteiro grosso, Fechar por `::after`); ficou só `.sv-logo` e os links (`a[href]`), que a lib não dimensiona. `docs/still-void-gaps.md` (`touch-target-size`) atualizado.
+- **TESTE-ALTERADO**: `e2e/alvos-de-toque-tablet.spec.ts` (da #531, desta mesma entrega): o Fechar agora é medido pelo `::after` de 44×44, não pela caixa do botão, porque a lib estende a área por pseudo-elemento.
+- **Staging (Kalléo)**: em 768 px, botões, campos e o Fechar de «Nova consulta» continuam com 44px.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA R2 validação: índice de Configurações fixo e marca inteira na gaveta (#534, #535) (2026-10-24) — EM REVISÃO
+- **Causa**: o pacote põe `overflow: auto` no `SidebarInset` (`<main>`), que vira o contêiner de rolagem do `position: sticky`, mas a rolagem real é a da janela: o índice nunca grudava (#534). A marca «EstomaSysTech» mede ~144 px e o miolo do menu (painel `w-56` − `p-5` − padding do corpo) era 135 px (#535, aparecida com o `overflow-x-hidden` do #513).
+- **O que mudou**: `staff-layout-client.tsx`: `SidebarInset` com `overflow-y-visible overflow-x-clip` (não cria contêiner de rolagem e ainda contém o excesso horizontal) e padding lateral do painel `px-3` (em vez de alargar para `w-60`, que estreitava o conteúdo e fez o axe `target-size` falhar em `sidebar-identidade.spec.ts`). ACE-RN-67 atualizada.
+- **Testes novos**: `e2e/configuracoes-indice-e-marca-gaveta.spec.ts` (Playwright, build de produção: índice a 0 px do topo em 360/390/768 após rolar; âncora fora da faixa; main sem overflow auto; marca sem corte na gaveta 360/390 e na barra lateral 1280); nenhum existente alterado.
+- **Staging (Kalléo)**: Configurações em 360 px, rolar até o fim e ver a faixa de índice fixa; abrir o menu e ver «EstomaSysTech» inteiro.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Código do commit no rodapé só na homologação; SHA acompanha o deploy (2026-10-24) — EM REVISÃO
+- **Decisão do PO** (confirmada pelo Kalléo): o código do commit não é necessário, principalmente em produção; na homologação fica. ADR-068. Já era assim em produção (`exposesSha()` e build): rodapé, `GET /api/version` e `GET /api/portal/version` só com a versão; agora com teste explícito e documentado. `git_sha` segue gravado no banco para diagnóstico, sem sair por API nem tela.
+- **Bug achado**: na staging o rodapé mostrou `(aaa5023)` com o commit `302a61c` no ar. Causa: `app_releases` gravava com `ON CONFLICT (version) DO NOTHING`; como a homologação reconstrói a mesma versão a cada commit, o SHA ficava o do primeiro deploy. Correção: `DO UPDATE SET git_sha = coalesce(excluded.git_sha, git_sha)`; data e notas não mudam.
+- **Testes novos**: dois casos em `tests/infrastructure/drizzle-app-release-repository.test.ts`; nenhum existente alterado.
+- **Staging (Kalléo)**: depois do rebuild, rodapé com `v0.2.0 (sha)` igual ao commit da staging; produção sem código.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Performance do Next: linha de base, ADR-069 e tickets (#541) (2026-10-24) — EM REVISÃO
+- **O que é**: só planejamento (sem código). Linha de base do front medida no build de produção local nas 4 larguras (`docs/engineering/performance-front-linha-de-base-2026-10.md`), ADR-069 proposta (dados no servidor, Server Actions, nenhum dado de clínica em cache compartilhado, imagem autenticada fora do otimizador, sem PPR enquanto a CSP usar nonce) e issue-mãe #541 com 19 sub-issues (#542 a #560) em ondas.
+- **Números**: 33/34 páginas `'use client'`; dados prontos ~2,9 s em 360 (CPU 4x, 1,6 Mbps); 18/28 rotas com LCP > 2,5 s no celular; JS 195 a 239 KB gz por rota; hidratação 0 erros em 448 cargas.
+- **Achado**: fotos clínicas via `next/image` sem `unoptimized` passam pelo otimizador, que busca sem a sessão (401) — #542 (P1).
+- **Decisão pendente do PO**: fuso das datas = `APP_TIMEZONE` (#543, recomendado).
+- **Script e brutos**: `/mnt/project-files/perf-next/` (`linha-base.spec.ts`, `.jsonl`).
+- **Next step**: aceitar a ADR-069 (vira `frozen` no #544) e abrir a onda 1 (#542, #543). **Blockers**: nenhum.

@@ -59,8 +59,9 @@ export async function GET(request: NextRequest) {
     return {
       billing,
       appointmentsInMonth,
-      today: todayAppointments.map(({ appointment, patientName }) =>
-        toAppointmentDto(appointment, patientName),
+      today: todayAppointments.map(
+        ({ appointment, patientName, patientBirthDate }) =>
+          toAppointmentDto(appointment, patientName, patientBirthDate),
       ),
     };
   });

@@ -154,6 +154,7 @@ export class RunRetention {
     counts.waitlistEntries = await retention.anonymizeWaitlistEntries(
       this.cutoffs.waitlist,
     );
+    await this.removeAvatars(services);
     counts.accounts = await retention.anonymizeInactiveAccounts(
       this.cutoffs.inactiveAccount,
       this.now,
@@ -170,6 +171,27 @@ export class RunRetention {
       await this.recordRun(services.auditEvents, clinicId, counts);
     } catch (error) {
       logError(`Retenção da empresa ${clinicId}: falha ao auditar`, error);
+    }
+  }
+
+  /**
+   * Foto de rosto da equipe (#427) é dado pessoal: os arquivos das contas que
+   * serão anonimizadas saem do armazenamento ANTES, porque a anonimização zera
+   * a chave. Falha de um arquivo fica no log, com a chave, e não trava a
+   * anonimização (o prazo legal da conta vale mais que o arquivo órfão).
+   */
+  private async removeAvatars({
+    retention,
+    photoStorage,
+  }: ClinicRetentionServices): Promise<void> {
+    for (const key of await retention.findInactiveAvatarKeys(
+      this.cutoffs.inactiveAccount,
+    )) {
+      try {
+        await photoStorage.remove(key);
+      } catch (error) {
+        logError(`Retenção: falha ao apagar o avatar ${key}`, error);
+      }
     }
   }
 

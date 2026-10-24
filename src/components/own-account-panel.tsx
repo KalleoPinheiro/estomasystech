@@ -3,6 +3,7 @@
 import { Button, Card, Input } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { IdentityImageField } from '@/components/identity-image-field';
 import { OtpauthQr } from '@/components/otpauth-qr';
 import { MIN_PASSWORD_LENGTH } from '@/domain/auth/password-policy';
 import { apiFetch } from '@/lib/client';
@@ -11,6 +12,8 @@ import { useApiQuery } from '@/lib/use-api-query';
 interface OwnAccount {
   email: string;
   role: string;
+  avatarUrl?: string | null;
+  imageUploadAvailable?: boolean;
   mfa: { policy: 'required' | 'optional' | 'none'; enrolled: boolean };
 }
 
@@ -43,9 +46,34 @@ export function OwnAccountPanel() {
       <p className="text-ink-3 text-sm">
         Conectado como <strong>{data.email}</strong>.
       </p>
+      <AvatarCard account={data} />
       <PasswordCard />
       <MfaCard account={data} onChanged={refresh} />
     </div>
+  );
+}
+
+function AvatarCard({ account }: { account: OwnAccount }) {
+  const [url, setUrl] = useState<string | null | undefined>(undefined);
+  return (
+    <Card as="section" className="p-5">
+      <h2 className="mb-1 font-semibold text-lg">Foto</h2>
+      <p className="mb-4 text-ink-3 text-sm">
+        Aparece para a equipe da clínica. Sem foto, mostramos as suas iniciais.
+      </p>
+      <IdentityImageField
+        kind="avatar"
+        endpoint="/api/account/avatar"
+        name={account.email.split('@')[0].replace(/[._-]+/g, ' ')}
+        url={url === undefined ? account.avatarUrl : url}
+        onChanged={setUrl}
+        disabledReason={
+          account.imageUploadAvailable === false
+            ? 'O envio de imagens está indisponível neste ambiente (armazenamento não configurado).'
+            : undefined
+        }
+      />
+    </Card>
   );
 }
 

@@ -48,6 +48,8 @@ import { useSavableForm } from '@/lib/use-savable-form';
 import { CancellationPolicyFields } from './cancellation-policy-fields';
 import { ClosuresSection } from './closures-section';
 import { EmailChannelSection } from './email-channel-section';
+import { IdentitySection } from './identity-section';
+import { LogoSection } from './logo-section';
 import { LunchBreakFields } from './lunch-break-fields';
 import { PortalLinkField } from './portal-link-field';
 import { PrivacyContactSection } from './privacy-contact-section';
@@ -70,6 +72,21 @@ const ACCOUNT_ROLE_OPTIONS: { value: AccountRole; label: string }[] = [
   { value: 'partner', label: 'Parceiro' },
   { value: 'guardian', label: 'Responsável do paciente' },
 ];
+
+/** Rótulo do papel na tabela de contas (#475): sem a coluna só se distinguia pela de profissional. */
+const accountRoleLabel = (role: AccountRole | string): string =>
+  ACCOUNT_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
+
+type EmailChannelState = 'configured' | 'none' | 'unknown';
+
+/** O convite sai por e-mail só com canal; sem ele a tela devolve o link (ACE-RN-33). */
+const INVITE_HINT: Record<EmailChannelState, string> = {
+  configured:
+    'A pessoa recebe um e-mail de convite e define a própria senha — ninguém digita senha por ela.',
+  none: 'Esta clínica não tem canal de e-mail: ao criar a conta, o link de convite aparece aqui para você copiar e enviar. A pessoa define a própria senha — ninguém digita senha por ela.',
+  unknown:
+    'A pessoa define a própria senha pelo link do convite. Ele sai por e-mail quando a clínica tem canal configurado; sem canal, o link aparece aqui para você copiar.',
+};
 
 const WEEKDAYS = [
   { value: 0, label: 'Dom' },
@@ -97,20 +114,131 @@ interface ScheduleConfigDto {
  */
 export default function SettingsPage() {
   const can = useStaffAccess();
+  const canClinic = can('/api/settings/clinic-info');
+  const sections = [
+    { id: 'dados', label: 'Dados cadastrais', show: canClinic },
+    { id: 'identidade', label: 'Identidade', show: true },
+    { id: 'privacidade', label: 'Contato de privacidade', show: canClinic },
+    {
+      id: 'horarios',
+      label: 'Horários e agenda',
+      show: can('/api/settings/schedule'),
+    },
+    { id: 'feriados', label: 'Feriados e ausências', show: true },
+    {
+      id: 'google-agenda',
+      label: 'Google Agenda',
+      show: can('/api/integrations/google-calendar'),
+    },
+    {
+      id: 'email',
+      label: 'Canal de e-mail',
+      // A seção se esconde sem esta rota; o índice acompanha (#482).
+      show: can('/api/settings/email-channel'),
+    },
+    {
+      id: 'contas',
+      label: 'Contas de acesso',
+      // A seção lê o cadastro completo de profissionais (administrativo).
+      show: can('/api/professionals'),
+    },
+  ].filter((section) => section.show);
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <PageHeader title="Configurações" />
-      {can('/api/settings/clinic-info') && <ClinicInfoSection />}
-      {can('/api/settings/clinic-info') && <PrivacyContactSection />}
-      {can('/api/settings/schedule') && <ScheduleSection />}
-      <ClosuresSection />
-      {can('/api/integrations/google-calendar') && (
-        <CalendarIntegrationSection />
-      )}
-      <EmailChannelSection />
-      {/* A seção lê o cadastro completo de profissionais (administrativo). */}
-      {can('/api/professionals') && <AccountsSection />}
+      <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <SectionNav sections={sections} />
+        <div className="flex min-w-0 flex-col gap-8">
+          {canClinic && (
+            <div id="dados" className="scroll-mt-20 lg:scroll-mt-4">
+              <ClinicInfoSection />
+              <BackToIndex />
+            </div>
+          )}
+          <div
+            id="identidade"
+            className="flex scroll-mt-20 flex-col gap-8 lg:scroll-mt-4"
+          >
+            {canClinic && <LogoSection />}
+            <IdentitySection />
+            <BackToIndex />
+          </div>
+          {canClinic && (
+            <div id="privacidade" className="scroll-mt-20 lg:scroll-mt-4">
+              <PrivacyContactSection />
+              <BackToIndex />
+            </div>
+          )}
+          {can('/api/settings/schedule') && (
+            <div id="horarios" className="scroll-mt-20 lg:scroll-mt-4">
+              <ScheduleSection />
+              <BackToIndex />
+            </div>
+          )}
+          <div id="feriados" className="scroll-mt-20 lg:scroll-mt-4">
+            <ClosuresSection />
+            <BackToIndex />
+          </div>
+          {can('/api/integrations/google-calendar') && (
+            <div id="google-agenda" className="scroll-mt-20 lg:scroll-mt-4">
+              <CalendarIntegrationSection />
+              <BackToIndex />
+            </div>
+          )}
+          <div id="email" className="scroll-mt-20 lg:scroll-mt-4">
+            <EmailChannelSection />
+            {can('/api/settings/email-channel') && <BackToIndex />}
+          </div>
+          {can('/api/professionals') && (
+            <div id="contas" className="scroll-mt-20 lg:scroll-mt-4">
+              <AccountsSection />
+              <BackToIndex />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+/**
+ * Atalhos para as seções da página: no computador ficam numa coluna fixa ao
+ * lado; no celular, numa lista no topo (o hub), e tocar leva à seção.
+ */
+function SectionNav({
+  sections,
+}: {
+  sections: Array<{ id: string; label: string }>;
+}) {
+  return (
+    <nav
+      id="indice-secoes"
+      aria-label="Seções da configuração"
+      className="sticky top-0 z-10 -mx-4 flex gap-1 overflow-x-auto border-border border-b bg-bg px-4 py-2 sm:-mx-6 sm:px-6 lg:top-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0"
+    >
+      <p className="sr-only lg:hidden">Ir para a seção</p>
+      {sections.map((section) => (
+        <a
+          key={section.id}
+          href={`#${section.id}`}
+          className="shrink-0 whitespace-nowrap rounded-lg px-3 py-2 font-semibold text-ink-2 text-sm hover:bg-accent-soft hover:text-ink lg:whitespace-normal"
+        >
+          {section.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+/** Só no celular: volta ao índice fixo, que já não está à vista no fim de uma seção longa. */
+function BackToIndex() {
+  return (
+    <a
+      href="#indice-secoes"
+      className="mt-3 inline-flex font-medium text-accent-ink text-sm hover:underline lg:hidden"
+    >
+      Voltar ao índice
+    </a>
   );
 }
 
@@ -435,10 +563,29 @@ function AccountsSection() {
   } = useApiQuery<UserAccountDto[]>('/api/accounts');
   const { data: professionals } =
     useApiQuery<ProfessionalDto[]>('/api/professionals');
+  const can = useStaffAccess();
+  const { data: channelData } = useApiQuery<{ channel: unknown | null }>(
+    can('/api/settings/email-channel') ? '/api/settings/email-channel' : null,
+  );
+  const emailChannel: EmailChannelState = channelData
+    ? channelData.channel
+      ? 'configured'
+      : 'none'
+    : 'unknown';
   const [creating, setCreating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [manualLink, setManualLink] = useState<ManualLink | null>(null);
+  // Contas criadas nesta sessão: a lista as mostra na hora, mesmo que a nova
+  // busca ainda traga a versão antiga (o convite demora e a lista não pode
+  // parecer vazia dele; nada de recarregar a página).
+  const [justCreated, setJustCreated] = useState<UserAccountDto[]>([]);
+  const visibleAccounts = accounts
+    ? [
+        ...accounts,
+        ...justCreated.filter((c) => !accounts.some((a) => a.id === c.id)),
+      ]
+    : null;
 
   const professionalName = (id: string | null) =>
     (professionals ?? []).find((p) => p.id === id)?.fullName ?? '—';
@@ -544,7 +691,7 @@ function AccountsSection() {
       />
 
       <AccountsTable
-        accounts={accounts}
+        accounts={visibleAccounts}
         professionalName={professionalName}
         onToggleActive={(account) => void toggleActive(account)}
         onResendInvite={(account) => void issueLink(account, 'resend-invite')}
@@ -556,8 +703,18 @@ function AccountsSection() {
         <Modal title="Nova conta de acesso" onClose={() => setCreating(false)}>
           <AccountForm
             professionals={(professionals ?? []).filter((p) => p.active)}
-            onSaved={({ email, inviteUrl }) => {
+            emailChannel={emailChannel}
+            onSaved={({
+              email,
+              inviteUrl,
+              delivered: _delivered,
+              ...account
+            }) => {
               setCreating(false);
+              setJustCreated((current) => [
+                ...current,
+                { email, ...account } as UserAccountDto,
+              ]);
               setManualLink(inviteUrl ? { email, url: inviteUrl } : null);
               setActionNotice(null);
               toast({ description: 'Conta criada', variant: 'success' });
@@ -632,6 +789,7 @@ function AccountsTable({
         <TableHeader>
           <TableRow>
             <TableHead className="py-2 pr-3">Email</TableHead>
+            <TableHead className="py-2 pr-3">Papel</TableHead>
             <TableHead className="py-2 pr-3">Profissional vinculado</TableHead>
             <TableHead className="py-2 pr-3">Situação</TableHead>
             <TableHead className="py-2 text-right">Ações</TableHead>
@@ -688,6 +846,9 @@ function AccountRow({
     <TableRow className={account.active ? '' : 'bg-surface-2/60'}>
       <TableCell label="Email" className="py-2 pr-3 font-medium">
         {account.email}
+      </TableCell>
+      <TableCell label="Papel" className="py-2 pr-3 text-ink-2">
+        {accountRoleLabel(account.role)}
       </TableCell>
       <TableCell
         label="Profissional vinculado"
@@ -805,14 +966,17 @@ function missingLinkMessage(
 
 function AccountForm({
   professionals,
+  emailChannel,
   onSaved,
 }: {
   professionals: ProfessionalDto[];
-  onSaved: (created: { email: string } & AccessLinkResult) => void;
+  emailChannel: EmailChannelState;
+  onSaved: (created: UserAccountDto & AccessLinkResult) => void;
 }) {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<AccountRole>('company_admin');
+  // Menor privilégio da equipe como padrão: o Admin de Empresa é escolha consciente (#475).
+  const [role, setRole] = useState<AccountRole>('atendente');
   const [professionalId, setProfessionalId] = useState('');
   // Cadastro de paciente/parceiro dono da conta de portal (#196).
   const [recordId, setRecordId] = useState('');
@@ -860,11 +1024,7 @@ function AccountForm({
           }),
         },
       );
-      onSaved({
-        email: created.email,
-        delivered: created.delivered,
-        inviteUrl: created.inviteUrl,
-      });
+      onSaved(created);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Erro ao criar conta';
@@ -888,10 +1048,7 @@ function AccountForm({
           className="mt-1"
         />
       </label>
-      <p className="text-ink-3 text-sm">
-        A pessoa recebe um e-mail de convite e define a própria senha — ninguém
-        digita senha por ela.
-      </p>
+      <p className="text-ink-3 text-sm">{INVITE_HINT[emailChannel]}</p>
       <label className="font-medium text-sm">
         Papel *
         <NativeSelect

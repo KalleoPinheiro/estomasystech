@@ -14,6 +14,7 @@ import { TriagePhotoList } from '@/components/triage-photo-list';
 import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
 import { apiFetch } from '@/lib/client';
+import { dayCounts, nextAppointment, pendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, FollowUpDto, SupplyDto } from '@/lib/dto';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -21,6 +22,7 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/format';
+import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useTriageQueue } from '@/lib/use-triage-queue';
@@ -30,6 +32,14 @@ interface SummaryData {
   billing: BillingSummary;
   appointmentsInMonth: number;
   today: AppointmentDto[];
+}
+
+/** Janela dos últimos 30 dias até agora — onde procurar consulta sem desfecho. */
+function closurePendingRange(): string {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - 30);
+  return `from=${start.toISOString()}&to=${end.toISOString()}`;
 }
 
 /** Início e fim do dia local — janela de "Consultas de hoje" sem o resumo. */
@@ -94,7 +104,10 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" />
+      <PageHeader
+        title="Hoje"
+        description={formatDate(new Date().toISOString())}
+      />
 
       {showFinance && (
         <KpiGrid summary={summaryQuery.data} error={summaryQuery.error} />
@@ -103,6 +116,8 @@ export default function DashboardPage() {
       {showTriage && <TriageQueue />}
 
       {showMajority && <MajorityReviewCard />}
+
+      <PendingClosureCard />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TodayAppointmentsCard
@@ -174,11 +189,7 @@ function KpiGrid({
       className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
     >
       {cards.map((card) => (
-        <Link
-          key={card.label}
-          href={card.href}
-          aria-label={`Ver ${card.label.toLowerCase()}`}
-        >
+        <Link key={card.label} href={card.href}>
           <Card className="h-full p-4 transition-colors hover:border-accent sm:p-5">
             <p className="text-ink-3 text-sm">{card.label}</p>
             <p
@@ -189,6 +200,82 @@ function KpiGrid({
           </Card>
         </Link>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Consultas dos últimos 30 dias que seguem "Agendada"/"Confirmada" (#480).
+ * Só aparece quando há pendência; erro ou carga não ocupam espaço na tela.
+ */
+function PendingClosureCard() {
+  const { data } = useApiQuery<AppointmentDto[]>(
+    `/api/appointments?${closurePendingRange()}`,
+  );
+  const pending = pendingClosure(data ?? [], new Date());
+  if (pending.length === 0) return null;
+  const homonyms = homonymPatientIds(pending);
+
+  return (
+    <Card data-pending-closure className="mb-6 border-warning p-5">
+      <h2 className="font-semibold text-lg">
+        {`Consultas sem desfecho (${pending.length})`}
+      </h2>
+      <p className="mb-3 text-ink-3 text-sm">
+        Já passaram e seguem agendadas ou confirmadas: conclua, registre a falta
+        ou cancele.
+      </p>
+      <ul className="divide-y divide-border">
+        {pending.slice(0, PENDING_CLOSURE_CAP).map((appointment) => (
+          <li key={appointment.id} className="flex items-center gap-4 py-2">
+            <span className="w-32 shrink-0 font-mono text-ink-2 text-sm">
+              {`${formatDate(appointment.startsAt)} ${formatTime(appointment.startsAt)}`}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-medium">
+              {listPatientName(appointment, homonyms)}
+            </span>
+            <span className="hidden truncate text-ink-3 text-sm sm:block">
+              {appointment.procedure}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Link
+        href="/agenda"
+        className="mt-3 inline-flex min-h-11 items-center font-medium text-accent-ink text-sm hover:underline"
+      >
+        Abrir a agenda para dar o desfecho
+      </Link>
+    </Card>
+  );
+}
+
+const PENDING_CLOSURE_CAP = 8;
+
+/** Próximo atendimento e números do dia, no topo da agenda de hoje (#428). */
+function DayHighlights({ today }: { today: AppointmentDto[] }) {
+  const next = nextAppointment(today, new Date());
+  const counts = dayCounts(today);
+
+  return (
+    <div data-day-highlights className="mb-3 border-border border-b pb-3">
+      {next && (
+        <div data-next-appointment>
+          <p className="text-ink-3 text-xs">Próximo atendimento</p>
+          <p className="font-semibold">
+            <Link
+              href={`/pacientes/${next.patientId}`}
+              className="hover:underline"
+            >
+              {`${next.patientName} · ${formatTime(next.startsAt)}`}
+            </Link>
+          </p>
+          <p className="text-ink-2 text-sm">{`Procedimento: ${next.procedure}`}</p>
+        </div>
+      )}
+      <p className="mt-2 text-ink-3 text-sm" data-day-counts>
+        {`${counts.completed} de ${counts.total} concluídas`}
+      </p>
     </div>
   );
 }
@@ -212,6 +299,7 @@ function TodayAppointmentsCard({
   );
   const today = fromSummary ? (fromSummary.data?.today ?? null) : own.data;
   const source = fromSummary ?? own;
+  const homonyms = homonymPatientIds(today ?? []);
 
   return (
     <SummaryCard
@@ -224,6 +312,7 @@ function TodayAppointmentsCard({
       emptyMessage="Nenhuma consulta agendada para hoje."
       emptyIcon="check-circle"
     >
+      <DayHighlights today={today ?? []} />
       <ul className="divide-y divide-border">
         {(today ?? []).map((appointment) => (
           <li key={appointment.id} className="flex items-center gap-4 py-3">
@@ -232,7 +321,9 @@ function TodayAppointmentsCard({
               {formatTime(appointment.endsAt)}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{appointment.patientName}</p>
+              <p className="truncate font-medium">
+                {listPatientName(appointment, homonyms)}
+              </p>
               <p className="truncate text-ink-3 text-sm">
                 {appointment.procedure}
               </p>
@@ -271,6 +362,7 @@ function FollowUpsCard({
 }: FollowUpsCardProps) {
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const visible = (followUps ?? []).slice(0, FOLLOW_UPS_CAP);
+  const followUpHomonyms = homonymPatientIds(visible);
   const { data: whatsappSent } = useApiQuery<Record<string, string>>(
     visible.length > 0
       ? `/api/reminders/whatsapp-link?kind=recall&referenceIds=${visible.map((f) => f.id).join(',')}`
@@ -309,7 +401,7 @@ function FollowUpsCard({
                     href={`/pacientes/${followUp.patientId}`}
                     className="hover:underline"
                   >
-                    {followUp.patientName}
+                    {listPatientName(followUp, followUpHomonyms)}
                   </Link>
                 </p>
                 <p className="break-words text-ink-3 sm:truncate">

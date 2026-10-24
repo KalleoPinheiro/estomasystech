@@ -12,7 +12,7 @@ import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import type { TriagePhotoDto } from '@/lib/dto';
-import { formatDate } from '@/lib/format';
+import { formatDate, INFECTION_LEVEL_LABELS } from '@/lib/format';
 import type { TriageDecision } from '@/lib/use-triage-queue';
 
 const TRIAGE_ATTENTION_HOURS = 24;
@@ -85,6 +85,12 @@ export function TriagePhotoList({
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">
                 {photo.patientName} — {photo.conditionTitle}
+                {photo.infectionAlert && (
+                  <span className="ml-2 rounded bg-danger-soft px-1.5 py-0.5 font-semibold text-danger text-xs">
+                    {INFECTION_LEVEL_LABELS[photo.infectionAlert] ??
+                      photo.infectionAlert}
+                  </span>
+                )}
                 {photo.latestScore && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -105,7 +111,7 @@ export function TriagePhotoList({
                   </Tooltip>
                 )}
               </p>
-              <p className="truncate text-ink-3 text-xs">
+              <p className="truncate text-ink-2 text-xs">
                 {photo.patientNote ?? 'sem observação'} ·{' '}
                 {formatDate(photo.createdAt)} ·{' '}
                 <span

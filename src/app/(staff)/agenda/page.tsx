@@ -4,11 +4,11 @@ import {
   Alert,
   AlertDescription,
   Button,
-  Icon,
   NativeSelect,
 } from '@still-void/ui/react';
 import { useMediaQuery, useToast } from '@still-void/ui/react/client';
 import { useEffect, useMemo, useState } from 'react';
+import { useHydrated } from '@/components/app-shell/use-hydrated';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
@@ -24,13 +24,16 @@ import type {
   WaitlistEntryDto,
 } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
+import { useAgendaPeriod } from './agenda-period';
 import { type ActionExtras, AppointmentDetail } from './appointment-detail';
 import {
   AppointmentForm,
   type AppointmentFormValues,
 } from './appointment-form';
-import { CalendarGrid, dayKey } from './calendar-grid';
+import { CalendarGrid } from './calendar-grid';
+import { PeriodNav } from './period-nav';
 import { WaitlistPanel } from './waitlist-panel';
+import { WeekView } from './week-view';
 
 function ProfessionalFilter({
   professionals,
@@ -99,16 +102,6 @@ function AgendaNotices({
   );
 }
 
-/** Só a primeira letra maiúscula ("Agosto de 2026") — a classe Tailwind
- * `capitalize` maiusculiza cada palavra, incluindo a preposição "de". */
-const monthLabel = (date: Date): string => {
-  const raw = date.toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric',
-  });
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-};
-
 /** Primeiro dia aceito pela entrada, nunca antes de hoje. */
 function waitlistStartDay(fromDate: string): Date {
   const [year, month, day] = fromDate.split('-').map(Number);
@@ -158,11 +151,9 @@ export default function AgendaPage() {
   // Abaixo de `md` a grade de 7 colunas com chips não cabe: vira mês compacto.
   const compact = useMediaQuery('(max-width: 767px)');
   const { toast } = useToast();
+  const hydrated = useHydrated();
   const [consultationLink] = useState(readConsultationLink);
-  const [monthDate, setMonthDate] = useState(() => {
-    const now = consultationLink?.startsAt ?? new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
+  const period = useAgendaPeriod(consultationLink?.startsAt ?? new Date());
   const [recall] = useState(readRecallParams);
   const [creatingFor, setCreatingFor] = useState<Date | null>(() =>
     readRecallParams() ? new Date() : null,
@@ -178,13 +169,11 @@ export default function AgendaPage() {
   const [linkOpened, setLinkOpened] = useState(false);
 
   const appointmentsUrl = useMemo(() => {
-    const from = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-    const to = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
     const filter = professionalFilter
       ? `&professionalId=${encodeURIComponent(professionalFilter)}`
       : '';
-    return `/api/appointments?from=${from.toISOString()}&to=${to.toISOString()}${filter}`;
-  }, [monthDate, professionalFilter]);
+    return `/api/appointments?from=${period.from.toISOString()}&to=${period.to.toISOString()}${filter}`;
+  }, [period.from, period.to, professionalFilter]);
 
   const {
     data: appointments,
@@ -210,18 +199,10 @@ export default function AgendaPage() {
     isDefault: boolean;
   }>('/api/schedule-config');
   const scheduleConfig = resolveScheduleConfig(scheduleData);
-  // Grade do mês mostra até 6 dias do mês vizinho de cada lado.
-  const closuresUrl = useMemo(() => {
-    const from = new Date(monthDate.getFullYear(), monthDate.getMonth(), -6);
-    const to = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 7);
-    return `/api/settings/schedule/closures?from=${dayKey(from)}&to=${dayKey(to)}`;
-  }, [monthDate]);
+  const closuresUrl = `/api/settings/schedule/closures?from=${period.closuresFrom}&to=${period.closuresTo}`;
+  const professionalName = (id: string) =>
+    professionals?.find((p) => p.id === id)?.fullName ?? 'Profissional';
   const { data: closures } = useApiQuery<ScheduleClosureDto[]>(closuresUrl);
-
-  const changeMonth = (delta: number) =>
-    setMonthDate(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1),
-    );
 
   const [seriesNotice, setSeriesNotice] = useState<{
     text: string;
@@ -371,6 +352,9 @@ export default function AgendaPage() {
           <Button
             type="button"
             onClick={() => setCreatingFor(new Date())}
+            // Antes da hidratação o clique se perderia (#484): o botão fica
+            // desabilitado até responder.
+            disabled={!hydrated}
             variant="accent"
           >
             + Nova consulta
@@ -385,29 +369,7 @@ export default function AgendaPage() {
       />
 
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            onClick={() => changeMonth(-1)}
-            aria-label="Mês anterior"
-            variant="outline"
-            className="hover:bg-surface-2"
-          >
-            <Icon name="chevron-left" />
-          </Button>
-          <span className="min-w-48 flex-1 text-center font-semibold text-lg md:flex-none">
-            {monthLabel(monthDate)}
-          </span>
-          <Button
-            type="button"
-            onClick={() => changeMonth(1)}
-            aria-label="Próximo mês"
-            variant="outline"
-            className="hover:bg-surface-2"
-          >
-            <Icon name="chevron-right" />
-          </Button>
-        </div>
+        <PeriodNav period={period} showViewToggle={!compact} />
         <ProfessionalFilter
           professionals={professionals ?? []}
           value={professionalFilter}
@@ -418,15 +380,24 @@ export default function AgendaPage() {
 
       {!appointments ? (
         <LoadingIndicator />
-      ) : (
-        <CalendarGrid
-          monthDate={monthDate}
+      ) : period.view !== 'month' && !compact ? (
+        <WeekView
+          weekStart={period.view === 'day' ? period.dayDate : period.weekStart}
+          dayCount={period.view === 'day' ? 1 : 7}
           appointments={appointments}
           scheduleConfig={scheduleConfig}
           closures={closures ?? []}
-          professionalName={(id) =>
-            professionals?.find((p) => p.id === id)?.fullName ?? 'Profissional'
-          }
+          professionalName={professionalName}
+          onDayClick={(day) => setCreatingFor(day)}
+          onAppointmentClick={setSelected}
+        />
+      ) : (
+        <CalendarGrid
+          monthDate={period.monthDate}
+          appointments={appointments}
+          scheduleConfig={scheduleConfig}
+          closures={closures ?? []}
+          professionalName={professionalName}
           compact={compact}
           onDayClick={(day) => setCreatingFor(day)}
           onAppointmentClick={setSelected}

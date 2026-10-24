@@ -401,6 +401,31 @@ describe('Feature: Catálogo de procedimentos', () => {
       expect(screen.queryByText('Editar procedimento')).not.toBeInTheDocument();
     });
 
+    it('Dado clique em Editar, Quando a ficha abre ao lado da lista, Então a linha fica selecionada e a lista continua visível', async () => {
+      mockFetch(buildRouter({ procedures: [activeProcedure] }));
+
+      renderWithToast(<ProceduresPage />);
+      await screen.findByText('Troca de bolsa de colostomia');
+      fireEvent.click(screen.getByText('Editar'));
+
+      expect(screen.getByRole('row', { selected: true })).toHaveTextContent(
+        'Troca de bolsa de colostomia',
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('Dado a ficha aberta, Quando clicar em Fechar ficha, Então a ficha some e a seleção é limpa', async () => {
+      mockFetch(buildRouter({ procedures: [activeProcedure] }));
+
+      renderWithToast(<ProceduresPage />);
+      await screen.findByText('Troca de bolsa de colostomia');
+      fireEvent.click(screen.getByText('Editar'));
+      fireEvent.click(screen.getByRole('button', { name: 'Fechar ficha' }));
+
+      expect(screen.queryByText('Editar procedimento')).not.toBeInTheDocument();
+      expect(screen.queryByRole('row', { selected: true })).toBeNull();
+    });
+
     it('Dado clique no botão Fechar do modal de novo procedimento, Quando acionado, Então fecha o modal sem salvar', async () => {
       const fetchMock = mockFetch(buildRouter());
 

@@ -186,3 +186,13 @@ export function formatBrazilianPhone(phone: string): string {
   const split = subscriber.length - 4;
   return `(${area}) ${subscriber.slice(0, split)}-${subscriber.slice(split)}`;
 }
+
+/**
+ * Telefone para exibição: formata também o legado salvo sem o `+55`
+ * (`11979133735` → `(11) 97913-3735`); o que não der para entender volta
+ * como está.
+ */
+export function displayBrazilianPhone(phone: string): string {
+  const parsed = parseBrazilianPhone(phone);
+  return parsed.ok ? formatBrazilianPhone(parsed.e164) : phone;
+}

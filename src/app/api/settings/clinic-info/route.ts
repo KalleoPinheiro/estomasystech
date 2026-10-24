@@ -1,12 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { UpdateClinicInfo } from '@/application/platform/update-clinic-info';
 import { getRepositories } from '@/infrastructure/container';
+import { isPhotoStorageAvailable } from '@/infrastructure/storage/unavailable-photo-storage';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { clinicInfoChangesSchema } from '@/lib/clinic-info-schema';
-import { toClinicRegistrationDto } from '@/lib/dto';
+import { clinicLogoUrl, toClinicRegistrationDto } from '@/lib/dto';
 
 /**
  * Só quem administra a empresa edita os dados cadastrais da clínica (#61). O
@@ -22,12 +23,22 @@ export async function GET(request: NextRequest) {
   const clinicId = writeClinicId(guard.session);
 
   return handleRequest(async () => {
-    const { clinics } = await getRepositories(clinicScope(clinicId));
+    const { clinics, photoStorage } = await getRepositories(
+      clinicScope(clinicId),
+    );
     const clinic = await clinics.findById(clinicId);
     if (!clinic) {
       throw new Error('Clínica não encontrada');
     }
-    return { info: toClinicRegistrationDto(clinic) };
+    return {
+      info: toClinicRegistrationDto(clinic),
+      // Logo (#427): endereço e se o armazenamento aceita envio.
+      identity: {
+        logoUrl: clinicLogoUrl(clinic.logoKey),
+        theme: clinic.theme,
+        imageUploadAvailable: isPhotoStorageAvailable(photoStorage),
+      },
+    };
   });
 }
 

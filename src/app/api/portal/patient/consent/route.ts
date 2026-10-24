@@ -17,7 +17,11 @@ import {
   writeClinicId,
   writeScope,
 } from '@/lib/auth/tenant-scope';
-import { CONSENT_DOCUMENTS, consentPurposeFrom } from '@/lib/consent-documents';
+import {
+  acceptedTemplates,
+  CONSENT_DOCUMENTS,
+  consentPurposeFrom,
+} from '@/lib/consent-documents';
 import {
   controllerFromClinic,
   controllerSnapshot,
@@ -76,7 +80,7 @@ export async function GET(request: NextRequest) {
     const records = await consentRecords.findByPatientId(patient.id);
     const status = ConsentRecord.resolveStatus(
       records,
-      document.template,
+      acceptedTemplates(document),
       purpose,
       patient,
     );
@@ -90,7 +94,13 @@ export async function GET(request: NextRequest) {
     return toConsentStatusDto(
       status,
       purpose,
-      renderLegalText(document.template, controller),
+      // O representante legal lê (e assina) o texto redigido em nome dele (#469).
+      renderLegalText(
+        canSign && auth.session.role === 'guardian'
+          ? document.representativeTemplate
+          : document.template,
+        controller,
+      ),
       canSign,
     );
   });
@@ -118,7 +128,7 @@ export async function POST(request: NextRequest) {
     const existing = await consentRecords.findByPatientId(patient.id);
     const status = ConsentRecord.resolveStatus(
       existing,
-      document.template,
+      acceptedTemplates(document),
       purpose,
       patient,
     );
@@ -137,8 +147,8 @@ export async function POST(request: NextRequest) {
     const controller = await controllerOf(clinics, writeClinicId(auth.session));
     const record = ConsentRecord.create({
       patientId: patient.id,
-      consentText: document.template,
-      textVersion: document.version,
+      consentText: signer ? document.representativeTemplate : document.template,
+      textVersion: signer ? document.representativeVersion : document.version,
       purpose,
       controllerSnapshot: controllerSnapshot(controller),
       // Evidência do aceite: mesma derivação confiável usada no rate limit (SEC1-10..13).

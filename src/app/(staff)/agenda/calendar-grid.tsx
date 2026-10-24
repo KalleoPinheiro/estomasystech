@@ -1,13 +1,17 @@
 'use client';
 
 import { Button, Card } from '@still-void/ui/react';
+import { useState } from 'react';
 import { EmptyState } from '@/components/feedback';
+import { Modal } from '@/components/modal';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
+import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
+import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import {
   buildMonthDays,
   dayKey,
@@ -15,16 +19,13 @@ import {
   WEEKDAY_LABELS,
 } from './calendar-days';
 import { MobileMonth } from './mobile-month';
+import {
+  PENDING_CLOSURE_CLASS,
+  PENDING_CLOSURE_LABEL,
+  STATUS_COLORS,
+} from './status-colors';
 
 export { dayKey } from './calendar-days';
-
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: 'bg-info-soft text-info border-info',
-  confirmed: 'bg-accent-soft text-accent-ink border-accent',
-  completed: 'bg-success-soft text-success border-success',
-  cancelled: 'bg-surface-2 text-ink-3 border-border line-through',
-  no_show: 'bg-warning-soft text-warning border-warning',
-};
 
 const MAX_VISIBLE_PER_DAY = 3;
 
@@ -37,9 +38,19 @@ function StatusLegend() {
           {APPOINTMENT_STATUS_LABELS[status] ?? status}
         </span>
       ))}
+      <span className="inline-flex items-center gap-1.5">
+        <span
+          className={`h-2.5 w-2.5 rounded-full border border-border ${PENDING_CLOSURE_CLASS}`}
+        />
+        {PENDING_CLOSURE_LABEL} (já passou)
+      </span>
     </div>
   );
 }
+
+/** "2026-10-22" → "22/10/2026" para o título do diálogo do dia. */
+const formatDayTitle = (key: string): string =>
+  key.split('-').reverse().join('/');
 
 interface CalendarGridProps {
   monthDate: Date;
@@ -65,9 +76,12 @@ export function CalendarGrid({
   onAppointmentClick,
 }: CalendarGridProps) {
   const days = buildMonthDays(monthDate);
-  const todayKey = dayKey(new Date());
+  const now = new Date();
+  const todayKey = dayKey(now);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const byDay = new Map<string, AppointmentDto[]>();
+  const homonyms = homonymPatientIds(appointments);
   for (const appointment of appointments) {
     const key = dayKey(new Date(appointment.startsAt));
     byDay.set(key, [...(byDay.get(key) ?? []), appointment]);
@@ -125,10 +139,10 @@ export function CalendarGrid({
                 const dayAppointments = (byDay.get(key) ?? []).sort((a, b) =>
                   a.startsAt.localeCompare(b.startsAt),
                 );
-                const visibleAppointments = dayAppointments.slice(
-                  0,
-                  MAX_VISIBLE_PER_DAY,
-                );
+                // Cancelada não ocupa linha da célula: vai para "+N mais" (#471).
+                const visibleAppointments = dayAppointments
+                  .filter((appointment) => appointment.status !== 'cancelled')
+                  .slice(0, MAX_VISIBLE_PER_DAY);
                 const hiddenCount =
                   dayAppointments.length - visibleAppointments.length;
                 return (
@@ -155,7 +169,7 @@ export function CalendarGrid({
                   >
                     <span
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full font-medium text-xs ${
-                        key === todayKey ? 'bg-accent-ink text-white' : ''
+                        key === todayKey ? 'bg-accent-ink text-bg' : ''
                       }`}
                     >
                       {day.getDate()}
@@ -180,20 +194,29 @@ export function CalendarGrid({
                             event.stopPropagation();
                             onAppointmentClick(appointment);
                           }}
-                          title={`${formatTime(appointment.startsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}`}
+                          title={`${formatTime(appointment.startsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`}
                           variant="outline"
                           className={`h-auto w-full truncate rounded border-0 px-1.5 py-0.5 text-left font-normal text-xs ${
                             STATUS_COLORS[appointment.status] ?? 'bg-surface-2'
-                          }`}
+                          } ${isPendingClosure(appointment, now) ? PENDING_CLOSURE_CLASS : ''}`}
                         >
                           {formatTime(appointment.startsAt)}{' '}
-                          {appointment.patientName}
+                          {listPatientName(appointment, homonyms)}
                         </Button>
                       ))}
                       {hiddenCount > 0 && (
-                        <span className="px-1.5 font-medium text-ink-3 text-xs">
+                        <Button
+                          type="button"
+                          variant="link"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setExpandedDay(key);
+                          }}
+                          aria-label={`Ver todas as consultas de ${day.toLocaleDateString('pt-BR')}`}
+                          className="h-auto justify-start px-1.5 py-0 font-medium text-ink-3 text-xs"
+                        >
                           +{hiddenCount} mais
-                        </span>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -202,6 +225,37 @@ export function CalendarGrid({
             </div>
           </Card>
         </div>
+      )}
+      {expandedDay && (
+        <Modal
+          title={`Consultas de ${formatDayTitle(expandedDay)}`}
+          onClose={() => setExpandedDay(null)}
+        >
+          <ul className="flex flex-col gap-1.5">
+            {(byDay.get(expandedDay) ?? []).map((appointment) => (
+              <li key={appointment.id}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setExpandedDay(null);
+                    onAppointmentClick(appointment);
+                  }}
+                  className={`h-auto w-full justify-start rounded px-2 py-1.5 text-left font-normal text-sm ${
+                    STATUS_COLORS[appointment.status] ?? 'bg-surface-2'
+                  }`}
+                >
+                  {formatTime(appointment.startsAt)}–
+                  {formatTime(appointment.endsAt)}{' '}
+                  {listPatientName(appointment, homonyms)} —{' '}
+                  {appointment.procedure} ·{' '}
+                  {APPOINTMENT_STATUS_LABELS[appointment.status] ??
+                    appointment.status}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Modal>
       )}
     </div>
   );
