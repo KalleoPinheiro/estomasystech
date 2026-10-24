@@ -24,7 +24,7 @@ import { PatientPhone } from '@/components/patient-phone';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { PartnerDto, PatientDto } from '@/lib/dto';
-import { formatDate } from '@/lib/format';
+import { formatCivilDate } from '@/lib/format';
 import { abbreviatePatientName } from '@/lib/patient-name';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
@@ -81,7 +81,7 @@ function PatientsTable({
                 </div>
               </TableCell>
               <TableCell label="Nascimento" className="px-4 py-3 text-ink-2">
-                {patient.birthDate ? formatDate(patient.birthDate) : '—'}
+                {patient.birthDate ? formatCivilDate(patient.birthDate) : '—'}
               </TableCell>
               <TableCell label="Situação" className="px-4 py-3">
                 <StatusBadge
@@ -179,9 +179,8 @@ export default function PatientsPage() {
       phone: values.phone,
       // Em branco: novo cadastro sem CPF; edição mantém o que está guardado.
       cpf: values.cpf.trim() || undefined,
-      birthDate: values.birthDate
-        ? new Date(values.birthDate).toISOString()
-        : null,
+      // Data civil: AAAA-MM-DD, sem hora nem fuso (ADR-073).
+      birthDate: values.birthDate || null,
       notes: values.notes || null,
       referredByPartnerId: values.referredByPartnerId || null,
     };

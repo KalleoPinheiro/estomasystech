@@ -20,7 +20,7 @@ const updatePatientSchema = z.object({
   phone: z.string().min(1).max(50).optional(),
   // Ausente mantém; vazio ou null remove.
   cpf: z.string().max(20).nullish(),
-  birthDate: z.iso.datetime().nullish(),
+  birthDate: z.union([z.iso.date(), z.iso.datetime()]).nullish(),
   notes: z.string().max(5000).nullish(),
   referredByPartnerId: z.string().max(100).nullish(),
   guardianId: z.string().max(100).nullish(),

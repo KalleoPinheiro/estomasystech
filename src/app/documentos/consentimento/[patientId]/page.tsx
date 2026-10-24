@@ -12,7 +12,7 @@ import {
 } from '@/lib/consent-representative-text';
 import { CONSENT_TEXT, CONSENT_TEXT_VERSION } from '@/lib/consent-text';
 import type { PatientDto } from '@/lib/dto';
-import { formatDate } from '@/lib/format';
+import { formatCivilDate } from '@/lib/format';
 import {
   IMAGE_CONSENT_REPRESENTATIVE_TEXT,
   IMAGE_CONSENT_REPRESENTATIVE_TEXT_VERSION,
@@ -134,7 +134,7 @@ export default function ConsentDocumentPage({
           Eu, <strong>{guardian.fullName}</strong>, {guardian.relationshipLabel}{' '}
           e responsável legal de <strong>{patient.fullName}</strong>
           {patient.birthDate
-            ? `, nascido(a) em ${formatDate(patient.birthDate)}`
+            ? `, nascido(a) em ${formatCivilDate(patient.birthDate)}`
             : ''}
           , li e concordo com o termo abaixo.
         </p>
@@ -142,7 +142,7 @@ export default function ConsentDocumentPage({
         <p className="mb-4">
           Eu, <strong>{patient.fullName}</strong>
           {patient.birthDate
-            ? `, nascido(a) em ${formatDate(patient.birthDate)}`
+            ? `, nascido(a) em ${formatCivilDate(patient.birthDate)}`
             : ''}
           , li e concordo com o termo abaixo.
         </p>

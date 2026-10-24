@@ -20,15 +20,17 @@ export const formatPercent = (fraction: number): string =>
  * Data e hora no fuso da clínica (`APP_TIMEZONE`) com locale fixo: servidor e
  * navegador devolvem o mesmo texto, em qualquer fuso do aparelho (#543).
  */
-const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+export const formatDate = (iso: string): string =>
+  new Date(iso).toLocaleDateString('pt-BR', { timeZone: appTimeZone() });
 
-export const formatDate = (iso: string): string => {
-  // Data civil (aniversário): sem hora nem fuso, nunca desloca de dia.
-  const dateOnly = DATE_ONLY.exec(iso);
-  if (dateOnly) {
-    return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
-  }
-  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: appTimeZone() });
+/**
+ * Data civil (nascimento, só dia): sem hora nem fuso, nunca desloca de dia
+ * (ADR-073). Vale o dia `AAAA-MM-DD` do valor, que é gravado à meia-noite UTC;
+ * `formatDate` o mostraria um dia antes em São Paulo.
+ */
+export const formatCivilDate = (value: string): string => {
+  const [year, month, day] = value.slice(0, 10).split('-');
+  return `${day}/${month}/${year}`;
 };
 
 export const formatTime = (iso: string): string =>

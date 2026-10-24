@@ -6,7 +6,7 @@ import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import type { AppointmentDto, PatientDto } from '@/lib/dto';
-import { formatDate, formatTime } from '@/lib/format';
+import { formatCivilDate, formatDate, formatTime } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
 import {
   type DocumentIssuance,
@@ -112,7 +112,7 @@ export default function AttendanceDocumentPage({
         Declaro, para os devidos fins, que{' '}
         <strong>{appointment.patientName ?? 'o(a) paciente'}</strong>
         {patient?.birthDate
-          ? ` (nascido(a) em ${formatDate(patient.birthDate)})`
+          ? ` (nascido(a) em ${formatCivilDate(patient.birthDate)})`
           : ''}{' '}
         compareceu a atendimento de estomaterapia nesta clínica no dia{' '}
         <strong>{formatDate(appointment.startsAt)}</strong>, no período de{' '}
