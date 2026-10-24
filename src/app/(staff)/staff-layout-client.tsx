@@ -102,9 +102,10 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
             a 1120px e as telas do staff são tabelas largas. */}
           {/* Colado ao topo e com a altura da janela menos a faixa de homologação (#482):
               Tema e Sair ficam sempre à vista, inclusive em janela baixa. */}
-          <SidebarPanel className="flex max-h-[calc(100dvh-var(--staging-banner-h,0px))] flex-col [&>.sv-app-sidebar__body]:max-h-full [&>.sv-app-sidebar__body]:min-h-0 [&>.sv-app-sidebar__body]:flex-1 [&>.sv-app-sidebar__body]:justify-between w-60 shrink-0 justify-between border-border border-r p-5 lg:sticky lg:top-0 lg:h-[calc(100dvh-var(--staging-banner-h,0px))] lg:self-start">
-            {/* w-60 (e não w-56): a marca «EstomaSysTech» mede ~144 px e o miolo útil do
-                menu (painel − p-5 − padding do corpo) ficava em 135 px, cortando-a (#535). */}
+          <SidebarPanel className="flex max-h-[calc(100dvh-var(--staging-banner-h,0px))] flex-col [&>.sv-app-sidebar__body]:max-h-full [&>.sv-app-sidebar__body]:min-h-0 [&>.sv-app-sidebar__body]:flex-1 [&>.sv-app-sidebar__body]:justify-between w-56 shrink-0 justify-between border-border border-r px-3 py-5 lg:sticky lg:top-0 lg:h-[calc(100dvh-var(--staging-banner-h,0px))] lg:self-start">
+            {/* px-3 (e não p-5): a marca «EstomaSysTech» mede ~144 px e o miolo útil do menu
+                (painel − padding − padding do corpo) ficava em 135 px, cortando-a (#535). A
+                largura w-56 fica, para não estreitar o conteúdo da página. */}
             {/* Só o menu rola em tela baixa; Tema, Sair e versão ficam sempre à vista (#482). */}
             {/* overflow-x-hidden: com overflow-y o x vira auto e aparecia barra horizontal
                 sob «Minha conta»; -mx-1/px-1 preservam o anel de foco dos links. */}
