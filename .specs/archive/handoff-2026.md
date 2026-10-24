@@ -1943,6 +1943,14 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Rotina ADR-052**: toda `feat/*` aberta recebe `release/v0.3.0` mergeada antes do PR e antes do merge.
 - **Next step**: the-judge e merge squash dos dois PRs na release. **Blockers**: nenhum.
 
+## Corte de release em comando único e gate com ambiente fixo (#570, #571) (2026-10-24) — EM REVISÃO
+- **Decisão** (Kalléo, 2026-10-24, depois da v0.2.0 com gate repetido 4x): `npm run release:cut -- --rollback=...` na release, no WSL. Ordem: pré-condições (marca `homologacao/vX.Y.Z` no SHA, TESTE-ALTERADO do lote consolidado e integridade contra a `main`), `release:prepare` primeiro, worktree limpo, gate da release uma vez, PR `release → main` com o recibo. ADR-071 (substitui o ponto do ADR-051 sobre a mutação na release).
+- **O que mudou**: `scripts/release/cut.ts` + `cut-lib.ts`; `scripts/gate/ambiente.ts` (TZ=UTC, NODE_OPTIONS 8192, `POSTGRES_PORT` livre a partir de 55432 para `docker` e `backup`, projeto do compose `estomasystech-gate`, segredos descartáveis, sobras apagadas) e `plano.ts` (perfis `pr` e `release`; release sem mutação, Docker e backup obrigatórios); `verify-receipt --head-ref` no `recibo-gate.yml`. Editado com `GATE_OWNER_EDIT=1` por aval do Kalléo.
+- **Causa do #571**: a etapa `docker` escolhia porta livre, mas a `backup` subia o compose sem ela, na 5432.
+- **Testes novos**: `tests/scripts/gate-ambiente.test.ts`, `gate-perfil-release.test.ts`, `release-cut.test.ts`; nenhum existente alterado.
+- **Pendente**: provar o `release:cut` de ponta a ponta no WSL no corte da v0.3.0 (critério de pronto da #570).
+- **Next step**: the-judge e merge na release/v0.3.0. **Blockers**: nenhum.
+
 ## Filtro da agenda por status da consulta (#538) (2026-10-24) — EM REVISÃO
 - **O que mudou**: chips de status em `/agenda` (multisseleção, contagem por status do período, `aria-pressed`, rolagem horizontal própria em 360/390 px); estado em `?status=` (padrão sem `cancelled` deixa a URL limpa; inválido cai no padrão; vazio = nenhum, com «Mostrar padrão»); `GET /api/appointments?status=` filtra no servidor dentro do escopo da empresa e novo `GET /api/appointments/status-counts` conta por status sem o filtro de status. Cancelada pedida pelo filtro vira bloco na grade (mês e semana/dia).
 - **Decisões**: rótulo «Faltou» (o do selo, em vez de «Falta» da issue); cancelada fora do padrão muda o que a equipe vê por padrão (antes o mês mandava a cancelada para «+N mais»); a URL é lida por `useSyncExternalStore` e gravada por `history.replaceState` (sem `useSearchParams`, que os testes de página da agenda não mockam e que exigiria Suspense).

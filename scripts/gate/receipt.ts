@@ -39,6 +39,14 @@ export const REQUIRED_STEPS = [
 ] as const;
 
 /**
+ * Etapas a mais do PR `release/* → main` (ADR-071): a imagem Docker com smoke e o backup não podem
+ * ser puladas. A mutação não é exigida ali: rodou em cada PR do lote e roda inteira na rotina mensal.
+ */
+export const RELEASE_EXTRA_STEPS = ['docker', 'backup'] as const;
+
+const isReleaseRef = (ref: string): boolean => /^release\/.+$/.test(ref);
+
+/**
  * Arquivos de regra que o Stryker sabe mutar (ADR-047): mesmo escopo de `stryker.config.json`
  * (`src/domain` e `src/application`, sem `.d.ts` nem `index.ts`).
  */
@@ -53,7 +61,12 @@ export interface Check {
   reason: string;
 }
 
-export function verifyReceipt(prBody: string, headSha: string, changedFiles: string[] = []): Check {
+export function verifyReceipt(
+  prBody: string,
+  headSha: string,
+  changedFiles: string[] = [],
+  headRef = '',
+): Check {
   const m = LINE.exec(prBody);
   if (!m) return { ok: false, reason: 'Corpo do PR sem a linha `E2E-GATE:` (rode `npm run gate:local`).' };
   const [, sha, status, rest] = m;
@@ -64,10 +77,12 @@ export function verifyReceipt(prBody: string, headSha: string, changedFiles: str
     };
   if (status !== 'pass') return { ok: false, reason: 'Recibo registra falha do gate.' };
   const steps = /etapas=(\S+)/.exec(rest)?.[1]?.split(',') ?? [];
-  const missing = REQUIRED_STEPS.filter((s) => !steps.includes(s));
+  const release = isReleaseRef(headRef);
+  const required: readonly string[] = release ? [...REQUIRED_STEPS, ...RELEASE_EXTRA_STEPS] : REQUIRED_STEPS;
+  const missing = required.filter((s) => !steps.includes(s));
   if (missing.length > 0)
     return { ok: false, reason: `Recibo sem as etapas obrigatórias: ${missing.join(', ')}.` };
-  if (mutationTargets(changedFiles).length > 0 && !steps.includes('mutacao'))
+  if (!release && mutationTargets(changedFiles).length > 0 && !steps.includes('mutacao'))
     return {
       ok: false,
       reason: 'O diff muda regra em domain/application: o recibo precisa da etapa `mutacao` (ADR-047).',

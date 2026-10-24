@@ -231,9 +231,9 @@ O deploy é **manual** (botão *Deploy* no Coolify): nada sobe sozinho por um pu
 proposital enquanto as migrações não têm `down`
 ([ADR-039](../adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md)).
 
-0. **Release (ADR-052, que substitui o passo do ADR-043):** com a staging aprovada,
-   `npm run release:prepare -- --rollback=redeploy|backup` na `release/vX.Y.Z` (versão e CHANGELOG, Release em
-   rascunho); PR `release → main` com `gate:local` e merge **commit**; depois
+0. **Release (ADR-052 e ADR-071):** com a staging aprovada e a marca `homologacao/vX.Y.Z` no SHA,
+   `npm run release:cut -- --rollback=redeploy|backup` na `release/vX.Y.Z` (no WSL: `release:prepare` primeiro,
+   gate da release uma vez em worktree limpo, PR `release → main` com o recibo); merge **commit**; depois
    `npm run release:publish -- --rollback=...` cria a tag `vX.Y.Z` no commit de merge e publica a
    Release (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**. Fluxo completo
    em [`homologacao.md`](homologacao.md) § 1.
