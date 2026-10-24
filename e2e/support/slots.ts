@@ -140,6 +140,8 @@ export const SLOT_SEEDS = [
   "relatorios-margem-2",
   "relatorios-producao",
   "responsive-tables-relatorios",
+  "agenda-bloco-curto-768",
+  "agenda-bloco-curto-1280",
 ] as const;
 
 export type SlotSeed = (typeof SLOT_SEEDS)[number];

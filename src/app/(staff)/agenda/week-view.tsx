@@ -13,7 +13,13 @@ import {
   PENDING_CLOSURE_LABEL,
   STATUS_COLORS,
 } from './status-colors';
-import { layoutDay, verticalSpan, visibleHours } from './week-layout';
+import {
+  type BlockDensity,
+  blockDensity,
+  layoutDay,
+  verticalSpan,
+  visibleHours,
+} from './week-layout';
 
 /** Altura de uma hora na coluna; a duração real da consulta vira altura do bloco. */
 const HOUR_REM = 3.5;
@@ -41,6 +47,20 @@ const weekDays = (weekStart: Date, dayCount: number): Date[] =>
         weekStart.getDate() + index,
       ),
   );
+
+/**
+ * Espaçamento e entrelinha do bloco por densidade, para o texto caber na altura da duração.
+ * `min-h-0 min-w-0` anula o alvo de toque de 44 px do `.sv-btn` (abaixo de 64rem), que
+ * inflava o bloco e o sobrepunha ao vizinho; o bloco é proporcional ao tempo do procedimento.
+ * No `tiny` (14 px) o `::after` estende a área de toque para 26 px (WCAG 2.5.8) sem mudar o
+ * desenho: a extensão de 6 px de cada lado cabe no intervalo mínimo de 15 min (14 px) entre
+ * consultas, então nunca cobre o bloco vizinho.
+ */
+const DENSITY_CLASS: Record<BlockDensity, string> = {
+  full: 'min-h-0 min-w-0 overflow-hidden py-0.5',
+  single: 'min-h-0 min-w-0 overflow-hidden py-0 leading-4',
+  tiny: 'min-h-0 min-w-0 py-0 text-[11px] leading-3.5 after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-[""]',
+};
 
 const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
 
@@ -204,14 +224,20 @@ export function WeekView({
                         appointment.endsAt,
                         range,
                       );
+                      const label = `${formatTime(appointment.startsAt)}–${formatTime(appointment.endsAt)} ${listPatientName(appointment, homonyms)} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`;
+                      const density = blockDensity(
+                        appointment.startsAt,
+                        appointment.endsAt,
+                      );
                       return (
                         <Button
                           key={appointment.id}
                           type="button"
                           variant="outline"
                           onClick={() => onAppointmentClick(appointment)}
-                          title={`${formatTime(appointment.startsAt)}–${formatTime(appointment.endsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`}
-                          className={`absolute h-auto flex-col items-start justify-start overflow-hidden rounded border-0 px-1.5 py-0.5 text-left font-normal text-xs ${
+                          title={label}
+                          aria-label={label}
+                          className={`absolute h-auto flex-col items-start justify-start rounded border-0 px-1.5 text-left font-normal text-xs ${DENSITY_CLASS[density]} ${
                             STATUS_COLORS[appointment.status] ?? 'bg-surface-2'
                           } ${isPendingClosure(appointment, now) ? PENDING_CLOSURE_CLASS : ''}`}
                           style={{
@@ -221,14 +247,24 @@ export function WeekView({
                             width: `calc(${100 / lanes}% - 2px)`,
                           }}
                         >
-                          <span className="block w-full truncate font-medium">
-                            {formatTime(appointment.startsAt)}–
-                            {formatTime(appointment.endsAt)}{' '}
-                            {listPatientName(appointment, homonyms)}
-                          </span>
-                          <span className="block w-full truncate">
-                            {appointment.procedure}
-                          </span>
+                          {density === 'full' ? (
+                            <>
+                              <span className="block w-full truncate font-medium">
+                                {formatTime(appointment.startsAt)}–
+                                {formatTime(appointment.endsAt)}{' '}
+                                {listPatientName(appointment, homonyms)}
+                              </span>
+                              <span className="block w-full truncate">
+                                {appointment.procedure}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="block w-full truncate font-medium">
+                              {formatTime(appointment.startsAt)}{' '}
+                              {listPatientName(appointment, homonyms)} ·{' '}
+                              {appointment.procedure}
+                            </span>
+                          )}
                         </Button>
                       );
                     },
