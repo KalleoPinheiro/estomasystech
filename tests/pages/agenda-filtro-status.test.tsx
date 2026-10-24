@@ -16,11 +16,45 @@ import { layoutDay, visibleHours } from '@/app/(staff)/agenda/week-layout';
 import { WeekView } from '@/app/(staff)/agenda/week-view';
 import type { AppointmentDto } from '@/lib/dto';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useParams: () => ({}),
-  usePathname: () => '/agenda',
-}));
+// A URL é a fonte do filtro: o mock do roteador guarda a query num armazém e
+// avisa quem a lê (como `useSearchParams` reage à navegação no Next).
+const nav = vi.hoisted(() => {
+  let search = '';
+  const listeners = new Set<() => void>();
+  return {
+    get: () => search,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    /** Navega para `/agenda?...` (ou só `?...`), como o roteador faz. */
+    go: (url: string) => {
+      search = url.includes('?') ? `?${url.split('?')[1]}` : '';
+      for (const listener of listeners) listener();
+    },
+  };
+});
+
+vi.mock('next/navigation', async () => {
+  const React = await import('react');
+  return {
+    useRouter: () => ({
+      push: vi.fn(),
+      refresh: vi.fn(),
+      replace: (url: string) => nav.go(url),
+    }),
+    useParams: () => ({}),
+    usePathname: () => '/agenda',
+    useSearchParams: () => {
+      const search = React.useSyncExternalStore(
+        nav.subscribe,
+        nav.get,
+        nav.get,
+      );
+      return React.useMemo(() => new URLSearchParams(search), [search]);
+    },
+  };
+});
 
 const COUNTS = {
   scheduled: 3,
@@ -39,7 +73,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.useRealTimers();
-  window.history.replaceState(null, '', '/');
+  nav.go('');
 });
 
 const mockFetch = () => {
@@ -99,7 +133,7 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
   });
 
   it('AGE-FLT-04: Dado ?status=completed, Quando abrir, Então só Concluída marcada e enviada ao servidor', async () => {
-    window.history.replaceState(null, '', '/agenda?status=completed');
+    nav.go('?status=completed');
     const urls = mockFetch();
     renderWithToast(<AgendaPage />);
 
@@ -123,7 +157,7 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
       screen.getByRole('button', { name: 'Concluída, 0 consultas' }),
     );
 
-    expect(window.location.search).toBe('?status=confirmed%2Cno_show');
+    expect(nav.get()).toBe('?status=confirmed%2Cno_show');
     await waitFor(() =>
       expect(lastListUrl(urls)).toMatch(/&status=confirmed,no_show$/),
     );
@@ -138,11 +172,11 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Concluída, 0 consultas' }),
     );
-    expect(window.location.search).toBe('');
+    expect(nav.get()).toBe('');
   });
 
   it('AGE-FLT-04: Dado ?status=xyz, Quando abrir, Então cai no padrão sem erro', async () => {
-    window.history.replaceState(null, '', '/agenda?status=xyz');
+    nav.go('?status=xyz');
     mockFetch();
     renderWithToast(<AgendaPage />);
 
@@ -153,7 +187,7 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
   });
 
   it('AGE-FLT-01: Dado nenhum status, Quando abrir, Então estado vazio com "Mostrar padrão" que restaura', async () => {
-    window.history.replaceState(null, '', '/agenda?status=');
+    nav.go('?status=');
     mockFetch();
     renderWithToast(<AgendaPage />);
 
@@ -163,7 +197,7 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
     await waitFor(() =>
       expect(screen.queryByText('Nenhum status marcado.')).toBeNull(),
     );
-    expect(window.location.search).toBe('');
+    expect(nav.get()).toBe('');
     expect(
       screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -227,16 +261,16 @@ describe('Feature: Canceladas pedidas pelo filtro aparecem na grade (#538)', () 
 
 describe('Feature: A URL é a única fonte do filtro de status (#538)', () => {
   it('Dado ?status=cancelled aberto, Quando o roteador navega para /agenda sem parâmetros (clique em «Agenda» no menu), Então volta ao padrão', async () => {
-    window.history.replaceState(null, '', '/agenda?status=cancelled');
+    nav.go('?status=cancelled');
     mockFetch();
     renderWithToast(<AgendaPage />);
     expect(
       await screen.findByRole('button', { name: 'Cancelada, 4 consultas' }),
     ).toHaveAttribute('aria-pressed', 'true');
 
-    // O roteador do Next navega com history.pushState, sem popstate.
+    // Clique em «Agenda» no menu: o roteador navega para /agenda sem parâmetros.
     act(() => {
-      window.history.pushState(null, '', '/agenda');
+      nav.go('/agenda');
     });
 
     await waitFor(() =>
@@ -255,7 +289,7 @@ describe('Feature: A URL é a única fonte do filtro de status (#538)', () => {
     await screen.findByRole('button', { name: 'Agendada, 3 consultas' });
 
     act(() => {
-      window.history.pushState(null, '', '/agenda?status=no_show');
+      nav.go('/agenda?status=no_show');
     });
 
     await waitFor(() =>

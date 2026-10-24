@@ -7,13 +7,8 @@ import {
   NativeSelect,
 } from '@still-void/ui/react';
 import { useMediaQuery, useToast } from '@still-void/ui/react/client';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHydrated } from '@/components/app-shell/use-hydrated';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
@@ -161,56 +156,32 @@ function readConsultationLink() {
 }
 
 /**
- * Avisa quem lê a URL de qualquer mudança dela: voltar/avançar (`popstate`) e
- * as navegações do roteador do Next, que usam `history.pushState`/`replaceState`
- * e não disparam evento (ex.: clicar em «Agenda» no menu com `?status=` aberto).
- */
-const subscribeToUrl = (onChange: () => void) => {
-  const { history } = window;
-  const { pushState, replaceState } = history;
-  history.pushState = (...args) => {
-    pushState.apply(history, args);
-    onChange();
-  };
-  history.replaceState = (...args) => {
-    replaceState.apply(history, args);
-    onChange();
-  };
-  window.addEventListener('popstate', onChange);
-  return () => {
-    // Só desfaz o que esta assinatura instalou, sem derrubar o patch de outra.
-    window.removeEventListener('popstate', onChange);
-    history.pushState = pushState;
-    history.replaceState = replaceState;
-  };
-};
-
-/**
  * Filtro de status na URL (`?status=`, AGE-FLT-04): o link compartilhado e o
- * recarregar mantêm o recorte. Lê `window.location` por `useSyncExternalStore`
- * (no servidor, sem parâmetro) para a hidratação não divergir; a URL é a
- * única fonte, sem estado local espelhado. Grava com `history.replaceState`.
+ * recarregar mantêm o recorte, e a URL é a única fonte da seleção (sem estado
+ * local espelhado): navegar para `/agenda` sem parâmetros volta ao padrão.
  */
 function useStatusFilter() {
-  const search = useSyncExternalStore(
-    subscribeToUrl,
-    () => window.location.search,
-    () => '',
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const raw = searchParams.get('status');
+  const statuses = useMemo(() => parseStatusFilter(raw), [raw]);
+  const setStatuses = useCallback(
+    (next: readonly AppointmentStatus[]) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const value = serializeStatusFilter(next);
+      if (value === null) {
+        params.delete('status');
+      } else {
+        params.set('status', value);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams],
   );
-  const statuses = useMemo(
-    () => parseStatusFilter(new URLSearchParams(search).get('status')),
-    [search],
-  );
-  const setStatuses = useCallback((next: readonly AppointmentStatus[]) => {
-    const url = new URL(window.location.href);
-    const value = serializeStatusFilter(next);
-    if (value === null) {
-      url.searchParams.delete('status');
-    } else {
-      url.searchParams.set('status', value);
-    }
-    window.history.replaceState(window.history.state, '', url);
-  }, []);
   return { statuses, setStatuses };
 }
 
