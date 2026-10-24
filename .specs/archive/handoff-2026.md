@@ -1930,3 +1930,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Decisão pendente do PO**: fuso das datas = `APP_TIMEZONE` (#543, recomendado).
 - **Script e brutos**: `/mnt/project-files/perf-next/` (`linha-base.spec.ts`, `.jsonl`).
 - **Next step**: aceitar a ADR-069 (vira `frozen` no #544) e abrir a onda 1 (#542, #543). **Blockers**: nenhum.
+
+## Abertura da release v0.3.0 (2026-10-24) — EM REVISÃO
+- **O que foi feito**: `release/v0.3.0` criada a partir da `main` (7ee79cd, tag v0.2.0); `staging` devolvida a igual à `main` (force-with-lease; o commit descartado era só `chore(staging): dispara deploy`); `feat/539-bloco-curto-agenda` e `feat/adr-fluxo-7-estacoes` receberam a release por merge (sem rebase), com conflito só no handoff (mantidas as duas entradas) e PRs abertos na release.
+- **Rotina ADR-052**: toda `feat/*` aberta recebe `release/v0.3.0` mergeada antes do PR e antes do merge.
+- **Next step**: the-judge e merge squash dos dois PRs na release. **Blockers**: nenhum.
