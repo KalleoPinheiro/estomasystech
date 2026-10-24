@@ -108,7 +108,9 @@ export default async function RootLayout({
       </head>
       <body className="sv-body min-h-dvh">
         <StagingBanner />
-        <Providers theme={theme}>{children}</Providers>
+        <Providers theme={theme} nonce={nonce}>
+          {children}
+        </Providers>
       </body>
     </html>
   );
