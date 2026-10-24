@@ -1950,3 +1950,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `tests/scripts/gate-ambiente.test.ts`, `gate-perfil-release.test.ts`, `release-cut.test.ts`; nenhum existente alterado.
 - **Pendente**: provar o `release:cut` de ponta a ponta no WSL no corte da v0.3.0 (critério de pronto da #570).
 - **Next step**: the-judge e merge na release/v0.3.0. **Blockers**: nenhum.
+
+## Performance do Next, onda 1: fotos clínicas e CSP do modal (#542, #562) (2026-10-24) — EM REVISÃO
+- **Causa #542**: `next/image` sem `unoptimized` mandava `/api/photos/:id` ao otimizador, que busca sem cookie (401) e, se aceitasse, guardaria a foto em cache de disco sem escopo de empresa (ADR-069).
+- **Causa #562**: o `<style>` de bloqueio de rolagem (react-remove-scroll via react-style-singleton) lê o nonce de `get-nonce`, que ninguém configurava; a CSP o bloqueava ao abrir modal e a rolagem do fundo não travava.
+- **O que mudou**: `unoptimized` nas cinco imagens de foto (triagem, ficha, portal, prévia do envio); `images.localPatterns` só com `/brand/**` e `/icons/**`; `Providers` recebe o nonce de `x-nonce` (layout) e chama `setNonce` no cliente; `get-nonce` vira dependência direta (mesma versão 1.0.1 já instalada, sem segunda cópia). CSP do cabeçalho inalterada.
+- **Testes novos** (nenhum existente alterado): `tests/components/fotos-autenticadas-sem-otimizador.test.tsx`, `tests/next-config-imagens.test.ts`, `tests/app/providers-nonce.test.tsx`, `e2e/fotos-clinicas-sem-otimizador.spec.ts`, `e2e/modal-csp.spec.ts`. Teste pré-patch: 9 dos 10 unitários falharam antes do código.
+- **Staging (Kalléo)**: triagem, ficha e portal mostram a miniatura da foto; abrir «+ Nova consulta» não gera erro de CSP no console e o fundo não rola atrás do modal.
+- **Next step**: the-judge e validação em threads limpas; merge squash na release/v0.3.0. **Blockers**: nenhum.

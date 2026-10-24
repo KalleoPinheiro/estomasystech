@@ -180,6 +180,7 @@ function PortalPhotoGallery({
                 src={`${photoUrlBase}/${photo.id}`}
                 alt={`Foto da condição em ${formatDate(photo.createdAt)}`}
                 fill
+                unoptimized
                 className="object-cover"
               />
             </div>

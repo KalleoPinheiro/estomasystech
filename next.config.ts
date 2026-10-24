@@ -74,6 +74,10 @@ const nextConfig: NextConfig = {
   // intercepta cliques em elementos reais ali embaixo (ex.: botão "Sair" da
   // sidebar) — atrapalha o Playwright em modo dev sem existir em produção.
   devIndicators: false,
+  // ADR-069: imagem autenticada (`/api/**`) nunca passa pelo otimizador — ele busca sem
+  // cookie (401) e guardaria o arquivo num cache de disco sem escopo de empresa. Só os
+  // ativos públicos entram; o resto é recusado (400) mesmo que esqueçam `unoptimized`.
+  images: { localPatterns: [{ pathname: "/brand/**" }, { pathname: "/icons/**" }] },
   serverExternalPackages: ["pg", "@electric-sql/pglite", "googleapis"],
   async headers() {
     return [
