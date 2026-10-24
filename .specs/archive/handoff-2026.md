@@ -1923,6 +1923,13 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Staging (Kalléo)**: depois do rebuild, rodapé com `v0.2.0 (sha)` igual ao commit da staging; produção sem código.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
 
+## Agenda: bloco de consulta curta legível (#539) (2026-10-24) — EM REVISÃO
+- **Causa**: `week-view.tsx` sempre desenhava duas linhas; em 1280 px o bloco de 15/30 min (14/28 px) cortava o texto na vertical e abaixo de `64rem` o `.sv-btn` do Still Void impunha `min-height: 44px`, inflando o bloco por cima da consulta seguinte. Varredura em 360/390/768/1280 (dia, semana, mês, lista do dia no celular): só a visão Dia/Semana tinha o problema.
+- **O que mudou**: `blockDensity` (≥ 45 min duas linhas; 30–44 uma linha; < 30 uma linha de 14 px) e `min-h-0 min-w-0` no bloco. AGE-RN-23. Alvo de toque (decisão do PO): bloco < 30 min ganha área de toque ≥ 24 px (WCAG 2.5.8) por `::after` sem cobrir o vizinho; `aria-label` com hora, paciente e procedimento. O celular segue com mês + lista do dia.
+- **Testes novos**: `tests/pages/agenda-bloco-curto-legivel.test.tsx` e `e2e/agenda-bloco-curto-legivel.spec.ts` (mede bloco inflado e texto cortado em 768 e 1280); nenhum existente alterado.
+- **Staging (Kalléo)**: Agenda → Semana/Dia com consulta de 30 min: «11:00 Meire Saraiva · Troca de bolsa…» numa linha, sem corte; consulta de 15 min idem.
+- **Next step**: PR na release/v0.3.0. **Blockers**: nenhum.
+
 ## Performance do Next: linha de base, ADR-069 e tickets (#541) (2026-10-24) — EM REVISÃO
 - **O que é**: só planejamento (sem código). Linha de base do front medida no build de produção local nas 4 larguras (`docs/engineering/performance-front-linha-de-base-2026-10.md`), ADR-069 proposta (dados no servidor, Server Actions, nenhum dado de clínica em cache compartilhado, imagem autenticada fora do otimizador, sem PPR enquanto a CSP usar nonce) e issue-mãe #541 com 19 sub-issues (#542 a #560) em ondas.
 - **Números**: 33/34 páginas `'use client'`; dados prontos ~2,9 s em 360 (CPU 4x, 1,6 Mbps); 18/28 rotas com LCP > 2,5 s no celular; JS 195 a 239 KB gz por rota; hidratação 0 erros em 448 cargas.
@@ -1930,6 +1937,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Decisão pendente do PO**: fuso das datas = `APP_TIMEZONE` (#543, recomendado).
 - **Script e brutos**: `/mnt/project-files/perf-next/` (`linha-base.spec.ts`, `.jsonl`).
 - **Next step**: aceitar a ADR-069 (vira `frozen` no #544) e abrir a onda 1 (#542, #543). **Blockers**: nenhum.
+
+## Abertura da release v0.3.0 (2026-10-24) — EM REVISÃO
+- **O que foi feito**: `release/v0.3.0` criada a partir da `main` (7ee79cd, tag v0.2.0); `staging` devolvida a igual à `main` (force-with-lease; o commit descartado era só `chore(staging): dispara deploy`); `feat/539-bloco-curto-agenda` e `feat/adr-fluxo-7-estacoes` receberam a release por merge (sem rebase), com conflito só no handoff (mantidas as duas entradas) e PRs abertos na release.
+- **Rotina ADR-052**: toda `feat/*` aberta recebe `release/v0.3.0` mergeada antes do PR e antes do merge.
+- **Next step**: the-judge e merge squash dos dois PRs na release. **Blockers**: nenhum.
 
 ## Filtro da agenda por status da consulta (#538) (2026-10-24) — EM REVISÃO
 - **O que mudou**: chips de status em `/agenda` (multisseleção, contagem por status do período, `aria-pressed`, rolagem horizontal própria em 360/390 px); estado em `?status=` (padrão sem `cancelled` deixa a URL limpa; inválido cai no padrão; vazio = nenhum, com «Mostrar padrão»); `GET /api/appointments?status=` filtra no servidor dentro do escopo da empresa e novo `GET /api/appointments/status-counts` conta por status sem o filtro de status. Cancelada pedida pelo filtro vira bloco na grade (mês e semana/dia).
