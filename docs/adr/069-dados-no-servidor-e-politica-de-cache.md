@@ -76,7 +76,7 @@ Não habilitar agora: a documentação do Next 16.4 diz que PPR é incompatível
 
 ### 5. Hidratação
 
-Zero erro ou aviso de hidratação em qualquer rota, largura, tema e fuso. Datas e horas renderizadas no servidor e no cliente usam fuso e locale explícitos (os mesmos nos dois lados); nada de `Date.now()`, `window`, `localStorage` ou `Math.random()` no render; IDs por `useId`. Uma suíte E2E permanente falha em qualquer mensagem de hidratação no console.
+Zero erro ou aviso de hidratação em qualquer rota, largura, tema e fuso. Datas e horas renderizadas no servidor e no cliente usam fuso e locale explícitos (os mesmos nos dois lados); nada de `Date.now()`, `window`, `localStorage` ou `Math.random()` no render; IDs por `useId`. Estilo injetado em tempo de execução (ex.: bloqueio de rolagem dos diálogos) recebe o nonce da requisição; a CSP não ganha `'unsafe-inline'`. Uma suíte E2E permanente falha em qualquer mensagem de hidratação ou de violação de CSP no console.
 
 ### 6. Navegação e assets
 

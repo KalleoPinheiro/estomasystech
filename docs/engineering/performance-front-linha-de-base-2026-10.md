@@ -133,6 +133,8 @@ Matriz: 28 rotas × 4 larguras × tema claro e escuro × (São Paulo, `pt-BR`) e
 | Cargas com erro ou aviso de hidratação | **0 de 448** |
 | Outros erros de console | 16 de 448, todos em `/minha-conta`: um recurso responde 404 na carga (em todas as combinações; investigar no ticket de Configurações e Minha conta) |
 
+**CSP:** a matriz só carrega as páginas, sem interação, e não viu violação. Abrindo um modal (Agenda → "+ Nova consulta") o console registra `Applying inline style violates … 'style-src-elem 'self' 'nonce-…''`: o `<style>` do bloqueio de rolagem do Radix (`react-remove-scroll` → `react-style-singleton` → `get-nonce`) sai sem nonce ([#562](https://github.com/KalleoPinheiro/estomasystech/issues/562)). A guarda permanente de console abre um modal por tela.
+
 O zero de hoje tem uma razão que **vai mudar com a migração**: quase nada é renderizado no servidor (o dado chega depois da hidratação, só no navegador). Os formatadores de data e hora (`formatDate`, `formatTime` em `src/lib/format.ts`) usam o fuso do ambiente que roda o código. Quando a mesma data for renderizada no servidor (fuso do processo, `America/Sao_Paulo`) e hidratada num navegador em outro fuso, o texto difere e o React acusa erro de hidratação. Por isso o ticket da guarda de hidratação vem antes das migrações e fixa o fuso dos formatadores.
 
 ## 6. O que se espera depois da frente
