@@ -1930,3 +1930,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Decisão pendente do PO**: fuso das datas = `APP_TIMEZONE` (#543, recomendado).
 - **Script e brutos**: `/mnt/project-files/perf-next/` (`linha-base.spec.ts`, `.jsonl`).
 - **Next step**: aceitar a ADR-069 (vira `frozen` no #544) e abrir a onda 1 (#542, #543). **Blockers**: nenhum.
+
+## Corte de release em comando único e gate com ambiente fixo (#570, #571) (2026-10-24) — EM REVISÃO
+- **Decisão** (Kalléo, 2026-10-24, depois da v0.2.0 com gate repetido 4x): `npm run release:cut -- --rollback=...` na release, no WSL. Ordem: pré-condições (marca `homologacao/vX.Y.Z` no SHA, TESTE-ALTERADO do lote consolidado e integridade contra a `main`), `release:prepare` primeiro, worktree limpo, gate da release uma vez, PR `release → main` com o recibo. ADR-071 (substitui o ponto do ADR-051 sobre a mutação na release).
+- **O que mudou**: `scripts/release/cut.ts` + `cut-lib.ts`; `scripts/gate/ambiente.ts` (TZ=UTC, NODE_OPTIONS 8192, `POSTGRES_PORT` livre a partir de 55432 para `docker` e `backup`, projeto do compose `estomasystech-gate`, segredos descartáveis, sobras apagadas) e `plano.ts` (perfis `pr` e `release`; release sem mutação, Docker e backup obrigatórios); `verify-receipt --head-ref` no `recibo-gate.yml`. Editado com `GATE_OWNER_EDIT=1` por aval do Kalléo.
+- **Causa do #571**: a etapa `docker` escolhia porta livre, mas a `backup` subia o compose sem ela, na 5432.
+- **Testes novos**: `tests/scripts/gate-ambiente.test.ts`, `gate-perfil-release.test.ts`, `release-cut.test.ts`; nenhum existente alterado.
+- **Pendente**: provar o `release:cut` de ponta a ponta no WSL no corte da v0.3.0 (critério de pronto da #570).
+- **Next step**: the-judge e merge na release/v0.3.0. **Blockers**: nenhum.
