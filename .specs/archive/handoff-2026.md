@@ -1908,3 +1908,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **TESTE-ALTERADO**: `e2e/alvos-de-toque-tablet.spec.ts` (da #531, desta mesma entrega): o Fechar agora é medido pelo `::after` de 44×44, não pela caixa do botão, porque a lib estende a área por pseudo-elemento.
 - **Staging (Kalléo)**: em 768 px, botões, campos e o Fechar de «Nova consulta» continuam com 44px.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## QA R2 validação: índice de Configurações fixo e marca inteira na gaveta (#534, #535) (2026-10-24) — EM REVISÃO
+- **Causa**: o pacote põe `overflow: auto` no `SidebarInset` (`<main>`), que vira o contêiner de rolagem do `position: sticky`, mas a rolagem real é a da janela: o índice nunca grudava (#534). A marca «EstomaSysTech» mede ~144 px e o miolo do menu (painel `w-56` − `p-5` − padding do corpo) era 135 px (#535, aparecida com o `overflow-x-hidden` do #513).
+- **O que mudou**: `staff-layout-client.tsx`: `SidebarInset` com `overflow-y-visible overflow-x-clip` (não cria contêiner de rolagem e ainda contém o excesso horizontal) e painel `w-60`. ACE-RN-67 atualizada.
+- **Testes novos**: `e2e/configuracoes-indice-e-marca-gaveta.spec.ts` (Playwright, build de produção: índice a 0 px do topo em 360/390/768 após rolar; âncora fora da faixa; main sem overflow auto; marca sem corte na gaveta 360/390 e na barra lateral 1280); nenhum existente alterado.
+- **Staging (Kalléo)**: Configurações em 360 px, rolar até o fim e ver a faixa de índice fixa; abrir o menu e ver «EstomaSysTech» inteiro.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
