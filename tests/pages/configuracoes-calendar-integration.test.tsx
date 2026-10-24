@@ -3,7 +3,7 @@
 import { cleanup, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import { CalendarIntegrationSection } from '@/app/(staff)/configuracoes/page';
+import { CalendarIntegrationSection } from '@/app/(staff)/configuracoes/calendar-integration-section';
 import type { CalendarIntegrationStatusDto } from '@/lib/dto';
 
 const { searchParamsRef, toastMock } = vi.hoisted(() => ({

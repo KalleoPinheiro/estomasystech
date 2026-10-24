@@ -12,7 +12,7 @@ test.describe("feriados e ausências", () => {
     const day = ymdToDateInput(businessDay(120 + test.info().retry * 7));
     const reason = `Congresso ${unique()}`;
 
-    await page.goto("/configuracoes");
+    await page.goto("/configuracoes/feriados");
     await expect(page.getByRole("heading", { name: "Feriados e ausências" })).toBeVisible();
     await page.getByLabel("Quem").selectOption({ label: professional.fullName });
     await page.getByLabel("De *").fill(day);

@@ -151,7 +151,7 @@ test.describe("agenda", () => {
   });
 
   test("grade de horários é configurável em /configuracoes", async ({ page, request }) => {
-    await page.goto("/configuracoes");
+    await page.goto("/configuracoes/horarios");
     await expect(page.getByRole("heading", { name: "Configurações" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Grade de horários" })).toBeVisible();
 

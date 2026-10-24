@@ -11,9 +11,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { pickPatient } from '@/../tests/support/patient-picker';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import AuditPage from '@/app/(staff)/auditoria/page';
-import SettingsPage from '@/app/(staff)/configuracoes/page';
 import PartnersPage from '@/app/(staff)/parceiros/page';
 import ProfessionalsPage from '@/app/(staff)/profissionais/page';
+import SettingsPage from '../support/settings-all-sections';
 
 // CalendarIntegrationSection (issue #124) usa useSearchParams — fora de um
 // router real do Next, o hook retorna null no ambiente de teste.
