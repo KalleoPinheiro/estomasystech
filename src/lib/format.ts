@@ -1,6 +1,7 @@
 import type { CarePlanStatus } from '@/domain/clinical/care-plan';
 import type { CarePlanDiagnosisType } from '@/domain/clinical/care-plan-diagnosis';
 import type { InterventionPriority } from '@/domain/clinical/care-plan-intervention';
+import { appTimeZone } from '@/domain/shared/time-zone';
 import type { CarePlanDiagnosisDto } from '@/lib/dto';
 
 export const formatCurrency = (cents: number): string =>
@@ -15,11 +16,26 @@ export const formatPercent = (fraction: number): string =>
     minimumFractionDigits: 1,
   }).format(fraction);
 
+/**
+ * Data e hora no fuso da clínica (`APP_TIMEZONE`) com locale fixo: servidor e
+ * navegador devolvem o mesmo texto, em qualquer fuso do aparelho (#543).
+ */
 export const formatDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString('pt-BR');
+  new Date(iso).toLocaleDateString('pt-BR', { timeZone: appTimeZone() });
+
+/**
+ * Data civil (nascimento, só dia): sem hora nem fuso, nunca desloca de dia
+ * (ADR-073). Vale o dia `AAAA-MM-DD` do valor, que é gravado à meia-noite UTC;
+ * `formatDate` o mostraria um dia antes em São Paulo.
+ */
+export const formatCivilDate = (value: string): string => {
+  const [year, month, day] = value.slice(0, 10).split('-');
+  return `${day}/${month}/${year}`;
+};
 
 export const formatTime = (iso: string): string =>
   new Date(iso).toLocaleTimeString('pt-BR', {
+    timeZone: appTimeZone(),
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -197,15 +213,19 @@ export const formatCommissionRule = (
  * correção de capitalização já usada em `/agenda`. */
 export function monthLabelPtBr(month: string): string {
   const [year, monthNum] = month.split('-').map(Number);
-  const raw = new Date(year, monthNum - 1, 1).toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const raw = new Date(Date.UTC(year, monthNum - 1, 1)).toLocaleDateString(
+    'pt-BR',
+    {
+      timeZone: 'UTC',
+      month: 'long',
+      year: 'numeric',
+    },
+  );
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 export function shiftMonth(month: string, delta: number): string {
   const [year, monthNum] = month.split('-').map(Number);
-  const shifted = new Date(year, monthNum - 1 + delta, 1);
-  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
+  const shifted = new Date(Date.UTC(year, monthNum - 1 + delta, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}`;
 }

@@ -15,6 +15,7 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import { NotFoundError } from '@/domain/shared/errors';
+import { shiftZonedMonths } from '@/domain/shared/time-zone';
 import type { ConditionWithAssessments } from './get-patient-portal-data';
 
 function groupBy<T>(items: T[], keyOf: (item: T) => string): Map<string, T[]> {
@@ -58,9 +59,7 @@ export interface PartnerShareConsentPolicy {
 }
 
 function historyCutoff(now: Date): Date {
-  const cutoff = new Date(now);
-  cutoff.setMonth(cutoff.getMonth() - PARTNER_HISTORY_MONTHS);
-  return cutoff;
+  return shiftZonedMonths(now, -PARTNER_HISTORY_MONTHS);
 }
 
 /**

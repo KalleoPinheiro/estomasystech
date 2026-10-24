@@ -6,6 +6,7 @@ import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { MetricCard } from '@/components/metric-card';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
+import { zonedMonthKey } from '@/domain/shared/time-zone';
 import type {
   CommissionPayoutDto,
   PayoutStatementDto,
@@ -28,10 +29,7 @@ import {
   PayoutHistoryTable,
 } from './payout-tables';
 
-const currentMonth = (): string => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
+const currentMonth = (): string => zonedMonthKey(new Date());
 
 /** Fechamento só depois que o mês termina (a API também recusa). */
 const isEnded = (month: string): boolean => month < currentMonth();

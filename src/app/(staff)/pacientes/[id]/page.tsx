@@ -43,7 +43,7 @@ import type {
   PatientDto,
   SidebarIdentityDto,
 } from '@/lib/dto';
-import { formatDate } from '@/lib/format';
+import { formatCivilDate } from '@/lib/format';
 import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import { AnamnesisSection } from './anamnesis-section';
@@ -219,7 +219,9 @@ function PatientHeader({ patient }: { patient: PatientDto }) {
             needsCorrection={patient.phoneNeedsCorrection}
           />{' '}
           {patient.email ? ` · ${patient.email}` : ''}
-          {patient.birthDate ? ` · nasc. ${formatDate(patient.birthDate)}` : ''}
+          {patient.birthDate
+            ? ` · nasc. ${formatCivilDate(patient.birthDate)}`
+            : ''}
           {patient.cpfMasked ? ` · CPF ${patient.cpfMasked}` : ''}
         </span>
       }

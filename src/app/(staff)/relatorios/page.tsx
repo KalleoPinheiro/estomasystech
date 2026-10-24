@@ -21,6 +21,7 @@ import {
 } from '@/components/feedback';
 import { MetricCard } from '@/components/metric-card';
 import { PageHeader } from '@/components/page-header';
+import { zonedMonthKey } from '@/domain/shared/time-zone';
 import {
   APPOINTMENT_STATUS_LABELS,
   formatCurrency,
@@ -31,10 +32,7 @@ import {
 import { useApiQuery } from '@/lib/use-api-query';
 import { ProductionTable } from './production-table';
 
-const currentMonth = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
+const currentMonth = () => zonedMonthKey(new Date());
 
 /** Delta percentual vs. mês anterior (REL-04) — `undefined` quando não há
  * base de comparação (mês anterior não carregou ou é zero — evita divisão

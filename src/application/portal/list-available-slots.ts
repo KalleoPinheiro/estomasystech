@@ -18,6 +18,11 @@ import {
   ValidationError,
 } from '@/domain/shared/errors';
 import { TimeSlot } from '@/domain/shared/time-slot';
+import {
+  startOfZonedDay,
+  zonedInstant,
+  zonedParts,
+} from '@/domain/shared/time-zone';
 import { findOwnAppointment } from './own-appointment';
 
 export type ListAvailableSlotsInput = {
@@ -76,7 +81,7 @@ export class ListAvailableSlots {
     const config =
       (await this.scheduleConfig?.get()) ?? DEFAULT_SCHEDULE_CONFIG;
     const day = parseLocalDate(input.date);
-    if (!day || !config.weekdays.includes(day.getDay())) {
+    if (!day || !config.weekdays.includes(zonedParts(day).weekday)) {
       return [];
     }
 
@@ -202,10 +207,9 @@ function candidateSlots(
   durationMinutes: number,
 ): AvailableSlot[] {
   const durationMs = durationMinutes * MINUTE_MS;
-  const closesAt = new Date(day);
-  closesAt.setHours(config.endHour, 0, 0, 0);
-  const start = new Date(day);
-  start.setHours(config.startHour, 0, 0, 0);
+  const { year, month, day: dayOfMonth } = zonedParts(day);
+  const closesAt = zonedInstant(year, month, dayOfMonth, config.endHour);
+  const start = zonedInstant(year, month, dayOfMonth, config.startHour);
 
   const candidates: AvailableSlot[] = [];
   for (
@@ -221,7 +225,7 @@ function candidateSlots(
   return candidates;
 }
 
-/** AAAA-MM-DD → data local; null quando o formato é inválido. */
+/** AAAA-MM-DD → meia-noite do dia no fuso da clínica; null quando o formato é inválido. */
 function parseLocalDate(date: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) {
@@ -232,12 +236,11 @@ function parseLocalDate(date: string): Date | null {
     Number(match[2]),
     Number(match[3]),
   ];
-  const parsed = new Date(year, month - 1, day);
+  const parsed = startOfZonedDay(year, month, day);
   // 2026-02-31 viraria 3 de março: rejeita em vez de ofertar o dia errado.
+  const wall = zonedParts(parsed);
   const isRealDate =
-    parsed.getFullYear() === year &&
-    parsed.getMonth() === month - 1 &&
-    parsed.getDate() === day;
+    wall.year === year && wall.month === month && wall.day === day;
   return isRealDate ? parsed : null;
 }
 

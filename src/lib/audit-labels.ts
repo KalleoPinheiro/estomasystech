@@ -1,3 +1,5 @@
+import { appTimeZone } from '@/domain/shared/time-zone';
+
 /**
  * Rótulos das trilhas de auditoria — a da clínica (`/auditoria`) e a de
  * plataforma (`/plataforma/auditoria`, B6) usam a mesma lista.
@@ -145,6 +147,7 @@ export function formatAuditDetail(
 
 export function formatDateTimeWithSeconds(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', {
+    timeZone: appTimeZone(),
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

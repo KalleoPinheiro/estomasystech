@@ -15,6 +15,7 @@ import {
   type CancellationPolicy,
   DEFAULT_CANCELLATION_POLICY,
 } from '@/domain/scheduling/schedule-config';
+import { clinicInstant, instantDayKey } from '@/lib/clinic-calendar';
 import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto } from '@/lib/dto';
 import {
@@ -102,7 +103,7 @@ export function AppointmentDetail({
   );
   const hasFee = cancellationPolicy.lateFeeCents > 0;
   const [followUpInDays, setFollowUpInDays] = useState(0);
-  const [newDate, setNewDate] = useState(appointment.startsAt.slice(0, 10));
+  const [newDate, setNewDate] = useState(instantDayKey(appointment.startsAt));
   const [newTime, setNewTime] = useState(formatTime(appointment.startsAt));
 
   const durationMs =
@@ -133,7 +134,7 @@ export function AppointmentDetail({
 
   const handleReschedule = () =>
     run(async () => {
-      const startsAt = new Date(`${newDate}T${newTime}:00`);
+      const startsAt = clinicInstant(newDate, newTime);
       const endsAt = new Date(startsAt.getTime() + durationMs);
       await onReschedule(startsAt, endsAt);
     });

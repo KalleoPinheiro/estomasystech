@@ -15,6 +15,7 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { Appointment } from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import { NotFoundError } from '@/domain/shared/errors';
+import { shiftZonedMonths } from '@/domain/shared/time-zone';
 
 export interface ConditionWithAssessments {
   condition: ClinicalCondition;
@@ -53,8 +54,7 @@ export class GetPatientPortalData {
       throw new NotFoundError('Paciente', input.patientId);
     }
 
-    const cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - HISTORY_MONTHS);
+    const cutoff = shiftZonedMonths(new Date(), -HISTORY_MONTHS);
 
     const [appointments, conditions, invoices, followUps] = await Promise.all([
       this.appointments.findByPatientId(patient.id, { endsAfter: cutoff }),

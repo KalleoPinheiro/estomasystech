@@ -8,6 +8,7 @@ import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
+import { clinicDayCell, instantDayKey } from '@/lib/clinic-calendar';
 import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
@@ -80,13 +81,13 @@ export function CalendarGrid({
 }: CalendarGridProps) {
   const days = buildMonthDays(monthDate);
   const now = new Date();
-  const todayKey = dayKey(now);
+  const todayKey = dayKey(clinicDayCell(now));
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const byDay = new Map<string, AppointmentDto[]>();
   const homonyms = homonymPatientIds(appointments);
   for (const appointment of appointments) {
-    const key = dayKey(new Date(appointment.startsAt));
+    const key = instantDayKey(appointment.startsAt);
     byDay.set(key, [...(byDay.get(key) ?? []), appointment]);
   }
 

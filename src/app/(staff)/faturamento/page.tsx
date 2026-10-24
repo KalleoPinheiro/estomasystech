@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
-
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
@@ -26,6 +25,7 @@ import { PatientPicker } from '@/components/patient-picker';
 import { StatusBadge } from '@/components/status-badge';
 import type { InvoiceSummary } from '@/domain/billing/invoice-repository';
 import { apiFetch } from '@/lib/client';
+import { clinicDayEnd } from '@/lib/clinic-calendar';
 import type { InvoiceDto, ProcedureDto } from '@/lib/dto';
 import {
   formatCurrency,
@@ -531,9 +531,7 @@ function PackageForm({ onSaved }: { onSaved: () => void }) {
           priceCents: Math.round(Number(price) * 100),
           // Validade opcional: fim do dia escolhido no fuso local da clínica —
           // forçar UTC encurtaria o último dia em fusos a oeste (UTC-3: 20:59).
-          expiresAt: expiresAt
-            ? new Date(`${expiresAt}T23:59:59`).toISOString()
-            : null,
+          expiresAt: expiresAt ? clinicDayEnd(expiresAt).toISOString() : null,
         }),
       });
       toast({

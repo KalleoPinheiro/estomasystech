@@ -3,6 +3,11 @@ import {
   GetMonthlyReport,
   isReportSettled,
 } from '@/application/reports/get-monthly-report';
+import {
+  startOfZonedMonth,
+  startOfZonedMonthOf,
+  zonedParts,
+} from '@/domain/shared/time-zone';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -22,15 +27,16 @@ export async function GET(request: NextRequest) {
 
   return handleRequest(async () => {
     const now = new Date();
-    const [year, monthIndex] = month
-      ? [Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1]
-      : [now.getFullYear(), now.getMonth()];
-    const from = new Date(year, monthIndex, 1);
-    const to = new Date(year, monthIndex + 1, 1);
+    const current = zonedParts(now);
+    const [year, monthNumber] = month
+      ? [Number(month.slice(0, 4)), Number(month.slice(5, 7))]
+      : [current.year, current.month];
+    const from = startOfZonedMonth(year, monthNumber);
+    const to = startOfZonedMonth(year, monthNumber + 1);
 
-    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfCurrentMonth = startOfZonedMonthOf(now);
     const isClosedMonth = to.getTime() <= startOfCurrentMonth.getTime();
-    const cacheKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    const cacheKey = `${year}-${String(monthNumber).padStart(2, '0')}`;
     // Escopo da sessão: empresa vê só os próprios números; papel de sistema
     // (sem clínica) mantém a visão cross-empresa.
     const tenant = sessionScope(guard.session);
