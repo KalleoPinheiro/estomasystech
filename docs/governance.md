@@ -60,6 +60,7 @@ alguém analisou" (`frozen`). Sem ele, uma auditoria antiga vale tanto quanto a 
 | Gate automático | `npm run check:docs` no CI: links relativos resolvem, frontmatter válido, aviso para doc `living` com `last_reviewed` > 90 dias |
 | Doc no mesmo PR | checklist do PR: "mudou comportamento? atualizou `docs/domains/<d>/`?" — o revisor (humano ou CodeRabbit) cobra |
 | Decisão durável | ADR em `docs/adr/` (template em `docs/templates/adr.md`); decisão de execução em `.specs/STATE.md` — ver [`agents/planning.md`](agents/planning.md) |
+| Trabalho por issue | sete estações, com dono e saída por etapa; labels de fila `pronta`, `em-andamento`, `bloqueada` — ver [ADR-070](adr/070-fluxo-de-sete-estacoes-com-labels-de-fila.md) |
 | Sem duplicação | uma tabela de env vars (onboarding § 4); um glossário (`CONTEXT.md`); um roadmap (`plano-evolucao-faseado.md`) |
 | Higiene de contexto | handoffs `CONCLUÍDA` saem de `.specs/STATE.md` para `.specs/archive/` ao fim de cada feature |
 | Revisão periódica | o aviso de 90 dias do `check:docs` gera a lista; o owner revisa ou marca `frozen`/`superseded` |
