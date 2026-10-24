@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DOCKER_STEPS,
-  planFor,
-  profileFor,
-  STEPS,
-} from '../../scripts/gate/plano';
+import { planFor, profileFor, type Step } from '../../scripts/gate/plano';
 import {
   formatReceipt,
   REQUIRED_STEPS,
@@ -12,6 +7,15 @@ import {
 } from '../../scripts/gate/receipt';
 
 const SHA = 'c'.repeat(40);
+const step = (name: string, docker = false): Step => ({
+  name,
+  cmd: 'npm',
+  args: ['run', name],
+  docker,
+});
+const STEPS = ['typecheck', 'build', 'e2e-producao'].map((n) => step(n));
+const DOCKER_STEPS = [step('docker', true), step('backup', true)];
+const lists = { steps: STEPS, dockerSteps: DOCKER_STEPS };
 const names = (plan: ReturnType<typeof planFor>) =>
   plan.ok ? plan.steps.map((s) => s.name) : [];
 const receipt = (steps: string[], skipped: string[] = []) =>
@@ -39,6 +43,7 @@ describe('Feature: perfil do gate da release (ADR-071)', () => {
 
   it('Dado o perfil release com regra alterada, Então roda build, E2E, integridade, Docker e backup, sem mutação', () => {
     const plan = planFor({
+      ...lists,
       profile: 'release',
       hasDocker: true,
       rules: ['src/domain/a.ts'],
@@ -53,13 +58,19 @@ describe('Feature: perfil do gate da release (ADR-071)', () => {
   });
 
   it('Dado o perfil release sem Docker, Então recusa em vez de pular a imagem e o backup', () => {
-    const plan = planFor({ profile: 'release', hasDocker: false, rules: [] });
+    const plan = planFor({
+      ...lists,
+      profile: 'release',
+      hasDocker: false,
+      rules: [],
+    });
     expect(plan).toMatchObject({ ok: false });
     expect(!plan.ok && plan.reason).toContain('exige Docker');
   });
 
   it('Dado o perfil pr com regra alterada e sem Docker, Então muta só o arquivo e registra Docker e backup como pulados', () => {
     const plan = planFor({
+      ...lists,
       profile: 'pr',
       hasDocker: false,
       rules: ['src/domain/a.ts', 'src/application/b.ts'],
@@ -76,13 +87,18 @@ describe('Feature: perfil do gate da release (ADR-071)', () => {
   });
 
   it('Dado o perfil pr com Docker e sem regra alterada, Então roda as etapas Docker com segredos descartáveis', () => {
-    const plan = planFor({ profile: 'pr', hasDocker: true, rules: [] });
+    const plan = planFor({
+      ...lists,
+      profile: 'pr',
+      hasDocker: true,
+      rules: [],
+    });
     expect(names(plan)).toEqual([
       ...STEPS.map((s) => s.name),
       'docker',
       'backup',
     ]);
-    expect(DOCKER_STEPS.every((s) => s.docker)).toBe(true);
+    expect(plan.ok && plan.steps.filter((s) => s.docker).length).toBe(2);
   });
 });
 

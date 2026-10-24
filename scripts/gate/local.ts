@@ -20,6 +20,23 @@ import { detectBase } from './base';
 import { planFor, profileFor, type Step } from './plano';
 import { formatReceipt, mutationTargets } from './receipt';
 
+const STEPS: Step[] = [
+  { name: 'typecheck', cmd: 'npm', args: ['run', 'typecheck'] },
+  { name: 'lint', cmd: 'npm', args: ['run', 'lint'] },
+  { name: 'sv', cmd: 'npm', args: ['run', 'check:sv'] },
+  { name: 'docs', cmd: 'npm', args: ['run', 'check:docs'] },
+  { name: 'integridade-de-testes', cmd: 'npm', args: ['run', 'check:testes'] },
+  { name: 'cobertura', cmd: 'npm', args: ['run', 'test:coverage'] },
+  { name: 'build', cmd: 'npm', args: ['run', 'build'] },
+  { name: 'e2e-producao', cmd: 'npm', args: ['run', 'test:e2e:prod'], countsE2e: true },
+  { name: 'e2e-dev', cmd: 'npm', args: ['run', 'test:e2e:dev'], countsE2e: true },
+];
+
+const DOCKER_STEPS: Step[] = [
+  { name: 'docker', cmd: 'bash', args: ['scripts/gate/docker-step.sh'], docker: true },
+  { name: 'backup', cmd: 'bash', args: ['scripts/backup-smoke.sh'], docker: true },
+];
+
 function git(...args: string[]): string {
   return spawnSync('git', args, { encoding: 'utf8' }).stdout.trim();
 }
@@ -85,6 +102,8 @@ async function main(): Promise<void> {
   const profile = profileFor(git('rev-parse', '--abbrev-ref', 'HEAD'), process.env.GATE_PERFIL);
   const plan = planFor({
     profile,
+    steps: STEPS,
+    dockerSteps: DOCKER_STEPS,
     hasDocker: dockerAvailable(),
     rules: profile === 'release' ? [] : changedRuleFiles(),
   });
