@@ -97,6 +97,9 @@ describe('Feature: bloco de consulta curta legível na agenda (#539)', () => {
 
       const line = screen.getByText(/11:00 Meire Saraiva · Troca de bolsa/);
       expect(line.closest('button')).toHaveClass('min-h-0', 'leading-3.5');
+      expect(line.closest('button')).toHaveAccessibleName(
+        '11:00–11:15 Meire Saraiva — Troca de bolsa de estomia',
+      );
     });
 
     it('Dada uma consulta de 60 min, Quando abrir o dia, Então hora e procedimento seguem em duas linhas', () => {

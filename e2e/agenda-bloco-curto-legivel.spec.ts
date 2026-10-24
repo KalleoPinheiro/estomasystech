@@ -50,6 +50,8 @@ for (const width of [768, 1280]) {
             found.push(`texto cortado: ${block.getAttribute("title")}`);
           }
         }
+        const after = getComputedStyle(block, "::after");
+        if (minutes < 30 && Number.parseFloat(after.height) < 24) found.push(`área de toque ${after.height} abaixo de 24px`);
         return found;
       });
     }, HOUR_PX);

@@ -1925,7 +1925,7 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 
 ## Agenda: bloco de consulta curta legível (#539) (2026-10-24) — EM REVISÃO
 - **Causa**: `week-view.tsx` sempre desenhava duas linhas; em 1280 px o bloco de 15/30 min (14/28 px) cortava o texto na vertical e abaixo de `64rem` o `.sv-btn` do Still Void impunha `min-height: 44px`, inflando o bloco por cima da consulta seguinte. Varredura em 360/390/768/1280 (dia, semana, mês, lista do dia no celular): só a visão Dia/Semana tinha o problema.
-- **O que mudou**: `blockDensity` (≥ 45 min duas linhas; 30–44 uma linha; < 30 uma linha de 14 px) e `min-h-0 min-w-0` no bloco. AGE-RN-23. Tradeoff: o alvo de toque do bloco passa a ser proporcional à duração (menor que 44 px para consulta curta); o celular segue com mês + lista do dia.
+- **O que mudou**: `blockDensity` (≥ 45 min duas linhas; 30–44 uma linha; < 30 uma linha de 14 px) e `min-h-0 min-w-0` no bloco. AGE-RN-23. Alvo de toque (decisão do PO): bloco < 30 min ganha área de toque ≥ 24 px (WCAG 2.5.8) por `::after` sem cobrir o vizinho; `aria-label` com hora, paciente e procedimento. O celular segue com mês + lista do dia.
 - **Testes novos**: `tests/pages/agenda-bloco-curto-legivel.test.tsx` e `e2e/agenda-bloco-curto-legivel.spec.ts` (mede bloco inflado e texto cortado em 768 e 1280); nenhum existente alterado.
 - **Staging (Kalléo)**: Agenda → Semana/Dia com consulta de 30 min: «11:00 Meire Saraiva · Troca de bolsa…» numa linha, sem corte; consulta de 15 min idem.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
