@@ -94,4 +94,18 @@ export function verticalSpan(
   return { top, height: Math.max(rawHeight, 2.5) };
 }
 
+/**
+ * Quanto conteúdo cabe no bloco pela duração (a altura é proporcional a ela):
+ * `full` mostra duas linhas (hora e paciente / procedimento); `single` cabe uma
+ * linha de texto; `tiny` é o mínimo, uma linha de 14 px. Nunca corta uma linha
+ * na vertical (#539).
+ */
+export type BlockDensity = 'full' | 'single' | 'tiny';
+
+export function blockDensity(startIso: string, endIso: string): BlockDensity {
+  const minutes = minutesOfDay(endIso) - minutesOfDay(startIso);
+  if (minutes >= 45) return 'full';
+  return minutes >= 30 ? 'single' : 'tiny';
+}
+
 export { minutesOfDay };
