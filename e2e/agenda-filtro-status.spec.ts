@@ -61,9 +61,9 @@ test.describe("agenda: filtro por status (#538)", () => {
     // não pode trazer a cancelada; ela só aparece quando o chip é marcado (abaixo).
     await expect(appt(13)).toHaveCount(0);
     // A contagem inclui o que o padrão esconde.
-    await expect(chip(page, /^Cancelada 1$/)).toBeVisible();
-    await expect(chip(page, /^Agendada 1$/)).toHaveAttribute("aria-pressed", "true");
-    await expect(chip(page, /^Cancelada 1$/)).toHaveAttribute("aria-pressed", "false");
+    await expect(chip(page, /^Cancelada, 1 consulta$/)).toBeVisible();
+    await expect(chip(page, /^Agendada, 1 consulta$/)).toHaveAttribute("aria-pressed", "true");
+    await expect(chip(page, /^Cancelada, 1 consulta$/)).toHaveAttribute("aria-pressed", "false");
 
     // Multisseleção: só Confirmada e Faltou.
     await chip(page, /^Agendada/).click();

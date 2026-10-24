@@ -86,16 +86,15 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
     const urls = mockFetch();
     renderWithToast(<AgendaPage />);
 
-    await screen.findByRole('button', { name: 'Agendada 3' });
+    await screen.findByRole('button', { name: 'Agendada, 3 consultas' });
     await waitFor(() =>
       expect(lastListUrl(urls)).toContain(
         '&status=scheduled,confirmed,completed,no_show',
       ),
     );
-    expect(screen.getByRole('button', { name: 'Cancelada 4' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    expect(
+      screen.getByRole('button', { name: 'Cancelada, 4 consultas' }),
+    ).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('AGE-FLT-04: Dado ?status=completed, Quando abrir, Então só Concluída marcada e enviada ao servidor', async () => {
@@ -107,27 +106,37 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
       expect(lastListUrl(urls)).toMatch(/&status=completed$/),
     );
     expect(
-      await screen.findByRole('button', { name: 'Concluída 0' }),
+      await screen.findByRole('button', { name: 'Concluída, 0 consultas' }),
     ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('AGE-FLT-01/04: Dado o padrão, Quando desmarcar e marcar chips, Então a URL reflete o recorte e a contagem não muda', async () => {
     const urls = mockFetch();
     renderWithToast(<AgendaPage />);
-    await screen.findByRole('button', { name: 'Agendada 3' });
+    await screen.findByRole('button', { name: 'Agendada, 3 consultas' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Agendada 3' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Concluída 0' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Concluída, 0 consultas' }),
+    );
 
     expect(window.location.search).toBe('?status=confirmed%2Cno_show');
     await waitFor(() =>
       expect(lastListUrl(urls)).toMatch(/&status=confirmed,no_show$/),
     );
-    expect(screen.getByRole('button', { name: 'Agendada 3' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
+    ).toBeTruthy();
 
     // Voltar ao padrão deixa a URL limpa.
-    fireEvent.click(screen.getByRole('button', { name: 'Agendada 3' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Concluída 0' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Concluída, 0 consultas' }),
+    );
     expect(window.location.search).toBe('');
   });
 
@@ -137,7 +146,7 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
     renderWithToast(<AgendaPage />);
 
     expect(
-      await screen.findByRole('button', { name: 'Agendada 3' }),
+      await screen.findByRole('button', { name: 'Agendada, 3 consultas' }),
     ).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -154,10 +163,9 @@ describe('Feature: Filtro de status na página da agenda (#538)', () => {
       expect(screen.queryByText('Nenhum status marcado.')).toBeNull(),
     );
     expect(window.location.search).toBe('');
-    expect(screen.getByRole('button', { name: 'Agendada 3' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(
+      screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 });
 

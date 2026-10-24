@@ -25,9 +25,15 @@ describe('Feature: Chips de status da agenda (#538)', () => {
         onToggle={() => {}}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Agendada 3' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Faltou 2' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Cancelada 4' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Agendada, 3 consultas' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Faltou, 2 consultas' }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Cancelada, 4 consultas' }),
+    ).toBeTruthy();
   });
 
   it('Dado a contagem ainda carregando, Quando renderizar, Então mostra «—» no lugar da contagem', () => {
@@ -38,7 +44,9 @@ describe('Feature: Chips de status da agenda (#538)', () => {
         onToggle={() => {}}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Agendada —' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Agendada, carregando' }),
+    ).toBeTruthy();
   });
 
   it('AGE-FLT-01: Dado dois status marcados, Quando renderizar, Então aria-pressed só neles', () => {
@@ -51,15 +59,17 @@ describe('Feature: Chips de status da agenda (#538)', () => {
     );
     const pressed = (name: string) =>
       screen.getByRole('button', { name }).getAttribute('aria-pressed');
-    expect(pressed('Confirmada 1')).toBe('true');
-    expect(pressed('Faltou 2')).toBe('true');
-    expect(pressed('Agendada 3')).toBe('false');
+    expect(pressed('Confirmada, 1 consulta')).toBe('true');
+    expect(pressed('Faltou, 2 consultas')).toBe('true');
+    expect(pressed('Agendada, 3 consultas')).toBe('false');
   });
 
   it('Dado um chip, Quando clicar, Então avisa qual status alternar', () => {
     const onToggle = vi.fn();
     render(<StatusFilter selected={[]} counts={COUNTS} onToggle={onToggle} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Concluída 0' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Concluída, 0 consultas' }),
+    );
     expect(onToggle).toHaveBeenCalledWith('completed');
   });
 });

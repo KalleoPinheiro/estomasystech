@@ -5,6 +5,10 @@ import { ScheduleAppointment } from '@/application/appointments/schedule-appoint
 import { parseStatusFilter } from '@/domain/scheduling/appointment-status-filter';
 import { getRepositories, type Services } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
+import {
+  appointmentProfessionalScope,
+  parseAppointmentRange,
+} from '@/lib/auth/appointment-query';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
@@ -28,35 +32,23 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  const from = request.nextUrl.searchParams.get('from');
-  const to = request.nextUrl.searchParams.get('to');
-  if (!from || !to) {
+  const range = parseAppointmentRange(request);
+  if (!range) {
     return fail('Parâmetros obrigatórios: from, to (ISO 8601)', 400);
   }
-  // Escopo dinâmico do Profissional (R4/RBAC-19): a sessão profissional só
-  // pode ver a própria agenda — ignora professionalId vindo da query string.
-  const professionalId =
-    guard.session.role === 'profissional'
-      ? (guard.session.professionalId ?? undefined)
-      : (request.nextUrl.searchParams.get('professionalId') ?? undefined);
+  const professional = appointmentProfessionalScope(guard.session, request);
   // Sem `status` a rota devolve tudo (contrato anterior); a agenda sempre o envia (AGE-FLT-03).
   const statusParam = request.nextUrl.searchParams.get('status');
   return handleRequest(async () => {
-    // Profissional sem vínculo de conta (dado legado/corrompido) nunca vê
-    // agenda alheia por ausência de filtro — nunca cai no "sem filtro = tudo".
-    if (
-      guard.session.role === 'profissional' &&
-      !guard.session.professionalId
-    ) {
+    if (professional.none) {
       return [];
     }
     const { appointments, patients } = await getRepositories(
       sessionScope(guard.session),
     );
     const result = await new ListAppointments(appointments, patients).execute({
-      from: new Date(from),
-      to: new Date(to),
-      professionalId,
+      ...range,
+      professionalId: professional.professionalId,
       statuses:
         statusParam === null ? undefined : parseStatusFilter(statusParam),
     });

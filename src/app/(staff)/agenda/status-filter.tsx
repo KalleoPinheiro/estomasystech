@@ -39,6 +39,8 @@ export function StatusFilter({
             size="sm"
             variant={active ? 'accent' : 'outline'}
             aria-pressed={active}
+            // Nome acessível com unidade; o texto visível («Agendada 3» ou traço) continua dentro dele.
+            aria-label={`${APPOINTMENT_STATUS_LABELS[status]}, ${typeof count === 'number' ? `${count} ${count === 1 ? 'consulta' : 'consultas'}` : 'carregando'}`}
             onClick={() => onToggle(status)}
             className="shrink-0"
           >
