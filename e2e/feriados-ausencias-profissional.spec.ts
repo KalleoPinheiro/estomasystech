@@ -18,7 +18,7 @@ test.describe("feriados e ausências — profissional", () => {
     const day = ymdToDateInput(businessDay(150 + test.info().retry * 7));
     const reason = `Congresso próprio ${unique()}`;
 
-    await page.goto("/configuracoes");
+    await page.goto("/configuracoes/feriados");
     await expect(page.getByRole("heading", { name: "Feriados e ausências" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Grade de horários" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Dados da clínica" })).toHaveCount(0);

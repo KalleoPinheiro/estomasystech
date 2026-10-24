@@ -4,7 +4,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { pickPatient } from '@/../tests/support/patient-picker';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import SettingsPage from '@/app/(staff)/configuracoes/page';
+import SettingsPage from '../support/settings-all-sections';
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
