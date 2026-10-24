@@ -25,7 +25,11 @@ import {
   formatDateTimeWithSeconds,
   RESOURCE_LABELS,
 } from '@/lib/audit-labels';
-import { clinicDayEnd, clinicDayStart } from '@/lib/clinic-calendar';
+import {
+  clinicDayEnd,
+  clinicDayStart,
+  instantDayKey,
+} from '@/lib/clinic-calendar';
 import type { AuditEventDto } from '@/lib/dto';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 
@@ -37,7 +41,8 @@ type Filters = { patientId: string; from: string; to: string };
 /** Data da URL só vale se existir no calendário: `?de=abc` não pode derrubar a tela. */
 function validDateParam(value: string | null | undefined): string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
-  return Number.isNaN(clinicDayStart(value).getTime()) ? '' : value;
+  // 2027-02-31 normaliza para março: só vale o dia que volta igual.
+  return instantDayKey(clinicDayStart(value)) === value ? value : '';
 }
 
 /** Filtros na URL (`?paciente=&de=&ate=`): a tela compartilha e recarrega o mesmo recorte. */
