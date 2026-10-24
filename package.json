@@ -26,7 +26,7 @@
     "test:watch": "vitest",
     "test:changed": "vitest run --changed",
     "test:coverage": "vitest run --coverage",
-    "test:mutacao": "stryker run",
+    "test:mutacao": "TZ=UTC stryker run",
     "test:e2e": "npm run build && npm run test:e2e:prod && npm run test:e2e:dev",
     "test:e2e:prod": "playwright test -c playwright.prod.config.ts",
     "test:e2e:dev": "playwright test",
