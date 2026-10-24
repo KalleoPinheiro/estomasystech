@@ -126,7 +126,10 @@ export class InMemoryAppointmentRepository implements AppointmentRepository {
   async findInRange(
     start: Date,
     end: Date,
-    options?: { professionalId?: string },
+    options?: {
+      professionalId?: string;
+      statuses?: readonly AppointmentStatus[];
+    },
   ): Promise<Appointment[]> {
     return [...this.appointments.values()]
       .filter(
@@ -134,9 +137,24 @@ export class InMemoryAppointmentRepository implements AppointmentRepository {
           a.slot.start.getTime() < end.getTime() &&
           a.slot.end.getTime() > start.getTime() &&
           (!options?.professionalId ||
-            a.professionalId === options.professionalId),
+            a.professionalId === options.professionalId) &&
+          (!options?.statuses || options.statuses.includes(a.status)),
       )
       .sort((a, b) => a.slot.start.getTime() - b.slot.start.getTime());
+  }
+
+  async countByStatusInRange(
+    start: Date,
+    end: Date,
+    options?: { professionalId?: string },
+  ): Promise<Record<AppointmentStatus, number>> {
+    const counts = Object.fromEntries(
+      APPOINTMENT_STATUSES.map((status) => [status, 0]),
+    ) as Record<AppointmentStatus, number>;
+    for (const appointment of await this.findInRange(start, end, options)) {
+      counts[appointment.status] += 1;
+    }
+    return counts;
   }
 
   async findConflicting(

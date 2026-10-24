@@ -1930,3 +1930,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Decisão pendente do PO**: fuso das datas = `APP_TIMEZONE` (#543, recomendado).
 - **Script e brutos**: `/mnt/project-files/perf-next/` (`linha-base.spec.ts`, `.jsonl`).
 - **Next step**: aceitar a ADR-069 (vira `frozen` no #544) e abrir a onda 1 (#542, #543). **Blockers**: nenhum.
+
+## Filtro da agenda por status da consulta (#538) (2026-10-24) — EM REVISÃO
+- **O que mudou**: chips de status em `/agenda` (multisseleção, contagem por status do período, `aria-pressed`, rolagem horizontal própria em 360/390 px); estado em `?status=` (padrão sem `cancelled` deixa a URL limpa; inválido cai no padrão; vazio = nenhum, com «Mostrar padrão»); `GET /api/appointments?status=` filtra no servidor dentro do escopo da empresa e novo `GET /api/appointments/status-counts` conta por status sem o filtro de status. Cancelada pedida pelo filtro vira bloco na grade (mês e semana/dia).
+- **Decisões**: rótulo «Faltou» (o do selo, em vez de «Falta» da issue); cancelada fora do padrão muda o que a equipe vê por padrão (antes o mês mandava a cancelada para «+N mais»); a URL é lida por `useSyncExternalStore` e gravada por `history.replaceState` (sem `useSearchParams`, que os testes de página da agenda não mockam e que exigiria Suspense).
+- **Testes novos** (nenhum existente alterado): `tests/domain/appointment-status-filter.test.ts`, `tests/api/agenda-filtro-status.test.ts`, `tests/infrastructure/agenda-filtro-status-in-memory.test.ts`, `tests/components/agenda-status-filter.test.tsx`, `tests/pages/agenda-filtro-status.test.tsx`, `e2e/agenda-filtro-status.spec.ts`. Pré-patch: o teste do parser nasceu vermelho (módulo inexistente).
+- **Staging (Kalléo)**: ver `## Homologação` do PR.
+- **Next step**: the-judge e validação Playwright em thread limpa; PR na release/v0.3.0. **Blockers**: nenhum.

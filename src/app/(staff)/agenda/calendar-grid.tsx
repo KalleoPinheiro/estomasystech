@@ -61,6 +61,8 @@ interface CalendarGridProps {
   professionalName?: (professionalId: string) => string;
   /** Celular: mês compacto + lista do dia (`MobileMonth`) no lugar da grade de chips. */
   compact?: boolean;
+  /** Filtro de status pede as canceladas: ocupam linha da célula como as demais (#538). */
+  showCancelled?: boolean;
   onDayClick: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }
@@ -72,6 +74,7 @@ export function CalendarGrid({
   closures = [],
   professionalName = () => 'Profissional',
   compact = false,
+  showCancelled = false,
   onDayClick,
   onAppointmentClick,
 }: CalendarGridProps) {
@@ -139,9 +142,13 @@ export function CalendarGrid({
                 const dayAppointments = (byDay.get(key) ?? []).sort((a, b) =>
                   a.startsAt.localeCompare(b.startsAt),
                 );
-                // Cancelada não ocupa linha da célula: vai para "+N mais" (#471).
+                // Cancelada não ocupa linha da célula: vai para "+N mais" (#471),
+                // salvo quando o filtro de status a pede (#538).
                 const visibleAppointments = dayAppointments
-                  .filter((appointment) => appointment.status !== 'cancelled')
+                  .filter(
+                    (appointment) =>
+                      showCancelled || appointment.status !== 'cancelled',
+                  )
                   .slice(0, MAX_VISIBLE_PER_DAY);
                 const hiddenCount =
                   dayAppointments.length - visibleAppointments.length;

@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { ListAppointments } from '@/application/appointments/list-appointments';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
+import { parseStatusFilter } from '@/domain/scheduling/appointment-status-filter';
 import { getRepositories, type Services } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -38,6 +39,8 @@ export async function GET(request: NextRequest) {
     guard.session.role === 'profissional'
       ? (guard.session.professionalId ?? undefined)
       : (request.nextUrl.searchParams.get('professionalId') ?? undefined);
+  // Sem `status` a rota devolve tudo (contrato anterior); a agenda sempre o envia (AGE-FLT-03).
+  const statusParam = request.nextUrl.searchParams.get('status');
   return handleRequest(async () => {
     // Profissional sem vínculo de conta (dado legado/corrompido) nunca vê
     // agenda alheia por ausência de filtro — nunca cai no "sem filtro = tudo".
@@ -54,6 +57,8 @@ export async function GET(request: NextRequest) {
       from: new Date(from),
       to: new Date(to),
       professionalId,
+      statuses:
+        statusParam === null ? undefined : parseStatusFilter(statusParam),
     });
     return result.map(({ appointment, patientName, patientBirthDate }) =>
       toAppointmentDto(appointment, patientName, patientBirthDate),

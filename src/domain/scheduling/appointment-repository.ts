@@ -39,8 +39,17 @@ export interface AppointmentRepository {
   findInRange(
     start: Date,
     end: Date,
-    options?: { professionalId?: string },
+    options?: {
+      professionalId?: string;
+      statuses?: readonly AppointmentStatus[];
+    },
   ): Promise<Appointment[]>;
+  /** Contagem por status no período, sem filtro de status (chips da agenda, AGE-FLT-05). */
+  countByStatusInRange(
+    start: Date,
+    end: Date,
+    options?: { professionalId?: string },
+  ): Promise<Record<AppointmentStatus, number>>;
   /**
    * Conflitos de horário: mesmo profissional, ou quando um dos lados não tem
    * profissional atribuído (regra global preservada para dados sem atribuição).
