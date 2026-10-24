@@ -30,7 +30,7 @@ describe('Feature: Chips de status da agenda (#538)', () => {
     expect(screen.getByRole('button', { name: 'Cancelada 4' })).toBeTruthy();
   });
 
-  it('Dado a contagem ainda carregando, Quando renderizar, Então só o rótulo', () => {
+  it('Dado a contagem ainda carregando, Quando renderizar, Então mostra «—» no lugar da contagem', () => {
     render(
       <StatusFilter
         selected={['scheduled']}
@@ -38,7 +38,7 @@ describe('Feature: Chips de status da agenda (#538)', () => {
         onToggle={() => {}}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Agendada' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Agendada —' })).toBeTruthy();
   });
 
   it('AGE-FLT-01: Dado dois status marcados, Quando renderizar, Então aria-pressed só neles', () => {

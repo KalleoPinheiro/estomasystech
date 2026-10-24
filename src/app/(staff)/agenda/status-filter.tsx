@@ -9,7 +9,7 @@ import { APPOINTMENT_STATUS_LABELS } from '@/lib/format';
 
 interface StatusFilterProps {
   selected: readonly AppointmentStatus[];
-  /** Contagem do período visível; ausente enquanto carrega. */
+  /** Contagem do período visível; ausente enquanto carrega (o chip mostra «—»). */
   counts: Record<AppointmentStatus, number> | null;
   onToggle: (status: AppointmentStatus) => void;
 }
@@ -43,7 +43,7 @@ export function StatusFilter({
             className="shrink-0"
           >
             {APPOINTMENT_STATUS_LABELS[status]}
-            {typeof count === 'number' ? ` ${count}` : ''}
+            {` ${typeof count === 'number' ? count : '—'}`}
           </Button>
         );
       })}

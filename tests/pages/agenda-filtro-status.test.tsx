@@ -79,7 +79,6 @@ const dto = (status: string): AppointmentDto => ({
   cancelledAt: null,
   cancelReason: null,
   cancelledLate: false,
-  procedureId: null,
 });
 
 describe('Feature: Filtro de status na página da agenda (#538)', () => {
