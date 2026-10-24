@@ -66,12 +66,12 @@ describe('Feature: atalhos das seções em Configurações', () => {
 
     expect(await atalhos()).toEqual(
       expect.arrayContaining([
-        ['Dados cadastrais', '#dados'],
-        ['Identidade', '#identidade'],
-        ['Horários e agenda', '#horarios'],
-        ['Feriados e ausências', '#feriados'],
-        ['Canal de e-mail', '#email'],
-        ['Contas de acesso', '#contas'],
+        ['Dados cadastrais', '/configuracoes/dados'],
+        ['Identidade', '/configuracoes/identidade'],
+        ['Horários e agenda', '/configuracoes/horarios'],
+        ['Feriados e ausências', '/configuracoes/feriados'],
+        ['Canal de e-mail', '/configuracoes/email'],
+        ['Contas de acesso', '/configuracoes/contas'],
       ]),
     );
   });

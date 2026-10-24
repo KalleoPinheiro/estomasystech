@@ -183,7 +183,7 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
 
   test("configurações", async ({ page }) => {
     // A conta do Admin de Empresa da sessão padrão já garante ao menos 1 linha na tabela.
-    await page.goto("/configuracoes");
+    await page.goto("/configuracoes/contas");
     await expect(page.locator("table")).toBeVisible();
     await expectTableWrappedInOverflowContainer(page);
     await expectNoHorizontalScroll(page);

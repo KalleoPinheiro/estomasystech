@@ -5,7 +5,7 @@ import { unique } from "./support/api";
 test("conta recém-convidada aparece na lista sem recarregar", async ({ page }) => {
   const email = `convidado-${unique()}@estomasystech.test`;
 
-  await page.goto("/configuracoes");
+  await page.goto("/configuracoes/contas");
   await page.getByRole("button", { name: "+ Nova conta" }).click();
   await page.getByLabel("Email *").fill(email);
   await page.getByRole("button", { name: "Criar conta" }).click();
