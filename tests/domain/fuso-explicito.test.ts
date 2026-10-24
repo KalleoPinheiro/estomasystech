@@ -21,7 +21,7 @@ import {
   zonedMonthKey,
 } from '@/domain/shared/time-zone';
 import { previousPeriod } from '@/lib/dto/payout';
-import { formatDate, formatTime } from '@/lib/format';
+import { formatCivilDate, formatDate, formatTime } from '@/lib/format';
 
 const ORIGINAL_TZ = process.env.TZ;
 const slot = (start: string, end: string) =>
@@ -125,7 +125,7 @@ describe.each(['UTC', 'America/Sao_Paulo', 'Asia/Tokyo'])(
     it('formatadores mostram o horário da clínica', () => {
       expect(formatTime('2026-10-28T12:00:00Z')).toBe('09:00');
       expect(formatDate('2026-10-29T01:30:00Z')).toBe('28/10/2026');
-      expect(formatDate('1990-05-17')).toBe('17/05/1990');
+      expect(formatCivilDate('1990-05-17')).toBe('17/05/1990');
     });
   },
 );
