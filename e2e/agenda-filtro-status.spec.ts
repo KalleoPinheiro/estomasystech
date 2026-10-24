@@ -17,7 +17,8 @@ const pad = (n: number) => String(n).padStart(2, "0");
 async function seedAgenda(request: Parameters<typeof createPatient>[0]) {
   const professional = await createProfessional(request, { fullName: `Enf. Filtro ${unique()}` });
   const patient = await createPatient(request, { fullName: `Paciente Filtro ${unique()}` });
-  const day = businessDay(3);
+  // Longe das seeds de horário dos outros specs: com profissional x sem profissional, o conflito é global (AGE-RN-02).
+  const day = businessDay(120);
   const date = `${day.year}-${pad(day.month)}-${pad(day.day)}`;
   const make = (hour: number) =>
     createAppointment(request, {
