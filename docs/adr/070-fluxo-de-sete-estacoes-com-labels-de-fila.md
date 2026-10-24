@@ -55,7 +55,7 @@ Nenhuma dessas decisões muda aqui.
 | 3 | **Pesquisa** | coordenador, skill `tlc-discover` | problema entendido, código lido, métrica de sucesso definida, antes de qualquer código |
 | 4 | **Plano** | coordenador, skill `tlc-plan` | fatias verticais com resultado observável; cada fatia é um ticket pronto para thread |
 | 5 | **Implementação** | thread de execução, skill `tlc-implement` | branch `feat/*` na release aberta, fatia vertical, verificações baratas primeiro, teste pré-patch no PR, PR squash com changeset, `## Homologação` e handoff |
-| 6 | **Gate** | thread **nova**, `the-judge` (+ `npm run gate:local` no PR `release/*` → `main`) | uma revisão consolidada no GitHub com citações e veredito; recibo `E2E-GATE:` do SHA atual só no PR `release/*` → `main` ([ADR-052](052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md)); no PR `feat/*` → release vale `test:changed`, typecheck e lint; validação de tela em 360/390/768/1280 |
+| 6 | **Gate** | thread **nova**, `the-judge` + `npm run gate:local` | uma revisão consolidada no GitHub com citações e veredito; recibo `E2E-GATE:` do SHA atual do `gate:local` em todo PR (em `feat/*` → release, gate rápido, `test:changed` e mutação por diff; E2E completo com imagem Docker só no PR `release/*` → `main`, [ADR-052](052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md)); validação de tela em 360/390/768/1280 |
 | 7 | **Produção** | Kalléo (deploy manual, [ADR-039](039-deploy-manual-no-coolify-sem-down-de-migracao.md)) | tag publicada e deploy feito; incidente ou feedback vira **issue nova** no template de entrada e volta à estação 1 |
 
 ### Entrada no formato único
@@ -123,9 +123,10 @@ um teste existente mudou é o gate (estação 6), não a thread que o alterou. U
   e o veredito é `APPROVE`, `COMMENT` ou `REQUEST_CHANGES`. Não há comentários soltos fora dessa revisão.
 - Validação de tela usa Playwright no build local com seed, nas larguras 360, 390, 768 e 1280 px
   (mobile first: validar 360 e 390 px antes do desktop).
-- O merge na release é feito pelo coordenador, via thread, depois do `the-judge` aprovado e da validação local
-  (`test:changed`, typecheck, lint); o recibo do gate local ([ADR-042](042-e2e-fora-do-actions-gate-local-com-recibo.md))
-  vale no PR `release/*` → `main`. Só PR de `.md` de documentação, nos termos do [ADR-053](053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md), dispensa recibo.
+- O merge na release é feito pelo coordenador, via thread, depois do `the-judge` aprovado e do recibo do `gate:local`
+  ([ADR-042](042-e2e-fora-do-actions-gate-local-com-recibo.md)) no PR: em `feat/*` → release, gate rápido, `test:changed` e mutação por diff;
+  o E2E completo com imagem Docker é exigido só no PR `release/*` → `main`. Só PR exclusivamente de `.md` de documentação,
+  nos termos do [ADR-053](053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md), dispensa recibo.
   O fluxo de git continua o do [ADR-052](052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md).
 
 ### Papel do coordenador
