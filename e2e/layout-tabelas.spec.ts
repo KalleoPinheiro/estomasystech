@@ -202,7 +202,7 @@ const TABLE_SET: Member[] = [
   },
   {
     name: "configurações contas",
-    seed: async () => ({ url: "/configuracoes", header: "Profissional vinculado" }),
+    seed: async () => ({ url: "/configuracoes/contas", header: "Profissional vinculado" }),
   },
   {
     name: "configurações feriados",
@@ -214,7 +214,7 @@ const TABLE_SET: Member[] = [
         { professionalId: null, startsOn: day, endsOn: null, reason: `Recesso tabela ${unique()}` },
       );
       return {
-        url: "/configuracoes",
+        url: "/configuracoes/feriados",
         header: "Período",
         // Feriado de teste não pode vazar para outros specs (responsive-tables
         // espera uma tabela só em Configurações).

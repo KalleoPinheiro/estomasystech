@@ -1930,3 +1930,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Decisão pendente do PO**: fuso das datas = `APP_TIMEZONE` (#543, recomendado).
 - **Script e brutos**: `/mnt/project-files/perf-next/` (`linha-base.spec.ts`, `.jsonl`).
 - **Next step**: aceitar a ADR-069 (vira `frozen` no #544) e abrir a onda 1 (#542, #543). **Blockers**: nenhum.
+
+## Configurações em sub-rotas (#522) (2026-10-24) — EM REVISÃO
+- **O que mudou**: `/configuracoes` virou índice de cartões; cada seção é `/configuracoes/<slug>` (8 rotas) com «Voltar ao índice» no topo e corte por papel igual ao anterior. `page.tsx` de 1.118 linhas foi dividido em `clinic-info-section`, `schedule-section`, `calendar-integration-section`, `accounts-section`, `sections.ts`, `section-page.tsx` e `legacy-anchor-redirect.tsx`. `/configuracoes#<slug>` e `/configuracoes?calendar=…` (OAuth do Google) redirecionam. ADR-071 substitui o ADR-067; ACE-RN-67 reescrita.
+- **Débito (#541)**: as seções seguem client com `useApiQuery`; mover dados para Server Components/Actions é da frente de performance.
+- **TESTE-ALTERADO**: aprovado pelo coordenador/Kalléo (2026-10-24). Specs que renderizavam a página única trocaram só o import (`tests/support/settings-all-sections.tsx` ou a sub-rota): configuracoes-accounts, -conta-recem-convidada, -contas-papel, -role, -calendar-integration, staff-operations. `configuracoes-secoes`: href `#x` → `/configuracoes/x`. `configuracoes-indice-mobile`: «Voltar ao índice» passa de fim-de-seção a topo de cada sub-rota. E2E: agenda, canal-email, contas-convite-lista, feriados-ausencias(-profissional), layout-tabelas, responsive-tables abrem a sub-rota; `configuracoes-indice-e-marca-gaveta` troca os testes da faixa fixa (#534, sem sentido no índice) por índice curto/navegação/redirecionamento (marca na gaveta intacta).
+- **Testes novos**: `tests/pages/configuracoes-ancoras-antigas.test.tsx` (redirecionamento das âncoras e do OAuth).
+- **Staging (Kalléo)**: Configurações em 360: índice curto, tocar numa seção, «Voltar ao índice»; abrir `/configuracoes#horarios`; Atendente só com Identidade e Feriados.
+- **Next step**: PR na release/v0.3.0. **Blockers**: nenhum.

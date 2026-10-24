@@ -15,53 +15,49 @@ async function settle(page: Page): Promise<void> {
   await expect(page.locator(".sv-skeleton:visible")).toHaveCount(0, { timeout: 20_000 });
 }
 
-test.describe("índice de Configurações fixo ao rolar (#534)", () => {
-  for (const viewport of [...MOBILE_WIDTHS, { width: 768, height: 1024 }]) {
-    test(`índice continua à vista depois de rolar (${viewport.width}px)`, async ({ page }) => {
+test.describe("Configurações em sub-rotas (#522)", () => {
+  for (const viewport of [...MOBILE_WIDTHS, { width: 768, height: 1024 }, { width: 1280, height: 800 }]) {
+    test(`índice curto, sem rolagem horizontal e com acesso a cada seção (${viewport.width}px)`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/configuracoes");
       await settle(page);
       const indice = page.locator("nav#indice-secoes");
       await expect(indice).toBeVisible();
-      for (const y of [400, 1500, 4000]) {
-        // A página é mais curta em telas largas: rola até o teto quando y passa dele.
-        const alvo = await page.evaluate((to) => {
-          const max = document.documentElement.scrollHeight - window.innerHeight;
-          window.scrollTo(0, Math.min(to, max));
-          return Math.min(to, max);
-        }, y);
-        await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(alvo - 5);
-        const top = await indice.evaluate((el) => el.getBoundingClientRect().top);
-        expect(top, `scrollY ${y}`).toBeGreaterThanOrEqual(-1);
-        expect(top, `scrollY ${y}`).toBeLessThanOrEqual(1);
-      }
+      expect(await indice.getByRole("link").count()).toBeGreaterThanOrEqual(6);
+      const { altura, largura, janela } = await page.evaluate(() => ({
+        altura: document.documentElement.scrollHeight,
+        largura: document.documentElement.scrollWidth,
+        janela: window.innerWidth,
+      }));
+      // Antes eram ~8.400 px numa página só em 360 px.
+      expect(altura).toBeLessThan(2000);
+      expect(largura).toBeLessThanOrEqual(janela);
     });
   }
 
-  test("âncora do índice não fica atrás da faixa fixa (360px)", async ({ page }) => {
+  test("tocar numa seção abre a sub-rota e «Voltar ao índice» volta (360px)", async ({ page }) => {
     await page.setViewportSize(MOBILE_WIDTHS[0]);
     await page.goto("/configuracoes");
     await settle(page);
-    await page.locator("nav#indice-secoes a[href='#privacidade']").click();
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
-    const gap = await page.evaluate(() => {
-      const faixa = document.querySelector("nav#indice-secoes")!.getBoundingClientRect();
-      const secao = document.querySelector("#privacidade")!.getBoundingClientRect();
-      return secao.top - faixa.bottom;
-    });
-    expect(gap).toBeGreaterThanOrEqual(0);
+    await page.locator("nav#indice-secoes").getByRole("link", { name: "Privacidade" }).or(
+      page.locator("nav#indice-secoes").getByRole("link", { name: "Contato de privacidade" }),
+    ).first().click();
+    await expect(page).toHaveURL(/\/configuracoes\/privacidade$/);
+    await settle(page);
+    await page.getByRole("link", { name: "Voltar ao índice" }).click();
+    await expect(page).toHaveURL(/\/configuracoes$/);
   });
 
-  test("a rolagem da página não vira rolagem interna do conteúdo (1280px)", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/configuracoes");
+  test("link antigo com âncora leva à sub-rota da seção", async ({ page }) => {
+    await page.goto("/configuracoes#horarios");
+    await expect(page).toHaveURL(/\/configuracoes\/horarios$/);
     await settle(page);
-    const overflow = await page
-      .locator("main")
-      .first()
-      .evaluate((el) => getComputedStyle(el).overflowY);
-    expect(overflow).not.toBe("auto");
-    expect(overflow).not.toBe("scroll");
+    await expect(page.getByRole("heading", { name: "Grade de horários" })).toBeVisible();
+  });
+
+  test("retorno do OAuth do Google vai para Google Agenda com os parâmetros", async ({ page }) => {
+    await page.goto("/configuracoes?calendar=erro&reason=acesso_negado");
+    await expect(page).toHaveURL(/\/configuracoes\/google-agenda\?calendar=erro&reason=acesso_negado$/);
   });
 });
 
