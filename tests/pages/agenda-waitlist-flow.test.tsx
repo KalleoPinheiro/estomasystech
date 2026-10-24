@@ -6,6 +6,12 @@ import { renderWithToast } from '@/../tests/support/render-with-toast';
 import AgendaPage from '@/app/(staff)/agenda/page';
 import type { AppointmentDto, WaitlistEntryDto } from '@/lib/dto';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => '/agenda',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 interface Call {
   url: string;
   method: string;
