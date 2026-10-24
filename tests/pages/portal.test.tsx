@@ -1637,8 +1637,8 @@ describe('Feature: Evolução clínica da condição', () => {
       const image = screen.getByAltText(
         `Foto da condição em ${formatDate(photo.createdAt)}`,
       ) as HTMLImageElement;
-      expect(image.src).toContain(
-        '%2Fapi%2Fportal%2Fpatient%2Fphotos%2Fphoto-1',
+      expect(image.getAttribute('src')).toBe(
+        '/api/portal/patient/photos/photo-1',
       );
     });
 
