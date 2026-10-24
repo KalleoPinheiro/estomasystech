@@ -9,7 +9,7 @@ export interface AppRelease {
 export type NewAppRelease = Omit<AppRelease, 'releasedAt'> & { at: Date };
 
 export interface AppReleaseRepository {
-  /** Idempotente por `version`: repetir não duplica nem muda a data da release. */
+  /** Idempotente por `version`: repetir não duplica nem muda a data da release; só atualiza o SHA, quando vier um novo (ADR-068). */
   record(release: NewAppRelease): Promise<void>;
   /** A release gravada mais recentemente, ou `null` sem nenhuma. */
   latest(): Promise<AppRelease | null>;
