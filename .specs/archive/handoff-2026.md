@@ -1922,3 +1922,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: dois casos em `tests/infrastructure/drizzle-app-release-repository.test.ts`; nenhum existente alterado.
 - **Staging (Kalléo)**: depois do rebuild, rodapé com `v0.2.0 (sha)` igual ao commit da staging; produção sem código.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Performance do Next: linha de base, ADR-069 e tickets (#541) (2026-10-24) — EM REVISÃO
+- **O que é**: só planejamento (sem código). Linha de base do front medida no build de produção local nas 4 larguras (`docs/engineering/performance-front-linha-de-base-2026-10.md`), ADR-069 proposta (dados no servidor, Server Actions, nenhum dado de clínica em cache compartilhado, imagem autenticada fora do otimizador, sem PPR enquanto a CSP usar nonce) e issue-mãe #541 com 19 sub-issues (#542 a #560) em ondas.
+- **Números**: 33/34 páginas `'use client'`; dados prontos ~2,9 s em 360 (CPU 4x, 1,6 Mbps); 18/28 rotas com LCP > 2,5 s no celular; JS 195 a 239 KB gz por rota; hidratação 0 erros em 448 cargas.
+- **Achado**: fotos clínicas via `next/image` sem `unoptimized` passam pelo otimizador, que busca sem a sessão (401) — #542 (P1).
+- **Decisão pendente do PO**: fuso das datas = `APP_TIMEZONE` (#543, recomendado).
+- **Script e brutos**: `/mnt/project-files/perf-next/` (`linha-base.spec.ts`, `.jsonl`).
+- **Next step**: aceitar a ADR-069 (vira `frozen` no #544) e abrir a onda 1 (#542, #543). **Blockers**: nenhum.
