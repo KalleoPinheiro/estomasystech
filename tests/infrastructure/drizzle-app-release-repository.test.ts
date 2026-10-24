@@ -51,4 +51,21 @@ describe('Feature: Releases implantadas no banco (ADR-066)', () => {
       new Date('2026-10-23T12:00:00Z'),
     );
   });
+
+  it('Dada a mesma versão reimplantada em outro commit, Quando grava, Então o SHA acompanha o commit novo e a data fica', async () => {
+    await repo.record(release('0.2.0', '2026-10-23T12:00:00Z', 'aaa5023'));
+    await repo.record(release('0.2.0', '2026-10-24T12:00:00Z', '302a61c'));
+
+    expect(await repo.latest()).toMatchObject({
+      gitSha: '302a61c',
+      releasedAt: new Date('2026-10-23T12:00:00Z'),
+    });
+  });
+
+  it('Dada a mesma versão reiniciada sem SHA, Quando grava, Então mantém o SHA já gravado', async () => {
+    await repo.record(release('0.2.0', '2026-10-23T12:00:00Z', 'aaa5023'));
+    await repo.record(release('0.2.0', '2026-10-24T12:00:00Z'));
+
+    expect((await repo.latest())?.gitSha).toBe('aaa5023');
+  });
 });

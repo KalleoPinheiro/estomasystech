@@ -1915,3 +1915,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `e2e/configuracoes-indice-e-marca-gaveta.spec.ts` (Playwright, build de produção: índice a 0 px do topo em 360/390/768 após rolar; âncora fora da faixa; main sem overflow auto; marca sem corte na gaveta 360/390 e na barra lateral 1280); nenhum existente alterado.
 - **Staging (Kalléo)**: Configurações em 360 px, rolar até o fim e ver a faixa de índice fixa; abrir o menu e ver «EstomaSysTech» inteiro.
 - **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
+
+## Código do commit no rodapé só na homologação; SHA acompanha o deploy (2026-10-24) — EM REVISÃO
+- **Decisão do PO** (confirmada pelo Kalléo): o código do commit não é necessário, principalmente em produção; na homologação fica. ADR-068. Já era assim em produção (`exposesSha()` e build): rodapé, `GET /api/version` e `GET /api/portal/version` só com a versão; agora com teste explícito e documentado. `git_sha` segue gravado no banco para diagnóstico, sem sair por API nem tela.
+- **Bug achado**: na staging o rodapé mostrou `(aaa5023)` com o commit `302a61c` no ar. Causa: `app_releases` gravava com `ON CONFLICT (version) DO NOTHING`; como a homologação reconstrói a mesma versão a cada commit, o SHA ficava o do primeiro deploy. Correção: `DO UPDATE SET git_sha = coalesce(excluded.git_sha, git_sha)`; data e notas não mudam.
+- **Testes novos**: dois casos em `tests/infrastructure/drizzle-app-release-repository.test.ts`; nenhum existente alterado.
+- **Staging (Kalléo)**: depois do rebuild, rodapé com `v0.2.0 (sha)` igual ao commit da staging; produção sem código.
+- **Next step**: PR na release/v0.2.0. **Blockers**: nenhum.
