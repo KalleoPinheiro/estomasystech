@@ -51,6 +51,7 @@
     "@sentry/core": "10.75.3",
     "@still-void/ui": "^3.5.1",
     "drizzle-orm": "^0.45.2",
+    "get-nonce": "^1.0.1",
     "googleapis": "^173.0.0",
     "next": "^16.3.6",
     "pg": "^8.22.0",

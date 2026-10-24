@@ -79,6 +79,7 @@ export function TriagePhotoList({
                 src={`/api/photos/${photo.id}`}
                 alt={`Foto de ${photo.patientName}`}
                 fill
+                unoptimized
                 className="object-cover"
               />
             </Button>
@@ -174,6 +175,7 @@ export function TriagePhotoList({
               src={`/api/photos/${previewPhoto.id}`}
               alt={`Foto de ${previewPhoto.patientName}`}
               fill
+              unoptimized
               className="rounded object-contain"
             />
           </div>
