@@ -25,6 +25,19 @@ Cenários:
 <!-- Só se um teste EXISTENTE mudou porque o requisito de negócio mudou (regra 8); senão apague a linha. -->
 TESTE-ALTERADO:
 
+## Teste pré-patch (ADR-070)
+
+<!--
+  Obrigatório se o PR traz teste NOVO. Rode cada teste novo contra o código de ANTES da correção: ele tem que falhar.
+  Depois restaure o código e confirme que passa. Cole o resultado abaixo, ou `n/a — <motivo>` se não há teste novo.
+  Edições em testes existentes foram descartadas, salvo `TESTE-ALTERADO` (regra 8).
+-->
+- Testes novos: 
+- SHA antes da correção: 
+- Resultado no código anterior (falhou): 
+- Resultado depois da correção (passou): 
+- Edições em testes existentes descartadas: sim / não
+
 ## Documentação
 - [ ] Comportamento mudou → `docs/domains/<d>/` atualizado (ou n/a)
 - [ ] Termo de domínio novo → `CONTEXT.md`
