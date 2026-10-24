@@ -38,8 +38,9 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | `main` mudou (hotfix) | `npm run release:sync` **mergeia** a `main` na release aberta (nunca rebase); conflito aborta e avisa: resolva na release |
 | Testar o lote na staging | `npm run staging:rebuild -- --release --push` (staging = release aberta; branches extras opcionais no fim da linha). O script já passa `--deploy` e empurra sempre para `origin HEAD:staging`; veja a nota abaixo |
 | `staging` é reconstruída, não consertada | conflito ou migração colidente: reconstrua; nunca resolva em `staging` |
-| Staging aprovada | `npm run release:prepare -- --rollback=redeploy\|backup` **na release** (versão + CHANGELOG + Release em rascunho) |
-| Entrar na `main` | PR `release/vX.Y.Z → main` com `gate:local` no head e recibo no corpo; merge **commit** (nunca squash nem rebase) |
+| Staging aprovada | quem validou cria ou move a marca `homologacao/vX.Y.Z` para o SHA aprovado (`git push --force origin <sha>:refs/heads/homologacao/vX.Y.Z`) ([ADR-071](../adr/071-corte-de-release-em-comando-unico.md)) |
+| Cortar a release | `npm run release:cut -- --rollback=redeploy\|backup` **na release**, no WSL: confere a marca e o TESTE-ALTERADO do lote, roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo (sem mutação; Docker e backup obrigatórios) e abre o PR `release → main` com o recibo. Nada entra na release depois disso; se o gate falhar por ambiente, rode o mesmo comando de novo (não versiona outra vez) |
+| Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase) |
 | Depois do merge | `npm run release:publish -- --rollback=...` (tag no commit de merge, Release publicada); deploy da tag em `producao.md` § 3.1. A `staging` volta a ser = `main` |
 | Hotfix | `hotfix/*` nasce da `main`, PR direto na `main` (recibo), `release:prepare`/`release:publish --hotfix`; o `release:sync` leva a correção para a release aberta |
 
