@@ -15,6 +15,10 @@ describe('Feature: Versão da release em andamento embutida no build (ADR-066)',
   });
 
   it('Dado a release 0.1.0 com changesets minor, Quando monta o build, Então a staging mostra 0.2.0 e não 0.1.0', () => {
-    expect(nextReleaseVersion('0.1.0', pending())).toBe('0.2.0');
+    expect(
+      nextReleaseVersion('0.1.0', [
+        '---\n"estomasystech": minor\n---\n\nMudança.',
+      ]),
+    ).toBe('0.2.0');
   });
 });

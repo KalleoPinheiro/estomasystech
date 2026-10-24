@@ -11,7 +11,7 @@
  * pulada fica registrada no recibo e o CI roda o job Docker quando o que ele valida muda.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { detectBase } from './base';
 import { formatReceipt, mutationTargets } from './receipt';
 
@@ -36,7 +36,7 @@ const STEPS: Step[] = [
 ];
 
 const DOCKER_STEPS: Step[] = [
-  { name: 'docker', cmd: 'bash', args: ['-c', 'docker compose build && bash scripts/docker-smoke.sh'] },
+  { name: 'docker', cmd: 'bash', args: ['scripts/gate/docker-step.sh'] },
   { name: 'backup', cmd: 'bash', args: ['scripts/backup-smoke.sh'] },
 ];
 
@@ -76,6 +76,8 @@ async function main(): Promise<void> {
     console.error('✗ árvore suja: faça commit antes. O recibo vale para o SHA do HEAD.');
     process.exit(1);
   }
+  // Sobras de rodadas anteriores (mutação, relatórios) não podem cair no lint nem no recibo.
+  for (const dir of ['.stryker-tmp', 'reports']) rmSync(dir, { recursive: true, force: true });
   console.log(`Base do diff: ${detectBase()}`);
   const sha = git('rev-parse', 'HEAD');
   const started = Date.now();
