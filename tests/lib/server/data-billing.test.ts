@@ -49,6 +49,7 @@ const completeSession = async (
   professionalId: string,
   procedureId: string,
   day: string,
+  period = PERIOD,
 ) => {
   const appointment = await post<{ id: string }>('/appointments', {
     patientId,
@@ -56,8 +57,8 @@ const completeSession = async (
     procedureId,
     procedure: 'Curativo dados',
     priceCents: 10_005,
-    startsAt: `${PERIOD}-${day}T12:00:00.000Z`,
-    endsAt: `${PERIOD}-${day}T13:00:00.000Z`,
+    startsAt: `${period}-${day}T12:00:00.000Z`,
+    endsAt: `${period}-${day}T13:00:00.000Z`,
   });
   await patch('/appointments', appointment.id, { action: 'complete' });
 };
@@ -178,6 +179,57 @@ describe('Feature: leituras do Faturamento e dos Repasses no servidor (#547)', (
     );
     expect(own.scope).toBe('own');
     expect(own.rows).toEqual([row]);
+  });
+
+  it('Dado um repasse fechado de mês encerrado, Quando o Profissional lê o próprio extrato, Então o histórico traz o repasse com o nome dele', async () => {
+    await ensureTestClinics();
+    const closedPeriod = '2020-02';
+    const bia = await post<{ id: string }>('/professionals', {
+      fullName: 'Dra. Bia Histórico',
+      commissionPct: 20,
+    });
+    const procedure = await post<{ id: string }>('/procedures', {
+      name: 'Curativo histórico',
+      priceCents: 20_000,
+      durationMinutes: 60,
+    });
+    const paciente = await post<{ id: string }>('/patients', {
+      fullName: 'Paciente Histórico',
+      email: 'historico-dados@x.com',
+      phone: '11999990009',
+    });
+    await completeSession(
+      paciente.id,
+      bia.id,
+      procedure.id,
+      '03',
+      closedPeriod,
+    );
+    const [invoice] = (
+      await listInvoicesFor(session(), { patientId: paciente.id })
+    ).invoices;
+    await patch('/invoices', invoice.id, { action: 'pay', method: 'pix' });
+    const route = await import('@/app/api/commission-payouts/route');
+    const closed = await route.POST(
+      jsonRequest('/api/commission-payouts', 'POST', {
+        professionalId: bia.id,
+        period: closedPeriod,
+        paidAt: '2020-03-02',
+        paymentMethod: 'pix',
+      }),
+    );
+    expect(closed.status).toBe(200);
+
+    const own = await getOwnPayoutsFor(
+      session({ role: 'profissional', professionalId: bia.id }),
+      closedPeriod,
+    );
+
+    expect(own.history).toHaveLength(1);
+    expect(own.history[0]).toMatchObject({
+      professionalName: 'Dra. Bia Histórico',
+      period: closedPeriod,
+    });
   });
 
   it('Dado várias faturas, Quando lê página a página com cursor e filtro de situação, Então percorre todas sem repetir e a última página fecha o cursor', async () => {
