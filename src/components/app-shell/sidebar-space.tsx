@@ -12,6 +12,7 @@ import { useSidebar } from '@still-void/ui/react/client';
  * (`w-56`, a mesma do `SidebarPanel`); quando o menu entra, o espaço sai e nada
  * se move. Abaixo de `lg` ele é invisível.
  */
+// sv-gap: sidebar-ssr-space
 export function SidebarSpace() {
   const { isMobile } = useSidebar();
   if (!isMobile) return null;

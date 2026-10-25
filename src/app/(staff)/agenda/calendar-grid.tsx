@@ -65,6 +65,8 @@ interface CalendarGridProps {
   /** Filtro de status pede as canceladas: ocupam linha da célula como as demais (#538). */
   showCancelled?: boolean;
   onDayClick: (day: Date) => void;
+  /** Celular: dia marcado no mês compacto (a visão Dia abre nele, #591). */
+  onSelectDay?: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }
 
@@ -77,6 +79,7 @@ export function CalendarGrid({
   compact = false,
   showCancelled = false,
   onDayClick,
+  onSelectDay,
   onAppointmentClick,
 }: CalendarGridProps) {
   const days = buildMonthDays(monthDate);
@@ -113,6 +116,7 @@ export function CalendarGrid({
             )
           }
           onBook={onDayClick}
+          onSelectDay={onSelectDay}
           onAppointmentClick={onAppointmentClick}
         />
       ) : (

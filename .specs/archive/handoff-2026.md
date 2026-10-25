@@ -1999,11 +1999,25 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Revisão dos `Date.now()`/`new Date()` em `.tsx`**: nenhum causa hydration mismatch nem divergência de fuso (os formatadores usam `APP_TIMEZONE`, ADR-073); nenhum código de `src/` mudou. Detalhe no PR.
 - **Next step**: the-judge em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
 
-## Agenda: erro visível na busca das consultas (#578) (2026-10-25) — EM REVISÃO
+## Agenda: erro visível na busca das consultas (#578) (2026-10-25) — MERGEADO NA RELEASE
 - **Causa**: `useApiQuery` guardava um `data` único e só o sobrescrevia no sucesso: ao trocar de URL, ou quando a busca falhava (429), a grade seguia desenhando o recorte anterior; o erro da contagem por status era ignorado e a lista só mostrava um `ErrorAlert` genérico.
 - **O que mudou**: o hook guarda o resultado junto da URL e só o devolve para a URL corrente (a falha descarta o dado). A agenda mostra, com `role="alert"`, «Não foi possível carregar as consultas.» e o botão «Tentar de novo» (refaz lista e contagem); sem dado da URL corrente a grade não é desenhada; com erro na contagem os chips mostram «—» e o nome acessível «indisponível».
 - **Hipótese do 429 no `router.replace`**: não se confirmou; a seleção vem da URL (`useSearchParams`) e o E2E com 429 na busca mantém o chip marcado e a URL com o recorte escolhido.
 - **Testes novos** (nenhum existente alterado): `tests/lib/use-api-query-troca-de-url.test.tsx`, `tests/pages/agenda-busca-falha.test.tsx`, `e2e/agenda-busca-falha.spec.ts` (360, 390, 768 e 1280). Pré-patch: 5 dos 5 unitários novos falham no código da release.
+- **Decisão do PO (aprovação do #583)**: com `error` a grade fica escondida, inclusive numa falha ao refazer a mesma URL (o estado de erro substitui a grade); o «Carregando» na troca de chip fica como está. Aplicado no PR `fix/agenda-erro-esconde-grade`, com teste de página e E2E da falha na mesma URL.
+- **Next step**: validação em thread limpa na staging. **Blockers**: nenhum.
+
+
+## Agenda: semana e dia sem sumir durante a busca (#588) (2026-10-25) — EM REVISÃO
+- **Causa**: a correção da #578 (#583) passou a esconder a grade enquanto a busca do período corrente não termina. Na visão Semana a coluna do dia some a cada troca, e o `agenda-bloco-curto-legivel` (que avança "Próxima semana" até achar `[data-week-day]`) passava direto da semana certa.
+- **O que mudou**: no mês o «Carregando» segue como estava; em Semana e Dia a `WeekView` é desenhada com `appointments=[]` e a nova prop `loading`: colunas no lugar, `aria-busy`, texto «Carregando…» só para leitor de tela, sem «Nenhuma consulta» até a busca acabar. Nunca aparecem consultas de outro período.
+- **Testes novos** (nenhum existente alterado): `tests/pages/agenda-semana-carregando.test.tsx` (pré-patch: falha no código da release), `e2e/agenda-semana-carregando.spec.ts` (768 e 1280, busca retida por rota).
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+## Agenda no celular: chips de status e seletor Mês/Dia (#582) (2026-10-25) — EM REVISÃO
+- **O que mudou**: os chips de status passam de linha rolável a `flex-wrap` (os 5 à vista em 360 e 390 px); o seletor de visão aparece no celular só com **Mês** e **Dia** (sem Semana; a visão Dia é a `WeekView` com `dayCount=1`); `PeriodNav` recebe `compact` no lugar de `showViewToggle`. Se a janela encolher com a Semana aberta, a página passa para Dia.
+- **Decisão do PO** (coordenador): celular com Mês e Dia, chips quebram em linhas; mobile first.
+- **Testes novos** (nenhum existente alterado): `tests/components/agenda-period-nav.test.tsx`, `e2e/agenda-celular-chips-e-visao.spec.ts` (360 e 390: 5 chips visíveis, sem rolagem, seletor Mês/Dia; Dia mostra uma coluna e Mês volta ao compacto).
+- **Observação**: `e2e/agenda-bloco-curto-legivel.spec.ts` (768 px) falha também na release sem esta mudança (mesmo resultado com e sem o patch): o teste avança no máximo 14 semanas até o dia da seed e, com a data de hoje, a seed fica além disso. Não mexi no teste (regra 8); fica para o coordenador decidir.
 - **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
 
 
@@ -2014,3 +2028,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **TESTE-ALTERADO** (aprovado pelo coordenador, commit isolado): `tests/components/bottom-nav.test.tsx` (bloco «tela Mais (#428)») renderiza `await MorePage()` com a sessão simulada; asserções idênticas. `vitest.config.mts`: alias de `server-only` para o módulo vazio do Next (só acrescenta; nenhum limiar muda).
 - **Ficou fora**: o contador de triagem da barra do celular do Profissional ainda busca `/api/photos/triage` (migra com a Triagem). Nenhuma Server Action de negócio existe ainda: a primeira entra com a #545.
 - **Next step**: the-judge e validação em threads limpas; merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Agenda: Mês→Dia abre no dia escolhido (#591) (2026-10-25) — EM REVISÃO
+- **Causa**: `setView` ancorava a visão Dia/Semana em hoje (se no mês exibido) ou no dia 1; o dia marcado no mês compacto do celular ficava dentro do `MobileMonth` e a página não o conhecia.
+- **O que mudou**: `useAgendaPeriod` ganha `chooseDay`; `MobileMonth` avisa o dia marcado por `onSelectDay` (via `CalendarGrid`); de Mês para Dia/Semana a âncora é o dia escolhido. Trocar de mês descarta a escolha. Sem dia marcado (ou no desktop, que não marca dia no mês) vale a regra de antes: hoje, se no mês, senão o dia 1.
+- **Pergunta aberta (PO)**: no desktop o mês não tem dia marcado; se a Dia/Semana deve abrir num dia clicado ali, é decisão nova (hoje o clique na célula abre «Nova consulta»).
+- **Testes novos** (nenhum existente alterado): `tests/pages/agenda-mes-dia-abre-no-dia-escolhido.test.tsx` (pré-patch: 4 de 5 falham), `e2e/agenda-mes-dia-abre-no-dia-escolhido.spec.ts` (360 e 1280).
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
