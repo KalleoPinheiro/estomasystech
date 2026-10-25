@@ -1,4 +1,5 @@
 import { Alert, AlertDescription } from '@still-void/ui/react';
+import Link from 'next/link';
 import type { ClinicInfoDto } from '@/components/document-frame';
 import { missingClinicInfoFields } from '@/domain/clinic/clinic';
 
@@ -18,13 +19,13 @@ export function ClinicInfoIncompleteAlert({
       <AlertDescription>
         Clínica sem CNPJ ou responsável técnico cadastrados (falta: {missing}).
         Cadastre em{' '}
-        <a href="/configuracoes#dados" className="font-medium underline">
+        <Link href="/configuracoes#dados" className="font-medium underline">
           Configurações → Dados cadastrais
-        </a>{' '}
+        </Link>{' '}
         antes de emitir este documento.{' '}
-        <a href="/" className="font-medium underline">
+        <Link href="/" className="font-medium underline">
           Voltar ao início
-        </a>
+        </Link>
       </AlertDescription>
     </Alert>
   );

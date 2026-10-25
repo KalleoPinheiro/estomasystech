@@ -13,6 +13,7 @@ import {
 import { isSessionRevoked } from '@/lib/auth/staff-revocation';
 import { isStaffRole } from '@/lib/auth/staff-roles';
 import { loginPath, SESSION_EXPIRED_ERROR } from '@/lib/login-redirect';
+import { canRoleAccess, staffPageFor } from '@/lib/staff-pages';
 
 /**
  * Sessão no servidor para páginas e Server Actions (ADR-069 § 1). Lê o cookie
@@ -82,6 +83,23 @@ export async function requireStaffPage(
     session.role === 'super_admin' ||
     !hasRole(session, options.roles)
   ) {
+    forbidden();
+  }
+  return session;
+}
+
+/**
+ * Tela da equipe pelo caminho (`/faturamento`): além de exigir a equipe da
+ * clínica, aplica a MESMA matriz de papéis da API a essa tela (`STAFF_PAGES`,
+ * #199). Vai no `layout.tsx` do segmento, então o papel sem acesso recebe o
+ * 403 (`forbidden.tsx`) sem a página montar nem chamar a API — esconder no
+ * cliente depois de carregar não existe mais (#545). Caminho fora do mapa só
+ * exige a equipe.
+ */
+export async function requireStaffPageFor(href: string): Promise<Session> {
+  const session = await requireStaffPage({ next: href });
+  const page = staffPageFor(href);
+  if (page && !canRoleAccess(page.api, session.role)) {
     forbidden();
   }
   return session;
