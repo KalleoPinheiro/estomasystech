@@ -143,6 +143,18 @@ test.describe("Pacientes e triagem no servidor", () => {
     });
   }
 
+  test("o HTML que o servidor entrega já traz a lista de pacientes e a fila de triagem (dados prontos junto do primeiro paint)", async ({ page }) => {
+    await page.context().addCookies([ADMIN]);
+
+    const pacientes = await (await page.request.get("/pacientes")).text();
+    const triagem = await (await page.request.get("/triagem")).text();
+
+    expect(pacientes).toContain("Prontuário");
+    expect(pacientes).toMatch(/Zz S\. F\./);
+    expect(triagem).toContain("Ampliar foto de");
+    expect(triagem).not.toContain("Carregando…");
+  });
+
   test("o «Carregar mais» e a busca digitada seguem pela API", async ({ page }) => {
     await page.context().addCookies([ADMIN]);
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -163,7 +175,7 @@ test.describe("Pacientes e triagem no servidor", () => {
   test("a triagem no celular entrega a página em até 2,5 s e não bloqueia a thread mais que o casco da equipe (CPU 4x, 1,6 Mbps)", async ({
     page,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     await page.context().addCookies([ADMIN]);
     await page.setViewportSize({ width: 360, height: 740 });
     const { metrics } = await measure(page);
@@ -179,21 +191,24 @@ test.describe("Pacientes e triagem no servidor", () => {
       downloadThroughput: PHONE_SLOW.down,
       uploadThroughput: PHONE_SLOW.up,
     });
-    // Mediana de cinco cargas: um long task isolado de 50 ms muda a conta e o ruído da máquina é maior que isso.
+    // Cargas alternadas entre as duas telas, mediana de sete: o ruído da máquina (e de outros testes
+    // em paralelo) pega as duas igualmente, e um long task isolado de 50 ms não muda a conta.
     const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] as number;
-    const load = async (path: string) => {
-      const samples: { blocking: number; lcp: number }[] = [];
-      for (let i = 0; i < 5; i++) {
+    const samples: Record<string, { blocking: number; lcp: number }[]> = { "/triagem": [], "/mais": [] };
+    for (let i = 0; i < 7; i++) {
+      for (const path of ["/triagem", "/mais"]) {
         await page.goto(path, { waitUntil: "load" });
         await page.waitForLoadState("networkidle");
         await page.waitForTimeout(500);
-        samples.push(await metrics());
+        (samples[path] as { blocking: number; lcp: number }[]).push(await metrics());
       }
-      return { blocking: median(samples.map((s) => s.blocking)), lcp: median(samples.map((s) => s.lcp)) };
+    }
+    const summarize = (path: string) => {
+      const list = samples[path] as { blocking: number; lcp: number }[];
+      return { blocking: median(list.map((x) => x.blocking)), lcp: median(list.map((x) => x.lcp)) };
     };
-
-    const triagem = await load("/triagem");
-    const shell = await load("/mais");
+    const triagem = summarize("/triagem");
+    const shell = summarize("/mais");
 
     expect(triagem.lcp, "LCP de /triagem").toBeLessThanOrEqual(LCP_LIMIT_MS);
     // O tempo bloqueado é a hidratação do casco (a «/mais», sem lista, mede o mesmo): a página não pode acrescentar a ele.
