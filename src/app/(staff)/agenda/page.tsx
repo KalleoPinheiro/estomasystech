@@ -498,6 +498,7 @@ export default function AgendaPage() {
           closures={closures ?? []}
           professionalName={professionalName}
           compact={compact}
+          onSelectDay={period.chooseDay}
           showCancelled={statuses.includes('cancelled')}
           onDayClick={(day) => setCreatingFor(day)}
           onAppointmentClick={setSelected}

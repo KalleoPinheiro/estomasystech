@@ -17,6 +17,8 @@ interface MobileMonthProps {
   /** Mesmo critério da grade do desktop: dia passado, fora da grade ou fechado. */
   isBookable: (day: Date) => boolean;
   onBook: (day: Date) => void;
+  /** Avisa a página do dia marcado, para a visão Dia abrir nele (#589). */
+  onSelectDay?: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }
 
@@ -41,6 +43,7 @@ export function MobileMonth({
   professionalName,
   isBookable,
   onBook,
+  onSelectDay,
   onAppointmentClick,
 }: MobileMonthProps) {
   const monthKey = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
@@ -97,7 +100,10 @@ export function MobileMonth({
                 aria-label={`${day.getDate()}${hasAppointments ? ', com consultas' : ''}`}
                 data-day={key}
                 data-has-appointments={hasAppointments || undefined}
-                onClick={() => setSelection({ monthKey, day: key })}
+                onClick={() => {
+                  setSelection({ monthKey, day: key });
+                  onSelectDay?.(day);
+                }}
                 className={`relative h-auto min-h-11 w-full min-w-0 flex-col gap-0.5 p-0 font-medium text-sm ${
                   inMonth ? '' : 'text-ink-3'
                 } ${isSelected ? 'bg-accent-soft text-accent-ink' : ''}`}

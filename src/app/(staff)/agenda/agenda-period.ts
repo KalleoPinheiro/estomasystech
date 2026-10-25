@@ -73,6 +73,8 @@ export interface AgendaPeriod {
   closuresTo: string;
   label: string;
   shift: (delta: number) => void;
+  /** Dia escolhido no mês compacto do celular: a visão Semana/Dia abre nele (#589). */
+  chooseDay: (day: Date) => void;
 }
 
 /** Período da agenda: mês (padrão), semana ou dia, com navegação para frente e para trás. */
@@ -82,6 +84,8 @@ export function useAgendaPeriod(initial: Date): AgendaPeriod {
     const day = clinicDayCell(initial);
     return new Date(day.getFullYear(), day.getMonth(), 1);
   });
+
+  const [picked, setPicked] = useState<Date | null>(null);
 
   return useMemo(() => {
     const monthDate = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
@@ -115,8 +119,9 @@ export function useAgendaPeriod(initial: Date): AgendaPeriod {
       if (next === 'month') {
         setAnchor(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
       } else if (view === 'month') {
-        // De mês para semana/dia: hoje, se está no mês exibido; senão o dia 1.
-        setAnchor(entryDay(monthDate, monthEnd));
+        // De mês para semana/dia: o dia escolhido no mês; sem escolha, hoje (se está no
+        // mês exibido) ou o dia 1.
+        setAnchor(picked ?? entryDay(monthDate, monthEnd));
       } else if (next === 'day') {
         // De semana para dia: hoje, se está na semana exibida; senão o domingo.
         setAnchor(entryDay(weekStart, addDays(weekStart, 7)));
@@ -139,12 +144,16 @@ export function useAgendaPeriod(initial: Date): AgendaPeriod {
         week: weekLabel(weekStart),
         day: dayLabel(dayDate),
       }[view],
-      shift: (delta: number) =>
+      chooseDay: (day: Date) =>
+        setPicked(new Date(day.getFullYear(), day.getMonth(), day.getDate())),
+      shift: (delta: number) => {
+        setPicked(null);
         setAnchor((prev) => {
           if (view === 'day') return addDays(prev, delta);
           if (view === 'week') return addDays(prev, delta * 7);
           return new Date(prev.getFullYear(), prev.getMonth() + delta, 1);
-        }),
+        });
+      },
     };
-  }, [anchor, view]);
+  }, [anchor, view, picked]);
 }
