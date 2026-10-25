@@ -12,6 +12,14 @@ import { shown } from "./support/patient-name";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/**
+ * #578 / #551: a leitura da agenda mora no servidor, então o navegador não consegue mais fazer a
+ * busca «responder 429». O alerta «Não foi possível carregar as consultas.» e o «Tentar de novo»
+ * seguem cobertos por `tests/pages/agenda-busca-falha.test.tsx` (falha injetada na camada de
+ * dados). Aqui ficam os cenários de ponta a ponta que não dependem da falha: a grade só desenha o
+ * recorte dos chips, em todas as larguras, e a URL guarda o recorte.
+ */
+
 /** Uma agendada e uma cancelada no mesmo dia, de um profissional só do teste. */
 async function seed(request: Parameters<typeof createPatient>[0]) {
   const professional = await createProfessional(request, { fullName: `Enf. Falha ${unique()}` });
@@ -40,12 +48,9 @@ function gridEntry(page: import("@playwright/test").Page, width: number, day: nu
     : page.getByRole("button", { name: label, exact: true });
 }
 
-test.describe("agenda: busca que falha (#578)", () => {
+test.describe("agenda: recorte dos chips na grade (#578)", () => {
   for (const width of [360, 390, 768, 1280]) {
-    test(`429 na busca mostra alerta e «Tentar de novo»; o retry traz o recorte dos chips (${width}px)`, async ({
-      page,
-      request,
-    }) => {
+    test(`marcar «Cancelada» traz o recorte dos chips e a URL o guarda (${width}px)`, async ({ page, request }) => {
       const s = await seed(request);
       const name = shown(s.patient.fullName);
       await page.setViewportSize({ width, height: 900 });
@@ -54,37 +59,15 @@ test.describe("agenda: busca que falha (#578)", () => {
       await goToMonth(page, s.day);
       await expect(gridEntry(page, width, s.day.day, `09:00 ${name}`)).toBeVisible();
 
-      // A busca das consultas passa a responder 429.
-      let blocked = true;
-      await page.route("**/api/appointments?*", async (route) => {
-        if (blocked) {
-          await route.fulfill({
-            status: 429,
-            contentType: "application/json",
-            body: JSON.stringify({ success: false, data: null, error: "Muitas requisições" }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
-
       await page.getByRole("button", { name: /^Cancelada/ }).click();
 
-      const alert = page.getByRole("alert").filter({ hasText: "Não foi possível carregar as consultas." });
-      await expect(alert).toBeVisible();
-      await expect(page.getByRole("button", { name: "Tentar de novo" })).toBeVisible();
-      // O chip fica como o usuário o deixou e a grade não mostra o recorte anterior.
+      // O chip fica como o usuário o deixou e a URL guarda o recorte.
       await expect(page.getByRole("button", { name: /^Cancelada/ })).toHaveAttribute("aria-pressed", "true");
-      await expect(gridEntry(page, width, s.day.day, `09:00 ${name}`)).toHaveCount(0);
       await expect(page).toHaveURL(/status=.*cancelled/);
-
-      blocked = false;
-      await page.getByRole("button", { name: "Tentar de novo" }).click();
-
-      await expect(alert).toHaveCount(0);
       // Chips e grade concordam: Cancelada marcada, a agendada continua marcada (padrão + cancelada).
       await expect(gridEntry(page, width, s.day.day, `10:00 ${name}`)).toBeVisible();
       await expect(page.getByRole("button", { name: /^Agendada/ })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByRole("alert").filter({ hasText: "Não foi possível" })).toHaveCount(0);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
@@ -92,7 +75,7 @@ test.describe("agenda: busca que falha (#578)", () => {
     });
   }
 
-  test("a grade nunca mostra consulta de status desmarcado depois de falha e retry", async ({ page, request }) => {
+  test("a grade nunca mostra consulta de status desmarcado depois de trocar os chips", async ({ page, request }) => {
     const s = await seed(request);
     const name = shown(s.patient.fullName);
     await page.goto("/agenda?status=scheduled");
@@ -100,57 +83,10 @@ test.describe("agenda: busca que falha (#578)", () => {
     await goToMonth(page, s.day);
     await expect(page.getByRole("button", { name: `09:00 ${name}`, exact: true })).toBeVisible();
 
-    await page.route("**/api/appointments?*", (route) =>
-      route.fulfill({
-        status: 429,
-        contentType: "application/json",
-        body: JSON.stringify({ success: false, data: null, error: "Muitas requisições" }),
-      }),
-    );
     await page.getByRole("button", { name: /^Agendada/ }).click();
     await page.getByRole("button", { name: /^Cancelada/ }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "Não foi possível" })).toBeVisible();
-    await expect(page.getByRole("button", { name: `09:00 ${name}`, exact: true })).toHaveCount(0);
 
-    await page.unroute("**/api/appointments?*");
-    await page.getByRole("button", { name: "Tentar de novo" }).click();
     await expect(page.getByRole("button", { name: `10:00 ${name}`, exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: `09:00 ${name}`, exact: true })).toHaveCount(0);
   });
-
-  for (const width of [360, 1280]) {
-    test(`falha ao refazer a mesma URL esconde a grade e deixa o alerta (${width}px)`, async ({ page, request }) => {
-      const s = await seed(request);
-      const name = shown(s.patient.fullName);
-      await page.setViewportSize({ width, height: 900 });
-      // A contagem falha desde o início: o alerta aparece com a grade da URL corrente.
-      await page.route("**/api/appointments/status-counts?*", (route) =>
-        route.fulfill({
-          status: 429,
-          contentType: "application/json",
-          body: JSON.stringify({ success: false, data: null, error: "Muitas requisições" }),
-        }),
-      );
-      await page.goto("/agenda");
-      await page.getByLabel("Filtrar por profissional").selectOption(s.professional.id);
-      await goToMonth(page, s.day);
-      const alert = page.getByRole("alert").filter({ hasText: "Não foi possível carregar as consultas." });
-      await expect(alert).toBeVisible();
-      await expect(gridEntry(page, width, s.day.day, `09:00 ${name}`)).toBeVisible();
-
-      // Agora a lista também falha, na mesma URL: refazer não pode deixar a grade antiga.
-      await page.route("**/api/appointments?*", (route) =>
-        route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ success: false, data: null, error: "Erro interno" }),
-        }),
-      );
-      await page.getByRole("button", { name: "Tentar de novo" }).click();
-
-      await expect(alert).toBeVisible();
-      await expect(gridEntry(page, width, s.day.day, `09:00 ${name}`)).toHaveCount(0);
-    });
-  }
 });
-
