@@ -29,7 +29,7 @@ export default defineConfig({
   // dev compila rota sob demanda e refaz o Fast Refresh no meio do teste, o que
   // deixava a suíte inteira intermitente (#308); o resto roda em
   // `playwright.prod.config.ts`, contra `next start`.
-  testMatch: [...ROLE_ACCOUNT_SPECS, "auth.spec.ts"],
+  testMatch: [...ROLE_ACCOUNT_SPECS, "auth.spec.ts", "console-limpo.spec.ts"],
   // Banco PGlite em memória é compartilhado por todo o processo do servidor
   // principal — rodar specs em paralelo geraria corrida em agenda/estoque/etc.
   fullyParallel: false,
