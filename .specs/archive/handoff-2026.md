@@ -1992,3 +1992,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Revisão dos `Date.now()`/`new Date()` em `.tsx`**: nenhum causa hydration mismatch nem divergência de fuso (os formatadores usam `APP_TIMEZONE`, ADR-073); nenhum código de `src/` mudou. Detalhe no PR.
 - **Next step**: the-judge em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
 
+## Agenda: erro visível na busca das consultas (#578) (2026-10-25) — EM REVISÃO
+- **Causa**: `useApiQuery` guardava um `data` único e só o sobrescrevia no sucesso: ao trocar de URL, ou quando a busca falhava (429), a grade seguia desenhando o recorte anterior; o erro da contagem por status era ignorado e a lista só mostrava um `ErrorAlert` genérico.
+- **O que mudou**: o hook guarda o resultado junto da URL e só o devolve para a URL corrente (a falha descarta o dado). A agenda mostra, com `role="alert"`, «Não foi possível carregar as consultas.» e o botão «Tentar de novo» (refaz lista e contagem); sem dado da URL corrente a grade não é desenhada; com erro na contagem os chips mostram «—» e o nome acessível «indisponível».
+- **Hipótese do 429 no `router.replace`**: não se confirmou; a seleção vem da URL (`useSearchParams`) e o E2E com 429 na busca mantém o chip marcado e a URL com o recorte escolhido.
+- **Testes novos** (nenhum existente alterado): `tests/lib/use-api-query-troca-de-url.test.tsx`, `tests/pages/agenda-busca-falha.test.tsx`, `e2e/agenda-busca-falha.spec.ts` (360, 390, 768 e 1280). Pré-patch: 5 dos 5 unitários novos falham no código da release.
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+

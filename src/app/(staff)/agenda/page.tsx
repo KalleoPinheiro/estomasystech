@@ -10,7 +10,7 @@ import { useMediaQuery, useToast } from '@still-void/ui/react/client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHydrated } from '@/components/app-shell/use-hydrated';
-import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
 import type { AppointmentStatus } from '@/domain/scheduling/appointment';
@@ -79,17 +79,14 @@ function ProfessionalFilter({
 }
 
 function AgendaNotices({
-  error,
   seriesNotice,
   onDismissSeriesNotice,
 }: {
-  error: string | null;
   seriesNotice: { text: string; variant: 'success' | 'warning' } | null;
   onDismissSeriesNotice: () => void;
 }) {
   return (
     <>
-      {error && <ErrorAlert message={error} />}
       {seriesNotice && (
         <Alert
           variant={seriesNotice.variant}
@@ -109,6 +106,35 @@ function AgendaNotices({
         </Alert>
       )}
     </>
+  );
+}
+
+/**
+ * Falha da busca das consultas ou da contagem (#578): fica no lugar da grade,
+ * que só desenha o dado da URL corrente, e refaz as duas buscas.
+ */
+function LoadFailedAlert({
+  detail,
+  onRetry,
+}: {
+  detail: string | null;
+  onRetry: () => void;
+}) {
+  return (
+    <Alert
+      variant="danger"
+      className="mb-4"
+      action={
+        <Button type="button" variant="outline" onClick={onRetry}>
+          Tentar de novo
+        </Button>
+      }
+    >
+      <AlertDescription>
+        <span className="block">Não foi possível carregar as consultas.</span>
+        {detail && <span className="block text-sm">{detail}</span>}
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -216,9 +242,13 @@ export default function AgendaPage() {
   }, [period.from, period.to, professionalFilter]);
   // O filtro vai ao servidor (AGE-FLT-03); `status=` vazio pede nenhum status.
   const appointmentsUrl = `/api/appointments?${periodQuery}&status=${statuses.join(',')}`;
-  const { data: statusCounts, refresh: refreshCounts } = useApiQuery<
-    Record<AppointmentStatus, number>
-  >(`/api/appointments/status-counts?${periodQuery}`);
+  const {
+    data: statusCounts,
+    error: countsError,
+    refresh: refreshCounts,
+  } = useApiQuery<Record<AppointmentStatus, number>>(
+    `/api/appointments/status-counts?${periodQuery}`,
+  );
 
   const {
     data: appointments,
@@ -410,7 +440,6 @@ export default function AgendaPage() {
       />
 
       <AgendaNotices
-        error={error}
         seriesNotice={seriesNotice}
         onDismissSeriesNotice={() => setSeriesNotice(null)}
       />
@@ -428,8 +457,13 @@ export default function AgendaPage() {
       <StatusFilter
         selected={statuses}
         counts={statusCounts}
+        unavailable={countsError !== null}
         onToggle={(status) => setStatuses(toggleStatus(statuses, status))}
       />
+
+      {(error || countsError) && statuses.length > 0 && (
+        <LoadFailedAlert detail={error ?? countsError} onRetry={refresh} />
+      )}
 
       {statuses.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-8 text-center text-ink-3 text-sm">
@@ -443,7 +477,9 @@ export default function AgendaPage() {
           </Button>
         </div>
       ) : !appointments ? (
-        <LoadingIndicator />
+        error ? null : (
+          <LoadingIndicator />
+        )
       ) : period.view !== 'month' && !compact ? (
         <WeekView
           weekStart={period.view === 'day' ? period.dayDate : period.weekStart}

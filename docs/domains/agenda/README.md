@@ -56,6 +56,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | AGE-FLT-04 | O estado vive na URL (`/agenda?status=confirmed,no_show`): link compartilhado e recarregar mantêm o recorte. O padrão deixa a URL limpa; valor inválido cai no padrão sem erro; `status=` vazio é «nenhum» | `parseStatusFilter`, `serializeStatusFilter`, `useStatusFilter` em `page.tsx` |
 | AGE-FLT-05 | A contagem dos chips é a do período visível (e do profissional filtrado) e **não muda** com o próprio filtro de status: `GET /api/appointments/status-counts?from&to[&professionalId]`, mesmo escopo da listagem (Profissional só conta a própria agenda) | `CountAppointmentsByStatus`, `countByStatusInRange`, `src/app/api/appointments/status-counts/route.ts` |
 | AGE-FLT-06 | O filtro de status combina com o de profissional | `tests/api/agenda-filtro-status.test.ts` |
+| AGE-FLT-07 | Busca que falha (429, rede): no lugar da grade aparece o alerta «Não foi possível carregar as consultas.» com o botão «Tentar de novo» (refaz lista e contagem); a grade só desenha o dado da URL corrente e os chips mostram «—» quando a contagem falha | `LoadFailedAlert` em `page.tsx`, `useApiQuery`, `tests/pages/agenda-busca-falha.test.tsx`, `e2e/agenda-busca-falha.spec.ts` |
 
 Rótulos dos chips: os mesmos do selo de status (`APPOINTMENT_STATUS_LABELS`: Agendada, Confirmada, Concluída, Cancelada, **Faltou**). Interface mobile first: linha de chips com rolagem horizontal própria (a página não rola de lado em 360/390 px), `aria-pressed` e alvo de toque da lib.
 

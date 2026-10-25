@@ -11,6 +11,8 @@ interface StatusFilterProps {
   selected: readonly AppointmentStatus[];
   /** Contagem do período visível; ausente enquanto carrega (o chip mostra «—»). */
   counts: Record<AppointmentStatus, number> | null;
+  /** A contagem falhou: o chip mostra «—» e o nome acessível diz «indisponível». */
+  unavailable?: boolean;
   onToggle: (status: AppointmentStatus) => void;
 }
 
@@ -21,6 +23,7 @@ interface StatusFilterProps {
 export function StatusFilter({
   selected,
   counts,
+  unavailable = false,
   onToggle,
 }: StatusFilterProps) {
   return (
@@ -40,7 +43,7 @@ export function StatusFilter({
             variant={active ? 'accent' : 'outline'}
             aria-pressed={active}
             // Nome acessível com unidade; o texto visível («Agendada 3» ou traço) continua dentro dele.
-            aria-label={`${APPOINTMENT_STATUS_LABELS[status]}, ${typeof count === 'number' ? `${count} ${count === 1 ? 'consulta' : 'consultas'}` : 'carregando'}`}
+            aria-label={`${APPOINTMENT_STATUS_LABELS[status]}, ${typeof count === 'number' ? `${count} ${count === 1 ? 'consulta' : 'consultas'}` : unavailable ? 'indisponível' : 'carregando'}`}
             onClick={() => onToggle(status)}
             className="shrink-0"
           >
