@@ -12,18 +12,25 @@ export interface ApiQueryResult<T> {
   refresh: () => void;
 }
 
+interface SettledQuery<T> {
+  /** URL a que o resultado pertence: dado de outra URL nunca é devolvido (#578). */
+  url: string;
+  /** `url:version` da requisição resolvida (sucesso ou erro). */
+  key: string;
+  data: T | null;
+  error: string | null;
+  errorStatus: number | null;
+}
+
 export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [settled, setSettled] = useState<SettledQuery<T> | null>(null);
   const [version, setVersion] = useState(0);
-  // Chave da última requisição já resolvida (sucesso ou erro). Enquanto a
-  // chave atual (`url:version`) não coincidir, a requisição está pendente —
-  // deriva `isLoading` sem precisar de um `setState` síncrono no corpo do
-  // efeito (proibido por `react-hooks/set-state-in-effect`).
-  const [settledKey, setSettledKey] = useState<string | null>(null);
+  // Enquanto a chave atual (`url:version`) não coincidir com a da última
+  // requisição resolvida, a requisição está pendente — deriva `isLoading` sem
+  // precisar de um `setState` síncrono no corpo do efeito (proibido por
+  // `react-hooks/set-state-in-effect`).
   const requestKey = `${url ?? ''}:${version}`;
-  const isLoading = url != null && settledKey !== requestKey;
+  const isLoading = url != null && settled?.key !== requestKey;
 
   useEffect(() => {
     if (url == null) {
@@ -33,19 +40,28 @@ export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
     apiFetch<T>(url)
       .then((result) => {
         if (!cancelled) {
-          setData(result);
-          setError(null);
-          setErrorStatus(null);
-          setSettledKey(requestKey);
+          setSettled({
+            url,
+            key: requestKey,
+            data: result,
+            error: null,
+            errorStatus: null,
+          });
         }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : 'Erro ao carregar dados',
-          );
-          setErrorStatus(err instanceof ApiError ? err.status : null);
-          setSettledKey(requestKey);
+          // A falha de outra URL descarta o dado anterior: a tela não pode seguir
+          // desenhando um recorte que não é mais o pedido. Falha ao refazer a
+          // mesma URL mantém o último dado dela (o chamador decide o que mostrar).
+          setSettled((previous) => ({
+            url,
+            key: requestKey,
+            data: previous?.url === url ? previous.data : null,
+            error:
+              err instanceof Error ? err.message : 'Erro ao carregar dados',
+            errorStatus: err instanceof ApiError ? err.status : null,
+          }));
         }
       });
     return () => {
@@ -55,7 +71,13 @@ export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
 
   const refresh = useCallback(() => setVersion((current) => current + 1), []);
 
-  return url == null
-    ? { data: null, error: null, errorStatus: null, isLoading: false, refresh }
-    : { data, error, errorStatus, isLoading, refresh };
+  // Só vale o resultado da URL corrente; ao trocar de URL, o anterior some.
+  const current = url != null && settled?.url === url ? settled : null;
+  return {
+    data: current?.data ?? null,
+    error: current?.error ?? null,
+    errorStatus: current?.errorStatus ?? null,
+    isLoading,
+    refresh,
+  };
 }
