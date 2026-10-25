@@ -1986,18 +1986,26 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Staging (Kalléo)**: triagem, ficha e portal mostram a miniatura da foto; abrir «+ Nova consulta» não gera erro de CSP no console e o fundo não rola atrás do modal.
 - **Next step**: staging rebuild e validação limpa da v0.3.0. **Blockers**: nenhum.
 
+## Agenda: consulta que termina às 24:00 (#580) (2026-10-25) — EM REVISÃO
+- **Causa**: `assertWithinBusinessHours` exigia o mesmo dia civil no fim, então 23:00–24:00 (fim às 00:00 do dia seguinte) era recusada mesmo com a grade até 24 h. Bug latente: `assertWithinProfessionalHours` tratava qualquer fim às 00:00 como 24:00, sem conferir o dia (23:00 de hoje até 00:00 de depois de amanhã passava).
+- **O que mudou**: helper único `endMinuteOfDay(início, fim)` em `business-hours.ts`: mesmo dia devolve o minuto; 00:00 do dia civil seguinte devolve 1440; qualquer outro cruzamento devolve `null` (recusa). As duas asserções usam o helper.
+- **Testes novos** (nenhum existente alterado): `tests/domain/consulta-ate-meia-noite.test.ts` (23:00–24:00 e 23:30–00:00 aceitas; 23:30–00:30 e 00:00 dois dias depois recusadas, nas duas asserções; verde com TZ=UTC e TZ=Asia/Tokyo, APP_TIMEZONE=America/Sao_Paulo), `e2e/agenda-remarcar-ate-24h.spec.ts` (remarcar para 23:00 com 60 min aceito, navegador em São Paulo, Manaus e Tóquio). Pré-patch: os 9 unitários novos falham no código da release. Mutação de `business-hours.ts`: 100%.
+- **Fora do escopo**: oferta de horários do autoagendamento (`list-available-slots`) não foi mexida.
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+
 ## Console limpo nos E2E (#543, sobras) (2026-10-25) — EM REVISÃO
 - **O que mudou**: `e2e/console-limpo.spec.ts` percorre as rotas do menu de cada papel (admin de empresa, atendente, profissional) mais as de configuração do admin e a ficha do paciente, em 360 e 1280 px, o portal do paciente e do parceiro (com consulta e indicação) e as telas públicas; falha em `console.error`, `console.warn`, exceção da página, violação de CSP e hydration mismatch (React 19 o reporta como erro). `npm run test:console` faz build e roda a spec no build de produção e no `next dev`. No build de produção a spec já entra em `test:e2e:prod` (o `gate:local` a cobre sem mexer em `scripts/gate/`); no `next dev` ela roda por `playwright.console.config.ts`, porque o contrato C46 (#308) fixa o `testMatch` do `test:e2e:dev` em papéis e login. Seed de horário `console-limpo-portal` registrada no fim de `SLOT_SEEDS`.
 - **Sessões**: cookie assinado (vale nos dois modos; o convite das contas reais só existe no log do `next dev`). Consequência: `/minha-conta` (lê `/api/me`, 404 sem conta) e a ficha do paciente pelo profissional (sem vínculo, 404) ficam fora da spec; são lacunas declaradas, não ignoradas.
 - **Revisão dos `Date.now()`/`new Date()` em `.tsx`**: nenhum causa hydration mismatch nem divergência de fuso (os formatadores usam `APP_TIMEZONE`, ADR-073); nenhum código de `src/` mudou. Detalhe no PR.
 - **Next step**: the-judge em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
 
-## Agenda: erro visível na busca das consultas (#578) (2026-10-25) — EM REVISÃO
+## Agenda: erro visível na busca das consultas (#578) (2026-10-25) — MERGEADO NA RELEASE
 - **Causa**: `useApiQuery` guardava um `data` único e só o sobrescrevia no sucesso: ao trocar de URL, ou quando a busca falhava (429), a grade seguia desenhando o recorte anterior; o erro da contagem por status era ignorado e a lista só mostrava um `ErrorAlert` genérico.
 - **O que mudou**: o hook guarda o resultado junto da URL e só o devolve para a URL corrente (a falha descarta o dado). A agenda mostra, com `role="alert"`, «Não foi possível carregar as consultas.» e o botão «Tentar de novo» (refaz lista e contagem); sem dado da URL corrente a grade não é desenhada; com erro na contagem os chips mostram «—» e o nome acessível «indisponível».
 - **Hipótese do 429 no `router.replace`**: não se confirmou; a seleção vem da URL (`useSearchParams`) e o E2E com 429 na busca mantém o chip marcado e a URL com o recorte escolhido.
 - **Testes novos** (nenhum existente alterado): `tests/lib/use-api-query-troca-de-url.test.tsx`, `tests/pages/agenda-busca-falha.test.tsx`, `e2e/agenda-busca-falha.spec.ts` (360, 390, 768 e 1280). Pré-patch: 5 dos 5 unitários novos falham no código da release.
-- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+- **Decisão do PO (aprovação do #583)**: com `error` a grade fica escondida, inclusive numa falha ao refazer a mesma URL (o estado de erro substitui a grade); o «Carregando» na troca de chip fica como está. Aplicado no PR `fix/agenda-erro-esconde-grade`, com teste de página e E2E da falha na mesma URL.
+- **Next step**: validação em thread limpa na staging. **Blockers**: nenhum.
 
 ## Agenda no celular: chips de status e seletor Mês/Dia (#582) (2026-10-25) — EM REVISÃO
 - **O que mudou**: os chips de status passam de linha rolável a `flex-wrap` (os 5 à vista em 360 e 390 px); o seletor de visão aparece no celular só com **Mês** e **Dia** (sem Semana; a visão Dia é a `WeekView` com `dayCount=1`); `PeriodNav` recebe `compact` no lugar de `showViewToggle`. Se a janela encolher com a Semana aberta, a página passa para Dia.
