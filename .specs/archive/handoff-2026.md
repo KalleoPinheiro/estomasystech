@@ -2007,3 +2007,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Decisão do PO (aprovação do #583)**: com `error` a grade fica escondida, inclusive numa falha ao refazer a mesma URL (o estado de erro substitui a grade); o «Carregando» na troca de chip fica como está. Aplicado no PR `fix/agenda-erro-esconde-grade`, com teste de página e E2E da falha na mesma URL.
 - **Next step**: validação em thread limpa na staging. **Blockers**: nenhum.
 
+
+## Agenda: semana e dia sem sumir durante a busca (#588) (2026-10-25) — EM REVISÃO
+- **Causa**: a correção da #578 (#583) passou a esconder a grade enquanto a busca do período corrente não termina. Na visão Semana a coluna do dia some a cada troca, e o `agenda-bloco-curto-legivel` (que avança "Próxima semana" até achar `[data-week-day]`) passava direto da semana certa.
+- **O que mudou**: no mês o «Carregando» segue como estava; em Semana e Dia a `WeekView` é desenhada com `appointments=[]` e a nova prop `loading`: colunas no lugar, `aria-busy`, texto «Carregando…» só para leitor de tela, sem «Nenhuma consulta» até a busca acabar. Nunca aparecem consultas de outro período.
+- **Testes novos** (nenhum existente alterado): `tests/pages/agenda-semana-carregando.test.tsx` (pré-patch: falha no código da release), `e2e/agenda-semana-carregando.spec.ts` (768 e 1280, busca retida por rota).
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
