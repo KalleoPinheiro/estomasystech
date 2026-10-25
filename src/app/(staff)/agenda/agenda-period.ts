@@ -73,12 +73,15 @@ export interface AgendaPeriod {
   closuresTo: string;
   label: string;
   shift: (delta: number) => void;
+}
+
+export interface AgendaPeriodState extends AgendaPeriod {
   /** Dia escolhido no mês compacto do celular: a visão Semana/Dia abre nele (#589). */
   chooseDay: (day: Date) => void;
 }
 
 /** Período da agenda: mês (padrão), semana ou dia, com navegação para frente e para trás. */
-export function useAgendaPeriod(initial: Date): AgendaPeriod {
+export function useAgendaPeriod(initial: Date): AgendaPeriodState {
   const [view, setViewState] = useState<AgendaView>('month');
   const [anchor, setAnchor] = useState(() => {
     const day = clinicDayCell(initial);
