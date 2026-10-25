@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
+      // `server-only` lança fora do bundle do Next (é o que protege o cliente); na suíte
+      // vale o módulo vazio que o próprio Next usa no servidor.
+      "server-only": path.resolve(import.meta.dirname, "./node_modules/next/dist/compiled/server-only/empty.js"),
     },
   },
   test: {

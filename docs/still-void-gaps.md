@@ -8,7 +8,7 @@ last_reviewed: 2026-09-26
 
 # Lacunas do `@still-void/ui` — backlog para a lib
 
-- **Status:** Aberto — seções abertas: `touch-target-size`, `field-font-16`, `combobox` (só relato)
+- **Status:** Aberto — seções abertas: `sidebar-ssr-space`, `touch-target-size`, `field-font-16`, `combobox` (só relato)
 - **Data:** 2026-08-26
 - **Versão verificada:** `@still-void/ui@3.2.0`
 - **Origem:** migração 2.0 → 3.1 do EstomaSysTech (`.specs/features/still-void-v3-migration/`); as
@@ -42,6 +42,20 @@ Conferida contra `dist/style.css` da `@still-void/ui@3.4.0`. O workaround mora e
 [src/app/globals.css](../src/app/globals.css) e é provado por
 [e2e/portal-responsivo.spec.ts](../e2e/portal-responsivo.spec.ts) e
 [e2e/layout-mobile-first.spec.ts](../e2e/layout-mobile-first.spec.ts).
+
+### `sidebar-ssr-space`
+
+**Lacuna.** O `SidebarProvider` decide "celular ou desktop" por `matchMedia` (`useMediaQuery`), que no
+servidor e na primeira renderização vale "celular": o `SidebarPanel` sai como diálogo fechado e só
+vira `<aside>` depois da hidratação. Em todo desktop (≥ 1024 px) o conteúdo salta 224 px para a
+direita (CLS ~0,18 em cada tela da equipe, #544).
+
+**Workaround local.** `SidebarSpace` ([src/components/app-shell/sidebar-space.tsx](../src/components/app-shell/sidebar-space.tsx))
+reserva `w-56` (a largura do menu) enquanto o provider ainda diz "celular", visível só a partir de
+`lg` (mesmo corte de 1024 px do provider). Provado por `e2e/server-first-mais.spec.ts` (CLS ≤ 0,1).
+
+**Correção sugerida na lib (minor).** Padrão SSR-safe por CSS: o painel renderiza como coluna fixa em
+`@media (min-width: 64rem)` já no HTML do servidor, e o estado "celular" só liga o diálogo.
 
 ### `touch-target-size`
 

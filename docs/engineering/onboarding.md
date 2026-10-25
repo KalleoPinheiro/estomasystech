@@ -165,6 +165,7 @@ npm run dev                   # http://localhost:3000
 | `UPLOADS_DIR` | não | diretório das fotos no disco local | padrão `./uploads`; no compose, `/app/uploads` (volume `uploads`) |
 | `TRUSTED_PROXY_HOPS` | não | quantos proxies reversos confiáveis ficam à frente do app (define o IP do cliente no `x-forwarded-for`) | padrão `1`; Nginx/Traefik = `1`, Cloudflare + Nginx = `2` |
 | `API_RATE_LIMIT_MAX` | não | req/min em `/api/*`, somado entre réplicas: **por conta** quando autenticado (empresa + e-mail), por IP quando anônimo | padrão `120` — cada tela faz de 2 a 8 chamadas ao abrir (Agenda 7, Configurações 8, Dashboard 5, Ficha 6), ou seja ~15 trocas de tela por minuto por pessoa |
+| `ACTION_RATE_LIMIT_MAX` | não | req/min de `POST` de Server Action (cabeçalho `Next-Action`), somado entre réplicas, mesma chave da API (conta ou IP); contador separado do da API (ADR-074) | padrão `120` |
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | não | tuning do pool Postgres | — |
 | `GLITCHTIP_DSN` / `APP_RELEASE` | não | error tracking no GlitchTip self-hosted ([ADR-014](../adr/014-observabilidade-sem-pii.md)) e a versão marcada em cada evento | vazio = no-op; [glitchtip.md](integrations/glitchtip.md) |
 | `GLITCHTIP_DB_PASSWORD` / `GLITCHTIP_SECRET_KEY` | só com o GlitchTip | senha do Postgres próprio e chave do GlitchTip, lidas por `docker-compose.glitchtip.yml` (não pelo app) | [producao.md](producao.md) § 9.5 |

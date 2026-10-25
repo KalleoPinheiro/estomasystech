@@ -3,7 +3,7 @@ title: "Domínio: Acesso, empresas e auditoria"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-21
+last_reviewed: 2026-10-25
 domain: acesso
 ---
 
@@ -127,6 +127,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 | domínio | `src/domain/{auth,clinic,audit,consent}/` |
 | casos de uso | `src/application/{auth,platform}/` |
 | borda e política | `src/proxy.ts`, `src/lib/auth/` |
+| sessão no servidor (páginas e Server Actions, [ADR-074](../../adr/074-fundacao-server-first-sessao-dados-e-acoes.md)) | `src/lib/server/session.ts` (guardas de página, mesma revogação do proxy), `src/lib/server/define-action.ts`; `POST` de Server Action tem limite próprio no proxy |
 | API | `src/app/api/{auth,accounts,audit,settings,clinic-info,platform}/` |
 | UI | `src/app/{login,definir-senha,esqueci-senha,plataforma}/`, `src/app/(staff)/{auditoria,configuracoes}/` |
 | testes | `tests/lib/`, `tests/proxy.test.ts`, `tests/api/platform-*.test.ts`, `tests/api/audit-platform-trail.test.ts`, `tests/api/mfa-login.test.ts`, `tests/api/{own-account,account-reset-mfa}.test.ts`, `tests/api/login-hardening.test.ts`, `tests/{api,infrastructure}/recover-super-admin.test.ts`, `e2e/{auth,auditoria,equipe,export-lgpd,plataforma,plataforma-suspensao}.spec.ts`, `e2e/papeis-*.spec.ts` (uma sessão real por papel) |
@@ -138,6 +139,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 - [ADR-002](../../adr/002-autorizacao-em-duas-camadas.md) — proxy + handler
 - [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — seis papéis (o sétimo, `guardian`, no ADR-027), vínculo dinâmico do Profissional
 - [ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md) — login nativo; Google só como integração
+- [ADR-074](../../adr/074-fundacao-server-first-sessao-dados-e-acoes.md) — sessão por `cookies()` nas páginas e ações, `forbidden()`, `defineAction`
 - [ADR-005](../../adr/005-revogacao-de-sessao-por-versao.md) — revogação de sessão por `session_version`
 - [ADR-007](../../adr/007-super-admin-operador-da-plataforma.md) — Super Admin é o operador da plataforma, único e sem dado de clínica
 - [ADR-008](../../adr/008-segundo-fator-do-super-admin.md) — segundo fator TOTP obrigatório para o Super Admin

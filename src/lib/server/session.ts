@@ -1,0 +1,111 @@
+import 'server-only';
+import { cookies } from 'next/headers';
+import { forbidden, redirect } from 'next/navigation';
+import { cache } from 'react';
+import type { UserRole } from '@/domain/auth/user-role';
+import { AUTH_NOT_CONFIGURED_MESSAGE } from '@/lib/auth/access-policy';
+import {
+  getAuthConfig,
+  SESSION_COOKIE,
+  type Session,
+  verifySessionToken,
+} from '@/lib/auth/session';
+import { isSessionRevoked } from '@/lib/auth/staff-revocation';
+import { isStaffRole } from '@/lib/auth/staff-roles';
+import { loginPath, SESSION_EXPIRED_ERROR } from '@/lib/login-redirect';
+
+/**
+ * Sessão no servidor para páginas e Server Actions (ADR-069 § 1). Lê o cookie
+ * por `cookies()` — as rotas leem por `NextRequest` — e passa pela MESMA
+ * verificação (`verifySessionToken`) e pela MESMA revogação do proxy
+ * (`isSessionRevoked`, ADR-005): sessão de conta desativada ou de clínica
+ * suspensa não renderiza página nem executa ação. Sem `AUTH_SECRET` falha
+ * fechado (ADR-002).
+ */
+export type SessionState =
+  | { status: 'active'; session: Session }
+  | { status: 'anonymous'; expired: boolean };
+
+/**
+ * Lida uma vez por requisição: `React.cache()` deduplica layout, páginas e
+ * componentes da mesma renderização, então o cookie é verificado e a conta
+ * consultada uma única vez. Nunca guarda nada entre requisições (ADR-069 § 3).
+ */
+export const readSession = cache(async (): Promise<SessionState> => {
+  const auth = getAuthConfig();
+  if (!auth) {
+    throw new Error(AUTH_NOT_CONFIGURED_MESSAGE);
+  }
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const session = verifySessionToken(auth.secret, token);
+  if (!session || (await isSessionRevoked(session))) {
+    // Havia cookie (vencido, inválido ou revogado) → a tela de login diz por quê.
+    return { status: 'anonymous', expired: token !== undefined };
+  }
+  return { status: 'active', session };
+});
+
+interface PageGuardOptions {
+  /** Caminho de volta depois do login (`/login?next=…`); só caminho interno vale. */
+  next?: string;
+}
+
+async function requireSession(options: PageGuardOptions): Promise<Session> {
+  const state = await readSession();
+  if (state.status === 'anonymous') {
+    redirect(
+      loginPath({
+        error: state.expired ? SESSION_EXPIRED_ERROR : undefined,
+        next: options.next,
+      }),
+    );
+  }
+  return state.session;
+}
+
+const hasRole = (
+  session: Session,
+  roles: readonly UserRole[] | undefined,
+): boolean => roles === undefined || roles.includes(session.role);
+
+/**
+ * Página da equipe da clínica. Sem sessão → `/login?next=…`; sessão de outra
+ * família (portal, plataforma) ou papel fora de `roles` → `forbidden()` (403).
+ * O super_admin é operador da plataforma e não entra em tela da clínica (ADR-007).
+ */
+export async function requireStaffPage(
+  options: PageGuardOptions & { roles?: readonly UserRole[] } = {},
+): Promise<Session> {
+  const session = await requireSession(options);
+  if (
+    !isStaffRole(session.role) ||
+    session.role === 'super_admin' ||
+    !hasRole(session, options.roles)
+  ) {
+    forbidden();
+  }
+  return session;
+}
+
+/** Página do portal (paciente, responsável ou parceiro); `roles` restringe a um subconjunto. */
+export async function requirePortalPage(
+  options: PageGuardOptions & { roles?: readonly UserRole[] } = {},
+): Promise<Session> {
+  const session = await requireSession(options);
+  const portalRoles: readonly UserRole[] = ['patient', 'guardian', 'partner'];
+  if (!portalRoles.includes(session.role) || !hasRole(session, options.roles)) {
+    forbidden();
+  }
+  return session;
+}
+
+/** Página da plataforma: só o super_admin (ADR-007). */
+export async function requirePlatformPage(
+  options: PageGuardOptions = {},
+): Promise<Session> {
+  const session = await requireSession(options);
+  if (session.role !== 'super_admin') {
+    forbidden();
+  }
+  return session;
+}

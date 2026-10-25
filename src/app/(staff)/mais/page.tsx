@@ -1,21 +1,21 @@
-'use client';
-
 import { Card } from '@still-void/ui/react';
 import Link from 'next/link';
 import { LogoutButton } from '@/components/logout-button';
 import { PageHeader } from '@/components/page-header';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
+import { requireStaffPage } from '@/lib/server/session';
+import { canRoleAccess } from '@/lib/staff-pages';
 import { moreGroupsFor } from '@/lib/staff-shortcuts';
 
 /**
  * "Mais" (#428): o que não cabe na barra inferior do celular, agrupado e já
  * filtrado pelo papel da sessão (mesma matriz de autorização do menu lateral).
+ * Server Component (ADR-069): o papel vem da sessão no servidor, então a lista
+ * já sai no HTML, sem chamada de API nem salto de layout depois da hidratação.
  */
-export default function MorePage() {
-  const can = useStaffAccess();
-  const role = useStaffIdentity()?.role ?? null;
-  const groups = moreGroupsFor(role, can);
+export default async function MorePage() {
+  const { role } = await requireStaffPage({ next: '/mais' });
+  const groups = moreGroupsFor(role, (api) => canRoleAccess(api, role));
 
   return (
     <div>
