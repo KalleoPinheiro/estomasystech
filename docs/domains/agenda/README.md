@@ -59,7 +59,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | AGE-FLT-06 | O filtro de status combina com o de profissional | `tests/api/agenda-filtro-status.test.ts` |
 | AGE-FLT-07 | Busca que falha (429, rede): no lugar da grade aparece o alerta «Não foi possível carregar as consultas.» com o botão «Tentar de novo» (refaz lista e contagem); a grade só desenha o dado da URL corrente e os chips mostram «—» quando a contagem falha | `LoadFailedAlert` em `page.tsx`, `useApiQuery`, `tests/pages/agenda-busca-falha.test.tsx`, `e2e/agenda-busca-falha.spec.ts` |
 
-Rótulos dos chips: os mesmos do selo de status (`APPOINTMENT_STATUS_LABELS`: Agendada, Confirmada, Concluída, Cancelada, **Faltou**). Interface mobile first: linha de chips com rolagem horizontal própria (a página não rola de lado em 360/390 px), `aria-pressed` e alvo de toque da lib.
+Rótulos dos chips: os mesmos do selo de status (`APPOINTMENT_STATUS_LABELS`: Agendada, Confirmada, Concluída, Cancelada, **Faltou**). Interface mobile first: chips que quebram em linhas, sem rolagem horizontal (os cinco ficam à vista em 360/390 px, #582), `aria-pressed` e alvo de toque da lib.
 
 ## Funcionalidades
 
