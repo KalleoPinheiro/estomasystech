@@ -158,7 +158,7 @@ describe('Feature: busca da agenda que falha (#578)', () => {
 
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
     expect(await screen.findByText(/Paciente Cancelada/)).toBeTruthy();
-    // Os chips e a grade concordam: Cancelada marcada, e a agendada fica de fora? (padrão + cancelada)
+    // Chips e grade concordam: Cancelada marcada e a Agendada, do padrão, continua marcada.
     expect(
       screen.getByRole('button', { name: /^Cancelada, 1 consulta/ }),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -177,6 +177,26 @@ describe('Feature: busca da agenda que falha (#578)', () => {
       screen.getByRole('button', { name: 'Agendada, indisponível' })
         .textContent,
     ).toContain('—');
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeTruthy();
+  });
+
+  it('Dada a grade carregada, Quando refazer a mesma URL falha, Então a grade some e o alerta fica no lugar dela', async () => {
+    const fail = { list: false, counts: true };
+    mockFetch(fail);
+    renderWithToast(<AgendaPage />);
+    // Só a contagem falha: a grade da URL corrente segue visível com o alerta.
+    expect(await screen.findByText(/Paciente Agendada/)).toBeTruthy();
+    await screen.findByRole('alert');
+
+    fail.list = true;
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Paciente Agendada/)).toBeNull(),
+    );
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Não foi possível carregar as consultas.',
+    );
     expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeTruthy();
   });
 });

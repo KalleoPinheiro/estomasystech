@@ -476,10 +476,8 @@ export default function AgendaPage() {
             Mostrar padrão
           </Button>
         </div>
-      ) : !appointments ? (
-        error ? null : (
-          <LoadingIndicator />
-        )
+      ) : error ? null : !appointments ? (
+        <LoadingIndicator />
       ) : period.view !== 'month' && !compact ? (
         <WeekView
           weekStart={period.view === 'day' ? period.dayDate : period.weekStart}
