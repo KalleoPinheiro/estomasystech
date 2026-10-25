@@ -15,7 +15,9 @@ import { TriageCard } from './_hoje/triage-card';
 
 /**
  * Tela Hoje no servidor (#548, ADR-069): cada bloco lê o próprio dado e tem o
- * próprio `<Suspense>`, então o mais lento não segura a tela. Cada bloco só
+ * próprio `<Suspense>`, então o mais lento não segura a tela. A agenda do dia e
+ * os retornos vêm primeiro; triagem, maioridade e consultas sem desfecho (que
+ * só aparecem com pendência) ficam abaixo, para não empurrar o conteúdo. Cada bloco só
  * existe para quem pode usá-lo (#199): Atendente e Profissional não têm resumo
  * financeiro nem estoque. A carga não chama `/api`; as ações rápidas
  * (concluir/cancelar retorno, triagem, maioridade) são Server Actions.
@@ -41,22 +43,6 @@ export default async function DashboardPage() {
         </Suspense>
       )}
 
-      {showTriage && (
-        <Suspense fallback={null}>
-          <TriageCard session={session} />
-        </Suspense>
-      )}
-
-      {showMajority && (
-        <Suspense fallback={null}>
-          <MajorityCard session={session} />
-        </Suspense>
-      )}
-
-      <Suspense fallback={null}>
-        <PendingClosureCard session={session} />
-      </Suspense>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Suspense fallback={<CardSkeleton />}>
           <TodayAppointmentsCard session={session} />
@@ -72,6 +58,26 @@ export default async function DashboardPage() {
             </Suspense>
           )}
         </div>
+      </div>
+
+      {/* Depois do grid, que é o primeiro conteúdo estável: blocos que só existem
+          com pendência chegam no stream sem empurrar a agenda (CLS, #548). */}
+      <div className="mt-6">
+        {showTriage && (
+          <Suspense fallback={null}>
+            <TriageCard session={session} />
+          </Suspense>
+        )}
+
+        {showMajority && (
+          <Suspense fallback={null}>
+            <MajorityCard session={session} />
+          </Suspense>
+        )}
+
+        <Suspense fallback={null}>
+          <PendingClosureCard session={session} />
+        </Suspense>
       </div>
     </div>
   );

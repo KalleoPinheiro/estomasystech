@@ -2048,5 +2048,6 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **R4**: `resolveFollowUp` aplica o vínculo Profissional↔Paciente (mais estrito que o PATCH antigo de retornos).
 - **Testes novos**: `tests/app/hoje-actions.test.ts`, `tests/integracao/hoje-auditoria-transacional.integracao.ts` (rollback da auditoria em Postgres real).
 - **TESTE-ALTERADO** (aprovado, troca de harness, cenários e asserções preservados): `tests/pages/{staff-dashboard,dashboard-role,consultas-sem-desfecho-ui,whatsapp-link-ui}.test.tsx`, um commit por arquivo; tabela de paridade no PR.
-- **Ficou fora**: `/api/photos/triage` na barra do celular do Profissional (outra issue).
-- **Next step**: the-judge e validação em threads limpas; merge na release/v0.4.0. **Blockers**: nenhum.
+- **Correção da validação (CLS)**: triagem, maioridade e consultas sem desfecho (fallback `null`, só existem com pendência) empurravam o grid quando chegavam (CLS 0,134 em 390 px com fila real). Passam a ficar DEPOIS do grid (decisão do PO); `e2e/server-first-hoje.spec.ts` ganha o cenário do admin com 3 fotos na fila e aviso de maioridade, exigindo CLS < 0,05 nas 4 larguras (pré-patch: 0,08–0,24, falha). **TESTE-ALTERADO**: `staff-dashboard.test.tsx` (DASH-02) inverte a ordem esperada (retornos antes da fila), por esta decisão de produto.
+- **Ficou fora**: `/api/photos/triage` na barra do celular do Profissional (outra issue); `PATCH /api/follow-ups/:id` sem R4 (issue própria).
+- **Next step**: revalidação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
