@@ -83,7 +83,7 @@ test.describe("Hoje no servidor: admin com fila de triagem e aviso de maioridade
     for (let i = 0; i < 3; i++) {
       await context.clearCookies();
       await context.addCookies([adminCookie]);
-      const patient = await createPatient(page.request, { fullName: `Paciente Hoje CLS ${unique()}` });
+      const patient = await createPatient(page.request, { fullName: `Zz Hoje CLS Paciente ${unique()}` });
       patients.push(patient);
       await linkPortalAccount(page.request, "patient", patient);
       const condition = await createCondition(page.request, patient.id, {
@@ -112,11 +112,11 @@ test.describe("Hoje no servidor: admin com fila de triagem e aviso de maioridade
       });
     }
     await createSupply(page.request, { name: `Insumo Hoje CLS ${unique()}`, minQty: 5 });
-    const guardian = await createGuardian(page.request, `Resp Hoje CLS ${unique()}`, `resp.${unique()}@e2e.estomasystech.test`);
+    const guardian = await createGuardian(page.request, `Zz Hoje CLS Resp ${unique()}`, `resp.${unique()}@e2e.estomasystech.test`);
     const birth = new Date();
     birth.setFullYear(birth.getFullYear() - 19);
     await createPatient(page.request, {
-      fullName: `Maior Hoje CLS ${unique()}`,
+      fullName: `Zz Hoje CLS Maior ${unique()}`,
       birthDate: birth.toISOString().slice(0, 10),
       guardianId: guardian.id,
     });

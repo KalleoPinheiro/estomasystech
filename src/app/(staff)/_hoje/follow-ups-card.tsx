@@ -49,7 +49,7 @@ export async function FollowUpsCard({
           <li
             key={followUp.id}
             data-follow-up-row
-            className="flex flex-col gap-1 py-3 text-sm sm:flex-row sm:items-center sm:gap-3"
+            className="flex flex-col gap-1 py-3 text-sm"
           >
             <div className="min-w-0 flex-1" data-follow-up-text>
               <p className="break-words font-medium sm:truncate">

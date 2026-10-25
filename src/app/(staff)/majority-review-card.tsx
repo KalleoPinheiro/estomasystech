@@ -121,12 +121,12 @@ export function MajorityReviewCard({
                 {item.fullName}
               </Link>
               {item.birthDate && (
-                <span className="text-ink-3">
+                <span className="text-ink-2">
                   {' '}
                   · nascido(a) em {civilDate(item.birthDate)}
                 </span>
               )}
-              <span className="block text-ink-3">
+              <span className="block text-ink-2">
                 Responsável: {item.guardianName} (
                 {relationshipLabel(item.guardianRelationship)})
               </span>
