@@ -4,9 +4,10 @@ import { Button, Textarea } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
 import type { CommissionPayoutDto } from '@/lib/dto';
 import { formatCurrency, monthLabelPtBr } from '@/lib/format';
+import { cancelPayout } from './payout-actions';
 
 /** Cancela um repasse registrado por engano — motivo obrigatório, auditado. */
 export function CancelPayoutForm({
@@ -26,10 +27,7 @@ export function CancelPayoutForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/commission-payouts/${payout.id}/cancel`, {
-        method: 'POST',
-        body: JSON.stringify({ reason }),
-      });
+      await unwrapAction(cancelPayout({ id: payout.id, reason }));
       toast({ description: 'Repasse cancelado', variant: 'success' });
       onDone();
     } catch (err) {
