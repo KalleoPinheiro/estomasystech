@@ -408,7 +408,7 @@ describe('Feature: Dashboard do painel interno', () => {
   });
 
   describe('Cenário: fila de triagem em faixa própria (DASH-02)', () => {
-    it('Dado fila de triagem não-vazia, Quando renderizar, Então o heading da fila vem antes do heading de retornos pendentes', async () => {
+    it('Dado fila de triagem não-vazia, Quando renderizar, Então o heading de retornos pendentes vem antes do da fila (a agenda é o primeiro conteúdo estável, #548)', async () => {
       mockHojeData({ triage: [triageFixture], followUps: [followUpFixture] });
       await renderPage();
 
@@ -421,8 +421,8 @@ describe('Feature: Dashboard do painel interno', () => {
         (h) => h.textContent === 'Retornos pendentes',
       );
 
-      expect(triageIndex).toBeGreaterThanOrEqual(0);
-      expect(followUpsIndex).toBeGreaterThan(triageIndex);
+      expect(followUpsIndex).toBeGreaterThanOrEqual(0);
+      expect(triageIndex).toBeGreaterThan(followUpsIndex);
     });
   });
 
