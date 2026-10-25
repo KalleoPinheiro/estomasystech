@@ -2,15 +2,43 @@
 
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
-import AgendaPage from '@/app/(staff)/agenda/page';
 import type { AppointmentDto, WaitlistEntryDto } from '@/lib/dto';
+import { renderAgenda, resetAgenda } from '../support/agenda-app';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  usePathname: () => '/agenda',
-  useSearchParams: () => new URLSearchParams(),
-}));
+vi.mock('next/navigation', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    useRouter: () => agenda.router,
+    useParams: () => ({}),
+    usePathname: () => '/agenda',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { requireStaffPage: agenda.requireStaffPage };
+});
+vi.mock('@/lib/server/data/appointments', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    listAppointmentsFor: agenda.listAppointmentsFor,
+    countAppointmentsFor: agenda.countAppointmentsFor,
+  };
+});
+vi.mock('@/lib/server/data/professionals', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listProfessionalOptions: agenda.listProfessionalOptions };
+});
+vi.mock('@/lib/server/data/schedule', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    loadScheduleConfig: agenda.loadScheduleConfig,
+    listClosuresFor: agenda.listClosuresFor,
+  };
+});
+vi.mock('@/lib/server/data/waitlist', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listWaitlistFor: agenda.listWaitlistFor };
+});
 
 interface Call {
   url: string;
@@ -58,9 +86,25 @@ const entry: WaitlistEntryDto = {
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
+/**
+ * As leituras (consultas, fila, grade) vêm do servidor; só as gravações e os
+ * catálogos do formulário ainda passam por `fetch` (uma URL de leitura aqui
+ * seria `/api` na carga, que a tela não faz mais).
+ */
 function mockAgenda(
   options: { waitlistPatchFails?: boolean; catalogFails?: boolean } = {},
 ): Call[] {
+  resetAgenda({
+    appointments: [appointment],
+    waitlist: [entry],
+    scheduleConfig: {
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      startHour: 0,
+      endHour: 24,
+      minGapMinutes: 15,
+      cancellationPolicy: { noticeHours: 24, lateFeeCents: 5000 },
+    },
+  });
   const calls: Call[] = [];
   vi.stubGlobal(
     'fetch',
@@ -73,7 +117,6 @@ function mockAgenda(
           ? failure('Falha')
           : ok({ ...entry, status: 'scheduled' });
       }
-      if (url.startsWith('/api/waitlist')) return ok([entry]);
       if (url === '/api/appointments/appt-1' && method === 'PATCH') {
         return ok({
           ...appointment,
@@ -85,29 +128,14 @@ function mockAgenda(
       if (url.startsWith('/api/appointments') && method === 'POST') {
         return ok(appointment);
       }
-      if (url.startsWith('/api/appointments')) return ok([appointment]);
       if (url === '/api/patients/pat-1') {
         return ok({ id: 'pat-1', fullName: 'Maria Souza', active: true });
       }
       if (url.startsWith('/api/patients')) {
         return ok([{ id: 'pat-1', fullName: 'Maria Souza', active: true }]);
       }
-      if (url.startsWith('/api/options/professionals')) return ok([]);
       if (url.startsWith('/api/options/procedures')) {
         return options.catalogFails ? failure('Acesso negado') : ok([]);
-      }
-      if (url.startsWith('/api/settings/schedule/closures')) return ok([]);
-      if (url.startsWith('/api/schedule-config')) {
-        return ok({
-          config: {
-            weekdays: [0, 1, 2, 3, 4, 5, 6],
-            startHour: 0,
-            endHour: 24,
-            minGapMinutes: 15,
-            cancellationPolicy: { noticeHours: 24, lateFeeCents: 5000 },
-          },
-          isDefault: false,
-        });
       }
       throw new Error(`URL não mapeada: ${method} ${url}`);
     }),
@@ -123,7 +151,7 @@ afterEach(() => {
 describe('Feature: Agenda com lista de espera e cancelamento tardio', () => {
   it('Dado o catálogo indisponível, Então a lista de espera mostra o erro', async () => {
     mockAgenda({ catalogFails: true });
-    renderWithToast(<AgendaPage />);
+    await renderAgenda();
 
     fireEvent.click(await screen.findByRole('button', { name: '+ Adicionar' }));
 
@@ -136,7 +164,7 @@ describe('Feature: Agenda com lista de espera e cancelamento tardio', () => {
 
   it('Dado paciente na fila, Quando agendar a partir dela, Então o formulário vem preenchido e a entrada sai da fila', async () => {
     const calls = mockAgenda();
-    renderWithToast(<AgendaPage />);
+    await renderAgenda();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Agendar' }));
     expect(await screen.findByText('Nova consulta')).toBeInTheDocument();
@@ -163,7 +191,7 @@ describe('Feature: Agenda com lista de espera e cancelamento tardio', () => {
 
   it('Dado falha ao tirar da fila, Quando a consulta é criada, Então avisa que a entrada continua na lista', async () => {
     mockAgenda({ waitlistPatchFails: true });
-    renderWithToast(<AgendaPage />);
+    await renderAgenda();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Agendar' }));
     fireEvent.change(await screen.findByLabelText(/Valor/), {
@@ -178,7 +206,7 @@ describe('Feature: Agenda com lista de espera e cancelamento tardio', () => {
 
   it('Dado cancelamento tardio com taxa e fila para o dia, Quando cancelar, Então avisa a taxa lançada e quantos aguardam', async () => {
     const calls = mockAgenda();
-    renderWithToast(<AgendaPage />);
+    await renderAgenda();
 
     fireEvent.click(await screen.findByTitle(/Maria Souza — Curativo/));
     fireEvent.click(await screen.findByText('Cancelar'));
