@@ -2042,3 +2042,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Ficou fora**: `role-gate.tsx` e seu teste (`tests/pages/staff-nav-role.test.tsx`) seguem no repositório, sem uso no layout; remover exige aprovação de TESTE-ALTERADO. `mais/layout.tsx` fica sem guarda de papel (rota aberta a toda a equipe, protegida pela página).
 - **Next step**: the-judge e validação em threads limpas; merge na release/v0.4.0. **Blockers**: nenhum.
 
+
+## Tela Hoje com dados no servidor (#548) (2026-10-25) — EM REVISÃO
+- **O que mudou**: `src/app/(staff)/page.tsx` é Server Component com `<Suspense>` por bloco (`_hoje/*`); cada bloco lê pela camada `src/lib/server/data/*` (`appointments`, `month-summary`, `follow-ups`, `supplies`, `reminders`, `majority`, `triage`), compartilhada com as rotas `/api` (rotas passam a só chamar a função; R4 e escopo preservados). Ações rápidas em `hoje-actions.ts` (`resolveFollowUp`, `decideTriage`, `keepMajorityGuardian`) via `defineAction`; `defineAction` ganha `authorize` (fora da transação, para 404/R4 antes de gravar). `check:server-first`: a página sai da allowlist. ADR-075: errata do HTTP 200 («tela de acesso negado (forbidden) renderizada no servidor»).
+- **R4**: `resolveFollowUp` aplica o vínculo Profissional↔Paciente (mais estrito que o PATCH antigo de retornos).
+- **Testes novos**: `tests/app/hoje-actions.test.ts`, `tests/integracao/hoje-auditoria-transacional.integracao.ts` (rollback da auditoria em Postgres real).
+- **TESTE-ALTERADO** (aprovado, troca de harness, cenários e asserções preservados): `tests/pages/{staff-dashboard,dashboard-role,consultas-sem-desfecho-ui,whatsapp-link-ui}.test.tsx`, um commit por arquivo; tabela de paridade no PR.
+- **Ficou fora**: `/api/photos/triage` na barra do celular do Profissional (outra issue).
+- **Next step**: the-judge e validação em threads limpas; merge na release/v0.4.0. **Blockers**: nenhum.
