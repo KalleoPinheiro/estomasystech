@@ -219,6 +219,12 @@ export default function AgendaPage() {
   const hydrated = useHydrated();
   const [consultationLink] = useState(readConsultationLink);
   const period = useAgendaPeriod(consultationLink?.startsAt ?? new Date());
+  // Girar/encolher a janela com a semana aberta: o celular não tem 7 colunas.
+  useEffect(() => {
+    if (compact && period.view === 'week') {
+      period.setView('day');
+    }
+  }, [compact, period]);
   const [recall] = useState(readRecallParams);
   const [creatingFor, setCreatingFor] = useState<Date | null>(() =>
     readRecallParams() ? clinicDayCell() : null,
@@ -445,7 +451,7 @@ export default function AgendaPage() {
       />
 
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
-        <PeriodNav period={period} showViewToggle={!compact} />
+        <PeriodNav period={period} compact={compact} />
         <ProfessionalFilter
           professionals={professionals ?? []}
           value={professionalFilter}
@@ -480,7 +486,7 @@ export default function AgendaPage() {
         error ? null : (
           <LoadingIndicator />
         )
-      ) : period.view !== 'month' && !compact ? (
+      ) : period.view !== 'month' ? (
         <WeekView
           weekStart={period.view === 'day' ? period.dayDate : period.weekStart}
           dayCount={period.view === 'day' ? 1 : 7}

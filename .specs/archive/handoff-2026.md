@@ -1999,3 +1999,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos** (nenhum existente alterado): `tests/lib/use-api-query-troca-de-url.test.tsx`, `tests/pages/agenda-busca-falha.test.tsx`, `e2e/agenda-busca-falha.spec.ts` (360, 390, 768 e 1280). Pré-patch: 5 dos 5 unitários novos falham no código da release.
 - **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
 
+## Agenda no celular: chips de status e seletor Mês/Dia (#582) (2026-10-25) — EM REVISÃO
+- **O que mudou**: os chips de status passam de linha rolável a `flex-wrap` (os 5 à vista em 360 e 390 px); o seletor de visão aparece no celular só com **Mês** e **Dia** (sem Semana; a visão Dia é a `WeekView` com `dayCount=1`); `PeriodNav` recebe `compact` no lugar de `showViewToggle`. Se a janela encolher com a Semana aberta, a página passa para Dia.
+- **Decisão do PO** (coordenador): celular com Mês e Dia, chips quebram em linhas; mobile first.
+- **Testes novos** (nenhum existente alterado): `tests/components/agenda-period-nav.test.tsx`, `e2e/agenda-celular-chips-e-visao.spec.ts` (360 e 390: 5 chips visíveis, sem rolagem, seletor Mês/Dia; Dia mostra uma coluna e Mês volta ao compacto).
+- **Observação**: `e2e/agenda-bloco-curto-legivel.spec.ts` (768 px) falha também na release sem esta mudança (mesmo resultado com e sem o patch): o teste avança no máximo 14 semanas até o dia da seed e, com a data de hoje, a seed fica além disso. Não mexi no teste (regra 8); fica para o coordenador decidir.
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+
