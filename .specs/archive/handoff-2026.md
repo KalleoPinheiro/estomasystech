@@ -2013,3 +2013,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **O que mudou**: no mês o «Carregando» segue como estava; em Semana e Dia a `WeekView` é desenhada com `appointments=[]` e a nova prop `loading`: colunas no lugar, `aria-busy`, texto «Carregando…» só para leitor de tela, sem «Nenhuma consulta» até a busca acabar. Nunca aparecem consultas de outro período.
 - **Testes novos** (nenhum existente alterado): `tests/pages/agenda-semana-carregando.test.tsx` (pré-patch: falha no código da release), `e2e/agenda-semana-carregando.spec.ts` (768 e 1280, busca retida por rota).
 - **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+## Agenda no celular: chips de status e seletor Mês/Dia (#582) (2026-10-25) — EM REVISÃO
+- **O que mudou**: os chips de status passam de linha rolável a `flex-wrap` (os 5 à vista em 360 e 390 px); o seletor de visão aparece no celular só com **Mês** e **Dia** (sem Semana; a visão Dia é a `WeekView` com `dayCount=1`); `PeriodNav` recebe `compact` no lugar de `showViewToggle`. Se a janela encolher com a Semana aberta, a página passa para Dia.
+- **Decisão do PO** (coordenador): celular com Mês e Dia, chips quebram em linhas; mobile first.
+- **Testes novos** (nenhum existente alterado): `tests/components/agenda-period-nav.test.tsx`, `e2e/agenda-celular-chips-e-visao.spec.ts` (360 e 390: 5 chips visíveis, sem rolagem, seletor Mês/Dia; Dia mostra uma coluna e Mês volta ao compacto).
+- **Observação**: `e2e/agenda-bloco-curto-legivel.spec.ts` (768 px) falha também na release sem esta mudança (mesmo resultado com e sem o patch): o teste avança no máximo 14 semanas até o dia da seed e, com a data de hoje, a seed fica além disso. Não mexi no teste (regra 8); fica para o coordenador decidir.
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+
