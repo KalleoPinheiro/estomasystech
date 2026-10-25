@@ -186,6 +186,7 @@ npm run test:mutacao      # mutantes (Stryker) em src/domain e src/application; 
 npm run test:e2e         # build + Playwright contra `next start` e contra `next dev` (ADR-021); na 1ª vez ou após bump: npx playwright install
 npm run test:e2e:prod    # só a suíte principal, contra o build (precisa de `npm run build` antes)
 npm run test:e2e:dev     # só papéis e login, contra `next dev`
+npm run test:console     # build + `e2e/console-limpo.spec.ts` no build e no `next dev`: falha em erro ou aviso de console, violação de CSP e hydration mismatch (#543)
 ```
 
 A suíte E2E sobe os próprios servidores e gera as credenciais a cada execução. Só para

@@ -1993,6 +1993,12 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Fora do escopo**: oferta de horários do autoagendamento (`list-available-slots`) não foi mexida.
 - **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
 
+## Console limpo nos E2E (#543, sobras) (2026-10-25) — EM REVISÃO
+- **O que mudou**: `e2e/console-limpo.spec.ts` percorre as rotas do menu de cada papel (admin de empresa, atendente, profissional) mais as de configuração do admin e a ficha do paciente, em 360 e 1280 px, o portal do paciente e do parceiro (com consulta e indicação) e as telas públicas; falha em `console.error`, `console.warn`, exceção da página, violação de CSP e hydration mismatch (React 19 o reporta como erro). `npm run test:console` faz build e roda a spec no build de produção e no `next dev`. No build de produção a spec já entra em `test:e2e:prod` (o `gate:local` a cobre sem mexer em `scripts/gate/`); no `next dev` ela roda por `playwright.console.config.ts`, porque o contrato C46 (#308) fixa o `testMatch` do `test:e2e:dev` em papéis e login. Seed de horário `console-limpo-portal` registrada no fim de `SLOT_SEEDS`.
+- **Sessões**: cookie assinado (vale nos dois modos; o convite das contas reais só existe no log do `next dev`). Consequência: `/minha-conta` (lê `/api/me`, 404 sem conta) e a ficha do paciente pelo profissional (sem vínculo, 404) ficam fora da spec; são lacunas declaradas, não ignoradas.
+- **Revisão dos `Date.now()`/`new Date()` em `.tsx`**: nenhum causa hydration mismatch nem divergência de fuso (os formatadores usam `APP_TIMEZONE`, ADR-073); nenhum código de `src/` mudou. Detalhe no PR.
+- **Next step**: the-judge em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+
 ## Agenda: erro visível na busca das consultas (#578) (2026-10-25) — EM REVISÃO
 - **Causa**: `useApiQuery` guardava um `data` único e só o sobrescrevia no sucesso: ao trocar de URL, ou quando a busca falhava (429), a grade seguia desenhando o recorte anterior; o erro da contagem por status era ignorado e a lista só mostrava um `ErrorAlert` genérico.
 - **O que mudou**: o hook guarda o resultado junto da URL e só o devolve para a URL corrente (a falha descarta o dado). A agenda mostra, com `role="alert"`, «Não foi possível carregar as consultas.» e o botão «Tentar de novo» (refaz lista e contagem); sem dado da URL corrente a grade não é desenhada; com erro na contagem os chips mostram «—» e o nome acessível «indisponível».
