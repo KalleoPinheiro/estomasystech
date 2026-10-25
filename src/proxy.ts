@@ -51,9 +51,9 @@ const API_RATE_LIMIT = new SharedRateLimiter(
 
 // Server Action (ADR-069 § 2) é um POST no caminho da página, fora de `/api/*`:
 // sem este teto ela escaparia do limite da API. Contador próprio, mesmo teto e
-// mesma chave (conta autenticada ou IP).
-const ACTION_RATE_LIMIT_MAX =
-  Number(process.env.ACTION_RATE_LIMIT_MAX) || API_RATE_LIMIT_MAX;
+// mesma chave (conta autenticada ou IP). O teto tem variável própria: relaxar a
+// API nos E2E não relaxa as ações.
+const ACTION_RATE_LIMIT_MAX = Number(process.env.ACTION_RATE_LIMIT_MAX) || 120;
 const ACTION_RATE_LIMIT = new SharedRateLimiter(
   'action',
   ACTION_RATE_LIMIT_MAX,

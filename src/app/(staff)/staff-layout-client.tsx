@@ -7,6 +7,7 @@ import {
   SidebarTrigger,
 } from '@still-void/ui/react/client';
 import { BottomNav } from '@/components/app-shell/bottom-nav';
+import { SidebarSpace } from '@/components/app-shell/sidebar-space';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/app-shell/skip-link';
 import { useStaffDocumentTitle } from '@/components/app-shell/use-staff-document-title';
 import { BrandLogo } from '@/components/brand-logo';
@@ -109,6 +110,7 @@ export function StaffLayoutClient({
             a 1120px e as telas do staff são tabelas largas. */}
           {/* Colado ao topo e com a altura da janela menos a faixa de homologação (#482):
               Tema e Sair ficam sempre à vista, inclusive em janela baixa. */}
+          <SidebarSpace />
           <SidebarPanel className="flex max-h-[calc(100dvh-var(--staging-banner-h,0px))] flex-col [&>.sv-app-sidebar__body]:max-h-full [&>.sv-app-sidebar__body]:min-h-0 [&>.sv-app-sidebar__body]:flex-1 [&>.sv-app-sidebar__body]:justify-between w-56 shrink-0 justify-between border-border border-r px-3 py-5 lg:sticky lg:top-0 lg:h-[calc(100dvh-var(--staging-banner-h,0px))] lg:self-start">
             {/* px-3 (e não p-5): a marca «EstomaSysTech» mede ~144 px e o miolo útil do menu
                 (painel − padding − padding do corpo) ficava em 135 px, cortando-a (#535). A
