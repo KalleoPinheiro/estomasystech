@@ -50,7 +50,8 @@ async function goToMonth(page: Page, isoDate: string): Promise<void> {
   const name = delta >= 0 ? "Próximo mês" : "Mês anterior";
   for (let i = 0; i < Math.abs(delta); i += 1) {
     const done = page.waitForResponse((r) => r.url().includes("month="), { timeout: 20_000 });
-    await page.getByRole("button", { name }).first().click();
+    // Repasses troca o mês por link (?month=, #547); as demais telas, por botão.
+    await page.getByRole("button", { name }).or(page.getByRole("link", { name })).first().click();
     await done;
   }
 }
