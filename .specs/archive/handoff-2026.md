@@ -2060,3 +2060,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Decisão do PO**: sem vínculo é `403` (a issue falava em 404; vale a decisão do coordenador, coerente com AGE-RN-17 e `resolveFollowUp`).
 - **Testes novos** (nenhum existente alterado): `tests/api/follow-up-patch-r4-597.test.ts`. Pré-patch: 5 de 7 falham (200 em vez de 403, sem auditoria); os de outra empresa e sem sessão já passavam e ficam como regressão.
 - **Next step**: the-judge, validação em thread limpa, gate:local no WSL se o coordenador exigir, merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Agenda com dados no servidor, leituras (#551, PR 1) (2026-10-25) — EM REVISÃO
+- **O que mudou**: `agenda/page.tsx` é Server Component com um só `<Suspense>`; `AgendaData` lê consultas, contagem, profissionais, grade, feriados e fila em paralelo pela camada `src/lib/server/data/*` (novas: `schedule`, `professionals`, `waitlist`; `countAppointmentsFor`), compartilhada com as rotas `/api`. O período vem da URL (`?visao`, `?dia`, `?status`, `?profissional`; `agenda-range.ts`), navegação por `router.push/replace` em transição. `loadBlock` foi para `src/lib/server/load-block.ts`. ADR-077.
+- **CLS**: o mês traz as duas variantes no HTML até a hidratação (`bothLayouts`) e o botão Semana é oculto por CSS.
+- **TESTE-ALTERADO** (troca de harness, cenários e asserções preservados): `tests/pages/{agenda-busca-falha,agenda-filtro-status,agenda-visao-dia,agenda-visao-semana,agenda-mes-dia-abre-no-dia-escolhido,agenda-waitlist-flow,waitlist-late-cancel-ui,staff-agenda}.test.tsx`; tabela de paridade no PR. Harness novo: `tests/support/agenda-app.tsx`.
+- **Ficou para o PR 2**: Server Actions de consulta (criar, recorrente, remarcar, confirmar, cancelar, falta, concluir) com auditoria na mesma transação e teste de rollback em Postgres real; as gravações seguem por `/api`.
+- **Next step**: the-judge, validação em thread limpa, gate:local no WSL; merge na release/v0.4.0. **Blockers**: nenhum.

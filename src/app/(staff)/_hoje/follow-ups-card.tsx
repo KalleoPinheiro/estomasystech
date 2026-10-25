@@ -5,8 +5,8 @@ import type { Session } from '@/lib/auth/session';
 import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { listFollowUpsFor } from '@/lib/server/data/follow-ups';
 import { whatsappSentToday } from '@/lib/server/data/reminders';
+import { loadBlock } from '@/lib/server/load-block';
 import { FollowUpRowActions } from './follow-up-row-actions';
-import { loadBlock } from './load-block';
 
 // Altura previsível acima da dobra (CLS, #548): 3 retornos; o resto fica em «Ver todos».
 const FOLLOW_UPS_CAP = 3;

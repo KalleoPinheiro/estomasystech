@@ -62,6 +62,12 @@ interface CalendarGridProps {
   professionalName?: (professionalId: string) => string;
   /** Celular: mês compacto + lista do dia (`MobileMonth`) no lugar da grade de chips. */
   compact?: boolean;
+  /**
+   * Antes de a página hidratar o servidor não sabe a largura da tela: desenha
+   * as duas versões e o CSS (`md:`) esconde a que não serve, então nada pula
+   * quando o cliente assume (#551, CLS). Vale mais que `compact`.
+   */
+  bothLayouts?: boolean;
   /** Filtro de status pede as canceladas: ocupam linha da célula como as demais (#538). */
   showCancelled?: boolean;
   onDayClick: (day: Date) => void;
@@ -77,6 +83,7 @@ export function CalendarGrid({
   closures = [],
   professionalName = () => 'Profissional',
   compact = false,
+  bothLayouts = false,
   showCancelled = false,
   onDayClick,
   onSelectDay,
@@ -94,149 +101,163 @@ export function CalendarGrid({
     byDay.set(key, [...(byDay.get(key) ?? []), appointment]);
   }
 
+  const mobile = (
+    <MobileMonth
+      monthDate={monthDate}
+      appointments={appointments}
+      closures={closures}
+      professionalName={professionalName}
+      isBookable={(day) =>
+        !isInvalidDay(day, scheduleConfig) &&
+        !closures.some(
+          (c) =>
+            c.professionalId === null &&
+            c.startsOn <= dayKey(day) &&
+            dayKey(day) <= c.endsOn,
+        )
+      }
+      onBook={onDayClick}
+      onSelectDay={onSelectDay}
+      onAppointmentClick={onAppointmentClick}
+    />
+  );
+  const desktop = (
+    <>
+      <StatusLegend />
+      <div className="overflow-x-auto">
+        <Card className="min-w-[840px] overflow-hidden">
+          <div className="grid grid-cols-7 border-border border-b bg-bg">
+            {WEEKDAY_LABELS.map((label) => (
+              <div
+                key={label}
+                className="px-2 py-2 text-center font-semibold text-ink-3 text-xs uppercase"
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {days.map((day) => {
+              const key = dayKey(day);
+              const isCurrentMonth = day.getMonth() === monthDate.getMonth();
+              const dayClosures = closures.filter(
+                (c) => c.startsOn <= key && key <= c.endsOn,
+              );
+              const clinicClosure = dayClosures.find(
+                (c) => c.professionalId === null,
+              );
+              const invalid =
+                isInvalidDay(day, scheduleConfig) || Boolean(clinicClosure);
+              const dayAppointments = (byDay.get(key) ?? []).sort((a, b) =>
+                a.startsAt.localeCompare(b.startsAt),
+              );
+              // Cancelada não ocupa linha da célula: vai para "+N mais" (#471),
+              // salvo quando o filtro de status a pede (#538).
+              const visibleAppointments = dayAppointments
+                .filter(
+                  (appointment) =>
+                    showCancelled || appointment.status !== 'cancelled',
+                )
+                .slice(0, MAX_VISIBLE_PER_DAY);
+              const hiddenCount =
+                dayAppointments.length - visibleAppointments.length;
+              return (
+                // biome-ignore lint/a11y/useSemanticElements: célula contém <Button> filhos (compromissos); trocar por <button> geraria <button> aninhado, HTML inválido.
+                <div
+                  key={key}
+                  data-calendar-day={key}
+                  role="button"
+                  tabIndex={invalid ? -1 : 0}
+                  onClick={() => !invalid && onDayClick(day)}
+                  onKeyDown={(event) => {
+                    if (invalid) return;
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onDayClick(day);
+                    }
+                  }}
+                  aria-disabled={invalid || undefined}
+                  className={`min-h-24 border-border border-r border-b p-1.5 align-top transition ${
+                    invalid
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'cursor-pointer hover:bg-accent-soft/50'
+                  } ${isCurrentMonth ? '' : 'bg-bg/70 text-ink-3'}`}
+                >
+                  <span
+                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full font-medium text-xs ${
+                      key === todayKey ? 'bg-accent-ink text-bg' : ''
+                    }`}
+                  >
+                    {day.getDate()}
+                  </span>
+                  {dayClosures.map((closure) => (
+                    <p
+                      key={closure.id}
+                      className="truncate px-1 text-ink-3 text-xs"
+                      title={closure.reason}
+                    >
+                      {closure.professionalId === null
+                        ? `Fechado: ${closure.reason}`
+                        : `${professionalName(closure.professionalId)} ausente`}
+                    </p>
+                  ))}
+                  <div className="mt-1 flex max-h-32 flex-col gap-1 overflow-hidden">
+                    {visibleAppointments.map((appointment) => (
+                      <Button
+                        key={appointment.id}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onAppointmentClick(appointment);
+                        }}
+                        title={`${formatTime(appointment.startsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`}
+                        variant="outline"
+                        className={`h-auto w-full truncate rounded border-0 px-1.5 py-0.5 text-left font-normal text-xs ${
+                          STATUS_COLORS[appointment.status] ?? 'bg-surface-2'
+                        } ${isPendingClosure(appointment, now) ? PENDING_CLOSURE_CLASS : ''}`}
+                      >
+                        {formatTime(appointment.startsAt)}{' '}
+                        {listPatientName(appointment, homonyms)}
+                      </Button>
+                    ))}
+                    {hiddenCount > 0 && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setExpandedDay(key);
+                        }}
+                        aria-label={`Ver todas as consultas de ${day.toLocaleDateString('pt-BR')}`}
+                        className="h-auto justify-start px-1.5 py-0 font-medium text-ink-3 text-xs"
+                      >
+                        +{hiddenCount} mais
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+    </>
+  );
+
   return (
     <div>
-      {!compact && <StatusLegend />}
       {appointments.length === 0 && (
         <EmptyState message="Nenhuma consulta agendada neste mês." />
       )}
-      {compact ? (
-        <MobileMonth
-          monthDate={monthDate}
-          appointments={appointments}
-          closures={closures}
-          professionalName={professionalName}
-          isBookable={(day) =>
-            !isInvalidDay(day, scheduleConfig) &&
-            !closures.some(
-              (c) =>
-                c.professionalId === null &&
-                c.startsOn <= dayKey(day) &&
-                dayKey(day) <= c.endsOn,
-            )
-          }
-          onBook={onDayClick}
-          onSelectDay={onSelectDay}
-          onAppointmentClick={onAppointmentClick}
-        />
+      {bothLayouts ? (
+        <>
+          <div className="md:hidden">{mobile}</div>
+          <div className="hidden md:block">{desktop}</div>
+        </>
+      ) : compact ? (
+        mobile
       ) : (
-        <div className="overflow-x-auto">
-          <Card className="min-w-[840px] overflow-hidden">
-            <div className="grid grid-cols-7 border-border border-b bg-bg">
-              {WEEKDAY_LABELS.map((label) => (
-                <div
-                  key={label}
-                  className="px-2 py-2 text-center font-semibold text-ink-3 text-xs uppercase"
-                >
-                  {label}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7">
-              {days.map((day) => {
-                const key = dayKey(day);
-                const isCurrentMonth = day.getMonth() === monthDate.getMonth();
-                const dayClosures = closures.filter(
-                  (c) => c.startsOn <= key && key <= c.endsOn,
-                );
-                const clinicClosure = dayClosures.find(
-                  (c) => c.professionalId === null,
-                );
-                const invalid =
-                  isInvalidDay(day, scheduleConfig) || Boolean(clinicClosure);
-                const dayAppointments = (byDay.get(key) ?? []).sort((a, b) =>
-                  a.startsAt.localeCompare(b.startsAt),
-                );
-                // Cancelada não ocupa linha da célula: vai para "+N mais" (#471),
-                // salvo quando o filtro de status a pede (#538).
-                const visibleAppointments = dayAppointments
-                  .filter(
-                    (appointment) =>
-                      showCancelled || appointment.status !== 'cancelled',
-                  )
-                  .slice(0, MAX_VISIBLE_PER_DAY);
-                const hiddenCount =
-                  dayAppointments.length - visibleAppointments.length;
-                return (
-                  // biome-ignore lint/a11y/useSemanticElements: célula contém <Button> filhos (compromissos); trocar por <button> geraria <button> aninhado, HTML inválido.
-                  <div
-                    key={key}
-                    data-calendar-day={key}
-                    role="button"
-                    tabIndex={invalid ? -1 : 0}
-                    onClick={() => !invalid && onDayClick(day)}
-                    onKeyDown={(event) => {
-                      if (invalid) return;
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        onDayClick(day);
-                      }
-                    }}
-                    aria-disabled={invalid || undefined}
-                    className={`min-h-24 border-border border-r border-b p-1.5 align-top transition ${
-                      invalid
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'cursor-pointer hover:bg-accent-soft/50'
-                    } ${isCurrentMonth ? '' : 'bg-bg/70 text-ink-3'}`}
-                  >
-                    <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full font-medium text-xs ${
-                        key === todayKey ? 'bg-accent-ink text-bg' : ''
-                      }`}
-                    >
-                      {day.getDate()}
-                    </span>
-                    {dayClosures.map((closure) => (
-                      <p
-                        key={closure.id}
-                        className="truncate px-1 text-ink-3 text-xs"
-                        title={closure.reason}
-                      >
-                        {closure.professionalId === null
-                          ? `Fechado: ${closure.reason}`
-                          : `${professionalName(closure.professionalId)} ausente`}
-                      </p>
-                    ))}
-                    <div className="mt-1 flex max-h-32 flex-col gap-1 overflow-hidden">
-                      {visibleAppointments.map((appointment) => (
-                        <Button
-                          key={appointment.id}
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onAppointmentClick(appointment);
-                          }}
-                          title={`${formatTime(appointment.startsAt)} ${appointment.patientName ?? ''} — ${appointment.procedure}${isPendingClosure(appointment, now) ? ` (${PENDING_CLOSURE_LABEL})` : ''}`}
-                          variant="outline"
-                          className={`h-auto w-full truncate rounded border-0 px-1.5 py-0.5 text-left font-normal text-xs ${
-                            STATUS_COLORS[appointment.status] ?? 'bg-surface-2'
-                          } ${isPendingClosure(appointment, now) ? PENDING_CLOSURE_CLASS : ''}`}
-                        >
-                          {formatTime(appointment.startsAt)}{' '}
-                          {listPatientName(appointment, homonyms)}
-                        </Button>
-                      ))}
-                      {hiddenCount > 0 && (
-                        <Button
-                          type="button"
-                          variant="link"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setExpandedDay(key);
-                          }}
-                          aria-label={`Ver todas as consultas de ${day.toLocaleDateString('pt-BR')}`}
-                          className="h-auto justify-start px-1.5 py-0 font-medium text-ink-3 text-xs"
-                        >
-                          +{hiddenCount} mais
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
+        desktop
       )}
       {expandedDay && (
         <Modal

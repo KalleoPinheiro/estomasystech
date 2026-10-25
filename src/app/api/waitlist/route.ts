@@ -1,16 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import {
-  AddToWaitlist,
-  findWaitlistMatches,
-} from '@/application/scheduling/waitlist';
+import { AddToWaitlist } from '@/application/scheduling/waitlist';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
-import { linkedPatientFilter } from '@/lib/auth/clinical-resource-scope';
 import { assertPatientLinkedForProfessionalWrite } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
+import { listWaitlistFor } from '@/lib/server/data/waitlist';
 import { waitlistWithNames } from '@/lib/waitlist-names';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -38,21 +35,12 @@ export async function GET(request: NextRequest) {
     return fail('date deve estar em AAAA-MM-DD', 400);
   }
 
-  return handleRequest(async () => {
-    const services = await getRepositories(sessionScope(guard.session));
-    const entries = date
-      ? await findWaitlistMatches(services.waitlist, date, professionalId)
-      : await services.waitlist.listWaiting();
-    // Escopo R4 (#186): o Profissional só vê a fila dos pacientes vinculados.
-    const isLinked = await linkedPatientFilter(
-      guard.session,
-      services.professionalPatientLinks,
-    );
-    return waitlistWithNames(
-      services,
-      entries.filter((entry) => isLinked(entry.patientId)),
-    );
-  });
+  return handleRequest(() =>
+    listWaitlistFor(guard.session, {
+      date: date ?? undefined,
+      professionalId,
+    }),
+  );
 }
 
 export async function POST(request: NextRequest) {

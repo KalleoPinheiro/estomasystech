@@ -1,162 +1,110 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { clinicDayCell } from '@/lib/clinic-calendar';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  type AgendaQuery,
+  type AgendaView,
+  type AgendaWindow,
+  agendaHref,
+  anchorForView,
+  parseDayKey,
+  resolveAgendaWindow,
+  shiftAnchor,
+} from './agenda-range';
 import { dayKey } from './calendar-days';
 
-export type AgendaView = 'month' | 'week' | 'day';
+export type { AgendaView } from './agenda-range';
 
-/** Domingo da semana de `date` (a grade do mês também começa no domingo). */
-export function startOfWeek(date: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate() - date.getDay(),
-  );
-}
+/** O que muda no recorte: valores novos, ou uma função do recorte mais recente pedido (`null` = nada a fazer). */
+export type NavigationChange =
+  | Partial<AgendaQuery>
+  | ((latest: AgendaQuery) => Partial<AgendaQuery> | null);
 
-const addDays = (date: Date, days: number): Date =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
-
-/** Só a primeira letra maiúscula ("Agosto de 2026"): `capitalize` do Tailwind maiusculiza a preposição. */
-export const monthLabel = (date: Date): string => {
-  const raw = date.toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric',
-  });
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-};
-
-/** "18 a 24 de outubro de 2026" (ou com os dois meses, quando a semana vira o mês). */
-export function weekLabel(weekStart: Date): string {
-  const last = addDays(weekStart, 6);
-  const day = (date: Date) => String(date.getDate());
-  const month = (date: Date) =>
-    date.toLocaleDateString('pt-BR', { month: 'long' });
-  const tail = `${last.getFullYear()}`;
-  return weekStart.getMonth() === last.getMonth()
-    ? `${day(weekStart)} a ${day(last)} de ${month(last)} de ${tail}`
-    : `${day(weekStart)} de ${month(weekStart)} a ${day(last)} de ${month(last)} de ${tail}`;
-}
-
-/** "Quinta-feira, 22 de outubro de 2026". */
-export function dayLabel(date: Date): string {
-  const raw = date.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
-
-/** Dia em que a visão entra: hoje, se cair no período exibido; senão o primeiro dia dele. */
-function entryDay(from: Date, to: Date): Date {
-  const today = clinicDayCell();
-  return today >= from && today < to ? today : from;
-}
-
-export interface AgendaPeriod {
-  view: AgendaView;
-  setView: (view: AgendaView) => void;
-  /** Primeiro dia do mês exibido (visão mensal). */
-  monthDate: Date;
-  /** Domingo da semana exibida (visão semanal). */
-  weekStart: Date;
-  /** Dia exibido (visão diária). */
-  dayDate: Date;
-  /** Janela das consultas: `from` incluso, `to` exclusivo. */
-  from: Date;
-  to: Date;
-  /** Janela dos feriados/ausências (a grade do mês mostra dias dos meses vizinhos). */
-  closuresFrom: string;
-  closuresTo: string;
-  label: string;
+export interface AgendaPeriod extends AgendaWindow {
+  setView: (view: AgendaView, options?: { replace?: boolean }) => void;
   shift: (delta: number) => void;
 }
 
 export interface AgendaPeriodState extends AgendaPeriod {
   /** Dia escolhido no mês compacto do celular: a visão Semana/Dia abre nele (#591). */
   chooseDay: (day: Date) => void;
+  /** Há uma navegação a caminho: a URL já mudou e o servidor ainda não respondeu. */
+  pending: boolean;
+  /** Vai a outro recorte (status, profissional) mantendo o período, sem criar entrada no histórico. */
+  navigate: (next: NavigationChange, options?: { replace?: boolean }) => void;
 }
 
-/** Período da agenda: mês (padrão), semana ou dia, com navegação para frente e para trás. */
-export function useAgendaPeriod(initial: Date): AgendaPeriodState {
-  const [view, setViewState] = useState<AgendaView>('month');
-  const [anchor, setAnchor] = useState(() => {
-    const day = clinicDayCell(initial);
-    return new Date(day.getFullYear(), day.getMonth(), 1);
-  });
-
+/**
+ * Período da agenda: mês (padrão), semana ou dia. A URL é a fonte da verdade
+ * (#551): o servidor lê `?visao`, `?dia`, `?status` e `?profissional` e manda
+ * as consultas desse recorte; aqui cada mudança vira navegação (`router.push`
+ * dentro de uma transição, então a tela atual fica no lugar até a resposta
+ * chegar). Só o dia escolhido no mês do celular é estado local.
+ */
+export function useAgendaPeriod(query: AgendaQuery): AgendaPeriodState {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [picked, setPicked] = useState<Date | null>(null);
+  // Último destino pedido enquanto o servidor responde: cliques seguidos somam
+  // (dois «próximo» andam dois períodos; trocar o status e o profissional não se desfazem).
+  const queued = useRef<AgendaQuery | null>(null);
+  useEffect(() => {
+    if (!pending) queued.current = null;
+  }, [pending]);
+  const { view, anchor, professionalId } = query;
+  // Chave estável dos status: o array da página é novo a cada renderização.
+  const statusKey = query.statuses.join(',');
 
   return useMemo(() => {
-    const monthDate = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-    const weekStart = startOfWeek(anchor);
-    const dayDate = new Date(
-      anchor.getFullYear(),
-      anchor.getMonth(),
-      anchor.getDate(),
-    );
-    const monthEnd = new Date(
-      monthDate.getFullYear(),
-      monthDate.getMonth() + 1,
-      1,
-    );
-    const span = {
-      month: { from: monthDate, to: monthEnd },
-      week: { from: weekStart, to: addDays(weekStart, 7) },
-      day: { from: dayDate, to: addDays(dayDate, 1) },
-    }[view];
-    const closuresFrom =
-      view === 'month'
-        ? new Date(monthDate.getFullYear(), monthDate.getMonth(), -6)
-        : span.from;
-    const closuresTo =
-      view === 'month'
-        ? new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 7)
-        : addDays(span.to, -1);
-
-    const setView = (next: AgendaView) => {
-      if (next === view) return;
-      if (next === 'month') {
-        setAnchor(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
-      } else if (view === 'month') {
-        // De mês para semana/dia: o dia escolhido no mês; sem escolha, hoje (se está no
-        // mês exibido) ou o dia 1.
-        setAnchor(picked ?? entryDay(monthDate, monthEnd));
-      } else if (next === 'day') {
-        // De semana para dia: hoje, se está na semana exibida; senão o domingo.
-        setAnchor(entryDay(weekStart, addDays(weekStart, 7)));
-      }
-      setViewState(next);
+    const anchorDay = parseDayKey(anchor) ?? new Date();
+    const window = resolveAgendaWindow(view, anchorDay);
+    const statuses = (
+      statusKey === '' ? [] : statusKey.split(',')
+    ) as AgendaQuery['statuses'];
+    const current: AgendaQuery = { view, anchor, statuses, professionalId };
+    const navigate = (
+      next: NavigationChange,
+      options: { replace?: boolean } = {},
+    ) => {
+      const latest = queued.current ?? current;
+      const change = typeof next === 'function' ? next(latest) : next;
+      if (!change) return;
+      const target = { ...latest, ...change };
+      queued.current = target;
+      const href = agendaHref(target);
+      startTransition(() => {
+        if (options.replace) {
+          router.replace(href, { scroll: false });
+        } else {
+          router.push(href, { scroll: false });
+        }
+      });
     };
-
     return {
-      view,
-      setView,
-      monthDate,
-      weekStart,
-      dayDate,
-      from: span.from,
-      to: span.to,
-      closuresFrom: dayKey(closuresFrom),
-      closuresTo: dayKey(closuresTo),
-      label: {
-        month: monthLabel(monthDate),
-        week: weekLabel(weekStart),
-        day: dayLabel(dayDate),
-      }[view],
+      ...window,
+      pending,
+      navigate,
       chooseDay: (day: Date) =>
         setPicked(new Date(day.getFullYear(), day.getMonth(), day.getDate())),
+      setView: (next: AgendaView, options?: { replace?: boolean }) => {
+        navigate((latest) => {
+          if (next === latest.view) return null;
+          const latestDay = parseDayKey(latest.anchor) ?? anchorDay;
+          const latestWindow = resolveAgendaWindow(latest.view, latestDay);
+          const target = anchorForView(latest.view, next, latestWindow, picked);
+          return { view: next, anchor: dayKey(target) };
+        }, options);
+      },
       shift: (delta: number) => {
         setPicked(null);
-        setAnchor((prev) => {
-          if (view === 'day') return addDays(prev, delta);
-          if (view === 'week') return addDays(prev, delta * 7);
-          return new Date(prev.getFullYear(), prev.getMonth() + delta, 1);
+        navigate((latest) => {
+          const latestDay = parseDayKey(latest.anchor) ?? anchorDay;
+          return {
+            anchor: dayKey(shiftAnchor(latest.view, latestDay, delta)),
+          };
         });
       },
     };
-  }, [anchor, view, picked]);
+  }, [view, anchor, statusKey, professionalId, picked, pending, router]);
 }

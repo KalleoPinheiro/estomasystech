@@ -8,7 +8,7 @@ import type { AppointmentDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
 import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { listAppointmentsFor } from '@/lib/server/data/appointments';
-import { loadBlock } from './load-block';
+import { loadBlock } from '@/lib/server/load-block';
 
 /** Próximo atendimento e números do dia, no topo da agenda de hoje (#428). */
 function DayHighlights({ today }: { today: AppointmentDto[] }) {

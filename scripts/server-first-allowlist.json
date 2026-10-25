@@ -1,5 +1,4 @@
 [
-  "src/app/(staff)/agenda/page.tsx",
   "src/app/(staff)/auditoria/page.tsx",
   "src/app/(staff)/configuracoes/page.tsx",
   "src/app/(staff)/faturamento/page.tsx",

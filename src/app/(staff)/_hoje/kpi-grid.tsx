@@ -4,7 +4,7 @@ import { RefreshErrorAlert } from '@/components/refresh-error-alert';
 import type { Session } from '@/lib/auth/session';
 import { formatCurrency } from '@/lib/format';
 import { buildMonthSummary } from '@/lib/server/data/month-summary';
-import { loadBlock } from './load-block';
+import { loadBlock } from '@/lib/server/load-block';
 
 export async function KpiGrid({ session }: { session: Session }) {
   const { data: summary, error } = await loadBlock(() =>

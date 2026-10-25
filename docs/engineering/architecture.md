@@ -65,7 +65,7 @@ Decisão: [ADR-069](../adr/069-dados-no-servidor-e-politica-de-cache.md); funda�
 | Papéis | catálogo fechado de 6 | [ADR-003](../adr/003-modelo-de-papeis-multi-empresa.md) |
 | Autenticação | só e-mail + senha própria; Google é integração | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
 | Paginação | cursor opaco em `meta.nextCursor` (pacientes, faturas) | `.specs/features/paginacao-cursor-csp-nonce/` |
-| Telas no servidor | Server Components, Server Actions, sem cache compartilhado de dado de clínica | [ADR-069](../adr/069-dados-no-servidor-e-politica-de-cache.md), [ADR-074](../adr/074-fundacao-server-first-sessao-dados-e-acoes.md) |
+| Telas no servidor | Server Components, Server Actions, sem cache compartilhado de dado de clínica | [ADR-069](../adr/069-dados-no-servidor-e-politica-de-cache.md), [ADR-074](../adr/074-fundacao-server-first-sessao-dados-e-acoes.md), [ADR-077](../adr/077-agenda-no-servidor-periodo-na-url.md) |
 | CSP | nonce por request, sem `unsafe-inline`; por isso o layout raiz é `force-dynamic` | `src/proxy.ts` |
 | Headers estáticos | HSTS, `X-Frame-Options`, COOP/CORP `same-origin`, sem `X-Powered-By` (#219) | `next.config.ts` |
 | Várias réplicas | rate limit no Postgres, fotos no S3, caches só de dado imutável | [`CONTEXT.md`](../../CONTEXT.md) § Critical constraints |
