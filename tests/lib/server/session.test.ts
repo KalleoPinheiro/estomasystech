@@ -198,3 +198,49 @@ describe('Feature: sessão no servidor por cookies (ADR-069 § 1)', () => {
     await expect(other.requirePlatformPage()).rejects.toThrow('FORBIDDEN');
   });
 });
+
+describe('Feature: papel por tela no servidor, no lugar do RoleGate do cliente (#545)', () => {
+  it('Dado o atendente, Quando abre Faturamento (restrito), Então recebe 403 sem montar a página', async () => {
+    signedIn('atendente');
+    const { requireStaffPageFor } = await loadGuards();
+
+    await expect(requireStaffPageFor('/faturamento')).rejects.toThrow(
+      'FORBIDDEN',
+    );
+  });
+
+  it('Dado o admin da clínica, Quando abre Faturamento, Então a sessão é devolvida', async () => {
+    signedIn('company_admin');
+    const { requireStaffPageFor } = await loadGuards();
+
+    const session = await requireStaffPageFor('/faturamento');
+
+    expect(session.role).toBe('company_admin');
+  });
+
+  it('Dado o atendente, Quando abre a Agenda (aberta a ele), Então entra', async () => {
+    signedIn('atendente');
+    const { requireStaffPageFor } = await loadGuards();
+
+    await expect(requireStaffPageFor('/agenda')).resolves.toMatchObject({
+      role: 'atendente',
+    });
+  });
+
+  it('Dado caminho fora do mapa de telas, Quando a guarda roda, Então só exige a equipe', async () => {
+    signedIn('atendente');
+    const { requireStaffPageFor } = await loadGuards();
+
+    await expect(requireStaffPageFor('/mais')).resolves.toMatchObject({
+      role: 'atendente',
+    });
+  });
+
+  it('Dado visitante sem sessão, Quando abre uma tela, Então vai ao login voltando para ela', async () => {
+    const { requireStaffPageFor } = await loadGuards();
+
+    await expect(requireStaffPageFor('/faturamento')).rejects.toThrow(
+      'REDIRECT /login?next=%2Ffaturamento',
+    );
+  });
+});

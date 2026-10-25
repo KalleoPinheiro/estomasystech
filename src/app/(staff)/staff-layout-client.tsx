@@ -18,7 +18,6 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import type { AppVersionDto, SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
-import { RoleGate } from './role-gate';
 import { ScrollFade } from './scroll-fade';
 import { SidebarAutoClose } from './sidebar-auto-close';
 import { StaffNav } from './staff-nav';
@@ -146,7 +145,7 @@ export function StaffLayoutClient({
               <SidebarTrigger className="min-h-11 min-w-11" />
               <BrandLogo />
             </div>
-            <RoleGate>{children}</RoleGate>
+            {children}
           </SidebarInset>
           <BottomNav />
         </div>

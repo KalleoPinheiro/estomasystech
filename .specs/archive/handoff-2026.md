@@ -2035,3 +2035,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Pergunta aberta (PO)**: no desktop o mês não tem dia marcado; se a Dia/Semana deve abrir num dia clicado ali, é decisão nova (hoje o clique na célula abre «Nova consulta»).
 - **Testes novos** (nenhum existente alterado): `tests/pages/agenda-mes-dia-abre-no-dia-escolhido.test.tsx` (pré-patch: 4 de 5 falham), `e2e/agenda-mes-dia-abre-no-dia-escolhido.spec.ts` (360 e 1280).
 - **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Casca da equipe no servidor (#545) (2026-10-25) — EM REVISÃO
+- **O que mudou**: `requireStaffPageFor(href)` (`src/lib/server/session.ts`) aplica a matriz de papéis da API à tela e entra no `layout.tsx` de cada segmento de `(staff)` (agenda, auditoria, configuracoes, faturamento, materiais, minha-conta, pacientes, parceiros, pedidos-titular, procedimentos, profissionais, relatorios, repasses, triagem); papel sem acesso recebe `forbidden()` antes de a página montar. `RoleGate` deixou de ser montado em `staff-layout-client.tsx`. Os dois `<a>` de `clinic-info-incomplete-alert.tsx` viram `Link`. `defineAction` com `audit` função roda handler e auditoria na MESMA transação (`transactions.run` + `recordAuditNow`; handler grava por `tx`); falha da trilha desfaz tudo e não chama `refresh()`. Dois tipos: `AuditedActionDefinition` e `UnauditedActionDefinition` (`audit: false`). ADR-075 novo; ADR-074, `conventions.md` e domínio acesso atualizados. Identidade, papel, menu e versão já chegavam por props desde a #544 (zero `/api` da casca).
+- **TESTE-ALTERADO**: ver o corpo do PR (`tests/lib/server/define-action.test.ts`, handler de `load()` passa a gravar por `tx`, contrato novo da ação auditada).
+- **Ficou fora**: `role-gate.tsx` e seu teste (`tests/pages/staff-nav-role.test.tsx`) seguem no repositório, sem uso no layout; remover exige aprovação de TESTE-ALTERADO. `mais/layout.tsx` fica sem guarda de papel (rota aberta a toda a equipe, protegida pela página).
+- **Next step**: the-judge e validação em threads limpas; merge na release/v0.4.0. **Blockers**: nenhum.
+

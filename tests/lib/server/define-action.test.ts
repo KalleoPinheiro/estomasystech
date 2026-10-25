@@ -51,9 +51,8 @@ const patientsOf = async (clinicId: string) => {
 
 const load = async () => {
   const { defineAction } = await import('@/lib/server/define-action');
-  const handler = vi.fn(async ({ input, scope }) => {
-    const { patients } = await getRepositories(scope);
-    await patients.save(buildPatient({ fullName: input.name }));
+  const handler = vi.fn(async ({ input, tx }) => {
+    await tx.patients.save(buildPatient({ fullName: input.name }));
     return { saved: input.name };
   });
   const action = defineAction({
@@ -265,5 +264,61 @@ describe('Feature: Server Action com guarda, zod, escopo e auditoria (ADR-069 §
       success: true,
       data: 'super_admin',
     });
+  });
+
+  it('Dado que a auditoria falha, Quando a ação grava, Então nada fica gravado e a ação responde erro (ADR-075)', async () => {
+    signIn('company_admin', CLINIC_A_ID);
+    const { defineAction } = await import('@/lib/server/define-action');
+    const action = defineAction({
+      access: { kind: 'staff' },
+      input: z.object({ name: z.string() }),
+      handler: async ({ input, tx }) => {
+        await tx.patients.save(buildPatient({ fullName: input.name }));
+        return input.name;
+      },
+      audit: () => {
+        throw new Error('trilha indisponível');
+      },
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const result = await action({ name: 'Sem Trilha Nao Grava' });
+
+    expect(result).toEqual({
+      success: false,
+      data: null,
+      error: 'Erro interno do servidor',
+    });
+    expect(refreshed).not.toHaveBeenCalled();
+    const names = (await patientsOf(CLINIC_A_ID)).map((p) => p.fullName);
+    expect(names).not.toContain('Sem Trilha Nao Grava');
+  });
+
+  it('Dado que o handler falha depois de gravar, Quando a ação roda, Então a gravação é desfeita e nenhuma auditoria fica', async () => {
+    signIn('company_admin', CLINIC_A_ID);
+    const { defineAction } = await import('@/lib/server/define-action');
+    const action = defineAction({
+      access: { kind: 'staff' },
+      input: z.object({ name: z.string() }),
+      handler: async ({ input, tx }) => {
+        await tx.patients.save(buildPatient({ fullName: input.name }));
+        throw new ValidationError('Regra violada');
+      },
+      audit: ({ input }) => ({
+        action: 'create',
+        resourceType: 'patient',
+        resourceId: input.name,
+      }),
+    });
+
+    const result = await action({ name: 'Desfeito Por Erro' });
+
+    expect(result.error).toBe('Regra violada');
+    const names = (await patientsOf(CLINIC_A_ID)).map((p) => p.fullName);
+    expect(names).not.toContain('Desfeito Por Erro');
+    const events = await (
+      await getRepositories(clinicScope(CLINIC_A_ID))
+    ).auditEvents.findAll();
+    expect(events.map((e) => e.resourceId)).not.toContain('Desfeito Por Erro');
   });
 });
