@@ -49,6 +49,7 @@ last_reviewed: 2026-09-26
 | `tests/scripts/`, `tests/docs/` | gates (`check:sv`, `check:docs`) e estrutura da documentação | sistema de arquivos |
 | `e2e/` | jornadas no navegador | Playwright, servidor próprio |
 
+- **Data e hora no fuso da clínica ([ADR-073](../adr/073-datas-no-fuso-da-clinica-explicito.md)).** Regra de dia/hora usa `src/domain/shared/time-zone.ts` (e `src/lib/clinic-calendar.ts` no cliente); `getHours`/`setDate`/`new Date(y, m, d)` e `toLocale*String` sem `timeZone` são proibidos em `src/domain`, `src/application`, `src/app` e `src/lib` (`tests/lib/fuso-sem-date-local.test.ts`). Teste de fuso troca `process.env.TZ` e fixa `APP_TIMEZONE`.
 - Estilo BDD nos nomes (`Feature / Cenário / Dado-Quando-Então`); fixtures via `tests/support/builders.ts`.
 - Regra de negócio crítica (dado de saúde, dinheiro, acesso entre papéis ou empresas, agenda) tem cenário ligado em `tests/bdd/regras-criticas.ts`; `tests/bdd/rastreabilidade.test.ts` falha se faltar ([ADR-048](../adr/048-bdd-com-describe-it-e-rastreabilidade-de-regras-criticas.md)). Regra crítica nova entra no manifesto no mesmo PR.
 - Caminho de exceção (entrada inválida, sem permissão, outra clínica, duplicidade, concorrência, falha de integração, estado terminal) vive na matriz `docs/domains/<d>/excecoes.md`, cada linha com o teste que a prova; `tests/bdd/matriz-excecoes.test.ts` falha se o teste citado não existe ([ADR-049](../adr/049-matriz-de-excecoes-por-dominio.md)). Funcionalidade nova com exceção nova atualiza a matriz no mesmo PR.

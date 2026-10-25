@@ -404,6 +404,7 @@ export function PatientPhotoUpload({
               src={previewUrl}
               alt="Prévia da foto selecionada"
               fill
+              unoptimized
               className="object-cover"
             />
           </div>

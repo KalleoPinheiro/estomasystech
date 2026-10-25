@@ -1,5 +1,18 @@
 # estomasystech
 
+## 0.3.0
+
+### Minor Changes
+
+- b9fb108: Configurações agora abre num índice de seções, e cada seção (Dados cadastrais, Identidade, Horários e agenda, Feriados e ausências, Contas de acesso e as demais) tem a própria tela, com «Voltar ao índice» no topo. No celular a tela deixa de ser uma página de mais de 8 mil pixels. Links antigos com âncora (por exemplo, /configuracoes#horarios) continuam funcionando, e cada papel vê as mesmas seções de antes.
+- 5c2023f: A agenda ganhou o filtro por status da consulta: chips de Agendada, Confirmada, Concluída, Cancelada e Faltou, com a quantidade de cada uma no período e no profissional escolhidos. Dá para marcar mais de um, o recorte fica no endereço da página (o link compartilhado mostra a mesma lista) e, por padrão, as consultas canceladas ficam de fora até o chip «Cancelada» ser marcado.
+
+### Patch Changes
+
+- 2ca880e: Na agenda por dia e por semana, a consulta curta (15 ou 30 minutos) agora mostra hora, paciente e procedimento legíveis numa linha só, em vez de ter o texto cortado ou sobreposto à consulta seguinte.
+- 5eafaef: As miniaturas das fotos clínicas voltam a aparecer na triagem, na ficha e no portal (o otimizador de imagem as recusava com 401), e abrir um modal ou folha deixa de gerar erro de CSP no console; a rolagem do fundo passa a ser travada de fato.
+- c33b683: Horários e dias da agenda, do portal, dos resumos, dos relatórios e dos repasses agora seguem sempre o fuso da clínica (São Paulo por padrão), mesmo quando o computador ou o celular de quem usa está em outro fuso. Corrige a janela do profissional, o dia de feriado e os horários oferecidos no autoagendamento quando o servidor roda em UTC.
+
 ## 0.2.0
 
 ### Minor Changes

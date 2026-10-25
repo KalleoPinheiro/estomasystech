@@ -9,9 +9,9 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import SettingsPage from '@/app/(staff)/configuracoes/page';
 import type { UserRole } from '@/domain/auth/user-role';
 import type { ScheduleClosureDto } from '@/lib/dto';
+import SettingsPage from '../support/settings-all-sections';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
 
 vi.mock('next/navigation', () => ({

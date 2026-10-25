@@ -1,8 +1,9 @@
 /**
  * Confere o recibo do gate local no corpo do PR (job `recibo-gate` do CI).
- * Uso: `tsx scripts/gate/verify-receipt.ts --body-file <arquivo> --head-sha <sha> [--base-ref origin/main]`.
+ * Uso: `tsx scripts/gate/verify-receipt.ts --body-file <arquivo> --head-sha <sha> [--base-ref origin/main] [--head-ref <branch>]`.
  * Sai 1 se o recibo falta, é de outro commit ou não lista as etapas obrigatórias
- * (com `--base-ref`, exige também `mutacao` quando o diff muda regra em domain/application).
+ * (com `--base-ref`, exige também `mutacao` quando o diff muda regra em domain/application; com
+ * `--head-ref release/*`, exige `docker` e `backup` e dispensa a `mutacao`, ADR-071).
  */
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -20,6 +21,6 @@ const changed = baseRef
       encoding: 'utf8',
     }).stdout.split('\n').filter(Boolean)
   : [];
-const check = verifyReceipt(body, option('--head-sha'), changed);
+const check = verifyReceipt(body, option('--head-sha'), changed, option('--head-ref'));
 console.log(check.ok ? `✓ ${check.reason}` : `✗ ${check.reason}`);
 process.exit(check.ok ? 0 : 1);

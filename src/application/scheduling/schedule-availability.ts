@@ -14,6 +14,7 @@ import {
   type WeeklyWindow,
 } from '@/domain/scheduling/schedule-availability';
 import { NotFoundError } from '@/domain/shared/errors';
+import { startOfZonedDay } from '@/domain/shared/time-zone';
 import { assertActiveProfessional } from './assert-active-professional';
 
 export interface CreatedClosure {
@@ -35,11 +36,11 @@ async function assertProfessional(
   }
 }
 
-/** Dia local AAAA-MM-DD → [00:00 do dia, 00:00 do dia seguinte). */
+/** Dia da clínica AAAA-MM-DD → [00:00 do dia, 00:00 do dia seguinte) no fuso da clínica. */
 function localDayBounds(startsOn: string, endsOn: string): [Date, Date] {
   const [y1, m1, d1] = startsOn.split('-').map(Number);
   const [y2, m2, d2] = endsOn.split('-').map(Number);
-  return [new Date(y1, m1 - 1, d1), new Date(y2, m2 - 1, d2 + 1)];
+  return [startOfZonedDay(y1, m1, d1), startOfZonedDay(y2, m2, d2 + 1)];
 }
 
 /** Feriado/recesso da clínica ou ausência de um profissional. */

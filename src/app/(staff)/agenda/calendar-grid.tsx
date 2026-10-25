@@ -8,6 +8,7 @@ import {
   DEFAULT_SCHEDULE_CONFIG,
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
+import { clinicDayCell, instantDayKey } from '@/lib/clinic-calendar';
 import { isPendingClosure } from '@/lib/day-summary';
 import type { AppointmentDto, ScheduleClosureDto } from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatTime } from '@/lib/format';
@@ -61,6 +62,8 @@ interface CalendarGridProps {
   professionalName?: (professionalId: string) => string;
   /** Celular: mês compacto + lista do dia (`MobileMonth`) no lugar da grade de chips. */
   compact?: boolean;
+  /** Filtro de status pede as canceladas: ocupam linha da célula como as demais (#538). */
+  showCancelled?: boolean;
   onDayClick: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }
@@ -72,18 +75,19 @@ export function CalendarGrid({
   closures = [],
   professionalName = () => 'Profissional',
   compact = false,
+  showCancelled = false,
   onDayClick,
   onAppointmentClick,
 }: CalendarGridProps) {
   const days = buildMonthDays(monthDate);
   const now = new Date();
-  const todayKey = dayKey(now);
+  const todayKey = dayKey(clinicDayCell(now));
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const byDay = new Map<string, AppointmentDto[]>();
   const homonyms = homonymPatientIds(appointments);
   for (const appointment of appointments) {
-    const key = dayKey(new Date(appointment.startsAt));
+    const key = instantDayKey(appointment.startsAt);
     byDay.set(key, [...(byDay.get(key) ?? []), appointment]);
   }
 
@@ -139,9 +143,13 @@ export function CalendarGrid({
                 const dayAppointments = (byDay.get(key) ?? []).sort((a, b) =>
                   a.startsAt.localeCompare(b.startsAt),
                 );
-                // Cancelada não ocupa linha da célula: vai para "+N mais" (#471).
+                // Cancelada não ocupa linha da célula: vai para "+N mais" (#471),
+                // salvo quando o filtro de status a pede (#538).
                 const visibleAppointments = dayAppointments
-                  .filter((appointment) => appointment.status !== 'cancelled')
+                  .filter(
+                    (appointment) =>
+                      showCancelled || appointment.status !== 'cancelled',
+                  )
                   .slice(0, MAX_VISIBLE_PER_DAY);
                 const hiddenCount =
                   dayAppointments.length - visibleAppointments.length;

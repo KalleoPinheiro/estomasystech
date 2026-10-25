@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { PORTAL_BOOKING_HORIZON_DAYS } from '@/domain/scheduling/patient-self-service';
+import { zonedDateKey } from '@/domain/shared/time-zone';
 import { apiFetch } from '@/lib/client';
 import type { ProcedureDto } from '@/lib/dto';
 import { formatDateTime, formatTime } from '@/lib/format';
@@ -23,11 +24,8 @@ export interface AvailableSlotDto {
   endsAt: string;
 }
 
-/** Data local no formato aceito por <input type="date"> e pela API. */
-export const dayKey = (date: Date): string =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-    date.getDate(),
-  ).padStart(2, '0')}`;
+/** Dia da clínica no formato aceito por <input type="date"> e pela API. */
+export const dayKey = (date: Date): string => zonedDateKey(date);
 
 export const OFFER_WINDOW_DAYS = PORTAL_BOOKING_HORIZON_DAYS;
 

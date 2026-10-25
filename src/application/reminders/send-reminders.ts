@@ -306,11 +306,8 @@ class ClinicReminders {
   }
 
   private async recallReminders(now: Date): Promise<PendingReminder[]> {
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
+    const { year, month, day } = zonedParts(now);
+    const startOfToday = startOfZonedDay(year, month, day);
     const overdue =
       await this.services.followUps.findPendingDueBefore(startOfToday);
 

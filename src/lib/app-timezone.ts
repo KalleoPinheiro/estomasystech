@@ -1,4 +1,4 @@
-import { appTimeZone } from '@/domain/shared/time-zone';
+import { appTimeZone, isValidTimeZone } from '@/domain/shared/time-zone';
 import { logger } from '@/lib/observability/logger';
 
 /** Fuso efetivo do processo Node (`TZ`), como o `Date` local o enxerga. */
@@ -30,6 +30,26 @@ export function assertProcessTimeZone(): void {
 }
 
 /**
+ * O cliente recebe o fuso fixado no `next build` (`NEXT_PUBLIC_APP_TIMEZONE`);
+ * o servidor lê `APP_TIMEZONE` do runtime. Se divergirem, servidor e navegador
+ * mostrariam datas diferentes (ADR-073): em produção recusa subir; fora dela, avisa.
+ */
+export function assertClientTimeZone(): void {
+  const built = process.env.NEXT_PUBLIC_APP_TIMEZONE;
+  const expected = appTimeZone();
+  if (!built || built === expected) {
+    return;
+  }
+  const message =
+    `APP_TIMEZONE do runtime (${expected}) difere do fixado no build (${built}). ` +
+    'Refaça o build com o mesmo APP_TIMEZONE (a imagem Docker usa o padrão America/Sao_Paulo).';
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(message);
+  }
+  logger.warn(`[config] ${message}`);
+}
+
+/**
  * Alinha o fuso do processo a `APP_TIMEZONE` antes de checar (#206). Na Vercel
  * `TZ` é variável reservada e as funções rodam sempre em UTC — sem este passo
  * o app nem subiria. Node relê `process.env.TZ` quando ele é atribuído. Se o
@@ -37,6 +57,11 @@ export function assertProcessTimeZone(): void {
  */
 export function alignProcessTimeZone(): void {
   const expected = appTimeZone();
+  if (!isValidTimeZone(expected)) {
+    throw new Error(
+      `APP_TIMEZONE (${expected}) não é um fuso IANA válido (ex.: America/Sao_Paulo).`,
+    );
+  }
   if (processTimeZone() !== expected) {
     process.env.TZ = expected;
     logger.warn(
@@ -44,6 +69,7 @@ export function alignProcessTimeZone(): void {
     );
   }
   assertProcessTimeZone();
+  assertClientTimeZone();
 }
 
 /**

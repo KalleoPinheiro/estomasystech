@@ -24,6 +24,7 @@ import {
   formatDateTimeWithSeconds,
   RESOURCE_LABELS,
 } from '@/lib/audit-labels';
+import { clinicDayEnd, clinicDayStart } from '@/lib/clinic-calendar';
 import type { PlatformAuditEventDto } from '@/lib/dto';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
 
@@ -37,8 +38,8 @@ function clinicLabel(event: PlatformAuditEventDto): string {
 
 function periodQuery(from: string, to: string): string {
   const params = new URLSearchParams();
-  if (from) params.set('from', new Date(`${from}T00:00:00`).toISOString());
-  if (to) params.set('to', new Date(`${to}T23:59:59.999`).toISOString());
+  if (from) params.set('from', clinicDayStart(from).toISOString());
+  if (to) params.set('to', clinicDayEnd(to, 999).toISOString());
   const query = params.toString();
   return query ? `?${query}` : '';
 }

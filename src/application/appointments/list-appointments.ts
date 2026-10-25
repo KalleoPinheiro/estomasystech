@@ -1,5 +1,8 @@
 import type { PatientRepository } from '@/domain/patient/patient-repository';
-import type { Appointment } from '@/domain/scheduling/appointment';
+import type {
+  Appointment,
+  AppointmentStatus,
+} from '@/domain/scheduling/appointment';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 
 export interface AppointmentWithPatient {
@@ -13,6 +16,8 @@ export interface ListAppointmentsInput {
   from: Date;
   to: Date;
   professionalId?: string;
+  /** Sem o campo, todos os status; lista vazia, nenhum. */
+  statuses?: readonly AppointmentStatus[];
 }
 
 export class ListAppointments {
@@ -29,6 +34,7 @@ export class ListAppointments {
       input.to,
       {
         professionalId: input.professionalId,
+        statuses: input.statuses,
       },
     );
     const patients = await this.patients.findByIds(

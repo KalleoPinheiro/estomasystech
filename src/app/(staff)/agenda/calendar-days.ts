@@ -1,4 +1,5 @@
 import type { ScheduleConfig } from '@/domain/scheduling/schedule-config';
+import { clinicDayCell } from '@/lib/clinic-calendar';
 
 export const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -19,8 +20,8 @@ export function buildMonthDays(monthDate: Date): Date[] {
 
 /** Dia inválido = passado ou fora dos dias configurados (AGENDA-01). */
 export function isInvalidDay(day: Date, config: ScheduleConfig): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // "Hoje" é o dia da clínica, não o do aparelho (#563).
+  const today = clinicDayCell();
   const compare = new Date(day);
   compare.setHours(0, 0, 0, 0);
   return compare < today || !config.weekdays.includes(day.getDay());

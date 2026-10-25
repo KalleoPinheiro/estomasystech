@@ -62,6 +62,8 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: APP_VERSION,
     NEXT_PUBLIC_RELEASE_VERSION: RELEASE_VERSION,
+    // Fuso da clínica para o cliente (#543): sem segredo, igual ao do servidor.
+    NEXT_PUBLIC_APP_TIMEZONE: process.env.APP_TIMEZONE?.trim() || "America/Sao_Paulo",
     NEXT_PUBLIC_APP_COMMIT: isHomologation
       ? (process.env.VERCEL_GIT_COMMIT_SHA ?? "")
       : "",
@@ -74,6 +76,10 @@ const nextConfig: NextConfig = {
   // intercepta cliques em elementos reais ali embaixo (ex.: botão "Sair" da
   // sidebar) — atrapalha o Playwright em modo dev sem existir em produção.
   devIndicators: false,
+  // ADR-069: imagem autenticada (`/api/**`) nunca passa pelo otimizador — ele busca sem
+  // cookie (401) e guardaria o arquivo num cache de disco sem escopo de empresa. Só os
+  // ativos públicos entram; o resto é recusado (400) mesmo que esqueçam `unoptimized`.
+  images: { localPatterns: [{ pathname: "/brand/**" }, { pathname: "/icons/**" }] },
   serverExternalPackages: ["pg", "@electric-sql/pglite", "googleapis"],
   async headers() {
     return [

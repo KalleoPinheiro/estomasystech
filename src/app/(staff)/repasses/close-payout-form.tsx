@@ -4,15 +4,13 @@ import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { zonedDateKey } from '@/domain/shared/time-zone';
 import { apiFetch } from '@/lib/client';
 import type { PayoutStatementDto } from '@/lib/dto';
 import { formatCurrency, monthLabelPtBr } from '@/lib/format';
 import { PayoutItemsTable } from './payout-tables';
 
-const today = (): string => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-};
+const today = (): string => zonedDateKey(new Date());
 
 /** Confirma o fechamento do mês de um profissional: congela e registra o pagamento. */
 export function ClosePayoutForm({

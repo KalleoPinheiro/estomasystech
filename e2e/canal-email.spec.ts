@@ -13,7 +13,7 @@ test.describe("canal de e-mail da clínica", () => {
   });
 
   test("admin salva remetente e chave, vê só os 4 últimos caracteres e remove", async ({ page }) => {
-    await page.goto("/configuracoes");
+    await page.goto("/configuracoes/email");
     const section = page.getByRole("region", { name: "Canal de e-mail" });
     await expect(section.getByText(/^Nenhum canal configurado/)).toBeVisible();
     await expect(section.getByLabel("Provedor")).toHaveValue("resend");

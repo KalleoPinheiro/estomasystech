@@ -1,6 +1,7 @@
 ---
 title: "ADR 067 — Configurações: página única com índice fixo no celular; sub-rotas ficam para depois da v0.2.0"
-status: frozen
+status: superseded
+superseded_by: docs/adr/072-configuracoes-em-sub-rotas.md
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-23

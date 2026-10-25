@@ -3,6 +3,7 @@ import {
   ValidationError,
 } from '../shared/errors';
 import { newId } from '../shared/id';
+import { startOfZonedMonth, startOfZonedMonthOf } from '../shared/time-zone';
 import {
   type CommissionRule,
   type ProducedSession,
@@ -36,21 +37,21 @@ export interface PayoutItem {
 
 const PERIOD_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-/** "2026-09" → [1º/set 00:00, 1º/out 00:00) no fuso local (mesma régua do relatório). */
+/** "2026-09" → [1º/set 00:00, 1º/out 00:00) no fuso da clínica (mesma régua do relatório). */
 export function periodBounds(period: string): { start: Date; end: Date } {
   if (!PERIOD_PATTERN.test(period)) {
     throw new ValidationError('Mês deve estar no formato AAAA-MM');
   }
   const [year, month] = period.split('-').map(Number);
   return {
-    start: new Date(year, month - 1, 1),
-    end: new Date(year, month, 1),
+    start: startOfZonedMonth(year, month),
+    end: startOfZonedMonth(year, month + 1),
   };
 }
 
 /** Só mês encerrado pode ser fechado — o mês corrente ainda produz sessões. */
 export function isPeriodEnded(period: string, now: Date): boolean {
-  const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfCurrentMonth = startOfZonedMonthOf(now);
   return periodBounds(period).end.getTime() <= startOfCurrentMonth.getTime();
 }
 

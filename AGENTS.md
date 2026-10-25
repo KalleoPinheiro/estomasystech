@@ -29,7 +29,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run test:coverage` | gate de CI | **100% em domain, application, infrastructure e lib; piso 90% global, UI incluída** ([ADR-050](docs/adr/050-limiar-100-por-camada-e-ui-medida.md)) |
 | `npm run gate:local` | antes de marcar o PR como pronto | build + E2E + gates + integridade dos testes; imprime a linha `E2E-GATE:` do PR ([ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)) |
 | `npm run changeset` / `npm run check:changeset` | PR que toca `src/`, `drizzle/` ou `Dockerfile` | um `.changeset/*.md` por PR (`--empty` se nada muda para a clínica); níveis no [ADR-043](docs/adr/043-versionamento-com-changesets-e-release-por-tag.md) |
-| `npm run release:sync` / `release:prepare` / `release:publish` | release de produção | fluxo `feat → release/vX.Y.Z → main` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md), `homologacao.md` § 1): `sync` mergeia a `main` na release; `prepare` (na release) versiona e deixa a Release em rascunho; `publish` (na `main`) tagueia o commit de merge, `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
+| `npm run release:sync` / `release:cut` / `release:publish` | release de produção | fluxo `feat → release/vX.Y.Z → main` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md), `homologacao.md` § 1): `sync` mergeia a `main` na release; `cut` (na release, com a marca `homologacao/vX.Y.Z`) roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo e abre o PR para a `main` ([ADR-071](docs/adr/071-corte-de-release-em-comando-unico.md)); nunca rode o `prepare` e o gate à mão; `publish` (na `main`) tagueia o commit de merge, `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
 | `npm run check:testes` | automático no `pre-push` e no CI | regra 8: falha se um teste foi enfraquecido |
 | `npm run test:changed [-- <ref>]` | loop local (ex.: `-- origin/main`) | não substitui `test:coverage`; o CI roda a suíte completa |
 | `npm run test:mutacao` | mudou regra em `src/domain/**` ou `src/application/**` | Stryker + Vitest (`stryker.config.json`, `vitest.mutacao.config.mts`); o `gate:local` já roda sozinho nos arquivos alterados de domain/application; rodada completa ~1h20 (mensal no Actions, último dia do mês); `-- --mutate <arquivo>` para um arquivo; relatório em `reports/mutation` ([ADR-047](docs/adr/047-testes-de-mutacao-com-stryker.md), [ADR-051](docs/adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md)) |
@@ -127,6 +127,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | --- | --- |
 | Issues (GitHub, `KalleoPinheiro/estomasystech`) | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
 | Triagem (labels canônicos) | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
+| Fluxo de sete estações e labels de fila (`pronta`, `em-andamento`, `bloqueada`) | [ADR-070](docs/adr/070-fluxo-de-sete-estacoes-com-labels-de-fila.md) |
 | Glossário e ADRs | [`docs/agents/domain.md`](docs/agents/domain.md) |
 | Planejamento (PRD vs `.specs/`, dois logs de decisão) | [`docs/agents/planning.md`](docs/agents/planning.md) |
 | Corrigir subconjunto de achados de auditoria | [`docs/agents/fix-audit-issues.md`](docs/agents/fix-audit-issues.md) |

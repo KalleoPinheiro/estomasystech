@@ -1,4 +1,5 @@
 import type { ScheduleConfig } from '@/domain/scheduling/schedule-config';
+import { clinicMinutesOfDay } from '@/lib/clinic-calendar';
 import type { AppointmentDto } from '@/lib/dto';
 
 /** Consulta posicionada na coluna do dia: `lane` de `lanes` raias lado a lado. */
@@ -16,11 +17,17 @@ const endMs = (appointment: AppointmentDto) =>
 /**
  * Distribui as consultas de um dia em raias: as que se sobrepõem no tempo ficam
  * lado a lado (conflito visível, em vez de uma esconder a outra); as demais
- * ocupam a coluna inteira. Cancelada não ocupa horário e fica de fora.
+ * ocupam a coluna inteira. Cancelada não ocupa horário e fica de fora, a menos
+ * que o filtro de status a peça (`includeCancelled`, #538).
  */
-export function layoutDay(appointments: AppointmentDto[]): PlacedAppointment[] {
+export function layoutDay(
+  appointments: AppointmentDto[],
+  includeCancelled = false,
+): PlacedAppointment[] {
   const active = appointments
-    .filter((appointment) => appointment.status !== 'cancelled')
+    .filter(
+      (appointment) => includeCancelled || appointment.status !== 'cancelled',
+    )
     .sort((a, b) => startMs(a) - startMs(b) || endMs(a) - endMs(b));
   const placed: PlacedAppointment[] = [];
   let cluster: PlacedAppointment[] = [];
@@ -52,10 +59,7 @@ export function layoutDay(appointments: AppointmentDto[]): PlacedAppointment[] {
   return placed;
 }
 
-const minutesOfDay = (iso: string): number => {
-  const date = new Date(iso);
-  return date.getHours() * 60 + date.getMinutes();
-};
+const minutesOfDay = clinicMinutesOfDay;
 
 /**
  * Faixa de horas exibida: a da grade da clínica, ampliada para caber qualquer
@@ -64,11 +68,12 @@ const minutesOfDay = (iso: string): number => {
 export function visibleHours(
   config: Pick<ScheduleConfig, 'startHour' | 'endHour'>,
   appointments: AppointmentDto[],
+  includeCancelled = false,
 ): { startHour: number; endHour: number } {
   let startHour = config.startHour;
   let endHour = config.endHour;
   for (const appointment of appointments) {
-    if (appointment.status === 'cancelled') continue;
+    if (appointment.status === 'cancelled' && !includeCancelled) continue;
     startHour = Math.min(
       startHour,
       Math.floor(minutesOfDay(appointment.startsAt) / 60),
@@ -92,6 +97,20 @@ export function verticalSpan(
   const rawHeight =
     ((minutesOfDay(endIso) - minutesOfDay(startIso)) / total) * 100;
   return { top, height: Math.max(rawHeight, 2.5) };
+}
+
+/**
+ * Quanto conteúdo cabe no bloco pela duração (a altura é proporcional a ela):
+ * `full` mostra duas linhas (hora e paciente / procedimento); `single` cabe uma
+ * linha de texto; `tiny` é o mínimo, uma linha de 14 px. Nunca corta uma linha
+ * na vertical (#539).
+ */
+export type BlockDensity = 'full' | 'single' | 'tiny';
+
+export function blockDensity(startIso: string, endIso: string): BlockDensity {
+  const minutes = minutesOfDay(endIso) - minutesOfDay(startIso);
+  if (minutes >= 45) return 'full';
+  return minutes >= 30 ? 'single' : 'tiny';
 }
 
 export { minutesOfDay };

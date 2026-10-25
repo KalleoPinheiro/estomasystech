@@ -5,6 +5,7 @@ import {
   ToastProvider,
   TooltipProvider,
 } from '@still-void/ui/react/client';
+import { getNonce, setNonce } from 'get-nonce';
 import type { ReactNode } from 'react';
 import { ClinicThemeSync } from '@/components/clinic-theme-sync';
 import { HydrationMark } from '@/components/hydration-mark';
@@ -18,10 +19,19 @@ import {
 export function Providers({
   children,
   theme,
+  nonce,
 }: {
   children: ReactNode;
   theme?: ClinicTheme;
+  /** Nonce da CSP da requisição (`x-nonce`, src/proxy.ts). */
+  nonce?: string;
 }) {
+  // O `<style>` de bloqueio de rolagem (react-remove-scroll) lê o nonce daqui; sem
+  // ele a CSP o bloqueia ao abrir modal (#562). Só no cliente: o módulo é compartilhado
+  // entre requisições no servidor, e o estilo só é injetado em efeito. Vale o primeiro
+  // nonce: a CSP vigente é a do HTML carregado, e o `router.refresh()` do login traz
+  // outro nonce, de uma requisição nova, que o navegador não reconhece.
+  if (nonce && typeof window !== 'undefined' && !getNonce()) setNonce(nonce);
   return (
     <ThemeProvider
       defaultMode={DEFAULT_THEME_MODE}

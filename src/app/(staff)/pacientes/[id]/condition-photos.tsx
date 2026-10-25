@@ -77,6 +77,7 @@ export function ConditionPhotos({
                     src={`/api/photos/${photo.id}`}
                     alt={`Foto de ${formatDate(photo.createdAt)}`}
                     fill
+                    unoptimized
                     className="object-cover"
                   />
                 </div>
@@ -121,6 +122,7 @@ function ComparePane({ label, photoId }: { label: string; photoId: string }) {
           src={`/api/photos/${photoId}`}
           alt={label}
           fill
+          unoptimized
           className="object-contain"
         />
       </div>
