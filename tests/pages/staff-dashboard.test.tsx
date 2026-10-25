@@ -137,15 +137,16 @@ afterEach(() => {
 
 describe('Feature: Dashboard do painel interno', () => {
   describe('Cenário: carregando', () => {
-    it('Dado que o resumo ainda não chegou, Quando renderizar, Então cada bloco tem o próprio indicador de carregamento', async () => {
+    it('Dado que o resumo ainda não chegou, Quando renderizar, Então a tela inteira tem um só indicador de carregamento', async () => {
       mockHojeData();
 
-      // Server Components: cada bloco espera o próprio dado dentro de um
-      // <Suspense> com esqueleto, então KPIs e "Consultas de hoje" carregam
-      // sem segurar a tela inteira.
+      // Server Components: todos os blocos leem o dado em paralelo atrás de UM
+      // <Suspense> com esqueleto, então chegam no mesmo flush e nenhum card
+      // aparece depois empurrando os outros (CLS, decisão do PO).
       const fallbacks = suspenseFallbacks(await DashboardPage());
 
-      expect(fallbacks.filter(Boolean).length).toBeGreaterThanOrEqual(3);
+      expect(fallbacks).toHaveLength(1);
+      expect(fallbacks[0]).toBeTruthy();
     });
   });
 
@@ -665,14 +666,14 @@ describe('Feature: Dashboard do painel interno', () => {
       });
     });
 
-    it('Dado fila de triagem carregando, Quando renderizar, Então a seção não reserva espaço enquanto carrega (sem salto se a fila vier vazia)', async () => {
+    it('Dado fila de triagem carregando, Quando renderizar, Então a seção não tem fronteira própria e chega junto da tela (sem salto)', async () => {
       mockHojeData({ triage: [triageFixture] });
 
-      // A faixa de triagem é opcional: carrega sem moldura nem indicador,
-      // para a tela não saltar quando a fila vem vazia.
+      // A faixa de triagem é opcional: não tem Suspense nem esqueleto
+      // próprios; chega no mesmo flush do restante, para não empurrar a agenda.
       const fallbacks = suspenseFallbacks(await DashboardPage());
 
-      expect(fallbacks.some((fallback) => fallback === null)).toBe(true);
+      expect(fallbacks.some((fallback) => fallback === null)).toBe(false);
     });
 
     it('Dado clique na miniatura da foto, Quando acionado, Então abre a foto ampliada em um modal', async () => {
