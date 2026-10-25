@@ -7,11 +7,51 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pickPatient } from '@/../tests/support/patient-picker';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
 import BillingPage from '@/app/(staff)/faturamento/page';
+import Loading from '@/app/(staff)/loading';
 import type { InvoiceDto, PatientDto, ProcedureDto } from '@/lib/dto';
+import {
+  actionError,
+  actionOk,
+  billing,
+  mockBillingData,
+  resetBillingData,
+} from '../support/billing-data';
+import { renderWithToast } from '../support/render-with-toast';
+import { renderServerPage } from '../support/server-page';
+
+vi.mock('next/navigation', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    useRouter: () => ({ refresh: billing.refresh, push: vi.fn() }),
+    usePathname: () => '/faturamento',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { billing } = await import('../support/billing-data');
+  return { requireStaffPageFor: billing.requireStaffPageFor };
+});
+vi.mock('@/lib/server/data/invoices', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    listInvoicesFor: billing.listInvoicesFor,
+    getInvoiceSummaryFor: billing.getInvoiceSummaryFor,
+  };
+});
+vi.mock('@/lib/server/data/procedures', async () => {
+  const { billing } = await import('../support/billing-data');
+  return { listProceduresFor: billing.listProceduresFor };
+});
+vi.mock('@/app/(staff)/faturamento/billing-actions', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    createInvoice: billing.createInvoice,
+    updateInvoice: billing.updateInvoice,
+    sellPackage: billing.sellPackage,
+  };
+});
 
 interface FetchCall {
   url: string;
@@ -27,11 +67,11 @@ const jsonResponse = (
   json: async () => ({ success: ok, data, error: ok ? null : 'Erro', meta }),
 });
 
-const errorResponse = (message: string) => ({
-  ok: false,
-  json: async () => ({ success: false, data: null, error: message }),
-});
-
+/**
+ * O que continua pela API depois do servidor: a busca de pacientes do
+ * `PatientPicker` (digitada pelo usuário) e as páginas seguintes de «Carregar
+ * mais» (exceções do ADR-069).
+ */
 const mockFetch = (
   router: (call: FetchCall) => { ok: boolean; json: () => Promise<unknown> },
 ): ReturnType<typeof vi.fn> => {
@@ -42,10 +82,27 @@ const mockFetch = (
   return fn;
 };
 
+const patientsFetch = (patients: PatientDto[] = []) =>
+  mockFetch(({ url }) =>
+    url.startsWith('/api/patients')
+      ? jsonResponse(patients)
+      : jsonResponse(null, false),
+  );
+
+beforeEach(() => {
+  resetBillingData();
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+/** Renderiza a tela no servidor, para a situação pedida na URL. */
+const renderBilling = (status?: string) =>
+  renderServerPage(() =>
+    BillingPage({ searchParams: Promise.resolve({ status }) }),
+  );
 
 const invoicePending: InvoiceDto = {
   id: 'inv-1',
@@ -121,64 +178,61 @@ const procedureFixture: ProcedureDto = {
   kitItemCount: 0,
 };
 
-const defaultRouter =
-  (
-    overrides: {
-      invoices?: InvoiceDto[];
-      patients?: PatientDto[];
-      procedures?: ProcedureDto[];
-      patchInvoice?: (
-        call: FetchCall,
-      ) => { ok: boolean; json: () => Promise<unknown> } | null;
-      createInvoice?: { ok: boolean; json: () => Promise<unknown> };
-      createPackage?: { ok: boolean; json: () => Promise<unknown> };
-    } = {},
-  ) =>
-  ({ url, init }: FetchCall) => {
-    const method = init?.method ?? 'GET';
+const PACKAGE_FORM = {
+  patientId: 'pat-1',
+  procedureId: 'proc-1',
+  totalSessions: 10,
+  priceCents: 100000,
+  expiresAt: null,
+};
 
-    if (overrides.patchInvoice) {
-      const result = overrides.patchInvoice({ url, init });
-      if (result) return result;
-    }
+/** Preenche o modal de venda de pacote com o paciente, o procedimento e o preço. */
+const fillPackage = async (sessions?: string) => {
+  fireEvent.click(screen.getByText('Vender pacote'));
+  await pickPatient('Maria Souza');
+  fireEvent.change(screen.getByLabelText(/Procedimento/), {
+    target: { value: 'proc-1' },
+  });
+  if (sessions) {
+    fireEvent.change(screen.getByLabelText(/Sessões/), {
+      target: { value: sessions },
+    });
+  }
+  fireEvent.change(screen.getByLabelText(/Preço total/), {
+    target: { value: '1000' },
+  });
+};
 
-    if (url === '/api/invoices' && method === 'POST') {
-      return overrides.createInvoice ?? jsonResponse(invoicePending);
-    }
-    if (url === '/api/packages' && method === 'POST') {
-      return overrides.createPackage ?? jsonResponse({ id: 'pkg-1' });
-    }
-    if (url.startsWith('/api/invoices')) {
-      return jsonResponse(overrides.invoices ?? []);
-    }
-    if (url.startsWith('/api/patients')) {
-      return jsonResponse(overrides.patients ?? []);
-    }
-    if (url.startsWith('/api/procedures')) {
-      return jsonResponse(overrides.procedures ?? []);
-    }
-    return jsonResponse(null, false);
-  };
+const submitPackage = () =>
+  fireEvent.click(
+    screen.getByText('Vender pacote', { selector: 'button[type=submit]' }),
+  );
+
+/** Preenche o modal de nova fatura: paciente, descrição e valor. */
+const fillInvoice = async () => {
+  fireEvent.click(screen.getByText('+ Nova fatura'));
+  await pickPatient('Maria Souza');
+  fireEvent.change(screen.getByLabelText(/Descrição/), {
+    target: { value: 'Sessão avulsa' },
+  });
+  fireEvent.change(screen.getByLabelText(/Valor/), {
+    target: { value: '150' },
+  });
+};
 
 describe('Feature: Faturamento', () => {
   describe('Cenário: carregamento e listagem', () => {
-    it('Dado que a lista ainda não chegou, Quando renderizar, Então exibe indicador de carregamento', () => {
-      mockFetch(({ url }) => {
-        if (url.startsWith('/api/invoices')) {
-          return { ok: true, json: () => new Promise(() => {}) };
-        }
-        return jsonResponse([]);
-      });
-
-      renderWithToast(<BillingPage />);
+    it('Dado que a lista ainda não chegou, Quando o servidor responde, Então o grupo exibe o indicador de carregamento', () => {
+      // A espera é do `loading.tsx` do grupo (ADR-074 § 6), não mais do cliente.
+      renderWithToast(<Loading />);
 
       expect(screen.getByText('Carregando…')).toBeInTheDocument();
     });
 
     it('Dado nenhuma fatura, Quando a página carrega, Então exibe mensagem de vazio', async () => {
-      mockFetch(defaultRouter());
+      mockBillingData();
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
 
       expect(
         await screen.findByText('Nenhuma fatura encontrada.'),
@@ -186,9 +240,12 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado faturas pendentes e pagas, Quando a página carrega, Então lista dados e calcula totais', async () => {
-      mockFetch(defaultRouter({ invoices: [invoicePending, invoicePaid] }));
+      mockBillingData({
+        invoices: [invoicePending, invoicePaid],
+        summary: { paidCents: 20000, pendingCents: 15000 },
+      });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
 
       expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
       expect(screen.getByText('João Lima')).toBeInTheDocument();
@@ -198,12 +255,9 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado erro ao carregar faturas, Quando a página carrega, Então exibe alerta de erro', async () => {
-      mockFetch(({ url }) => {
-        if (url.startsWith('/api/invoices')) return jsonResponse(null, false);
-        return jsonResponse([]);
-      });
+      mockBillingData({ invoicesError: 'Erro ao carregar faturas' });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
 
       expect(await screen.findByRole('alert')).toBeInTheDocument();
     });
@@ -215,9 +269,9 @@ describe('Feature: Faturamento', () => {
         patientName: 'Ana Ramos',
         status: 'refunded',
       };
-      mockFetch(defaultRouter({ invoices: [invoiceUnknownStatus] }));
+      mockBillingData({ invoices: [invoiceUnknownStatus] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
 
       expect(await screen.findByText('Ana Ramos')).toBeInTheDocument();
       expect(screen.getByText('refunded')).toBeInTheDocument();
@@ -232,9 +286,9 @@ describe('Feature: Faturamento', () => {
         paidAt: null,
         payments: [],
       };
-      mockFetch(defaultRouter({ invoices: [invoiceUnknownPayment] }));
+      mockBillingData({ invoices: [invoiceUnknownPayment] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
 
       expect(await screen.findByText('Carla Nunes')).toBeInTheDocument();
       expect(screen.getByText('boleto')).toBeInTheDocument();
@@ -243,57 +297,56 @@ describe('Feature: Faturamento', () => {
 
   describe('Cenário: filtros de status', () => {
     it('Dado clique no filtro Pendentes, Quando acionado, Então refaz a busca com status=pending', async () => {
-      const fetchMock = mockFetch(
-        defaultRouter({ invoices: [invoicePending] }),
-      );
+      mockBillingData({ invoices: [invoicePending] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
-      fireEvent.click(screen.getByText('Pendentes'));
+      // O filtro é navegação: o link leva ao servidor com `?status=pending`.
+      expect(screen.getByText('Pendentes').closest('a')).toHaveAttribute(
+        'href',
+        '/faturamento?status=pending',
+      );
+
+      cleanup();
+      await renderBilling('pending');
 
       await waitFor(() => {
-        expect(
-          fetchMock.mock.calls.some(([url]) =>
-            String(url).includes('/api/invoices?status=pending'),
-          ),
-        ).toBe(true);
+        expect(billing.listInvoicesFor).toHaveBeenLastCalledWith(
+          expect.anything(),
+          { status: 'pending' },
+        );
       });
     });
 
-    it('Dado os filtros de status, Quando renderizar, Então formam um role=group com aria-pressed no ativo (FAT-01)', async () => {
-      mockFetch(defaultRouter({ invoices: [invoicePending] }));
+    it('Dado os filtros de status, Quando renderizar, Então formam um role=group com o ativo marcado (FAT-01)', async () => {
+      mockBillingData({ invoices: [invoicePending] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       expect(
         screen.getByRole('group', { name: 'Filtrar por situação' }),
       ).toBeInTheDocument();
-      expect(screen.getByText('Todas')).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByText('Pendentes')).toHaveAttribute(
-        'aria-pressed',
-        'false',
-      );
+      expect(screen.getByText('Todas')).toHaveAttribute('aria-current', 'page');
+      expect(screen.getByText('Pendentes')).not.toHaveAttribute('aria-current');
 
-      fireEvent.click(screen.getByText('Pendentes'));
+      cleanup();
+      await renderBilling('pending');
 
-      expect(screen.getByText('Pendentes')).toHaveAttribute(
-        'aria-pressed',
-        'true',
+      expect(await screen.findByText('Pendentes')).toHaveAttribute(
+        'aria-current',
+        'page',
       );
-      expect(screen.getByText('Todas')).toHaveAttribute(
-        'aria-pressed',
-        'false',
-      );
+      expect(screen.getByText('Todas')).not.toHaveAttribute('aria-current');
     });
   });
 
   describe('Cenário: alinhamento e ações (FAT-01/03)', () => {
     it('Dado a coluna Valor, Quando renderizar, Então usa text-right e tabular-nums', async () => {
-      mockFetch(defaultRouter({ invoices: [invoicePending] }));
+      mockBillingData({ invoices: [invoicePending] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
 
       const valueCell = await screen.findAllByText('R$ 150,00');
       const cell = valueCell
@@ -303,9 +356,9 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado fatura paga, Quando renderizar a linha, Então a coluna Ações mostra um traço em vez de vazio (FAT-03)', async () => {
-      mockFetch(defaultRouter({ invoices: [invoicePaid] }));
+      mockBillingData({ invoices: [invoicePaid] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('João Lima');
 
       const row = screen.getByText('João Lima').closest('tr');
@@ -315,20 +368,13 @@ describe('Feature: Faturamento', () => {
   });
 
   describe('Cenário: registrar pagamento', () => {
-    it('Dado clique em Receber e escolha do método, Quando confirmado, Então envia PATCH pay e atualiza a lista', async () => {
-      const fetchMock = mockFetch(
-        defaultRouter({
-          invoices: [invoicePending],
-          patchInvoice: ({ url, init }) => {
-            if (url === '/api/invoices/inv-1' && init?.method === 'PATCH') {
-              return jsonResponse({ ...invoicePending, status: 'paid' });
-            }
-            return null;
-          },
-        }),
+    it('Dado clique em Receber e escolha do método, Quando confirmado, Então envia a ação pay (a ação atualiza a lista)', async () => {
+      mockBillingData({ invoices: [invoicePending] });
+      billing.updateInvoice.mockResolvedValue(
+        actionOk({ ...invoicePending, status: 'paid' }),
       );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Receber'));
@@ -339,30 +385,20 @@ describe('Feature: Faturamento', () => {
       fireEvent.click(screen.getByText('Confirmar recebimento'));
 
       await waitFor(() => {
-        expect(fetchMock.mock.calls).toContainEqual([
-          '/api/invoices/inv-1',
-          expect.objectContaining({
-            method: 'PATCH',
-            body: JSON.stringify({ action: 'pay', method: 'pix' }),
-          }),
-        ]);
+        expect(billing.updateInvoice).toHaveBeenCalledWith({
+          id: 'inv-1',
+          change: { action: 'pay', method: 'pix' },
+        });
       });
     });
 
     it('Dado falha ao registrar pagamento, Quando confirmado, Então exibe alerta de erro', async () => {
-      mockFetch(
-        defaultRouter({
-          invoices: [invoicePending],
-          patchInvoice: ({ url, init }) => {
-            if (url === '/api/invoices/inv-1' && init?.method === 'PATCH') {
-              return errorResponse('Erro ao registrar pagamento');
-            }
-            return null;
-          },
-        }),
+      mockBillingData({ invoices: [invoicePending] });
+      billing.updateInvoice.mockResolvedValue(
+        actionError('Erro ao registrar pagamento'),
       );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Receber'));
@@ -375,11 +411,9 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado clique em Fechar no modal de pagamento, Quando acionado, Então fecha sem registrar pagamento', async () => {
-      const fetchMock = mockFetch(
-        defaultRouter({ invoices: [invoicePending] }),
-      );
+      mockBillingData({ invoices: [invoicePending] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Receber'));
@@ -390,27 +424,16 @@ describe('Feature: Faturamento', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
 
       expect(screen.queryByText('Registrar pagamento')).not.toBeInTheDocument();
-      expect(
-        fetchMock.mock.calls.some(
-          ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
-        ),
-      ).toBe(false);
+      expect(billing.updateInvoice).not.toHaveBeenCalled();
     });
 
     it("Dado sucesso ao registrar pagamento, Quando confirmado, Então exibe toast de sucesso 'Pagamento registrado'", async () => {
-      mockFetch(
-        defaultRouter({
-          invoices: [invoicePending],
-          patchInvoice: ({ url, init }) => {
-            if (url === '/api/invoices/inv-1' && init?.method === 'PATCH') {
-              return jsonResponse({ ...invoicePending, status: 'paid' });
-            }
-            return null;
-          },
-        }),
+      mockBillingData({ invoices: [invoicePending] });
+      billing.updateInvoice.mockResolvedValue(
+        actionOk({ ...invoicePending, status: 'paid' }),
       );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Receber'));
@@ -424,50 +447,33 @@ describe('Feature: Faturamento', () => {
   });
 
   describe('Cenário: cancelar fatura', () => {
-    it('Dado clique em Cancelar, Quando acionado, Então envia PATCH cancel e atualiza a lista', async () => {
-      const fetchMock = mockFetch(
-        defaultRouter({
-          invoices: [invoicePending],
-          patchInvoice: ({ url, init }) => {
-            if (url === '/api/invoices/inv-1' && init?.method === 'PATCH') {
-              return jsonResponse({ ...invoicePending, status: 'cancelled' });
-            }
-            return null;
-          },
-        }),
+    it('Dado clique em Cancelar, Quando acionado, Então envia a ação cancel (a ação atualiza a lista)', async () => {
+      mockBillingData({ invoices: [invoicePending] });
+      billing.updateInvoice.mockResolvedValue(
+        actionOk({ ...invoicePending, status: 'cancelled' }),
       );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Cancelar'));
       fireEvent.click(await screen.findByText('Cancelar fatura'));
 
       await waitFor(() => {
-        expect(fetchMock.mock.calls).toContainEqual([
-          '/api/invoices/inv-1',
-          expect.objectContaining({
-            method: 'PATCH',
-            body: JSON.stringify({ action: 'cancel' }),
-          }),
-        ]);
+        expect(billing.updateInvoice).toHaveBeenCalledWith({
+          id: 'inv-1',
+          change: { action: 'cancel' },
+        });
       });
     });
 
     it('Dado falha ao cancelar, Quando acionado, Então exibe alerta de erro', async () => {
-      mockFetch(
-        defaultRouter({
-          invoices: [invoicePending],
-          patchInvoice: ({ url, init }) => {
-            if (url === '/api/invoices/inv-1' && init?.method === 'PATCH') {
-              return errorResponse('Erro ao cancelar fatura');
-            }
-            return null;
-          },
-        }),
+      mockBillingData({ invoices: [invoicePending] });
+      billing.updateInvoice.mockResolvedValue(
+        actionError('Erro ao cancelar fatura'),
       );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Cancelar'));
@@ -479,19 +485,12 @@ describe('Feature: Faturamento', () => {
     });
 
     it("Dado sucesso ao cancelar, Quando acionado, Então exibe toast de sucesso 'Fatura cancelada'", async () => {
-      mockFetch(
-        defaultRouter({
-          invoices: [invoicePending],
-          patchInvoice: ({ url, init }) => {
-            if (url === '/api/invoices/inv-1' && init?.method === 'PATCH') {
-              return jsonResponse({ ...invoicePending, status: 'cancelled' });
-            }
-            return null;
-          },
-        }),
+      mockBillingData({ invoices: [invoicePending] });
+      billing.updateInvoice.mockResolvedValue(
+        actionOk({ ...invoicePending, status: 'cancelled' }),
       );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Cancelar'));
@@ -502,83 +501,49 @@ describe('Feature: Faturamento', () => {
       });
     });
 
-    it('Dado clique em Cancelar seguido de cancelamento no dialog, Quando acionado, Então não chama a API', async () => {
-      const fetchMock = mockFetch(
-        defaultRouter({ invoices: [invoicePending] }),
-      );
+    it('Dado clique em Cancelar seguido de cancelamento no dialog, Quando acionado, Então não chama a ação', async () => {
+      mockBillingData({ invoices: [invoicePending] });
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Cancelar'));
       const dialog = await screen.findByRole('alertdialog');
       fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
 
-      expect(
-        fetchMock.mock.calls.some(
-          ([, init]) => (init as RequestInit | undefined)?.method === 'PATCH',
-        ),
-      ).toBe(false);
+      expect(billing.updateInvoice).not.toHaveBeenCalled();
     });
   });
 
   describe('Cenário: emitir nova fatura', () => {
     it('Dado preenchimento do formulário, Quando submetido, Então cria a fatura e fecha o modal', async () => {
-      let created = false;
-      mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/invoices' && method === 'POST') {
-          created = true;
-          return jsonResponse(invoicePending);
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData();
+      patientsFetch([patientFixture]);
+      billing.createInvoice.mockResolvedValue(actionOk(invoicePending));
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('+ Nova fatura'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Descrição/), {
-        target: { value: 'Sessão avulsa' },
-      });
-      fireEvent.change(screen.getByLabelText(/Valor/), {
-        target: { value: '150' },
-      });
+      await fillInvoice();
       fireEvent.click(screen.getByText('Emitir fatura'));
 
       await waitFor(() =>
         expect(screen.queryByText('Emitir fatura')).not.toBeInTheDocument(),
       );
-      expect(created).toBe(true);
+      expect(billing.createInvoice).toHaveBeenCalledTimes(1);
     });
 
     it('Dado falha ao emitir fatura, Quando submetido, Então exibe alerta de erro no formulário', async () => {
-      mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/invoices' && method === 'POST') {
-          return errorResponse('Erro ao emitir fatura: dados inválidos');
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData();
+      patientsFetch([patientFixture]);
+      billing.createInvoice.mockResolvedValue(
+        actionError('Erro ao emitir fatura: dados inválidos'),
+      );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('+ Nova fatura'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Descrição/), {
-        target: { value: 'Sessão avulsa' },
-      });
-      fireEvent.change(screen.getByLabelText(/Valor/), {
-        target: { value: '150' },
-      });
+      await fillInvoice();
       fireEvent.click(screen.getByText('Emitir fatura'));
 
       expect(
@@ -588,53 +553,34 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado preenchimento com vencimento, Quando submetido, Então envia dueDate convertido para ISO', async () => {
-      const fetchMock = mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/invoices' && method === 'POST') {
-          return jsonResponse(invoicePending);
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData();
+      patientsFetch([patientFixture]);
+      billing.createInvoice.mockResolvedValue(actionOk(invoicePending));
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('+ Nova fatura'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Descrição/), {
-        target: { value: 'Sessão avulsa' },
-      });
-      fireEvent.change(screen.getByLabelText(/Valor/), {
-        target: { value: '150' },
-      });
+      await fillInvoice();
       fireEvent.change(screen.getByLabelText(/Vencimento/), {
         target: { value: '2026-08-01' },
       });
       fireEvent.click(screen.getByText('Emitir fatura'));
 
       await waitFor(() => {
-        expect(fetchMock.mock.calls).toContainEqual([
-          '/api/invoices',
-          expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({
-              patientId: 'pat-1',
-              description: 'Sessão avulsa',
-              amountCents: 15000,
-              dueDate: new Date('2026-08-01').toISOString(),
-            }),
-          }),
-        ]);
+        expect(billing.createInvoice).toHaveBeenCalledWith({
+          patientId: 'pat-1',
+          description: 'Sessão avulsa',
+          amountCents: 15000,
+          dueDate: new Date('2026-08-01').toISOString(),
+        });
       });
     });
 
     it('Dado clique em Fechar no modal de nova fatura, Quando acionado, Então fecha sem criar fatura', async () => {
-      mockFetch(defaultRouter({ patients: [patientFixture] }));
+      mockBillingData();
+      patientsFetch([patientFixture]);
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('+ Nova fatura'));
@@ -643,51 +589,32 @@ describe('Feature: Faturamento', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
 
       expect(screen.queryByText('Emitir fatura')).not.toBeInTheDocument();
+      expect(billing.createInvoice).not.toHaveBeenCalled();
     });
 
     it('Dado modal de nova fatura aberto, Quando nada foi buscado, Então não carrega a lista de pacientes (#197)', async () => {
-      const fetchMock = mockFetch(({ url }) => {
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData();
+      const fetchMock = patientsFetch();
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('+ Nova fatura'));
 
       expect(await screen.findByLabelText(/Paciente/)).toHaveValue('');
       expect(screen.getByText(/Digite ao menos 2 letras/)).toBeInTheDocument();
-      expect(
-        fetchMock.mock.calls.some(([url]) =>
-          String(url).startsWith('/api/patients'),
-        ),
-      ).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it("Dado sucesso ao emitir fatura, Quando submetido, Então exibe toast de sucesso 'Fatura criada'", async () => {
-      mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/invoices' && method === 'POST') {
-          return jsonResponse(invoicePending);
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData();
+      patientsFetch([patientFixture]);
+      billing.createInvoice.mockResolvedValue(actionOk(invoicePending));
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('+ Nova fatura'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Descrição/), {
-        target: { value: 'Sessão avulsa' },
-      });
-      fireEvent.change(screen.getByLabelText(/Valor/), {
-        target: { value: '150' },
-      });
+      await fillInvoice();
       fireEvent.click(screen.getByText('Emitir fatura'));
 
       await waitFor(() => {
@@ -698,67 +625,31 @@ describe('Feature: Faturamento', () => {
 
   describe('Cenário: vender pacote de sessões', () => {
     it('Dado clique em Vender pacote e preenchimento, Quando submetido, Então cria o pacote', async () => {
-      let createdPackage = false;
-      mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/packages' && method === 'POST') {
-          createdPackage = true;
-          return jsonResponse({ id: 'pkg-1' });
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        if (url.startsWith('/api/procedures'))
-          return jsonResponse([procedureFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData({ procedures: [procedureFixture] });
+      patientsFetch([patientFixture]);
+      billing.sellPackage.mockResolvedValue(actionOk({ id: 'pkg-1' }));
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('Vender pacote'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Procedimento/), {
-        target: { value: 'proc-1' },
-      });
-      fireEvent.change(screen.getByLabelText(/Preço total/), {
-        target: { value: '1000' },
-      });
-      fireEvent.click(
-        screen.getByText('Vender pacote', { selector: 'button[type=submit]' }),
-      );
+      await fillPackage();
+      submitPackage();
 
-      await waitFor(() => expect(createdPackage).toBe(true));
+      await waitFor(() =>
+        expect(billing.sellPackage).toHaveBeenCalledWith(PACKAGE_FORM),
+      );
     });
 
     it("Dado sucesso ao vender pacote, Quando submetido, Então exibe toast de sucesso 'Pacote vendido'", async () => {
-      mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/packages' && method === 'POST') {
-          return jsonResponse({ id: 'pkg-1' });
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        if (url.startsWith('/api/procedures'))
-          return jsonResponse([procedureFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData({ procedures: [procedureFixture] });
+      patientsFetch([patientFixture]);
+      billing.sellPackage.mockResolvedValue(actionOk({ id: 'pkg-1' }));
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('Vender pacote'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Procedimento/), {
-        target: { value: 'proc-1' },
-      });
-      fireEvent.change(screen.getByLabelText(/Preço total/), {
-        target: { value: '1000' },
-      });
-      fireEvent.click(
-        screen.getByText('Vender pacote', { selector: 'button[type=submit]' }),
-      );
+      await fillPackage();
+      submitPackage();
 
       await waitFor(() => {
         expect(screen.getByText('Pacote vendido')).toBeInTheDocument();
@@ -766,15 +657,10 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado nenhum procedimento ativo, Quando o modal de venda abre, Então exibe aviso para cadastrar catálogo', async () => {
-      mockFetch(({ url }) => {
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        if (url.startsWith('/api/procedures')) return jsonResponse([]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData({ procedures: [] });
+      patientsFetch([patientFixture]);
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('Vender pacote'));
@@ -787,33 +673,17 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado falha ao vender pacote, Quando submetido, Então exibe alerta de erro no formulário', async () => {
-      mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/packages' && method === 'POST') {
-          return errorResponse('Erro ao vender pacote');
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        if (url.startsWith('/api/procedures'))
-          return jsonResponse([procedureFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData({ procedures: [procedureFixture] });
+      patientsFetch([patientFixture]);
+      billing.sellPackage.mockResolvedValue(
+        actionError('Erro ao vender pacote'),
+      );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('Vender pacote'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Procedimento/), {
-        target: { value: 'proc-1' },
-      });
-      fireEvent.change(screen.getByLabelText(/Preço total/), {
-        target: { value: '1000' },
-      });
-      fireEvent.click(
-        screen.getByText('Vender pacote', { selector: 'button[type=submit]' }),
-      );
+      await fillPackage();
+      submitPackage();
 
       expect(
         await screen.findByText('Erro ao vender pacote'),
@@ -821,115 +691,52 @@ describe('Feature: Faturamento', () => {
     });
 
     it('Dado alteração da quantidade de sessões, Quando submetido, Então envia totalSessions atualizado', async () => {
-      const fetchMock = mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/packages' && method === 'POST') {
-          return jsonResponse({ id: 'pkg-1' });
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        if (url.startsWith('/api/procedures'))
-          return jsonResponse([procedureFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData({ procedures: [procedureFixture] });
+      patientsFetch([patientFixture]);
+      billing.sellPackage.mockResolvedValue(actionOk({ id: 'pkg-1' }));
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('Vender pacote'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Procedimento/), {
-        target: { value: 'proc-1' },
-      });
-      fireEvent.change(screen.getByLabelText(/Sessões/), {
-        target: { value: '5' },
-      });
-      fireEvent.change(screen.getByLabelText(/Preço total/), {
-        target: { value: '1000' },
-      });
-      fireEvent.click(
-        screen.getByText('Vender pacote', { selector: 'button[type=submit]' }),
-      );
+      await fillPackage('5');
+      submitPackage();
 
       await waitFor(() => {
-        expect(fetchMock.mock.calls).toContainEqual([
-          '/api/packages',
-          expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({
-              patientId: 'pat-1',
-              procedureId: 'proc-1',
-              totalSessions: 5,
-              priceCents: 100000,
-              expiresAt: null,
-            }),
-          }),
-        ]);
+        expect(billing.sellPackage).toHaveBeenCalledWith({
+          ...PACKAGE_FORM,
+          totalSessions: 5,
+        });
       });
     });
 
     it('Dado validade preenchida, Quando vender pacote, Então envia expiresAt no fim do dia (COMP3-07)', async () => {
-      const fetchMock = mockFetch(({ url, init }) => {
-        const method = init?.method ?? 'GET';
-        if (url === '/api/packages' && method === 'POST') {
-          return jsonResponse({ id: 'pkg-2' });
-        }
-        if (url.startsWith('/api/invoices')) return jsonResponse([]);
-        if (url.startsWith('/api/patients'))
-          return jsonResponse([patientFixture]);
-        if (url.startsWith('/api/procedures'))
-          return jsonResponse([procedureFixture]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData({ procedures: [procedureFixture] });
+      patientsFetch([patientFixture]);
+      billing.sellPackage.mockResolvedValue(actionOk({ id: 'pkg-2' }));
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('Vender pacote'));
-      await pickPatient('Maria Souza');
-      fireEvent.change(screen.getByLabelText(/Procedimento/), {
-        target: { value: 'proc-1' },
-      });
-      fireEvent.change(screen.getByLabelText(/Sessões/), {
-        target: { value: '5' },
-      });
-      fireEvent.change(screen.getByLabelText(/Preço total/), {
-        target: { value: '1000' },
-      });
+      await fillPackage('5');
       fireEvent.change(screen.getByLabelText(/Validade/), {
         target: { value: '2030-06-30' },
       });
-      fireEvent.click(
-        screen.getByText('Vender pacote', { selector: 'button[type=submit]' }),
-      );
+      submitPackage();
 
       await waitFor(() => {
-        expect(fetchMock.mock.calls).toContainEqual([
-          '/api/packages',
-          expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({
-              patientId: 'pat-1',
-              procedureId: 'proc-1',
-              totalSessions: 5,
-              priceCents: 100000,
-              expiresAt: '2030-06-30T23:59:59.000Z',
-            }),
-          }),
-        ]);
+        expect(billing.sellPackage).toHaveBeenCalledWith({
+          ...PACKAGE_FORM,
+          totalSessions: 5,
+          expiresAt: '2030-06-30T23:59:59.000Z',
+        });
       });
     });
 
     it('Dado clique em Fechar no modal de venda de pacote, Quando acionado, Então fecha sem criar pacote', async () => {
-      mockFetch(
-        defaultRouter({
-          patients: [patientFixture],
-          procedures: [procedureFixture],
-        }),
-      );
+      mockBillingData({ procedures: [procedureFixture] });
+      patientsFetch([patientFixture]);
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
       fireEvent.click(screen.getByText('Vender pacote'));
@@ -942,6 +749,7 @@ describe('Feature: Faturamento', () => {
       expect(
         screen.queryByText('Vender pacote de sessões'),
       ).not.toBeInTheDocument();
+      expect(billing.sellPackage).not.toHaveBeenCalled();
     });
   });
 
@@ -955,16 +763,14 @@ describe('Feature: Faturamento', () => {
         }),
       );
       const cursor = 'eyJpc3N1ZWRBdCI6IngiLCJpZCI6InkifQ';
-      const fetchMock = mockFetch(({ url }) => {
-        if (url.startsWith('/api/invoices')) {
-          if (url.includes(`cursor=${cursor}`)) return jsonResponse([]);
-          return jsonResponse(fullPage, true, { nextCursor: cursor });
-        }
-        if (url.startsWith('/api/patients')) return jsonResponse([]);
-        return jsonResponse(null, false);
-      });
+      mockBillingData({ invoices: fullPage, nextCursor: cursor });
+      const fetchMock = mockFetch(({ url }) =>
+        url.includes(`cursor=${cursor}`)
+          ? jsonResponse([])
+          : jsonResponse(null, false),
+      );
 
-      renderWithToast(<BillingPage />);
+      await renderBilling();
       await screen.findByText('Carregar mais');
 
       fireEvent.click(screen.getByText('Carregar mais'));
