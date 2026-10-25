@@ -2020,3 +2020,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Observação**: `e2e/agenda-bloco-curto-legivel.spec.ts` (768 px) falha também na release sem esta mudança (mesmo resultado com e sem o patch): o teste avança no máximo 14 semanas até o dia da seed e, com a data de hoje, a seed fica além disso. Não mexi no teste (regra 8); fica para o coordenador decidir.
 - **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
 
+
+## Agenda: Mês→Dia abre no dia escolhido (#591) (2026-10-25) — EM REVISÃO
+- **Causa**: `setView` ancorava a visão Dia/Semana em hoje (se no mês exibido) ou no dia 1; o dia marcado no mês compacto do celular ficava dentro do `MobileMonth` e a página não o conhecia.
+- **O que mudou**: `useAgendaPeriod` ganha `chooseDay`; `MobileMonth` avisa o dia marcado por `onSelectDay` (via `CalendarGrid`); de Mês para Dia/Semana a âncora é o dia escolhido. Trocar de mês descarta a escolha. Sem dia marcado (ou no desktop, que não marca dia no mês) vale a regra de antes: hoje, se no mês, senão o dia 1.
+- **Pergunta aberta (PO)**: no desktop o mês não tem dia marcado; se a Dia/Semana deve abrir num dia clicado ali, é decisão nova (hoje o clique na célula abre «Nova consulta»).
+- **Testes novos** (nenhum existente alterado): `tests/pages/agenda-mes-dia-abre-no-dia-escolhido.test.tsx` (pré-patch: 4 de 5 falham), `e2e/agenda-mes-dia-abre-no-dia-escolhido.spec.ts` (360 e 1280).
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
