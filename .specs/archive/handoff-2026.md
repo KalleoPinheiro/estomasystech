@@ -2053,3 +2053,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **gate:local em 59139f7 (3 de 403)**: (a) axe `color-contrast`: texto `text-ink-3` do card de maioridade (4,4:1 sobre `warning-soft`) passa a `text-ink-2`; (b) axe `target-size`: a linha de retorno em duas colunas deixava o nome sobrepor o «Agendar» no meio da página; a linha passa a ser em coluna (texto e ações empilhados); (c) `responsive-tables` «pacientes»: a lista é paginada (100 por nome) e a suíte inteira passa de 100 pacientes antes de «Paciente Responsivo» (falha também sem a spec desta PR); o teste passa a buscar o paciente. **TESTE-ALTERADO** em commit isolado. As pendências reais da spec de CLS passaram a usar nomes «Zz Hoje CLS…» para ficar no fim da lista.
 - **Ficou fora**: `/api/photos/triage` na barra do celular do Profissional (outra issue); `PATCH /api/follow-ups/:id` sem R4 (issue própria).
 - **Next step**: revalidação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Retornos: R4 no PATCH da API (#597) (2026-10-25) — EM REVISÃO
+- **Causa**: `PATCH /api/follow-ups/:id` não aplicava o vínculo Profissional↔Paciente (R4) nem auditava; achado na validação do #596 (Profissional sem vínculo cancelou retorno alheio, HTTP 200).
+- **O que mudou**: regra única em `src/lib/server/follow-up-resolution.ts` (`authorizeFollowUpResolution`, `followUpResolutionAudit`), usada pela rota e por `resolveFollowUp` (Hoje), sem duplicar. Sem vínculo: `403`; retorno de outra empresa: `404`; admin/atendente inalterados. Gravação e auditoria `follow_up` na mesma transação (ADR-075). AGE-RN-25 em `docs/domains/agenda/`.
+- **Decisão do PO**: sem vínculo é `403` (a issue falava em 404; vale a decisão do coordenador, coerente com AGE-RN-17 e `resolveFollowUp`).
+- **Testes novos** (nenhum existente alterado): `tests/api/follow-up-patch-r4-597.test.ts`. Pré-patch: 5 de 7 falham (200 em vez de 403, sem auditoria); os de outra empresa e sem sessão já passavam e ficam como regressão.
+- **Next step**: the-judge, validação em thread limpa, gate:local no WSL se o coordenador exigir, merge na release/v0.4.0. **Blockers**: nenhum.

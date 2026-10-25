@@ -9,8 +9,12 @@ import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
-import { assertPatientLinkedForProfessionalWrite } from '@/lib/auth/professional-patient-scope';
 import { defineAction } from '@/lib/server/define-action';
+import {
+  authorizeFollowUpResolution,
+  followUpResolutionAudit,
+  toFollowUpResolution,
+} from '@/lib/server/follow-up-resolution';
 
 /**
  * Ações da tela Hoje (#548, ADR-069 § 2, ADR-075): cada uma é uma Server Action
@@ -25,34 +29,13 @@ const idSchema = z.object({ id: z.string().min(1).max(100) });
 export const resolveFollowUp = defineAction({
   access: { kind: 'staff' },
   input: idSchema.extend({ status: z.enum(['done', 'cancelled']) }),
-  authorize: async ({ input, session, scope }) => {
-    const { followUps, professionalPatientLinks } =
-      await getRepositories(scope);
-    const followUp = await followUps.findById(input.id);
-    if (!followUp) {
-      throw new NotFoundError('Retorno', input.id);
-    }
-    await assertPatientLinkedForProfessionalWrite(
-      session,
-      followUp.patientId,
-      professionalPatientLinks,
-    );
-  },
-  handler: async ({ input, tx }) => {
-    const updated = await new SetFollowUpStatus(tx.followUps).execute(input);
-    return {
-      id: updated.id,
-      patientId: updated.patientId,
-      status: updated.status,
-    };
-  },
-  audit: ({ result }) => ({
-    action: 'update',
-    resourceType: 'follow_up',
-    resourceId: result.id,
-    patientId: result.patientId,
-    detail: `retorno: ${result.status}`,
-  }),
+  authorize: ({ input, session, scope }) =>
+    authorizeFollowUpResolution(session, scope, input.id),
+  handler: async ({ input, tx }) =>
+    toFollowUpResolution(
+      await new SetFollowUpStatus(tx.followUps).execute(input),
+    ),
+  audit: ({ result }) => followUpResolutionAudit(result),
 });
 
 /**
