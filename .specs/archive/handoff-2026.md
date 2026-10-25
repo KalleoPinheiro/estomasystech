@@ -1985,3 +1985,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Correção do the-judge (F1)**: o `router.refresh()` do login trazia outro nonce e o `setNonce` o sobrescrevia; a CSP vigente é a do HTML carregado, então vale o primeiro nonce (`!getNonce()`).
 - **Staging (Kalléo)**: triagem, ficha e portal mostram a miniatura da foto; abrir «+ Nova consulta» não gera erro de CSP no console e o fundo não rola atrás do modal.
 - **Next step**: staging rebuild e validação limpa da v0.3.0. **Blockers**: nenhum.
+
+## Agenda: consulta que termina às 24:00 (#580) (2026-10-25) — EM REVISÃO
+- **Causa**: `assertWithinBusinessHours` exigia o mesmo dia civil no fim, então 23:00–24:00 (fim às 00:00 do dia seguinte) era recusada mesmo com a grade até 24 h. Bug latente: `assertWithinProfessionalHours` tratava qualquer fim às 00:00 como 24:00, sem conferir o dia (23:00 de hoje até 00:00 de depois de amanhã passava).
+- **O que mudou**: helper único `endMinuteOfDay(início, fim)` em `business-hours.ts`: mesmo dia devolve o minuto; 00:00 do dia civil seguinte devolve 1440; qualquer outro cruzamento devolve `null` (recusa). As duas asserções usam o helper.
+- **Testes novos** (nenhum existente alterado): `tests/domain/consulta-ate-meia-noite.test.ts` (23:00–24:00 e 23:30–00:00 aceitas; 23:30–00:30 e 00:00 dois dias depois recusadas, nas duas asserções; verde com TZ=UTC e TZ=Asia/Tokyo, APP_TIMEZONE=America/Sao_Paulo), `e2e/agenda-remarcar-ate-24h.spec.ts` (remarcar para 23:00 com 60 min aceito, navegador em São Paulo, Manaus e Tóquio). Pré-patch: os 9 unitários novos falham no código da release. Mutação de `business-hours.ts`: 100%.
+- **Fora do escopo**: oferta de horários do autoagendamento (`list-available-slots`) não foi mexida.
+- **Next step**: the-judge e validação em thread limpa; merge na release/v0.4.0. **Blockers**: nenhum.
+
