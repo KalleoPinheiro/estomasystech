@@ -1,19 +1,16 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { ListAppointments } from '@/application/appointments/list-appointments';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { parseStatusFilter } from '@/domain/scheduling/appointment-status-filter';
 import { getRepositories, type Services } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
-import {
-  appointmentProfessionalScope,
-  parseAppointmentRange,
-} from '@/lib/auth/appointment-query';
+import { parseAppointmentRange } from '@/lib/auth/appointment-query';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
+import { listAppointmentsFor } from '@/lib/server/data/appointments';
 
 const scheduleSchema = z.object({
   patientId: z.string().min(1),
@@ -36,26 +33,17 @@ export async function GET(request: NextRequest) {
   if (!range) {
     return fail('Parâmetros obrigatórios: from, to (ISO 8601)', 400);
   }
-  const professional = appointmentProfessionalScope(guard.session, request);
   // Sem `status` a rota devolve tudo (contrato anterior); a agenda sempre o envia (AGE-FLT-03).
   const statusParam = request.nextUrl.searchParams.get('status');
-  return handleRequest(async () => {
-    if (professional.none) {
-      return [];
-    }
-    const { appointments, patients } = await getRepositories(
-      sessionScope(guard.session),
-    );
-    const result = await new ListAppointments(appointments, patients).execute({
+  return handleRequest(() =>
+    listAppointmentsFor(guard.session, {
       ...range,
-      professionalId: professional.professionalId,
+      professionalId:
+        request.nextUrl.searchParams.get('professionalId') ?? undefined,
       statuses:
         statusParam === null ? undefined : parseStatusFilter(statusParam),
-    });
-    return result.map(({ appointment, patientName, patientBirthDate }) =>
-      toAppointmentDto(appointment, patientName, patientBirthDate),
-    );
-  });
+    }),
+  );
 }
 
 async function markFollowUpScheduled(

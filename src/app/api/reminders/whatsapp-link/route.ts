@@ -1,15 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { SendWhatsAppReminder } from '@/application/reminders/send-whatsapp-reminder';
-import { dateKey, REMINDER_KINDS } from '@/domain/messaging/reminder-log';
+import { REMINDER_KINDS } from '@/domain/messaging/reminder-log';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import {
-  sessionScope,
-  writeClinicId,
-  writeScope,
-} from '@/lib/auth/tenant-scope';
+import { writeClinicId, writeScope } from '@/lib/auth/tenant-scope';
+import { whatsappSentToday } from '@/lib/server/data/reminders';
 
 const bodySchema = z.object({
   kind: z.enum(REMINDER_KINDS),
@@ -38,16 +35,7 @@ export async function GET(request: NextRequest) {
       kind: params.get('kind') ?? undefined,
       referenceIds: params.get('referenceIds') ?? '',
     });
-    const { reminderLog } = await getRepositories(sessionScope(guard.session));
-    const sent = await reminderLog.firstSentAt(
-      query.kind,
-      'whatsapp_link',
-      query.referenceIds,
-      dateKey(new Date()),
-    );
-    return Object.fromEntries(
-      [...sent].map(([id, at]) => [id, at.toISOString()]),
-    );
+    return whatsappSentToday(guard.session, query.kind, query.referenceIds);
   });
 }
 

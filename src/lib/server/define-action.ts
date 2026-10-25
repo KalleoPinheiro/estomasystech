@@ -32,6 +32,13 @@ export interface ActionContext<I> {
 interface ActionBase<S extends z.ZodType> {
   access: ActionAccess;
   input: S;
+  /**
+   * Autorização do RECURSO (ex.: vínculo do Profissional com o paciente, R4),
+   * depois do `zod` e ANTES da gravação: lança `ForbiddenError`/`NotFoundError`
+   * e nada é aberto nem gravado. Roda fora da transação, então pode ler com
+   * `getRepositories(scope)`.
+   */
+  authorize?: (context: ActionContext<z.output<S>>) => Promise<void>;
 }
 
 /**
@@ -147,6 +154,7 @@ export function defineAction<S extends z.ZodType, R>(
         session,
         scope: writeScope(session),
       };
+      await definition.authorize?.(context);
       const result = definition.audit
         ? await runAudited(definition, context)
         : await definition.handler(context);

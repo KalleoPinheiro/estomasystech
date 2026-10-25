@@ -7,7 +7,6 @@
   "src/app/(staff)/minha-conta/page.tsx",
   "src/app/(staff)/pacientes/[id]/page.tsx",
   "src/app/(staff)/pacientes/page.tsx",
-  "src/app/(staff)/page.tsx",
   "src/app/(staff)/parceiros/page.tsx",
   "src/app/(staff)/pedidos-titular/page.tsx",
   "src/app/(staff)/procedimentos/page.tsx",

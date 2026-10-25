@@ -18,3 +18,16 @@ export const toGuardianDto = (guardian: Guardian): GuardianDto => ({
   phone: guardian.phone,
   email: guardian.email,
 });
+
+export interface MajorityReviewDto {
+  patientId: string;
+  fullName: string;
+  birthDate: string | null;
+  guardianName: string;
+  guardianRelationship: string;
+  /** Ainda só com o responsável no portal: transferir ou manter (#372). */
+  awaitingTransfer?: boolean;
+  /** Dia em que o aceite do representante deixa de valer (#375); nulo sem aceite dele. */
+  representativeConsentExpiresOn?: string | null;
+  representativeConsentExpired?: boolean;
+}
