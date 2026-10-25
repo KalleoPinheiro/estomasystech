@@ -25,16 +25,10 @@ for (const width of [768, 1280]) {
     });
 
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/agenda");
-    await page.getByLabel("Filtrar por profissional").selectOption(professional.id);
-    await page.getByRole("button", { name: "Semana", exact: true }).click();
+    // O período vem da URL (#551): abre direto na semana da consulta.
+    await page.goto(`/agenda?visao=semana&dia=${date}&profissional=${professional.id}`);
     await expect(page.locator("[data-week-day]")).toHaveCount(7);
-    // Semana da consulta: se ela cair na semana seguinte, avança até vê-la.
     const block = page.locator("button[title]");
-    for (let attempt = 0; attempt < 2 && (await block.count()) === 0; attempt++) {
-      await page.getByRole("button", { name: "Próxima semana" }).click();
-      await expect(page.locator("[data-week-day]")).toHaveCount(7);
-    }
     await expect(block).toHaveCount(1);
 
     // A próxima busca fica pendurada até o teste liberá-la.
@@ -42,7 +36,12 @@ for (const width of [768, 1280]) {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.route("**/api/appointments?*", async (route) => {
+    // A leitura mora no servidor (#551): quem fica pendurada é a resposta da navegação (RSC).
+    await page.route(/\/agenda\?.*_rsc=/, async (route) => {
+      if (route.request().headers()["next-router-prefetch"]) {
+        await route.continue();
+        return;
+      }
       await gate;
       await route.continue();
     });
