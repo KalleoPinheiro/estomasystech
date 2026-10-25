@@ -12,6 +12,56 @@ import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { AppointmentDetail } from '@/app/(staff)/agenda/appointment-detail';
 import DashboardPage from '@/app/(staff)/page';
 import type { AppointmentDto, FollowUpDto } from '@/lib/dto';
+import { mockHojeData, resetHojeData } from '../support/hoje-data';
+import { renderServerPage } from '../support/server-page';
+
+vi.mock('next/navigation', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return {
+    useRouter: () => ({ refresh: hoje.refresh, push: vi.fn() }),
+    usePathname: () => '/',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { requireStaffPage: hoje.requireStaffPage };
+});
+vi.mock('@/lib/server/data/appointments', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listAppointmentsFor: hoje.listAppointmentsFor };
+});
+vi.mock('@/lib/server/data/month-summary', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { buildMonthSummary: hoje.buildMonthSummary };
+});
+vi.mock('@/lib/server/data/follow-ups', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listFollowUpsFor: hoje.listFollowUpsFor };
+});
+vi.mock('@/lib/server/data/reminders', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { whatsappSentToday: hoje.whatsappSentToday };
+});
+vi.mock('@/lib/server/data/supplies', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listSuppliesFor: hoje.listSuppliesFor };
+});
+vi.mock('@/lib/server/data/triage', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { buildLinkedTriageQueue: hoje.buildLinkedTriageQueue };
+});
+vi.mock('@/lib/server/data/majority', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listMajorityReviewsFor: hoje.listMajorityReviewsFor };
+});
+vi.mock('@/app/(staff)/hoje-actions', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return {
+    resolveFollowUp: hoje.resolveFollowUp,
+    decideTriage: hoje.decideTriage,
+    keepMajorityGuardian: hoje.keepMajorityGuardian,
+  };
+});
 
 const WA_URL = 'https://wa.me/5511999990000?text=Ol%C3%A1';
 
@@ -106,6 +156,8 @@ let openSpy: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   openSpy = vi.fn();
   vi.stubGlobal('open', openSpy);
+  resetHojeData();
+  mockHojeData();
 });
 
 afterEach(() => {
@@ -194,11 +246,12 @@ describe('Feature: Botão Enviar WhatsApp e selo nos retornos pendentes', () => 
       .map((link) => link.closest('[data-follow-up-row]') as HTMLElement);
 
   it('C22 cada retorno pendente tem o botão', async () => {
-    const fetchMock = mockFetch({
+    mockHojeData({
       followUps: [followUp('fu-1', false), followUp('fu-2', false)],
       sent: { 'fu-2': '2026-07-16T10:40:00.000Z' },
     });
-    renderWithToast(<DashboardPage />);
+    const fetchMock = mockFetch();
+    await renderServerPage(DashboardPage);
 
     await screen.findByText('Paciente fu-1');
     const [first, second] = rows();
@@ -226,10 +279,10 @@ describe('Feature: Botão Enviar WhatsApp e selo nos retornos pendentes', () => 
   });
 
   it('C32 selo aparece só no retorno esgotado', async () => {
-    mockFetch({
+    mockHojeData({
       followUps: [followUp('fu-1', true), followUp('fu-2', false)],
     });
-    renderWithToast(<DashboardPage />);
+    await renderServerPage(DashboardPage);
 
     await screen.findByText('Paciente fu-1');
     const [exhausted, active] = rows();
