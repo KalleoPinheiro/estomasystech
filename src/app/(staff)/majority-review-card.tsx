@@ -11,20 +11,9 @@ import {
   type GuardianRelationship,
 } from '@/domain/guardian/guardian';
 import { apiFetch } from '@/lib/client';
+import type { MajorityReviewDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
-
-export interface MajorityReviewDto {
-  patientId: string;
-  fullName: string;
-  birthDate: string | null;
-  guardianName: string;
-  guardianRelationship: string;
-  /** Ainda só com o responsável no portal: transferir ou manter (#372). */
-  awaitingTransfer?: boolean;
-  /** Dia em que o aceite do representante deixa de valer (#375); nulo sem aceite dele. */
-  representativeConsentExpiresOn?: string | null;
-  representativeConsentExpired?: boolean;
-}
+import { keepMajorityGuardian } from './hoje-actions';
 
 /**
  * Data civil gravada à meia-noite UTC, mostrada sem passar pelo fuso do
@@ -43,16 +32,39 @@ const relationshipLabel = (value: string): string =>
  * Também avisa quando o aceite dado pelo representante vence, 90 dias depois
  * dos 18 anos (#375, ADR-033). Some quando não há ninguém.
  */
-export function MajorityReviewCard() {
+export function MajorityReviewCard({
+  initial,
+}: {
+  /**
+   * Lista lida no servidor pela tela Hoje (ADR-069): sem ela o card busca por
+   * `/api` e decide por `apiFetch`; com ela não há chamada na carga e a decisão
+   * é a Server Action `keepMajorityGuardian`.
+   */
+  initial?: MajorityReviewDto[];
+}) {
   const { toast } = useToast();
-  const { data, error, isLoading, refresh } = useApiQuery<MajorityReviewDto[]>(
-    '/api/guardians/majority',
+  const query = useApiQuery<MajorityReviewDto[]>(
+    initial ? null : '/api/guardians/majority',
   );
+  const { error, isLoading, refresh } = query;
+  const data = initial ?? query.data;
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   const keep = async (patientId: string) => {
     setSubmittingId(patientId);
     try {
+      if (initial) {
+        const result = await keepMajorityGuardian({ patientId });
+        toast(
+          result.success
+            ? {
+                description: 'Acesso mantido com o responsável',
+                variant: 'success',
+              }
+            : { description: result.error, variant: 'danger' },
+        );
+        return;
+      }
       await apiFetch(`/api/guardians/majority/${patientId}/keep`, {
         method: 'POST',
       });
@@ -109,12 +121,12 @@ export function MajorityReviewCard() {
                 {item.fullName}
               </Link>
               {item.birthDate && (
-                <span className="text-ink-3">
+                <span className="text-ink-2">
                   {' '}
                   · nascido(a) em {civilDate(item.birthDate)}
                 </span>
               )}
-              <span className="block text-ink-3">
+              <span className="block text-ink-2">
                 Responsável: {item.guardianName} (
                 {relationshipLabel(item.guardianRelationship)})
               </span>
