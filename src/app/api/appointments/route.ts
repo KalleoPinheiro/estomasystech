@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { parseStatusFilter } from '@/domain/scheduling/appointment-status-filter';
 import { getRepositories, type Services } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
+import { scheduleSchema } from '@/lib/appointment-schemas';
 import { parseAppointmentRange } from '@/lib/auth/appointment-query';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
@@ -11,19 +11,6 @@ import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
 import { listAppointmentsFor } from '@/lib/server/data/appointments';
-
-const scheduleSchema = z.object({
-  patientId: z.string().min(1),
-  startsAt: z.iso.datetime(),
-  endsAt: z.iso.datetime(),
-  procedure: z.string().min(1).max(500),
-  priceCents: z.number().int().nonnegative().max(1_000_000_000),
-  notes: z.string().max(5000).nullish(),
-  professionalId: z.string().max(100).nullish(),
-  procedureId: z.string().max(100).nullish(),
-  /** Recall de 1 clique: follow-up de origem vira "scheduled" após criar. */
-  followUpId: z.string().max(100).nullish(),
-});
 
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);

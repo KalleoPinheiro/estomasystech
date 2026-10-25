@@ -34,6 +34,8 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         ESTOMASYSTECH_DB_DRIVER: "pglite",
+        // Gancho de teste: deixa o E2E fazer uma leitura do servidor falhar (src/lib/server/test-faults.ts).
+        ESTOMASYSTECH_E2E_FAULTS: "1",
         TZ: "America/Sao_Paulo",
         APP_TIMEZONE: "America/Sao_Paulo",
         AUTH_SECRET: E2E_AUTH_SECRET,

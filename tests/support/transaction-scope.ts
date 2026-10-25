@@ -20,6 +20,7 @@ import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memo
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
 
 /** Escopo transacional em memória; o que o teste já tem entra por `parts`. */
 export function inMemoryScope(
@@ -37,6 +38,7 @@ export function inMemoryScope(
     scheduleAvailability: new InMemoryScheduleAvailabilityRepository(),
     conditions: new InMemoryClinicalConditionRepository(),
     conditionPhotos: new InMemoryConditionPhotoRepository(),
+    professionals: new InMemoryProfessionalRepository(),
     ...parts,
   };
 }

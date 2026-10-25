@@ -171,6 +171,7 @@ npm run dev                   # http://localhost:3000
 | `GLITCHTIP_DB_PASSWORD` / `GLITCHTIP_SECRET_KEY` | só com o GlitchTip | senha do Postgres próprio e chave do GlitchTip, lidas por `docker-compose.glitchtip.yml` (não pelo app) | [producao.md](producao.md) § 9.5 |
 | `ALERT_EMAIL_TO` / `ALERT_5XX_THRESHOLD` / `ALERT_DELIVERY_FAILURE_THRESHOLD` | não (sim em produção) | alertas por e-mail ao operador (`POST /api/alerts/run`) pelo canal da plataforma | limiares em 15 min, padrão `10` e `3`; [alertas.md](integrations/alertas.md) |
 | `ESTOMASYSTECH_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
+| `ESTOMASYSTECH_E2E_FAULTS` | não | só a suíte E2E: `1` deixa o teste fazer uma leitura do servidor falhar pelo cookie `e2e-fault` | nunca em produção; [ADR-078](../adr/078-gravacoes-da-agenda-em-server-actions.md) |
 | `POSTGRES_PORT` / `APP_PORT` | não | portas publicadas pelo compose no host | padrão `5432` (só loopback) e `3000` |
 | `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 | `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |

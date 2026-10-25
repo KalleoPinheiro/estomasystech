@@ -8,6 +8,7 @@ import type {
 } from '@/domain/clinical/clinical-repositories';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
+import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
@@ -33,6 +34,8 @@ export interface TransactionScope {
   scheduleAvailability: ScheduleAvailabilityRepository;
   conditions: ClinicalConditionRepository;
   conditionPhotos: ConditionPhotoRepository;
+  /** Agendar valida o profissional (ativo, da empresa) na mesma transação da consulta (#551). */
+  professionals: ProfessionalRepository;
 }
 
 /**

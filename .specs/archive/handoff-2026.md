@@ -2067,3 +2067,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **TESTE-ALTERADO** (troca de harness, cenários e asserções preservados): `tests/pages/{agenda-busca-falha,agenda-filtro-status,agenda-visao-dia,agenda-visao-semana,agenda-mes-dia-abre-no-dia-escolhido,agenda-waitlist-flow,waitlist-late-cancel-ui,staff-agenda}.test.tsx`; tabela de paridade no PR. Harness novo: `tests/support/agenda-app.tsx`.
 - **Ficou para o PR 2**: Server Actions de consulta (criar, recorrente, remarcar, confirmar, cancelar, falta, concluir) com auditoria na mesma transação e teste de rollback em Postgres real; as gravações seguem por `/api`.
 - **Next step**: the-judge, validação em thread limpa, gate:local no WSL; merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Agenda: gravações em Server Actions (#551, PR 2) (2026-10-25) — EM REVISÃO
+- **O que mudou**: `agenda-actions.ts` com 7 ações por `defineAction` (agendar, série, remarcar, confirmar, concluir, cancelar, falta); a tela chama as ações (`unwrapAction`) em vez de `apiFetch`. Schemas `zod` compartilhados com as rotas (`src/lib/appointment-schemas.ts`). `TransactionScope` ganhou `professionals`. Auditoria `appointment` na mesma transação; vínculo, Google Agenda, kit e fila depois do commit. ADR-078.
+- **Falha de leitura no E2E**: gancho `ESTOMASYSTECH_E2E_FAULTS` + cookie `e2e-fault` (`test-faults.ts`); `e2e/agenda-leitura-falha.spec.ts` prova alerta e «Tentar de novo».
+- **Testes novos** (nenhum existente alterado além de um `vi.mock` das ações nos testes de página): `tests/app/agenda-actions.test.ts`, `tests/integracao/agenda-auditoria-transacional.integracao.ts` (rollback em Postgres real: agendar, concluir e série), `tests/lib/server/test-faults.test.ts`.
+- **Pergunta aberta (PO)**: R4 do Profissional em confirmar/concluir (a rota nunca aplicou).
+- **Next step**: the-judge; gate:local no WSL. **Blockers**: nenhum.

@@ -18,6 +18,7 @@ import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
 import { DrizzlePatientRepository } from './drizzle-patient-repository';
+import { DrizzleProfessionalRepository } from './drizzle-professional-repository';
 import { DrizzleScheduleAvailabilityRepository } from './drizzle-schedule-availability-repository';
 
 /**
@@ -61,6 +62,7 @@ export class DrizzleTransactionManager implements TransactionManager {
           this.clinicId,
           this.cipher,
         ),
+        professionals: new DrizzleProfessionalRepository(tx, this.clinicId),
       }),
     );
   }
