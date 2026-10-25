@@ -9,9 +9,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { CalendarGrid } from '@/app/(staff)/agenda/calendar-grid';
-import AgendaPage from '@/app/(staff)/agenda/page';
 import {
   layoutDay,
   verticalSpan,
@@ -19,13 +17,47 @@ import {
 } from '@/app/(staff)/agenda/week-layout';
 import { WeekView } from '@/app/(staff)/agenda/week-view';
 import type { AppointmentDto } from '@/lib/dto';
+import {
+  click,
+  lastListWindow,
+  renderAgenda,
+  resetAgenda,
+} from '../support/agenda-app';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useParams: () => ({}),
-  usePathname: () => '/agenda',
-  useSearchParams: () => new URLSearchParams(),
-}));
+vi.mock('next/navigation', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    useRouter: () => agenda.router,
+    useParams: () => ({}),
+    usePathname: () => '/agenda',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { requireStaffPage: agenda.requireStaffPage };
+});
+vi.mock('@/lib/server/data/appointments', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    listAppointmentsFor: agenda.listAppointmentsFor,
+    countAppointmentsFor: agenda.countAppointmentsFor,
+  };
+});
+vi.mock('@/lib/server/data/professionals', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listProfessionalOptions: agenda.listProfessionalOptions };
+});
+vi.mock('@/lib/server/data/schedule', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    loadScheduleConfig: agenda.loadScheduleConfig,
+    listClosuresFor: agenda.listClosuresFor,
+  };
+});
+vi.mock('@/lib/server/data/waitlist', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listWaitlistFor: agenda.listWaitlistFor };
+});
 
 beforeEach(() => {
   // Os cenários usam a semana de 18/10/2026: sem fixar o relógio, o dia 22
@@ -36,7 +68,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -256,39 +287,16 @@ describe('Feature: Agenda por semana com blocos do tamanho da consulta (#471)', 
   });
 
   describe('Cenário: escolha da visão na página', () => {
-    const mockFetch = () => {
-      const urls: string[] = [];
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (url: string) => {
-          urls.push(url);
-          const data = url.startsWith('/api/schedule-config')
-            ? { config: CONFIG, isDefault: false }
-            : [];
-          return {
-            ok: true,
-            json: async () => ({ success: true, data, error: null }),
-          };
-        }),
-      );
-      return urls;
-    };
-
     it('Dada a agenda no mês, Quando escolher Semana, Então busca 7 dias a partir do domingo e navega por semana', async () => {
-      const urls = mockFetch();
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ scheduleConfig: CONFIG });
+      await renderAgenda();
       await screen.findByLabelText('Mês anterior');
 
-      fireEvent.click(screen.getByRole('button', { name: 'Semana' }));
+      await click(screen.getByRole('button', { name: 'Semana' }));
 
       await screen.findByLabelText('Semana anterior');
       await waitFor(() => {
-        const weekUrl = urls
-          .filter((url) => url.startsWith('/api/appointments?'))
-          .at(-1) as string;
-        const params = new URLSearchParams(weekUrl.split('?')[1]);
-        const from = new Date(params.get('from') as string);
-        const to = new Date(params.get('to') as string);
+        const { from, to } = lastListWindow();
         expect(from.getDay()).toBe(0);
         expect(Math.round((to.getTime() - from.getTime()) / 86_400_000)).toBe(
           7,
@@ -299,7 +307,7 @@ describe('Feature: Agenda por semana com blocos do tamanho da consulta (#471)', 
         'true',
       );
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mês' }));
+      await click(screen.getByRole('button', { name: 'Mês' }));
       expect(await screen.findByLabelText('Mês anterior')).toBeInTheDocument();
     });
   });
