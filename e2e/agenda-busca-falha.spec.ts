@@ -117,4 +117,40 @@ test.describe("agenda: busca que falha (#578)", () => {
     await expect(page.getByRole("button", { name: `10:00 ${name}`, exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: `09:00 ${name}`, exact: true })).toHaveCount(0);
   });
+
+  for (const width of [360, 1280]) {
+    test(`falha ao refazer a mesma URL esconde a grade e deixa o alerta (${width}px)`, async ({ page, request }) => {
+      const s = await seed(request);
+      const name = shown(s.patient.fullName);
+      await page.setViewportSize({ width, height: 900 });
+      // A contagem falha desde o início: o alerta aparece com a grade da URL corrente.
+      await page.route("**/api/appointments/status-counts?*", (route) =>
+        route.fulfill({
+          status: 429,
+          contentType: "application/json",
+          body: JSON.stringify({ success: false, data: null, error: "Muitas requisições" }),
+        }),
+      );
+      await page.goto("/agenda");
+      await page.getByLabel("Filtrar por profissional").selectOption(s.professional.id);
+      await goToMonth(page, s.day);
+      const alert = page.getByRole("alert").filter({ hasText: "Não foi possível carregar as consultas." });
+      await expect(alert).toBeVisible();
+      await expect(gridEntry(page, width, s.day.day, `09:00 ${name}`)).toBeVisible();
+
+      // Agora a lista também falha, na mesma URL: refazer não pode deixar a grade antiga.
+      await page.route("**/api/appointments?*", (route) =>
+        route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ success: false, data: null, error: "Erro interno" }),
+        }),
+      );
+      await page.getByRole("button", { name: "Tentar de novo" }).click();
+
+      await expect(alert).toBeVisible();
+      await expect(gridEntry(page, width, s.day.day, `09:00 ${name}`)).toHaveCount(0);
+    });
+  }
 });
+
