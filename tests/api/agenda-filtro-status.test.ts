@@ -269,7 +269,7 @@ describe('Feature: Filtrar a agenda por status da consulta (#538)', () => {
   });
 
   it('Dado a chamada sem sessão, Quando contar, Então 401', async () => {
-    const response = await get('/api/appointments/status-counts?' + range, {
+    const response = await get(`/api/appointments/status-counts?${range}`, {
       cookie: '',
     });
     expect(response.status).toBe(401);
