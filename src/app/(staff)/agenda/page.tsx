@@ -482,13 +482,14 @@ export default function AgendaPage() {
             Mostrar padrão
           </Button>
         </div>
-      ) : error ? null : !appointments ? (
+      ) : error ? null : !appointments && period.view === 'month' ? (
         <LoadingIndicator />
       ) : period.view !== 'month' ? (
         <WeekView
           weekStart={period.view === 'day' ? period.dayDate : period.weekStart}
           dayCount={period.view === 'day' ? 1 : 7}
-          appointments={appointments}
+          appointments={appointments ?? []}
+          loading={!appointments}
           scheduleConfig={scheduleConfig}
           closures={closures ?? []}
           professionalName={professionalName}
@@ -499,7 +500,7 @@ export default function AgendaPage() {
       ) : (
         <CalendarGrid
           monthDate={period.monthDate}
-          appointments={appointments}
+          appointments={appointments ?? []}
           scheduleConfig={scheduleConfig}
           closures={closures ?? []}
           professionalName={professionalName}
