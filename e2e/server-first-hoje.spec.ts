@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 import {
   createCondition,
+  createFollowUp,
   createGuardian,
   createPatient,
   linkGuardianAccount,
+  createSupply,
   linkPortalAccount,
   unique,
 } from "./support/api";
@@ -77,10 +79,12 @@ test.describe("Hoje no servidor: admin com fila de triagem e aviso de maioridade
     const adminCookie = sessionCookie("local", "company_admin");
     await context.addCookies([adminCookie]);
     // Fila com três fotos: a altura do bloco é o que empurrava a agenda.
+    const patients: { id: string }[] = [];
     for (let i = 0; i < 3; i++) {
       await context.clearCookies();
       await context.addCookies([adminCookie]);
       const patient = await createPatient(page.request, { fullName: `Paciente Hoje CLS ${unique()}` });
+      patients.push(patient);
       await linkPortalAccount(page.request, "patient", patient);
       const condition = await createCondition(page.request, patient.id, {
         kind: "wound",
@@ -98,6 +102,16 @@ test.describe("Hoje no servidor: admin com fila de triagem e aviso de maioridade
     }
     await context.clearCookies();
     await context.addCookies([adminCookie]);
+    // Cinco retornos pendentes (o card mostra 3 e «Ver todos») e um insumo abaixo do mínimo:
+    // o card de retornos chegando por último era o que empurrava o resto da tela.
+    for (let i = 0; i < 5; i++) {
+      await createFollowUp(page.request, {
+        patientId: (patients[i % patients.length] as { id: string }).id,
+        dueDate: new Date(Date.now() + (i + 1) * 86_400_000).toISOString(),
+        reason: `Retorno Hoje CLS ${i + 1} ${unique()}`,
+      });
+    }
+    await createSupply(page.request, { name: `Insumo Hoje CLS ${unique()}`, minQty: 5 });
     const guardian = await createGuardian(page.request, `Resp Hoje CLS ${unique()}`, `resp.${unique()}@e2e.estomasystech.test`);
     const birth = new Date();
     birth.setFullYear(birth.getFullYear() - 19);
@@ -112,10 +126,12 @@ test.describe("Hoje no servidor: admin com fila de triagem e aviso de maioridade
 
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  for (const width of [360, 390, 768, 1280]) {
-    test(`em ${width}px a triagem e a maioridade chegam sem empurrar a agenda`, async ({ page }) => {
+  for (const [width, cpu] of [360, 390, 768, 1280].flatMap((w) => [1, 4].map((c) => [w, c] as const))) {
+    test(`em ${width}px (CPU ${cpu}x mais lenta) as pendências chegam sem empurrar a agenda`, async ({ page }) => {
       await page.context().addCookies([sessionCookie("local", "company_admin")]);
       await page.setViewportSize({ width, height: 800 });
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpu });
       await page.addInitScript(() => {
         const box = { cls: 0 };
         (window as unknown as { __cls: typeof box }).__cls = box;
@@ -134,6 +150,7 @@ test.describe("Hoje no servidor: admin com fila de triagem e aviso de maioridade
 
       const cls = await page.evaluate(() => (window as unknown as { __cls: { cls: number } }).__cls.cls);
       expect(cls, "CLS da Hoje com pendências").toBeLessThan(CLS_LIMIT_COM_PENDENCIAS);
+      await expect(page.getByRole("link", { name: /^Ver todos \(\d+\)$/ })).toBeVisible();
     });
   }
 });

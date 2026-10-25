@@ -8,14 +8,23 @@ import { whatsappSentToday } from '@/lib/server/data/reminders';
 import { FollowUpRowActions } from './follow-up-row-actions';
 import { loadBlock } from './load-block';
 
-// Mesmo cap das demais cards do dashboard (LowStockCard, TriageQueue).
-const FOLLOW_UPS_CAP = 8;
+// Altura previsível acima da dobra (CLS, #548): 3 retornos; o resto fica em «Ver todos».
+const FOLLOW_UPS_CAP = 3;
 
-export async function FollowUpsCard({ session }: { session: Session }) {
+export async function FollowUpsCard({
+  session,
+  showAll = false,
+}: {
+  session: Session;
+  showAll?: boolean;
+}) {
   const { data: followUps, error } = await loadBlock(() =>
     listFollowUpsFor(session, { status: 'pending' }),
   );
-  const visible = (followUps ?? []).slice(0, FOLLOW_UPS_CAP);
+  const total = followUps?.length ?? 0;
+  const visible = showAll
+    ? (followUps ?? [])
+    : (followUps ?? []).slice(0, FOLLOW_UPS_CAP);
   const homonyms = homonymPatientIds(visible);
   // O «enviado hoje às HH:MM» é um enfeite: se falhar, a lista continua.
   const { data: sent } = await loadBlock(() =>
@@ -67,6 +76,14 @@ export async function FollowUpsCard({ session }: { session: Session }) {
           </li>
         ))}
       </ul>
+      {total > FOLLOW_UPS_CAP && (
+        <Link
+          href={showAll ? '/' : '/?retornos=todos'}
+          className="mt-2 inline-flex min-h-11 items-center font-medium text-accent-ink text-sm hover:underline"
+        >
+          {showAll ? 'Mostrar menos' : `Ver todos (${total})`}
+        </Link>
+      )}
     </SummaryCard>
   );
 }

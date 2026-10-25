@@ -14,21 +14,25 @@ import { TodayAppointmentsCard } from './_hoje/today-appointments';
 import { TriageCard } from './_hoje/triage-card';
 
 /**
- * Tela Hoje no servidor (#548, ADR-069): cada bloco lê o próprio dado e tem o
- * próprio `<Suspense>`, então o mais lento não segura a tela. A agenda do dia e
- * os retornos vêm primeiro; triagem, maioridade e consultas sem desfecho (que
- * só aparecem com pendência) ficam abaixo, para não empurrar o conteúdo. Cada bloco só
+ * Tela Hoje no servidor (#548, ADR-069): cada bloco lê o próprio dado, em
+ * paralelo, mas todos ficam atrás de UM `<Suspense>`: a tela chega inteira num
+ * flush, sem card que apareça depois e empurre os outros (CLS). Triagem,
+ * maioridade e consultas sem desfecho (que só aparecem com pendência) ficam
+ * abaixo do grid. Cada bloco só
  * existe para quem pode usá-lo (#199): Atendente e Profissional não têm resumo
  * financeiro nem estoque. A carga não chama `/api`; as ações rápidas
  * (concluir/cancelar retorno, triagem, maioridade) são Server Actions.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage(props?: {
+  searchParams?: Promise<{ retornos?: string }>;
+}) {
   const session = await requireStaffPage({ next: '/' });
   const showFinance = canRoleAccess('/api/summary', session.role);
   const showStock = canRoleAccess('/api/supplies', session.role);
   const showTriage = canRoleAccess('/api/photos/triage', session.role);
   // Aviso de maioridade (#372): só quem gerencia responsáveis decide.
   const showMajority = GUARDIAN_MANAGER_ROLES.includes(session.role);
+  const showAllFollowUps = (await props?.searchParams)?.retornos === 'todos';
 
   return (
     <div>
@@ -37,47 +41,38 @@ export default async function DashboardPage() {
         description={formatDate(new Date().toISOString())}
       />
 
-      {showFinance && (
-        <Suspense fallback={<KpiSkeleton />}>
-          <KpiGrid session={session} />
-        </Suspense>
-      )}
+      {/* Uma só fronteira: KPIs, grid e pendências chegam no mesmo flush. Com
+          fronteiras separadas, o card que chegava por último (retornos, 405 px
+          contra 118 do esqueleto) empurrava os que já estavam na tela (CLS). */}
+      <Suspense fallback={<HojeSkeleton showFinance={showFinance} />}>
+        {showFinance && <KpiGrid session={session} />}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Suspense fallback={<CardSkeleton />}>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <TodayAppointmentsCard session={session} />
-        </Suspense>
 
-        <div className="flex flex-col gap-6">
-          <Suspense fallback={<CardSkeleton />}>
-            <FollowUpsCard session={session} />
-          </Suspense>
-          {showStock && (
-            <Suspense fallback={<CardSkeleton />}>
-              <LowStockCard session={session} />
-            </Suspense>
-          )}
+          <div className="flex flex-col gap-6">
+            <FollowUpsCard session={session} showAll={showAllFollowUps} />
+            {showStock && <LowStockCard session={session} />}
+          </div>
         </div>
-      </div>
 
-      {/* Depois do grid, que é o primeiro conteúdo estável: blocos que só existem
-          com pendência chegam no stream sem empurrar a agenda (CLS, #548). */}
-      <div className="mt-6">
-        {showTriage && (
-          <Suspense fallback={null}>
-            <TriageCard session={session} />
-          </Suspense>
-        )}
-
-        {showMajority && (
-          <Suspense fallback={null}>
-            <MajorityCard session={session} />
-          </Suspense>
-        )}
-
-        <Suspense fallback={null}>
+        <div className="mt-6">
+          {showTriage && <TriageCard session={session} />}
+          {showMajority && <MajorityCard session={session} />}
           <PendingClosureCard session={session} />
-        </Suspense>
+        </div>
+      </Suspense>
+    </div>
+  );
+}
+
+function HojeSkeleton({ showFinance }: { showFinance: boolean }) {
+  return (
+    <div aria-busy="true">
+      {showFinance && <KpiSkeleton />}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <CardSkeleton />
+        <CardSkeleton />
       </div>
     </div>
   );
