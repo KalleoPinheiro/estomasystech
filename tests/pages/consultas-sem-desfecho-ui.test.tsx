@@ -1,18 +1,62 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { AppointmentDetail } from '@/app/(staff)/agenda/appointment-detail';
 import { CalendarGrid } from '@/app/(staff)/agenda/calendar-grid';
 import DashboardPage from '@/app/(staff)/page';
 import type { AppointmentDto } from '@/lib/dto';
-import { identityFor, WithStaffIdentity } from '../support/staff-identity';
+import { mockHojeData, resetHojeData } from '../support/hoje-data';
+import { renderServerPage } from '../support/server-page';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  usePathname: () => '/',
-}));
+vi.mock('next/navigation', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return {
+    useRouter: () => ({ refresh: hoje.refresh, push: vi.fn() }),
+    usePathname: () => '/',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { requireStaffPage: hoje.requireStaffPage };
+});
+vi.mock('@/lib/server/data/appointments', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listAppointmentsFor: hoje.listAppointmentsFor };
+});
+vi.mock('@/lib/server/data/month-summary', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { buildMonthSummary: hoje.buildMonthSummary };
+});
+vi.mock('@/lib/server/data/follow-ups', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listFollowUpsFor: hoje.listFollowUpsFor };
+});
+vi.mock('@/lib/server/data/reminders', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { whatsappSentToday: hoje.whatsappSentToday };
+});
+vi.mock('@/lib/server/data/supplies', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listSuppliesFor: hoje.listSuppliesFor };
+});
+vi.mock('@/lib/server/data/triage', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { buildLinkedTriageQueue: hoje.buildLinkedTriageQueue };
+});
+vi.mock('@/lib/server/data/majority', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return { listMajorityReviewsFor: hoje.listMajorityReviewsFor };
+});
+vi.mock('@/app/(staff)/hoje-actions', async () => {
+  const { hoje } = await import('../support/hoje-data');
+  return {
+    resolveFollowUp: hoje.resolveFollowUp,
+    decideTriage: hoje.decideTriage,
+    keepMajorityGuardian: hoje.keepMajorityGuardian,
+  };
+});
 
 const ok = (data: unknown) => ({
   ok: true,
@@ -43,6 +87,10 @@ const futura: AppointmentDto = {
   endsAt: new Date(Date.now() + 86_400_000 + 3_600_000).toISOString(),
 };
 
+beforeEach(() => {
+  resetHojeData();
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -50,26 +98,9 @@ afterEach(() => {
 
 describe('Feature: consulta passada sem desfecho (#480)', () => {
   it('Dado uma consulta de dias atrás ainda agendada, Quando a tela Hoje abre, Então lista a pendência com atalho para a agenda', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.startsWith('/api/auth/identity')) {
-          return ok(identityFor('atendente'));
-        }
-        if (url.startsWith('/api/appointments')) return ok([passada]);
-        if (url.startsWith('/api/follow-ups')) return ok([]);
-        if (url.startsWith('/api/reminders/whatsapp-link')) return ok({});
-        if (url.startsWith('/api/guardians/majority')) return ok([]);
-        throw new Error(`unexpected fetch: ${url}`);
-      }),
-    );
+    mockHojeData({ role: 'atendente', recent: [passada] });
 
-    renderWithToast(
-      <WithStaffIdentity>
-        <DashboardPage />
-      </WithStaffIdentity>,
-    );
+    await renderServerPage(DashboardPage);
 
     expect(
       await screen.findByText('Consultas sem desfecho (1)'),
@@ -80,26 +111,9 @@ describe('Feature: consulta passada sem desfecho (#480)', () => {
   });
 
   it('Dado só consulta futura, Quando a tela Hoje abre, Então não mostra pendência', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url.startsWith('/api/auth/identity')) {
-          return ok(identityFor('atendente'));
-        }
-        if (url.startsWith('/api/appointments')) return ok([futura]);
-        if (url.startsWith('/api/follow-ups')) return ok([]);
-        if (url.startsWith('/api/reminders/whatsapp-link')) return ok({});
-        if (url.startsWith('/api/guardians/majority')) return ok([]);
-        throw new Error(`unexpected fetch: ${url}`);
-      }),
-    );
+    mockHojeData({ role: 'atendente', today: [futura], recent: [futura] });
 
-    renderWithToast(
-      <WithStaffIdentity>
-        <DashboardPage />
-      </WithStaffIdentity>,
-    );
+    await renderServerPage(DashboardPage);
 
     expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
     expect(
