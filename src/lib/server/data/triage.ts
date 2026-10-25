@@ -31,7 +31,7 @@ function infectionAlertFor(
   assessment: ConditionAssessment | undefined,
 ): string | null {
   const level = assessment?.infectionLevel;
-  return isInfectionAlertLevel(level) ? (level ?? null) : null;
+  return level != null && isInfectionAlertLevel(level) ? level : null;
 }
 
 /**
