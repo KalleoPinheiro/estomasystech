@@ -7,7 +7,7 @@ import { useAgendaPeriod } from '@/app/(staff)/agenda/agenda-period';
 // Março de 2030: longe de «hoje», então sem escolha o dia de entrada é o dia 1.
 const MARCH_2030 = new Date(2030, 2, 10);
 
-describe('Feature: Mês → Dia abre no dia escolhido (#589)', () => {
+describe('Feature: Mês → Dia abre no dia escolhido (#591)', () => {
   it('Dado um dia marcado no mês, Quando trocar para Dia, Então abre nesse dia', () => {
     const { result } = renderHook(() => useAgendaPeriod(MARCH_2030));
 

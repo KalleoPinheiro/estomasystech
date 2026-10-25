@@ -5,9 +5,9 @@ import { businessDay } from "./support/dates";
 const pad = (n: number) => String(n).padStart(2, "0");
 const keyOf = (d: { year: number; month: number; day: number }) => `${d.year}-${pad(d.month)}-${pad(d.day)}`;
 
-// Visão Dia aberta a partir do mês (#589): no celular o mês compacto tem dia marcado e a visão
+// Visão Dia aberta a partir do mês (#591): no celular o mês compacto tem dia marcado e a visão
 // Dia abre nele; no desktop o mês não tem dia marcado, então vale o dia 1 do mês (hoje, no mês atual).
-test.describe("agenda: Mês → Dia abre no dia escolhido (#589)", () => {
+test.describe("agenda: Mês → Dia abre no dia escolhido (#591)", () => {
   test("celular (360px): marcar um dia no mês e tocar em Dia abre nesse dia", async ({ page }) => {
     const day = businessDay(200);
     await page.setViewportSize({ width: 360, height: 800 });

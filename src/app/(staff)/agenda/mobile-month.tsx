@@ -17,7 +17,7 @@ interface MobileMonthProps {
   /** Mesmo critério da grade do desktop: dia passado, fora da grade ou fechado. */
   isBookable: (day: Date) => boolean;
   onBook: (day: Date) => void;
-  /** Avisa a página do dia marcado, para a visão Dia abrir nele (#589). */
+  /** Avisa a página do dia marcado, para a visão Dia abrir nele (#591). */
   onSelectDay?: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }

@@ -65,7 +65,7 @@ interface CalendarGridProps {
   /** Filtro de status pede as canceladas: ocupam linha da célula como as demais (#538). */
   showCancelled?: boolean;
   onDayClick: (day: Date) => void;
-  /** Celular: dia marcado no mês compacto (a visão Dia abre nele, #589). */
+  /** Celular: dia marcado no mês compacto (a visão Dia abre nele, #591). */
   onSelectDay?: (day: Date) => void;
   onAppointmentClick: (appointment: AppointmentDto) => void;
 }

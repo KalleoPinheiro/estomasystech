@@ -76,7 +76,7 @@ export interface AgendaPeriod {
 }
 
 export interface AgendaPeriodState extends AgendaPeriod {
-  /** Dia escolhido no mês compacto do celular: a visão Semana/Dia abre nele (#589). */
+  /** Dia escolhido no mês compacto do celular: a visão Semana/Dia abre nele (#591). */
   chooseDay: (day: Date) => void;
 }
 
