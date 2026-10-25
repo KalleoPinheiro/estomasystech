@@ -49,7 +49,24 @@ const API_RATE_LIMIT = new SharedRateLimiter(
   API_RATE_LIMIT_SYNC_MS,
 );
 
+// Server Action (ADR-069 § 2) é um POST no caminho da página, fora de `/api/*`:
+// sem este teto ela escaparia do limite da API. Contador próprio, mesmo teto e
+// mesma chave (conta autenticada ou IP).
+const ACTION_RATE_LIMIT_MAX =
+  Number(process.env.ACTION_RATE_LIMIT_MAX) || API_RATE_LIMIT_MAX;
+const ACTION_RATE_LIMIT = new SharedRateLimiter(
+  'action',
+  ACTION_RATE_LIMIT_MAX,
+  60_000,
+  undefined,
+  API_RATE_LIMIT_SYNC_MS,
+);
+
 const isApiPath = (pathname: string): boolean => pathname.startsWith('/api/');
+
+/** O Next marca o POST de Server Action com o cabeçalho `Next-Action`. */
+const isServerActionRequest = (request: NextRequest): boolean =>
+  request.method === 'POST' && request.headers.has('next-action');
 
 /**
  * Liveness (#212) passa direto: sem rate limit, que conta no banco — o
@@ -218,8 +235,10 @@ async function route(
   }
 
   if (
-    isApiPath(pathname) &&
-    !(await API_RATE_LIMIT.allow(apiRateLimitKey(request)))
+    (isApiPath(pathname) &&
+      !(await API_RATE_LIMIT.allow(apiRateLimitKey(request)))) ||
+    (isServerActionRequest(request) &&
+      !(await ACTION_RATE_LIMIT.allow(apiRateLimitKey(request))))
   ) {
     return fail(
       'Limite de requisições excedido, tente novamente em instantes',

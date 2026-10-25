@@ -54,6 +54,32 @@ function statusForDomainError(error: DomainError): number {
   return 400;
 }
 
+/** Mensagem e status HTTP de uma exceção — a mesma tradução para rotas e Server Actions. */
+export function describeFailure(error: unknown): {
+  message: string;
+  status: number;
+} {
+  if (error instanceof ZodError) {
+    const detail = error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    return { message: `Dados inválidos: ${detail}`, status: 400 };
+  }
+  if (error instanceof NotFoundError) {
+    // O id saiu da mensagem (issue #219); fica só aqui, para diagnóstico.
+    logger.info('[api] 404', {
+      entity: error.entity,
+      entityId: error.entityId,
+    });
+  }
+  if (error instanceof DomainError) {
+    return { message: error.message, status: statusForDomainError(error) };
+  }
+  logError('Erro inesperado na API:', error);
+  recordSignal('server-error');
+  return { message: 'Erro interno do servidor', status: 500 };
+}
+
 export async function handleRequest<T>(
   action: () => Promise<T>,
   buildMeta?: (result: T) => { nextCursor: string | null },
@@ -62,24 +88,7 @@ export async function handleRequest<T>(
     const result = await action();
     return ok(result, 200, buildMeta?.(result));
   } catch (error) {
-    if (error instanceof ZodError) {
-      const detail = error.issues
-        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-        .join('; ');
-      return fail(`Dados inválidos: ${detail}`, 400);
-    }
-    if (error instanceof NotFoundError) {
-      // O id saiu da mensagem (issue #219); fica só aqui, para diagnóstico.
-      logger.info('[api] 404', {
-        entity: error.entity,
-        entityId: error.entityId,
-      });
-    }
-    if (error instanceof DomainError) {
-      return fail(error.message, statusForDomainError(error));
-    }
-    logError('Erro inesperado na API:', error);
-    recordSignal('server-error');
-    return fail('Erro interno do servidor', 500);
+    const { message, status } = describeFailure(error);
+    return fail(message, status);
   }
 }

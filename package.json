@@ -35,6 +35,7 @@
     "import-taxonomy": "tsx scripts/import-taxonomy.ts",
     "check:sv": "bash scripts/check-sv-adoption.sh",
     "check:docs": "tsx scripts/check-docs.ts",
+    "check:server-first": "tsx scripts/check-server-first.ts",
     "check:testes": "tsx scripts/gate/check-test-integrity.ts",
     "gate:local": "tsx scripts/gate/local.ts",
     "changeset": "changeset",

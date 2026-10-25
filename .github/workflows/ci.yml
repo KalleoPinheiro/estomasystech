@@ -58,6 +58,9 @@ jobs:
       - name: Docs gate
         run: npm run check:docs
 
+      - name: Server-first gate
+        run: npm run check:server-first
+
       - name: Test (coverage)
         run: npm run test:coverage
 
