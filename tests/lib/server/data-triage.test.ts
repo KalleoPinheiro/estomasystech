@@ -13,10 +13,10 @@ process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const admin = {
   role: 'company_admin',
-  email: 'a@clinica.com',
+  subject: 'a@clinica.com',
   clinicId: CLINIC_A_ID,
   professionalId: null,
-} as Session;
+} as unknown as Session;
 
 const woundScore = {
   lengthMm: 10,

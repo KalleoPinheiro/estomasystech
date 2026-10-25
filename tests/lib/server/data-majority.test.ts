@@ -34,10 +34,10 @@ describe('Feature: revisão de maioridade lida no servidor (#372, #548)', () => 
   it('Dado revisões com e sem data, Quando o admin lê, Então as datas viram texto ISO ou nulo', async () => {
     const result = await listMajorityReviewsFor({
       role: 'company_admin',
-      email: 'x@clinica.com',
+      subject: 'x@clinica.com',
       clinicId: 'clinic-a',
       professionalId: null,
-    } as Session);
+    } as unknown as Session);
 
     expect(result.map((r) => [r.patientId, r.birthDate])).toEqual([
       ['p-1', null],
@@ -52,10 +52,10 @@ describe('Feature: revisão de maioridade lida no servidor (#372, #548)', () => 
     await expect(
       listMajorityReviewsFor({
         role: 'profissional',
-        email: 'x@clinica.com',
+        subject: 'x@clinica.com',
         clinicId: 'clinic-a',
         professionalId: null,
-      } as Session),
+      } as unknown as Session),
     ).rejects.toThrow();
   });
 });

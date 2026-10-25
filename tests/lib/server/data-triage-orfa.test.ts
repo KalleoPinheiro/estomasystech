@@ -37,10 +37,10 @@ describe('Feature: fila de triagem com dado órfão (defesa de leitura, #548)', 
     const queue = await buildTriageQueue(
       {
         role: 'company_admin',
-        email: 'a@c.com',
+        subject: 'a@c.com',
         clinicId: 'c',
         professionalId: null,
-      } as Session,
+      } as unknown as Session,
       () => true,
     );
 

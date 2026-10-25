@@ -9,11 +9,11 @@ process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 const session = (overrides: Partial<Session>): Session =>
   ({
     role: 'company_admin',
-    email: 'x@clinica.com',
+    subject: 'x@clinica.com',
     clinicId: CLINIC_A_ID,
     professionalId: null,
     ...overrides,
-  }) as Session;
+  }) as unknown as Session;
 
 const range = {
   from: new Date('2026-10-01T00:00:00Z'),
