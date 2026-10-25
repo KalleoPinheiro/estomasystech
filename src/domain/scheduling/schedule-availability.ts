@@ -2,6 +2,7 @@ import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 import type { TimeSlot } from '../shared/time-slot';
 import { appTimeZone, zonedDateKey, zonedParts } from '../shared/time-zone';
+import { endMinuteOfDay } from './business-hours';
 import { formatMinuteOfDay } from './schedule-config';
 
 /**
@@ -207,11 +208,13 @@ export function assertWithinProfessionalHours(
   const to = zonedParts(slot.end, timeZone);
   const weekday = from.weekday;
   const start = from.hour * 60 + from.minute;
-  const end = to.hour * 60 + to.minute || 24 * 60;
-  const fits = windows.some(
-    (w) =>
-      w.weekday === weekday && w.startMinute <= start && end <= w.endMinute,
-  );
+  const end = endMinuteOfDay(from, to);
+  const fits =
+    end !== null &&
+    windows.some(
+      (w) =>
+        w.weekday === weekday && w.startMinute <= start && end <= w.endMinute,
+    );
   if (!fits) {
     throw new ValidationError(
       `Fora do horário do profissional: ${describeWeeklyWindows(windows)}`,
