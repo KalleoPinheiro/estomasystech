@@ -38,6 +38,11 @@ interface WeekViewProps {
   onAppointmentClick: (appointment: AppointmentDto) => void;
   /** Filtro de status pede as canceladas: viram blocos, em vez do resumo "N canceladas" (#538). */
   showCancelled?: boolean;
+  /**
+   * Busca em andamento (#588): as colunas aparecem vazias, marcadas como ocupadas e sem o
+   * aviso «Nenhuma consulta», e nunca com consultas de outro período.
+   */
+  loading?: boolean;
 }
 
 const weekDays = (weekStart: Date, dayCount: number): Date[] =>
@@ -96,6 +101,7 @@ export function WeekView({
   onDayClick,
   onAppointmentClick,
   showCancelled = false,
+  loading = false,
 }: WeekViewProps) {
   const days = weekDays(weekStart, dayCount);
   const isDay = dayCount === 1;
@@ -112,8 +118,9 @@ export function WeekView({
   const lunch = lunchSpan(scheduleConfig, range);
 
   return (
-    <div>
-      {appointments.length === 0 && (
+    <div aria-busy={loading || undefined}>
+      {loading && <span className="sr-only">Carregando…</span>}
+      {!loading && appointments.length === 0 && (
         <EmptyState
           message={`Nenhuma consulta agendada ${isDay ? 'neste dia' : 'nesta semana'}.`}
         />
