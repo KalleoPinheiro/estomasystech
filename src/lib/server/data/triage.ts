@@ -1,5 +1,9 @@
 import 'server-only';
 import type { ClinicalCondition } from '@/domain/clinical/clinical-condition';
+import type {
+  ClinicalConditionRepository,
+  ConditionPhotoRepository,
+} from '@/domain/clinical/clinical-repositories';
 import type { ConditionAssessment } from '@/domain/clinical/condition-assessment';
 import { isInfectionAlertLevel } from '@/domain/clinical/wound-time';
 import { getRepositories } from '@/infrastructure/container';
@@ -34,6 +38,28 @@ function infectionAlertFor(
   return level != null && isInfectionAlertLevel(level) ? level : null;
 }
 
+/** Fotos aguardando triagem dos pacientes que `isLinked` libera, com a condição de cada uma. */
+async function findPendingLinked(
+  repositories: {
+    conditionPhotos: ConditionPhotoRepository;
+    conditions: ClinicalConditionRepository;
+  },
+  isLinked: (patientId: string) => boolean,
+) {
+  const { conditionPhotos, conditions } = repositories;
+  const allPending = await conditionPhotos.findPendingTriage();
+
+  // Uma query em lote (CONS2-09) — padrão anti-N+1 do restante do projeto.
+  const conditionList = await conditions.findByIds([
+    ...new Set(allPending.map((photo) => photo.conditionId)),
+  ]);
+  const conditionById = new Map(conditionList.map((c) => [c.id, c]));
+  const pending = allPending.filter((photo) =>
+    isLinked(conditionById.get(photo.conditionId)?.patientId ?? ''),
+  );
+  return { pending, conditionById };
+}
+
 /**
  * Fila de triagem da empresa da sessão: fotos enviadas por pacientes
  * aguardando avaliação. Escopo R4 (#186): quem chama passa `isLinked`
@@ -45,17 +71,11 @@ export async function buildTriageQueue(
   session: Session,
   isLinked: (patientId: string) => boolean,
 ): Promise<(TriagePhotoDto & { conditionId: string })[]> {
-  const { conditionPhotos, conditions, patients, assessments } =
-    await getRepositories(sessionScope(session));
-  const allPending = await conditionPhotos.findPendingTriage();
-
-  // Uma query em lote (CONS2-09) — padrão anti-N+1 do restante do projeto.
-  const conditionList = await conditions.findByIds([
-    ...new Set(allPending.map((photo) => photo.conditionId)),
-  ]);
-  const conditionById = new Map(conditionList.map((c) => [c.id, c]));
-  const pending = allPending.filter((photo) =>
-    isLinked(conditionById.get(photo.conditionId)?.patientId ?? ''),
+  const repositories = await getRepositories(sessionScope(session));
+  const { patients, assessments } = repositories;
+  const { pending, conditionById } = await findPendingLinked(
+    repositories,
+    isLinked,
   );
   const conditionIds = [...new Set(pending.map((p) => p.conditionId))];
   const patientList = await patients.findByIds(
@@ -117,4 +137,21 @@ export async function buildLinkedTriageQueue(
   );
   const isLinked = await linkedPatientFilter(session, professionalPatientLinks);
   return buildTriageQueue(session, isLinked);
+}
+
+/**
+ * Quantas fotos aguardam triagem, no escopo R4 do papel: o contador da barra
+ * inferior do celular (casco da equipe). Só conta, sem montar a fila inteira
+ * (paciente e avaliação ficam de fora), porque roda em toda carga de tela.
+ */
+export async function countLinkedTriageQueue(
+  session: Session,
+): Promise<number> {
+  const repositories = await getRepositories(sessionScope(session));
+  const isLinked = await linkedPatientFilter(
+    session,
+    repositories.professionalPatientLinks,
+  );
+  const { pending } = await findPendingLinked(repositories, isLinked);
+  return pending.length;
 }

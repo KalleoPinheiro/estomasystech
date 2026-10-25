@@ -13,7 +13,8 @@ import { ErrorAlert } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import type { TriagePhotoDto } from '@/lib/dto';
 import { formatDate, INFECTION_LEVEL_LABELS } from '@/lib/format';
-import type { TriageDecision } from '@/lib/use-triage-queue';
+
+export type TriageDecision = 'reviewed' | 'escalated';
 
 const TRIAGE_ATTENTION_HOURS = 24;
 

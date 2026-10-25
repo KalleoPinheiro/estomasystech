@@ -27,6 +27,8 @@ interface StaffLayoutClientProps {
   /** Identidade e versão lidas no servidor pelo layout (ADR-069): a carga não chama `/api`. */
   initialIdentity?: SidebarIdentityDto;
   initialVersion?: AppVersionDto | null;
+  /** Fotos aguardando triagem, contadas no servidor para a barra do celular. */
+  initialTriageCount?: number;
 }
 
 /** Clínica ativa + conta logada (issue #126) — nunca texto fixo, sempre a sessão real. Exportado pra teste isolado, sem precisar montar o SidebarProvider inteiro. */
@@ -86,6 +88,7 @@ export function StaffLayoutClient({
   children,
   initialIdentity,
   initialVersion,
+  initialTriageCount,
 }: StaffLayoutClientProps) {
   useStaffDocumentTitle();
   return (
@@ -147,7 +150,7 @@ export function StaffLayoutClient({
             </div>
             {children}
           </SidebarInset>
-          <BottomNav />
+          <BottomNav triageCount={initialTriageCount} />
         </div>
       </SidebarProvider>
     </StaffIdentityProvider>
