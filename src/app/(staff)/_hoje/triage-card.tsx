@@ -1,8 +1,8 @@
 import { Icon } from '@still-void/ui/react';
 import { SummaryCard } from '@/components/summary-card';
 import type { Session } from '@/lib/auth/session';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { buildLinkedTriageQueue } from '@/lib/server/data/triage';
-import { loadBlock } from '@/lib/server/load-block';
 import { TriageActions } from './triage-actions';
 
 // Mesmo cap das outras cards do dashboard (FollowUpsCard/LowStockCard) —

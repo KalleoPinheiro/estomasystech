@@ -1,7 +1,6 @@
 [
   "src/app/(staff)/auditoria/page.tsx",
   "src/app/(staff)/configuracoes/page.tsx",
-  "src/app/(staff)/faturamento/page.tsx",
   "src/app/(staff)/materiais/page.tsx",
   "src/app/(staff)/minha-conta/page.tsx",
   "src/app/(staff)/pacientes/[id]/page.tsx",
@@ -11,7 +10,6 @@
   "src/app/(staff)/procedimentos/page.tsx",
   "src/app/(staff)/profissionais/page.tsx",
   "src/app/(staff)/relatorios/page.tsx",
-  "src/app/(staff)/repasses/page.tsx",
   "src/app/(staff)/triagem/page.tsx",
   "src/app/definir-senha/page.tsx",
   "src/app/documentos/atestado/[appointmentId]/page.tsx",

@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { CancelPayout } from '@/application/billing/payouts';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -7,8 +6,7 @@ import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toCommissionPayoutDto } from '@/lib/dto';
-
-const cancelSchema = z.object({ reason: z.string().max(1000) });
+import { cancelPayoutSchema } from '@/lib/server/payout-input';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -23,7 +21,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const body = cancelSchema.parse(await request.json());
+    const body = cancelPayoutSchema.parse(await request.json());
     const { commissionPayouts, professionals, auditEvents } =
       await getRepositories(writeScope(session));
     const cancelled = await new CancelPayout(commissionPayouts).execute({

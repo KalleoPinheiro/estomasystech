@@ -1,7 +1,7 @@
 import { SummaryCard } from '@/components/summary-card';
 import type { Session } from '@/lib/auth/session';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { listSuppliesFor } from '@/lib/server/data/supplies';
-import { loadBlock } from '@/lib/server/load-block';
 
 const LOW_STOCK_CAP = 6;
 

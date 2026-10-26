@@ -6,7 +6,7 @@ import { pendingClosure } from '@/lib/day-summary';
 import { formatDate, formatTime } from '@/lib/format';
 import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { listAppointmentsFor } from '@/lib/server/data/appointments';
-import { loadBlock } from '@/lib/server/load-block';
+import { loadBlock } from '@/lib/server/data/load-block';
 
 const PENDING_CLOSURE_CAP = 8;
 
