@@ -4,10 +4,12 @@ import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import type { PayoutMethod } from '@/domain/billing/commission-payout';
 import { zonedDateKey } from '@/domain/shared/time-zone';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
 import type { PayoutStatementDto } from '@/lib/dto';
 import { formatCurrency, monthLabelPtBr } from '@/lib/format';
+import { closePayout } from './payout-actions';
 import { PayoutItemsTable } from './payout-tables';
 
 const today = (): string => zonedDateKey(new Date());
@@ -34,16 +36,15 @@ export function ClosePayoutForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch('/api/commission-payouts', {
-        method: 'POST',
-        body: JSON.stringify({
+      await unwrapAction(
+        closePayout({
           professionalId: row.professionalId,
           period,
           paidAt,
-          paymentMethod,
+          paymentMethod: paymentMethod as PayoutMethod,
           notes: notes || null,
         }),
-      });
+      );
       toast({ description: 'Repasse registrado', variant: 'success' });
       onSaved();
     } catch (err) {

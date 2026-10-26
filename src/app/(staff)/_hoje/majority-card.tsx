@@ -1,8 +1,8 @@
 import { RefreshErrorAlert } from '@/components/refresh-error-alert';
 import type { Session } from '@/lib/auth/session';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { listMajorityReviewsFor } from '@/lib/server/data/majority';
 import { MajorityReviewCard } from '../majority-review-card';
-import { loadBlock } from './load-block';
 
 /** Aviso de maioridade (#372) lido no servidor; some quando não há ninguém. */
 export async function MajorityCard({ session }: { session: Session }) {

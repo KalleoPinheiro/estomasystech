@@ -59,3 +59,12 @@ export function staffPageFor(pathname: string): StaffPage | undefined {
       : pathname === page.href || pathname.startsWith(`${page.href}/`),
   );
 }
+
+/**
+ * Papéis da clínica que a matriz de autorização deixa usar a rota `api`. A
+ * Server Action de uma tela recebe esta lista em `roles`, então ação e API
+ * respondem igual para o mesmo papel, sem regra duplicada.
+ */
+export function rolesWithAccessTo(api: string): readonly UserRole[] {
+  return CLINIC_STAFF_ROLES.filter((role) => canRoleAccess(api, role));
+}

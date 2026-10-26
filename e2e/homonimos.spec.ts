@@ -31,7 +31,7 @@ test.describe("homônimos nas listas (#429)", () => {
     }
 
     await page.goto("/faturamento");
-    await page.getByRole("button", { name: "Pendentes" }).click();
+    await page.getByRole("link", { name: "Pendentes" }).click();
 
     await expect(
       page.getByRole("row", { name: literal(`${shown(first.fullName)} · nasc. 12/03/1980`) }),
