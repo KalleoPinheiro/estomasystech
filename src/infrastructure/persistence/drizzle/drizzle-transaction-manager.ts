@@ -10,7 +10,9 @@ import {
   DrizzleClinicalConditionRepository,
   DrizzleConditionPhotoRepository,
 } from './drizzle-clinical-repositories';
+import { DrizzleCommissionPayoutRepository } from './drizzle-commission-payout-repository';
 import {
+  DrizzleProcedureRepository,
   DrizzleScheduleConfigRepository,
   DrizzleUserAccountRepository,
 } from './drizzle-foundation-repositories';
@@ -20,6 +22,8 @@ import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
 import { DrizzlePartnerRepository } from './drizzle-partner-repository';
 import { DrizzlePatientRepository } from './drizzle-patient-repository';
+import { DrizzleProducedSessionRepository } from './drizzle-produced-session-repository';
+import { DrizzleProfessionalRepository } from './drizzle-professional-repository';
 import { DrizzleScheduleAvailabilityRepository } from './drizzle-schedule-availability-repository';
 import { DrizzleProfessionalPatientLinkRepository } from './professional-patient-link-repository';
 
@@ -63,6 +67,16 @@ export class DrizzleTransactionManager implements TransactionManager {
           tx,
           this.clinicId,
           this.cipher,
+        ),
+        procedures: new DrizzleProcedureRepository(tx, this.clinicId),
+        professionals: new DrizzleProfessionalRepository(tx, this.clinicId),
+        producedSessions: new DrizzleProducedSessionRepository(
+          tx,
+          this.clinicId,
+        ),
+        commissionPayouts: new DrizzleCommissionPayoutRepository(
+          tx,
+          this.clinicId,
         ),
         partners: new DrizzlePartnerRepository(tx, this.clinicId),
         guardians: new DrizzleGuardianRepository(tx, this.clinicId),

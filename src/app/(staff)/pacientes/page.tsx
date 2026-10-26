@@ -1,4 +1,4 @@
-import { loadBlock } from '@/app/(staff)/_hoje/load-block';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { listPartnersFor } from '@/lib/server/data/partners';
 import { listPatientsPage } from '@/lib/server/data/patients';
 import { requireStaffPageFor } from '@/lib/server/session';

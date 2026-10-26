@@ -1,7 +1,10 @@
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
+import type { ProducedSessionRepository } from '@/domain/billing/commission';
+import type { CommissionPayoutRepository } from '@/domain/billing/commission-payout';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
+import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type {
   ClinicalConditionRepository,
   ConditionPhotoRepository,
@@ -11,6 +14,7 @@ import type { FollowUpRepository } from '@/domain/followup/follow-up-repository'
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
+import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
@@ -23,6 +27,9 @@ import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-conf
  * `patients` (com `findByIdForUpdate`), agenda e fotos entraram com o teto
  * atômico do portal (#363): tudo que o fluxo lê dentro da transação precisa vir
  * do escopo — usar o repositório de fora trava o PGlite (conexão única).
+ * `procedures`, `professionals`, `producedSessions` e `commissionPayouts` entraram
+ * com o faturamento no servidor (#547): venda de pacote e fechamento/cancelamento
+ * de repasse gravam e auditam na mesma transação (ADR-075 § 4).
  * `partners`, `guardians` e `professionalPatientLinks` entraram com o cadastro
  * de paciente como Server Action (#549): paciente, vínculo do Profissional e
  * auditoria gravam juntos ou nada grava.
@@ -39,6 +46,10 @@ export interface TransactionScope {
   scheduleAvailability: ScheduleAvailabilityRepository;
   conditions: ClinicalConditionRepository;
   conditionPhotos: ConditionPhotoRepository;
+  procedures: ProcedureRepository;
+  professionals: ProfessionalRepository;
+  producedSessions: ProducedSessionRepository;
+  commissionPayouts: CommissionPayoutRepository;
   partners: PartnerRepository;
   guardians: GuardianRepository;
   professionalPatientLinks: ProfessionalPatientLinkRepository;

@@ -1,9 +1,9 @@
 import { Card } from '@still-void/ui/react';
-import { loadBlock } from '@/app/(staff)/_hoje/load-block';
 import { TriageActions } from '@/app/(staff)/_hoje/triage-actions';
 import { EmptyState } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
 import { RefreshErrorAlert } from '@/components/refresh-error-alert';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { buildLinkedTriageQueue } from '@/lib/server/data/triage';
 import { requireStaffPageFor } from '@/lib/server/session';
 

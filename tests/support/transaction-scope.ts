@@ -12,7 +12,9 @@ import {
   InMemoryClinicalConditionRepository,
   InMemoryConditionPhotoRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
+import { InMemoryCommissionPayoutRepository } from '@/infrastructure/persistence/in-memory/in-memory-commission-payout-repository';
 import {
+  InMemoryProcedureRepository,
   InMemoryScheduleAvailabilityRepository,
   InMemoryScheduleConfigRepository,
   InMemoryUserAccountRepository,
@@ -23,6 +25,8 @@ import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memor
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
+import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
 
 /** Vínculos Profissional↔Paciente em memória (só no escopo transacional dos testes). */
 export class InMemoryProfessionalPatientLinks
@@ -50,11 +54,16 @@ export class InMemoryProfessionalPatientLinks
 export function inMemoryScope(
   parts: Partial<TransactionScope> = {},
 ): TransactionScope {
+  const appointments =
+    parts.appointments ?? new InMemoryAppointmentRepository();
+  const invoices = parts.invoices ?? new InMemoryInvoiceRepository();
+  const sessionPackages =
+    parts.sessionPackages ?? new InMemorySessionPackageRepository();
   return {
-    appointments: new InMemoryAppointmentRepository(),
-    invoices: new InMemoryInvoiceRepository(),
+    appointments,
+    invoices,
     followUps: new InMemoryFollowUpRepository(),
-    sessionPackages: new InMemorySessionPackageRepository(),
+    sessionPackages,
     userAccounts: new InMemoryUserAccountRepository(),
     auditEvents: new InMemoryAuditEventRepository(),
     patients: new InMemoryPatientRepository(),
@@ -62,6 +71,14 @@ export function inMemoryScope(
     scheduleAvailability: new InMemoryScheduleAvailabilityRepository(),
     conditions: new InMemoryClinicalConditionRepository(),
     conditionPhotos: new InMemoryConditionPhotoRepository(),
+    procedures: new InMemoryProcedureRepository(),
+    professionals: new InMemoryProfessionalRepository(),
+    producedSessions: new InMemoryProducedSessionRepository(
+      appointments as InMemoryAppointmentRepository,
+      invoices as InMemoryInvoiceRepository,
+      sessionPackages as InMemorySessionPackageRepository,
+    ),
+    commissionPayouts: new InMemoryCommissionPayoutRepository(),
     partners: new InMemoryPartnerRepository(),
     guardians: new InMemoryGuardianRepository(),
     professionalPatientLinks: new InMemoryProfessionalPatientLinks(),
