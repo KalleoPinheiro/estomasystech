@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   CLINIC_A_ID,
   CLINIC_B_ID,
@@ -402,14 +402,20 @@ describe('Feature: CPF no recibo para o IRPF (#326, FIN-RN-15)', () => {
 
       const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
       const db = await getDb();
-      const result = await db.execute(
-        sql`select detail, resource_type from audit_events where resource_id = ${invoice.data.payments[0].id}`,
-      );
-      const { rows } = result as unknown as {
-        rows: { detail: string; resource_type: string }[];
-      };
+      // A auditoria grava em after() (fire-and-forget no teste): espera a linha.
+      const rows = await vi.waitFor(async () => {
+        const result = await db.execute(
+          sql`select detail, resource_type from audit_events where resource_id = ${invoice.data.payments[0].id}`,
+        );
+        const found = (
+          result as unknown as {
+            rows: { detail: string; resource_type: string }[];
+          }
+        ).rows;
+        expect(found.some((r) => r.resource_type === 'recibo')).toBe(true);
+        return found;
+      });
 
-      expect(rows.some((r) => r.resource_type === 'recibo')).toBe(true);
       expect(JSON.stringify(rows)).not.toMatch(/52998224725|529\.982/);
     });
   });

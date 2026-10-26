@@ -2076,3 +2076,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **TESTE-ALTERADO** (troca de harness, cenários e asserções preservados): `tests/pages/{agenda-busca-falha,agenda-filtro-status,agenda-visao-dia,agenda-visao-semana,agenda-mes-dia-abre-no-dia-escolhido,agenda-waitlist-flow,waitlist-late-cancel-ui,staff-agenda}.test.tsx`; tabela de paridade no PR. Harness novo: `tests/support/agenda-app.tsx`.
 - **Ficou para o PR 2**: Server Actions de consulta (criar, recorrente, remarcar, confirmar, cancelar, falta, concluir) com auditoria na mesma transação e teste de rollback em Postgres real; as gravações seguem por `/api`.
 - **Next step**: the-judge, validação em thread limpa, gate:local no WSL; merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Teste do recibo com CPF instável (#606) (2026-10-26) — EM REVISÃO
+- **Causa**: a rota do recibo audita com `recordAudit` (`after()`); em teste o `after` roda sem await (`tests/setup.ts`) e `receipt-cpf-routes` lia `audit_events` logo após a resposta. Corrida de I/O: passa no PC, falhou no Postgres 16.15 da nuvem. Não é regressão do #599 nem do #545; o código de produção está correto.
+- **O que mudou**: só o teste. A leitura da trilha espera a linha com `vi.waitFor` (padrão de `platform-clinic-detail.test.ts`); as duas asserções (evento `recibo` existe, CPF ausente do registro) seguem iguais.
+- **TESTE-ALTERADO**: `tests/api/receipt-cpf-routes.test.ts`, espera da auditoria assíncrona; requisito de negócio intacto.
+- **Next step**: the-judge e merge na release/v0.4.0; `test:integracao` na nuvem deixa de falhar. **Blockers**: nenhum.
