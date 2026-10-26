@@ -2077,6 +2077,12 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Ficou para o PR 2**: Server Actions de consulta (criar, recorrente, remarcar, confirmar, cancelar, falta, concluir) com auditoria na mesma transação e teste de rollback em Postgres real; as gravações seguem por `/api`.
 - **Next step**: the-judge, validação em thread limpa, gate:local no WSL; merge na release/v0.4.0. **Blockers**: nenhum.
 
+## Teste do recibo com CPF instável (#606) (2026-10-26) — EM REVISÃO
+- **Causa**: a rota do recibo audita com `recordAudit` (`after()`); em teste o `after` roda sem await (`tests/setup.ts`) e `receipt-cpf-routes` lia `audit_events` logo após a resposta. Corrida de I/O: passa no PC, falhou no Postgres 16.15 da nuvem. Não é regressão do #599 nem do #545; o código de produção está correto.
+- **O que mudou**: só o teste. A leitura da trilha espera a linha com `vi.waitFor` (padrão de `platform-clinic-detail.test.ts`); as duas asserções (evento `recibo` existe, CPF ausente do registro) seguem iguais.
+- **TESTE-ALTERADO**: `tests/api/receipt-cpf-routes.test.ts`, espera da auditoria assíncrona; requisito de negócio intacto.
+- **Next step**: the-judge e merge na release/v0.4.0; `test:integracao` na nuvem deixa de falhar. **Blockers**: nenhum.
+
 ## Agenda: gravações em Server Actions (#551, PR 2) (2026-10-25) — EM REVISÃO
 - **O que mudou**: `agenda-actions.ts` com 7 ações por `defineAction` (agendar, série, remarcar, confirmar, concluir, cancelar, falta); a tela chama as ações (`unwrapAction`) em vez de `apiFetch`. Schemas `zod` compartilhados com as rotas (`src/lib/appointment-schemas.ts`). `TransactionScope` ganhou `professionals`. Auditoria `appointment` na mesma transação; vínculo, Google Agenda, kit e fila depois do commit. ADR-078.
 - **Falha de leitura no E2E**: gancho `ESTOMASYSTECH_E2E_FAULTS` + cookie `e2e-fault` (`test-faults.ts`); `e2e/agenda-leitura-falha.spec.ts` prova alerta e «Tentar de novo».
