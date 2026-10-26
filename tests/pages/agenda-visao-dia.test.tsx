@@ -1,28 +1,53 @@
 // @vitest-environment jsdom
 
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
-import AgendaPage from '@/app/(staff)/agenda/page';
 import { WeekView } from '@/app/(staff)/agenda/week-view';
 import type { AppointmentDto } from '@/lib/dto';
+import {
+  click,
+  lastListWindow,
+  renderAgenda,
+  resetAgenda,
+} from '../support/agenda-app';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useParams: () => ({}),
-  usePathname: () => '/agenda',
-  useSearchParams: () => new URLSearchParams(),
-}));
+vi.mock('next/navigation', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    useRouter: () => agenda.router,
+    useParams: () => ({}),
+    usePathname: () => '/agenda',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { requireStaffPage: agenda.requireStaffPage };
+});
+vi.mock('@/lib/server/data/appointments', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    listAppointmentsFor: agenda.listAppointmentsFor,
+    countAppointmentsFor: agenda.countAppointmentsFor,
+  };
+});
+vi.mock('@/lib/server/data/professionals', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listProfessionalOptions: agenda.listProfessionalOptions };
+});
+vi.mock('@/lib/server/data/schedule', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    loadScheduleConfig: agenda.loadScheduleConfig,
+    listClosuresFor: agenda.listClosuresFor,
+  };
+});
+vi.mock('@/lib/server/data/waitlist', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listWaitlistFor: agenda.listWaitlistFor };
+});
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
 
 // Quinta-feira 22/10/2026.
@@ -93,45 +118,16 @@ describe('Feature: Agenda por dia (visão Dia)', () => {
   });
 
   describe('Cenário: escolha da visão na página', () => {
-    const mockFetch = () => {
-      const urls: string[] = [];
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (url: string) => {
-          urls.push(url);
-          const data = url.startsWith('/api/schedule-config')
-            ? { config: CONFIG, isDefault: false }
-            : [];
-          return {
-            ok: true,
-            json: async () => ({ success: true, data, error: null }),
-          };
-        }),
-      );
-      return urls;
-    };
-
-    const lastWindow = (urls: string[]) => {
-      const url = urls
-        .filter((candidate) => candidate.startsWith('/api/appointments?'))
-        .at(-1) as string;
-      const params = new URLSearchParams(url.split('?')[1]);
-      return {
-        from: new Date(params.get('from') as string),
-        to: new Date(params.get('to') as string),
-      };
-    };
-
     it('Dada a agenda no mês, Quando escolher Dia, Então busca 1 dia e navega de dia em dia', async () => {
-      const urls = mockFetch();
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ scheduleConfig: CONFIG });
+      await renderAgenda();
       await screen.findByLabelText('Mês anterior');
 
-      fireEvent.click(screen.getByRole('button', { name: 'Dia' }));
+      await click(screen.getByRole('button', { name: 'Dia' }));
 
       await screen.findByLabelText('Dia anterior');
       await waitFor(() => {
-        const { from, to } = lastWindow(urls);
+        const { from, to } = lastListWindow();
         expect(Math.round((to.getTime() - from.getTime()) / 86_400_000)).toBe(
           1,
         );
@@ -141,10 +137,10 @@ describe('Feature: Agenda por dia (visão Dia)', () => {
         'true',
       );
 
-      const before = lastWindow(urls).from;
-      fireEvent.click(screen.getByLabelText('Próximo dia'));
+      const before = lastListWindow().from;
+      await click(screen.getByLabelText('Próximo dia'));
       await waitFor(() => {
-        const after = lastWindow(urls).from;
+        const after = lastListWindow().from;
         expect(
           Math.round((after.getTime() - before.getTime()) / 86_400_000),
         ).toBe(1);
@@ -152,24 +148,24 @@ describe('Feature: Agenda por dia (visão Dia)', () => {
     });
 
     it('Dada a visão Dia, Quando voltar para Semana e para Mês, Então a navegação acompanha a visão', async () => {
-      const urls = mockFetch();
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ scheduleConfig: CONFIG });
+      await renderAgenda();
       await screen.findByLabelText('Mês anterior');
 
-      fireEvent.click(screen.getByRole('button', { name: 'Dia' }));
+      await click(screen.getByRole('button', { name: 'Dia' }));
       await screen.findByLabelText('Dia anterior');
 
-      fireEvent.click(screen.getByRole('button', { name: 'Semana' }));
+      await click(screen.getByRole('button', { name: 'Semana' }));
       await screen.findByLabelText('Semana anterior');
       await waitFor(() => {
-        const { from, to } = lastWindow(urls);
+        const { from, to } = lastListWindow();
         expect(from.getDay()).toBe(0);
         expect(Math.round((to.getTime() - from.getTime()) / 86_400_000)).toBe(
           7,
         );
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mês' }));
+      await click(screen.getByRole('button', { name: 'Mês' }));
       expect(await screen.findByLabelText('Mês anterior')).toBeInTheDocument();
     });
   });

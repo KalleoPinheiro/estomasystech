@@ -37,14 +37,3 @@ export function professionalScopeFor(
     ? { none: false, professionalId: session.professionalId }
     : { none: true };
 }
-
-/** Mesma regra, lendo o `professionalId` da query da rota. */
-export function appointmentProfessionalScope(
-  session: Pick<Session, 'role' | 'professionalId'>,
-  request: NextRequest,
-): { none: true } | { none: false; professionalId: string | undefined } {
-  return professionalScopeFor(
-    session,
-    request.nextUrl.searchParams.get('professionalId') ?? undefined,
-  );
-}

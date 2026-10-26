@@ -1,9 +1,7 @@
 import type { NextRequest } from 'next/server';
-import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope } from '@/lib/auth/tenant-scope';
-import { toProfessionalOptionDto } from '@/lib/dto';
+import { listProfessionalOptions } from '@/lib/server/data/professionals';
 
 /**
  * Profissionais da empresa para os seletores da equipe (#188/#189): família
@@ -16,11 +14,5 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { professionals } = await getRepositories(
-      sessionScope(guard.session),
-    );
-    const result = await professionals.findAll();
-    return result.map(toProfessionalOptionDto);
-  });
+  return handleRequest(() => listProfessionalOptions(guard.session));
 }

@@ -22,6 +22,10 @@ import type {
   WaitlistEntryDto,
 } from '@/lib/dto';
 
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
+
 interface FakeResponse {
   ok: boolean;
   json: () => Promise<unknown>;
@@ -63,6 +67,7 @@ function mockFetch(
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  router.refresh.mockReset();
 });
 
 // Em 1h: dentro de qualquer antecedência ≥ 2h.
@@ -290,12 +295,12 @@ const professionals = [
 
 describe('Feature: Lista de espera na agenda', () => {
   it('Dado fila, Quando renderizar, Então mostra paciente, origem, procedimento, profissional, período e observação; Agendar repassa a entrada', async () => {
-    mockFetch([{ path: '/api/waitlist', respond: () => ok([entry]) }]);
     const onSchedule = vi.fn();
     renderWithToast(
       <WaitlistPanel
         professionals={professionals}
-        version={0}
+        entries={[entry]}
+        error={null}
         onSchedule={onSchedule}
       />,
     );
@@ -311,11 +316,11 @@ describe('Feature: Lista de espera na agenda', () => {
   });
 
   it('Dado fila vazia, Então mostra estado vazio', async () => {
-    mockFetch([{ path: '/api/waitlist', respond: () => ok([]) }]);
     renderWithToast(
       <WaitlistPanel
         professionals={professionals}
-        version={0}
+        entries={[]}
+        error={null}
         onSchedule={vi.fn()}
       />,
     );
@@ -331,12 +336,12 @@ describe('Feature: Lista de espera na agenda', () => {
         path: '/api/waitlist/w-1',
         respond: () => ok({ ...entry, status: 'removed' }),
       },
-      { path: '/api/waitlist', respond: () => ok([entry]) },
     ]);
     renderWithToast(
       <WaitlistPanel
         professionals={professionals}
-        version={0}
+        entries={[entry]}
+        error={null}
         onSchedule={vi.fn()}
       />,
     );
@@ -352,6 +357,8 @@ describe('Feature: Lista de espera na agenda', () => {
     expect(calls.find((c) => c.method === 'PATCH')?.body).toBe(
       JSON.stringify({ resolution: 'removed' }),
     );
+    // A fila vem do servidor: depois de gravar, a tela pede a leitura de novo.
+    expect(router.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('Dado falha ao remover, Então avisa por toast', async () => {
@@ -361,12 +368,12 @@ describe('Feature: Lista de espera na agenda', () => {
         path: '/api/waitlist/w-1',
         respond: () => failure('Esta entrada já saiu da lista de espera'),
       },
-      { path: '/api/waitlist', respond: () => ok([entry]) },
     ]);
     renderWithToast(
       <WaitlistPanel
         professionals={professionals}
-        version={0}
+        entries={[entry]}
+        error={null}
         onSchedule={vi.fn()}
       />,
     );
@@ -394,13 +401,13 @@ describe('Feature: Lista de espera na agenda', () => {
         path: '/api/options/procedures',
         respond: () => ok([{ id: 'proc-1', name: 'Curativo', active: true }]),
       },
-      { path: '/api/waitlist', respond: () => ok([]) },
       { path: '/api/patients', respond: () => ok(patients) },
     ]);
     renderWithToast(
       <WaitlistPanel
         professionals={professionals}
-        version={0}
+        entries={[]}
+        error={null}
         onSchedule={vi.fn()}
       />,
     );
@@ -436,6 +443,7 @@ describe('Feature: Lista de espera na agenda', () => {
       within(dialog).getByRole('button', { name: 'Adicionar à lista' }),
     );
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(router.refresh).toHaveBeenCalledTimes(1);
     expect(
       JSON.parse(calls.filter((c) => c.method === 'POST')[1].body ?? '{}'),
     ).toEqual({

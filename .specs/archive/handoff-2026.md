@@ -2069,3 +2069,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **TESTE-ALTERADO** (troca de harness, cenários preservados; um commit por arquivo, tabela no PR): `tests/pages/{staff-faturamento,invoice-payments-ui,staff-repasses}.test.tsx` (página de servidor com dados e ações simuladas); `e2e/faturamento.spec.ts` e `e2e/homonimos.spec.ts` (filtro de situação: botão vira link).
 - **Ficou fora**: `/documentos/*` (#546). Métricas FCP/LCP de campo dependem do gate no WSL.
 - **Next step**: the-judge e validação em thread limpa; `gate:local` no WSL; merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Agenda com dados no servidor, leituras (#551, PR 1) (2026-10-25) — EM REVISÃO
+- **O que mudou**: `agenda/page.tsx` é Server Component com um só `<Suspense>`; `AgendaData` lê consultas, contagem, profissionais, grade, feriados e fila em paralelo pela camada `src/lib/server/data/*` (novas: `schedule`, `professionals`, `waitlist`; `countAppointmentsFor`), compartilhada com as rotas `/api`. O período vem da URL (`?visao`, `?dia`, `?status`, `?profissional`; `agenda-range.ts`), navegação por `router.push/replace` em transição. `loadBlock` foi para `src/lib/server/load-block.ts`. ADR-077.
+- **CLS**: o mês traz as duas variantes no HTML até a hidratação (`bothLayouts`) e o botão Semana é oculto por CSS.
+- **TESTE-ALTERADO** (troca de harness, cenários e asserções preservados): `tests/pages/{agenda-busca-falha,agenda-filtro-status,agenda-visao-dia,agenda-visao-semana,agenda-mes-dia-abre-no-dia-escolhido,agenda-waitlist-flow,waitlist-late-cancel-ui,staff-agenda}.test.tsx`; tabela de paridade no PR. Harness novo: `tests/support/agenda-app.tsx`.
+- **Ficou para o PR 2**: Server Actions de consulta (criar, recorrente, remarcar, confirmar, cancelar, falta, concluir) com auditoria na mesma transação e teste de rollback em Postgres real; as gravações seguem por `/api`.
+- **Next step**: the-judge, validação em thread limpa, gate:local no WSL; merge na release/v0.4.0. **Blockers**: nenhum.

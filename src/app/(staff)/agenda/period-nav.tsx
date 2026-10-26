@@ -15,10 +15,13 @@ export function PeriodNav({
   compact,
 }: {
   period: AgendaPeriod;
-  /** Celular: sem a visão semanal (7 colunas não cabem); a visão Dia é uma coluna só. */
+  /**
+   * Celular, depois da hidratação: sem a visão semanal (7 colunas não cabem); a
+   * visão Dia é uma coluna só. Antes dela o servidor não sabe a largura, então
+   * o botão vem escondido por CSS abaixo de `md` e some de vez aqui (#551).
+   */
   compact: boolean;
 }) {
-  const views = compact ? VIEWS.filter((v) => v.value !== 'week') : VIEWS;
   const unit = {
     month: { prev: 'Mês anterior', next: 'Próximo mês' },
     week: { prev: 'Semana anterior', next: 'Próxima semana' },
@@ -51,18 +54,28 @@ export function PeriodNav({
         className="m-0 flex min-w-0 gap-1 border-0 p-0"
         aria-label="Visão da agenda"
       >
-        {views.map((option) => (
-          <Button
-            key={option.value}
-            type="button"
-            size="sm"
-            variant={period.view === option.value ? 'accent' : 'outline'}
-            aria-pressed={period.view === option.value}
-            onClick={() => period.setView(option.value)}
-          >
-            {option.label}
-          </Button>
-        ))}
+        {VIEWS.filter((option) => !(compact && option.value === 'week')).map(
+          (option) => (
+            <span
+              key={option.value}
+              className={
+                option.value === 'week'
+                  ? 'hidden md:inline-flex'
+                  : 'inline-flex'
+              }
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant={period.view === option.value ? 'accent' : 'outline'}
+                aria-pressed={period.view === option.value}
+                onClick={() => period.setView(option.value)}
+              >
+                {option.label}
+              </Button>
+            </span>
+          ),
+        )}
       </fieldset>
     </div>
   );
