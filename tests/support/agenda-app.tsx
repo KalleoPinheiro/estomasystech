@@ -15,6 +15,7 @@ import {
   type ScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { ValidationError } from '@/domain/shared/errors';
+import type { ActionResult } from '@/lib/action-result';
 import type {
   AppointmentDto,
   ProfessionalOptionDto,
@@ -181,6 +182,49 @@ export function resetAgenda(overrides: Partial<AgendaState> = {}) {
     .mockReset()
     .mockImplementation(read('waitlist', () => agenda.state.waitlist));
 }
+
+/**
+ * As gravações da agenda são Server Actions (`agenda-actions.ts`). Nos testes de
+ * página elas viram a chamada REST equivalente (`fetch`), então os testes seguem
+ * afirmando o que a clínica pediu (rota, ação e corpo) sem importar o servidor;
+ * a Server Action real, com sessão, transação e auditoria, é provada em
+ * `tests/app/agenda-actions.test.ts` e `tests/integracao/`. Como a ação real, a
+ * atualização da tela vem junto (`router.refresh()` simulado).
+ */
+async function viaApi<T>(
+  url: string,
+  method: 'POST' | 'PATCH',
+  body: unknown,
+): Promise<ActionResult<T>> {
+  try {
+    const { apiFetch } = await import('@/lib/client');
+    const data = await apiFetch<T>(url, {
+      method,
+      body: JSON.stringify(body),
+    });
+    agenda.router.refresh();
+    return { success: true, data, error: null };
+  } catch (error) {
+    return { success: false, data: null, error: (error as Error).message };
+  }
+}
+
+const patch = (action: string) => (input: { id: string }) => {
+  const { id, ...rest } = input;
+  return viaApi(`/api/appointments/${id}`, 'PATCH', { action, ...rest });
+};
+
+export const legacyActions = {
+  scheduleAppointment: (input: unknown) =>
+    viaApi('/api/appointments', 'POST', input),
+  scheduleRecurring: (input: unknown) =>
+    viaApi('/api/appointments/recurring', 'POST', input),
+  rescheduleAppointment: patch('reschedule'),
+  confirmAppointment: patch('confirm'),
+  completeAppointment: patch('complete'),
+  cancelAppointment: patch('cancel'),
+  markAppointmentNoShow: patch('no_show'),
+};
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
