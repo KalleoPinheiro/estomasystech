@@ -1,27 +1,14 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { ScheduleAppointment } from '@/application/appointments/schedule-appointment';
 import { ScheduleRecurringAppointments } from '@/application/appointments/schedule-recurring-appointments';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
+import { recurringSchema } from '@/lib/appointment-schemas';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
-
-const recurringSchema = z.object({
-  patientId: z.string().min(1),
-  startsAt: z.iso.datetime(),
-  endsAt: z.iso.datetime(),
-  procedure: z.string().min(1).max(500),
-  priceCents: z.number().int().nonnegative().max(1_000_000_000),
-  notes: z.string().max(5000).nullish(),
-  professionalId: z.string().max(100).nullish(),
-  procedureId: z.string().max(100).nullish(),
-  occurrences: z.number().int().min(2).max(24),
-  weeksInterval: z.number().int().min(1).max(8).default(1),
-});
 
 export async function POST(request: NextRequest) {
   const guard = requireStaffSession(request);

@@ -18,6 +18,7 @@ import {
   toggleStatus,
 } from '@/domain/scheduling/appointment-status-filter';
 import type { ScheduleConfig } from '@/domain/scheduling/schedule-config';
+import { unwrapAction } from '@/lib/action-result';
 import { apiFetch } from '@/lib/client';
 import { clinicDayCell, clinicInstant } from '@/lib/clinic-calendar';
 import type {
@@ -27,6 +28,15 @@ import type {
   WaitlistEntryDto,
 } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
+import {
+  cancelAppointment,
+  completeAppointment,
+  confirmAppointment,
+  markAppointmentNoShow,
+  rescheduleAppointment,
+  scheduleAppointment,
+  scheduleRecurring,
+} from './agenda-actions';
 import { useAgendaPeriod } from './agenda-period';
 import type { AgendaEntry, AgendaQuery } from './agenda-range';
 import { type ActionExtras, AppointmentDetail } from './appointment-detail';
@@ -168,12 +178,37 @@ export interface AgendaScreenProps {
   waitlistError: string | null;
 }
 
+/** A ação do detalhe da consulta (confirmar, cancelar, falta, concluir) vira a Server Action certa. */
+async function runAppointmentAction(
+  id: string,
+  action: 'confirm' | 'cancel' | 'no_show' | 'complete',
+  {
+    followUpInDays,
+    extras,
+  }: { followUpInDays?: number | null; extras?: ActionExtras },
+): Promise<{ feeInvoiceId?: string | null; waitlistMatches?: number }> {
+  switch (action) {
+    case 'confirm':
+      await unwrapAction(confirmAppointment({ id }));
+      return {};
+    case 'complete':
+      await unwrapAction(
+        completeAppointment({ id, followUpInDays: followUpInDays ?? null }),
+      );
+      return {};
+    case 'cancel':
+      return unwrapAction(cancelAppointment({ id, ...extras }));
+    default:
+      return unwrapAction(markAppointmentNoShow({ id, ...extras }));
+  }
+}
+
 /**
  * Tela da agenda no cliente (#551): recebe do servidor tudo o que a carga
  * precisa (consultas, contagem, grade, feriados, profissionais, fila) e cuida
  * só do que é interação: navegar o período, abrir os formulários e gravar. Cada
  * mudança de período ou de filtro vira navegação (a URL é a fonte da verdade) e
- * cada gravação termina em `router.refresh()`.
+ * cada gravação é uma Server Action (`agenda-actions.ts`) que já atualiza a tela.
  */
 export function AgendaScreen({
   query,
@@ -240,13 +275,9 @@ export function AgendaScreen({
       procedureId: values.procedureId || null,
     };
     if (values.occurrences > 1) {
-      const result = await apiFetch<{
-        created: AppointmentDto[];
-        skipped: Array<{ startsAt: string; reason: string }>;
-      }>('/api/appointments/recurring', {
-        method: 'POST',
-        body: JSON.stringify({ ...payload, occurrences: values.occurrences }),
-      });
+      const result = await unwrapAction(
+        scheduleRecurring({ ...payload, occurrences: values.occurrences }),
+      );
       setSeriesNotice({
         text:
           result.skipped.length > 0
@@ -256,19 +287,17 @@ export function AgendaScreen({
         variant: result.skipped.length > 0 ? 'warning' : 'success',
       });
       setCreatingFor(null);
-      refresh();
     } else {
       // Sem try/catch aqui de propósito: AppointmentForm já envolve este
       // onSubmit no próprio catch (mostra ErrorAlert inline e mantém o modal
       // aberto) — interceptar o erro aqui engoliria essa mensagem antes dela
       // chegar lá (ex.: "Horário indisponível", "fora da grade").
-      await apiFetch<AppointmentDto>('/api/appointments', {
-        method: 'POST',
-        body: JSON.stringify({
+      await unwrapAction(
+        scheduleAppointment({
           ...payload,
           followUpId: entry.recall?.followUpId ?? null,
         }),
-      });
+      );
       toast({
         description: 'Consulta criada',
         variant: 'success',
@@ -278,7 +307,6 @@ export function AgendaScreen({
       }
       setSeriesNotice(null);
       setCreatingFor(null);
-      refresh();
     }
   };
 
@@ -297,6 +325,9 @@ export function AgendaScreen({
       });
     }
     setFromWaitlist(null);
+    // A fila é lida no servidor: a ação de agendar já atualizou a tela, mas só
+    // antes de a entrada sair da lista.
+    refresh();
   };
 
   const handleAction = async (
@@ -305,21 +336,11 @@ export function AgendaScreen({
     extras?: ActionExtras,
   ) => {
     if (!selected) return;
-    const result = await apiFetch<
-      AppointmentDto & {
-        feeInvoiceId?: string | null;
-        waitlistMatches?: number;
-      }
-    >(`/api/appointments/${selected.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(
-        action === 'complete'
-          ? { action, followUpInDays: followUpInDays ?? null }
-          : { action, ...extras },
-      ),
+    const result = await runAppointmentAction(selected.id, action, {
+      followUpInDays,
+      extras,
     });
     setSelected(null);
-    refresh();
     announceAbsence(result);
   };
 
@@ -344,16 +365,14 @@ export function AgendaScreen({
 
   const handleReschedule = async (startsAt: Date, endsAt: Date) => {
     if (!selected) return;
-    await apiFetch<AppointmentDto>(`/api/appointments/${selected.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        action: 'reschedule',
+    await unwrapAction(
+      rescheduleAppointment({
+        id: selected.id,
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
       }),
-    });
+    );
     setSelected(null);
-    refresh();
   };
 
   const showCancelled = statuses.includes('cancelled');

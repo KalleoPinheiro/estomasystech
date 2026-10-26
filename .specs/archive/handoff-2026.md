@@ -2082,3 +2082,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **O que mudou**: só o teste. A leitura da trilha espera a linha com `vi.waitFor` (padrão de `platform-clinic-detail.test.ts`); as duas asserções (evento `recibo` existe, CPF ausente do registro) seguem iguais.
 - **TESTE-ALTERADO**: `tests/api/receipt-cpf-routes.test.ts`, espera da auditoria assíncrona; requisito de negócio intacto.
 - **Next step**: the-judge e merge na release/v0.4.0; `test:integracao` na nuvem deixa de falhar. **Blockers**: nenhum.
+
+## Agenda: gravações em Server Actions (#551, PR 2) (2026-10-25) — EM REVISÃO
+- **O que mudou**: `agenda-actions.ts` com 7 ações por `defineAction` (agendar, série, remarcar, confirmar, concluir, cancelar, falta); a tela chama as ações (`unwrapAction`) em vez de `apiFetch`. Schemas `zod` compartilhados com as rotas (`src/lib/appointment-schemas.ts`). `TransactionScope` ganhou `professionals`. Auditoria `appointment` na mesma transação; vínculo, Google Agenda, kit e fila depois do commit. ADR-078.
+- **Falha de leitura no E2E**: gancho `ESTOMASYSTECH_E2E_FAULTS` + cookie `e2e-fault` (`test-faults.ts`); `e2e/agenda-leitura-falha.spec.ts` prova alerta e «Tentar de novo».
+- **Testes novos** (nenhum existente alterado além de um `vi.mock` das ações nos testes de página): `tests/app/agenda-actions.test.ts`, `tests/integracao/agenda-auditoria-transacional.integracao.ts` (rollback em Postgres real: agendar, concluir e série), `tests/lib/server/test-faults.test.ts`.
+- **Pergunta aberta (PO)**: R4 do Profissional em confirmar/concluir (a rota nunca aplicou).
+- **Next step**: the-judge; gate:local no WSL. **Blockers**: nenhum.

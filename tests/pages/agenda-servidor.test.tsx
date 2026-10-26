@@ -29,6 +29,10 @@ vi.mock('next/navigation', async () => {
     usePathname: () => '/agenda',
   };
 });
+vi.mock('@/app/(staff)/agenda/agenda-actions', async () => {
+  const { legacyActions } = await import('../support/agenda-app');
+  return legacyActions;
+});
 vi.mock('@/lib/server/session', async () => {
   const { agenda } = await import('../support/agenda-app');
   return { requireStaffPage: agenda.requireStaffPage };

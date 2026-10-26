@@ -12,6 +12,7 @@ import {
   loadScheduleConfig,
 } from '@/lib/server/data/schedule';
 import { listWaitlistFor } from '@/lib/server/data/waitlist';
+import { failIfInjected } from '@/lib/server/test-faults';
 import {
   type AgendaEntry,
   type AgendaQuery,
@@ -46,10 +47,17 @@ export async function AgendaData({
   };
   const [appointments, counts, professionals, schedule, closures, waitlist] =
     await Promise.all([
-      loadBlock(() =>
-        listAppointmentsFor(session, { ...range, statuses: query.statuses }),
-      ),
-      loadBlock(() => countAppointmentsFor(session, range)),
+      loadBlock(async () => {
+        await failIfInjected('consultas');
+        return listAppointmentsFor(session, {
+          ...range,
+          statuses: query.statuses,
+        });
+      }),
+      loadBlock(async () => {
+        await failIfInjected('contagem');
+        return countAppointmentsFor(session, range);
+      }),
       loadBlock(() => listProfessionalOptions(session)),
       loadBlock(() => loadScheduleConfig(session)),
       loadBlock(() =>
