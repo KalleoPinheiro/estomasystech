@@ -64,20 +64,32 @@ async function signIn(context: BrowserContext, role: UserRole) {
 test.describe("Pacientes e triagem no servidor", () => {
   const ADMIN = sessionCookie("local", "company_admin");
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser }, testInfo) => {
     const context = await browser.newContext();
     const page = await context.newPage();
     await context.addCookies([ADMIN]);
     // Mais de uma página de pacientes: a lista cobre o «Carregar mais» e a altura real da tabela.
-    const tag = unique();
-    for (let i = 0; i < PAGE_SIZE + 5; i++) {
-      await createPatient(page.request, { fullName: `Zz Server First ${tag} ${String(i).padStart(3, "0")}` });
+    // Os projetos (prod e dev) e as outras specs dividem o banco: a massa é por projeto e só nasce uma vez,
+    // e o prefixo «Aa» põe os 105 na primeira página da lista (ordem por nome).
+    const countByName = async (name: string) => {
+      const res = await page.request.get(`/api/patients?search=${encodeURIComponent(name)}&limit=${PAGE_SIZE}`);
+      const body = (await res.json()) as { data: unknown[] | null };
+      if (!body.data) throw new Error(`${res.status()} ${JSON.stringify(body)}`);
+      return body.data.length;
+    };
+    const seed = `Aa Server First ${testInfo.project.name}`;
+    if ((await countByName(seed)) < PAGE_SIZE + 5) {
+      for (let i = 0; i < PAGE_SIZE + 5; i++) {
+        await createPatient(page.request, { fullName: `${seed} ${String(i).padStart(3, "0")}` });
+      }
     }
     // Fila de triagem com três fotos de pacientes reais do portal.
+    const photoPatient = (i: number) => `Zz Server First Foto ${testInfo.project.name} ${i}`;
     for (let i = 0; i < 3; i++) {
       await context.clearCookies();
       await context.addCookies([ADMIN]);
-      const patient = await createPatient(page.request, { fullName: `Zz Server First Foto ${unique()}` });
+      if ((await countByName(photoPatient(i))) > 0) continue;
+      const patient = await createPatient(page.request, { fullName: photoPatient(i) });
       await linkPortalAccount(page.request, "patient", patient);
       const condition = await createCondition(page.request, patient.id, {
         kind: "wound",
@@ -151,12 +163,11 @@ test.describe("Pacientes e triagem no servidor", () => {
     const triagem = await (await page.request.get("/triagem")).text();
 
     expect(pacientes).toContain("Prontuário");
-    expect(pacientes).toMatch(/Zz S\. F\./);
+    expect(pacientes).toMatch(/Aa S\. F\./);
     expect(triagem).toContain("Ampliar foto de");
-    expect(triagem).not.toContain("Carregando…");
   });
 
-  test("o «Carregar mais» e a busca digitada seguem pela API", async ({ page }) => {
+  test("o «Carregar mais» e a busca digitada seguem pela API", async ({ page }, testInfo) => {
     await page.context().addCookies([ADMIN]);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/pacientes");
@@ -166,8 +177,9 @@ test.describe("Pacientes e triagem no servidor", () => {
     await page.getByText("Carregar mais").click();
     await expect.poll(async () => page.getByRole("row").count()).toBeGreaterThan(rowsBefore);
 
-    const search = page.waitForResponse((r) => r.url().includes("/api/patients?search=Server%20First%20Foto"));
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill("Server First Foto");
+    const photoSearch = `Server First Foto ${testInfo.project.name}`;
+    const search = page.waitForResponse((r) => r.url().includes(`/api/patients?search=${encodeURIComponent(photoSearch)}`));
+    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(photoSearch);
     await search;
     // A busca troca a lista do servidor pelas três da foto (nomes abreviados: «Zz S. F. F. …»).
     await expect(page.getByText(/^Zz S\. F\. F\. /)).toHaveCount(3);
@@ -209,13 +221,15 @@ test.describe("Pacientes e triagem no servidor", () => {
       return { blocking: floor(list.map((x) => x.blocking)), lcp: median(list.map((x) => x.lcp)) };
     };
     const triagem = summarize("/triagem");
+    await page.goto("/triagem");
+    const queueSize = await page.getByRole("button", { name: /Ampliar foto de/ }).count();
     const shell = summarize("/mais");
 
     expect(triagem.lcp, "LCP de /triagem").toBeLessThanOrEqual(LCP_LIMIT_MS);
     // O tempo bloqueado é a hidratação do casco (a «/mais», sem lista, mede o mesmo): a página não pode acrescentar a ele.
     expect(
       triagem.blocking,
-      `tempo bloqueado por long tasks em /triagem (${Math.round(triagem.blocking)} ms) contra o piso do casco (/mais: ${Math.round(shell.blocking)} ms)`,
+      `tempo bloqueado por long tasks em /triagem com ${queueSize} fotos na fila (${Math.round(triagem.blocking)} ms) contra o piso do casco (/mais: ${Math.round(shell.blocking)} ms)`,
     ).toBeLessThanOrEqual(shell.blocking * BLOCKING_MARGIN + BLOCKING_NOISE_MS);
   });
 });

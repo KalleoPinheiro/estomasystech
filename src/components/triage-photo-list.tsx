@@ -2,13 +2,20 @@
 
 import { Button } from '@still-void/ui/react';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@still-void/ui/react/client';
 import Image from 'next/image';
-import { useState } from 'react';
-import { ConfirmAction } from '@/components/confirm-action';
+import { useRef, useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import type { TriagePhotoDto } from '@/lib/dto';
@@ -17,6 +24,30 @@ import { formatDate, INFECTION_LEVEL_LABELS } from '@/lib/format';
 export type TriageDecision = 'reviewed' | 'escalated';
 
 const TRIAGE_ATTENTION_HOURS = 24;
+
+const DECISION_CONFIRMATION: Record<
+  TriageDecision,
+  {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    className: string;
+  }
+> = {
+  reviewed: {
+    title: 'Manter o plano de cuidados?',
+    description:
+      'A foto é marcada como revisada sem intervenção. Não há ação de reabrir depois.',
+    confirmLabel: 'Confirmar',
+    className: 'bg-danger text-white hover:bg-danger/90',
+  },
+  escalated: {
+    title: 'Antecipar o retorno do paciente?',
+    description: 'O retorno do paciente é antecipado com base nesta foto.',
+    confirmLabel: 'Confirmar antecipação',
+    className: 'bg-success text-white hover:bg-success/90',
+  },
+};
 
 // why: cortes por terço da escala (PUSH 0–17, DET 0–15 somado em
 // condition-assessment.ts) — aproximação não validada clinicamente,
@@ -59,6 +90,22 @@ export function TriagePhotoList({
   onTriage,
 }: TriagePhotoListProps) {
   const [previewPhoto, setPreviewPhoto] = useState<TriagePhotoDto | null>(null);
+  // why: um único AlertDialog para a fila toda — dois por linha custavam
+  // hidratação proporcional ao tamanho da fila (#549).
+  const [confirming, setConfirming] = useState<{
+    photo: TriagePhotoDto;
+    decision: TriageDecision;
+  } | null>(null);
+  const confirmTriggerRef = useRef<HTMLElement | null>(null);
+  const confirmation = confirming && DECISION_CONFIRMATION[confirming.decision];
+  const askConfirmation = (
+    photo: TriagePhotoDto,
+    decision: TriageDecision,
+    trigger: HTMLElement,
+  ) => {
+    confirmTriggerRef.current = trigger;
+    setConfirming({ photo, decision });
+  };
 
   return (
     <>
@@ -76,12 +123,15 @@ export function TriagePhotoList({
               aria-label={`Ampliar foto de ${photo.patientName}`}
               className="relative h-12 w-12 shrink-0 overflow-hidden rounded border border-border p-0"
             >
-              <Image
+              {/* biome-ignore lint/performance/noImgElement: miniatura autenticada, sempre sem otimizador (ADR-069); o next/image custa hidratação por linha da fila */}
+              <img
                 src={`/api/photos/${photo.id}`}
                 alt={`Foto de ${photo.patientName}`}
-                fill
-                unoptimized
-                className="object-cover"
+                width={48}
+                height={48}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
               />
             </Button>
             <div className="min-w-0 flex-1">
@@ -127,45 +177,62 @@ export function TriagePhotoList({
                 </span>
               </p>
             </div>
-            <ConfirmAction
-              trigger={
-                <Button
-                  type="button"
-                  variant="link"
-                  disabled={submittingId === photo.id}
-                  className="h-auto min-h-11 min-w-11 p-0 text-danger"
-                >
-                  {submittingId === photo.id ? 'Enviando…' : 'Ok, manter plano'}
-                </Button>
+            <Button
+              type="button"
+              variant="link"
+              disabled={submittingId === photo.id}
+              onClick={(event) =>
+                askConfirmation(photo, 'reviewed', event.currentTarget)
               }
-              title="Manter o plano de cuidados?"
-              description="A foto é marcada como revisada sem intervenção. Não há ação de reabrir depois."
-              confirmLabel="Confirmar"
-              variant="danger"
-              onConfirm={() => onTriage(photo, 'reviewed')}
-            />
-            <ConfirmAction
-              trigger={
-                <Button
-                  type="button"
-                  variant="link"
-                  disabled={submittingId === photo.id}
-                  className="h-auto min-h-11 min-w-11 p-0 text-success"
-                >
-                  {submittingId === photo.id
-                    ? 'Enviando…'
-                    : 'Antecipar retorno'}
-                </Button>
+              className="h-auto min-h-11 min-w-11 p-0 text-danger"
+            >
+              {submittingId === photo.id ? 'Enviando…' : 'Ok, manter plano'}
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              disabled={submittingId === photo.id}
+              onClick={(event) =>
+                askConfirmation(photo, 'escalated', event.currentTarget)
               }
-              title="Antecipar o retorno do paciente?"
-              description="O retorno do paciente é antecipado com base nesta foto."
-              confirmLabel="Confirmar antecipação"
-              variant="success"
-              onConfirm={() => onTriage(photo, 'escalated')}
-            />
+              className="h-auto min-h-11 min-w-11 p-0 text-success"
+            >
+              {submittingId === photo.id ? 'Enviando…' : 'Antecipar retorno'}
+            </Button>
           </li>
         ))}
       </ul>
+      <AlertDialog
+        open={confirming !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirming(null);
+        }}
+      >
+        {confirming && confirmation && (
+          <AlertDialogContent
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              confirmTriggerRef.current?.focus();
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>{confirmation.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmation.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onTriage(confirming.photo, confirming.decision)}
+                className={confirmation.className}
+              >
+                {confirmation.confirmLabel}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        )}
+      </AlertDialog>
       {previewPhoto && (
         <Modal
           title={`Foto de ${previewPhoto.patientName}`}
