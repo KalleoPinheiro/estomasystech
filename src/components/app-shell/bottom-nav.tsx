@@ -12,10 +12,16 @@ function isActive(pathname: string, href: string) {
   return href === '/' ? pathname === '/' : pathname.startsWith(href);
 }
 
-/** Contador de fotos na fila; só busca quando o atalho de Triagem existe. */
-function TriageCount() {
-  const { data } = useApiQuery<TriagePhotoDto[]>('/api/photos/triage');
-  const count = data?.length ?? 0;
+/**
+ * Contador de fotos na fila; só existe quando o atalho de Triagem existe. Com
+ * `initial` (contado no servidor, ADR-069) não há chamada de API; sem ele
+ * (falha do servidor, tela montada isolada) busca a fila como antes.
+ */
+function TriageCount({ initial }: { initial?: number }) {
+  const { data } = useApiQuery<TriagePhotoDto[]>(
+    initial === undefined ? '/api/photos/triage' : null,
+  );
+  const count = initial ?? data?.length ?? 0;
   if (count === 0) return null;
   return (
     <Badge variant="secondary" aria-label={`${count} fotos para avaliar`}>
@@ -34,7 +40,7 @@ function TriageCount() {
  * inerte (a Radix ainda a marca `aria-hidden`), e um toque fora do lugar não
  * sai do formulário em preenchimento (#523).
  */
-export function BottomNav() {
+export function BottomNav({ triageCount }: { triageCount?: number }) {
   const pathname = usePathname();
   const can = useStaffAccess();
   const state = useStaffIdentity();
@@ -61,7 +67,7 @@ export function BottomNav() {
                 }`}
               >
                 <span className="truncate">{item.label}</span>
-                {item.triageCount && <TriageCount />}
+                {item.triageCount && <TriageCount initial={triageCount} />}
               </Link>
             </li>
           );

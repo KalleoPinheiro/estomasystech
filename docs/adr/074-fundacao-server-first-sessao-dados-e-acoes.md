@@ -43,7 +43,7 @@ O ADR-069 decidiu que as telas carregam dado em Server Components e escrevem por
 
 - Toda tela migrada segue o mesmo caminho: guarda → camada de dados → DTO por props; escrita por `defineAction`.
 - O layout da equipe passa a depender do banco para renderizar o casco (antes só o cliente dependia). Falha cai no comportamento antigo.
-- A fila de triagem do celular (contador na barra inferior do Profissional) ainda busca `/api/photos/triage`: sai com a migração da Triagem.
+- O contador de triagem da barra inferior do celular (Profissional) saiu do cliente com a migração da Triagem (#549): `loadStaffShell` o conta no servidor (`countLinkedTriageQueue`, escopo R4) e o entrega por props; sem o valor (falha de leitura, tela isolada em teste) a barra busca `/api/photos/triage` como antes.
 - O `layout.tsx` não é fronteira de segurança (não re-renderiza a cada navegação): cada página chama a própria guarda.
 
 ## Relacionado

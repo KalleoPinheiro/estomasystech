@@ -3,6 +3,7 @@ import {
   type TransactionManager,
   type TransactionScope,
 } from '@/application/ports/transaction-manager';
+import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
 import type { Patient } from '@/domain/patient/patient';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
@@ -18,12 +19,36 @@ import {
   InMemoryScheduleConfigRepository,
   InMemoryUserAccountRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
+import { InMemoryGuardianRepository } from '@/infrastructure/persistence/in-memory/in-memory-guardian-repository';
 import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
+import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
+
+/** Vínculos Profissional↔Paciente em memória (só no escopo transacional dos testes). */
+export class InMemoryProfessionalPatientLinks
+  implements ProfessionalPatientLinkRepository
+{
+  private readonly links = new Set<string>();
+
+  async ensureLink(professionalId: string, patientId: string): Promise<void> {
+    this.links.add(`${professionalId}:${patientId}`);
+  }
+
+  async hasLink(professionalId: string, patientId: string): Promise<boolean> {
+    return this.links.has(`${professionalId}:${patientId}`);
+  }
+
+  async findLinkedPatientIds(professionalId: string): Promise<string[]> {
+    return [...this.links].flatMap((key) => {
+      const [professional, patient] = key.split(':');
+      return professional === professionalId ? [patient] : [];
+    });
+  }
+}
 
 /** Escopo transacional em memória; o que o teste já tem entra por `parts`. */
 export function inMemoryScope(
@@ -54,6 +79,9 @@ export function inMemoryScope(
       sessionPackages as InMemorySessionPackageRepository,
     ),
     commissionPayouts: new InMemoryCommissionPayoutRepository(),
+    partners: new InMemoryPartnerRepository(),
+    guardians: new InMemoryGuardianRepository(),
+    professionalPatientLinks: new InMemoryProfessionalPatientLinks(),
     ...parts,
   };
 }

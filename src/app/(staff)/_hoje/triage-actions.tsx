@@ -2,9 +2,11 @@
 
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
-import { TriagePhotoList } from '@/components/triage-photo-list';
+import {
+  type TriageDecision,
+  TriagePhotoList,
+} from '@/components/triage-photo-list';
 import type { TriagePhotoDto } from '@/lib/dto';
-import type { TriageDecision } from '@/lib/use-triage-queue';
 import { decideTriage } from '../hoje-actions';
 
 /**

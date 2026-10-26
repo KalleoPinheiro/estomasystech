@@ -10,10 +10,14 @@ export default async function StaffLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Identidade e versão vêm no HTML (ADR-069): o casco não chama `/api` na carga.
-  const { identity, version } = await loadStaffShell();
+  // Identidade, versão e o contador da triagem vêm no HTML (ADR-069): o casco não chama `/api` na carga.
+  const { identity, version, triageCount } = await loadStaffShell();
   return (
-    <StaffLayoutClient initialIdentity={identity} initialVersion={version}>
+    <StaffLayoutClient
+      initialIdentity={identity}
+      initialVersion={version}
+      initialTriageCount={triageCount}
+    >
       {children}
     </StaffLayoutClient>
   );

@@ -54,7 +54,8 @@ Decisão: [ADR-069](../adr/069-dados-no-servidor-e-politica-de-cache.md); funda�
 3. **Props:** o componente de cliente recebe o DTO por props; nunca a entidade.
 4. **Escrita:** `defineAction({ access, input, handler, audit })` num arquivo `'use server'`. Guarda, `zod`, `writeScope`, auditoria e `refresh()` já vêm dentro. No cliente, `useAction(acao)` dá `run`, `isPending` e `error`. Rotas com limite próprio no Traefik (login, senha, MFA, autoagendamento, lista de espera), upload e download continuam Route Handlers.
 5. **Estados de rota:** cada grupo (`(staff)`, `portal`, `plataforma`, `documentos`) tem `loading.tsx`, `error.tsx`, `not-found.tsx` e `forbidden.tsx`, finos sobre `src/components/route-states.tsx`.
-6. **Gate:** `npm run check:server-first` compara as páginas `'use client'` com `scripts/server-first-allowlist.json`, que só pode encolher: ao migrar uma página, remova-a da lista no mesmo PR.
+6. **Lista paginada:** a 1ª página vem do servidor (`listPatientsPage`, a mesma função da rota) e entra no cliente como semente de `useCursorPagedQuery(url, tamanho, semente)`; «Carregar mais» e busca digitada seguem Route Handler (exceção do ADR-069, dependem do que a pessoa digita). Sem a semente (falha de leitura) o hook busca como sempre.
+7. **Gate:** `npm run check:server-first` compara as páginas `'use client'` com `scripts/server-first-allowlist.json`, que só pode encolher: ao migrar uma página, remova-a da lista no mesmo PR.
 
 ## Decisões transversais
 
