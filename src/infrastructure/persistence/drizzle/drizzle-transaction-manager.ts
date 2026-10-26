@@ -16,13 +16,16 @@ import {
   DrizzleScheduleConfigRepository,
   DrizzleUserAccountRepository,
 } from './drizzle-foundation-repositories';
+import { DrizzleGuardianRepository } from './drizzle-guardian-repository';
 import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
+import { DrizzlePartnerRepository } from './drizzle-partner-repository';
 import { DrizzlePatientRepository } from './drizzle-patient-repository';
 import { DrizzleProducedSessionRepository } from './drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './drizzle-professional-repository';
 import { DrizzleScheduleAvailabilityRepository } from './drizzle-schedule-availability-repository';
+import { DrizzleProfessionalPatientLinkRepository } from './professional-patient-link-repository';
 
 /**
  * Unidade de trabalho sobre `db.transaction` do Drizzle: os repositórios do
@@ -72,6 +75,12 @@ export class DrizzleTransactionManager implements TransactionManager {
           this.clinicId,
         ),
         commissionPayouts: new DrizzleCommissionPayoutRepository(
+          tx,
+          this.clinicId,
+        ),
+        partners: new DrizzlePartnerRepository(tx, this.clinicId),
+        guardians: new DrizzleGuardianRepository(tx, this.clinicId),
+        professionalPatientLinks: new DrizzleProfessionalPatientLinkRepository(
           tx,
           this.clinicId,
         ),

@@ -9,7 +9,10 @@ import type {
   ClinicalConditionRepository,
   ConditionPhotoRepository,
 } from '@/domain/clinical/clinical-repositories';
+import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
+import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
+import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
@@ -27,6 +30,9 @@ import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-conf
  * `procedures`, `professionals`, `producedSessions` e `commissionPayouts` entraram
  * com o faturamento no servidor (#547): venda de pacote e fechamento/cancelamento
  * de repasse gravam e auditam na mesma transação (ADR-075 § 4).
+ * `partners`, `guardians` e `professionalPatientLinks` entraram com o cadastro
+ * de paciente como Server Action (#549): paciente, vínculo do Profissional e
+ * auditoria gravam juntos ou nada grava.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -44,6 +50,9 @@ export interface TransactionScope {
   professionals: ProfessionalRepository;
   producedSessions: ProducedSessionRepository;
   commissionPayouts: CommissionPayoutRepository;
+  partners: PartnerRepository;
+  guardians: GuardianRepository;
+  professionalPatientLinks: ProfessionalPatientLinkRepository;
 }
 
 /**

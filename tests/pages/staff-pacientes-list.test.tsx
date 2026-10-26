@@ -2,10 +2,32 @@
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
 import PatientsPage from '@/app/(staff)/pacientes/page';
+import type { UserRole } from '@/domain/auth/user-role';
 import type { PartnerDto, PatientDto } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
+import { renderServerPage } from '../support/server-page';
+
+const mocks = vi.hoisted(() => ({
+  requireStaffPageFor: vi.fn(),
+  listPatientsPage: vi.fn(),
+  listPartnersFor: vi.fn(),
+  createPatient: vi.fn(),
+}));
+
+// A lista é Server Component (#549): sessão e dados vêm da camada do servidor.
+vi.mock('@/lib/server/session', () => ({
+  requireStaffPageFor: mocks.requireStaffPageFor,
+}));
+vi.mock('@/lib/server/data/patients', () => ({
+  listPatientsPage: mocks.listPatientsPage,
+}));
+vi.mock('@/lib/server/data/partners', () => ({
+  listPartnersFor: mocks.listPartnersFor,
+}));
+vi.mock('@/app/(staff)/pacientes/actions', () => ({
+  createPatient: mocks.createPatient,
+}));
 
 interface FetchCall {
   url: string;
@@ -34,6 +56,7 @@ const mockFetch = (
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.clearAllMocks();
 });
 
 const partnerFixture: PartnerDto = {
@@ -83,11 +106,16 @@ interface RouterOptions {
   ) => { ok: boolean; json: () => Promise<unknown> } | undefined;
 }
 
+/** O que o servidor leu para a 1ª página: o mesmo que a rota devolveria. */
+let served: { patients: PatientDto[]; partners: PartnerDto[]; role: UserRole } =
+  { patients: [], partners: [], role: 'company_admin' };
+
 function buildRouter({
   patients = [],
   partners = [],
   extra,
 }: RouterOptions = {}) {
+  served = { patients, partners, role: 'company_admin' };
   return ({ url, init }: FetchCall) => {
     const method = init?.method ?? 'GET';
     if (extra) {
@@ -104,12 +132,32 @@ function buildRouter({
   };
 }
 
+const created = (id: string) => ({
+  success: true,
+  data: { ...patientFixture, id },
+  error: null,
+});
+
+/** Renderiza a página como o servidor a entrega, com a 1ª página já lida. */
+async function renderPatientsPage() {
+  mocks.requireStaffPageFor.mockResolvedValue({
+    role: served.role,
+    subject: 'admin@clinica.com',
+  });
+  mocks.listPatientsPage.mockResolvedValue({
+    items: served.patients,
+    nextCursor: null,
+  });
+  mocks.listPartnersFor.mockResolvedValue(served.partners);
+  return renderServerPage(PatientsPage);
+}
+
 describe('Feature: PatientsPage', () => {
   describe('Cenário: listagem', () => {
     it('Dado nenhum paciente, Quando a página carrega, Então exibe mensagem de vazio', async () => {
       mockFetch(buildRouter({ patients: [] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
 
       expect(
         await screen.findByText('Nenhum paciente cadastrado.'),
@@ -121,7 +169,7 @@ describe('Feature: PatientsPage', () => {
         buildRouter({ patients: [patientFixture, inactivePatientFixture] }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
 
       expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
       expect(screen.getByText('maria@example.com')).toBeInTheDocument();
@@ -137,7 +185,7 @@ describe('Feature: PatientsPage', () => {
     it('Dado paciente inativo, Quando renderizar a linha, Então usa fundo tingido em vez de opacity-50 (PRONT-12)', async () => {
       mockFetch(buildRouter({ patients: [inactivePatientFixture] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       const row = (await screen.findByText('João Pereira')).closest('tr');
 
       expect(row).toHaveClass('bg-surface-2/60');
@@ -147,7 +195,7 @@ describe('Feature: PatientsPage', () => {
     it("Dado a linha do paciente, Quando renderizar as ações, Então 'Prontuário' tem mais peso e as demais são Button ghost/sm (PRONT-11)", async () => {
       mockFetch(buildRouter({ patients: [patientFixture] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       expect(screen.getByText('Prontuário')).toHaveClass('font-semibold');
@@ -158,7 +206,7 @@ describe('Feature: PatientsPage', () => {
     it('Dado busca sem resultado, Quando renderizar o vazio, Então a mensagem cita o termo buscado (PRONT-13)', async () => {
       const fetchMock = mockFetch(buildRouter({ patients: [] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Nenhum paciente cadastrado.');
 
       fireEvent.change(
@@ -185,7 +233,7 @@ describe('Feature: PatientsPage', () => {
     it('Dado texto digitado na busca, Quando o debounce expira, Então refaz a busca com o parâmetro search', async () => {
       const fetchMock = mockFetch(buildRouter({ patients: [patientFixture] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       fireEvent.change(
@@ -205,17 +253,14 @@ describe('Feature: PatientsPage', () => {
     });
 
     it('Dado busca disparando nova requisição, Quando a resposta ainda não chegou, Então a tabela fica marcada como obsoleta (aria-busy) sem sumir (PRONT-10)', async () => {
-      let callCount = 0;
       mockFetch(
         buildRouter({
           patients: [patientFixture],
           extra: ({ url, init }) => {
             const method = init?.method ?? 'GET';
             if (url.startsWith('/api/patients') && method === 'GET') {
-              callCount += 1;
-              // 1ª chamada (montagem) resolve normal; a 2ª (busca) nunca resolve —
-              // só precisamos observar o estado "em voo", não o resultado final.
-              if (callCount === 1) return undefined;
+              // A montagem não busca (a 1ª página veio do servidor); a busca
+              // nunca resolve — só precisamos observar o estado "em voo".
               return { ok: true, json: () => new Promise<never>(() => {}) };
             }
             return undefined;
@@ -223,7 +268,7 @@ describe('Feature: PatientsPage', () => {
         }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       fireEvent.change(
@@ -262,7 +307,7 @@ describe('Feature: PatientsPage', () => {
     it('Dado telefone E.164 e legado, Quando listar, Então formata o primeiro e sinaliza o segundo', async () => {
       mockFetch(buildRouter({ patients: [e164Fixture, legacyFixture] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Eva Nova');
 
       expect(screen.getByText('(11) 99999-0000')).toBeInTheDocument();
@@ -271,8 +316,8 @@ describe('Feature: PatientsPage', () => {
     });
 
     it('Dado telefone sem DDD, Quando salvar, Então mostra o motivo e não chama a API', async () => {
-      const fetchMock = mockFetch(buildRouter({ patients: [] }));
-      renderWithToast(<PatientsPage />);
+      mockFetch(buildRouter({ patients: [] }));
+      await renderPatientsPage();
       await screen.findByText('Nenhum paciente cadastrado.');
       fireEvent.click(screen.getByText('+ Novo paciente'));
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
@@ -287,9 +332,7 @@ describe('Feature: PatientsPage', () => {
       fireEvent.click(screen.getByText('Salvar'));
 
       expect(await screen.findByText(/Informe o DDD/)).toBeInTheDocument();
-      expect(
-        fetchMock.mock.calls.some(([, init]) => init?.method === 'POST'),
-      ).toBe(false);
+      expect(mocks.createPatient).not.toHaveBeenCalled();
     });
 
     it('Dado paciente legado, Quando edita sem mexer no telefone, Então salva e a dica pede correção', async () => {
@@ -303,7 +346,7 @@ describe('Feature: PatientsPage', () => {
               : undefined,
         }),
       );
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Lia Legado');
 
       fireEvent.click(screen.getByText('Editar'));
@@ -332,8 +375,8 @@ describe('Feature: PatientsPage', () => {
     };
 
     it('Dado CPF com dígito verificador errado, Quando salvar, Então mostra a mensagem e não chama a API', async () => {
-      const fetchMock = mockFetch(buildRouter({ patients: [] }));
-      renderWithToast(<PatientsPage />);
+      mockFetch(buildRouter({ patients: [] }));
+      await renderPatientsPage();
       await screen.findByText('Nenhum paciente cadastrado.');
       fireEvent.click(screen.getByText('+ Novo paciente'));
       fillRequired();
@@ -343,22 +386,13 @@ describe('Feature: PatientsPage', () => {
       fireEvent.click(screen.getByText('Salvar'));
 
       expect(await screen.findByText(/CPF inválido/)).toBeInTheDocument();
-      expect(
-        fetchMock.mock.calls.some(([, init]) => init?.method === 'POST'),
-      ).toBe(false);
+      expect(mocks.createPatient).not.toHaveBeenCalled();
     });
 
     it('Dado CPF válido, Quando salvar, Então envia o CPF no cadastro', async () => {
-      const fetchMock = mockFetch(
-        buildRouter({
-          patients: [],
-          extra: ({ url, init }) =>
-            url === '/api/patients' && init?.method === 'POST'
-              ? jsonResponse({ ...patientFixture, id: 'pat-4' })
-              : undefined,
-        }),
-      );
-      renderWithToast(<PatientsPage />);
+      mockFetch(buildRouter({ patients: [] }));
+      mocks.createPatient.mockResolvedValue(created('pat-4'));
+      await renderPatientsPage();
       await screen.findByText('Nenhum paciente cadastrado.');
       fireEvent.click(screen.getByText('+ Novo paciente'));
       fillRequired();
@@ -368,12 +402,9 @@ describe('Feature: PatientsPage', () => {
       fireEvent.click(screen.getByText('Salvar'));
 
       await waitFor(() => {
-        const post = fetchMock.mock.calls.find(
-          ([, init]) => init?.method === 'POST',
+        expect(mocks.createPatient).toHaveBeenCalledWith(
+          expect.objectContaining({ cpf: '529.982.247-25' }),
         );
-        expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
-          cpf: '529.982.247-25',
-        });
       });
     });
 
@@ -388,7 +419,7 @@ describe('Feature: PatientsPage', () => {
               : undefined,
         }),
       );
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Editar'));
@@ -410,20 +441,10 @@ describe('Feature: PatientsPage', () => {
 
   describe('Cenário: criação via modal', () => {
     it('Dado clique em novo paciente e preenchimento, Quando submetido, Então cria o paciente e fecha o modal', async () => {
-      const fetchMock = mockFetch(
-        buildRouter({
-          patients: [],
-          partners: [partnerFixture],
-          extra: ({ url, init }) => {
-            if (url === '/api/patients' && init?.method === 'POST') {
-              return jsonResponse({ ...patientFixture, id: 'pat-3' });
-            }
-            return undefined;
-          },
-        }),
-      );
+      mockFetch(buildRouter({ patients: [], partners: [partnerFixture] }));
+      mocks.createPatient.mockResolvedValue(created('pat-3'));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Nenhum paciente cadastrado.');
 
       fireEvent.click(screen.getByText('+ Novo paciente'));
@@ -441,20 +462,14 @@ describe('Feature: PatientsPage', () => {
       fireEvent.click(screen.getByText('Salvar'));
 
       await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalledWith(
-          '/api/patients',
-          expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({
-              fullName: 'Ana Lima',
-              email: 'ana@example.com',
-              phone: '11977776666',
-              birthDate: null,
-              notes: null,
-              referredByPartnerId: null,
-            }),
-          }),
-        );
+        expect(mocks.createPatient).toHaveBeenCalledWith({
+          fullName: 'Ana Lima',
+          email: 'ana@example.com',
+          phone: '11977776666',
+          birthDate: null,
+          notes: null,
+          referredByPartnerId: null,
+        });
       });
       await waitFor(() => {
         expect(screen.queryByText('Novo paciente')).not.toBeInTheDocument();
@@ -464,20 +479,10 @@ describe('Feature: PatientsPage', () => {
     });
 
     it('Dado cadastro sem e-mail (#325), Quando submetido, Então envia email null', async () => {
-      const fetchMock = mockFetch(
-        buildRouter({
-          patients: [],
-          partners: [partnerFixture],
-          extra: ({ url, init }) => {
-            if (url === '/api/patients' && init?.method === 'POST') {
-              return jsonResponse({ ...patientFixture, id: 'pat-4' });
-            }
-            return undefined;
-          },
-        }),
-      );
+      mockFetch(buildRouter({ patients: [], partners: [partnerFixture] }));
+      mocks.createPatient.mockResolvedValue(created('pat-4'));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Nenhum paciente cadastrado.');
       fireEvent.click(screen.getByText('+ Novo paciente'));
       fireEvent.change(screen.getByLabelText(/Nome completo/), {
@@ -489,12 +494,8 @@ describe('Feature: PatientsPage', () => {
       fireEvent.click(screen.getByText('Salvar'));
 
       await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalledWith(
-          '/api/patients',
-          expect.objectContaining({
-            method: 'POST',
-            body: expect.stringContaining('"email":null'),
-          }),
+        expect(mocks.createPatient).toHaveBeenCalledWith(
+          expect.objectContaining({ email: null }),
         );
       });
     });
@@ -504,7 +505,7 @@ describe('Feature: PatientsPage', () => {
     it('Dado clique em editar paciente existente, Quando o modal abre, Então preenche os campos com os dados atuais', async () => {
       mockFetch(buildRouter({ patients: [patientFixture] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Editar'));
@@ -535,7 +536,7 @@ describe('Feature: PatientsPage', () => {
         }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
       fireEvent.click(screen.getByText('Editar'));
 
@@ -570,7 +571,7 @@ describe('Feature: PatientsPage', () => {
         }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
       fireEvent.click(screen.getByText('Editar'));
       fireEvent.click(screen.getByText('Salvar'));
@@ -607,13 +608,14 @@ describe('Feature: PatientsPage', () => {
         }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Desativar'));
       fireEvent.click(await screen.findByText('Confirmar'));
 
-      await waitFor(() => expect(calls).toBeGreaterThanOrEqual(2));
+      // A montagem não lê `/api` (a lista veio do servidor): a única leitura é a recarga.
+      await waitFor(() => expect(calls).toBe(1));
       expect(
         await screen.findByText('Paciente desativado'),
       ).toBeInTheDocument();
@@ -637,7 +639,7 @@ describe('Feature: PatientsPage', () => {
         }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Desativar'));
@@ -663,7 +665,7 @@ describe('Feature: PatientsPage', () => {
         }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
       await screen.findByText('Maria Souza');
 
       fireEvent.click(screen.getByText('Desativar'));
@@ -679,7 +681,7 @@ describe('Feature: PatientsPage', () => {
     it('Dado paciente inativo, Quando renderizado, Então exibe ação de reativar', async () => {
       mockFetch(buildRouter({ patients: [inactivePatientFixture] }));
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
 
       expect(await screen.findByText('Reativar')).toBeInTheDocument();
     });
@@ -691,7 +693,7 @@ describe('Feature: PatientsPage', () => {
         }),
       );
 
-      renderWithToast(<PatientsPage />);
+      await renderPatientsPage();
 
       expect(
         await screen.findByText(/Anonimizado: para voltar, cadastre/),
