@@ -1,15 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CreateInvoice } from '@/application/billing/create-invoice';
-import { ListInvoices } from '@/application/billing/list-invoices';
 import { INVOICE_STATUSES } from '@/domain/billing/invoice';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
-import type { InvoiceDto } from '@/lib/dto';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toInvoiceDto } from '@/lib/dto';
-import { encodeCursor } from '@/lib/pagination';
+import { listInvoicesFor } from '@/lib/server/data/invoices';
 
 const createInvoiceSchema = z.object({
   patientId: z.string().min(1),
@@ -26,52 +24,35 @@ const paginationSchema = z.object({
   cursor: z.string().optional(),
 });
 
-/** Cursor opaco pela mesma ordenação da query (issuedAt desc, id desc) — issue #75. */
-function nextInvoiceCursor(page: InvoiceDto[], limit: number): string | null {
-  if (page.length < limit) return null;
-  const last = page[page.length - 1];
-  return encodeCursor({ issuedAt: last.issuedAt, id: last.id });
-}
-
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  // `limit` some fora do try/catch do handleRequest (usado no buildMeta, que só
-  // roda depois do action resolver) — por isso fica numa variável de fora,
-  // atribuída dentro do action para que erros de zod ainda virem 400.
-  let limit = 0;
+  // O cursor sai da mesma leitura que monta a página; fica numa variável de
+  // fora porque o `meta` só é montado depois de o action resolver.
+  let nextCursor: string | null = null;
 
   return handleRequest(
     async () => {
       const params = request.nextUrl.searchParams;
-      const status = statusSchema.parse(params.get('status') ?? undefined);
       const from = params.get('from');
       const to = params.get('to');
-      const patientId = params.get('patientId') ?? undefined;
       const parsedPage = paginationSchema.parse({
         limit: params.get('limit') ?? undefined,
         cursor: params.get('cursor') ?? undefined,
       });
-      limit = parsedPage.limit;
-
-      const { invoices, patients } = await getRepositories(
-        sessionScope(guard.session),
-      );
-      const result = await new ListInvoices(invoices, patients).execute(
-        {
-          status,
-          patientId,
-          from: from ? new Date(from) : undefined,
-          to: to ? new Date(to) : undefined,
-        },
-        { limit, cursor: parsedPage.cursor },
-      );
-      return result.map(({ invoice, patientName, patientBirthDate }) =>
-        toInvoiceDto(invoice, patientName, patientBirthDate),
-      );
+      const page = await listInvoicesFor(guard.session, {
+        status: statusSchema.parse(params.get('status') ?? undefined),
+        patientId: params.get('patientId') ?? undefined,
+        from: from ? new Date(from) : undefined,
+        to: to ? new Date(to) : undefined,
+        limit: parsedPage.limit,
+        cursor: parsedPage.cursor,
+      });
+      nextCursor = page.nextCursor;
+      return page.invoices;
     },
-    (result) => ({ nextCursor: nextInvoiceCursor(result, limit) }),
+    () => ({ nextCursor }),
   );
 }
 

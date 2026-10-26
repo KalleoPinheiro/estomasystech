@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { RefreshErrorAlert } from '@/components/refresh-error-alert';
 import type { Session } from '@/lib/auth/session';
 import { formatCurrency } from '@/lib/format';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { buildMonthSummary } from '@/lib/server/data/month-summary';
-import { loadBlock } from '@/lib/server/load-block';
 
 export async function KpiGrid({ session }: { session: Session }) {
   const { data: summary, error } = await loadBlock(() =>

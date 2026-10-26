@@ -28,7 +28,7 @@ test.describe("faturamento", () => {
     await completeAppointment(request, appointment.id);
 
     await page.goto("/faturamento");
-    await page.getByRole("button", { name: "Pendentes" }).click();
+    await page.getByRole("link", { name: "Pendentes" }).click();
     const row = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await expect(row).toBeVisible();
     await expect(row.getByText("R$ 234,00")).toBeVisible();
@@ -50,7 +50,7 @@ test.describe("faturamento", () => {
     await page.getByRole("button", { name: "Confirmar recebimento" }).click();
 
     await expect(page.getByRole("heading", { name: "Registrar pagamento" })).not.toBeVisible();
-    await page.getByRole("button", { name: "Pagas" }).click();
+    await page.getByRole("link", { name: "Pagas" }).click();
     await expect(page.getByRole("row", { name: literal(shown(patient.fullName)) })).toContainText(
       "Pix",
     );
@@ -86,7 +86,7 @@ test.describe("faturamento", () => {
     await row.getByRole("button", { name: "Receber" }).click();
     await page.getByRole("button", { name: "Dinheiro", exact: true }).click();
     await page.getByRole("button", { name: "Confirmar recebimento" }).click();
-    await page.getByRole("button", { name: "Pagas" }).click();
+    await page.getByRole("link", { name: "Pagas" }).click();
     const paidRow = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await expect(paidRow.getByRole("link", { name: "Recibo" })).toHaveCount(2);
   });
@@ -131,7 +131,7 @@ test.describe("faturamento", () => {
     expect(body.error).toContain("paid");
 
     await page.goto("/faturamento");
-    await page.getByRole("button", { name: "Pagas" }).click();
+    await page.getByRole("link", { name: "Pagas" }).click();
     const row = page.getByRole("row", { name: literal(shown(patient.fullName)) });
     await expect(row).toBeVisible();
     await expect(row.getByRole("button", { name: "Cancelar" })).toHaveCount(0);
@@ -179,7 +179,7 @@ test.describe("faturamento", () => {
     // distinção é a célula de descrição: a fatura da consulta usa o nome do
     // procedimento puro.
     await page.goto("/faturamento");
-    await page.getByRole("button", { name: "Pendentes" }).click();
+    await page.getByRole("link", { name: "Pendentes" }).click();
     const pendingRowsForPatient = page.getByRole("row", {
       name: literal(shown(patient.fullName)),
     });

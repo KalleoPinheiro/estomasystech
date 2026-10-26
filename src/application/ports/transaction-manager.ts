@@ -1,7 +1,10 @@
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
+import type { ProducedSessionRepository } from '@/domain/billing/commission';
+import type { CommissionPayoutRepository } from '@/domain/billing/commission-payout';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
+import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type {
   ClinicalConditionRepository,
   ConditionPhotoRepository,
@@ -21,6 +24,9 @@ import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-conf
  * `patients` (com `findByIdForUpdate`), agenda e fotos entraram com o teto
  * atômico do portal (#363): tudo que o fluxo lê dentro da transação precisa vir
  * do escopo — usar o repositório de fora trava o PGlite (conexão única).
+ * `procedures`, `professionals`, `producedSessions` e `commissionPayouts` entraram
+ * com o faturamento no servidor (#547): venda de pacote e fechamento/cancelamento
+ * de repasse gravam e auditam na mesma transação (ADR-075 § 4).
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -34,8 +40,10 @@ export interface TransactionScope {
   scheduleAvailability: ScheduleAvailabilityRepository;
   conditions: ClinicalConditionRepository;
   conditionPhotos: ConditionPhotoRepository;
-  /** Agendar valida o profissional (ativo, da empresa) na mesma transação da consulta (#551). */
+  procedures: ProcedureRepository;
   professionals: ProfessionalRepository;
+  producedSessions: ProducedSessionRepository;
+  commissionPayouts: CommissionPayoutRepository;
 }
 
 /**

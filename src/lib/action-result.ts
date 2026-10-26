@@ -4,14 +4,14 @@ export type ActionResult<T> =
   | { success: false; data: null; error: string };
 
 /**
- * Desembrulha o envelope para quem trata o erro com `try/catch` (um formulário
- * que mostra o `ErrorAlert` e mantém o modal aberto): sucesso devolve o dado,
- * falha lança `Error` com a mensagem do servidor.
+ * Desembrulha o envelope de uma Server Action: devolve o dado, ou lança o erro
+ * com a MESMA mensagem da falha. Serve a formulários que já mostram o erro de
+ * quem lança (`catch` → alerta inline), como faziam com `apiFetch`.
  */
 export async function unwrapAction<T>(
-  pending: Promise<ActionResult<T>>,
+  call: Promise<ActionResult<T>>,
 ): Promise<T> {
-  const result = await pending;
+  const result = await call;
   if (!result.success) {
     throw new Error(result.error);
   }

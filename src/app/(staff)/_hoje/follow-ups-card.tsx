@@ -4,8 +4,8 @@ import { SummaryCard } from '@/components/summary-card';
 import type { Session } from '@/lib/auth/session';
 import { homonymPatientIds, listPatientName } from '@/lib/patient-name';
 import { listFollowUpsFor } from '@/lib/server/data/follow-ups';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { whatsappSentToday } from '@/lib/server/data/reminders';
-import { loadBlock } from '@/lib/server/load-block';
 import { FollowUpRowActions } from './follow-up-row-actions';
 
 // Altura previsível acima da dobra (CLS, #548): 3 retornos; o resto fica em «Ver todos».

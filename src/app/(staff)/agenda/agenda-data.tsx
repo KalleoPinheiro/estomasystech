@@ -5,13 +5,13 @@ import {
   countAppointmentsFor,
   listAppointmentsFor,
 } from '@/lib/server/data/appointments';
+import { loadBlock } from '@/lib/server/data/load-block';
 import { listProfessionalOptions } from '@/lib/server/data/professionals';
 import {
   listClosuresFor,
   loadScheduleConfig,
 } from '@/lib/server/data/schedule';
 import { listWaitlistFor } from '@/lib/server/data/waitlist';
-import { loadBlock } from '@/lib/server/load-block';
 import { failIfInjected } from '@/lib/server/test-faults';
 import {
   type AgendaEntry,

@@ -194,6 +194,7 @@ export function PayoutHistoryTable({
                   items={payout.items}
                   label={`${payout.items.length} sessões`}
                 />
+                {/* <a>, não <Link>: o comprovante é um documento imprimível fora do shell da equipe (#546); navegação completa, sem pré-carregar um por repasse. */}
                 <a
                   href={`/documentos/repasse/${payout.id}`}
                   className="mx-2 font-medium text-accent-ink text-xs hover:underline"
