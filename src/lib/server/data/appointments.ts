@@ -1,6 +1,10 @@
 import 'server-only';
+import { CountAppointmentsByStatus } from '@/application/appointments/count-appointments-by-status';
 import { ListAppointments } from '@/application/appointments/list-appointments';
-import type { AppointmentStatus } from '@/domain/scheduling/appointment';
+import {
+  APPOINTMENT_STATUSES,
+  type AppointmentStatus,
+} from '@/domain/scheduling/appointment';
 import { getRepositories } from '@/infrastructure/container';
 import { professionalScopeFor } from '@/lib/auth/appointment-query';
 import type { Session } from '@/lib/auth/session';
@@ -41,4 +45,28 @@ export async function listAppointmentsFor(
   return result.map(({ appointment, patientName, patientBirthDate }) =>
     toAppointmentDto(appointment, patientName, patientBirthDate),
   );
+}
+
+/**
+ * Contagem por status do período, para os chips do filtro da agenda
+ * (AGE-FLT-05): mesma regra de escopo da listagem (Profissional só conta a
+ * própria agenda, R4/RBAC-19) e independente do filtro de status. É a mesma
+ * resposta de `GET /api/appointments/status-counts`.
+ */
+export async function countAppointmentsFor(
+  session: Session,
+  range: Pick<AppointmentRange, 'from' | 'to' | 'professionalId'>,
+): Promise<Record<AppointmentStatus, number>> {
+  const professional = professionalScopeFor(session, range.professionalId);
+  if (professional.none) {
+    return Object.fromEntries(
+      APPOINTMENT_STATUSES.map((status) => [status, 0]),
+    ) as Record<AppointmentStatus, number>;
+  }
+  const { appointments } = await getRepositories(sessionScope(session));
+  return new CountAppointmentsByStatus(appointments).execute({
+    from: range.from,
+    to: range.to,
+    professionalId: professional.professionalId,
+  });
 }

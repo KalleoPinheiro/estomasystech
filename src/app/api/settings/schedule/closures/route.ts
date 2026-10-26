@@ -5,8 +5,9 @@ import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toScheduleClosureDto } from '@/lib/dto';
+import { listClosuresFor } from '@/lib/server/data/schedule';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -28,13 +29,7 @@ export async function GET(request: NextRequest) {
     return fail('Informe from e to (AAAA-MM-DD)', 400);
   }
 
-  return handleRequest(async () => {
-    const { scheduleAvailability } = await getRepositories(
-      sessionScope(guard.session),
-    );
-    const closures = await scheduleAvailability.listClosures({ from, to });
-    return closures.map(toScheduleClosureDto);
-  });
+  return handleRequest(() => listClosuresFor(guard.session, { from, to }));
 }
 
 export async function POST(request: NextRequest) {

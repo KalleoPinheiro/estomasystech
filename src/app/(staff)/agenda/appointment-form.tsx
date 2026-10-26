@@ -33,6 +33,8 @@ interface AppointmentFormProps {
   professionals?: ProfessionalOptionDto[];
   /** Falha ao carregar a lista de profissionais — vira alerta, nunca campo escondido (#188). */
   professionalsError?: string | null;
+  /** Grade já lida pela página; sem ela o formulário a busca. */
+  scheduleConfig?: ScheduleConfig;
   defaultDate?: Date;
   defaultPatientId?: string;
   defaultProcedure?: string;
@@ -62,6 +64,7 @@ function resolveScheduleConfig(
 export function AppointmentForm({
   professionals = [],
   professionalsError = null,
+  scheduleConfig: scheduleConfigProp,
   defaultDate,
   defaultPatientId,
   defaultProcedure,
@@ -89,10 +92,13 @@ export function AppointmentForm({
     ProcedureOptionDto[]
   >('/api/options/procedures');
   const activeCatalog = (catalog ?? []).filter((p) => p.active);
+  // A página já leu a grade no servidor (#551): só busca quando o formulário
+  // é usado sem ela.
   const { data: scheduleData } = useApiQuery<{ config: ScheduleConfig }>(
-    '/api/schedule-config',
+    scheduleConfigProp ? null : '/api/schedule-config',
   );
-  const scheduleConfig = resolveScheduleConfig(scheduleData);
+  const scheduleConfig =
+    scheduleConfigProp ?? resolveScheduleConfig(scheduleData);
 
   // Selecionar do catálogo preenche nome, preço e duração (editáveis depois).
   const applyCatalogProcedure = (procedureId: string) => {

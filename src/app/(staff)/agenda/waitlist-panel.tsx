@@ -9,6 +9,7 @@ import {
 } from '@still-void/ui/react';
 
 import { useToast } from '@still-void/ui/react/client';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { EmptyState, ErrorAlert } from '@/components/feedback';
@@ -26,8 +27,10 @@ import { useApiQuery } from '@/lib/use-api-query';
 
 interface WaitlistPanelProps {
   professionals: ProfessionalOptionDto[];
-  /** Muda quando a agenda muda (ex.: entrada marcada pelo formulário). */
-  version: number;
+  /** Fila lida no servidor junto com a página (#551); `null` quando a leitura falhou. */
+  entries: WaitlistEntryDto[] | null;
+  /** Mensagem da leitura que falhou. */
+  error: string | null;
   onSchedule: (entry: WaitlistEntryDto) => void;
 }
 
@@ -37,13 +40,13 @@ interface WaitlistPanelProps {
  */
 export function WaitlistPanel({
   professionals,
-  version,
+  entries: data,
+  error,
   onSchedule,
 }: WaitlistPanelProps) {
   const { toast } = useToast();
-  const { data, error, refresh } = useApiQuery<WaitlistEntryDto[]>(
-    `/api/waitlist?v=${version}`,
-  );
+  const router = useRouter();
+  const refresh = () => router.refresh();
   const [adding, setAdding] = useState(false);
 
   const professionalName = (id: string | null) =>
