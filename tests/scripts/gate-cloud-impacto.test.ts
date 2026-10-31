@@ -101,4 +101,14 @@ describe('Impacto do diff sobre os specs E2E (ADR-084)', () => {
       'src/lib/server/data/patients.ts',
     ]);
   });
+
+  it('a mutação da nuvem inclui o envelope das ações e rotas (action-result e api-response)', () => {
+    expect(
+      mutationTargetsCloud([
+        'src/lib/action-result.ts',
+        'src/lib/api-response.ts',
+        'src/lib/format.ts',
+      ]),
+    ).toEqual(['src/lib/action-result.ts', 'src/lib/api-response.ts']);
+  });
 });

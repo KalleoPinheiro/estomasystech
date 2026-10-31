@@ -90,13 +90,15 @@ export function impactedSpecs(changed: string[], specs: Spec[]): Impact {
 }
 
 /**
- * Arquivos que a mutação do gate da nuvem cobre: `src/domain`, `src/application` (ADR-051) e
- * `src/lib/server` (ADR-084: acesso e auditoria vivem lá). Sem `.d.ts` nem `index.ts`.
+ * Arquivos que a mutação do gate da nuvem cobre: `src/domain`, `src/application` (ADR-051),
+ * `src/lib/server` (ADR-084: acesso e auditoria vivem lá) e o envelope das ações e rotas
+ * (`action-result.ts`, `api-response.ts`). Sem `.d.ts` nem `index.ts`.
  */
 export function mutationTargetsCloud(changed: string[]): string[] {
   return changed.filter(
     (f) =>
-      /^src\/(domain|application|lib\/server)\/.+\.ts$/.test(f) &&
+      (/^src\/(domain|application|lib\/server)\/.+\.ts$/.test(f) ||
+        /^src\/lib\/(action-result|api-response)\.ts$/.test(f)) &&
       !f.endsWith('.d.ts') &&
       !/(^|\/)index\.ts$/.test(f),
   );
