@@ -9,8 +9,20 @@ import type { PatientRepository } from '@/domain/patient/patient-repository';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import { InMemoryAuditEventRepository } from '@/infrastructure/persistence/in-memory/in-memory-audit-event-repository';
 import {
+  InMemoryCarePlanDiagnosisRepository,
+  InMemoryCarePlanInterventionRepository,
+  InMemoryCarePlanOutcomeRepository,
+  InMemoryCarePlanRepository,
+  InMemoryInterventionRecordRepository,
+  InMemoryOutcomeEvaluationRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-care-plan-repositories';
+import {
+  InMemoryAnamnesisRepository,
   InMemoryClinicalConditionRepository,
+  InMemoryConditionAssessmentRepository,
   InMemoryConditionPhotoRepository,
+  InMemoryEvolutionNoteRepository,
+  InMemoryPartnerShareConsentRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
 import { InMemoryCommissionPayoutRepository } from '@/infrastructure/persistence/in-memory/in-memory-commission-payout-repository';
 import {
@@ -27,6 +39,11 @@ import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memor
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
+import {
+  InMemoryNursingDiagnosisRepository,
+  InMemoryNursingInterventionRepository,
+  InMemoryNursingOutcomeRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-taxonomy-repositories';
 
 /** Vínculos Profissional↔Paciente em memória (só no escopo transacional dos testes). */
 export class InMemoryProfessionalPatientLinks
@@ -82,6 +99,19 @@ export function inMemoryScope(
     partners: new InMemoryPartnerRepository(),
     guardians: new InMemoryGuardianRepository(),
     professionalPatientLinks: new InMemoryProfessionalPatientLinks(),
+    anamneses: new InMemoryAnamnesisRepository(),
+    evolutions: new InMemoryEvolutionNoteRepository(),
+    assessments: new InMemoryConditionAssessmentRepository(),
+    partnerShareConsents: new InMemoryPartnerShareConsentRepository(),
+    carePlans: new InMemoryCarePlanRepository(),
+    carePlanDiagnoses: new InMemoryCarePlanDiagnosisRepository(),
+    carePlanOutcomes: new InMemoryCarePlanOutcomeRepository(),
+    carePlanInterventions: new InMemoryCarePlanInterventionRepository(),
+    outcomeEvaluations: new InMemoryOutcomeEvaluationRepository(),
+    interventionRecords: new InMemoryInterventionRecordRepository(),
+    nursingDiagnoses: new InMemoryNursingDiagnosisRepository(),
+    nursingOutcomes: new InMemoryNursingOutcomeRepository(),
+    nursingInterventions: new InMemoryNursingInterventionRepository(),
     ...parts,
   };
 }

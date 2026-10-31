@@ -6,10 +6,20 @@ import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type {
+  AnamnesisRepository,
+  CarePlanDiagnosisRepository,
+  CarePlanInterventionRepository,
+  CarePlanOutcomeRepository,
+  CarePlanRepository,
   ClinicalConditionRepository,
+  ConditionAssessmentRepository,
   ConditionPhotoRepository,
+  EvolutionNoteRepository,
+  InterventionRecordRepository,
+  OutcomeEvaluationRepository,
 } from '@/domain/clinical/clinical-repositories';
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
+import type { PartnerShareConsentRepository } from '@/domain/consent/partner-share-consent';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
@@ -18,6 +28,11 @@ import type { ProfessionalRepository } from '@/domain/professional/professional-
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
+import type {
+  NursingDiagnosisRepository,
+  NursingInterventionRepository,
+  NursingOutcomeRepository,
+} from '@/domain/taxonomy/taxonomy-repositories';
 
 /**
  * Repositórios disponíveis dentro de uma transação — escopo enxuto, apenas o
@@ -33,6 +48,10 @@ import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-conf
  * `partners`, `guardians` e `professionalPatientLinks` entraram com o cadastro
  * de paciente como Server Action (#549): paciente, vínculo do Profissional e
  * auditoria gravam juntos ou nada grava.
+ * Anamnese, evolução, avaliação da condição, plano de cuidados (com diagnósticos,
+ * resultados, intervenções, avaliações e registros), catálogos de enfermagem e
+ * consentimento do parceiro entraram com as ações da ficha do paciente (#552,
+ * ADR-080): cada gravação da ficha e a sua trilha ficam na mesma transação.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -53,6 +72,19 @@ export interface TransactionScope {
   partners: PartnerRepository;
   guardians: GuardianRepository;
   professionalPatientLinks: ProfessionalPatientLinkRepository;
+  anamneses: AnamnesisRepository;
+  evolutions: EvolutionNoteRepository;
+  assessments: ConditionAssessmentRepository;
+  partnerShareConsents: PartnerShareConsentRepository;
+  carePlans: CarePlanRepository;
+  carePlanDiagnoses: CarePlanDiagnosisRepository;
+  carePlanOutcomes: CarePlanOutcomeRepository;
+  carePlanInterventions: CarePlanInterventionRepository;
+  outcomeEvaluations: OutcomeEvaluationRepository;
+  interventionRecords: InterventionRecordRepository;
+  nursingDiagnoses: NursingDiagnosisRepository;
+  nursingOutcomes: NursingOutcomeRepository;
+  nursingInterventions: NursingInterventionRepository;
 }
 
 /**

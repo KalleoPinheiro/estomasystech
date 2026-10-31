@@ -7,8 +7,19 @@ import type { AppDb } from './db';
 import { DrizzleAppointmentRepository } from './drizzle-appointment-repository';
 import { DrizzleAuditEventRepository } from './drizzle-audit-event-repository';
 import {
+  DrizzleCarePlanDiagnosisRepository,
+  DrizzleCarePlanInterventionRepository,
+  DrizzleCarePlanOutcomeRepository,
+  DrizzleCarePlanRepository,
+  DrizzleInterventionRecordRepository,
+  DrizzleOutcomeEvaluationRepository,
+} from './drizzle-care-plan-repositories';
+import {
+  DrizzleAnamnesisRepository,
   DrizzleClinicalConditionRepository,
+  DrizzleConditionAssessmentRepository,
   DrizzleConditionPhotoRepository,
+  DrizzleEvolutionNoteRepository,
 } from './drizzle-clinical-repositories';
 import { DrizzleCommissionPayoutRepository } from './drizzle-commission-payout-repository';
 import {
@@ -21,10 +32,16 @@ import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
 import { DrizzlePartnerRepository } from './drizzle-partner-repository';
+import { DrizzlePartnerShareConsentRepository } from './drizzle-partner-share-consent-repository';
 import { DrizzlePatientRepository } from './drizzle-patient-repository';
 import { DrizzleProducedSessionRepository } from './drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './drizzle-professional-repository';
 import { DrizzleScheduleAvailabilityRepository } from './drizzle-schedule-availability-repository';
+import {
+  DrizzleNursingDiagnosisRepository,
+  DrizzleNursingInterventionRepository,
+  DrizzleNursingOutcomeRepository,
+} from './drizzle-taxonomy-repositories';
 import { DrizzleProfessionalPatientLinkRepository } from './professional-patient-link-repository';
 
 /**
@@ -84,6 +101,52 @@ export class DrizzleTransactionManager implements TransactionManager {
           tx,
           this.clinicId,
         ),
+        anamneses: new DrizzleAnamnesisRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        evolutions: new DrizzleEvolutionNoteRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        assessments: new DrizzleConditionAssessmentRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        partnerShareConsents: new DrizzlePartnerShareConsentRepository(
+          tx,
+          this.clinicId,
+        ),
+        carePlans: new DrizzleCarePlanRepository(tx, this.clinicId),
+        carePlanDiagnoses: new DrizzleCarePlanDiagnosisRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        carePlanOutcomes: new DrizzleCarePlanOutcomeRepository(
+          tx,
+          this.clinicId,
+        ),
+        carePlanInterventions: new DrizzleCarePlanInterventionRepository(
+          tx,
+          this.clinicId,
+        ),
+        outcomeEvaluations: new DrizzleOutcomeEvaluationRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        interventionRecords: new DrizzleInterventionRecordRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        nursingDiagnoses: new DrizzleNursingDiagnosisRepository(tx),
+        nursingOutcomes: new DrizzleNursingOutcomeRepository(tx),
+        nursingInterventions: new DrizzleNursingInterventionRepository(tx),
       }),
     );
   }
