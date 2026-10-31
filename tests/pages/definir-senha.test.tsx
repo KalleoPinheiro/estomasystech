@@ -14,9 +14,13 @@ const { searchParamsRef } = vi.hoisted(() => ({
   searchParamsRef: { current: new URLSearchParams('token=segredo-do-link') },
 }));
 
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => searchParamsRef.current,
-}));
+// A página é Server Component: recebe `searchParams` do servidor (#554).
+async function renderPage() {
+  const ui = await SetPasswordPage({
+    searchParams: Promise.resolve(Object.fromEntries(searchParamsRef.current)),
+  });
+  return render(ui);
+}
 
 const jsonResponse = (
   success: boolean,
@@ -46,7 +50,7 @@ describe('Feature: Tela de definição de senha', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<SetPasswordPage />);
+    await renderPage();
     fireEvent.change(screen.getByLabelText('Nova senha'), {
       target: { value: 'senha-forte-1' },
     });
@@ -69,7 +73,7 @@ describe('Feature: Tela de definição de senha', () => {
       vi.fn(async () => jsonResponse(true, { ok: true })),
     );
 
-    render(<SetPasswordPage />);
+    await renderPage();
     fireEvent.change(screen.getByLabelText('Nova senha'), {
       target: { value: 'senha-forte-1' },
     });
@@ -90,7 +94,7 @@ describe('Feature: Tela de definição de senha', () => {
     const fetchMock = vi.fn(async () => jsonResponse(true, { ok: true }));
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<SetPasswordPage />);
+    await renderPage();
     fireEvent.change(screen.getByLabelText('Nova senha'), {
       target: { value: 'senha-forte-1' },
     });
@@ -118,7 +122,7 @@ describe('Feature: Tela de definição de senha', () => {
       })),
     );
 
-    render(<SetPasswordPage />);
+    await renderPage();
     fireEvent.change(screen.getByLabelText('Nova senha'), {
       target: { value: 'senha-forte-1' },
     });
@@ -132,10 +136,10 @@ describe('Feature: Tela de definição de senha', () => {
     ).toBeInTheDocument();
   });
 
-  it('Dado a URL sem token, Quando renderizar, Então avisa que o link está incompleto e oferece pedir outro', () => {
+  it('Dado a URL sem token, Quando renderizar, Então avisa que o link está incompleto e oferece pedir outro', async () => {
     searchParamsRef.current = new URLSearchParams();
 
-    render(<SetPasswordPage />);
+    await renderPage();
 
     expect(
       screen.getByText(
