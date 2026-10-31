@@ -121,9 +121,10 @@ export function ConsentCard({
       setRevoking(true);
       setError(null);
       setLocal({ accepted: false, at: new Date().toISOString() });
+      // O aviso sai junto com a troca do cartão; se o servidor recusar, o erro vem em seguida.
+      toast({ description: 'Consentimento revogado', variant: 'success' });
       try {
         await unwrapAction(revokeConsent({ purpose }));
-        toast({ description: 'Consentimento revogado', variant: 'success' });
         onAccepted();
       } catch (err) {
         const message =
@@ -182,9 +183,10 @@ export function ConsentCard({
     setAccepting(true);
     setError(null);
     setLocal({ accepted: true, at: new Date().toISOString() });
+    // O aviso sai junto com a troca do cartão; se o servidor recusar, o erro vem em seguida.
+    toast({ description: copy.acceptedLabel, variant: 'success' });
     try {
       await unwrapAction(acceptConsent({ purpose }));
-      toast({ description: copy.acceptedLabel, variant: 'success' });
       onAccepted();
     } catch (err) {
       const message =
