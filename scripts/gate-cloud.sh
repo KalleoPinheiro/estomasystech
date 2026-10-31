@@ -7,13 +7,13 @@
 #   scripts/gate-cloud.sh status       # resumo das etapas já terminadas
 #   scripts/gate-cloud.sh setup|integracao|pr|release   # em primeiro plano (CI, WSL, depuração)
 #
-# Perfis:
-#   pr       typecheck, lint, sv, docs, integridade, test:changed com cobertura 100% nos arquivos de
-#            regra tocados (piso 100% das camadas do vitest.config), mutação nos arquivos alterados de
-#            domain/application, e integração + build + E2E prod e dev quando o diff toca o que eles
-#            exercitam (na dúvida, roda: HEAVY_RE abaixo).
-#   release  setup + integração + `gate:local` (GATE_PERFIL=pr: o perfil release do gate exige Docker).
-#            Docker e backup seguem no WSL antes do `release:cut`.
+# Perfis (ADR-084):
+#   pr       typecheck, lint, sv, docs, integridade e a suíte unitária COMPLETA com cobertura e limiares
+#            atuais; integração (vitest --changed, grafo de imports), mutação (arquivos alterados de
+#            domain/application) e E2E (specs alcançados, scripts/gate/impacto.ts) só no que o diff
+#            altera ou alcança. Na dúvida, inclui: arquivo transversal ou sem mapa roda tudo.
+#   release  setup + integração completa + `gate:local` (GATE_PERFIL=pr: o perfil release do gate exige
+#            Docker). Docker e backup seguem no WSL antes do `release:cut`.
 #
 # Base do diff: GATE_BASE, senão a release aberta (scripts/gate/base.ts). Não toca banco de produção:
 # o assertLocalEnvironment recusa host que não seja da máquina.
@@ -27,9 +27,6 @@ LOG=.gate/cloud.log
 TIMES=.gate/cloud-times.txt
 export INTEGRATION_DATABASE_URL="postgres://postgres:${PGPASS}@127.0.0.1:${PGPORT}/${PGDB}"
 export CI=1 TZ=UTC NODE_OPTIONS="--max-old-space-size=8192"
-
-# Diff que exige integração/build/E2E: tela, servidor, persistência, acesso, infra e config de teste.
-HEAVY_RE='^(src/app/|src/lib/|src/infrastructure/|src/proxy\.ts|drizzle/|e2e/|Dockerfile|package(-lock)?\.json|next\.config|playwright)'
 
 stamp() { date +%s; }
 step() { # step <nome> <comando...>: mede, registra e para na primeira falha
@@ -97,24 +94,33 @@ e2e() {
   step e2e-dev npm run test:e2e:dev
 }
 
-# Cobertura dos arquivos de regra tocados: 100% (mesmo piso do vitest.config nas camadas).
-changed_coverage() {
-  local base="$1" files
-  files=$(git diff --name-only --diff-filter=d "${base}...HEAD" | grep -E '^src/(proxy\.ts|domain/|application/|infrastructure/|lib/)' | grep -vE '\.d\.ts$' || true)
-  [ -n "$files" ] || { echo "nenhum arquivo de regra alterado: cobertura por arquivo dispensada"; return 0; }
-  rm -rf .gate/coverage-pr
-  npx vitest run --changed "$base" --coverage --coverage.reportsDirectory=.gate/coverage-pr \
-    --coverage.reporter=json-summary --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 \
-    --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 2>&1 | tee .gate/cloud-changed.log
-  if grep -Eq '(Tests|Test Files) +.*failed' .gate/cloud-changed.log; then return 1; fi
-  FILES="$files" node -e "
-    const s=require('./.gate/coverage-pr/coverage-summary.json'); const root=process.cwd()+'/'; let bad=0;
-    for (const f of process.env.FILES.split('\n')) {
-      const e=s[root+f]; if (!e) continue; // sem teste que o importe: o piso global da release pega
-      for (const k of ['lines','functions','branches','statements'])
-        if (e[k].pct < 100 && e[k].total > 0) { console.log('✗ '+f+' '+k+' '+e[k].pct+'%'); bad=1; }
-    }
-    process.exit(bad);"
+# Integração só nos testes que o grafo de imports do Vitest liga ao diff; mudança em banco, setup de
+# teste ou dependência roda a integração inteira (na dúvida, inclui).
+integracao_impactada() {
+  local base="$1"
+  if git diff --name-only "${base}...HEAD" | grep -Eq '^(drizzle/|tests/support/|vitest[^/]*\.mts|package(-lock)?\.json|src/infrastructure/persistence/)'; then
+    echo "diff toca banco/setup/dependência: integração completa"
+    integracao
+  else
+    step integracao-impactada env PG_POOL_MAX=1 npx vitest run -c vitest.integracao.config.mts --changed "$base" --passWithNoTests
+  fi
+}
+
+# E2E só nos specs que o diff alcança (scripts/gate/impacto.ts); ALL = todos; NONE = nenhum.
+e2e_impactado() {
+  local sel="$1"
+  free_port_3000
+  if [ "$sel" = ALL ]; then
+    step e2e-producao npm run test:e2e:prod
+    free_port_3000
+    step e2e-dev npm run test:e2e:dev
+  else
+    # shellcheck disable=SC2086
+    step e2e-producao npx playwright test -c playwright.prod.config.ts --pass-with-no-tests $sel
+    free_port_3000
+    # shellcheck disable=SC2086
+    step e2e-dev npx playwright test --pass-with-no-tests $sel
+  fi
 }
 
 mutation_changed() {
@@ -127,23 +133,26 @@ mutation_changed() {
 
 pr_profile() {
   [ -z "$(git status --porcelain)" ] || { echo "árvore suja: o gate vale para o SHA do HEAD" >&2; return 1; }
-  local base; base=$(base_ref)
+  local base sel; base=$(base_ref)
   echo "perfil pr · base ${base} · $(git rev-parse --short HEAD)"
   step typecheck npm run typecheck
   step lint npm run lint
   step sv npm run check:sv
   step docs npm run check:docs
   step integridade-de-testes npm run check:testes
-  step cobertura-dos-arquivos-tocados changed_coverage "$base"
+  step cobertura npm run test:coverage
   step mutacao mutation_changed "$base"
-  if git diff --name-only "${base}...HEAD" | grep -Eq "$HEAVY_RE"; then
-    echo "o diff toca tela/servidor/persistência/config: integração, build e E2E rodam"
+  if git diff --name-only "${base}...HEAD" | grep -Eqv '(^docs/|^\.specs/|^\.changeset/|\.md$)'; then
     setup_postgres; setup_playwright
-    integracao
-    step build npm run build
-    e2e
+    integracao_impactada "$base"
+    sel=$(GATE_BASE="$base" npx tsx scripts/gate/impacto.ts)
+    echo "E2E selecionado: ${sel}"
+    if [ "$sel" != NONE ]; then
+      step build npm run build
+      e2e_impactado "$sel"
+    fi
   else
-    echo "diff só de regra/docs/scripts: integração, build e E2E dispensados (HEAVY_RE)"
+    echo "diff só de documentação: integração e E2E dispensados"
   fi
 }
 

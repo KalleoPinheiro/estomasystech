@@ -15,8 +15,9 @@ related:
 
 - **Data:** 2026-10-31
 - **Status:** aceito (decisão de PO do coordenador, com a autonomia dada por @KalleoPinheiro em
-  2026-10-24, sobre o pedido de 2026-10-31: «vc deve conseguir rodar o gate nas threads da nuvem de forma
-  autosuficiente», sem VPS e sem créditos extras no Actions). Complementa o [ADR-042](042-e2e-fora-do-actions-gate-local-com-recibo.md)
+  2026-10-24, sobre os pedidos de 2026-10-31: rodar o gate nas threads da nuvem de forma autosuficiente, sem
+  VPS e sem créditos extras no Actions; gate completo só antes do merge da release, com E2E, mutação e
+  integração só no alterado ou impactado nas feature/release e a suíte unitária sempre completa). Complementa o [ADR-042](042-e2e-fora-do-actions-gate-local-com-recibo.md)
   e o [ADR-071](071-corte-de-release-em-comando-unico.md); não os substitui.
 - **Domínios afetados:** engenharia (gate)
 
@@ -33,17 +34,29 @@ Restrições: sem VPS e sem minutos pagos do Actions; a ferramenta de shell mata
 
 1. **A thread da nuvem roda o gate sozinha** com `scripts/gate-cloud.sh` (segundo plano com log, porta 3000
    liberada antes do E2E, `PG_POOL_MAX=1` na integração, Postgres nativo, link do Chromium).
-2. **Por PR (`feat/*`, `fix/*` → release): perfil incremental.** typecheck, lint, sv, docs e integridade dos
-   testes; `vitest --changed` com **100% nos arquivos tocados** de proxy, domain, application, infrastructure
-   e lib (o mesmo piso do `vitest.config.mts`); mutação (Stryker) nos arquivos alterados de domain/application
-   (ADR-051); e **integração, build e E2E prod+dev sempre que o diff toca** `src/app`, `src/lib`,
-   `src/infrastructure`, `src/proxy.ts`, `drizzle/`, `e2e/`, `Dockerfile` ou configuração de pacote/teste. Na
-   dúvida, roda.
-3. **Por release (`release/*` → `main`): perfil completo.** `gate-cloud.sh release` (setup, integração e
-   `gate:local` com `GATE_PERFIL=pr`, cobertura global, build e E2E) na nuvem, **mais** Docker e backup no WSL
-   antes do `release:cut`, que continua exigindo Docker (ADR-071). A mutação completa segue na rotina mensal.
-4. O recibo `E2E-GATE` do ADR-042 continua sendo o do `gate:local`; o log da thread da nuvem é evidência
-   adicional do PR, não o substitui.
+2. **Por PR (`feat/*`, `fix/*` → release): suíte unitária completa, o resto só no impactado.**
+   Sempre: typecheck, lint, sv, docs, integridade dos testes e `test:coverage` inteiro, com os limiares de hoje
+   (100% nas camadas de regra, piso 90% global; ADR-046, ADR-050). Só no que o diff altera ou alcança:
+   - **Mutação:** os arquivos alterados de `src/domain` e `src/application` (ADR-051).
+   - **Integração (Postgres real):** `vitest --changed <base>` com a config de integração, que usa o grafo de
+     imports do Vitest. Fallback: diff em `drizzle/`, `tests/support/`, config do Vitest, dependências ou
+     `src/infrastructure/persistence/` roda a integração inteira.
+   - **E2E (prod e dev):** os specs escolhidos por `scripts/gate/impacto.ts`, que o Playwright não calcula a
+     partir de `src/`. Regras do mapa: spec alterado roda; arquivo de `src/app/<rota>` ou `src/app/api/<rota>`
+     roda os specs cujo nome ou URL contém a rota; arquivo de `src/domain|application/<pasta>` roda os specs
+     das rotas da pasta (tabela `SLUG_ROTAS`); só documentação, changeset ou teste unitário não roda E2E.
+   - **Fallback («na dúvida, inclui»), roda todos os specs:** arquivo transversal (`src/proxy.ts`, layouts e
+     casca, `src/components/`, `src/lib/auth`, sessão e `define-action`, container, persistência, `e2e/support`,
+     config do Playwright/Next, `package*.json`, `drizzle/`, `Dockerfile`); pasta de `domain`/`application` sem
+     entrada na tabela (`audit`, `auth`, `clinic`, `shared`, `messaging`, `retention`, `taxonomy`…); qualquer
+     outro arquivo de `src/` sem regra; e rota sem nenhum spec que a cubra.
+3. **Por release (`release/*` → `main`): gate completo** na nuvem (`gate-cloud.sh release`: integração inteira
+   e `gate:local` com `GATE_PERFIL=pr`, cobertura global, build e E2E prod+dev), **mais** Docker e backup no
+   WSL, só nesse momento, antes do `release:cut`, que continua exigindo Docker (ADR-071). A mutação completa
+   segue na rotina mensal.
+4. **Quando o Actions voltar (~2026-11-01):** o mesmo fluxo vira workflow: perfil `pr` nos PRs para a release e
+   perfil completo no PR da release. O recibo `E2E-GATE` do ADR-042 continua sendo o do `gate:local`; o log da
+   thread da nuvem é evidência adicional, não o substitui.
 
 ## Consequências
 

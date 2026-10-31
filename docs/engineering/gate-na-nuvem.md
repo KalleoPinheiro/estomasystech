@@ -8,6 +8,8 @@ last_reviewed: 2026-10-31
 
 # Gate na nuvem
 
+**Por PR:** suíte unitária completa com cobertura, mais integração, mutação e E2E só no que o diff altera ou alcança (regras de impacto e fallback no ADR). **Por release:** gate completo na nuvem e Docker/backup no WSL antes do `release:cut`.
+
 Decisão e motivo: [ADR-084](../adr/084-gate-na-nuvem-incremental-por-pr-e-completo-por-release.md).
 
 ## Comandos
