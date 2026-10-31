@@ -212,8 +212,24 @@ test.describe("Portal do paciente no servidor", () => {
       // por "aceito" é o que mais mexe na altura.
       for (const term of ["tratamento", "imagem"]) {
         await page.getByRole("checkbox").first().check();
+        // O cartão aceito não pode voltar a mostrar o termo pendente enquanto a
+        // releitura do servidor não chega (piscava aceito → pendente → aceito).
+        await page.evaluate(() => {
+          const w = window as unknown as { __pendingBack: number };
+          w.__pendingBack = 0;
+          new MutationObserver((records) => {
+            for (const record of records) {
+              for (const node of Array.from(record.addedNodes)) {
+                if (node instanceof HTMLElement && /Li e aceito o termo/.test(node.textContent ?? "")) w.__pendingBack += 1;
+              }
+            }
+          }).observe(document.body, { childList: true, subtree: true });
+        });
         await page.getByRole("button", { name: `Li e aceito o termo de ${term}` }).click();
         await expect(page.getByText(new RegExp(`Termo de .*${term === "imagem" ? "imagem" : "tratamento"}.* aceito`)).first()).toBeVisible();
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(1000);
+        expect(await page.evaluate(() => (window as unknown as { __pendingBack: number }).__pendingBack), `termo de ${term} voltou a pendente`).toBe(0);
       }
       await page.getByLabel(/O que precisa ser corrigido/).fill("Corrigir o telefone");
       await page.getByRole("button", { name: "Enviar pedido" }).click();

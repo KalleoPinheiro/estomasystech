@@ -54,23 +54,39 @@ describe('Feature: o cartão do termo troca no toque, sem esperar a rede (#623, 
         finish = resolve;
       }),
     );
-    renderWithToast(<ConsentCard status={pending} onAccepted={vi.fn()} />);
+    let reloaded: () => void = () => undefined;
+    const onAccepted = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          reloaded = resolve;
+        }),
+    );
+    renderWithToast(<ConsentCard status={pending} onAccepted={onAccepted} />);
 
     acceptNow();
 
-    expect(
-      await screen.findByRole('button', { name: REVOKE_BUTTON }),
-    ).toBeTruthy();
+    // Cartão aceito já no toque; o botão de revogar só vale com o servidor.
+    const revoke = await screen.findByRole('button', { name: REVOKE_BUTTON });
+    expect(revoke).toBeDisabled();
     expect(
       screen.queryByRole('button', {
         name: 'Li e aceito o termo de tratamento',
       }),
     ).toBeNull();
-    // O aviso sai junto com a troca (cartão + aviso), não depois da rede.
+    // O aviso verde só sai depois da confirmação: até lá só o cartão diz «aceito».
     expect(
       screen.getAllByText(/Termo de consentimento do tratamento aceito/),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+
     await act(async () => finish(ok));
+
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/Termo de consentimento do tratamento aceito/),
+      ).toHaveLength(2),
+    );
+    expect(screen.getByRole('button', { name: REVOKE_BUTTON })).toBeEnabled();
+    await act(async () => reloaded());
   });
 
   it('Dado o aceite recusado pelo servidor, Quando a resposta chega, Então o termo volta a pendente e o erro aparece', async () => {
@@ -92,6 +108,9 @@ describe('Feature: o cartão do termo troca no toque, sem esperar a rede (#623, 
       screen.getByRole('button', { name: 'Li e aceito o termo de tratamento' }),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: REVOKE_BUTTON })).toBeNull();
+    expect(
+      screen.queryByText(/Termo de consentimento do tratamento aceito/),
+    ).toBeNull();
   });
 
   it('Dado o aceite em voo, Quando o servidor confirma pela tela, Então vale a data do servidor', async () => {

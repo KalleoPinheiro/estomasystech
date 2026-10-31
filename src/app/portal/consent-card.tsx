@@ -81,7 +81,7 @@ export function ConsentCard({
   asRepresentative = false,
 }: {
   status: ConsentStatusDto | null;
-  onAccepted: () => void;
+  onAccepted: () => void | Promise<void>;
   purpose?: ConsentPurposeDto;
   /** Quem assina é o representante legal do menor (#372). */
   asRepresentative?: boolean;
@@ -97,10 +97,13 @@ export function ConsentCard({
   // ao aceitar ou revogar, e a tela nova só chega do servidor depois da rede.
   // Trocar no toque mantém o salto dentro da janela de 500 ms da entrada do
   // usuário e o dado do servidor depois só confirma o que já está na tela.
-  const [local, setLocal] = useState<{ accepted: boolean; at: string } | null>(
-    null,
-  );
-  // A cópia local vale enquanto a ação voa (sai no `finally`); se o servidor
+  const [local, setLocal] = useState<{
+    accepted: boolean;
+    at: string;
+    confirmed: boolean;
+  } | null>(null);
+  // A cópia local vale até a tela nova chegar (sai quando a releitura termina,
+  // no `finally`) e volta atrás se o servidor recusar (`catch`); se o servidor
   // confirmar antes, ela sai aqui e passa a valer o dado do servidor.
   useEffect(() => {
     if (local && serverStatus?.accepted === local.accepted) setLocal(null);
@@ -120,15 +123,19 @@ export function ConsentCard({
     const revoke = async () => {
       setRevoking(true);
       setError(null);
-      setLocal({ accepted: false, at: new Date().toISOString() });
-      // O aviso sai junto com a troca do cartão; se o servidor recusar, o erro vem em seguida.
-      toast({ description: 'Consentimento revogado', variant: 'success' });
+      setLocal({
+        accepted: false,
+        at: new Date().toISOString(),
+        confirmed: false,
+      });
       try {
         await unwrapAction(revokeConsent({ purpose }));
-        onAccepted();
+        toast({ description: 'Consentimento revogado', variant: 'success' });
+        await onAccepted();
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Erro ao revogar consentimento';
+        setLocal(null);
         setError(message);
         toast({ description: message, variant: 'danger' });
       } finally {
@@ -138,6 +145,7 @@ export function ConsentCard({
     };
 
     const byRepresentative = Boolean(status.signedByRelationship);
+    const unconfirmed = local?.accepted === true && !local.confirmed;
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="success" icon={<Icon name="check-circle" />}>
@@ -163,8 +171,10 @@ export function ConsentCard({
               type="button"
               variant="ghost"
               size="sm"
-              disabled={revoking}
-              className="self-start"
+              disabled={revoking || unconfirmed}
+              // Reserva o lugar do botão até o servidor confirmar o aceite:
+              // o cartão não muda de altura, e o botão só vale confirmado.
+              className={unconfirmed ? 'invisible self-start' : 'self-start'}
             >
               {revoking ? 'Revogando…' : copy.revokeButton}
             </Button>
@@ -182,15 +192,21 @@ export function ConsentCard({
   const accept = async () => {
     setAccepting(true);
     setError(null);
-    setLocal({ accepted: true, at: new Date().toISOString() });
-    // O aviso sai junto com a troca do cartão; se o servidor recusar, o erro vem em seguida.
-    toast({ description: copy.acceptedLabel, variant: 'success' });
+    setLocal({
+      accepted: true,
+      at: new Date().toISOString(),
+      confirmed: false,
+    });
     try {
       await unwrapAction(acceptConsent({ purpose }));
-      onAccepted();
+      // Aviso só depois do servidor confirmar; o botão de revogar vale junto.
+      toast({ description: copy.acceptedLabel, variant: 'success' });
+      setLocal((current) => current && { ...current, confirmed: true });
+      await onAccepted();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Erro ao registrar aceite';
+      setLocal(null);
       setError(message);
       toast({ description: message, variant: 'danger' });
     } finally {
