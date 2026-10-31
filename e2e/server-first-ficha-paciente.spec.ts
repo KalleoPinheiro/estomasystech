@@ -173,4 +173,23 @@ test.describe("Ficha do paciente no servidor", () => {
     expect(median, "LCP da ficha").toBeLessThanOrEqual(LCP_LIMIT_MS);
     expect(cls, "CLS da ficha com CPU 4x").toBeLessThan(CLS_LIMIT);
   });
+
+  test("uma seção que falha no servidor mostra o alerta na aba e «Tentar novamente» relê a ficha de verdade", async ({ page }) => {
+    await page.context().addCookies([ADMIN, { name: "e2e-fault", value: "ficha-condicoes", url: "http://localhost:3000" }]);
+    await page.setViewportSize({ width: 360, height: 800 });
+
+    await page.goto(`/pacientes/${patientId}?aba=condicoes`);
+
+    // A ficha abre (o cabeçalho não depende da seção) e a aba mostra o erro do bloco, não uma lista vazia.
+    await expect(page.getByRole("heading", { level: 1, name: patientName })).toBeVisible();
+    const retry = page.getByRole("button", { name: "Tentar novamente" });
+    await expect(retry).toBeVisible();
+    await expect(page.getByText("Úlcera venosa server first")).toHaveCount(0);
+
+    await page.context().clearCookies({ name: "e2e-fault" });
+    await retry.click();
+
+    await expect(page.getByText("Úlcera venosa server first")).toBeVisible();
+    await expect(retry).toHaveCount(0);
+  });
 });

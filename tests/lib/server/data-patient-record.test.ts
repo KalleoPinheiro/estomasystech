@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { AddEvolutionNote } from '@/application/clinical/add-evolution-note';
 import { CreateCondition } from '@/application/clinical/create-condition';
+import { OpenCarePlan } from '@/application/clinical/open-care-plan';
 import { UpsertAnamnesis } from '@/application/clinical/upsert-anamnesis';
 import { SessionPackage } from '@/domain/billing/package';
 import { NotFoundError } from '@/domain/shared/errors';
@@ -9,7 +11,9 @@ import { clinicScope } from '@/lib/auth/tenant-scope';
 import {
   getPatientAnamnesis,
   getPatientRecord,
+  listPatientCarePlans,
   listPatientConditions,
+  listPatientEvolutions,
   listPatientPackageBalances,
   listPatientPackagesWithPrice,
 } from '@/lib/server/data/patient-record';
@@ -154,5 +158,69 @@ describe('Feature: ficha do paciente lida no servidor (#552)', () => {
     });
     expect(balance).not.toHaveProperty('priceCents');
     expect(priced.priceCents).toBe(50_000);
+    expect(priced.procedureName).toBe('Curativo Pacote');
+    expect(priced.expiresAt).toBeNull();
+  });
+
+  it('Dado um prontuário com anamnese, condição, evolução e plano, Quando a equipe lê cada parte, Então cada leitura entra na trilha com o recurso e o paciente (LGPD)', async () => {
+    const { repos, patient } = await seedPatient(
+      CLINIC_A_ID,
+      'Trilha Completa',
+    );
+    await new UpsertAnamnesis(repos.anamneses, repos.patients).execute({
+      patientId: patient.id,
+      allergies: 'Látex',
+    });
+    await new CreateCondition(repos.conditions, repos.patients).execute({
+      patientId: patient.id,
+      kind: 'wound',
+      title: 'Úlcera da trilha',
+      stomaType: null,
+      startedAt: null,
+      notes: null,
+    });
+    await new AddEvolutionNote(repos.evolutions, repos.patients).execute({
+      patientId: patient.id,
+      appointmentId: null,
+      professionalId: null,
+      subjective: 'Dor leve',
+      objective: '',
+      assessment: '',
+      plan: '',
+    });
+    await new OpenCarePlan(
+      repos.carePlans,
+      repos.patients,
+      repos.conditions,
+    ).execute({
+      patientId: patient.id,
+      conditionId: null,
+      professionalId: null,
+    });
+    const admin = session('company_admin', CLINIC_A_ID);
+
+    expect(await listPatientEvolutions(admin, patient.id)).toHaveLength(1);
+    expect(await listPatientCarePlans(admin, patient.id)).toHaveLength(1);
+    await getPatientAnamnesis(admin, patient.id);
+    await listPatientConditions(admin, patient.id);
+
+    const trail = await repos.auditEvents.findAll({ patientId: patient.id });
+    for (const resourceType of [
+      'anamnesis',
+      'conditions',
+      'evolutions',
+      'care_plans',
+    ]) {
+      expect(
+        trail.some(
+          (event) =>
+            event.action === 'read' &&
+            event.resourceType === resourceType &&
+            event.resourceId === patient.id &&
+            event.patientId === patient.id,
+        ),
+        `leitura de ${resourceType} na trilha`,
+      ).toBe(true);
+    }
   });
 });

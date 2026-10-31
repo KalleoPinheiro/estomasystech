@@ -16,6 +16,7 @@ import {
 } from '@/lib/server/data/patient-record';
 import { listProfessionalOptions } from '@/lib/server/data/professionals';
 import { requireStaffPageFor } from '@/lib/server/session';
+import { failIfInjected } from '@/lib/server/test-faults';
 import { canRoleAccess } from '@/lib/staff-pages';
 import type { PackageDto } from './packages-section';
 import { PatientRecordClient } from './patient-record-client';
@@ -57,7 +58,11 @@ export default async function PatientRecordPage({
   ] = await Promise.all([
     patientRead,
     onlyIf('/api/patients/_/anamnesis', () => getPatientAnamnesis(session, id)),
-    onlyIf('/api/conditions', () => listPatientConditions(session, id)),
+    onlyIf('/api/conditions', async () => {
+      // Gancho do E2E: faz esta leitura falhar no servidor (test-faults.ts).
+      await failIfInjected('ficha-condicoes');
+      return listPatientConditions(session, id);
+    }),
     onlyIf('/api/patients/_/evolutions', () =>
       listPatientEvolutions(session, id),
     ),
