@@ -33,6 +33,12 @@ interface ActionBase<S extends z.ZodType> {
   access: ActionAccess;
   input: S;
   /**
+   * `false` quando a tela que chama a ação não deve ser relida depois dela
+   * (ex.: a emissão de documento, #546: reler a página repetiria a leitura
+   * auditada do prontuário). Padrão: relê (`refresh()`).
+   */
+  refresh?: boolean;
+  /**
    * Autorização do RECURSO (ex.: vínculo do Profissional com o paciente, R4),
    * depois do `zod` e ANTES da gravação: lança `ForbiddenError`/`NotFoundError`
    * e nada é aberto nem gravado. Roda fora da transação, então pode ler com
@@ -159,7 +165,7 @@ export function defineAction<S extends z.ZodType, R>(
       const result = definition.audit
         ? await runAudited(definition, context)
         : await definition.handler(context);
-      refresh();
+      if (definition.refresh !== false) refresh();
       return { success: true, data: result, error: null };
     } catch (error) {
       return failure(describeFailure(error).message);

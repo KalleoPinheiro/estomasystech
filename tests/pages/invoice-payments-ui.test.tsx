@@ -25,6 +25,7 @@ import {
   mockBillingData,
   resetBillingData,
 } from '../support/billing-data';
+import { renderDocumentPage } from '../support/documentos-over-fetch';
 import { PatientPortalHarness } from '../support/portal-harness';
 import { renderWithToast } from '../support/render-with-toast';
 import { renderServerPage } from '../support/server-page';
@@ -45,8 +46,24 @@ vi.mock('next/navigation', async () => {
 });
 vi.mock('@/lib/server/session', async () => {
   const { billing } = await import('../support/billing-data');
-  return { requireStaffPageFor: billing.requireStaffPageFor };
+  const documentos = await import('../support/documentos-over-fetch');
+  return {
+    requireStaffPageFor: billing.requireStaffPageFor,
+    ...documentos.sessionOverFetch(),
+  };
 });
+vi.mock('@/lib/server/data/clinic-info', async () =>
+  (await import('../support/documentos-over-fetch')).clinicInfoOverFetch(),
+);
+vi.mock('@/lib/server/data/documents', async () =>
+  (await import('../support/documentos-over-fetch')).documentsDataOverFetch(),
+);
+vi.mock('@/lib/server/document-issuance', async () =>
+  (await import('../support/documentos-over-fetch')).noPriorIssuance(),
+);
+vi.mock('@/app/documentos/actions', async () =>
+  (await import('../support/documentos-over-fetch')).documentActionsOverFetch(),
+);
 vi.mock('@/lib/server/data/invoices', async () => {
   const { billing } = await import('../support/billing-data');
   return {
@@ -350,7 +367,7 @@ const renderReceipt = async (
     return undefined;
   });
   await act(async () => {
-    renderWithToast(
+    await renderDocumentPage(
       <PaymentReceiptPage
         params={Promise.resolve({ invoiceId: 'inv-1', paymentId })}
       />,
@@ -452,7 +469,7 @@ describe('Feature: Recibo de pagamento', () => {
       return undefined;
     });
     await act(async () => {
-      renderWithToast(
+      await renderDocumentPage(
         <PaymentReceiptPage
           params={Promise.resolve({ invoiceId: 'inv-1', paymentId: 'pay-1' })}
         />,
@@ -474,7 +491,7 @@ describe('Feature: Recibo de pagamento', () => {
       return undefined;
     });
     await act(async () => {
-      renderWithToast(
+      await renderDocumentPage(
         <PaymentReceiptPage
           params={Promise.resolve({ invoiceId: 'inv-1', paymentId: 'pay-1' })}
         />,
