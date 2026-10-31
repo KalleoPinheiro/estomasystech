@@ -1,20 +1,16 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { AddEvolutionNote } from '@/application/clinical/add-evolution-note';
-import { ListEvolutionNotes } from '@/application/clinical/list-evolution-notes';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
-import {
-  clinicScope,
-  sessionScope,
-  writeClinicId,
-} from '@/lib/auth/tenant-scope';
+import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { toEvolutionNoteDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
+import { listPatientEvolutions } from '@/lib/server/data/patient-record';
 
 const evolutionSchema = z.object({
   appointmentId: z.string().nullish(),
@@ -30,26 +26,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { id } = await context.params;
-    const { evolutions, auditEvents, professionalPatientLinks } =
-      await getRepositories(sessionScope(guard.session));
-    await assertPatientAccessibleToProfessional(
-      guard.session,
-      id,
-      professionalPatientLinks,
-    );
-    const notes = await new ListEvolutionNotes(evolutions).execute({
-      patientId: id,
-    });
-    recordAudit(auditEvents, guard.session, {
-      action: 'read',
-      resourceType: 'evolutions',
-      resourceId: id,
-      patientId: id,
-    });
-    return notes.map(toEvolutionNoteDto);
-  });
+  return handleRequest(async () =>
+    listPatientEvolutions(guard.session, (await context.params).id),
+  );
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {

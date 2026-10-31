@@ -1,6 +1,5 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { ListCarePlansByPatient } from '@/application/clinical/list-care-plans-by-patient';
 import { OpenCarePlan } from '@/application/clinical/open-care-plan';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -8,8 +7,9 @@ import { recordAudit } from '@/lib/audit';
 import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toCarePlanDto } from '@/lib/dto';
+import { listPatientCarePlans } from '@/lib/server/data/patient-record';
 
 const openCarePlanSchema = z.object({
   conditionId: z.string().min(1).nullish(),
@@ -21,26 +21,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { id } = await context.params;
-    const { carePlans, auditEvents, professionalPatientLinks } =
-      await getRepositories(sessionScope(guard.session));
-    await assertPatientAccessibleToProfessional(
-      guard.session,
-      id,
-      professionalPatientLinks,
-    );
-    const result = await new ListCarePlansByPatient(carePlans).execute({
-      patientId: id,
-    });
-    recordAudit(auditEvents, guard.session, {
-      action: 'read',
-      resourceType: 'care_plans',
-      resourceId: id,
-      patientId: id,
-    });
-    return result.map(toCarePlanDto);
-  });
+  return handleRequest(async () =>
+    listPatientCarePlans(guard.session, (await context.params).id),
+  );
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {

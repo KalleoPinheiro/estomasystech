@@ -14,6 +14,7 @@ import {
   Textarea,
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
+import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import {
@@ -22,7 +23,6 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { FormSheet } from '@/components/form-sheet';
-import { HealingChart } from '@/components/healing-chart';
 import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
@@ -44,6 +44,13 @@ import {
   toTimePayload,
 } from './assessment-time-fields';
 import { ConditionPhotos } from './condition-photos';
+
+// O gráfico só aparece com a condição aberta e traz a lib de gráficos: fora do JS da carga.
+// O reservado tem a altura do gráfico, então abrir a condição não desloca a tabela.
+const HealingChart = dynamic(
+  () => import('@/components/healing-chart').then((m) => m.HealingChart),
+  { loading: () => <div className="h-[200px]" aria-hidden="true" /> },
+);
 
 interface ConditionsSectionProps {
   patientId: string;
