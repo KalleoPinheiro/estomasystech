@@ -3,8 +3,8 @@
 import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import PatientRecordPage from '@/app/(staff)/pacientes/[id]/page';
 import type { UserRole } from '@/domain/auth/user-role';
+import { renderPatientRecord } from '../support/render-patient-record';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
 
 vi.mock('next/navigation', () => ({
@@ -48,13 +48,10 @@ function mockApi(role: UserRole) {
 
 const renderAs = async (role: UserRole) => {
   const fetchMock = mockApi(role);
-  await act(async () => {
-    renderWithToast(
-      <WithStaffIdentity>
-        <PatientRecordPage params={Promise.resolve({ id: 'pac-1' })} />
-      </WithStaffIdentity>,
-    );
-  });
+  await renderPatientRecord(
+    (children) => <WithStaffIdentity>{children}</WithStaffIdentity>,
+    { role },
+  );
   await screen.findByText('Maria Souza');
   return fetchMock;
 };

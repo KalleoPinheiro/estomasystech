@@ -9,7 +9,6 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import PatientRecordPage from '@/app/(staff)/pacientes/[id]/page';
 import type { CarePlanDiagnosisType } from '@/domain/clinical/care-plan-diagnosis';
 import type { InterventionPriority } from '@/domain/clinical/care-plan-intervention';
 import type {
@@ -21,6 +20,7 @@ import type {
   NursingOutcomeDto,
   PatientDto,
 } from '@/lib/dto';
+import { renderPatientRecord } from '../support/render-patient-record';
 
 const { routerMock, searchParamsRef } = vi.hoisted(() => {
   return {
@@ -67,8 +67,10 @@ afterEach(() => {
 });
 
 async function renderDetail(id = 'pac-1') {
-  await act(async () => {
-    renderWithToast(<PatientRecordPage params={Promise.resolve({ id })} />);
+  await renderPatientRecord((children) => children, {
+    id,
+    initialTab: searchParamsRef.current.get('aba') ?? undefined,
+    router: routerMock,
   });
 }
 
