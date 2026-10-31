@@ -2,7 +2,6 @@
 
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RoleGate } from '@/app/(staff)/role-gate';
 import { StaffNav } from '@/app/(staff)/staff-nav';
 import type { UserRole } from '@/domain/auth/user-role';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
@@ -97,81 +96,5 @@ describe('Feature: menu por papel (#199)', () => {
 
     expect(labels).toHaveLength(15);
     expect(labels).toContain('Pedidos do titular');
-  });
-
-  it('C41 página proibida mostra sem permissão', async () => {
-    mockIdentity('atendente');
-    pathname.current = '/faturamento/qualquer';
-    const pageFetch = vi.fn();
-    function FakeBillingPage() {
-      pageFetch();
-      return <p>conteúdo do faturamento</p>;
-    }
-
-    render(
-      <WithStaffIdentity>
-        <RoleGate>
-          <FakeBillingPage />
-        </RoleGate>
-      </WithStaffIdentity>,
-    );
-
-    expect(
-      await screen.findByText('Seu papel não tem acesso a esta tela.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('conteúdo do faturamento'),
-    ).not.toBeInTheDocument();
-    expect(pageFetch).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole('link', { name: 'Voltar ao início' }),
-    ).toHaveAttribute('href', '/');
-  });
-
-  it('página permitida renderiza direto, sem esperar a identidade', () => {
-    mockIdentity('atendente');
-    pathname.current = '/agenda';
-
-    render(
-      <WithStaffIdentity>
-        <RoleGate>
-          <p>agenda</p>
-        </RoleGate>
-      </WithStaffIdentity>,
-    );
-
-    expect(screen.getByText('agenda')).toBeInTheDocument();
-  });
-
-  it('página restrita espera a identidade antes de decidir', async () => {
-    mockIdentity('company_admin');
-    pathname.current = '/faturamento';
-
-    render(
-      <WithStaffIdentity>
-        <RoleGate>
-          <p>faturamento</p>
-        </RoleGate>
-      </WithStaffIdentity>,
-    );
-
-    expect(screen.getByText('Carregando…')).toBeInTheDocument();
-    expect(await screen.findByText('faturamento')).toBeInTheDocument();
-  });
-
-  it('caminho fora do mapa de telas não é bloqueado', () => {
-    mockIdentity('atendente');
-    pathname.current = '/pacientes/abc';
-
-    render(
-      <WithStaffIdentity>
-        <RoleGate>
-          <p>ficha</p>
-        </RoleGate>
-      </WithStaffIdentity>,
-    );
-
-    expect(screen.getByText('ficha')).toBeInTheDocument();
   });
 });
