@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { SetPatientActive } from '@/application/patients/set-patient-active';
 import { UpdatePatient } from '@/application/patients/update-patient';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
@@ -12,23 +11,11 @@ import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-p
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toPatientDto } from '@/lib/dto';
+import {
+  setActiveSchema,
+  updatePatientSchema,
+} from '@/lib/patient-record-schemas';
 import { getPatientRecord } from '@/lib/server/data/patient-record';
-
-const updatePatientSchema = z.object({
-  fullName: z.string().min(1).max(200).optional(),
-  email: z.string().max(200).nullish(),
-  phone: z.string().min(1).max(50).optional(),
-  // Ausente mantém; vazio ou null remove.
-  cpf: z.string().max(20).nullish(),
-  birthDate: z.union([z.iso.date(), z.iso.datetime()]).nullish(),
-  notes: z.string().max(5000).nullish(),
-  referredByPartnerId: z.string().max(100).nullish(),
-  guardianId: z.string().max(100).nullish(),
-});
-
-const setActiveSchema = z.object({
-  active: z.boolean(),
-});
 
 async function loadGuardian(guardians: GuardianRepository, patient: Patient) {
   return patient.guardianId ? guardians.findById(patient.guardianId) : null;

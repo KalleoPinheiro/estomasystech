@@ -6,7 +6,7 @@ import {
   SchedulingConflictError,
   ValidationError,
 } from '@/domain/shared/errors';
-import { fail, handleRequest, ok } from '@/lib/api-response';
+import { describeFailure, fail, handleRequest, ok } from '@/lib/api-response';
 
 describe('Feature: Envelope de resposta da API', () => {
   it('Dado dado de sucesso, Quando ok(), Então envelope success com status 200 por padrão', async () => {
@@ -128,5 +128,30 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
       msg: 'Erro inesperado na API:',
       error: { name: 'Error', stack: expect.any(String) },
     });
+  });
+
+  it('Dado erro de validação aninhado em body (Server Action), Quando descreve a falha, Então o campo vem sem «body.» e o texto em português', () => {
+    const schema = z.object({
+      id: z.string(),
+      body: z.object({ title: z.string().min(1) }),
+    });
+    const parsed = schema.safeParse({ id: 'x', body: { title: '' } });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    const { message, status } = describeFailure(parsed.error);
+
+    expect(status).toBe(400);
+    expect(message).toMatch(/^Dados inválidos: title: /);
+    expect(message).not.toContain('body.');
+    expect(message).not.toMatch(/Too small|expected string|Invalid input/);
+  });
+
+  it('Dado erro de validação no próprio campo body, Quando descreve a falha, Então o caminho de um nível não perde o nome', () => {
+    const parsed = z.object({ body: z.string() }).safeParse({ body: 1 });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(
+      /^Dados inválidos: body: /,
+    );
   });
 });

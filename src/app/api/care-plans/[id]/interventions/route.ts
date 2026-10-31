@@ -1,7 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { PrescribeIntervention } from '@/application/clinical/prescribe-intervention';
-import { INTERVENTION_PRIORITIES } from '@/domain/clinical/care-plan-intervention';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -9,12 +7,7 @@ import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-s
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toCarePlanInterventionDto } from '@/lib/dto';
-
-const interventionSchema = z.object({
-  interventionCode: z.string().min(1).max(20),
-  frequency: z.string().min(1).max(500),
-  priority: z.enum(INTERVENTION_PRIORITIES),
-});
+import { interventionSchema } from '@/lib/patient-record-schemas';
 
 type RouteContext = { params: Promise<{ id: string }> };
 

@@ -25,6 +25,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@still-void/ui/react/client';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -46,12 +47,28 @@ import { formatCivilDate } from '@/lib/format';
 import type { Loaded } from '@/lib/server/data/load-block';
 import { useStaffAccess, useStaffIdentity } from '@/lib/staff-access';
 import { AnamnesisSection } from './anamnesis-section';
-import { CarePlansSection } from './care-plans-section';
-import { ConditionsSection } from './conditions-section';
-import { EvolutionsSection } from './evolutions-section';
 import { GuardianPanel } from './guardian-panel';
 import { type PackageDto, PackagesSection } from './packages-section';
 import { PartnerConsentPanel } from './partner-consent-panel';
+
+/**
+ * Abas pesadas carregadas só quando abertas (#615): a ficha abre em Anamnese e
+ * o JS de Condições, Evoluções e Plano de cuidados só desce quando o usuário
+ * troca de aba. Continuam renderizadas no servidor quando são a aba inicial.
+ */
+const tabLoading = () => <LoadingIndicator />;
+const ConditionsSection = dynamic(
+  () => import('./conditions-section').then((m) => m.ConditionsSection),
+  { loading: tabLoading },
+);
+const EvolutionsSection = dynamic(
+  () => import('./evolutions-section').then((m) => m.EvolutionsSection),
+  { loading: tabLoading },
+);
+const CarePlansSection = dynamic(
+  () => import('./care-plans-section').then((m) => m.CarePlansSection),
+  { loading: tabLoading },
+);
 
 /**
  * `api`: rota de que a aba depende — a aba só aparece para o papel que pode

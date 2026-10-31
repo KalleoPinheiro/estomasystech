@@ -11,7 +11,7 @@ import { assertCanManageGuardians } from '@/lib/auth/guardian-access';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toGuardianDto } from '@/lib/dto';
-import { guardianSchema } from '../schema';
+import { guardianSchema } from '@/lib/guardian-schema';
 
 type RouteContext = { params: Promise<{ id: string }> };
 

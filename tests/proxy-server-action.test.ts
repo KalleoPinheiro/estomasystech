@@ -143,10 +143,22 @@ describe('Feature: limite de requisições também para Server Action (ADR-069 �
     expect(isNext(page)).toBe(true);
   });
 
-  it('Dado POST de ação sem sessão, Quando chega ao proxy, Então vai ao login (a guarda de sessão continua valendo)', async () => {
+  it('Dado POST de ação sem sessão, Quando chega ao proxy, Então passa à ação, que responde Não autenticado no envelope (sem 307 que perderia o rascunho)', async () => {
     const proxy = await loadProxy();
 
     const response = await proxy(action('/mais'));
+
+    expect(response.status).not.toBe(307);
+    expect(response.headers.get('location')).toBeNull();
+    expect(isNext(response)).toBe(true);
+  });
+
+  it('Dado GET de página sem sessão, Quando chega ao proxy, Então continua indo ao login', async () => {
+    const proxy = await loadProxy();
+
+    const response = await proxy(
+      new NextRequest('http://localhost/mais', { method: 'GET' }),
+    );
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('/login');

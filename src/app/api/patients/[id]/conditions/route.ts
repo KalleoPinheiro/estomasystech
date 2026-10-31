@@ -1,10 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { CreateCondition } from '@/application/clinical/create-condition';
-import {
-  CONDITION_KINDS,
-  STOMA_TYPES,
-} from '@/domain/clinical/clinical-condition';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -12,15 +7,8 @@ import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-p
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toConditionDto } from '@/lib/dto';
+import { conditionSchema } from '@/lib/patient-record-schemas';
 import { listPatientConditions } from '@/lib/server/data/patient-record';
-
-const conditionSchema = z.object({
-  kind: z.enum(CONDITION_KINDS),
-  title: z.string().min(1).max(200),
-  stomaType: z.enum(STOMA_TYPES).nullish(),
-  startedAt: z.iso.datetime().nullish(),
-  notes: z.string().max(5000).nullish(),
-});
 
 type RouteContext = { params: Promise<{ id: string }> };
 

@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { AddEvolutionNote } from '@/application/clinical/add-evolution-note';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -10,15 +9,8 @@ import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
 import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { toEvolutionNoteDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
+import { evolutionSchema } from '@/lib/patient-record-schemas';
 import { listPatientEvolutions } from '@/lib/server/data/patient-record';
-
-const evolutionSchema = z.object({
-  appointmentId: z.string().nullish(),
-  subjective: z.string().max(5000).default(''),
-  objective: z.string().max(5000).default(''),
-  assessment: z.string().max(5000).default(''),
-  plan: z.string().max(5000).default(''),
-});
 
 type RouteContext = { params: Promise<{ id: string }> };
 
