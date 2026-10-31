@@ -321,4 +321,61 @@ describe('Feature: Server Action com guarda, zod, escopo e auditoria (ADR-069 §
     ).auditEvents.findAll();
     expect(events.map((e) => e.resourceId)).not.toContain('Desfeito Por Erro');
   });
+
+  it('Dado que a auditoria devolve null (repetição idempotente), Quando a ação roda, Então grava e não deixa evento de auditoria', async () => {
+    signIn('company_admin', CLINIC_A_ID);
+    const { defineAction } = await import('@/lib/server/define-action');
+    const action = defineAction({
+      access: { kind: 'staff' },
+      input: z.object({ name: z.string() }),
+      handler: async ({ input, tx }) => {
+        await tx.patients.save(buildPatient({ fullName: input.name }));
+        return input.name;
+      },
+      audit: () => null,
+    });
+
+    const result = await action({ name: 'Grava Sem Evento Nulo' });
+
+    expect(result.success).toBe(true);
+    const names = (await patientsOf(CLINIC_A_ID)).map((p) => p.fullName);
+    expect(names).toContain('Grava Sem Evento Nulo');
+    const events = await (
+      await getRepositories(clinicScope(CLINIC_A_ID))
+    ).auditEvents.findAll();
+    expect(events.map((e) => e.resourceId)).not.toContain(
+      'Grava Sem Evento Nulo',
+    );
+  });
+
+  it('Dado que a auditoria devolve um evento, Quando a ação roda, Então o evento é gravado junto com o dado, com o ator da sessão', async () => {
+    signIn('company_admin', CLINIC_A_ID);
+    const { defineAction } = await import('@/lib/server/define-action');
+    const action = defineAction({
+      access: { kind: 'staff' },
+      input: z.object({ name: z.string() }),
+      handler: async ({ input, tx }) => {
+        await tx.patients.save(buildPatient({ fullName: input.name }));
+        return input.name;
+      },
+      audit: ({ input }) => ({
+        action: 'create',
+        resourceType: 'patient',
+        resourceId: input.name,
+      }),
+    });
+
+    await action({ name: 'Grava Com Evento Real' });
+
+    const events = await (
+      await getRepositories(clinicScope(CLINIC_A_ID))
+    ).auditEvents.findAll();
+    const event = events.find((e) => e.resourceId === 'Grava Com Evento Real');
+    expect(event).toMatchObject({
+      action: 'create',
+      resourceType: 'patient',
+      actorId: 'company_admin@clinica.com',
+      actorRole: 'company_admin',
+    });
+  });
 });

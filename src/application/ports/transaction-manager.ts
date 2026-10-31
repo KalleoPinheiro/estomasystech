@@ -5,6 +5,7 @@ import type { CommissionPayoutRepository } from '@/domain/billing/commission-pay
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
+import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import type {
   AnamnesisRepository,
   CarePlanDiagnosisRepository,
@@ -19,10 +20,12 @@ import type {
   OutcomeEvaluationRepository,
 } from '@/domain/clinical/clinical-repositories';
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
+import type { ConsentRecordRepository } from '@/domain/consent/consent-record';
 import type { PartnerShareConsentRepository } from '@/domain/consent/partner-share-consent';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
+import type { DataSubjectRequestRepository } from '@/domain/patient/data-subject-request';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
@@ -52,6 +55,9 @@ import type {
  * resultados, intervenções, avaliações e registros), catálogos de enfermagem e
  * consentimento do parceiro entraram com as ações da ficha do paciente (#552,
  * ADR-080): cada gravação da ficha e a sua trilha ficam na mesma transação.
+ * `consentRecords`, `dataSubjectRequests` e `clinics` entraram com os atos de LGPD do
+ * portal como Server Action (#553, PR 2a): aceite, revogação e pedido do titular
+ * gravam e auditam na mesma transação.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -72,6 +78,9 @@ export interface TransactionScope {
   partners: PartnerRepository;
   guardians: GuardianRepository;
   professionalPatientLinks: ProfessionalPatientLinkRepository;
+  consentRecords: ConsentRecordRepository;
+  dataSubjectRequests: DataSubjectRequestRepository;
+  clinics: ClinicRepository;
   anamneses: AnamnesisRepository;
   evolutions: EvolutionNoteRepository;
   assessments: ConditionAssessmentRepository;
