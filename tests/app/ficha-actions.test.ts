@@ -191,6 +191,140 @@ describe('Feature: gravações da ficha do paciente como Server Actions (#552, A
     });
   });
 
+  describe('Scenario: R4 nas ações por recurso (condição, plano, intervenção, resultado)', () => {
+    /** Tudo gravado pelo Admin; o Profissional da ação não tem vínculo com o paciente. */
+    async function seededRecord() {
+      const { patient, professional } = await patientWithProfessional(false);
+      signIn('company_admin');
+      const prontuarioActions = await prontuario();
+      const planActions = await plano();
+      const condition = await prontuarioActions.createCondition({
+        patientId: patient.id,
+        body: { kind: 'wound', title: 'Lesão R4' },
+      });
+      const opened = await planActions.openCarePlan({
+        patientId: patient.id,
+        body: {},
+      });
+      const planId = opened.data?.id as string;
+      const outcome = await planActions.prescribeCarePlanOutcome({
+        id: planId,
+        body: { outcomeCode: '1101', baselineScore: 1, targetScore: 3 },
+      });
+      const intervention = await planActions.prescribeCarePlanIntervention({
+        id: planId,
+        body: {
+          interventionCode: '3660',
+          frequency: 'Diária',
+          priority: 'alta',
+        },
+      });
+      return {
+        patient,
+        professional,
+        conditionId: condition.data?.id as string,
+        planId,
+        outcomeId: outcome.data?.outcome.id as string,
+        interventionId: intervention.data?.intervention.id as string,
+      };
+    }
+
+    it('Dado Profissional sem vínculo, Quando age sobre os 8 recursos do paciente, Então todas recusam com 404 e nada é gravado', async () => {
+      const seeded = await seededRecord();
+      const r = await repos();
+      const before = {
+        assessments: (await r.assessments.findByConditionId(seeded.conditionId))
+          .length,
+        diagnoses: (await r.carePlanDiagnoses.findByCarePlanId(seeded.planId))
+          .length,
+        outcomes: (await r.carePlanOutcomes.findByCarePlanId(seeded.planId))
+          .length,
+        interventions: (
+          await r.carePlanInterventions.findByCarePlanId(seeded.planId)
+        ).length,
+        audit: (await r.auditEvents.findAll()).length,
+      };
+      signIn('profissional', CLINIC_A_ID, seeded.professional.id);
+      const prontuarioActions = await prontuario();
+      const planActions = await plano();
+
+      const results = await Promise.all([
+        prontuarioActions.resolveCondition({ id: seeded.conditionId }),
+        prontuarioActions.addConditionAssessment({
+          id: seeded.conditionId,
+          body: { lengthMm: 5 },
+        }),
+        planActions.resolveCarePlan({ id: seeded.planId }),
+        planActions.addCarePlanDiagnosis({
+          id: seeded.planId,
+          body: {
+            diagnosisCode: '00046',
+            type: 'risco',
+            relatedFactors: 'Umidade',
+          },
+        }),
+        planActions.prescribeCarePlanOutcome({
+          id: seeded.planId,
+          body: { outcomeCode: '1101', baselineScore: 1, targetScore: 3 },
+        }),
+        planActions.prescribeCarePlanIntervention({
+          id: seeded.planId,
+          body: {
+            interventionCode: '3660',
+            frequency: 'Diária',
+            priority: 'alta',
+          },
+        }),
+        planActions.recordCarePlanIntervention({
+          id: seeded.interventionId,
+          body: {},
+        }),
+        planActions.evaluateCarePlanOutcome({
+          id: seeded.outcomeId,
+          body: { score: 2 },
+        }),
+      ]);
+
+      expect(results.map((result) => result.success)).toEqual(
+        Array(8).fill(false),
+      );
+      // 404 como nas rotas: não revela que o prontuário existe (LGPD).
+      for (const result of results) {
+        expect(result.error).toMatch(/não encontrad/i);
+      }
+      expect(
+        (await r.assessments.findByConditionId(seeded.conditionId)).length,
+      ).toBe(before.assessments);
+      expect(
+        (await r.carePlanDiagnoses.findByCarePlanId(seeded.planId)).length,
+      ).toBe(before.diagnoses);
+      expect(
+        (await r.carePlanOutcomes.findByCarePlanId(seeded.planId)).length,
+      ).toBe(before.outcomes);
+      expect(
+        (await r.carePlanInterventions.findByCarePlanId(seeded.planId)).length,
+      ).toBe(before.interventions);
+      expect((await r.conditions.findById(seeded.conditionId))?.status).toBe(
+        'active',
+      );
+      expect((await r.carePlans.findById(seeded.planId))?.status).toBe(
+        'active',
+      );
+      expect((await r.auditEvents.findAll()).length).toBe(before.audit);
+    });
+
+    it('Dado Profissional sem vínculo, Quando o id nem existe, Então a resposta é a mesma (não distingue existente de inexistente)', async () => {
+      const seeded = await seededRecord();
+      signIn('profissional', CLINIC_A_ID, seeded.professional.id);
+      const { resolveCondition } = await prontuario();
+
+      const existing = await resolveCondition({ id: seeded.conditionId });
+      const missing = await resolveCondition({ id: 'nao-existe' });
+
+      expect(existing.error).toBe(missing.error);
+    });
+  });
+
   describe('Scenario: cadastro, condição e evolução', () => {
     it('Dado a atendente, Quando salva a anamnese, Então grava, audita e atualiza a tela', async () => {
       const { patient } = await patientWithProfessional(false);
