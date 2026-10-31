@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { INVALID_TOKEN_MESSAGE } from '@/application/auth/auth-token-flow';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
 import {
@@ -105,6 +105,19 @@ const login = async (email: string, password: string) => {
  * reset invalida o anterior.
  */
 describe('Feature: Ciclo completo de reset de senha', () => {
+  // why: a partida fria (banco em memória, migrações e os módulos das rotas) caía
+  // dentro do orçamento do primeiro `it` e estourava os 20 s sob CPU saturada (#604).
+  // Aquecer no hook tira esse custo do teste sem mexer em timeout nem em asserção.
+  beforeAll(async () => {
+    await ensureTestClinics();
+    await Promise.all([
+      import('@/app/api/accounts/route'),
+      import('@/app/api/auth/set-password/route'),
+      import('@/app/api/auth/forgot-password/route'),
+      import('@/app/api/auth/login/route'),
+    ]);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
