@@ -2160,3 +2160,6 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **TESTE-ALTERADO** (só harness, asserções e cenários preservados): `tests/pages/{portal-change-appointment,portal-guardian,waitlist-late-cancel-ui}.test.tsx` ganham `vi.mock('@/app/portal/actions')` via `tests/support/portal-actions.ts` (estendido com as cinco ações), que repete a chamada HTTP de antes; `tests/support/transaction-scope.ts` ganha `waitlist`. Requisito: o transporte dessas gravações mudou de rota para Server Action.
 - **Next step**: revisão limpa, gate nuvem perfil `pr` e merge na release/v0.4.0. **Blockers**: nenhum.
 
+## Gate nuvem: config de mutação alterada roda a mutação no conjunto novo (2026-10-31) — EM REVISÃO
+- **O que mudou**: `scripts/gate-cloud/impacto.ts` (`--mutacao`) compara o `mutate` do `stryker.config.json` com o da base e acrescenta aos alvos os arquivos que casam com os padrões novos (sem `.d.ts` nem `index.ts`). Antes o gate pulava a mutação quando só a config mudava (achado da revisão do #625). Mudança só no `include` de `vitest.mutacao.config.mts` não acrescenta alvo e segue sem disparar a mutação. `scripts/gate/` intocado. Testes novos em `tests/scripts/gate-cloud-impacto.test.ts`.
+- **Next step**: revisão limpa e merge na release/v0.4.0. **Blockers**: nenhum.

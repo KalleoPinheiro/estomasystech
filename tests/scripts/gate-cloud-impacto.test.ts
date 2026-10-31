@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  alvosDeConfigNova,
   impactedSpecs,
   mutationTargetsCloud,
+  novosPadroesMutate,
   routeOf,
 } from '../../scripts/gate-cloud/impacto';
 
@@ -110,5 +112,77 @@ describe('Impacto do diff sobre os specs E2E (ADR-084)', () => {
         'src/lib/format.ts',
       ]),
     ).toEqual(['src/lib/action-result.ts', 'src/lib/api-response.ts']);
+  });
+
+  describe('Scenario: a config de mutação mudou (roda a mutação no conjunto novo)', () => {
+    const antes = JSON.stringify({
+      mutate: ['src/domain/**/*.ts', '!src/**/*.d.ts'],
+    });
+    const depois = JSON.stringify({
+      mutate: [
+        'src/domain/**/*.ts',
+        'src/lib/action-result.ts',
+        'src/lib/api-response.ts',
+        '!src/**/*.d.ts',
+      ],
+    });
+
+    it('Dado padrões acrescentados no mutate, Quando compara, Então devolve só os novos', () => {
+      expect(novosPadroesMutate(antes, depois)).toEqual([
+        'src/lib/action-result.ts',
+        'src/lib/api-response.ts',
+      ]);
+    });
+
+    it('Dado config igual ou sem mutate, Quando compara, Então não há padrão novo', () => {
+      expect(novosPadroesMutate(antes, antes)).toEqual([]);
+      expect(novosPadroesMutate(antes, '{}')).toEqual([]);
+      expect(novosPadroesMutate(antes, 'não é json')).toEqual([]);
+    });
+
+    it('Dada config nova sem base (arquivo criado no diff), Quando compara, Então todos os padrões valem', () => {
+      expect(novosPadroesMutate(null, antes)).toEqual([
+        'src/domain/**/*.ts',
+        '!src/**/*.d.ts',
+      ]);
+    });
+
+    const arquivos = [
+      'src/lib/action-result.ts',
+      'src/lib/api-response.ts',
+      'src/lib/format.ts',
+      'src/lib/server/session.ts',
+      'src/lib/server/data/patients.ts',
+      'src/lib/server/index.ts',
+      'src/lib/server/x.d.ts',
+      'src/lib/server/leia.md',
+    ];
+
+    it('Dados padrões novos, Quando expande, Então devolve os arquivos que casam, sem index nem .d.ts nem exclusão', () => {
+      expect(
+        alvosDeConfigNova(
+          [
+            'src/lib/action-result.ts',
+            'src/lib/api-response.ts',
+            '!src/**/*.d.ts',
+          ],
+          arquivos,
+        ),
+      ).toEqual(['src/lib/action-result.ts', 'src/lib/api-response.ts']);
+      expect(alvosDeConfigNova(['src/lib/server/**/*.ts'], arquivos)).toEqual([
+        'src/lib/server/data/patients.ts',
+        'src/lib/server/session.ts',
+      ]);
+      expect(alvosDeConfigNova(['src/lib/*.ts'], arquivos)).toEqual([
+        'src/lib/action-result.ts',
+        'src/lib/api-response.ts',
+        'src/lib/format.ts',
+      ]);
+    });
+
+    it('Dado nenhum padrão novo, Quando expande, Então não há alvo', () => {
+      expect(alvosDeConfigNova([], arquivos)).toEqual([]);
+      expect(alvosDeConfigNova(['!src/**/*.d.ts'], arquivos)).toEqual([]);
+    });
   });
 });
