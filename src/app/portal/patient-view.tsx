@@ -11,18 +11,15 @@ import {
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
-import {
-  EmptyState,
-  ErrorAlert,
-  LoadingIndicator,
-} from '@/components/feedback';
+import { EmptyState, ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type {
-  FollowUpDto,
+  DataSubjectRequestDto,
   InvoiceDto,
+  PartnerShareConsentDto,
   PortalAppointmentDto,
-  PortalPatientProfileDto,
+  WaitlistEntryDto,
 } from '@/lib/dto';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -31,12 +28,9 @@ import {
   formatDateTime,
   INVOICE_STATUS_LABELS,
 } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
+import type { PatientPortalData } from '@/lib/server/data/portal';
 import { ChangeAppointment } from './change-appointment';
-import {
-  ConditionProgress,
-  type ConditionWithAssessmentsDto,
-} from './condition-progress';
+import { ConditionProgress } from './condition-progress';
 import {
   ConsentCard,
   type ConsentStatusDto,
@@ -46,55 +40,48 @@ import { DataRights } from './data-rights';
 import { PartnerConsentSection } from './partner-consent-card';
 import { PrivacyNoticeCard } from './privacy-notice-card';
 import { ScheduleReturn } from './schedule-return';
+import { usePortalRefresh } from './use-portal-refresh';
 import { MyWaitlist } from './waitlist';
 
-interface PatientPortalDto {
-  patient: PortalPatientProfileDto;
-  appointments: PortalAppointmentDto[];
-  conditions: ConditionWithAssessmentsDto[];
-  invoices: InvoiceDto[];
-  followUps: FollowUpDto[];
-  /** Responsável logado: em nome de quem ele age (ADR-027). */
-  actingFor: { patientId: string; fullName: string } | null;
-  /** Paciente logado: quem pode acessar o portal em nome dele (ADR-027). */
-  guardianAccess: {
-    fullName: string;
-    relationshipLabel: string;
-    lastAccessAt: string | null;
-  } | null;
-  /** Antecedência mínima para cancelar/remarcar (política da clínica). */
-  changeNoticeHours?: number;
+/**
+ * Tudo que o portal do paciente mostra, lido no servidor (#553, ADR-081): a
+ * tela chega pronta no HTML, sem chamada de API na carga. `dataRequests` e
+ * `partnerConsent` só existem para quem pode decidir (o responsável de adulto
+ * não vê esses blocos).
+ */
+export interface PatientPortalViewData {
+  data: PatientPortalData;
+  consent: ConsentStatusDto | null;
+  imageConsent: ConsentStatusDto | null;
+  waitlist: WaitlistEntryDto[];
+  dataRequests: DataSubjectRequestDto[] | null;
+  partnerConsent: PartnerShareConsentDto | null;
 }
-
-// Momento de carregamento da página — suficiente para separar futuras × passadas.
-const PAGE_LOAD_MS = Date.now();
 
 /**
  * `onSwitchPatient` só existe para o responsável com mais de um paciente
  * (ADR-027): o aviso "acessando em nome de" fica sempre visível no topo.
  */
 export function PatientPortalView({
+  data,
+  consent,
+  imageConsent,
+  waitlist,
+  dataRequests,
+  partnerConsent,
+  nowMs,
   onSwitchPatient,
-}: {
+}: PatientPortalViewData & {
+  /** Instante da renderização no servidor: separa consultas futuras e passadas. */
+  nowMs: number;
   onSwitchPatient?: () => void;
 }) {
   const { toast } = useToast();
-  const { data, error, refresh } = useApiQuery<PatientPortalDto>(
-    '/api/portal/patient',
-  );
   // Fonte única do consentimento na tela: o card de aceite e o envio de foto
-  // (COMP3-01) leem o mesmo status — cópias separadas divergiam após o aceite,
-  // porque useApiQuery guarda estado por componente, sem cache compartilhado.
-  const { data: consent, refresh: refreshConsent } =
-    useApiQuery<ConsentStatusDto>('/api/portal/patient/consent');
+  // (COMP3-01) leem o mesmo status, relido no servidor depois de cada aceite.
   // Autorização de imagem (#216): termo à parte; é ela que libera o envio de foto.
-  const { data: imageConsent, refresh: refreshImageConsent } =
-    useApiQuery<ConsentStatusDto>('/api/portal/patient/consent?purpose=image');
+  const refresh = usePortalRefresh();
   const [confirmError, setConfirmError] = useState<string | null>(null);
-  const [waitlistVersion, setWaitlistVersion] = useState(0);
-
-  if (error) return <ErrorAlert message={error} />;
-  if (!data) return <LoadingIndicator />;
 
   const confirmAppointment = async (appointment: PortalAppointmentDto) => {
     try {
@@ -117,7 +104,7 @@ export function PatientPortalView({
 
   const upcoming = data.appointments.filter(
     (a) =>
-      new Date(a.startsAt).getTime() >= PAGE_LOAD_MS &&
+      new Date(a.startsAt).getTime() >= nowMs &&
       (a.status === 'scheduled' || a.status === 'confirmed'),
   );
   // PORT-09: consulta cancelada pela clínica com data ainda futura fica
@@ -128,7 +115,7 @@ export function PatientPortalView({
   // sabe, e a consulta vai para o histórico como cancelada.
   const cancelledUpcoming = data.appointments.filter(
     (a) =>
-      new Date(a.startsAt).getTime() >= PAGE_LOAD_MS &&
+      new Date(a.startsAt).getTime() >= nowMs &&
       a.status === 'cancelled' &&
       a.cancelledBy !== 'patient',
   );
@@ -176,12 +163,12 @@ export function PatientPortalView({
           )}
           <ConsentCard
             status={consent}
-            onAccepted={refreshConsent}
+            onAccepted={refresh}
             asRepresentative={Boolean(data.actingFor)}
           />
           <ConsentCard
             status={imageConsent}
-            onAccepted={refreshImageConsent}
+            onAccepted={refresh}
             purpose="image"
             asRepresentative={Boolean(data.actingFor)}
           />
@@ -204,7 +191,7 @@ export function PatientPortalView({
             renderActions={(appointment) => (
               <ChangeAppointment
                 appointment={appointment}
-                nowMs={PAGE_LOAD_MS}
+                nowMs={nowMs}
                 noticeHours={data.changeNoticeHours}
                 onChanged={refresh}
               />
@@ -226,7 +213,7 @@ export function PatientPortalView({
                 <ScheduleReturn
                   followUpId={followUp.id}
                   onScheduled={refresh}
-                  onWaitlistJoined={() => setWaitlistVersion((v) => v + 1)}
+                  onWaitlistJoined={refresh}
                 />
               </li>
             ))}
@@ -234,7 +221,7 @@ export function PatientPortalView({
         </Section>
       )}
 
-      <MyWaitlist version={waitlistVersion} />
+      <MyWaitlist entries={waitlist} />
 
       <Section title="Minha evolução clínica">
         {data.conditions.length === 0 ? (
@@ -283,9 +270,15 @@ export function PatientPortalView({
       {/* O representante do menor também decide aqui (#375); o de adulto, não. */}
       {(!data.actingFor || consent?.canSign) && (
         <>
-          <PartnerConsentSection asRepresentative={Boolean(data.actingFor)} />
+          <PartnerConsentSection
+            consent={partnerConsent}
+            asRepresentative={Boolean(data.actingFor)}
+          />
 
-          <DataRights asRepresentative={Boolean(data.actingFor)} />
+          <DataRights
+            requests={dataRequests ?? []}
+            asRepresentative={Boolean(data.actingFor)}
+          />
         </>
       )}
     </div>
