@@ -8,7 +8,7 @@
  * mapa ou que não case com spec nenhum roda **todos** os specs.
  */
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { globSync, readdirSync, readFileSync } from 'node:fs';
 import { detectBase } from '../gate/base';
 
 /** Arquivos que mexem em todas as telas: mudou um, roda tudo. */
@@ -104,6 +104,46 @@ export function mutationTargetsCloud(changed: string[]): string[] {
   );
 }
 
+/** Padrões de `mutate` do Stryker que existem em `head` e não em `base` (config de mutação alterada). */
+export function novosPadroesMutate(baseConfig: string | null, headConfig: string): string[] {
+  const lista = (texto: string | null): string[] => {
+    if (!texto) return [];
+    try {
+      const mutate = (JSON.parse(texto) as { mutate?: unknown }).mutate;
+      return Array.isArray(mutate) ? mutate.filter((p): p is string => typeof p === 'string') : [];
+    } catch {
+      return [];
+    }
+  };
+  const antigos = new Set(lista(baseConfig));
+  return lista(headConfig).filter((p) => !antigos.has(p));
+}
+
+/**
+ * Quando `stryker.config.json` muda, a mutação roda no conjunto novo: os arquivos que casam com os
+ * padrões de `mutate` acrescentados, sem `.d.ts` nem `index.ts` (as exclusões do próprio config).
+ * Mudança só no `include` de `vitest.mutacao.config.mts` não acrescenta alvo, então não dispara a
+ * mutação sozinha.
+ */
+export function alvosDeConfigNova(padroes: string[]): string[] {
+  const novos = padroes.filter((p) => !p.startsWith('!'));
+  if (novos.length === 0) return [];
+  return globSync(novos)
+    .map((f) => f.replaceAll('\\', '/'))
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts') && !/(^|\/)index\.ts$/.test(f))
+    .sort();
+}
+
+function mutationTargetsWithConfig(base: string, changed: string[]): string[] {
+  const alvos = new Set(mutationTargetsCloud(changed));
+  if (changed.includes('stryker.config.json')) {
+    const antes = spawnSync('git', ['show', `${base}:stryker.config.json`], { encoding: 'utf8' });
+    const padroes = novosPadroesMutate(antes.status === 0 ? antes.stdout : null, readFileSync('stryker.config.json', 'utf8'));
+    for (const f of alvosDeConfigNova(padroes)) alvos.add(f);
+  }
+  return [...alvos];
+}
+
 function main(): void {
   const base = detectBase();
   const diff = spawnSync('git', ['diff', '--name-only', '--diff-filter=d', `${base}...HEAD`], { encoding: 'utf8' });
@@ -112,7 +152,7 @@ function main(): void {
     .filter((f) => f.endsWith('.spec.ts'))
     .map((f) => ({ file: `e2e/${f}`, text: readFileSync(`e2e/${f}`, 'utf8') }));
   if (process.argv.includes('--mutacao')) {
-    console.log(mutationTargetsCloud(changed).join(','));
+    console.log(mutationTargetsWithConfig(base, changed).join(','));
     return;
   }
   const impact = impactedSpecs(changed, specs);
