@@ -14,8 +14,10 @@ import {
   PATIENT_CHANGE_MIN_NOTICE_HOURS,
   patientChangeDeadline,
 } from '@/domain/scheduling/patient-self-service';
+import { unwrapAction } from '@/lib/action-result';
 import { apiFetch } from '@/lib/client';
 import type { PortalAppointmentDto } from '@/lib/dto';
+import { cancelAppointment } from './actions';
 import {
   type AvailableSlotDto,
   dayKey,
@@ -117,12 +119,8 @@ function CancelPanel({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(
-        `/api/portal/patient/appointments/${appointmentId}/cancel`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ reason: reason.trim() || null }),
-        },
+      await unwrapAction(
+        cancelAppointment({ appointmentId, reason: reason.trim() || null }),
       );
       toast({ description: 'Consulta cancelada', variant: 'success' });
       onDone();

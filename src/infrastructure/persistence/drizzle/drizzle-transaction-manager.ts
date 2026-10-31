@@ -45,6 +45,7 @@ import {
   DrizzleNursingInterventionRepository,
   DrizzleNursingOutcomeRepository,
 } from './drizzle-taxonomy-repositories';
+import { DrizzleWaitlistRepository } from './drizzle-waitlist-repository';
 import { DrizzleProfessionalPatientLinkRepository } from './professional-patient-link-repository';
 
 /**
@@ -157,6 +158,7 @@ export class DrizzleTransactionManager implements TransactionManager {
           this.cipher,
         ),
         clinics: new DrizzleClinicRepository(tx),
+        waitlist: new DrizzleWaitlistRepository(tx, this.clinicId, this.cipher),
       }),
     );
   }

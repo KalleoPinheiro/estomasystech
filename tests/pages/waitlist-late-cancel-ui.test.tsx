@@ -25,6 +25,10 @@ import { MyWaitlistHarness } from '../support/portal-harness';
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
 vi.mock('next/navigation', async () => {
   const { portalRouter } = await import('../support/portal-router');
   return {

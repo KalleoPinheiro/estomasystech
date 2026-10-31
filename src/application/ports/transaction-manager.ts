@@ -31,6 +31,7 @@ import type { ProfessionalRepository } from '@/domain/professional/professional-
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
+import type { WaitlistRepository } from '@/domain/scheduling/waitlist';
 import type {
   NursingDiagnosisRepository,
   NursingInterventionRepository,
@@ -57,7 +58,8 @@ import type {
  * ADR-080): cada gravação da ficha e a sua trilha ficam na mesma transação.
  * `consentRecords`, `dataSubjectRequests` e `clinics` entraram com os atos de LGPD do
  * portal como Server Action (#553, PR 2a): aceite, revogação e pedido do titular
- * gravam e auditam na mesma transação.
+ * gravam e auditam na mesma transação. `waitlist` entrou com a saída da lista
+ * de espera pelo portal (#553, PR 2b).
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -81,6 +83,7 @@ export interface TransactionScope {
   consentRecords: ConsentRecordRepository;
   dataSubjectRequests: DataSubjectRequestRepository;
   clinics: ClinicRepository;
+  waitlist: WaitlistRepository;
   anamneses: AnamnesisRepository;
   evolutions: EvolutionNoteRepository;
   assessments: ConditionAssessmentRepository;
