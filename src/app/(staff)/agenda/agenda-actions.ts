@@ -36,6 +36,10 @@ import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { type AppointmentDto, toAppointmentDto } from '@/lib/dto';
 import { logError } from '@/lib/log-error';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
+import {
+  assertProfessionalActsAsSelf,
+  authorizeAppointmentAct,
+} from '@/lib/server/appointment-authorization';
 import { defineAction } from '@/lib/server/define-action';
 import { readSession } from '@/lib/server/session';
 import { canRoleAccess } from '@/lib/staff-pages';
@@ -87,6 +91,8 @@ const audited = (
 const scheduleCore = defineAction({
   access,
   input: scheduleSchema,
+  authorize: async ({ input, session }) =>
+    assertProfessionalActsAsSelf(session, input.professionalId),
   handler: async ({ input, tx }) => {
     const appointment = await new ScheduleAppointment(
       tx.appointments,
@@ -149,6 +155,8 @@ interface SeriesResult {
 const recurringCore = defineAction({
   access,
   input: recurringSchema,
+  authorize: async ({ input, session }) =>
+    assertProfessionalActsAsSelf(session, input.professionalId),
   handler: async ({ input, tx }): Promise<SeriesResult> => {
     const result = await new ScheduleRecurringAppointments(
       new ScheduleAppointment(
@@ -182,6 +190,7 @@ const recurringCore = defineAction({
   },
   audit: ({ input, result }) => ({
     action: 'create',
+    // Paciente já validado pela série (#605): sem sessão criada, a trilha aponta para ele.
     resourceType: result.created[0] ? 'appointment' : 'patient',
     resourceId: result.created[0]?.id ?? input.patientId,
     patientId: input.patientId,
@@ -215,6 +224,8 @@ export async function scheduleRecurring(
 const rescheduleCore = defineAction({
   access,
   input: idSchema.extend(rescheduleFields),
+  authorize: ({ input, session, scope }) =>
+    authorizeAppointmentAct(session, scope, input.id),
   handler: async ({ input, tx }) =>
     toAppointmentDto(
       await new RescheduleAppointment(
@@ -249,6 +260,8 @@ export async function rescheduleAppointment(
 export const confirmAppointment = defineAction({
   access,
   input: idSchema,
+  authorize: ({ input, session, scope }) =>
+    authorizeAppointmentAct(session, scope, input.id),
   handler: async ({ input, tx }) =>
     toAppointmentDto(
       await new ChangeAppointmentStatus(tx.appointments).execute({
@@ -267,6 +280,8 @@ interface Completion {
 const completeCore = defineAction({
   access,
   input: idSchema.extend(completeFields),
+  authorize: ({ input, session, scope }) =>
+    authorizeAppointmentAct(session, scope, input.id),
   // Consulta, fatura, consumo de pacote e retorno: juntos ou nada (CONS2-01).
   handler: async ({ input, tx }): Promise<Completion> => {
     const completed = await new CompleteAppointment(
@@ -348,6 +363,8 @@ async function absenceHandler(
 const cancelCore = defineAction({
   access,
   input: idSchema.extend(cancelFields),
+  authorize: ({ input, session, scope }) =>
+    authorizeAppointmentAct(session, scope, input.id),
   handler: ({ input, tx }) => absenceHandler('cancel', input, tx),
   audit: ({ result }) =>
     audited('update', 'consulta cancelada', result.appointment),
@@ -356,6 +373,8 @@ const cancelCore = defineAction({
 const noShowCore = defineAction({
   access,
   input: idSchema.extend(noShowFields),
+  authorize: ({ input, session, scope }) =>
+    authorizeAppointmentAct(session, scope, input.id),
   handler: ({ input, tx }) => absenceHandler('no_show', input, tx),
   audit: ({ result }) =>
     audited('update', 'falta registrada', result.appointment),

@@ -2099,3 +2099,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Custo da fila de triagem**: o gate no PC mostrou que o tempo bloqueado cresce com o tamanho da fila (cerca de 2,4 ms por foto a CPU 4x). A miniatura da fila passou de `next/image` para `img` simples e os dois `AlertDialog` por linha viraram um só para a lista (`triage-photo-list.tsx`, também usado na Hoje); com 30 fotos o limite passa. A spec E2E agora semeia por projeto (prod e dev dividem o banco), de forma idempotente, e põe os 105 pacientes na 1ª página da lista (prefixo «Aa»).
 - **Ficou fora**: editar e ativar/desativar paciente por Server Action (seguem `PUT`/`PATCH`); ficha do paciente (#552).
 - **Next step**: the-judge, validação em thread limpa, `gate:local` (não roda na nuvem) e merge na release/v0.4.0. **Blockers**: nenhum.
+
+## R4 nas ações de consulta e série com paciente alheio (#603, #605) (2026-10-31) — EM REVISÃO
+- **O que mudou**: `src/lib/server/appointment-authorization.ts` (`authorizeAppointmentAct`, `assertProfessionalActsAsSelf`) é a regra única, usada por `authorize:` nas 5 Server Actions de consulta e nas rotas `PATCH /api/appointments/:id`, `POST /api/appointments` e `POST /api/appointments/recurring`. Sem vínculo = 403, outra empresa = 404, `professionalId` alheio ao agendar = 403, sem exigir vínculo prévio. `ScheduleAppointment.assertPatient` (também no avulso) é chamado pela série antes do laço: paciente inexistente/de outra empresa = 404, inativo = 400, sem auditoria. ADR-079 (+ Errata no ADR-078), AGE-RN-25, ACE-RN-68.
+- **Mudança de contrato**: `POST /api/appointments/recurring` com paciente inexistente deixa de ser 200 com tudo pulado e vira 404.
+- **Testes novos (antes do patch; 19 falhavam na base)**: `tests/api/appointment-actions-r4-603.test.ts`, `tests/app/agenda-actions-r4.test.ts`, `tests/application/schedule-recurring-patient-605.test.ts`, `tests/integracao/agenda-r4-auditoria.integracao.ts` (Postgres real). Nenhum teste existente alterado.
+- **Pergunta aberta (PO)**: exigir vínculo prévio para agendar (hoje não; é como o Profissional ganha paciente novo).
+- **Next step**: the-judge, validação em thread limpa, `gate:local` e `test:integracao` (não rodam na nuvem); merge na release/v0.4.0; fechar #603, #605 e #545 à mão. **Blockers**: nenhum.
+

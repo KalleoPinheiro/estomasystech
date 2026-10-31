@@ -10,6 +10,7 @@ import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
+import { assertProfessionalActsAsSelf } from '@/lib/server/appointment-authorization';
 import { listAppointmentsFor } from '@/lib/server/data/appointments';
 
 export async function GET(request: NextRequest) {
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = scheduleSchema.parse(await request.json());
+    assertProfessionalActsAsSelf(guard.session, body.professionalId);
     const services = await getRepositories(writeScope(guard.session));
     const appointment = await new ScheduleAppointment(
       services.appointments,

@@ -64,6 +64,7 @@ describe('Feature: Falhas que não chegam como Error (provedores e infraestrutur
 
   it('Dado agenda que falha com texto puro numa ocorrência, Quando agendar a série, Então a ocorrência é pulada com motivo genérico', async () => {
     const schedule = {
+      assertPatient: async () => undefined,
       assertProfessional: async () => undefined,
       execute: async () => {
         throw 'falha desconhecida';
