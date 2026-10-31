@@ -12,12 +12,13 @@ import {
 import { apiFetch, isSessionExpiredError } from '@/lib/client';
 import type { EvolutionNoteDto, ProfessionalOptionDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
 import { useSessionDraft } from '@/lib/use-session-draft';
 
 interface EvolutionsSectionProps {
   patientId: string;
   evolutions: EvolutionNoteDto[];
+  /** Nomes dos autores, lidos no servidor (lista reduzida, #189). */
+  professionals: ProfessionalOptionDto[];
   error: string | null;
   isLoading: boolean;
   onSaved: () => void;
@@ -66,6 +67,7 @@ function visibleEvolutions(
 export function EvolutionsSection({
   patientId,
   evolutions,
+  professionals,
   error,
   isLoading,
   onSaved,
@@ -86,12 +88,8 @@ export function EvolutionsSection({
       setShowForm(true);
     },
   );
-  // Lista reduzida (#189): o Profissional também lê o nome do autor.
-  const { data: professionals } = useApiQuery<ProfessionalOptionDto[]>(
-    '/api/options/professionals',
-  );
   const professionalName = (id: string | null) =>
-    (professionals ?? []).find((p) => p.id === id)?.fullName ?? null;
+    professionals.find((p) => p.id === id)?.fullName ?? null;
 
   const isDirty = Object.values(values).some((value) => value.trim() !== '');
   useEffect(() => {

@@ -1,10 +1,7 @@
 import type { NextRequest } from 'next/server';
-import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
-import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope } from '@/lib/auth/tenant-scope';
-import { toPackageBalanceDto } from '@/lib/dto';
+import { listPatientPackageBalances } from '@/lib/server/data/patient-record';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -17,20 +14,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { id } = await context.params;
-    const { sessionPackages, procedures, professionalPatientLinks } =
-      await getRepositories(sessionScope(guard.session));
-    await assertPatientAccessibleToProfessional(
-      guard.session,
-      id,
-      professionalPatientLinks,
-    );
-    const packages = await sessionPackages.findByPatientId(id);
-    const catalog = await procedures.findAll();
-    const nameById = new Map(catalog.map((p) => [p.id, p.name]));
-    return packages.map((pkg) =>
-      toPackageBalanceDto(pkg, nameById.get(pkg.procedureId)),
-    );
-  });
+  return handleRequest(async () =>
+    listPatientPackageBalances(guard.session, (await context.params).id),
+  );
 }
