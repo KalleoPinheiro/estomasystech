@@ -39,6 +39,11 @@ step() { # step <nome> <comando...>: mede, registra e para na primeira falha
   return "$rc"
 }
 
+skip() { # skip <etapa> <motivo>: o que não rodou também entra no resumo
+  mkdir -p .gate
+  echo "pulado: $1 ($2)" | tee -a "$TIMES"
+}
+
 base_ref() { npx tsx scripts/gate/base.ts; }
 
 setup_postgres() {
@@ -130,7 +135,7 @@ e2e_impactado() {
 mutation_changed() {
   local base="$1" files
   files=$(GATE_BASE="$base" npx tsx scripts/gate-cloud/impacto.ts --mutacao)
-  [ -n "$files" ] || { echo "nenhum arquivo de domain/application/lib/server alterado: sem mutação"; return 0; }
+  [ -n "$files" ] || { skip mutacao "nenhum arquivo de domain/application/lib/server alterado"; return 0; }
   npm run test:mutacao -- --mutate "$files"
 }
 
@@ -153,9 +158,11 @@ pr_profile() {
     if [ "$sel" != NONE ]; then
       step build npm run build
       e2e_impactado "$sel"
+    else
+      skip e2e "o mapa de impacto não alcança nenhum spec"
     fi
   else
-    echo "diff só de documentação: integração e E2E dispensados"
+    skip integracao-e-e2e "diff só de documentação"
   fi
 }
 
@@ -166,6 +173,8 @@ release_profile() {
   # Etapa que o gate:local ainda não tem (scripts/gate/ é do dono; trecho no PR #584): lado `next dev`.
   free_port_3000
   step console-limpo-dev npx playwright test -c playwright.console.config.ts
+  skip docker "sem daemon na nuvem; roda no WSL antes do release:cut"
+  skip backup "sem daemon na nuvem; roda no WSL antes do release:cut"
 }
 
 run_bg() { # run_bg <modo>
