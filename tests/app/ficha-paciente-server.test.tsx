@@ -160,7 +160,7 @@ describe('Feature: ficha do paciente lida no servidor (#552)', () => {
   it('Dado ?aba=evolucoes, Quando renderiza, Então abre a aba pedida', async () => {
     serve('company_admin');
 
-    await render();
+    await render('evolucoes');
 
     expect(
       await screen.findByRole('tab', { name: /Evoluções/, selected: true }),
