@@ -1,35 +1,63 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SuppliesPage from '@/app/(staff)/materiais/page';
+import { ValidationError } from '@/domain/shared/errors';
 import type { AppointmentDto, StockMovementDto, SupplyDto } from '@/lib/dto';
+import type { SupplyInsightsDto } from '@/lib/server/data/supplies';
+import { renderServerPage } from '../support/server-page';
+import {
+  actionError,
+  actionOk,
+  supplies as data,
+} from '../support/supplies-data';
 
-interface FetchCall {
-  url: string;
-  init?: RequestInit;
-}
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  usePathname: () => '/materiais',
+}));
+vi.mock('@/lib/server/session', async () => {
+  const { supplies } = await import('../support/supplies-data');
+  return { requireStaffPageFor: supplies.requireStaffPageFor };
+});
+vi.mock('@/lib/server/data/supplies', async () => {
+  const { supplies } = await import('../support/supplies-data');
+  return {
+    listSuppliesFor: supplies.listSuppliesFor,
+    getSupplyInsightsFor: supplies.getSupplyInsightsFor,
+  };
+});
+vi.mock('@/lib/server/data/appointments', async () => {
+  const { supplies } = await import('../support/supplies-data');
+  return { listAppointmentsFor: supplies.listAppointmentsFor };
+});
+vi.mock('@/app/(staff)/materiais/supply-actions', async () => {
+  const { supplies } = await import('../support/supplies-data');
+  return {
+    createSupply: supplies.createSupply,
+    updateSupply: supplies.updateSupply,
+    registerStockMovement: supplies.registerStockMovement,
+  };
+});
 
 const jsonResponse = (data: unknown, ok = true) => ({
   ok,
   json: async () => ({ success: ok, data, error: ok ? null : 'Erro' }),
 });
 
-const errorResponse = (message: string) => ({
-  ok: false,
-  json: async () => ({ success: false, data: null, error: message }),
-});
-
-const mockFetch = (
-  router: (call: FetchCall) => { ok: boolean; json: () => Promise<unknown> },
+/** Só o histórico de um insumo ainda é lido pelo navegador (sob demanda, ao abrir). */
+const mockMovements = (
+  respond: () => { ok: boolean; json: () => Promise<unknown> },
 ): ReturnType<typeof vi.fn> => {
-  const fn = vi.fn(async (url: string, init?: RequestInit) =>
-    router({ url, init }),
-  );
+  const fn = vi.fn(async () => respond());
   vi.stubGlobal('fetch', fn);
   return fn;
 };
+
+beforeEach(() => {
+  data.reset();
+});
 
 afterEach(() => {
   cleanup();
@@ -84,8 +112,6 @@ const outOfStockSupply: SupplyDto = {
   active: true,
 };
 
-const insightsEmpty = { bySupply: [], expiringBatches: [] };
-
 const appointmentFixture: AppointmentDto = {
   id: 'appt-1',
   patientId: 'pat-1',
@@ -114,76 +140,45 @@ const movementFixture: StockMovementDto = {
   createdAt: '2026-07-01T10:00:00.000Z',
 };
 
-interface RouterOptions {
+const insightsEmpty: SupplyInsightsDto = { bySupply: [], expiringBatches: [] };
+
+interface PageOptions {
   supplies?: SupplyDto[];
   suppliesError?: boolean;
-  insights?: {
-    bySupply: Array<{
-      supplyId: string;
-      avgDailyOut: number;
-      daysToStockout: number | null;
-    }>;
-    expiringBatches: Array<{
-      batchId: string;
-      supplyId: string;
-      supplyName: string;
-      label: string | null;
-      expiresAt: string;
-      remaining: number;
-      isExpired: boolean;
-    }>;
-  };
+  insights?: SupplyInsightsDto;
+  insightsError?: boolean;
   appointments?: AppointmentDto[];
+  appointmentsError?: boolean;
   movements?: StockMovementDto[];
-  patchOrPost?: (
-    call: FetchCall,
-  ) => { ok: boolean; json: () => Promise<unknown> } | null;
+  movementsError?: boolean;
 }
 
-const buildRouter =
-  (options: RouterOptions = {}) =>
-  ({ url, init }: FetchCall) => {
-    if (options.patchOrPost) {
-      const result = options.patchOrPost({ url, init });
-      if (result) return result;
-    }
-    if (url.startsWith('/api/supplies/insights')) {
-      return jsonResponse(options.insights ?? insightsEmpty);
-    }
-    if (url.includes('/movements')) {
-      return jsonResponse(options.movements ?? []);
-    }
-    if (url.startsWith('/api/supplies')) {
-      return options.suppliesError
-        ? jsonResponse(null, false)
-        : jsonResponse(options.supplies ?? []);
-    }
-    if (url.startsWith('/api/appointments')) {
-      return jsonResponse(options.appointments ?? []);
-    }
-    return jsonResponse(null, false);
-  };
+/** Configura as leituras do servidor e o histórico, e renderiza a página já resolvida. */
+async function renderPage(options: PageOptions = {}) {
+  data.listSuppliesFor.mockImplementation(async () => {
+    if (options.suppliesError) throw new ValidationError('Erro');
+    return options.supplies ?? [];
+  });
+  data.getSupplyInsightsFor.mockImplementation(async () => {
+    if (options.insightsError) throw new ValidationError('Erro');
+    return options.insights ?? insightsEmpty;
+  });
+  data.listAppointmentsFor.mockImplementation(async () => {
+    if (options.appointmentsError) throw new ValidationError('Erro');
+    return options.appointments ?? [];
+  });
+  mockMovements(() =>
+    options.movementsError
+      ? jsonResponse(null, false)
+      : jsonResponse(options.movements ?? []),
+  );
+  return renderServerPage(SuppliesPage);
+}
 
 describe('Feature: Materiais e estoque', () => {
   describe('Cenário: carregamento e listagem', () => {
-    it('Dado que a lista ainda não chegou, Quando renderizar, Então exibe indicador de carregamento', () => {
-      mockFetch(({ url }) => {
-        if (url.startsWith('/api/supplies/insights'))
-          return jsonResponse(insightsEmpty);
-        if (url.startsWith('/api/supplies'))
-          return { ok: true, json: () => new Promise(() => {}) };
-        return jsonResponse([]);
-      });
-
-      renderWithToast(<SuppliesPage />);
-
-      expect(screen.getByText('Carregando…')).toBeInTheDocument();
-    });
-
     it('Dado nenhum insumo, Quando a página carrega, Então exibe mensagem de vazio', async () => {
-      mockFetch(buildRouter());
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage();
 
       expect(
         await screen.findByText('Nenhum insumo cadastrado.'),
@@ -191,19 +186,15 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado erro ao carregar insumos, Quando a página carrega, Então exibe alerta de erro', async () => {
-      mockFetch(buildRouter({ suppliesError: true }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ suppliesError: true });
 
       expect(await screen.findByRole('alert')).toBeInTheDocument();
     });
 
     it('Dado insumos ativos e inativos, Quando a página carrega, Então lista dados e aplica opacidade ao inativo', async () => {
-      mockFetch(
-        buildRouter({ supplies: [lowStockSupply, okSupply, inactiveSupply] }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply, okSupply, inactiveSupply],
+      });
 
       expect(
         await screen.findByText('Bolsa de colostomia'),
@@ -217,9 +208,7 @@ describe('Feature: Materiais e estoque', () => {
 
   describe('Cenário: alertas de estoque baixo e validade', () => {
     it('Dado insumo com estoque baixo, Quando a página carrega, Então exibe o banner e o rótulo na linha', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
 
       expect(
         await screen.findByText(/1 insumo está com estoque baixo/),
@@ -228,9 +217,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado nenhum insumo com estoque baixo, Quando a página carrega, Então não exibe o banner', async () => {
-      mockFetch(buildRouter({ supplies: [okSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [okSupply] });
 
       await screen.findByText('Gaze estéril');
       expect(screen.queryByText(/com estoque baixo/)).not.toBeInTheDocument();
@@ -242,9 +229,7 @@ describe('Feature: Materiais e estoque', () => {
         id: 'sup-9',
         name: 'Outra bolsa',
       };
-      mockFetch(buildRouter({ supplies: [lowStockSupply, secondLowStock] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply, secondLowStock] });
 
       expect(
         await screen.findByText(/2 insumos estão com estoque baixo/),
@@ -252,36 +237,32 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado lotes vencidos e a vencer, Quando a página carrega, Então exibe o banner de validade', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          insights: {
-            bySupply: [],
-            expiringBatches: [
-              {
-                batchId: 'b1',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: 'L2026-01',
-                expiresAt: '2026-06-01T00:00:00.000Z',
-                remaining: 3,
-                isExpired: true,
-              },
-              {
-                batchId: 'b2',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: null,
-                expiresAt: '2026-08-01T00:00:00.000Z',
-                remaining: 5,
-                isExpired: false,
-              },
-            ],
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        insights: {
+          bySupply: [],
+          expiringBatches: [
+            {
+              batchId: 'b1',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: 'L2026-01',
+              expiresAt: '2026-06-01T00:00:00.000Z',
+              remaining: 3,
+              isExpired: true,
+            },
+            {
+              batchId: 'b2',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: null,
+              expiresAt: '2026-08-01T00:00:00.000Z',
+              remaining: 5,
+              isExpired: false,
+            },
+          ],
+        },
+      });
 
       const alerts = await screen.findAllByRole('alert');
       expect(alerts.length).toBe(3); // low stock (warning), expired (danger), and expiring (warning)
@@ -292,36 +273,32 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado apenas lotes a vencer (nenhum vencido), Quando a página carrega, Então exibe only expiring banner e não exibe expired', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          insights: {
-            bySupply: [],
-            expiringBatches: [
-              {
-                batchId: 'b1',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: 'L2026-02',
-                expiresAt: '2026-09-01T00:00:00.000Z',
-                remaining: 5,
-                isExpired: false,
-              },
-              {
-                batchId: 'b2',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: null,
-                expiresAt: '2026-09-15T00:00:00.000Z',
-                remaining: 10,
-                isExpired: false,
-              },
-            ],
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        insights: {
+          bySupply: [],
+          expiringBatches: [
+            {
+              batchId: 'b1',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: 'L2026-02',
+              expiresAt: '2026-09-01T00:00:00.000Z',
+              remaining: 5,
+              isExpired: false,
+            },
+            {
+              batchId: 'b2',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: null,
+              expiresAt: '2026-09-15T00:00:00.000Z',
+              remaining: 10,
+              isExpired: false,
+            },
+          ],
+        },
+      });
 
       const alerts = await screen.findAllByRole('alert');
       expect(alerts.length).toBe(2); // low stock (warning) and expiring (warning), NO danger alert
@@ -337,54 +314,50 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado múltiplos lotes vencidos e a vencer, alguns sem rótulo, Quando a página carrega, Então exibe as mensagens no plural', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          insights: {
-            bySupply: [],
-            expiringBatches: [
-              {
-                batchId: 'b1',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: 'L2026-01',
-                expiresAt: '2026-06-01T00:00:00.000Z',
-                remaining: 3,
-                isExpired: true,
-              },
-              {
-                batchId: 'b2',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: null,
-                expiresAt: '2026-06-02T00:00:00.000Z',
-                remaining: 1,
-                isExpired: true,
-              },
-              {
-                batchId: 'b3',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: 'L2026-09',
-                expiresAt: '2026-08-01T00:00:00.000Z',
-                remaining: 5,
-                isExpired: false,
-              },
-              {
-                batchId: 'b4',
-                supplyId: 'sup-1',
-                supplyName: 'Bolsa de colostomia',
-                label: null,
-                expiresAt: '2026-08-05T00:00:00.000Z',
-                remaining: 2,
-                isExpired: false,
-              },
-            ],
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        insights: {
+          bySupply: [],
+          expiringBatches: [
+            {
+              batchId: 'b1',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: 'L2026-01',
+              expiresAt: '2026-06-01T00:00:00.000Z',
+              remaining: 3,
+              isExpired: true,
+            },
+            {
+              batchId: 'b2',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: null,
+              expiresAt: '2026-06-02T00:00:00.000Z',
+              remaining: 1,
+              isExpired: true,
+            },
+            {
+              batchId: 'b3',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: 'L2026-09',
+              expiresAt: '2026-08-01T00:00:00.000Z',
+              remaining: 5,
+              isExpired: false,
+            },
+            {
+              batchId: 'b4',
+              supplyId: 'sup-1',
+              supplyName: 'Bolsa de colostomia',
+              label: null,
+              expiresAt: '2026-08-05T00:00:00.000Z',
+              remaining: 2,
+              isExpired: false,
+            },
+          ],
+        },
+      });
 
       const alerts = await screen.findAllByRole('alert');
       expect(alerts.length).toBe(3); // low stock (warning), expired (danger), and expiring (warning)
@@ -395,64 +368,46 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado previsão de ruptura, Quando a página carrega, Então exibe os dias restantes com destaque quando urgente', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          insights: {
-            bySupply: [
-              { supplyId: 'sup-1', avgDailyOut: 1, daysToStockout: 5 },
-            ],
-            expiringBatches: [],
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        insights: {
+          bySupply: [{ supplyId: 'sup-1', avgDailyOut: 1, daysToStockout: 5 }],
+          expiringBatches: [],
+        },
+      });
 
       expect(await screen.findByText('~5 dias')).toBeInTheDocument();
     });
 
     it('Dado previsão de ruptura para 1 dia, Quando a página carrega, Então exibe o texto no singular', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          insights: {
-            bySupply: [
-              { supplyId: 'sup-1', avgDailyOut: 2, daysToStockout: 1 },
-            ],
-            expiringBatches: [],
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        insights: {
+          bySupply: [{ supplyId: 'sup-1', avgDailyOut: 2, daysToStockout: 1 }],
+          expiringBatches: [],
+        },
+      });
 
       expect(await screen.findByText('~1 dia')).toBeInTheDocument();
     });
 
     it('Dado previsão de ruptura acima de 30 dias, Quando a página carrega, Então exibe o texto sem destaque de urgência', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          insights: {
-            bySupply: [
-              { supplyId: 'sup-1', avgDailyOut: 0.1, daysToStockout: 45 },
-            ],
-            expiringBatches: [],
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        insights: {
+          bySupply: [
+            { supplyId: 'sup-1', avgDailyOut: 0.1, daysToStockout: 45 },
+          ],
+          expiringBatches: [],
+        },
+      });
 
       const forecast = await screen.findByText('~45 dias');
       expect(forecast).toHaveClass('text-ink-2');
     });
 
     it('Dado insumo sem previsão de ruptura, Quando a página carrega, Então exibe traço', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
 
       await screen.findByText('Bolsa de colostomia');
       expect(screen.getByText('—')).toBeInTheDocument();
@@ -461,20 +416,7 @@ describe('Feature: Materiais e estoque', () => {
 
   describe('Cenário: cadastrar e editar insumo', () => {
     it('Dado preenchimento do novo insumo, Quando submetido, Então cria o insumo e fecha o modal', async () => {
-      let created = false;
-      mockFetch(
-        buildRouter({
-          patchOrPost: ({ url, init }) => {
-            if (url === '/api/supplies' && init?.method === 'POST') {
-              created = true;
-              return jsonResponse(lowStockSupply);
-            }
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage();
       await screen.findByText('Nenhum insumo cadastrado.');
 
       fireEvent.click(screen.getByText('+ Novo insumo'));
@@ -493,14 +435,19 @@ describe('Feature: Materiais e estoque', () => {
       expect(screen.getByDisplayValue('cx')).toBeInTheDocument();
       fireEvent.click(screen.getByText('Salvar'));
 
-      await waitFor(() => expect(created).toBe(true));
+      await waitFor(() =>
+        expect(data.createSupply).toHaveBeenCalledWith({
+          name: 'Bolsa nova',
+          unit: 'cx',
+          minQty: 5,
+          priceCents: 3000,
+        }),
+      );
       expect(await screen.findByText('Insumo salvo')).toBeInTheDocument();
     });
 
     it('Dado edição de um insumo existente, Quando o modal abre, Então preenche os campos com os dados atuais', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Editar'));
@@ -513,9 +460,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado clique em Editar, Quando a ficha abre ao lado da lista, Então a lista continua visível e sem janela', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
       fireEvent.click(screen.getByText('Editar'));
 
@@ -527,9 +472,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado a ficha aberta, Quando clicar em Fechar ficha, Então ela some sem salvar', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
       fireEvent.click(screen.getByText('Editar'));
       fireEvent.click(screen.getByRole('button', { name: 'Fechar ficha' }));
@@ -537,24 +480,8 @@ describe('Feature: Materiais e estoque', () => {
       expect(screen.queryByText('Editar insumo')).not.toBeInTheDocument();
     });
 
-    it('Dado edição de um insumo existente, Quando desmarcar ativo e submeter, Então envia PUT com os dados atualizados', async () => {
-      let sentUrl: string | undefined;
-      let sentBody: string | undefined;
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          patchOrPost: ({ url, init }) => {
-            if (url === '/api/supplies/sup-1' && init?.method === 'PUT') {
-              sentUrl = url;
-              sentBody = init.body as string;
-              return jsonResponse({ ...lowStockSupply, active: false });
-            }
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+    it('Dado edição de um insumo existente, Quando desmarcar ativo e submeter, Então grava a edição com os dados atualizados', async () => {
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Editar'));
@@ -563,20 +490,21 @@ describe('Feature: Materiais e estoque', () => {
       fireEvent.click(screen.getByLabelText('Insumo ativo'));
       fireEvent.click(screen.getByText('Salvar'));
 
-      await waitFor(() => expect(sentBody).toBeDefined());
-      expect(sentUrl).toBe('/api/supplies/sup-1');
-      const payload = JSON.parse(sentBody as string);
-      expect(payload).toMatchObject({
-        name: 'Bolsa de colostomia',
-        active: false,
-      });
+      await waitFor(() =>
+        expect(data.updateSupply).toHaveBeenCalledWith({
+          id: 'sup-1',
+          name: 'Bolsa de colostomia',
+          unit: 'un',
+          minQty: 10,
+          priceCents: 3000,
+          active: false,
+        }),
+      );
       expect(screen.queryByText('Editar insumo')).not.toBeInTheDocument();
     });
 
     it('Dado modal de novo insumo aberto, Quando fechar pelo botão Fechar, Então oculta o formulário', async () => {
-      mockFetch(buildRouter());
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage();
       await screen.findByText('Nenhum insumo cadastrado.');
 
       fireEvent.click(screen.getByText('+ Novo insumo'));
@@ -588,18 +516,8 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado falha ao salvar insumo, Quando submetido, Então exibe alerta de erro no formulário', async () => {
-      mockFetch(
-        buildRouter({
-          patchOrPost: ({ url, init }) => {
-            if (url === '/api/supplies' && init?.method === 'POST') {
-              return errorResponse('Erro ao salvar insumo');
-            }
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      data.createSupply.mockResolvedValue(actionError('Erro ao salvar insumo'));
+      await renderPage();
       await screen.findByText('Nenhum insumo cadastrado.');
 
       fireEvent.click(screen.getByText('+ Novo insumo'));
@@ -618,25 +536,8 @@ describe('Feature: Materiais e estoque', () => {
   });
 
   describe('Cenário: registrar movimentação de estoque', () => {
-    it('Dado entrada de estoque com lote e validade, Quando submetido, Então envia POST com os dados corretos', async () => {
-      let sentBody: string | undefined;
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          patchOrPost: ({ url, init }) => {
-            if (
-              url === '/api/supplies/sup-1/movements' &&
-              init?.method === 'POST'
-            ) {
-              sentBody = init.body as string;
-              return jsonResponse(lowStockSupply);
-            }
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+    it('Dado entrada de estoque com lote e validade, Quando submetido, Então registra a entrada com os dados corretos', async () => {
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Movimentar'));
@@ -659,39 +560,25 @@ describe('Feature: Materiais e estoque', () => {
       fireEvent.click(screen.getByText('Registrar movimentação'));
       fireEvent.click(await screen.findByText('Confirmar'));
 
-      await waitFor(() => expect(sentBody).toBeDefined());
-      const payload = JSON.parse(sentBody as string);
-      expect(payload).toMatchObject({
-        type: 'in',
-        quantity: 20,
-        reason: 'Compra fornecedor X',
-        appointmentId: null,
-        batchLabel: 'L2026-091',
-        expiresAt: new Date('2026-12-31').toISOString(),
-      });
+      await waitFor(() =>
+        expect(data.registerStockMovement).toHaveBeenCalledWith({
+          supplyId: 'sup-1',
+          type: 'in',
+          quantity: 20,
+          reason: 'Compra fornecedor X',
+          appointmentId: null,
+          batchLabel: 'L2026-091',
+          expiresAt: new Date('2026-12-31').toISOString(),
+        }),
+      );
       expect(await screen.findByText('Entrada registrada')).toBeInTheDocument();
     });
 
     it('Dado saída de estoque vinculada a uma consulta do dia, Quando submetido, Então envia o appointmentId', async () => {
-      let sentBody: string | undefined;
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          appointments: [appointmentFixture],
-          patchOrPost: ({ url, init }) => {
-            if (
-              url === '/api/supplies/sup-1/movements' &&
-              init?.method === 'POST'
-            ) {
-              sentBody = init.body as string;
-              return jsonResponse(lowStockSupply);
-            }
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        appointments: [appointmentFixture],
+      });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Movimentar'));
@@ -713,29 +600,23 @@ describe('Feature: Materiais e estoque', () => {
       fireEvent.click(screen.getByText('Registrar movimentação'));
       fireEvent.click(await screen.findByText('Confirmar'));
 
-      await waitFor(() => expect(sentBody).toBeDefined());
-      const payload = JSON.parse(sentBody as string);
-      expect(payload).toMatchObject({ type: 'out', appointmentId: 'appt-1' });
+      await waitFor(() =>
+        expect(data.registerStockMovement).toHaveBeenCalledWith(
+          expect.objectContaining({
+            supplyId: 'sup-1',
+            type: 'out',
+            appointmentId: 'appt-1',
+          }),
+        ),
+      );
       expect(await screen.findByText('Saída registrada')).toBeInTheDocument();
     });
 
     it('Dado falha ao registrar movimentação, Quando submetido, Então exibe alerta de erro', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          patchOrPost: ({ url, init }) => {
-            if (
-              url === '/api/supplies/sup-1/movements' &&
-              init?.method === 'POST'
-            ) {
-              return errorResponse('Erro ao movimentar estoque');
-            }
-            return null;
-          },
-        }),
+      data.registerStockMovement.mockResolvedValue(
+        actionError('Erro ao movimentar estoque'),
       );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Movimentar'));
@@ -755,9 +636,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado modal de movimentação aberto, Quando fechar pelo botão Fechar, Então oculta o formulário', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Movimentar'));
@@ -773,18 +652,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado falha ao carregar consultas do dia, Quando abrir movimentação de saída, Então mantém apenas a opção sem vínculo', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          patchOrPost: ({ url }) => {
-            if (url.startsWith('/api/appointments'))
-              return jsonResponse(null, false);
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply], appointmentsError: true });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Movimentar'));
@@ -817,14 +685,10 @@ describe('Feature: Materiais e estoque', () => {
         cancelReason: null,
         cancelledLate: false,
       };
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          appointments: [appointmentSemNome],
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        appointments: [appointmentSemNome],
+      });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Movimentar'));
@@ -842,14 +706,10 @@ describe('Feature: Materiais e estoque', () => {
 
   describe('Cenário: histórico de movimentações', () => {
     it('Dado histórico com registros, Quando abrir o modal, Então lista as movimentações', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          movements: [movementFixture],
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        movements: [movementFixture],
+      });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Histórico'));
@@ -861,9 +721,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado histórico vazio, Quando abrir o modal, Então exibe mensagem de vazio', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply], movements: [] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply], movements: [] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Histórico'));
@@ -874,17 +732,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado erro ao carregar histórico, Quando abrir o modal, Então exibe alerta de erro', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          patchOrPost: ({ url }) => {
-            if (url.includes('/movements')) return jsonResponse(null, false);
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply], movementsError: true });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Histórico'));
@@ -893,9 +741,7 @@ describe('Feature: Materiais e estoque', () => {
     });
 
     it('Dado modal de histórico aberto, Quando fechar pelo botão Fechar, Então oculta a listagem', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply], movements: [] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply], movements: [] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Histórico'));
@@ -918,11 +764,10 @@ describe('Feature: Materiais e estoque', () => {
         quantity: 4,
         reason: 'Uso em atendimento',
       };
-      mockFetch(
-        buildRouter({ supplies: [lowStockSupply], movements: [saidaMovement] }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        movements: [saidaMovement],
+      });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Histórico'));
@@ -938,11 +783,10 @@ describe('Feature: Materiais e estoque', () => {
         quantity: 4,
         reason: 'Uso em atendimento',
       };
-      mockFetch(
-        buildRouter({ supplies: [lowStockSupply], movements: [saidaMovement] }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({
+        supplies: [lowStockSupply],
+        movements: [saidaMovement],
+      });
       await screen.findByText('Bolsa de colostomia');
       fireEvent.click(screen.getByText('Histórico'));
 
@@ -957,9 +801,7 @@ describe('Feature: Materiais e estoque', () => {
         id: `mov-${i}`,
         reason: `Movimento número ${i}`,
       }));
-      mockFetch(buildRouter({ supplies: [lowStockSupply], movements: many }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply], movements: many });
       await screen.findByText('Bolsa de colostomia');
       fireEvent.click(screen.getByText('Histórico'));
 
@@ -976,18 +818,14 @@ describe('Feature: Materiais e estoque', () => {
 
   describe('Cenário: severidade de estoque (MAT-01/02)', () => {
     it("Dado insumo zerado com mínimo configurado, Quando renderizar, Então mostra 'Sem estoque' (danger)", async () => {
-      mockFetch(buildRouter({ supplies: [outOfStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [outOfStockSupply] });
 
       expect(await screen.findByText('Sem estoque')).toBeInTheDocument();
       expect(screen.queryByText('Estoque baixo')).not.toBeInTheDocument();
     });
 
     it("Dado insumo com estoque baixo mas não zerado, Quando renderizar, Então mostra 'Estoque baixo' (warning)", async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
 
       expect(await screen.findByText('Estoque baixo')).toBeInTheDocument();
       expect(screen.queryByText('Sem estoque')).not.toBeInTheDocument();
@@ -996,18 +834,7 @@ describe('Feature: Materiais e estoque', () => {
 
   describe('Cenário: previsão com erro de API (MAT-06)', () => {
     it('Dado falha ao carregar insights, Quando a página carrega, Então a coluna Previsão mostra indicador de erro, não traço', async () => {
-      mockFetch(
-        buildRouter({
-          supplies: [lowStockSupply],
-          patchOrPost: ({ url }) => {
-            if (url.startsWith('/api/supplies/insights'))
-              return jsonResponse(null, false);
-            return null;
-          },
-        }),
-      );
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply], insightsError: true });
       await screen.findByText('Bolsa de colostomia');
 
       expect(await screen.findByText('Erro ao calcular')).toBeInTheDocument();
@@ -1016,9 +843,7 @@ describe('Feature: Materiais e estoque', () => {
 
   describe('Cenário: alerta acionável (MAT-03)', () => {
     it("Dado insumo com estoque baixo, Quando clicar em 'repor', Então abre o modal de movimentação daquele insumo", async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText(/1 insumo está com estoque baixo/);
 
       fireEvent.click(
@@ -1032,10 +857,8 @@ describe('Feature: Materiais e estoque', () => {
   });
 
   describe('Cenário: saída maior que o saldo (MAT-04)', () => {
-    it('Dado saída maior que o saldo, Quando preencher e tentar registrar, Então bloqueia com erro inline, sem chamar a API', async () => {
-      const fetchMock = mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+    it('Dado saída maior que o saldo, Quando preencher e tentar registrar, Então bloqueia com erro inline, sem gravar', async () => {
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
 
       fireEvent.click(screen.getByText('Movimentar'));
@@ -1054,17 +877,14 @@ describe('Feature: Materiais e estoque', () => {
       ).toBeInTheDocument();
       expect(screen.getByText('Registrar movimentação')).toBeDisabled();
 
-      const callsBefore = fetchMock.mock.calls.length;
       fireEvent.click(screen.getByText('Registrar movimentação'));
-      expect(fetchMock.mock.calls.length).toBe(callsBefore);
+      expect(data.registerStockMovement).not.toHaveBeenCalled();
     });
   });
 
   describe('Cenário: busca e contagem (MAT/PROC-05)', () => {
     it('Dado 2 insumos, Quando digitar parte de um nome, Então filtra a lista e atualiza a contagem', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply, okSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply, okSupply] });
       await screen.findByText('Bolsa de colostomia');
       expect(screen.getByText('2 insumos')).toBeInTheDocument();
 
@@ -1080,9 +900,7 @@ describe('Feature: Materiais e estoque', () => {
 
   describe('Cenário: alvo de toque (PROC-02 equivalente)', () => {
     it('Dado a linha do insumo, Quando renderizar as ações, Então usam Button ghost/sm', async () => {
-      mockFetch(buildRouter({ supplies: [lowStockSupply] }));
-
-      renderWithToast(<SuppliesPage />);
+      await renderPage({ supplies: [lowStockSupply] });
       await screen.findByText('Bolsa de colostomia');
 
       expect(screen.getByText('Movimentar')).toHaveClass(
