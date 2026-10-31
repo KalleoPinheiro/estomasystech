@@ -1625,7 +1625,7 @@ Issue #430 (bloco 3 de `.design/identidade-visual-e-tema.md`), ADR-057; sem migr
 - **Feito**: `src/app/manifest.ts` (`standalone`, `pt-BR`, ícones 192/512/maskable) e ícone do iOS no `metadata` do layout; ícones gerados por `scripts/brand/generate-icons.ts` com tokens do Still Void; os cinco caminhos entram em `PUBLIC_PATHS` (exatos); `ClinicInfoDto.logoUrl` opcional e logo no cabeçalho de `DocumentFrame` só quando a clínica enviou.
 - **Decisões**: sem service worker (nada de prontuário em cache no aparelho); manifesto e ícones são da plataforma, iguais para todas as clínicas (rota pública não sabe a clínica).
 - **Perguntas abertas (produto)**: logo no login (como identificar a clínica antes de entrar, sem expor quem é cliente?) e logo em e-mail (precisa de URL pública da imagem). HEIC já respondido no ADR-055.
-- **Testes novos**: `tests/lib/instalar-na-tela-inicial.test.ts`, `tests/components/document-frame-logo.test.tsx`. Nenhum teste existente alterado.
+- **Testes novos**: `tests/lib/instalar-na-tela-inicial.test.ts`, `tests/components/document-frame-logo.test.tsx`. TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Next step**: aguardar decisão de produto sobre login/e-mail. **Blockers**: nenhum.
 
 ## Procedimentos em lista + ficha (2026-10-21) — EM REVISÃO
@@ -1644,7 +1644,7 @@ Issue #429, fatia 6, canvas aprovada (Entrar). `/login`: moldura em dois painéi
 Resolve a pergunta aberta de "Procedimentos em lista + ficha". `@still-void/ui` 3.4.1 → 3.5.0 (traz `BottomSheet` e o token `--sv-control-border`, bordas de campo mais fortes). Novo `src/components/sheet-panel.tsx`: ficha ao lado da lista a partir de 1024 px, `BottomSheet` (`closeLabel="Cancelar"`) abaixo disso; só `/procedimentos` usa por ora, é a única lista+ficha mergeada.
 - **Decisão**: consulta `max-width: 1023px`; sem `matchMedia` (SSR, testes) o padrão é a ficha ao lado, o que mantém os testes existentes intactos.
 - **Coordenação**: a thread de tema troca Materiais, Profissionais e Parceiros para `SheetPanel` depois que este PR entrar na release.
-- **Testes novos**: `tests/components/sheet-panel.test.tsx`, `e2e/procedimentos-folha.spec.ts` (390 px). Nenhum teste existente alterado.
+- **Testes novos**: `tests/components/sheet-panel.test.tsx`, `e2e/procedimentos-folha.spec.ts` (390 px). TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Next step**: adoção nas demais fichas. **Blockers**: nenhum.
 
 
@@ -1664,12 +1664,12 @@ Pedido do Kalléo: no login, logo do sistema (não da clínica), bonita, minimal
 ## Base do gate local na release (2026-10-21) — EM REVISÃO
 
 Exceção pontual de @KalleoPinheiro para editar `scripts/gate/` e `.husky/pre-push`. `check:testes`, mutação do `gate:local` e `check:changeset` passam a comparar com a release aberta de que a branch descende (ADR-058); `release/*`, `hotfix/*` e `main` seguem contra `origin/main`; `GATE_BASE` vence. `pre-push` busca as releases. Regra 8 e recibo do PR release→main intactos.
-- **Testes novos**: `tests/scripts/gate-base.test.ts`. Nenhum teste existente alterado.
+- **Testes novos**: `tests/scripts/gate-base.test.ts`. TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Next step**: aguardar revisão. **Blockers**: nenhum.
 
 ## Materiais em lista + ficha (2026-10-21) — EM REVISÃO
 
-Issue #429, fatia 8, canvas aprovada (Cadastros). `/materiais`: Editar abre a ficha ao lado da lista (`lg:`) ou a folha de baixo no celular, via `SheetPanel`; Novo insumo, Movimentar e Histórico seguem em janela (são ações de estoque, não ficha). Nenhum teste existente alterado.
+Issue #429, fatia 8, canvas aprovada (Cadastros). `/materiais`: Editar abre a ficha ao lado da lista (`lg:`) ou a folha de baixo no celular, via `SheetPanel`; Novo insumo, Movimentar e Histórico seguem em janela (são ações de estoque, não ficha). TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Next step**: hub de Configurações. **Blockers**: nenhum.
 
 ## Hub de Configurações (2026-10-21) — EM REVISÃO
@@ -1682,7 +1682,7 @@ Issue #429, fatia 9, canvas aprovada (Configurações). `/configuracoes` ganha `
 ## Seed de staging aditivo (2026-10-21) — EM REVISÃO
 
 Pedido do Kalléo (opção A): a staging usa a branch `main` do Neon, sem reset, então as 8 contas novas do #434 e a clínica vizinha nunca entravam. `scripts/seed/seed.ts` passa a criar só o que falta (clínica por id, conta por e-mail, profissional por registro, parceiro por e-mail, pacientes da vizinha por nome), sem apagar nem duplicar; massa pesada só em clínica sem paciente; senha reaplicada em banco já semeado; travas de `APP_ENV` e banco de produção intactas. ADR-059; `homologacao.md` § 4 atualizado.
-- **Testes novos**: `tests/scripts/seed-aditivo.test.ts` (banco vazio, já completo, semeado antes do #434, termos do portal, senha trocada). Nenhum teste existente alterado.
+- **Testes novos**: `tests/scripts/seed-aditivo.test.ts` (banco vazio, já completo, semeado antes do #434, termos do portal, senha trocada). TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Next step**: após o merge, Kalléo roda `git checkout release/v0.2.0 && git pull && npm run staging:rebuild -- --release --push` no WSL. **Blockers**: nenhum.
 ## Rotina mensal e checklist (#381) (2026-10-21) — EM REVISÃO
 
@@ -1714,7 +1714,7 @@ Segundo passo da rotina mensal: `.github/workflows/rotina-mensal.yml` abre a iss
 
 Issue #381 (item logs/LGPD), decisão do Kalléo: mascarar PII nos logs e auditar/documentar sempre com dado mascarado. `emit` do logger passa `msg` por `scrubText` e os campos por `redactFields` (`src/lib/redact.ts`): chave sensível (CPF, e-mail, telefone, nome de pessoa, anamnese/diagnóstico/notas, senha, token, corpo de mensagem…) vira `[redigido]`; URL com query, Bearer/JWT, sequência opaca, e-mail e número longo viram marcador. GlitchTip: contexto, mensagem, `transaction` e tags também. ADR-060; auditoria dos 56 pontos de log em `docs/engineering/auditoria-logs-pii-2026-10.md`; runbook § 9.4 e `glitchtip.md` atualizados.
 - **Decisão**: única exceção é o `link` de definição de senha fora de produção (dry-run do `NullEmailGateway`; o E2E depende dele). Teste de arquitetura C17 proíbe nome/e-mail/CPF/telefone crus em mensagem de log.
-- **Testes novos**: `redact-campos`, `logger-redacao`, `error-tracker-redacao`, `log-pii-architecture`. Nenhum teste existente alterado.
+- **Testes novos**: `redact-campos`, `logger-redacao`, `error-tracker-redacao`, `log-pii-architecture`. TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Pergunta aberta**: o log de acesso do Traefik/Coolify pode guardar `?token=` de convite/reset; não verificado (exige olhar o servidor, via RC). Entra na rotina mensal.
 - **Next step**: aguardar revisão. **Blockers**: nenhum.
 
@@ -1753,7 +1753,7 @@ QA da staging v0.2.0: Ana via 23 consultas de 20 pacientes e só 1 na lista; Bru
 - **Seed** (`seedProfessionalLinks`): cria o vínculo de cada par profissional/paciente da agenda; aditivo (ADR-059), em banco já semeado completa só o que falta, sem recriar a agenda. A staging corrige no próximo `staging:rebuild`.
 - **Bug de código achado no caminho**: `POST /api/appointments/recurring` não concedia o vínculo (a avulsa concedia; AGE-RN-12 já pressupunha). Corrigido em melhor esforço, como a avulsa, e só quando ao menos uma ocorrência é criada. Produção ainda sem paciente real, então não há backfill de vínculos lá.
 - Ana e Bruno atendem os mesmos 20 pacientes no seed; os cenários "sem vínculo" (AGE-RN-17, PRO-RN-08) passam a usar paciente sem consulta (`homologacao-cenarios.md`). Paciente exclusivo de um profissional fica para a #477.
-- Testes novos: `tests/api/professional-patient-link-on-recurring.test.ts`, `tests/scripts/seed-vinculos.test.ts`. Nenhum teste existente alterado.
+- Testes novos: `tests/api/professional-patient-link-on-recurring.test.ts`, `tests/scripts/seed-vinculos.test.ts`. TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Next step**: Kalléo roda `staging:rebuild`. **Blockers**: nenhum.
 
 ## Vercel constrói só a staging (2026-10-22) — EM REVISÃO
@@ -2103,7 +2103,7 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 ## R4 nas ações de consulta e série com paciente alheio (#603, #605) (2026-10-31) — EM REVISÃO
 - **O que mudou**: `src/lib/server/appointment-authorization.ts` (`authorizeAppointmentAct`, `assertProfessionalActsAsSelf`) é a regra única, usada por `authorize:` nas 5 Server Actions de consulta e nas rotas `PATCH /api/appointments/:id`, `POST /api/appointments` e `POST /api/appointments/recurring`. Sem vínculo = 403, outra empresa = 404, `professionalId` alheio ao agendar = 403, sem exigir vínculo prévio. `ScheduleAppointment.assertPatient` (também no avulso) é chamado pela série antes do laço: paciente inexistente/de outra empresa = 404, inativo = 400, sem auditoria. ADR-079 (+ Errata no ADR-078), AGE-RN-25, ACE-RN-68.
 - **Mudança de contrato**: `POST /api/appointments/recurring` com paciente inexistente deixa de ser 200 com tudo pulado e vira 404.
-- **Testes novos (antes do patch; 19 falhavam na base)**: `tests/api/appointment-actions-r4-603.test.ts`, `tests/app/agenda-actions-r4.test.ts`, `tests/application/schedule-recurring-patient-605.test.ts`, `tests/integracao/agenda-r4-auditoria.integracao.ts` (Postgres real). Nenhum teste existente alterado.
+- **Testes novos (antes do patch; 19 falhavam na base)**: `tests/api/appointment-actions-r4-603.test.ts`, `tests/app/agenda-actions-r4.test.ts`, `tests/application/schedule-recurring-patient-605.test.ts`, `tests/integracao/agenda-r4-auditoria.integracao.ts` (Postgres real). TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
 - **Pergunta aberta (PO)**: exigir vínculo prévio para agendar (hoje não; é como o Profissional ganha paciente novo).
 - **Next step**: the-judge, validação em thread limpa, `gate:local` e `test:integracao` (não rodam na nuvem); merge na release/v0.4.0; fechar #603, #605 e #545 à mão. **Blockers**: nenhum.
 

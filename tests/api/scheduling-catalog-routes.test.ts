@@ -106,7 +106,7 @@ describe('Feature: Recorrência de consultas, grade de horários, profissionais,
       expect(body.data.skipped[0].reason).toContain('indisponível');
     });
 
-    it('Dado paciente inexistente, Quando POST recorrente, Então todas as ocorrências são puladas', async () => {
+    it('Dado paciente inexistente, Quando POST recorrente, Então retorna 404 e nenhuma consulta é criada', async () => {
       const response = await recurringRoute.POST(
         jsonRequest('/api/appointments/recurring', 'POST', {
           patientId: 'paciente-fantasma',
@@ -117,15 +117,10 @@ describe('Feature: Recorrência de consultas, grade de horários, profissionais,
           occurrences: 2,
         }),
       );
-      const body = (await response.json()) as Envelope<{
-        created: Array<{ id: string }>;
-        skipped: Array<{ startsAt: string; reason: string }>;
-      }>;
+      const body = (await response.json()) as Envelope<null>;
 
-      expect(response.status).toBe(200);
-      expect(body.data.created).toHaveLength(0);
-      expect(body.data.skipped).toHaveLength(2);
-      expect(body.data.skipped[0].reason).toContain('não encontrado');
+      expect(response.status).toBe(404);
+      expect(body.error).toBe('Paciente não encontrado(a)');
     });
 
     it('Dado occurrences fora do intervalo permitido, Quando POST recorrente, Então retorna 400', async () => {
