@@ -166,3 +166,66 @@ describe('Feature: o cartão do termo troca no toque, sem esperar a rede (#623, 
     );
   });
 });
+
+describe('Feature: o leitor de tela só anuncia o aceite depois da gravação (#553, PR 2b)', () => {
+  it('Dado o aceite em voo, Quando o servidor ainda não confirmou, Então o aviso otimista fica fora da árvore de acessibilidade e nenhum role=status o anuncia', async () => {
+    let finish: (value: ActionResult<unknown>) => void = () => undefined;
+    actions.acceptConsent.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    renderWithToast(<ConsentCard status={pending} onAccepted={vi.fn()} />);
+
+    acceptNow();
+    await screen.findByRole('button', { name: REVOKE_BUTTON });
+
+    const optimistic = screen.getByText(
+      /Termo de consentimento do tratamento aceito/,
+    );
+    expect(optimistic.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(
+      screen.queryByRole('status', {
+        name: /Termo de consentimento do tratamento aceito/,
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryAllByText(/Termo de consentimento do tratamento aceito/),
+    ).toHaveLength(1);
+
+    await act(async () => finish(ok));
+    // Confirmado: o aviso (toast, anunciado pelo leitor) chega junto.
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/Termo de consentimento do tratamento aceito/),
+      ).toHaveLength(2),
+    );
+  });
+
+  it('Dado o termo já aceito no servidor, Quando renderiza, Então o aviso é um role=status anunciável', () => {
+    renderWithToast(<ConsentCard status={accepted} onAccepted={vi.fn()} />);
+
+    const notice = screen.getByRole('status');
+    expect(notice.textContent).toContain(
+      'Termo de consentimento do tratamento aceito',
+    );
+  });
+
+  it('Dado o aceite recusado, Quando o servidor responde erro, Então o aviso de aceito nunca chega a existir para o leitor', async () => {
+    actions.acceptConsent.mockResolvedValue({
+      success: false,
+      data: null,
+      error: 'Sem permissão',
+    });
+    renderWithToast(<ConsentCard status={pending} onAccepted={vi.fn()} />);
+
+    acceptNow();
+
+    await waitFor(() =>
+      expect(screen.getAllByText('Sem permissão').length).toBeGreaterThan(0),
+    );
+    expect(
+      screen.queryByText(/Termo de consentimento do tratamento aceito/),
+    ).toBeNull();
+  });
+});

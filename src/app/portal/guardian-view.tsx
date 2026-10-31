@@ -3,7 +3,8 @@
 import { Button, Card } from '@still-void/ui/react';
 import { useState } from 'react';
 import { EmptyState, ErrorAlert } from '@/components/feedback';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
+import { actForPatient, stopActingForPatient } from './actions';
 import { PatientPortalView, type PatientPortalViewData } from './patient-view';
 import { usePortalRefresh } from './use-portal-refresh';
 
@@ -31,12 +32,11 @@ export function GuardianPortalView({
   const refresh = usePortalRefresh();
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const change = async (method: 'PUT' | 'DELETE', patientId?: string) => {
+  const change = async (patientId?: string) => {
     try {
-      await apiFetch('/api/portal/guardian/acting-for', {
-        method,
-        body: patientId ? JSON.stringify({ patientId }) : undefined,
-      });
+      await unwrapAction<unknown>(
+        patientId ? actForPatient({ patientId }) : stopActingForPatient({}),
+      );
       setActionError(null);
       refresh();
     } catch (err) {
@@ -68,7 +68,7 @@ export function GuardianPortalView({
           <Button
             key={patient.id}
             variant="secondary"
-            onClick={() => change('PUT', patient.id)}
+            onClick={() => change(patient.id)}
           >
             {patient.fullName}
           </Button>
@@ -85,7 +85,7 @@ export function GuardianPortalView({
         {...portal}
         nowMs={nowMs}
         onSwitchPatient={
-          represented.patients.length > 1 ? () => change('DELETE') : undefined
+          represented.patients.length > 1 ? () => change() : undefined
         }
       />
     </>

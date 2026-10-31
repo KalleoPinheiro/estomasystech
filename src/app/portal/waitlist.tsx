@@ -4,8 +4,10 @@ import { Button, Card } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { formatDateKey } from '@/domain/scheduling/schedule-availability';
+import { unwrapAction } from '@/lib/action-result';
 import { apiFetch } from '@/lib/client';
 import type { WaitlistEntryDto } from '@/lib/dto';
+import { leaveWaitlist } from './actions';
 import { usePortalRefresh } from './use-portal-refresh';
 
 const WAIT_WINDOW_DAYS = 30;
@@ -96,9 +98,7 @@ export function MyWaitlist({ entries: data }: { entries: WaitlistEntryDto[] }) {
 
   const leave = async (entry: WaitlistEntryDto) => {
     try {
-      await apiFetch(`/api/portal/patient/waitlist/${entry.id}/leave`, {
-        method: 'POST',
-      });
+      await unwrapAction(leaveWaitlist({ id: entry.id }));
       toast({
         description: 'Você saiu da lista de espera',
         variant: 'success',

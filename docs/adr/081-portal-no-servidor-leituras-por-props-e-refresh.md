@@ -57,3 +57,13 @@ A decisão 5 foi cumprida em duas entregas (divisão aprovada pelo coordenador e
 - **Sem salto depois do aceite (CLS < 0,05)**: o cartão do termo muda de altura ao aceitar ou revogar, e a tela nova só chega depois da rede. O cartão troca no toque (estado local) para o salto cair na janela de 500 ms da entrada do usuário. O estado local só sai quando a releitura termina (`usePortalRefresh` devolve uma promessa que se resolve quando a transição sai de pendente) ou, se o servidor recusar, no `catch`; antes disso o cartão não volta ao pendente. O botão de revogar tem o lugar reservado (invisível e desabilitado) e o aviso verde só sai depois da confirmação do servidor. Medido em 360 e 390 px com CPU 4x e rede lenta: 0,19 antes, abaixo de 0,05 depois; o E2E também falha se o termo pendente reaparecer (`server-first-portal.spec.ts`).
 - **Continua Route Handler**: auto-agendamento, entrada na lista de espera, foto, exportação (decisão 5, sem mudança).
 
+## Atualização — PR 2b (as quatro ações restantes do portal)
+
+O **PR 2b** fecha a decisão 5: `cancelAppointment`, `leaveWaitlist`, `revokeGuardianAccess`, `actForPatient` e `stopActingForPatient` (`src/app/portal/actions.ts`) trocam os `fetch` das telas. As rotas seguem para integrações, com a mesma regra, e a revogação agora reaproveita as mesmas funções (`applyGuardianAccessRevocation`, `notifyGuardianOfRevocation`).
+
+- **Efeito de fora do banco só depois do commit** (`afterCommit`): a ação grava e audita na transação; se ela falha, o efeito nunca roda. Cancelamento remove o evento do Google Agenda (só quando houve mudança, não na repetição); encerrar o acesso avisa o responsável por e-mail em `after()` e a falha do aviso nunca desfaz a revogação; «agir em nome de» grava o cookie.
+- **«Agir em nome de» e `cookies().set`**: a ação valida o vínculo (`listRepresentablePatients`, paciente alheio = 404), audita `guardian-acting-for` e só então grava o cookie `httpOnly`. O `refresh()` da própria ação já renderiza a tela com o cookie novo; `stopActingForPatient` apaga o cookie (`maxAge: 0`) sem trilha. Prova: `e2e/portal-responsavel.spec.ts` (cookie no navegador, sobrevive ao `reload`, «Trocar paciente» o apaga) e `tests/app/portal-actions.test.ts` (nenhum cookie quando a trilha ou o vínculo falham).
+- **`TransactionScope`** ganha `waitlist`.
+- **Leitor de tela e LGPD**: o aceite continua otimista na tela, mas o aviso verde (`role=status`) fica fora da árvore de acessibilidade enquanto o servidor não confirmou; quem anuncia é o toast, que só sai depois da gravação. Um consentimento não persistido nunca é anunciado como aceito. CLS segue em 0 (o `div` de envelope não muda a altura).
+- **Continua Route Handler**: auto-agendamento, entrada na lista de espera, foto e exportação.
+

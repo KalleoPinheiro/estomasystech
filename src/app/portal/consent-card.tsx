@@ -148,16 +148,23 @@ export function ConsentCard({
     const unconfirmed = local?.accepted === true && !local.confirmed;
     return (
       <div className="flex flex-col gap-2">
-        <Alert variant="success" icon={<Icon name="check-circle" />}>
-          <AlertDescription>
-            {copy.acceptedLabel}
-            {byRepresentative ? ' pelo representante legal' : ''}
-            {status.acceptedAt
-              ? ` em ${formatDateTime(status.acceptedAt)}`
-              : ''}
-            .
-          </AlertDescription>
-        </Alert>
+        {/* Enquanto o aceite é só otimista, o aviso fica fora da árvore de
+            acessibilidade (o `Alert` de sucesso é um `role=status`, e o leitor
+            de tela não pode anunciar um consentimento ainda não gravado): quem
+            anuncia é o toast, que só sai depois da confirmação do servidor
+            (#553, PR 2b). */}
+        <div aria-hidden={local ? true : undefined}>
+          <Alert variant="success" icon={<Icon name="check-circle" />}>
+            <AlertDescription>
+              {copy.acceptedLabel}
+              {byRepresentative ? ' pelo representante legal' : ''}
+              {status.acceptedAt
+                ? ` em ${formatDateTime(status.acceptedAt)}`
+                : ''}
+              .
+            </AlertDescription>
+          </Alert>
+        </div>
         {error && <ErrorAlert message={error} />}
         {byRepresentative && status.canSign && !asRepresentative && (
           <OwnNameAccept purpose={purpose} onAccepted={onAccepted} />

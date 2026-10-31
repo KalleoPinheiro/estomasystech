@@ -1,6 +1,6 @@
 'use server';
 
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { after } from 'next/server';
 import { z } from 'zod';
 import {
@@ -8,17 +8,36 @@ import {
   revokePartnerShareConsent,
 } from '@/application/partners/partner-share-consent';
 import { OpenDataSubjectRequest } from '@/application/patients/data-subject-requests';
+import { CancelOwnAppointment } from '@/application/portal/cancel-own-appointment';
 import {
   ADULT_TITULAR_ONLY_MESSAGE,
+  listRepresentablePatients,
   resolveConsentSigner,
+  resolvePortalPatient,
 } from '@/application/portal/portal-identity';
+import {
+  applyGuardianAccessRevocation,
+  GUARDIAN_ACCESS_REVOCATION_DETAIL,
+  GUARDIAN_ACCESS_REVOCATION_RESOURCE,
+  notifyGuardianOfRevocation,
+} from '@/application/portal/revoke-guardian-access';
+import { ResolveWaitlistEntry } from '@/application/scheduling/waitlist';
 import { ConsentRecord } from '@/domain/consent/consent-record';
-import { ForbiddenError } from '@/domain/shared/errors';
+import { ForbiddenError, NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
+import type { ActionResult } from '@/lib/action-result';
+import {
+  ACTING_PATIENT_COOKIE,
+  actingPatientCookieOptions,
+} from '@/lib/auth/acting-patient';
 import { clientIpFromHeaders } from '@/lib/auth/client-ip';
-import { writeClinicId } from '@/lib/auth/tenant-scope';
+import { portalActorNoun } from '@/lib/auth/portal-actor';
+import { writeClinicId, writeScope } from '@/lib/auth/tenant-scope';
+import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { acceptedTemplates, CONSENT_DOCUMENTS } from '@/lib/consent-documents';
 import { toDataSubjectRequestDto } from '@/lib/dto';
+import { toPortalAppointmentDto } from '@/lib/dto/appointment';
+import { toWaitlistEntryDto } from '@/lib/dto/waitlist';
 import { controllerSnapshot } from '@/lib/legal-text';
 import { PARTNER_SHARE_CONSENT as PARTNER_CONSENT } from '@/lib/partner-share-consent-text';
 import {
@@ -28,7 +47,7 @@ import {
 } from '@/lib/portal-input';
 import { controllerOf } from '@/lib/server/data/portal';
 import { defineAction } from '@/lib/server/define-action';
-import { withActingPatient } from '@/lib/server/session';
+import { readSession, withActingPatient } from '@/lib/server/session';
 
 /**
  * Atos de LGPD do portal como Server Action (#553, PR 2a, ADR-081 § 5): aceite
@@ -279,4 +298,212 @@ export const openDataRequest = defineAction({
       ? `${result.request.kind} · pelo representante legal`
       : result.request.kind,
   }),
+});
+
+/**
+ * Efeito de fora do banco (calendário externo, e-mail, cookie) que só vale
+ * depois que a transação CONFIRMOU: a ação interna grava e audita; se ela
+ * falha, o efeito nunca roda (#553, PR 2b).
+ */
+function afterCommit<I, R>(
+  action: (input: I) => Promise<ActionResult<R>>,
+  effect: (done: { input: I; data: R }) => Promise<void>,
+): (input: I) => Promise<ActionResult<R>> {
+  return async (input) => {
+    const result = await action(input);
+    if (result.success) await effect({ input, data: result.data });
+    return result;
+  };
+}
+
+/** Escopo de escrita da sessão que acabou de executar a ação. */
+async function committedScope() {
+  const state = await readSession();
+  if (state.status !== 'active') {
+    throw new ForbiddenError('Não autenticado');
+  }
+  return { session: state.session, scope: writeScope(state.session) };
+}
+
+const appointmentIdSchema = z.object({
+  appointmentId: z.string().min(1).max(100),
+  reason: z.string().max(1000).nullish(),
+});
+
+const cancelAppointmentInner = defineAction({
+  access: PORTAL_PATIENT_ACCESS,
+  input: appointmentIdSchema,
+  handler: async ({ input, session, tx }) => {
+    const patient = await resolvePortalPatient(
+      tx,
+      await withActingPatient(session),
+    );
+    const { appointment, changed } = await new CancelOwnAppointment(
+      tx.patients,
+      tx.appointments,
+      tx.scheduleConfig,
+    ).execute({
+      patientId: patient.id,
+      appointmentId: input.appointmentId,
+      reason: input.reason ?? null,
+    });
+    return {
+      appointment: toPortalAppointmentDto(appointment),
+      patientId: patient.id,
+      changed,
+      actor: portalActorNoun(session),
+    };
+  },
+  // Repetição idempotente (já cancelada pelo paciente) não grava nem audita.
+  audit: ({ result }) =>
+    result.changed
+      ? {
+          action: 'update',
+          resourceType: 'appointment',
+          resourceId: result.appointment.id,
+          patientId: result.patientId,
+          detail: `cancelada pelo ${result.actor} no portal`,
+        }
+      : null,
+});
+
+/**
+ * Cancelamento da própria consulta, com a antecedência mínima da clínica. A
+ * remoção no Google Calendar sai depois da confirmação, fora da transação.
+ */
+export const cancelAppointment = afterCommit(
+  cancelAppointmentInner,
+  async ({ data }) => {
+    if (!data.changed) return;
+    const { scope } = await committedScope();
+    const services = await getRepositories(scope);
+    const eventId = (await services.appointments.findById(data.appointment.id))
+      ?.googleEventId;
+    if (eventId) {
+      scheduleCalendarSync(services, (sync) => sync.removed(eventId));
+    }
+  },
+);
+
+/** Paciente sai da lista de espera (só a própria entrada; de outro paciente é 404). */
+export const leaveWaitlist = defineAction({
+  access: PORTAL_PATIENT_ACCESS,
+  input: z.object({ id: z.string().min(1).max(100) }),
+  handler: async ({ input, session, tx }) => {
+    const patient = await resolvePortalPatient(
+      tx,
+      await withActingPatient(session),
+    );
+    const entry = await new ResolveWaitlistEntry(tx.waitlist).execute(
+      input.id,
+      'removed',
+      { patientId: patient.id },
+    );
+    return {
+      entry: toWaitlistEntryDto(entry),
+      actor: portalActorNoun(session),
+    };
+  },
+  audit: ({ result }) => ({
+    action: 'update',
+    resourceType: 'waitlist-entry',
+    resourceId: result.entry.id,
+    patientId: result.entry.patientId,
+    detail: `saiu da lista pelo portal (${result.actor})`,
+  }),
+});
+
+const revokeGuardianAccessInner = defineAction({
+  // Só o paciente: o responsável não revoga a própria autorização (ADR-028).
+  access: { kind: 'portal', roles: ['patient'] },
+  input: z.object({}),
+  handler: async ({ session, tx }) => {
+    const patient = await resolvePortalPatient(
+      tx,
+      await withActingPatient(session),
+    );
+    await applyGuardianAccessRevocation(tx, patient);
+    return { revoked: true as const, patientId: patient.id };
+  },
+  audit: ({ result }) => ({
+    action: 'update',
+    resourceType: GUARDIAN_ACCESS_REVOCATION_RESOURCE,
+    resourceId: result.patientId,
+    patientId: result.patientId,
+    detail: GUARDIAN_ACCESS_REVOCATION_DETAIL,
+  }),
+});
+
+/**
+ * O paciente encerra o acesso do responsável (ADR-028). O aviso por e-mail ao
+ * responsável sai depois da confirmação (`after()`) e nunca desfaz a revogação.
+ */
+export const revokeGuardianAccess = afterCommit(
+  revokeGuardianAccessInner,
+  async ({ data }) => {
+    const { session, scope } = await committedScope();
+    const services = await getRepositories(scope);
+    const patient = await services.patients.findById(data.patientId);
+    if (!patient?.guardianId) return;
+    const guardianId = patient.guardianId;
+    after(() =>
+      notifyGuardianOfRevocation(
+        {
+          auditEvents: services.auditEvents,
+          guardians: services.guardians,
+          email: services.email,
+        },
+        patient,
+        guardianId,
+        { subject: session.subject, clinicId: session.clinicId },
+      ),
+    );
+  },
+);
+
+const actingForInner = defineAction({
+  access: { kind: 'portal', roles: ['guardian'] },
+  input: z.object({ patientId: z.string().min(1).max(100) }),
+  handler: async ({ input, session, tx }) => {
+    const patients = await listRepresentablePatients(tx, session);
+    if (!patients.some((p) => p.id === input.patientId)) {
+      throw new NotFoundError('Paciente', input.patientId);
+    }
+    return { patientId: input.patientId };
+  },
+  audit: ({ result }) => ({
+    action: 'update',
+    resourceType: 'guardian-acting-for',
+    resourceId: result.patientId,
+    patientId: result.patientId,
+    detail: 'responsável passou a agir em nome do paciente',
+  }),
+});
+
+/**
+ * Escolhe em nome de quem o responsável age (ADR-027): valida o vínculo, grava
+ * a escolha na trilha e SÓ DEPOIS da confirmação grava o cookie. O `refresh()`
+ * da ação já renderiza a tela com o cookie novo.
+ */
+export const actForPatient = afterCommit(actingForInner, async ({ data }) => {
+  (await cookies()).set(
+    ACTING_PATIENT_COOKIE,
+    data.patientId,
+    actingPatientCookieOptions(),
+  );
+});
+
+const stopActingInner = defineAction({
+  access: { kind: 'portal', roles: ['guardian'] },
+  input: z.object({}),
+  handler: async () => ({ patientId: null }),
+  audit: false,
+});
+
+/** Deixa de agir em nome do paciente atual (troca de paciente ou saída). */
+export const stopActingForPatient = afterCommit(stopActingInner, async () => {
+  (await cookies()).set(ACTING_PATIENT_COOKIE, '', {
+    ...actingPatientCookieOptions(),
+    maxAge: 0,
+  });
 });

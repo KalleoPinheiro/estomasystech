@@ -9,6 +9,10 @@ import { formatTime } from '@/lib/format';
 
 import { PatientPortalHarness } from '../support/portal-harness';
 
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
 vi.mock('next/navigation', async () =>
   (await import('../support/portal-router')).navigationMock(),
 );

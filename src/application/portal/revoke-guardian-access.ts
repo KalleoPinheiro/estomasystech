@@ -38,9 +38,7 @@ export async function revokeGuardianAccess(
   patient: Patient,
   actor: { subject: string; clinicId: string | null },
 ): Promise<Patient> {
-  if (!patient.guardianId || patient.guardianPortalRevokedAt) {
-    throw new NotFoundError('Acesso do responsável', patient.id);
-  }
+  assertGuardianAccessActive(patient);
   await repos.auditEvents.save(
     AuditEvent.create({
       clinicId: actor.clinicId,
@@ -50,12 +48,41 @@ export async function revokeGuardianAccess(
       resourceType: GUARDIAN_ACCESS_REVOCATION_RESOURCE,
       resourceId: patient.id,
       patientId: patient.id,
-      detail: 'paciente encerrou o acesso do responsável ao portal',
+      detail: GUARDIAN_ACCESS_REVOCATION_DETAIL,
     }),
   );
+  const revoked = await applyGuardianAccessRevocation(repos, patient);
+  await notifyGuardianOfRevocation(
+    repos,
+    patient,
+    patient.guardianId as string,
+    actor,
+  );
+  return revoked;
+}
+
+export const GUARDIAN_ACCESS_REVOCATION_DETAIL =
+  'paciente encerrou o acesso do responsável ao portal';
+
+/** Sem responsável ligado, ou com o acesso já encerrado, não há o que revogar (404). */
+function assertGuardianAccessActive(patient: Patient): void {
+  if (!patient.guardianId || patient.guardianPortalRevokedAt) {
+    throw new NotFoundError('Acesso do responsável', patient.id);
+  }
+}
+
+/**
+ * A gravação da revogação, sem trilha nem aviso: a Server Action do portal
+ * grava isto e a trilha na mesma transação (ADR-075) e avisa o responsável
+ * depois, fora dela (#553, PR 2b).
+ */
+export async function applyGuardianAccessRevocation(
+  repos: { patients: PatientRepository },
+  patient: Patient,
+): Promise<Patient> {
+  assertGuardianAccessActive(patient);
   const revoked = patient.revokeGuardianPortalAccess();
   await repos.patients.save(revoked);
-  await notifyGuardianOfRevocation(repos, patient, patient.guardianId, actor);
   return revoked;
 }
 
@@ -66,7 +93,7 @@ export async function revokeGuardianAccess(
  * gravada, então falha (de envio ou de trilha) é registrada e não a desfaz
  * nem derruba a resposta. O endereço não vai para a trilha.
  */
-async function notifyGuardianOfRevocation(
+export async function notifyGuardianOfRevocation(
   repos: {
     auditEvents: AuditEventRepository;
     guardians: GuardianRepository;

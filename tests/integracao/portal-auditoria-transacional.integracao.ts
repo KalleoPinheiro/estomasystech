@@ -1,9 +1,16 @@
 import { sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserAccount } from '@/domain/auth/user-account';
+import { Guardian } from '@/domain/guardian/guardian';
 import { Partner } from '@/domain/partner/partner';
 import { Patient } from '@/domain/patient/patient';
+import { Appointment } from '@/domain/scheduling/appointment';
+import { WaitlistEntry } from '@/domain/scheduling/waitlist';
+import { Money } from '@/domain/shared/money';
+import { TimeSlot } from '@/domain/shared/time-slot';
 import { getRepositories } from '@/infrastructure/container';
 import { getDb } from '@/infrastructure/persistence/drizzle/db';
+import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { SESSION_COOKIE } from '@/lib/auth/session';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import {
@@ -17,6 +24,7 @@ import { sessionToken } from '../support/session';
 process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 const cookieStore = { value: undefined as string | undefined };
+const cookieWrites: string[] = [];
 const refreshed = vi.fn();
 
 vi.mock('next/headers', () => ({
@@ -25,6 +33,9 @@ vi.mock('next/headers', () => ({
       name === SESSION_COOKIE && cookieStore.value !== undefined
         ? { name, value: cookieStore.value }
         : undefined,
+    set: (name: string) => {
+      cookieWrites.push(name);
+    },
   }),
   headers: async () => new Headers({ 'x-forwarded-for': '198.51.100.7' }),
 }));
@@ -85,6 +96,7 @@ beforeEach(async () => {
   await ensureTestClinics();
   await completeClinicRegistration(CLINIC_A_ID);
   refreshed.mockClear();
+  cookieWrites.length = 0;
 });
 
 describe('Feature: atos de LGPD do portal gravam e auditam na mesma transação (ADR-075, Postgres real)', () => {
@@ -173,6 +185,116 @@ describe('Feature: atos de LGPD do portal gravam e auditam na mesma transação 
       expect(await repos.dataSubjectRequests.findByPatient(patient.id)).toEqual(
         [],
       );
+    });
+  });
+});
+
+describe('Feature: ações restantes do portal gravam e auditam na mesma transação (#553, PR 2b, Postgres real)', () => {
+  it('Dado consulta futura, Quando o cancelamento perde a trilha, Então a consulta segue marcada e o calendário não é tocado', async () => {
+    const { repos, patient } = await patientSignedIn();
+    const start = new Date(Date.now() + 40 * 86_400_000);
+    const appointment = Appointment.create({
+      patientId: patient.id,
+      slot: TimeSlot.create(start, new Date(start.getTime() + 3_600_000)),
+      procedure: 'Curativo',
+      price: Money.fromCents(10_000),
+    });
+    await repos.appointments.save(appointment);
+    const { cancelAppointment } = await import('@/app/portal/actions');
+
+    await withFailingAudit(async () => {
+      const result = await cancelAppointment({ appointmentId: appointment.id });
+
+      expect(result.success).toBe(false);
+      const stored = await repos.appointments.findById(appointment.id);
+      expect(stored?.status).toBe('scheduled');
+      expect(refreshed).not.toHaveBeenCalled();
+    });
+  });
+
+  it('Dado entrada na lista de espera, Quando a saída perde a trilha, Então a entrada segue aguardando', async () => {
+    const { repos, patient } = await patientSignedIn();
+    const entry = WaitlistEntry.create({
+      patientId: patient.id,
+      fromDate: '2027-03-01',
+      toDate: '2027-03-10',
+      source: 'patient',
+    });
+    await repos.waitlist.save(entry);
+    const { leaveWaitlist } = await import('@/app/portal/actions');
+
+    await withFailingAudit(async () => {
+      const result = await leaveWaitlist({ id: entry.id });
+
+      expect(result.success).toBe(false);
+      expect((await repos.waitlist.findById(entry.id))?.status).toBe('waiting');
+    });
+  });
+
+  it('Dado responsável ligado, Quando o encerramento do acesso perde a trilha, Então o acesso segue ativo', async () => {
+    const setup = await getRepositories(clinicScope(CLINIC_A_ID));
+    const guardian = Guardian.create({
+      fullName: unique('Responsável Integração'),
+      relationship: 'mae',
+      phone: '11999990000',
+      email: null,
+    });
+    await setup.guardians.save(guardian);
+    const { repos, patient } = await patientSignedIn();
+    await repos.patients.save(patient.update({ guardianId: guardian.id }));
+    const { revokeGuardianAccess } = await import('@/app/portal/actions');
+
+    await withFailingAudit(async () => {
+      const result = await revokeGuardianAccess({});
+
+      expect(result.success).toBe(false);
+      const stored = await repos.patients.findById(patient.id);
+      expect(stored?.guardianPortalRevokedAt).toBeFalsy();
+    });
+  });
+
+  it('Dado responsável com paciente, Quando a escolha perde a trilha, Então nenhum cookie é gravado', async () => {
+    const repos = await getRepositories(clinicScope(CLINIC_A_ID));
+    const guardian = Guardian.create({
+      fullName: unique('Responsável Cookie'),
+      relationship: 'mae',
+      phone: '11999990000',
+      email: null,
+    });
+    await repos.guardians.save(guardian);
+    const email = `${unique('resp')}@x.com`;
+    await repos.userAccounts.save(
+      UserAccount.create({
+        email,
+        passwordHash: UNSET_PASSWORD_HASH,
+        role: 'guardian',
+        clinicId: CLINIC_A_ID,
+        guardianId: guardian.id,
+      }),
+    );
+    const child = Patient.create({
+      fullName: unique('Representado'),
+      email: `${unique('rep')}@x.com`,
+      phone: '11988880000',
+      birthDate: new Date(Date.now() - 10 * 365 * 86_400_000),
+      guardianId: guardian.id,
+    });
+    await repos.patients.save(child);
+    cookieStore.value = sessionToken(
+      'guardian',
+      email,
+      undefined,
+      CLINIC_A_ID,
+      null,
+    );
+    const { actForPatient } = await import('@/app/portal/actions');
+
+    await withFailingAudit(async () => {
+      const result = await actForPatient({ patientId: child.id });
+
+      expect(result.success).toBe(false);
+      expect(cookieWrites).toEqual([]);
+      expect(refreshed).not.toHaveBeenCalled();
     });
   });
 });

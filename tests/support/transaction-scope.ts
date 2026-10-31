@@ -117,6 +117,7 @@ export function inMemoryScope(
     consentRecords: notInMemory('consentRecords'),
     dataSubjectRequests: notInMemory('dataSubjectRequests'),
     clinics: notInMemory('clinics'),
+    waitlist: notInMemory('waitlist'),
     anamneses: new InMemoryAnamnesisRepository(),
     evolutions: new InMemoryEvolutionNoteRepository(),
     assessments: new InMemoryConditionAssessmentRepository(),

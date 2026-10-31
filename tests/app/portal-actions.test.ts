@@ -3,6 +3,10 @@ import { UserAccount } from '@/domain/auth/user-account';
 import { Guardian } from '@/domain/guardian/guardian';
 import { Partner } from '@/domain/partner/partner';
 import { Patient } from '@/domain/patient/patient';
+import { Appointment } from '@/domain/scheduling/appointment';
+import { WaitlistEntry } from '@/domain/scheduling/waitlist';
+import { Money } from '@/domain/shared/money';
+import { TimeSlot } from '@/domain/shared/time-slot';
 import { getRepositories } from '@/infrastructure/container';
 import { ACTING_PATIENT_COOKIE } from '@/lib/auth/acting-patient';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
@@ -24,6 +28,8 @@ const cookieStore = {
   acting: undefined as string | undefined,
   forwardedFor: '203.0.113.9' as string | null,
 };
+const cookieWrites: Array<{ name: string; value: string; options: unknown }> =
+  [];
 const refreshed = vi.fn();
 const afterQueue: Array<() => Promise<unknown> | unknown> = [];
 
@@ -38,6 +44,9 @@ vi.mock('next/headers', () => ({
       }
       return undefined;
     },
+    set: (name: string, value: string, options: unknown) => {
+      cookieWrites.push({ name, value, options });
+    },
   }),
   headers: async () =>
     new Headers(
@@ -45,6 +54,10 @@ vi.mock('next/headers', () => ({
         ? { 'x-forwarded-for': cookieStore.forwardedFor }
         : {},
     ),
+}));
+const calendarSync = vi.fn();
+vi.mock('@/lib/calendar-sync', () => ({
+  scheduleCalendarSync: (...args: unknown[]) => calendarSync(...args),
 }));
 vi.mock('next/navigation', () => ({ redirect: vi.fn(), forbidden: vi.fn() }));
 vi.mock('next/cache', () => ({ refresh: () => refreshed() }));
@@ -73,7 +86,7 @@ const signIn = (role: Parameters<typeof sessionToken>[0], email: string) => {
 const repos = () => getRepositories(clinicScope(CLINIC_A_ID));
 
 async function adultPatient(
-  extra: { referredByPartnerId?: string | null } = {},
+  extra: { referredByPartnerId?: string | null; guardianId?: string } = {},
 ) {
   const { patients } = await repos();
   const patient = Patient.create({
@@ -140,6 +153,8 @@ beforeEach(async () => {
   cookieStore.forwardedFor = '203.0.113.9';
   refreshed.mockClear();
   afterQueue.length = 0;
+  cookieWrites.length = 0;
+  calendarSync.mockClear();
 });
 
 describe('Feature: guarda das ações do portal (ADR-074)', () => {
@@ -557,5 +572,330 @@ describe('Feature: pedido do titular (LGPD art. 18)', () => {
     });
 
     expect(result.error).toContain('Este pedido é do próprio paciente');
+  });
+});
+
+let bookingSeq = 0;
+// Consultas distantes ganham um deslocamento único (a agenda da clínica não
+// aceita sobreposição); as de última hora usam horas fixas, dentro da janela.
+const hoursAhead = (hours: number) =>
+  new Date(
+    Date.now() +
+      hours * 3_600_000 +
+      (hours >= 24 ? ++bookingSeq * 2 * 3_600_000 : 0),
+  );
+
+async function bookedFor(patientId: string, startsInHours: number) {
+  const { appointments } = await repos();
+  const start = hoursAhead(startsInHours);
+  const appointment = Appointment.create({
+    patientId,
+    slot: TimeSlot.create(start, new Date(start.getTime() + 3_600_000)),
+    procedure: 'Curativo',
+    price: Money.fromCents(10_000),
+  });
+  await appointments.save(appointment);
+  return appointment;
+}
+
+async function waitingFor(patientId: string) {
+  const { waitlist } = await repos();
+  const entry = WaitlistEntry.create({
+    patientId,
+    fromDate: '2027-03-01',
+    toDate: '2027-03-10',
+    source: 'patient',
+  });
+  await waitlist.save(entry);
+  return entry;
+}
+
+describe('Feature: cancelar a própria consulta (#553, PR 2b)', () => {
+  it('Dado consulta com antecedência, Quando o paciente cancela, Então fica cancelada pelo paciente, com trilha e refresh', async () => {
+    const patient = await adultPatient();
+    const appointment = await bookedFor(patient.id, 24 * 5);
+    signIn('patient', patient.email as string);
+    const { cancelAppointment } = await actions();
+
+    const result = await cancelAppointment({
+      appointmentId: appointment.id,
+      reason: 'Imprevisto',
+    });
+
+    expect(result.success).toBe(true);
+    const stored = await (await repos()).appointments.findById(appointment.id);
+    expect(stored?.status).toBe('cancelled');
+    expect(stored?.cancellation?.by).toBe('patient');
+    const events = await auditOf(patient.id, 'appointment');
+    expect(events).toHaveLength(1);
+    expect(events[0].detail).toBe('cancelada pelo paciente no portal');
+    expect(refreshed).toHaveBeenCalledTimes(1);
+  });
+
+  it('Dado a mesma consulta já cancelada, Quando repete, Então sucesso idempotente sem segunda trilha', async () => {
+    const patient = await adultPatient();
+    const appointment = await bookedFor(patient.id, 24 * 5);
+    signIn('patient', patient.email as string);
+    const { cancelAppointment } = await actions();
+    await cancelAppointment({ appointmentId: appointment.id });
+
+    const again = await cancelAppointment({ appointmentId: appointment.id });
+
+    expect(again.success).toBe(true);
+    expect(await auditOf(patient.id, 'appointment')).toHaveLength(1);
+  });
+
+  it('Dado consulta dentro da antecedência mínima, Quando cancela, Então é recusado e nada muda', async () => {
+    const patient = await adultPatient();
+    const appointment = await bookedFor(patient.id, 2);
+    signIn('patient', patient.email as string);
+    const { cancelAppointment } = await actions();
+
+    const result = await cancelAppointment({ appointmentId: appointment.id });
+
+    expect(result.success).toBe(false);
+    const stored = await (await repos()).appointments.findById(appointment.id);
+    expect(stored?.status).toBe('scheduled');
+    expect(await auditOf(patient.id, 'appointment')).toHaveLength(0);
+    expect(refreshed).not.toHaveBeenCalled();
+  });
+
+  it('Dado consulta de outro paciente, Quando cancela, Então 404 e a consulta segue marcada', async () => {
+    const owner = await adultPatient();
+    const intruder = await adultPatient();
+    const appointment = await bookedFor(owner.id, 24 * 5);
+    signIn('patient', intruder.email as string);
+    const { cancelAppointment } = await actions();
+
+    const result = await cancelAppointment({ appointmentId: appointment.id });
+
+    expect(result.success).toBe(false);
+    const stored = await (await repos()).appointments.findById(appointment.id);
+    expect(stored?.status).toBe('scheduled');
+  });
+
+  it('Dado o papel atendente, Quando cancela, Então recusado pela guarda', async () => {
+    signIn('atendente', 'atendente@clinica.com');
+    const { cancelAppointment } = await actions();
+
+    const result = await cancelAppointment({ appointmentId: 'x' });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('Dado consulta com evento no Google Agenda, Quando cancela, Então a remoção só é agendada depois da confirmação', async () => {
+    const patient = await adultPatient();
+    const appointment = (await bookedFor(patient.id, 24 * 5)).withGoogleEventId(
+      'evt-1',
+    );
+    await (await repos()).appointments.save(appointment);
+    signIn('patient', patient.email as string);
+    const { cancelAppointment } = await actions();
+
+    const result = await cancelAppointment({ appointmentId: appointment.id });
+
+    expect(result.success).toBe(true);
+    expect(calendarSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('Dado consulta sem evento externo ou cancelamento recusado, Quando cancela, Então o calendário não é tocado', async () => {
+    const patient = await adultPatient();
+    const plain = await bookedFor(patient.id, 24 * 5);
+    const late = (await bookedFor(patient.id, 4)).withGoogleEventId('evt-2');
+    await (await repos()).appointments.save(late);
+    signIn('patient', patient.email as string);
+    const { cancelAppointment } = await actions();
+
+    await cancelAppointment({ appointmentId: plain.id });
+    await cancelAppointment({ appointmentId: late.id });
+    await cancelAppointment({ appointmentId: plain.id });
+
+    expect(calendarSync).not.toHaveBeenCalled();
+  });
+});
+
+describe('Feature: sair da lista de espera (#553, PR 2b)', () => {
+  it('Dado entrada própria, Quando sai da lista, Então a entrada é removida com trilha', async () => {
+    const patient = await adultPatient();
+    const entry = await waitingFor(patient.id);
+    signIn('patient', patient.email as string);
+    const { leaveWaitlist } = await actions();
+
+    const result = await leaveWaitlist({ id: entry.id });
+
+    expect(result.success).toBe(true);
+    const stored = await (await repos()).waitlist.findById(entry.id);
+    expect(stored?.status).toBe('removed');
+    const [event] = await auditOf(patient.id, 'waitlist-entry');
+    expect(event.detail).toBe('saiu da lista pelo portal (paciente)');
+    expect(refreshed).toHaveBeenCalledTimes(1);
+  });
+
+  it('Dado entrada de outro paciente, Quando tenta sair, Então 404, nada muda e nada é auditado', async () => {
+    const owner = await adultPatient();
+    const intruder = await adultPatient();
+    const entry = await waitingFor(owner.id);
+    signIn('patient', intruder.email as string);
+    const { leaveWaitlist } = await actions();
+
+    const result = await leaveWaitlist({ id: entry.id });
+
+    expect(result.success).toBe(false);
+    const stored = await (await repos()).waitlist.findById(entry.id);
+    expect(stored?.status).toBe('waiting');
+    expect(await auditOf(owner.id, 'waitlist-entry')).toHaveLength(0);
+  });
+
+  it('Dado o responsável agindo pelo menor, Quando sai da lista, Então a trilha cita o representante', async () => {
+    const { email, patients } = await guardianOf('mae', [yearsAgo(10)]);
+    const entry = await waitingFor(patients[0].id);
+    signIn('guardian', email);
+    cookieStore.acting = patients[0].id;
+    const { leaveWaitlist } = await actions();
+
+    const result = await leaveWaitlist({ id: entry.id });
+
+    expect(result.success).toBe(true);
+    const [event] = await auditOf(patients[0].id, 'waitlist-entry');
+    expect(event.detail).toBe('saiu da lista pelo portal (responsável)');
+  });
+});
+
+describe('Feature: encerrar o acesso do responsável (#553, PR 2b)', () => {
+  async function patientWithGuardian() {
+    const { guardian } = await guardianOf('mae', []);
+    return {
+      guardian,
+      patient: await adultPatient({ guardianId: guardian.id }),
+    };
+  }
+
+  it('Dado paciente com responsável, Quando encerra o acesso, Então revoga, audita e o aviso sai só depois', async () => {
+    const { patient } = await patientWithGuardian();
+    signIn('patient', patient.email as string);
+    const { revokeGuardianAccess } = await actions();
+
+    const result = await revokeGuardianAccess({});
+
+    expect(result.success).toBe(true);
+    const stored = await (await repos()).patients.findById(patient.id);
+    expect(stored?.guardianPortalRevokedAt).toBeTruthy();
+    expect(
+      await auditOf(patient.id, 'guardian-access-revocation'),
+    ).toHaveLength(1);
+    expect(afterQueue).toHaveLength(1);
+    expect(
+      await auditOf(patient.id, 'guardian-access-revocation-notice'),
+    ).toHaveLength(0);
+    await afterQueue[0]();
+    expect(
+      await auditOf(patient.id, 'guardian-access-revocation-notice'),
+    ).toHaveLength(1);
+  });
+
+  it('Dado acesso já encerrado, Quando repete, Então 404, sem segunda trilha nem aviso', async () => {
+    const { patient } = await patientWithGuardian();
+    signIn('patient', patient.email as string);
+    const { revokeGuardianAccess } = await actions();
+    await revokeGuardianAccess({});
+    afterQueue.length = 0;
+
+    const again = await revokeGuardianAccess({});
+
+    expect(again.success).toBe(false);
+    expect(
+      await auditOf(patient.id, 'guardian-access-revocation'),
+    ).toHaveLength(1);
+    expect(afterQueue).toHaveLength(0);
+  });
+
+  it('Dado paciente sem responsável, Quando encerra, Então 404', async () => {
+    const patient = await adultPatient();
+    signIn('patient', patient.email as string);
+    const { revokeGuardianAccess } = await actions();
+
+    const result = await revokeGuardianAccess({});
+
+    expect(result.success).toBe(false);
+    expect(afterQueue).toHaveLength(0);
+  });
+
+  it('Dado o responsável logado, Quando tenta encerrar o próprio acesso, Então recusado', async () => {
+    const { email, patients } = await guardianOf('mae', [yearsAgo(10)]);
+    signIn('guardian', email);
+    cookieStore.acting = patients[0].id;
+    const { revokeGuardianAccess } = await actions();
+
+    const result = await revokeGuardianAccess({});
+
+    expect(result.success).toBe(false);
+    const stored = await (await repos()).patients.findById(patients[0].id);
+    expect(stored?.guardianPortalRevokedAt).toBeFalsy();
+  });
+});
+
+describe('Feature: agir em nome do paciente (#553, PR 2b)', () => {
+  it('Dado paciente representado, Quando o responsável escolhe, Então a trilha registra e o cookie é gravado depois', async () => {
+    const { email, patients } = await guardianOf('mae', [
+      yearsAgo(10),
+      yearsAgo(8),
+    ]);
+    signIn('guardian', email);
+    const { actForPatient } = await actions();
+
+    const result = await actForPatient({ patientId: patients[1].id });
+
+    expect(result.success).toBe(true);
+    expect(cookieWrites).toHaveLength(1);
+    expect(cookieWrites[0]).toMatchObject({
+      name: ACTING_PATIENT_COOKIE,
+      value: patients[1].id,
+    });
+    const [event] = await auditOf(patients[1].id, 'guardian-acting-for');
+    expect(event.detail).toBe('responsável passou a agir em nome do paciente');
+    expect(refreshed).toHaveBeenCalledTimes(1);
+  });
+
+  it('Dado paciente que não é dele, Quando escolhe, Então 404 e nenhum cookie é gravado', async () => {
+    const { email } = await guardianOf('mae', [yearsAgo(10)]);
+    const stranger = await guardianOf('mae', [yearsAgo(9)]);
+    signIn('guardian', email);
+    const { actForPatient } = await actions();
+
+    const result = await actForPatient({ patientId: stranger.patients[0].id });
+
+    expect(result.success).toBe(false);
+    expect(cookieWrites).toHaveLength(0);
+    expect(
+      await auditOf(stranger.patients[0].id, 'guardian-acting-for'),
+    ).toHaveLength(0);
+  });
+
+  it('Dado o paciente titular, Quando tenta agir em nome de alguém, Então recusado sem cookie', async () => {
+    const patient = await adultPatient();
+    signIn('patient', patient.email as string);
+    const { actForPatient } = await actions();
+
+    const result = await actForPatient({ patientId: patient.id });
+
+    expect(result.success).toBe(false);
+    expect(cookieWrites).toHaveLength(0);
+  });
+
+  it('Dado que agia em nome de um paciente, Quando deixa de agir, Então o cookie é apagado e a tela atualiza', async () => {
+    const { email } = await guardianOf('mae', [yearsAgo(10)]);
+    signIn('guardian', email);
+    const { stopActingForPatient } = await actions();
+
+    const result = await stopActingForPatient({});
+
+    expect(result.success).toBe(true);
+    expect(cookieWrites).toHaveLength(1);
+    expect(cookieWrites[0]).toMatchObject({
+      name: ACTING_PATIENT_COOKIE,
+      value: '',
+      options: expect.objectContaining({ maxAge: 0 }),
+    });
+    expect(refreshed).toHaveBeenCalledTimes(1);
   });
 });
