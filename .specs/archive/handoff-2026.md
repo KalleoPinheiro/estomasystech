@@ -2168,3 +2168,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 ## Gate nuvem: config de mutação alterada roda a mutação no conjunto novo (2026-10-31) — EM REVISÃO
 - **O que mudou**: `scripts/gate-cloud/impacto.ts` (`--mutacao`) compara o `mutate` do `stryker.config.json` com o da base e acrescenta aos alvos os arquivos que casam com os padrões novos (sem `.d.ts` nem `index.ts`). Antes o gate pulava a mutação quando só a config mudava (achado da revisão do #625). Mudança só no `include` de `vitest.mutacao.config.mts` não acrescenta alvo e segue sem disparar a mutação. `scripts/gate/` intocado. Testes novos em `tests/scripts/gate-cloud-impacto.test.ts`.
 - **Next step**: revisão limpa e merge na release/v0.4.0. **Blockers**: nenhum.
+
+## Remover RoleGate sem uso (#595) (2026-10-31) — EM REVISÃO
+- **O que mudou**: `src/app/(staff)/role-gate.tsx` removido; nenhuma referência restante (sobrou só texto de ADR/handoff). `scripts/gate/` intocado.
+- **TESTE-ALTERADO**: componente sem uso, papel por tela decidido no servidor (ADR-075; cenário coberto por tests/lib/server/session.test.ts e e2e/casca-equipe-servidor.spec.ts). Quatro cenários do `RoleGate` saem de `tests/pages/staff-nav-role.test.tsx`; os do `StaffNav` ficam.
+- **Next step**: gate nuvem perfil `pr` e merge na release/v0.4.0; segue #554. **Blockers**: nenhum.
