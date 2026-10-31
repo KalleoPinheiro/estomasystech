@@ -12,12 +12,13 @@ import {
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import Image from 'next/image';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { FilePicker } from '@/components/file-picker';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
 import { formatDateTime } from '@/lib/format';
+import { acceptConsent, revokeConsent } from './actions';
 
 /** Finalidade do termo (#216): TCLE de tratamento ou autorização de imagem. */
 export type ConsentPurposeDto = 'treatment' | 'image';
@@ -74,13 +75,13 @@ const COPY: Record<
  * foto (COMP3-01), então uma cópia só evita telas divergentes após o aceite.
  */
 export function ConsentCard({
-  status,
+  status: serverStatus,
   onAccepted,
   purpose = 'treatment',
   asRepresentative = false,
 }: {
   status: ConsentStatusDto | null;
-  onAccepted: () => void;
+  onAccepted: () => void | Promise<void>;
   purpose?: ConsentPurposeDto;
   /** Quem assina é o representante legal do menor (#372). */
   asRepresentative?: boolean;
@@ -92,6 +93,29 @@ export function ConsentCard({
   // Consentimento explícito (#481, LGPD art. 8º): o botão só libera depois de marcar.
   const [agreed, setAgreed] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  // Resposta imediata ao toque (#623, CLS): o cartão do termo troca de altura
+  // ao aceitar ou revogar, e a tela nova só chega do servidor depois da rede.
+  // Trocar no toque mantém o salto dentro da janela de 500 ms da entrada do
+  // usuário e o dado do servidor depois só confirma o que já está na tela.
+  const [local, setLocal] = useState<{
+    accepted: boolean;
+    at: string;
+    confirmed: boolean;
+  } | null>(null);
+  // A cópia local vale até a tela nova chegar (sai quando a releitura termina,
+  // no `finally`) e volta atrás se o servidor recusar (`catch`); se o servidor
+  // confirmar antes, ela sai aqui e passa a valer o dado do servidor.
+  useEffect(() => {
+    if (local && serverStatus?.accepted === local.accepted) setLocal(null);
+  }, [local, serverStatus?.accepted]);
+  const status =
+    serverStatus && local && local.accepted !== serverStatus.accepted
+      ? {
+          ...serverStatus,
+          accepted: local.accepted,
+          acceptedAt: local.accepted ? local.at : serverStatus.acceptedAt,
+        }
+      : serverStatus;
 
   if (!status) return null;
 
@@ -99,26 +123,29 @@ export function ConsentCard({
     const revoke = async () => {
       setRevoking(true);
       setError(null);
+      setLocal({
+        accepted: false,
+        at: new Date().toISOString(),
+        confirmed: false,
+      });
       try {
-        await apiFetch(
-          `/api/portal/patient/consent/revoke?purpose=${purpose}`,
-          {
-            method: 'POST',
-          },
-        );
+        await unwrapAction(revokeConsent({ purpose }));
         toast({ description: 'Consentimento revogado', variant: 'success' });
-        onAccepted();
+        await onAccepted();
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Erro ao revogar consentimento';
+        setLocal(null);
         setError(message);
         toast({ description: message, variant: 'danger' });
       } finally {
         setRevoking(false);
+        setLocal(null);
       }
     };
 
     const byRepresentative = Boolean(status.signedByRelationship);
+    const unconfirmed = local?.accepted === true && !local.confirmed;
     return (
       <div className="flex flex-col gap-2">
         <Alert variant="success" icon={<Icon name="check-circle" />}>
@@ -144,8 +171,10 @@ export function ConsentCard({
               type="button"
               variant="ghost"
               size="sm"
-              disabled={revoking}
-              className="self-start"
+              disabled={revoking || unconfirmed}
+              // Reserva o lugar do botão até o servidor confirmar o aceite:
+              // o cartão não muda de altura, e o botão só vale confirmado.
+              className={unconfirmed ? 'invisible self-start' : 'self-start'}
             >
               {revoking ? 'Revogando…' : copy.revokeButton}
             </Button>
@@ -163,15 +192,21 @@ export function ConsentCard({
   const accept = async () => {
     setAccepting(true);
     setError(null);
+    setLocal({
+      accepted: true,
+      at: new Date().toISOString(),
+      confirmed: false,
+    });
     try {
-      await apiFetch(`/api/portal/patient/consent?purpose=${purpose}`, {
-        method: 'POST',
-      });
+      await unwrapAction(acceptConsent({ purpose }));
+      // Aviso só depois do servidor confirmar; o botão de revogar vale junto.
       toast({ description: copy.acceptedLabel, variant: 'success' });
-      onAccepted();
+      setLocal((current) => current && { ...current, confirmed: true });
+      await onAccepted();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Erro ao registrar aceite';
+      setLocal(null);
       setError(message);
       toast({ description: message, variant: 'danger' });
     } finally {
@@ -181,6 +216,7 @@ export function ConsentCard({
       // (COMP3-01) seguia bloqueado sem caminho de volta. O POST é idempotente
       // (rota devolve o aceite existente), então tentar de novo é seguro.
       setAccepting(false);
+      setLocal(null);
     }
   };
 
@@ -244,9 +280,7 @@ function OwnNameAccept({
   const accept = async () => {
     setSending(true);
     try {
-      await apiFetch(`/api/portal/patient/consent?purpose=${purpose}`, {
-        method: 'POST',
-      });
+      await unwrapAction(acceptConsent({ purpose }));
       toast({ description: 'Termo aceito em seu nome', variant: 'success' });
       onAccepted();
     } catch (err) {

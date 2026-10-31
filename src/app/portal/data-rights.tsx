@@ -5,6 +5,7 @@ import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
+import { unwrapAction } from '@/lib/action-result';
 import { apiFetch } from '@/lib/client';
 import { DATA_RIGHTS_NOTICE } from '@/lib/data-rights-text';
 import {
@@ -13,6 +14,7 @@ import {
   type DataSubjectRequestDto,
 } from '@/lib/dto/data-subject-request';
 import { formatDateTime } from '@/lib/format';
+import { openDataRequest } from './actions';
 import { usePortalRefresh } from './use-portal-refresh';
 
 type Kind = DataSubjectRequestDto['kind'];
@@ -110,10 +112,9 @@ function DataRequests({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch('/api/portal/patient/data-requests', {
-        method: 'POST',
-        body: JSON.stringify({ kind, details: details.trim() || null }),
-      });
+      await unwrapAction(
+        openDataRequest({ kind, details: details.trim() || null }),
+      );
       setDetails('');
       toast({
         description: 'Pedido enviado. A clínica vai analisar.',

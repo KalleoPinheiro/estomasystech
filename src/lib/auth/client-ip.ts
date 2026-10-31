@@ -57,10 +57,18 @@ function warnMissingForwardedFor(header: string | null, hops: number): void {
   );
 }
 
-/** IP do cliente da requisição usando `TRUSTED_PROXY_HOPS` (default 1). */
-export function clientIp(request: NextRequest): string {
-  const header = request.headers.get('x-forwarded-for');
+/**
+ * IP do cliente pelos cabeçalhos da requisição (`TRUSTED_PROXY_HOPS`, default
+ * 1): a mesma derivação das rotas, para a Server Action que lê `headers()`.
+ */
+export function clientIpFromHeaders(headers: Pick<Headers, 'get'>): string {
+  const header = headers.get('x-forwarded-for');
   const hops = Number(process.env.TRUSTED_PROXY_HOPS) || DEFAULT_TRUSTED_HOPS;
   warnMissingForwardedFor(header, hops);
   return clientIpFromHeader(header, hops);
+}
+
+/** IP do cliente da requisição usando `TRUSTED_PROXY_HOPS` (default 1). */
+export function clientIp(request: NextRequest): string {
+  return clientIpFromHeaders(request.headers);
 }

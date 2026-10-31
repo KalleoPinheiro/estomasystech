@@ -14,14 +14,17 @@ import {
   DrizzleInterventionRecordRepository,
   DrizzleOutcomeEvaluationRepository,
 } from './drizzle-care-plan-repositories';
+import { DrizzleClinicRepository } from './drizzle-clinic-repository';
 import {
   DrizzleAnamnesisRepository,
   DrizzleClinicalConditionRepository,
   DrizzleConditionAssessmentRepository,
   DrizzleConditionPhotoRepository,
+  DrizzleConsentRecordRepository,
   DrizzleEvolutionNoteRepository,
 } from './drizzle-clinical-repositories';
 import { DrizzleCommissionPayoutRepository } from './drizzle-commission-payout-repository';
+import { DrizzleDataSubjectRequestRepository } from './drizzle-data-subject-request-repository';
 import {
   DrizzleProcedureRepository,
   DrizzleScheduleConfigRepository,
@@ -147,6 +150,13 @@ export class DrizzleTransactionManager implements TransactionManager {
         nursingDiagnoses: new DrizzleNursingDiagnosisRepository(tx),
         nursingOutcomes: new DrizzleNursingOutcomeRepository(tx),
         nursingInterventions: new DrizzleNursingInterventionRepository(tx),
+        consentRecords: new DrizzleConsentRecordRepository(tx, this.clinicId),
+        dataSubjectRequests: new DrizzleDataSubjectRequestRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        clinics: new DrizzleClinicRepository(tx),
       }),
     );
   }

@@ -91,7 +91,8 @@ export class OpenDataSubjectRequest {
     await this.notifyAdmins(request);
   }
 
-  private async notifyAdmins(request: DataSubjectRequest): Promise<void> {
+  /** Avisa os Admins de Empresa; falha no aviso só é logada (#312). */
+  async notifyAdmins(request: DataSubjectRequest): Promise<void> {
     try {
       const recipients = await companyAdminEmails(this.accounts);
       const message = {

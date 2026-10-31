@@ -15,6 +15,10 @@ import { PartnerConsentHarness } from '../support/portal-harness';
 import { renderWithToast } from '../support/render-with-toast';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
 
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
 vi.mock(
   '@/app/(staff)/pacientes/[id]/actions/cadastro',
   async () => (await import('../support/ficha-actions-via-fetch')).cadastro,
