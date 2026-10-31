@@ -1,9 +1,8 @@
 'use client';
 
-import { LoadingIndicator } from '@/components/feedback';
+import { ErrorAlert } from '@/components/feedback';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { useStaffIdentity } from '@/lib/staff-access';
-import { useApiQuery } from '@/lib/use-api-query';
+import type { Loaded } from '@/lib/server/data/load-block';
 
 export interface PackageDto {
   id: string;
@@ -22,17 +21,18 @@ export interface PackageDto {
 const isExpired = (pkg: PackageDto): boolean =>
   pkg.expiresAt !== null && new Date(pkg.expiresAt).getTime() <= Date.now();
 
-/** Pacotes pré-pagos do paciente: saldo e validade à vista da equipe (COMP3-10). */
-export function PackagesSection({ patientId }: { patientId: string }) {
-  // O Profissional lê o saldo sem preço (AD-027, #296); o Admin segue com o valor.
-  const isProfessional = useStaffIdentity()?.role === 'profissional';
-  const { data: packages } = useApiQuery<PackageDto[]>(
-    isProfessional
-      ? `/api/patients/${patientId}/packages`
-      : `/api/packages?patientId=${patientId}`,
-  );
-
-  if (!packages) return <LoadingIndicator />;
+/**
+ * Pacotes pré-pagos do paciente: saldo e validade à vista da equipe (COMP3-10).
+ * O servidor já escolheu a leitura certa por papel: o Profissional lê o saldo
+ * sem preço (AD-027, #296); o Admin segue com o valor.
+ */
+export function PackagesSection({
+  packages: block,
+}: {
+  packages: Loaded<PackageDto[]> | null;
+}) {
+  if (block?.error) return <ErrorAlert message={block.error} />;
+  const packages = block?.data ?? [];
   if (packages.length === 0) {
     return (
       <p className="text-ink-3 text-sm">

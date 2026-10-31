@@ -10,7 +10,6 @@ import { apiFetch } from '@/lib/client';
 import type { PartnerShareConsentDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
 import { useStaffIdentity } from '@/lib/staff-access';
-import { useApiQuery } from '@/lib/use-api-query';
 
 const REVOKED_BY = { patient: 'pelo paciente', staff: 'pela equipe' };
 
@@ -54,12 +53,18 @@ function describe(consent: PartnerShareConsentDto): string {
  * Empresa e no Atendente, registra o consentimento dado em papel (#310), com
  * origem e autoria auditadas. Sem parceiro indicador, não aparece.
  */
-export function PartnerConsentPanel({ patientId }: { patientId: string }) {
+export function PartnerConsentPanel({
+  patientId,
+  consent,
+  onChanged,
+}: {
+  patientId: string;
+  /** Lido no servidor; `null` sem parceiro indicador ativo (o painel some). */
+  consent: PartnerShareConsentDto | null;
+  onChanged: () => void;
+}) {
   const { toast } = useToast();
   const endpoint = `/api/patients/${patientId}/partner-consent`;
-  const { data: consent, refresh } = useApiQuery<PartnerShareConsentDto | null>(
-    endpoint,
-  );
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [registering, setRegistering] = useState(false);
@@ -76,7 +81,7 @@ export function PartnerConsentPanel({ patientId }: { patientId: string }) {
         description: 'Consentimento em papel registrado',
         variant: 'success',
       });
-      refresh();
+      onChanged();
     } catch (err) {
       const message =
         err instanceof Error
@@ -95,7 +100,7 @@ export function PartnerConsentPanel({ patientId }: { patientId: string }) {
     try {
       await apiFetch(`${endpoint}/revoke`, { method: 'POST' });
       toast({ description: 'Consentimento revogado', variant: 'success' });
-      refresh();
+      onChanged();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Erro ao revogar consentimento';

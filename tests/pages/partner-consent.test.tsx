@@ -7,8 +7,9 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import { useCallback, useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PartnerConsentPanel } from '@/app/(staff)/pacientes/[id]/partner-consent-panel';
+import { PartnerConsentPanel as Panel } from '@/app/(staff)/pacientes/[id]/partner-consent-panel';
 import type { PartnerShareConsentDto } from '@/lib/dto';
 import { PartnerConsentHarness } from '../support/portal-harness';
 import { renderWithToast } from '../support/render-with-toast';
@@ -31,6 +32,29 @@ const base: PartnerShareConsentDto = {
   revokedAt: null,
   revokedBy: null,
 };
+
+/**
+ * Faz o papel do servidor na ficha (#552): lê o consentimento pela rota e, em
+ * `onChanged` (o `router.refresh()` da tela), lê de novo. Assim o painel é
+ * provado como a tela o usa, com a leitura vinda de fora.
+ */
+function PartnerConsentPanel({ patientId }: { patientId: string }) {
+  const [consent, setConsent] = useState<PartnerShareConsentDto | null>(null);
+  const read = useCallback(async () => {
+    const response = await fetch(`/api/patients/${patientId}/partner-consent`);
+    setConsent((await response.json()).data);
+  }, [patientId]);
+  useEffect(() => {
+    void read();
+  }, [read]);
+  return (
+    <Panel
+      patientId={patientId}
+      consent={consent}
+      onChanged={() => void read()}
+    />
+  );
+}
 
 const ACCEPTED_AT = '2026-05-01T12:00:00.000Z';
 const active: PartnerShareConsentDto = {

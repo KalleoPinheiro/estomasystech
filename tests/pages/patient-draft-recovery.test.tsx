@@ -78,6 +78,7 @@ const evolutions = (patientId = 'pac-1') => (
   <EvolutionsSection
     patientId={patientId}
     evolutions={[]}
+    professionals={[]}
     error={null}
     isLoading={false}
     onSaved={() => {}}
