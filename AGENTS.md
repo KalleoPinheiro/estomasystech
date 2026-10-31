@@ -128,6 +128,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | Issues (GitHub, `KalleoPinheiro/estomasystech`) | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) |
 | Triagem (labels canônicos) | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | Fluxo de sete estações e labels de fila (`pronta`, `em-andamento`, `bloqueada`) | [ADR-070](docs/adr/070-fluxo-de-sete-estacoes-com-labels-de-fila.md) |
+| **Coordenação (papel, release, gate, autonomia)** e estado da release aberta | [`docs/agents/coordenacao.md`](docs/agents/coordenacao.md), [`docs/agents/estado-v0.4.0.md`](docs/agents/estado-v0.4.0.md) |
 | Glossário e ADRs | [`docs/agents/domain.md`](docs/agents/domain.md) |
 | Planejamento (PRD vs `.specs/`, dois logs de decisão) | [`docs/agents/planning.md`](docs/agents/planning.md) |
 | Corrigir subconjunto de achados de auditoria | [`docs/agents/fix-audit-issues.md`](docs/agents/fix-audit-issues.md) |
