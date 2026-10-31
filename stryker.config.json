@@ -6,6 +6,8 @@
     "src/domain/**/*.ts",
     "src/application/**/*.ts",
     "src/lib/server/**/*.ts",
+    "src/lib/action-result.ts",
+    "src/lib/api-response.ts",
     "!src/**/*.d.ts",
     "!src/**/index.ts"
   ],
