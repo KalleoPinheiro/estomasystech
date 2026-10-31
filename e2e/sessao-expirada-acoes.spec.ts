@@ -11,9 +11,8 @@ import { nextTotpCode, totpStatePath } from "./support/totp";
  * 307 do proxy, senão a tela não vê «Não autenticado» e o rascunho se perde. A ação responde o envelope,
  * a tela guarda o rascunho e vai ao login; depois do login o texto volta. Login real, em 360 e 1280.
  */
-test.use({ storageState: { cookies: [], origins: [] } });
-// Cada login espera o próximo passo do TOTP (30 s, sem reuso de código): dois logins por teste.
-test.setTimeout(150_000);
+// Começa logado como a conta real do Admin (sessão do global-setup): só o login depois do vencimento gasta um passo de TOTP.
+test.use({ storageState: ROLE_ACCOUNTS.company_admin.storageState });
 
 const ACCOUNT = ROLE_ACCOUNTS.company_admin.email;
 const WIDTHS = [
@@ -54,7 +53,6 @@ for (const { width, height, bucket } of WIDTHS) {
       await api.dispose();
       const record = `/pacientes/${patient.id}`;
       await page.goto(record);
-      await signIn(page);
       await expect(page).toHaveURL(record);
       const note = `Alergia a látex, iodo e dipirona ${width}`;
 

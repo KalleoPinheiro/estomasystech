@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 import {
   ConflictError,
   ConsentRequiredError,
@@ -13,6 +13,17 @@ import {
 import { logError } from '@/lib/log-error';
 import { logger } from '@/lib/observability/logger';
 import { recordSignal } from '@/lib/observability/signals';
+
+// Mensagens de validação em português para a tela (rotas e Server Actions): sem
+// isto, o `zod` devolve «Too small: expected string to have >=1 characters».
+z.config(z.locales.pt());
+
+/**
+ * Caminho do campo para a mensagem. As Server Actions recebem `{ id, body }` e
+ * o campo é o que a pessoa vê na tela, então o `body.` do envelope não vaza.
+ */
+const fieldPath = (path: ReadonlyArray<PropertyKey>): string =>
+  (path.length > 1 && path[0] === 'body' ? path.slice(1) : path).join('.');
 
 export interface ApiEnvelope<T> {
   success: boolean;
@@ -61,7 +72,7 @@ export function describeFailure(error: unknown): {
 } {
   if (error instanceof ZodError) {
     const detail = error.issues
-      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .map((issue) => `${fieldPath(issue.path)}: ${issue.message}`)
       .join('; ');
     return { message: `Dados inválidos: ${detail}`, status: 400 };
   }

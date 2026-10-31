@@ -9,6 +9,7 @@ import { Modal } from '@/components/modal';
 import {
   GUARDIAN_RELATIONSHIP_LABELS,
   GUARDIAN_RELATIONSHIPS,
+  type GuardianRelationship,
 } from '@/domain/guardian/guardian';
 import {
   formatBrazilianPhone,
@@ -18,7 +19,6 @@ import { unwrapAction } from '@/lib/action-result';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
 import type { GuardianDto, PatientDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
-import type { GuardianBody } from '@/lib/guardian-schema';
 import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
 import {
@@ -41,9 +41,13 @@ function useCanManageGuardians(): boolean {
 const errorMessage = (err: unknown, fallback: string): string =>
   err instanceof Error ? err.message : fallback;
 
+/** Parentesco válido: o que o `<select>` oferece; qualquer outro valor cai em «mãe». */
+const asRelationship = (value: string): GuardianRelationship =>
+  GUARDIAN_RELATIONSHIPS.find((key) => key === value) ?? 'mae';
+
 interface GuardianFormValues {
   fullName: string;
-  relationship: string;
+  relationship: GuardianRelationship;
   phone: string;
   email: string;
 }
@@ -59,14 +63,16 @@ function GuardianFormModal({
 }) {
   const [values, setValues] = useState<GuardianFormValues>({
     fullName: guardian?.fullName ?? '',
-    relationship: guardian?.relationship ?? 'mae',
+    relationship: asRelationship(guardian?.relationship ?? 'mae'),
     phone: guardian?.phone ?? '',
     email: guardian?.email ?? '',
   });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const set = (field: keyof GuardianFormValues) => (value: string) =>
-    setValues((prev) => ({ ...prev, [field]: value }));
+  const set =
+    (field: Exclude<keyof GuardianFormValues, 'relationship'>) =>
+    (value: string) =>
+      setValues((prev) => ({ ...prev, [field]: value }));
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -105,7 +111,12 @@ function GuardianFormModal({
           Parentesco *
           <NativeSelect
             value={values.relationship}
-            onChange={(e) => set('relationship')(e.target.value)}
+            onChange={(e) =>
+              setValues((prev) => ({
+                ...prev,
+                relationship: asRelationship(e.target.value),
+              }))
+            }
             className="mt-1"
           >
             {GUARDIAN_RELATIONSHIPS.map((key) => (
@@ -275,11 +286,7 @@ export function GuardianPanel({
     }
   };
   const saveGuardian = async (values: GuardianFormValues) => {
-    // O estado do formulário é texto; o `zod` do servidor valida a relação.
-    const body = {
-      ...values,
-      email: values.email || null,
-    } as GuardianBody;
+    const body = { ...values, email: values.email || null };
     if (guardian) {
       await unwrapAction(updateGuardian({ id: guardian.id, body }));
       return done('Responsável atualizado');
