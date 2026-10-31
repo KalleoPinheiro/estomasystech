@@ -2,7 +2,12 @@
 
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PartnerPortalView } from '@/app/portal/partner-view';
+
+import { PartnerPortalHarness } from '../support/portal-harness';
+
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
+);
 
 function mockPartner(crm: string | null, specialty: string | null) {
   vi.stubGlobal(
@@ -37,7 +42,7 @@ afterEach(() => {
 describe('Feature: Cabeçalho do portal do parceiro sem separador solto', () => {
   it('Dado parceiro sem CRM e com especialidade, Quando abrir o portal, Então o texto não começa com "·"', async () => {
     mockPartner(null, 'Estomaterapia');
-    render(<PartnerPortalView />);
+    render(<PartnerPortalHarness />);
     expect(
       await screen.findByText(/^Estomaterapia — acompanhamento dos pacientes/),
     ).toBeInTheDocument();
@@ -45,7 +50,7 @@ describe('Feature: Cabeçalho do portal do parceiro sem separador solto', () => 
 
   it('Dado parceiro com CRM e sem especialidade, Quando abrir o portal, Então não sobra "·" depois do CRM', async () => {
     mockPartner('CRM-SP 12345', null);
-    render(<PartnerPortalView />);
+    render(<PartnerPortalHarness />);
     expect(
       await screen.findByText(/^CRM-SP 12345 — acompanhamento/),
     ).toBeInTheDocument();
@@ -53,7 +58,7 @@ describe('Feature: Cabeçalho do portal do parceiro sem separador solto', () => 
 
   it('Dado parceiro com CRM e especialidade, Quando abrir o portal, Então os dois aparecem separados por "·"', async () => {
     mockPartner('CRM-SP 12345', 'Estomaterapia');
-    render(<PartnerPortalView />);
+    render(<PartnerPortalHarness />);
     expect(
       await screen.findByText(/^CRM-SP 12345 · Estomaterapia — acompanhamento/),
     ).toBeInTheDocument();
@@ -61,7 +66,7 @@ describe('Feature: Cabeçalho do portal do parceiro sem separador solto', () => 
 
   it('Dado parceiro sem CRM nem especialidade, Quando abrir o portal, Então o texto começa direto em "acompanhamento"', async () => {
     mockPartner(null, null);
-    render(<PartnerPortalView />);
+    render(<PartnerPortalHarness />);
     expect(
       await screen.findByText(/^acompanhamento dos pacientes/),
     ).toBeInTheDocument();

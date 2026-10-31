@@ -14,17 +14,29 @@ import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { AppointmentDetail } from '@/app/(staff)/agenda/appointment-detail';
 import { WaitlistPanel } from '@/app/(staff)/agenda/waitlist-panel';
 import { CancellationPolicyFields } from '@/app/(staff)/configuracoes/cancellation-policy-fields';
-import { JoinWaitlist, MyWaitlist } from '@/app/portal/waitlist';
+import { JoinWaitlist } from '@/app/portal/waitlist';
 import type {
   AppointmentDto,
   PatientDto,
   ProfessionalDto,
   WaitlistEntryDto,
 } from '@/lib/dto';
+import { MyWaitlistHarness } from '../support/portal-harness';
 
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 
-vi.mock('next/navigation', () => ({ useRouter: () => router }));
+vi.mock('next/navigation', async () => {
+  const { portalRouter } = await import('../support/portal-router');
+  return {
+    useRouter: () => ({
+      ...router,
+      refresh: () => {
+        router.refresh();
+        portalRouter.reload();
+      },
+    }),
+  };
+});
 
 interface FakeResponse {
   ok: boolean;
@@ -521,7 +533,7 @@ describe('Feature: Lista de espera no portal', () => {
       },
       { path: '/api/portal/patient/waitlist', respond: () => ok(entries) },
     ]);
-    renderWithToast(<MyWaitlist />);
+    renderWithToast(<MyWaitlistHarness />);
 
     expect(await screen.findByText('Lista de espera')).toBeInTheDocument();
     expect(screen.getByText('01/07/2099 a 15/07/2099')).toBeInTheDocument();
@@ -542,7 +554,7 @@ describe('Feature: Lista de espera no portal', () => {
       },
       { path: '/api/portal/patient/waitlist', respond: () => ok([entry]) },
     ]);
-    renderWithToast(<MyWaitlist />);
+    renderWithToast(<MyWaitlistHarness />);
     fireEvent.click(
       await screen.findByRole('button', { name: 'Sair da lista' }),
     );

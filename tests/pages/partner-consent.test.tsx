@@ -10,8 +10,8 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PartnerConsentPanel as Panel } from '@/app/(staff)/pacientes/[id]/partner-consent-panel';
-import { PartnerConsentSection } from '@/app/portal/partner-consent-card';
 import type { PartnerShareConsentDto } from '@/lib/dto';
+import { PartnerConsentHarness } from '../support/portal-harness';
 import { renderWithToast } from '../support/render-with-toast';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
 
@@ -32,6 +32,9 @@ vi.mock(
   '@/app/(staff)/pacientes/[id]/actions/consentimento',
   async () =>
     (await import('../support/ficha-actions-via-fetch')).consentimento,
+);
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
 );
 
 const base: PartnerShareConsentDto = {
@@ -122,7 +125,7 @@ describe('Feature: Consentimento para o parceiro no portal do paciente (#292)', 
   it('Dado paciente sem parceiro indicador (null), Então não mostra nada', async () => {
     const calls = mockConsentApi([null]);
 
-    renderWithToast(<PartnerConsentSection />);
+    renderWithToast(<PartnerConsentHarness />);
 
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(screen.queryByText(/Compartilhar com/)).not.toBeInTheDocument();
@@ -131,7 +134,7 @@ describe('Feature: Consentimento para o parceiro no portal do paciente (#292)', 
   it('Dado sem autorização, Quando clicar "Li e autorizo", Então POST no portal e recarrega o status', async () => {
     const calls = mockConsentApi([base, active]);
 
-    renderWithToast(<PartnerConsentSection />);
+    renderWithToast(<PartnerConsentHarness />);
 
     expect(
       await screen.findByText('Compartilhar com Dra. Parceira'),
@@ -156,7 +159,7 @@ describe('Feature: Consentimento para o parceiro no portal do paciente (#292)', 
       { ...base, revoked: true, revokedAt: ACCEPTED_AT, revokedBy: 'patient' },
     ]);
 
-    renderWithToast(<PartnerConsentSection />);
+    renderWithToast(<PartnerConsentHarness />);
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Revogar autorização' }),
@@ -176,7 +179,7 @@ describe('Feature: Consentimento para o parceiro no portal do paciente (#292)', 
   it('Dado falha no POST, Então mostra o erro', async () => {
     mockConsentApi([base], false);
 
-    renderWithToast(<PartnerConsentSection />);
+    renderWithToast(<PartnerConsentHarness />);
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Li e autorizo' }),

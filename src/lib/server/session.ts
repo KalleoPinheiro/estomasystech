@@ -4,6 +4,8 @@ import { forbidden, redirect } from 'next/navigation';
 import { cache } from 'react';
 import type { UserRole } from '@/domain/auth/user-role';
 import { AUTH_NOT_CONFIGURED_MESSAGE } from '@/lib/auth/access-policy';
+import { ACTING_PATIENT_COOKIE } from '@/lib/auth/acting-patient';
+import type { PatientPortalSession } from '@/lib/auth/require-session';
 import {
   getAuthConfig,
   SESSION_COOKIE,
@@ -105,6 +107,17 @@ export async function requireStaffPageFor(href: string): Promise<Session> {
   return session;
 }
 
+/**
+ * Página aberta a qualquer sessão (equipe, portal ou plataforma): só exige
+ * entrar. Quem decide o que mostrar por papel é a própria página (ex.: `/portal`
+ * leva a equipe de volta ao sistema da clínica, #553).
+ */
+export async function requireSignedInPage(
+  options: PageGuardOptions = {},
+): Promise<Session> {
+  return requireSession(options);
+}
+
 /** Página do portal (paciente, responsável ou parceiro); `roles` restringe a um subconjunto. */
 export async function requirePortalPage(
   options: PageGuardOptions & { roles?: readonly UserRole[] } = {},
@@ -115,6 +128,21 @@ export async function requirePortalPage(
     forbidden();
   }
   return session;
+}
+
+/**
+ * Página do portal do paciente: sessão de paciente ou responsável, com o
+ * paciente em nome de quem o responsável age (cookie, ADR-027) — o mesmo que
+ * `requirePatientPortalSession` monta nas rotas. O cookie é só um id: cada
+ * leitura o revalida contra o vínculo do responsável.
+ */
+export async function requirePatientPortalPage(): Promise<PatientPortalSession> {
+  const session = await requirePortalPage({ roles: ['patient', 'guardian'] });
+  const acting =
+    session.role === 'guardian'
+      ? ((await cookies()).get(ACTING_PATIENT_COOKIE)?.value ?? null)
+      : null;
+  return { ...session, actingPatientId: acting };
 }
 
 /** Página da plataforma: só o super_admin (ADR-007). */

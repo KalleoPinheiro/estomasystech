@@ -14,7 +14,12 @@ export default defineConfig({
   ...base,
   test: {
     ...base.test,
-    include: ["tests/domain/**/*.test.ts", "tests/application/**/*.test.ts"],
+    include: [
+      "tests/domain/**/*.test.ts",
+      "tests/application/**/*.test.ts",
+      // ADR-084: src/lib/server (acesso e auditoria) entra na mutação do gate da nuvem.
+      "tests/lib/server/**/*.test.ts",
+    ],
     coverage: { enabled: false },
   },
 });
