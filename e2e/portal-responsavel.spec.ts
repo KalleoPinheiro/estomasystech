@@ -78,6 +78,8 @@ test.describe("portal do responsável (ADR-027)", () => {
     const id = unique();
     const guardian = await createGuardian(request, `Eva Responsável ${id}`, `eva.${id}@e2e.estomasystech.test`);
     const child = await createPatient(request, { fullName: `Caio Filho ${id}`, guardianId: guardian.id });
+    // Com um só representado o portal já o escolhe; com dois, aparece a lista.
+    await createPatient(request, { fullName: `Duda Filha ${id}`, guardianId: guardian.id });
     await linkGuardianAccount(request, guardian);
     await context.addCookies([sessionCookie(guardian.email, "guardian")]);
     await page.goto("/portal");
