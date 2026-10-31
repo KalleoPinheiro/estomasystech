@@ -1,6 +1,7 @@
 import type { UserRole } from '@/domain/auth/user-role';
 import { classifyRoute, isFamilyAllowedForRole } from './route-family';
 import { getAuthConfig } from './session';
+import { UNAUTHENTICATED_MESSAGE } from './unauthenticated-message';
 
 /**
  * Política de acesso do EstomaSysTech — fonte única consumida pelas DUAS camadas de
@@ -66,7 +67,7 @@ export const SHARED_PATH_PREFIXES = [
   '/api/me',
 ] as const;
 
-export const UNAUTHENTICATED_MESSAGE = 'Não autenticado';
+export { UNAUTHENTICATED_MESSAGE };
 export const STAFF_ONLY_MESSAGE = 'Acesso restrito à equipe da clínica';
 /** Distinto de STAFF_ONLY_MESSAGE: a sessão É da equipe, mas o papel não acessa esta família de rota (RBAC-16). */
 export const ROLE_FAMILY_DENIED_MESSAGE =

@@ -6,6 +6,25 @@ import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { ConditionsSection } from '@/app/(staff)/pacientes/[id]/conditions-section';
 import type { AssessmentDto, ConditionDto } from '@/lib/dto';
 
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/cadastro',
+  async () => (await import('../support/ficha-actions-via-fetch')).cadastro,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/prontuario',
+  async () => (await import('../support/ficha-actions-via-fetch')).prontuario,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/plano-cuidados',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).planoCuidados,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/consentimento',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).consentimento,
+);
+
 const wound: ConditionDto = {
   id: 'cond-wound',
   patientId: 'pac-1',

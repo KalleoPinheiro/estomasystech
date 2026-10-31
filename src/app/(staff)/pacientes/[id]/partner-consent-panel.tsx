@@ -68,7 +68,6 @@ export function PartnerConsentPanel({
   onChanged: () => void;
 }) {
   const { toast } = useToast();
-  const _endpoint = `/api/patients/${patientId}/partner-consent`;
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [registering, setRegistering] = useState(false);
