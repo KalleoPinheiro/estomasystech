@@ -5,6 +5,8 @@
  */
 
 export const SESSION_EXPIRED_ERROR = 'session_expired';
+/** Recusa sem sessão; vive aqui para o cliente comparar sem puxar o código de sessão. */
+export const UNAUTHENTICATED_MESSAGE = 'Não autenticado';
 export const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente.';
 
 /**

@@ -66,7 +66,7 @@ export const SHARED_PATH_PREFIXES = [
   '/api/me',
 ] as const;
 
-export const UNAUTHENTICATED_MESSAGE = 'Não autenticado';
+export { UNAUTHENTICATED_MESSAGE } from '../login-redirect';
 export const STAFF_ONLY_MESSAGE = 'Acesso restrito à equipe da clínica';
 /** Distinto de STAFF_ONLY_MESSAGE: a sessão É da equipe, mas o papel não acessa esta família de rota (RBAC-16). */
 export const ROLE_FAMILY_DENIED_MESSAGE =

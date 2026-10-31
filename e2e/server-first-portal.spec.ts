@@ -89,6 +89,8 @@ test.describe("Portal do paciente no servidor", () => {
 
   let patientEmail = "";
   let partnerEmail = "";
+  // Um titular novo por largura: aceitar o termo e pedir correção mudam o dado.
+  const actingEmails: Record<number, string> = {};
   let firstName = "";
   let procedureLabel = "";
 
@@ -126,6 +128,22 @@ test.describe("Portal do paciente no servidor", () => {
       amountCents: 9_000,
     });
     await linkPortalAccount(request, "patient", patient);
+    for (const width of [360, 390]) {
+      const acting = await createPatient(request, { fullName: `Titular Ações ${width} ${unique()}` });
+      const actingCondition = await createCondition(request, acting.id, {
+        kind: "wound",
+        title: `Ferida ações ${unique()}`,
+      });
+      await addAssessment(request, actingCondition.id, { lengthMm: 20, widthMm: 10, depthMm: 2 });
+      await createFollowUp(request, {
+        patientId: acting.id,
+        dueDate: new Date(Date.now() + 10 * 86_400_000).toISOString(),
+        reason: `Reavaliar ações ${unique()}`,
+      });
+      await createInvoice(request, { patientId: acting.id, description: `Fatura ações ${unique()}`, amountCents: 9_000 });
+      await linkPortalAccount(request, "patient", acting);
+      actingEmails[width] = acting.email;
+    }
     // Parceiro com um indicado, para o portal do parceiro ter conteúdo real (#613).
     const partner = await createPartner(request, { fullName: `Dra. Parceira Servidor ${unique()}` });
     partnerEmail = partner.email;
@@ -177,6 +195,46 @@ test.describe("Portal do paciente no servidor", () => {
       });
     }
   }
+
+  // #623 (F3): depois das ações do titular a tela também não pode saltar.
+  // O Next recarrega o servidor sem ação do usuário no meio: o que muda de
+  // altura precisa mudar sem empurrar o resto da página.
+  for (const width of [360, 390]) {
+    test(`/portal em ${width}px: aceitar o termo e enviar pedido não saltam`, async ({ page }) => {
+      await page.context().addCookies([sessionCookie(actingEmails[width], "patient")]);
+      await setupMetrics(page, width, true);
+
+      await page.goto("/portal");
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await page.waitForLoadState("networkidle");
+
+      // Aceita os dois termos, um depois do outro: a troca do cartão de termo
+      // por "aceito" é o que mais mexe na altura.
+      for (const term of ["tratamento", "imagem"]) {
+        await page.getByRole("checkbox").first().check();
+        await page.getByRole("button", { name: `Li e aceito o termo de ${term}` }).click();
+        await expect(page.getByText(new RegExp(`Termo de .*${term === "imagem" ? "imagem" : "tratamento"}.* aceito`)).first()).toBeVisible();
+      }
+      await page.getByLabel(/O que precisa ser corrigido/).fill("Corrigir o telefone");
+      await page.getByRole("button", { name: "Enviar pedido" }).click();
+      await expect(page.getByText("Pedido enviado. A clínica vai analisar.").first()).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(1500);
+
+      const { cls, shifts } = await readMetrics(page);
+      expect(cls, `CLS depois das ações do titular: ${shifts.join(" // ")}`).toBeLessThan(CLS_LIMIT);
+    });
+  }
+
+  test("/portal com a sessão apagada: enviar pedido leva ao login com sessão expirada", async ({ page }) => {
+    await page.context().addCookies([sessionCookie(patientEmail, "patient")]);
+    await page.goto("/portal");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.getByLabel(/O que precisa ser corrigido/).fill("Pedido sem sessão");
+    await page.context().clearCookies();
+    await page.getByRole("button", { name: "Enviar pedido" }).click();
+    await expect(page).toHaveURL(/\/login\?.*error=session_expired.*next=%2Fportal/);
+  });
 
   test("/portal sem sessão leva ao login com sessão expirada", async ({ page }) => {
     await page.goto("/portal");

@@ -12,7 +12,7 @@ import {
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import Image from 'next/image';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { FilePicker } from '@/components/file-picker';
@@ -75,7 +75,7 @@ const COPY: Record<
  * foto (COMP3-01), então uma cópia só evita telas divergentes após o aceite.
  */
 export function ConsentCard({
-  status,
+  status: serverStatus,
   onAccepted,
   purpose = 'treatment',
   asRepresentative = false,
@@ -93,6 +93,26 @@ export function ConsentCard({
   // Consentimento explícito (#481, LGPD art. 8º): o botão só libera depois de marcar.
   const [agreed, setAgreed] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  // Resposta imediata ao toque (#623, CLS): o cartão do termo troca de altura
+  // ao aceitar ou revogar, e a tela nova só chega do servidor depois da rede.
+  // Trocar no toque mantém o salto dentro da janela de 500 ms da entrada do
+  // usuário e o dado do servidor depois só confirma o que já está na tela.
+  const [local, setLocal] = useState<{ accepted: boolean; at: string } | null>(
+    null,
+  );
+  // A cópia local vale enquanto a ação voa (sai no `finally`); se o servidor
+  // confirmar antes, ela sai aqui e passa a valer o dado do servidor.
+  useEffect(() => {
+    if (local && serverStatus?.accepted === local.accepted) setLocal(null);
+  }, [local, serverStatus?.accepted]);
+  const status =
+    serverStatus && local && local.accepted !== serverStatus.accepted
+      ? {
+          ...serverStatus,
+          accepted: local.accepted,
+          acceptedAt: local.accepted ? local.at : serverStatus.acceptedAt,
+        }
+      : serverStatus;
 
   if (!status) return null;
 
@@ -100,6 +120,7 @@ export function ConsentCard({
     const revoke = async () => {
       setRevoking(true);
       setError(null);
+      setLocal({ accepted: false, at: new Date().toISOString() });
       try {
         await unwrapAction(revokeConsent({ purpose }));
         toast({ description: 'Consentimento revogado', variant: 'success' });
@@ -111,6 +132,7 @@ export function ConsentCard({
         toast({ description: message, variant: 'danger' });
       } finally {
         setRevoking(false);
+        setLocal(null);
       }
     };
 
@@ -159,6 +181,7 @@ export function ConsentCard({
   const accept = async () => {
     setAccepting(true);
     setError(null);
+    setLocal({ accepted: true, at: new Date().toISOString() });
     try {
       await unwrapAction(acceptConsent({ purpose }));
       toast({ description: copy.acceptedLabel, variant: 'success' });
@@ -175,6 +198,7 @@ export function ConsentCard({
       // (COMP3-01) seguia bloqueado sem caminho de volta. O POST é idempotente
       // (rota devolve o aceite existente), então tentar de novo é seguro.
       setAccepting(false);
+      setLocal(null);
     }
   };
 
