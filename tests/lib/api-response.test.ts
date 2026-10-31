@@ -154,4 +154,38 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
       /^Dados inválidos: body: /,
     );
   });
+
+  it('Dado erro aninhado em body com vários níveis, Quando descreve a falha, Então só o «body.» sai e o resto fica unido por ponto', () => {
+    const parsed = z
+      .object({
+        id: z.string(),
+        body: z.object({ a: z.object({ b: z.string() }) }),
+      })
+      .safeParse({ id: 'x', body: { a: { b: 1 } } });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(
+      /^Dados inválidos: a\.b: /,
+    );
+  });
+
+  it('Dado erro em campo que não é body (rota), Quando descreve a falha, Então o caminho completo é mantido', () => {
+    const parsed = z
+      .object({ id: z.string(), pessoa: z.object({ nome: z.string() }) })
+      .safeParse({ id: 'x', pessoa: { nome: 1 } });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(
+      /^Dados inválidos: pessoa\.nome: /,
+    );
+  });
+
+  it('Dados dois erros, Quando descreve a falha, Então são separados por «; »', () => {
+    const parsed = z
+      .object({ a: z.string(), b: z.string() })
+      .safeParse({ a: 1, b: 2 });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(/a: .+; b: /);
+  });
 });
