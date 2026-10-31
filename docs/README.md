@@ -179,6 +179,9 @@ Auditoria é **entrada** de planejamento, nunca pedido de trabalho por si só.
 | Arquivo | Para quê |
 | --- | --- |
 | [`governance.md`](governance.md) | progressive disclosure, docs-as-code, contexto para LLMs |
+| [`agents/coordenacao.md`](agents/coordenacao.md) | papel do coordenador, regras, fluxo de release, política do gate |
+| [`agents/estado-v0.4.0.md`](agents/estado-v0.4.0.md) | release aberta: mergeados, em andamento, fila, decisões PO |
+| [`agents/briefs-v0.4.0-leva2.md`](agents/briefs-v0.4.0-leva2.md) | briefs executáveis das issues da leva 2 |
 | [`agents/domain.md`](agents/domain.md) | glossário e ADRs |
 | [`agents/planning.md`](agents/planning.md) | onde vive cada tipo de plano; os dois logs de decisão |
 | [`agents/issue-tracker.md`](agents/issue-tracker.md) | issues no GitHub |
