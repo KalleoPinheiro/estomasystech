@@ -147,29 +147,42 @@ describe('Impacto do diff sobre os specs E2E (ADR-084)', () => {
       ]);
     });
 
+    const arquivos = [
+      'src/lib/action-result.ts',
+      'src/lib/api-response.ts',
+      'src/lib/format.ts',
+      'src/lib/server/session.ts',
+      'src/lib/server/data/patients.ts',
+      'src/lib/server/index.ts',
+      'src/lib/server/x.d.ts',
+      'src/lib/server/leia.md',
+    ];
+
     it('Dados padrões novos, Quando expande, Então devolve os arquivos que casam, sem index nem .d.ts nem exclusão', () => {
-      const alvos = alvosDeConfigNova([
-        'src/lib/action-result.ts',
-        'src/lib/api-response.ts',
-        '!src/**/*.d.ts',
-      ]);
-      expect(alvos).toEqual([
-        'src/lib/action-result.ts',
-        'src/lib/api-response.ts',
-      ]);
       expect(
-        alvosDeConfigNova(['src/lib/server/**/*.ts']).some(
-          (f) => f.endsWith('index.ts') || f.endsWith('.d.ts'),
+        alvosDeConfigNova(
+          [
+            'src/lib/action-result.ts',
+            'src/lib/api-response.ts',
+            '!src/**/*.d.ts',
+          ],
+          arquivos,
         ),
-      ).toBe(false);
-      expect(
-        alvosDeConfigNova(['src/lib/server/**/*.ts']).length,
-      ).toBeGreaterThan(1);
+      ).toEqual(['src/lib/action-result.ts', 'src/lib/api-response.ts']);
+      expect(alvosDeConfigNova(['src/lib/server/**/*.ts'], arquivos)).toEqual([
+        'src/lib/server/data/patients.ts',
+        'src/lib/server/session.ts',
+      ]);
+      expect(alvosDeConfigNova(['src/lib/*.ts'], arquivos)).toEqual([
+        'src/lib/action-result.ts',
+        'src/lib/api-response.ts',
+        'src/lib/format.ts',
+      ]);
     });
 
     it('Dado nenhum padrão novo, Quando expande, Então não há alvo', () => {
-      expect(alvosDeConfigNova([])).toEqual([]);
-      expect(alvosDeConfigNova(['!src/**/*.d.ts'])).toEqual([]);
+      expect(alvosDeConfigNova([], arquivos)).toEqual([]);
+      expect(alvosDeConfigNova(['!src/**/*.d.ts'], arquivos)).toEqual([]);
     });
   });
 });

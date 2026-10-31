@@ -8,7 +8,7 @@
  * mapa ou que não case com spec nenhum roda **todos** os specs.
  */
 import { spawnSync } from 'node:child_process';
-import { globSync, readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { detectBase } from '../gate/base';
 
 /** Arquivos que mexem em todas as telas: mudou um, roda tudo. */
@@ -120,18 +120,31 @@ export function novosPadroesMutate(baseConfig: string | null, headConfig: string
 }
 
 /**
- * Quando `stryker.config.json` muda, a mutação roda no conjunto novo: os arquivos que casam com os
+ * Quando `stryker.config.json` muda, a mutação roda no conjunto novo: os arquivos versionados que casam com os
  * padrões de `mutate` acrescentados, sem `.d.ts` nem `index.ts` (as exclusões do próprio config).
  * Mudança só no `include` de `vitest.mutacao.config.mts` não acrescenta alvo, então não dispara a
  * mutação sozinha.
  */
-export function alvosDeConfigNova(padroes: string[]): string[] {
-  const novos = padroes.filter((p) => !p.startsWith('!'));
-  if (novos.length === 0) return [];
-  return globSync(novos)
-    .map((f) => f.replaceAll('\\', '/'))
+export function alvosDeConfigNova(padroes: string[], arquivos: string[]): string[] {
+  const regexes = padroes
+    .filter((p) => !p.startsWith('!'))
+    .map((p) => globParaRegex(p));
+  return arquivos
     .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts') && !/(^|\/)index\.ts$/.test(f))
+    .filter((f) => regexes.some((re) => re.test(f)))
     .sort();
+}
+
+/** Glob mínimo do `mutate`: `**` atravessa pastas, `*` fica dentro de uma pasta. */
+function globParaRegex(padrao: string): RegExp {
+  const corpo = padrao
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*\//g, '\u0000')
+    .replace(/\*\*/g, '\u0001')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\u0000/g, '(?:.*/)?')
+    .replace(/\u0001/g, '.*');
+  return new RegExp(`^${corpo}$`);
 }
 
 function mutationTargetsWithConfig(base: string, changed: string[]): string[] {
@@ -139,7 +152,8 @@ function mutationTargetsWithConfig(base: string, changed: string[]): string[] {
   if (changed.includes('stryker.config.json')) {
     const antes = spawnSync('git', ['show', `${base}:stryker.config.json`], { encoding: 'utf8' });
     const padroes = novosPadroesMutate(antes.status === 0 ? antes.stdout : null, readFileSync('stryker.config.json', 'utf8'));
-    for (const f of alvosDeConfigNova(padroes)) alvos.add(f);
+    const arquivos = spawnSync('git', ['ls-files', 'src'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
+    for (const f of alvosDeConfigNova(padroes, arquivos)) alvos.add(f);
   }
   return [...alvos];
 }
