@@ -203,10 +203,10 @@ test.describe("Pacientes e triagem no servidor", () => {
       downloadThroughput: PHONE_SLOW.down,
       uploadThroughput: PHONE_SLOW.up,
     });
-    // Cargas alternadas entre as duas telas; o tempo bloqueado é o piso (mínimo) de cinco, o LCP a mediana: o ruído da máquina (e de outros testes
-    // em paralelo) pega as duas igualmente, e um long task isolado de 50 ms não muda a conta.
+    // Cargas alternadas entre as duas telas, em pares adjacentes (triagem, casco): o ruído da máquina (e de outros testes em paralelo)
+    // pega as duas cargas de um par igualmente, então a diferença POR PAR cancela o que é comum a elas. Comparar o piso de cada tela
+    // separadamente deixava o resultado à mercê de um piso de casco «sortudo» (uma amostra baixa isolada), embora a triagem estivesse no mesmo patamar.
     const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] as number;
-    const floor = (values: number[]) => Math.min(...values);
     const samples: Record<string, { blocking: number; lcp: number }[]> = { "/triagem": [], "/mais": [] };
     for (let i = 0; i < 5; i++) {
       for (const path of ["/triagem", "/mais"]) {
@@ -216,20 +216,21 @@ test.describe("Pacientes e triagem no servidor", () => {
         (samples[path] as { blocking: number; lcp: number }[]).push(await metrics());
       }
     }
-    const summarize = (path: string) => {
-      const list = samples[path] as { blocking: number; lcp: number }[];
-      return { blocking: floor(list.map((x) => x.blocking)), lcp: median(list.map((x) => x.lcp)) };
-    };
-    const triagem = summarize("/triagem");
+    const lcpOf = (path: string) => median((samples[path] as { blocking: number; lcp: number }[]).map((x) => x.lcp));
+    // Excesso de cada par: quanto a triagem bloqueou além do casco com a margem de PO (a mediana dos pares, não o melhor par: um par com o casco
+    // anormalmente alto não esconde uma regressão, que desloca todos os pares).
+    const excess = (samples["/triagem"] as { blocking: number }[]).map(
+      (t, i) => t.blocking - ((samples["/mais"] as { blocking: number }[])[i] as { blocking: number }).blocking * BLOCKING_MARGIN,
+    );
+    const excessMedian = median(excess);
     await page.goto("/triagem");
     const queueSize = await page.getByRole("button", { name: /Ampliar foto de/ }).count();
-    const shell = summarize("/mais");
 
-    expect(triagem.lcp, "LCP de /triagem").toBeLessThanOrEqual(LCP_LIMIT_MS);
+    expect(lcpOf("/triagem"), "LCP de /triagem").toBeLessThanOrEqual(LCP_LIMIT_MS);
     // O tempo bloqueado é a hidratação do casco (a «/mais», sem lista, mede o mesmo): a página não pode acrescentar a ele.
     expect(
-      triagem.blocking,
-      `tempo bloqueado por long tasks em /triagem com ${queueSize} fotos na fila (${Math.round(triagem.blocking)} ms) contra o piso do casco (/mais: ${Math.round(shell.blocking)} ms)`,
-    ).toBeLessThanOrEqual(shell.blocking * BLOCKING_MARGIN + BLOCKING_NOISE_MS);
+      excessMedian,
+      `excesso mediano por par do tempo bloqueado de /triagem com ${queueSize} fotos na fila sobre o casco (/mais) × ${BLOCKING_MARGIN} (por par: ${excess.map((x) => Math.round(x)).join(", ")} ms)`,
+    ).toBeLessThanOrEqual(BLOCKING_NOISE_MS);
   });
 });
