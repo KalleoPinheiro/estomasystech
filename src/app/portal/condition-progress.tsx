@@ -6,9 +6,9 @@ import { useState } from 'react';
 import { HealingChart } from '@/components/healing-chart';
 import { StatusBadge } from '@/components/status-badge';
 import type {
-  ConditionDto,
   ConditionPhotoDto,
   PortalAssessmentDto,
+  PortalConditionDto,
 } from '@/lib/dto';
 import {
   CONDITION_KIND_LABELS,
@@ -19,7 +19,7 @@ import {
 } from '@/lib/format';
 
 export interface ConditionWithAssessmentsDto {
-  condition: ConditionDto;
+  condition: PortalConditionDto;
   /** DTO já filtrado pro portal (PORT-03, #93) — sem `notes`/`complications` livres. */
   assessments: PortalAssessmentDto[];
   /** Fotos só chegam ao próprio paciente — parceiro não recebe (minimização LGPD). */

@@ -144,6 +144,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/078-gravacoes-da-agenda-em-server-actions.md`](adr/078-gravacoes-da-agenda-em-server-actions.md) | gravações da agenda em Server Actions: auditoria na mesma transação, efeitos best-effort depois do commit, gancho de falha para o E2E |
 | [`adr/079-r4-nas-acoes-de-consulta.md`](adr/079-r4-nas-acoes-de-consulta.md) | R4 nas ações de consulta (403 sem vínculo, 404 de outra empresa), agendar só no próprio nome e série que confere o paciente |
 | [`adr/080-ficha-do-paciente-no-servidor.md`](adr/080-ficha-do-paciente-no-servidor.md) | ficha do paciente no servidor: uma leitura por seção e por papel, e a aba na URL sem reler |
+| [`adr/081-portal-no-servidor-leituras-por-props-e-refresh.md`](adr/081-portal-no-servidor-leituras-por-props-e-refresh.md) | portal do paciente, do responsável e do parceiro no servidor: leituras por props, atualização por `router.refresh()` e cabeçalho sem salto |
 | [`adr/073-datas-no-fuso-da-clinica-explicito.md`](adr/073-datas-no-fuso-da-clinica-explicito.md) | datas e horas no fuso da clínica (`APP_TIMEZONE`) em toda regra e no cliente, nunca no fuso do processo nem do aparelho; guarda por teste |
 | [`adr/072-configuracoes-em-sub-rotas.md`](adr/072-configuracoes-em-sub-rotas.md) | Configurações em sub-rotas `/configuracoes/<seção>` com índice em cartões; âncoras antigas redirecionam; substitui o ADR-067 |
 | [`adr/067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md`](adr/067-configuracoes-em-pagina-unica-com-indice-fixo-no-celular.md) | Configurações em página única com índice fixo no celular; sub-rotas adiadas (substituído pelo ADR-072) |
@@ -180,6 +181,9 @@ Auditoria é **entrada** de planejamento, nunca pedido de trabalho por si só.
 | Arquivo | Para quê |
 | --- | --- |
 | [`governance.md`](governance.md) | progressive disclosure, docs-as-code, contexto para LLMs |
+| [`agents/coordenacao.md`](agents/coordenacao.md) | papel do coordenador, regras, fluxo de release, política do gate |
+| [`agents/estado-v0.4.0.md`](agents/estado-v0.4.0.md) | release aberta: mergeados, em andamento, fila, decisões PO |
+| [`agents/briefs-v0.4.0-leva2.md`](agents/briefs-v0.4.0-leva2.md) | briefs executáveis das issues da leva 2 |
 | [`agents/domain.md`](agents/domain.md) | glossário e ADRs |
 | [`agents/planning.md`](agents/planning.md) | onde vive cada tipo de plano; os dois logs de decisão |
 | [`agents/issue-tracker.md`](agents/issue-tracker.md) | issues no GitHub |

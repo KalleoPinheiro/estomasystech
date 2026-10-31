@@ -4,8 +4,13 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import DataRequestsPage from '@/app/(staff)/pedidos-titular/page';
-import { DataRights } from '@/app/portal/data-rights';
 import type { DataSubjectRequestDto } from '@/lib/dto';
+
+import { DataRightsHarness } from '../support/portal-harness';
+
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
+);
 
 type Responder = (
   url: string,
@@ -79,7 +84,7 @@ describe('Portal: Meus dados (LGPD) (#293)', () => {
         };
       return undefined;
     });
-    renderWithToast(<DataRights />);
+    renderWithToast(<DataRightsHarness />);
 
     expect(
       screen.getByText(
@@ -117,7 +122,7 @@ describe('Portal: Meus dados (LGPD) (#293)', () => {
         return { ok: true, body: [] };
       return undefined;
     });
-    renderWithToast(<DataRights />);
+    renderWithToast(<DataRightsHarness />);
 
     fireEvent.change(screen.getByLabelText('Tipo de pedido'), {
       target: { value: 'erasure' },
@@ -147,7 +152,7 @@ describe('Portal: Meus dados (LGPD) (#293)', () => {
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
-    renderWithToast(<DataRights />);
+    renderWithToast(<DataRightsHarness />);
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Baixar cópia dos meus dados' }),
@@ -167,7 +172,7 @@ describe('Portal: Meus dados (LGPD) (#293)', () => {
         return { ok: true, body: [] };
       return undefined;
     });
-    renderWithToast(<DataRights />);
+    renderWithToast(<DataRightsHarness />);
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Baixar cópia dos meus dados' }),

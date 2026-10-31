@@ -2,37 +2,11 @@
 
 import { Button, Card, CardContent, Hero } from '@still-void/ui/react';
 import { useState } from 'react';
-import {
-  EmptyState,
-  ErrorAlert,
-  LoadingIndicator,
-} from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
-import type {
-  PartnerDto,
-  PortalAppointmentDto,
-  ReferredPatientSummaryDto,
-} from '@/lib/dto';
 import { APPOINTMENT_STATUS_LABELS, formatDateTime } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
-import {
-  ConditionProgress,
-  type ConditionWithAssessmentsDto,
-} from './condition-progress';
-
-interface ReferredPatientDto {
-  patient: ReferredPatientSummaryDto;
-  /** Consentimento ativo do paciente para este parceiro (#292). */
-  sharing: boolean;
-  attended: boolean;
-  appointments: PortalAppointmentDto[];
-  conditions: ConditionWithAssessmentsDto[];
-}
-
-interface PartnerPortalDto {
-  partner: PartnerDto;
-  referredPatients: ReferredPatientDto[];
-}
+import type { PartnerPortalData } from '@/lib/server/data/portal';
+import { ConditionProgress } from './condition-progress';
 
 /**
  * Sem consentimento do paciente (#292): o parceiro vê só se ele foi atendido,
@@ -73,12 +47,8 @@ function partnerCredentials(partner: {
   return parts.length > 0 ? `${parts.join(' · ')} — ` : '';
 }
 
-export function PartnerPortalView() {
-  const { data, error } = useApiQuery<PartnerPortalDto>('/api/portal/partner');
+export function PartnerPortalView({ data }: { data: PartnerPortalData }) {
   const [expanded, setExpanded] = useState<string | null>(null);
-
-  if (error) return <ErrorAlert message={error} />;
-  if (!data) return <LoadingIndicator />;
 
   return (
     <div className="flex flex-col gap-6">

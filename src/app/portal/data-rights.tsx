@@ -13,7 +13,7 @@ import {
   type DataSubjectRequestDto,
 } from '@/lib/dto/data-subject-request';
 import { formatDateTime } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
+import { usePortalRefresh } from './use-portal-refresh';
 
 type Kind = DataSubjectRequestDto['kind'];
 
@@ -37,8 +37,11 @@ function saveJson(data: unknown, filename: string) {
  * só na clínica (#375, ADR-033).
  */
 export function DataRights({
+  requests,
   asRepresentative = false,
 }: {
+  /** Pedidos já feitos, lidos no servidor. */
+  requests: DataSubjectRequestDto[];
   asRepresentative?: boolean;
 }) {
   const { toast } = useToast();
@@ -83,17 +86,21 @@ export function DataRights({
             ? 'Baixar cópia dos dados do paciente'
             : 'Baixar cópia dos meus dados'}
         </Button>
-        <DataRequests asRepresentative={asRepresentative} />
+        <DataRequests requests={requests} asRepresentative={asRepresentative} />
       </Card>
     </section>
   );
 }
 
-function DataRequests({ asRepresentative }: { asRepresentative: boolean }) {
+function DataRequests({
+  requests: data,
+  asRepresentative,
+}: {
+  requests: DataSubjectRequestDto[];
+  asRepresentative: boolean;
+}) {
   const { toast } = useToast();
-  const { data, refresh } = useApiQuery<DataSubjectRequestDto[]>(
-    '/api/portal/patient/data-requests',
-  );
+  const refresh = usePortalRefresh();
   const [kind, setKind] = useState<Kind>('correction');
   const [details, setDetails] = useState('');
   const [saving, setSaving] = useState(false);

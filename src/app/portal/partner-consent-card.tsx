@@ -8,7 +8,7 @@ import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
 import type { PartnerShareConsentDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
+import { usePortalRefresh } from './use-portal-refresh';
 
 const ENDPOINT = '/api/portal/patient/partner-consent';
 
@@ -34,14 +34,15 @@ function statusLine(consent: PartnerShareConsentDto): string {
  * confirmar em nome próprio o que o representante autorizou.
  */
 export function PartnerConsentSection({
+  consent,
   asRepresentative = false,
 }: {
+  /** Lido no servidor; `null` quando o paciente não foi indicado por parceiro. */
+  consent: PartnerShareConsentDto | null;
   asRepresentative?: boolean;
 }) {
   const { toast } = useToast();
-  const { data: consent, refresh } = useApiQuery<PartnerShareConsentDto | null>(
-    ENDPOINT,
-  );
+  const refresh = usePortalRefresh();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

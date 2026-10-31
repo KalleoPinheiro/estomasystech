@@ -14,8 +14,9 @@ import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requirePatientPortalSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toDataSubjectRequestDto } from '@/lib/dto';
+import { loadDataRequests } from '@/lib/server/data/portal';
 
 export const MINOR_ERASURE_AT_CLINIC_MESSAGE =
   'A eliminação dos dados do menor é pedida diretamente à clínica.';
@@ -30,16 +31,7 @@ export async function GET(request: NextRequest) {
   const auth = requirePatientPortalSession(request);
   if (!auth.ok) return auth.response;
 
-  return handleRequest(async () => {
-    const repos = await getRepositories(sessionScope(auth.session));
-    const { patient } = await resolveConsentSigner(
-      repos,
-      auth.session,
-      ADULT_TITULAR_ONLY_MESSAGE,
-    );
-    const requests = await repos.dataSubjectRequests.findByPatient(patient.id);
-    return requests.map((item) => toDataSubjectRequestDto(item));
-  });
+  return handleRequest(() => loadDataRequests(auth.session));
 }
 
 /**
