@@ -52,8 +52,12 @@ export interface AuditedActionDefinition<S extends z.ZodType, R>
   handler: (
     context: ActionContext<z.output<S>> & { tx: TransactionScope },
   ) => Promise<R>;
-  /** Evento do que foi gravado; é persistido antes do commit, junto com a gravação. */
-  audit: (done: { input: z.output<S>; result: R }) => AuditInput;
+  /**
+   * Evento do que foi gravado; é persistido antes do commit, junto com a
+   * gravação. `null` quando o handler decidiu não gravar nada (repetição
+   * idempotente): sem gravação não há o que auditar.
+   */
+  audit: (done: { input: z.output<S>; result: R }) => AuditInput | null;
 }
 
 /**
@@ -102,11 +106,8 @@ async function runAudited<S extends z.ZodType, R>(
   const { transactions } = await getRepositories(context.scope);
   return transactions.run(async (tx) => {
     const result = await definition.handler({ ...context, tx });
-    await recordAuditNow(
-      tx.auditEvents,
-      context.session,
-      definition.audit({ input: context.input, result }),
-    );
+    const event = definition.audit({ input: context.input, result });
+    if (event) await recordAuditNow(tx.auditEvents, context.session, event);
     return result;
   });
 }

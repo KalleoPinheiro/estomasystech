@@ -19,6 +19,7 @@ import {
 } from '@/lib/server/data/portal';
 import {
   CLINIC_A_ID,
+  CLINIC_B_ID,
   completeClinicRegistration,
   ensureTestClinics,
 } from '../../support/clinics';
@@ -38,8 +39,9 @@ const unique = (prefix: string) =>
 async function guardianWith(
   relationship: 'mae' | 'conjuge',
   patients: { fullName: string; birthDate?: Date }[],
+  clinicId: string = CLINIC_A_ID,
 ) {
-  const repos = await getRepositories(clinicScope(CLINIC_A_ID));
+  const repos = await getRepositories(clinicScope(clinicId));
   const guardian = Guardian.create({
     fullName: unique('Responsável'),
     relationship,
@@ -53,7 +55,7 @@ async function guardianWith(
       email,
       passwordHash: UNSET_PASSWORD_HASH,
       role: 'guardian',
-      clinicId: CLINIC_A_ID,
+      clinicId,
       guardianId: guardian.id,
     }),
   );
@@ -73,7 +75,7 @@ async function guardianWith(
     ({
       role: 'guardian',
       subject: email,
-      clinicId: CLINIC_A_ID,
+      clinicId,
       actingPatientId,
     }) as unknown as PatientPortalSession;
   return { repos, saved, session, email };
@@ -92,6 +94,24 @@ describe('Feature: regras de acesso do portal lidas no servidor (#614)', () => {
     expect(view.data.actingFor?.patientId).toBe(saved[0].id);
     expect(view.consent?.canSign).toBe(true);
     expect(view.dataRequests).toEqual([]);
+    expect(view.partnerConsent).toBeNull();
+  });
+
+  it('Dado responsável de menor e a leitura do termo falhando, Quando monta a tela, Então a tela abre sem o termo e sem os blocos de quem decide', async () => {
+    await ensureTestClinics();
+    // A clínica B não completou o cadastro: sem controlador, o termo não carrega.
+    const { saved, session } = await guardianWith(
+      'mae',
+      [{ fullName: 'Menor Sem Termo' }],
+      CLINIC_B_ID,
+    );
+
+    const view = await loadPatientPortalView(session(saved[0].id));
+
+    expect(view.consent).toBeNull();
+    expect(view.imageConsent).toBeNull();
+    expect(view.data.actingFor?.patientId).toBe(saved[0].id);
+    expect(view.dataRequests).toBeNull();
     expect(view.partnerConsent).toBeNull();
   });
 
