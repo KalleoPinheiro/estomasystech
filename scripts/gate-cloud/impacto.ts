@@ -45,6 +45,9 @@ export function routeOf(file: string): string | undefined {
   return m && m[1] !== 'api' ? m[1] : undefined;
 }
 
+/** Só isto não pode mudar o que o navegador vê: docs, changeset, markdown, CI e teste unitário. */
+export const SEM_IMPACTO_E2E = /^(docs\/|\.specs\/|\.changeset\/|\.github\/|tests\/.+\.test\.tsx?$)|\.md$/;
+
 export interface Spec {
   file: string;
   text: string;
@@ -56,7 +59,7 @@ const matches = (spec: Spec, key: string) => spec.file.includes(key) || spec.tex
 
 /** Specs que o diff alcança, ou todos quando a regra de fallback manda. */
 export function impactedSpecs(changed: string[], specs: Spec[]): Impact {
-  const code = changed.filter((f) => !/^(docs\/|\.specs\/|\.changeset\/|.*\.md$)/.test(f));
+  const code = changed.filter((f) => !SEM_IMPACTO_E2E.test(f));
   const groups: string[][] = [];
   const direct = new Set<string>();
   for (const f of code) {
@@ -75,7 +78,7 @@ export function impactedSpecs(changed: string[], specs: Spec[]): Impact {
       const rotas = SLUG_ROTAS[slug];
       if (!rotas) return { all: true, reason: `pasta sem mapa de rotas: ${slug}` };
       groups.push(rotas);
-    } else if (/^src\//.test(f)) return { all: true, reason: `arquivo de src sem mapa: ${f}` };
+    } else return { all: true, reason: `arquivo sem mapa (na dúvida, inclui): ${f}` };
   }
   const picked = new Set(direct);
   for (const group of groups) {
@@ -86,6 +89,19 @@ export function impactedSpecs(changed: string[], specs: Spec[]): Impact {
   return { all: false, specs: [...picked].sort(), reason: `${groups.length} grupo(s) de rota, ${direct.size} spec(s) alterado(s)` };
 }
 
+/**
+ * Arquivos que a mutação do gate da nuvem cobre: `src/domain`, `src/application` (ADR-051) e
+ * `src/lib/server` (ADR-084: acesso e auditoria vivem lá). Sem `.d.ts` nem `index.ts`.
+ */
+export function mutationTargetsCloud(changed: string[]): string[] {
+  return changed.filter(
+    (f) =>
+      /^src\/(domain|application|lib\/server)\/.+\.ts$/.test(f) &&
+      !f.endsWith('.d.ts') &&
+      !/(^|\/)index\.ts$/.test(f),
+  );
+}
+
 function main(): void {
   const base = detectBase();
   const diff = spawnSync('git', ['diff', '--name-only', '--diff-filter=d', `${base}...HEAD`], { encoding: 'utf8' });
@@ -93,6 +109,10 @@ function main(): void {
   const specs = readdirSync('e2e')
     .filter((f) => f.endsWith('.spec.ts'))
     .map((f) => ({ file: `e2e/${f}`, text: readFileSync(`e2e/${f}`, 'utf8') }));
+  if (process.argv.includes('--mutacao')) {
+    console.log(mutationTargetsCloud(changed).join(','));
+    return;
+  }
   const impact = impactedSpecs(changed, specs);
   console.error(`impacto E2E (${base}): ${impact.all ? 'TODOS' : `${impact.specs.length} spec(s)`} · ${impact.reason}`);
   console.log(impact.all ? 'ALL' : impact.specs.join(' ') || 'NONE');

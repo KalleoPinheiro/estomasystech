@@ -129,9 +129,8 @@ e2e_impactado() {
 
 mutation_changed() {
   local base="$1" files
-  files=$(git diff --name-only --diff-filter=d "${base}...HEAD" \
-    | grep -E '^src/(domain|application)/.+\.ts$' | grep -vE '(\.d\.ts$|(^|/)index\.ts$)' | paste -sd, - || true)
-  [ -n "$files" ] || { echo "nenhum arquivo de domain/application alterado: sem mutação"; return 0; }
+  files=$(GATE_BASE="$base" npx tsx scripts/gate-cloud/impacto.ts --mutacao)
+  [ -n "$files" ] || { echo "nenhum arquivo de domain/application/lib/server alterado: sem mutação"; return 0; }
   npm run test:mutacao -- --mutate "$files"
 }
 
@@ -177,7 +176,10 @@ run_bg() { # run_bg <modo>
 
 case "${1:-}" in
   bg) run_bg "${2:?uso: $0 bg pr|release}" ;;
-  status) cat "$TIMES" 2>/dev/null; cat .gate/cloud.done 2>/dev/null || echo "em andamento" ;;
+  status)
+    cat "$TIMES" 2>/dev/null
+    echo "puladas: docker, backup (sem daemon; rodam no WSL antes do release:cut)"
+    cat .gate/cloud.done 2>/dev/null || echo "em andamento" ;;
   setup) setup ;;
   integracao) integracao ;;
   pr) mkdir -p .gate; : > "$TIMES"; pr_profile ;;

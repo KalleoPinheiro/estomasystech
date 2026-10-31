@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { impactedSpecs, routeOf } from '../../scripts/gate-cloud/impacto';
+import {
+  impactedSpecs,
+  mutationTargetsCloud,
+  routeOf,
+} from '../../scripts/gate-cloud/impacto';
 
 const specs = [
   { file: 'e2e/agenda.spec.ts', text: 'await page.goto("/agenda");' },
@@ -45,19 +49,56 @@ describe('Impacto do diff sobre os specs E2E (ADR-084)', () => {
     ).toMatchObject({ all: true });
   });
 
+  it.each([
+    'vitest.config.mts',
+    'tsconfig.json',
+    'postcss.config.mjs',
+    'biome.json',
+    'scripts/seed/faker.ts',
+    'public/logo.svg',
+    'e2e/helpers.ts',
+    'e2e/fixtures/dados.json',
+    'src/lib/format.ts',
+  ])('arquivo não mapeado %s cai no gate completo, nunca em NONE', (file) => {
+    expect(impactedSpecs([file], specs)).toMatchObject({ all: true });
+  });
+
   it('só documentação não seleciona E2E', () => {
-    expect(impactedSpecs(['docs/README.md', '.changeset/a.md'], specs)).toEqual(
-      {
-        all: false,
-        specs: [],
-        reason: '0 grupo(s) de rota, 0 spec(s) alterado(s)',
-      },
-    );
+    expect(
+      impactedSpecs(
+        ['docs/README.md', '.changeset/a.md', 'tests/lib/x.test.ts'],
+        specs,
+      ),
+    ).toEqual({
+      all: false,
+      specs: [],
+      reason: '0 grupo(s) de rota, 0 spec(s) alterado(s)',
+    });
   });
 
   it('a rota vem do primeiro segmento estático, sem grupo nem pasta privada', () => {
     expect(routeOf('src/app/(staff)/_hoje/x.tsx')).toBe('hoje');
     expect(routeOf('src/app/(staff)/pacientes/[id]/a.tsx')).toBe('pacientes');
     expect(routeOf('src/app/api/pacientes/route.ts')).toBeUndefined();
+  });
+
+  it('a mutação da nuvem cobre domain, application e lib/server, sem index nem .d.ts', () => {
+    expect(
+      mutationTargetsCloud([
+        'src/domain/billing/a.ts',
+        'src/application/billing/b.ts',
+        'src/lib/server/session.ts',
+        'src/lib/server/data/patients.ts',
+        'src/lib/server/index.ts',
+        'src/lib/server/x.d.ts',
+        'src/lib/format.ts',
+        'src/app/(staff)/agenda/page.tsx',
+      ]),
+    ).toEqual([
+      'src/domain/billing/a.ts',
+      'src/application/billing/b.ts',
+      'src/lib/server/session.ts',
+      'src/lib/server/data/patients.ts',
+    ]);
   });
 });

@@ -37,7 +37,10 @@ Restrições: sem VPS e sem minutos pagos do Actions; a ferramenta de shell mata
 2. **Por PR (`feat/*`, `fix/*` → release): suíte unitária completa, o resto só no impactado.**
    Sempre: typecheck, lint, sv, docs, integridade dos testes e `test:coverage` inteiro, com os limiares de hoje
    (100% nas camadas de regra, piso 90% global; ADR-046, ADR-050). Só no que o diff altera ou alcança:
-   - **Mutação:** os arquivos alterados de `src/domain` e `src/application` (ADR-051).
+   - **Mutação:** os arquivos alterados de `src/domain`, `src/application` e `src/lib/server` (ADR-051; `lib/server`
+     entra por decisão de PO, porque as regras de acesso e a auditoria vivem lá). `stryker.config.json` (`mutate`) e `vitest.mutacao.config.mts`
+     (`tests/lib/server/**`) passam a incluí-lo, só somando alvos e testes; nenhum limiar muda. O `gate:local` do WSL
+     (`scripts/gate/`, do dono) segue só com domain/application até o dono decidir igualar.
    - **Integração (Postgres real):** `vitest --changed <base>` com a config de integração, que usa o grafo de
      imports do Vitest. Fallback: diff em `drizzle/`, `tests/support/`, config do Vitest, dependências ou
      `src/infrastructure/persistence/` roda a integração inteira.
@@ -45,7 +48,10 @@ Restrições: sem VPS e sem minutos pagos do Actions; a ferramenta de shell mata
      partir de `src/`. Regras do mapa: spec alterado roda; arquivo de `src/app/<rota>` ou `src/app/api/<rota>`
      roda os specs cujo nome ou URL contém a rota; arquivo de `src/domain|application/<pasta>` roda os specs
      das rotas da pasta (tabela `SLUG_ROTAS`); só documentação, changeset ou teste unitário não roda E2E.
-   - **Fallback («na dúvida, inclui»), roda todos os specs:** arquivo transversal (`src/proxy.ts`, layouts e
+   - **Fallback («na dúvida, inclui»), roda todos os specs:** qualquer arquivo que não esteja na lista de «sem
+     impacto no navegador» (docs, `.specs`, changeset, `.md`, `.github`, teste unitário) nem case com uma regra
+     acima (por exemplo `vitest.config.mts`, `tsconfig.json`, `biome.json`, `postcss`, `scripts/seed/*`,
+     `public/*`, helpers de `e2e/`); arquivo transversal (`src/proxy.ts`, layouts e
      casca, `src/components/`, `src/lib/auth`, sessão e `define-action`, container, persistência, `e2e/support`,
      config do Playwright/Next, `package*.json`, `drizzle/`, `Dockerfile`); pasta de `domain`/`application` sem
      entrada na tabela (`audit`, `auth`, `clinic`, `shared`, `messaging`, `retention`, `taxonomy`…); qualquer
@@ -60,9 +66,10 @@ Restrições: sem VPS e sem minutos pagos do Actions; a ferramenta de shell mata
 
 ## Consequências
 
+- A rotina mensal de mutação (`stryker.config.json`) passa a mutar também `src/lib/server`; na primeira medição
+  (`appointment-authorization.ts` 42%, `patient-record.ts` 92%, `session.ts` 99%) o escore do conjunto ficou 88,5%,
+  mas o arquivo de autorização tem mutantes sobreviventes que pedem teste novo antes de a rodada completa fechar
+  acima do `break` 85.
 - O PC deixa de ser ponto único de falha para o PR; a release ainda precisa do WSL para Docker e backup.
 - Postgres da nuvem é o 16 da imagem; produção e CI usam o 18 (ADR-037). Risco residual pequeno, coberto
   pela integração do WSL na release.
-- **Pergunta aberta (não decidida aqui):** a mutação não alcança `src/lib/server`, porque o Stryker só muta
-  `domain`/`application` e o `vitest.mutacao.config.mts` só roda esses testes. Incluir `lib/server` muda
-  configuração de teste/mutação e fica para uma decisão própria.
