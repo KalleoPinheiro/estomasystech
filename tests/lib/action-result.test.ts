@@ -58,6 +58,30 @@ describe('Feature: desembrulhar o envelope da Server Action (#551)', () => {
       );
     });
 
+    it('Dado um erro comum numa tela logada, Quando desembrulha, Então NÃO vai ao login e lança a mensagem do servidor', async () => {
+      const assign = vi.fn();
+      vi.stubGlobal('window', {
+        location: {
+          pathname: '/pacientes/p-1',
+          search: '',
+          hash: '',
+          assign,
+        },
+      });
+
+      const error = await unwrapAction(
+        Promise.resolve({
+          success: false as const,
+          data: null,
+          error: 'Horário indisponível',
+        }),
+      ).catch((e) => e);
+
+      expect(error).not.toBeInstanceOf(ApiError);
+      expect(error.message).toBe('Horário indisponível');
+      expect(assign).not.toHaveBeenCalled();
+    });
+
     it('Dada a ação sem sessão fora do navegador, Quando desembrulha, Então lança a mensagem do servidor', async () => {
       await expect(unwrapAction(Promise.resolve(expired))).rejects.toThrow(
         'Não autenticado',
