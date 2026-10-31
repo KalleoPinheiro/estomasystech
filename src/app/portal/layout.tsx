@@ -23,7 +23,9 @@ export default async function PortalLayout({
         logo={
           <div>
             <BrandLogo />
-            <p className="text-ink-3 text-xs">
+            {/* Duas linhas reservadas no celular: a troca da fonte de reserva pela
+                Sora mudava a quebra do texto e o cabeçalho saltava (#613). */}
+            <p className="line-clamp-2 min-h-8 text-ink-3 text-xs sm:line-clamp-none sm:min-h-0">
               Portal do paciente, do responsável e do parceiro
             </p>
           </div>

@@ -1,10 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import {
   addAssessment,
   createAppointment,
   createCondition,
   createFollowUp,
   createInvoice,
+  createPartner,
   createPatient,
   linkPortalAccount,
   unique,
@@ -21,10 +22,73 @@ import { sessionCookie } from "./support/session-token";
  */
 const CLS_LIMIT = 0.05;
 
+type Metrics = { cls: number; lcp: number; shifts: string[] };
+
+function trackApiCalls(page: Page): string[] {
+  const apiCalls: string[] = [];
+  page.on("request", (request) => {
+    const type = request.resourceType();
+    const { pathname } = new URL(request.url());
+    // Foto autenticada continua pela API (ADR-069); aqui não há foto.
+    if ((type === "fetch" || type === "xhr") && pathname.startsWith("/api/")) {
+      apiCalls.push(`${request.method()} ${pathname}`);
+    }
+  });
+  return apiCalls;
+}
+
+/** Celular de entrada: CPU 4x (até 390 px) e, se pedido, 1,6 Mbps com 150 ms, como a régua do orquestrador. */
+async function setupMetrics(page: Page, width: number, slowNetwork: boolean): Promise<void> {
+  await page.setViewportSize({ width, height: 800 });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: width <= 390 ? 4 : width <= 768 ? 2 : 1 });
+  if (slowNetwork) {
+    await cdp.send("Network.enable");
+    await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
+    await cdp.send("Network.emulateNetworkConditions", {
+      offline: false,
+      latency: 150,
+      downloadThroughput: (1.6 * 1024 * 1024) / 8,
+      uploadThroughput: (750 * 1024) / 8,
+    });
+  }
+  await page.addInitScript(() => {
+    const box = { cls: 0, lcp: 0, shifts: [] as string[] };
+    (window as unknown as { __cls: typeof box }).__cls = box;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) box.lcp = entry.startTime;
+    }).observe({ type: "largest-contentful-paint", buffered: true });
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        const shift = entry as PerformanceEntry & {
+          value: number;
+          hadRecentInput: boolean;
+          sources?: { node?: Element | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[];
+        };
+        if (shift.hadRecentInput) continue;
+        box.cls += shift.value;
+        // Quem se mexeu, para o relatório de falha apontar o elemento.
+        const who = (shift.sources ?? [])
+          .map(
+            (source) =>
+              `${(source.node as HTMLElement | null)?.outerHTML.slice(0, 50) ?? "?"} top ${Math.round(source.previousRect.top)}→${Math.round(source.currentRect.top)} h ${Math.round(source.previousRect.height)}→${Math.round(source.currentRect.height)}`,
+          )
+          .join(" | ");
+        box.shifts.push(`${shift.value.toFixed(4)} ${who}`);
+      }
+    }).observe({ type: "layout-shift", buffered: true });
+  });
+}
+
+async function readMetrics(page: Page): Promise<Metrics> {
+  return page.evaluate(() => (window as unknown as { __cls: Metrics }).__cls);
+}
+
 test.describe("Portal do paciente no servidor", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   let patientEmail = "";
+  let partnerEmail = "";
   let firstName = "";
   let procedureLabel = "";
 
@@ -62,51 +126,19 @@ test.describe("Portal do paciente no servidor", () => {
       amountCents: 9_000,
     });
     await linkPortalAccount(request, "patient", patient);
+    // Parceiro com um indicado, para o portal do parceiro ter conteúdo real (#613).
+    const partner = await createPartner(request, { fullName: `Dra. Parceira Servidor ${unique()}` });
+    partnerEmail = partner.email;
+    await createPatient(request, { fullName: `Indicado Servidor ${unique()}`, referredByPartnerId: partner.id });
+    await linkPortalAccount(request, "partner", partner);
     await context.close();
   });
 
   for (const width of [360, 390, 768, 1280]) {
     test(`/portal em ${width}px: a carga não chama /api e não salta`, async ({ page }) => {
       await page.context().addCookies([sessionCookie(patientEmail, "patient")]);
-      await page.setViewportSize({ width, height: 800 });
-      // Celular de entrada: a CPU 4x mostra salto que a máquina de desenvolvimento esconde.
-      const cdp = await page.context().newCDPSession(page);
-      await cdp.send("Emulation.setCPUThrottlingRate", { rate: width <= 390 ? 4 : width <= 768 ? 2 : 1 });
-      const apiCalls: string[] = [];
-      page.on("request", (request) => {
-        const type = request.resourceType();
-        const { pathname } = new URL(request.url());
-        // Foto autenticada continua pela API (ADR-069); aqui não há foto.
-        if ((type === "fetch" || type === "xhr") && pathname.startsWith("/api/")) {
-          apiCalls.push(`${request.method()} ${pathname}`);
-        }
-      });
-      await page.addInitScript(() => {
-        const box = { cls: 0, lcp: 0, shifts: [] as string[] };
-        (window as unknown as { __cls: typeof box }).__cls = box;
-        new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) box.lcp = entry.startTime;
-        }).observe({ type: "largest-contentful-paint", buffered: true });
-        new PerformanceObserver((list) => {
-          for (const entry of list.getEntries()) {
-            const shift = entry as PerformanceEntry & {
-              value: number;
-              hadRecentInput: boolean;
-              sources?: { node?: Element | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[];
-            };
-            if (shift.hadRecentInput) continue;
-            box.cls += shift.value;
-            // Quem se mexeu, para o relatório de falha apontar o elemento.
-            const who = (shift.sources ?? [])
-              .map(
-                (source) =>
-                  `${(source.node as HTMLElement | null)?.outerHTML.slice(0, 50) ?? "?"} top ${Math.round(source.previousRect.top)}→${Math.round(source.currentRect.top)}`,
-              )
-              .join(" | ");
-            box.shifts.push(`${shift.value.toFixed(4)} ${who}`);
-          }
-        }).observe({ type: "layout-shift", buffered: true });
-      });
+      const apiCalls = trackApiCalls(page);
+      await setupMetrics(page, width, false);
 
       await page.goto("/portal");
       await expect(page.getByRole("heading", { level: 1, name: `Olá, ${firstName}!` })).toBeVisible();
@@ -115,13 +147,35 @@ test.describe("Portal do paciente no servidor", () => {
       await page.waitForLoadState("networkidle");
 
       expect(apiCalls, "chamadas /api na carga").toEqual([]);
-      const { cls, lcp, shifts } = await page.evaluate(
-        () => (window as unknown as { __cls: { cls: number; lcp: number; shifts: string[] } }).__cls,
-      );
+      const { cls, lcp, shifts } = await readMetrics(page);
       // Sem rede limitada aqui; a régua do orquestrador mede o LCP com 1,6 Mbps.
       expect(lcp, "LCP do portal").toBeLessThanOrEqual(2500);
       expect(cls, `CLS do portal: ${shifts.join(" // ")}`).toBeLessThan(CLS_LIMIT);
     });
+  }
+
+  // #613: a régua é CLS < 0,05 em todo papel. Celular de entrada (CPU 4x) e rede
+  // lenta (1,6 Mbps, 150 ms), cinco execuções seguidas por papel: o cabeçalho do
+  // layout não pode saltar depois do primeiro paint nem no parceiro nem no paciente.
+  for (const role of ["parceiro", "paciente"] as const) {
+    for (const run of [1, 2, 3, 4, 5]) {
+      test(`/portal de ${role} em 390px com rede lenta, execução ${run}: CLS abaixo do limite`, async ({ page }) => {
+        const cookie = role === "parceiro" ? sessionCookie(partnerEmail, "partner") : sessionCookie(patientEmail, "patient");
+        await page.context().addCookies([cookie]);
+        await setupMetrics(page, 390, true);
+
+        // Segunda visita: a primeira aquece o servidor e o que o navegador guarda em memória.
+        await page.goto("/portal");
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await page.waitForLoadState("networkidle");
+        await page.goto("/portal");
+        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+        await page.waitForLoadState("networkidle");
+
+        const { cls, shifts } = await readMetrics(page);
+        expect(cls, `CLS do portal (${role}): ${shifts.join(" // ")}`).toBeLessThan(CLS_LIMIT);
+      });
+    }
   }
 
   test("/portal sem sessão leva ao login com sessão expirada", async ({ page }) => {
