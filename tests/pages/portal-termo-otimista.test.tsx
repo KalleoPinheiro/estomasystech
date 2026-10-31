@@ -35,7 +35,7 @@ const accepted = {
   acceptedAt: '2026-10-31T15:00:00.000Z',
 };
 const ok: ActionResult<unknown> = { success: true, data: {}, error: null };
-const ACCEPTED_TEXT = 'Termo de consentimento do tratamento aceito';
+const REVOKE_BUTTON = 'Revogar consentimento do tratamento';
 
 function acceptNow() {
   fireEvent.click(
@@ -58,12 +58,18 @@ describe('Feature: o cartão do termo troca no toque, sem esperar a rede (#623, 
 
     acceptNow();
 
-    expect(await screen.findByText(new RegExp(ACCEPTED_TEXT))).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: REVOKE_BUTTON }),
+    ).toBeTruthy();
     expect(
       screen.queryByRole('button', {
         name: 'Li e aceito o termo de tratamento',
       }),
     ).toBeNull();
+    // O aviso sai junto com a troca (cartão + aviso), não depois da rede.
+    expect(
+      screen.getAllByText(/Termo de consentimento do tratamento aceito/),
+    ).toHaveLength(2);
     await act(async () => finish(ok));
   });
 
@@ -85,7 +91,7 @@ describe('Feature: o cartão do termo troca no toque, sem esperar a rede (#623, 
     expect(
       screen.getByRole('button', { name: 'Li e aceito o termo de tratamento' }),
     ).toBeTruthy();
-    expect(screen.queryByText(new RegExp(ACCEPTED_TEXT))).toBeNull();
+    expect(screen.queryByRole('button', { name: REVOKE_BUTTON })).toBeNull();
   });
 
   it('Dado o aceite em voo, Quando o servidor confirma pela tela, Então vale a data do servidor', async () => {
@@ -99,7 +105,7 @@ describe('Feature: o cartão do termo troca no toque, sem esperar a rede (#623, 
       <ConsentCard status={pending} onAccepted={vi.fn()} />,
     );
     acceptNow();
-    await screen.findByText(new RegExp(ACCEPTED_TEXT));
+    await screen.findByRole('button', { name: REVOKE_BUTTON });
 
     rerender(
       <ToastProvider>
@@ -137,7 +143,7 @@ describe('Feature: o cartão do termo troca no toque, sem esperar a rede (#623, 
       finish({ success: false, data: null, error: 'Sem permissão' }),
     );
     await waitFor(() =>
-      expect(screen.getByText(new RegExp(ACCEPTED_TEXT))).toBeTruthy(),
+      expect(screen.getByRole('button', { name: REVOKE_BUTTON })).toBeTruthy(),
     );
   });
 });
