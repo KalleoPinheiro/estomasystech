@@ -19,6 +19,24 @@ vi.mock('@/app/portal/actions', async () =>
   (await import('../support/portal-actions')).portalActionsOverFetch(),
 );
 
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/cadastro',
+  async () => (await import('../support/ficha-actions-via-fetch')).cadastro,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/prontuario',
+  async () => (await import('../support/ficha-actions-via-fetch')).prontuario,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/plano-cuidados',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).planoCuidados,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/consentimento',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).consentimento,
+);
 vi.mock('next/navigation', async () =>
   (await import('../support/portal-router')).navigationMock(),
 );

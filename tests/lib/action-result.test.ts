@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { unwrapAction } from '@/lib/action-result';
+import { ApiError } from '@/lib/client';
+import { SESSION_EXPIRED_MESSAGE } from '@/lib/login-redirect';
 
 describe('Feature: desembrulhar o envelope da Server Action (#551)', () => {
   it('Dado um sucesso, Quando desembrulha, Então devolve o dado', async () => {
@@ -20,56 +22,46 @@ describe('Feature: desembrulhar o envelope da Server Action (#551)', () => {
     ).rejects.toThrow('Horário indisponível');
   });
 
-  describe('sessão expirada', () => {
-    const goTo = (_path: string) => {
+  describe('Scenario: sessão expirada em uma ação (#207, #552)', () => {
+    const expired = {
+      success: false as const,
+      data: null,
+      error: 'Não autenticado',
+    };
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('Dada a ação sem sessão numa tela logada, Quando desembrulha, Então vai ao login e lança o 401 que guarda o rascunho', async () => {
       const assign = vi.fn();
       vi.stubGlobal('window', {
-        location: { pathname: '/portal', search: '?a=1', hash: '', assign },
+        location: {
+          pathname: '/pacientes/p-1',
+          search: '?aba=anamnese',
+          hash: '',
+          assign,
+        },
       });
-      return assign;
-    };
-    afterEach(() => vi.unstubAllGlobals());
 
-    it('Dado que o proxy redirecionou a ação ao login, Quando o Next recusa a resposta, Então leva ao login com a rota em next e a mensagem é de sessão expirada', async () => {
-      const assign = goTo('/portal');
+      const error = await unwrapAction(Promise.resolve(expired)).catch(
+        (e) => e,
+      );
 
-      await expect(
-        unwrapAction(
-          Promise.reject(
-            new Error('An unexpected response was received from the server.'),
-          ),
-        ),
-      ).rejects.toThrow('Sua sessão expirou. Entre novamente.');
-
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
+        status: 401,
+        message: SESSION_EXPIRED_MESSAGE,
+      });
       expect(assign).toHaveBeenCalledWith(
-        '/login?error=session_expired&next=%2Fportal%3Fa%3D1',
+        expect.stringContaining('session_expired'),
       );
     });
 
-    it('Dado a ação respondendo "Não autenticado", Quando desembrulha, Então também leva ao login', async () => {
-      const assign = goTo('/portal');
-
-      await expect(
-        unwrapAction(
-          Promise.resolve({
-            success: false,
-            data: null,
-            error: 'Não autenticado',
-          }),
-        ),
-      ).rejects.toThrow('Sua sessão expirou. Entre novamente.');
-
-      expect(assign).toHaveBeenCalledTimes(1);
-    });
-
-    it('Dada uma falha de rede, Quando desembrulha, Então o erro segue como veio e não navega', async () => {
-      const assign = goTo('/portal');
-
-      await expect(
-        unwrapAction(Promise.reject(new TypeError('Failed to fetch'))),
-      ).rejects.toThrow('Failed to fetch');
-
-      expect(assign).not.toHaveBeenCalled();
+    it('Dada a ação sem sessão fora do navegador, Quando desembrulha, Então lança a mensagem do servidor', async () => {
+      await expect(unwrapAction(Promise.resolve(expired))).rejects.toThrow(
+        'Não autenticado',
+      );
     });
   });
 });

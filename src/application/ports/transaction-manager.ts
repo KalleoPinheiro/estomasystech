@@ -7,8 +7,17 @@ import type { SessionPackageRepository } from '@/domain/billing/package';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import type {
+  AnamnesisRepository,
+  CarePlanDiagnosisRepository,
+  CarePlanInterventionRepository,
+  CarePlanOutcomeRepository,
+  CarePlanRepository,
   ClinicalConditionRepository,
+  ConditionAssessmentRepository,
   ConditionPhotoRepository,
+  EvolutionNoteRepository,
+  InterventionRecordRepository,
+  OutcomeEvaluationRepository,
 } from '@/domain/clinical/clinical-repositories';
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
 import type { ConsentRecordRepository } from '@/domain/consent/consent-record';
@@ -22,6 +31,11 @@ import type { ProfessionalRepository } from '@/domain/professional/professional-
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
+import type {
+  NursingDiagnosisRepository,
+  NursingInterventionRepository,
+  NursingOutcomeRepository,
+} from '@/domain/taxonomy/taxonomy-repositories';
 
 /**
  * Repositórios disponíveis dentro de uma transação — escopo enxuto, apenas o
@@ -37,9 +51,13 @@ import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-conf
  * `partners`, `guardians` e `professionalPatientLinks` entraram com o cadastro
  * de paciente como Server Action (#549): paciente, vínculo do Profissional e
  * auditoria gravam juntos ou nada grava.
- * `consentRecords`, `partnerShareConsents`, `dataSubjectRequests` e `clinics`
- * entraram com os atos de LGPD do portal como Server Action (#553, PR 2a):
- * aceite, revogação e pedido do titular gravam e auditam na mesma transação.
+ * Anamnese, evolução, avaliação da condição, plano de cuidados (com diagnósticos,
+ * resultados, intervenções, avaliações e registros), catálogos de enfermagem e
+ * consentimento do parceiro entraram com as ações da ficha do paciente (#552,
+ * ADR-080): cada gravação da ficha e a sua trilha ficam na mesma transação.
+ * `consentRecords`, `dataSubjectRequests` e `clinics` entraram com os atos de LGPD do
+ * portal como Server Action (#553, PR 2a): aceite, revogação e pedido do titular
+ * gravam e auditam na mesma transação.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -61,9 +79,21 @@ export interface TransactionScope {
   guardians: GuardianRepository;
   professionalPatientLinks: ProfessionalPatientLinkRepository;
   consentRecords: ConsentRecordRepository;
-  partnerShareConsents: PartnerShareConsentRepository;
   dataSubjectRequests: DataSubjectRequestRepository;
   clinics: ClinicRepository;
+  anamneses: AnamnesisRepository;
+  evolutions: EvolutionNoteRepository;
+  assessments: ConditionAssessmentRepository;
+  partnerShareConsents: PartnerShareConsentRepository;
+  carePlans: CarePlanRepository;
+  carePlanDiagnoses: CarePlanDiagnosisRepository;
+  carePlanOutcomes: CarePlanOutcomeRepository;
+  carePlanInterventions: CarePlanInterventionRepository;
+  outcomeEvaluations: OutcomeEvaluationRepository;
+  interventionRecords: InterventionRecordRepository;
+  nursingDiagnoses: NursingDiagnosisRepository;
+  nursingOutcomes: NursingOutcomeRepository;
+  nursingInterventions: NursingInterventionRepository;
 }
 
 /**

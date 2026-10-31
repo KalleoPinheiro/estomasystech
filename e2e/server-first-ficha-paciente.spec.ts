@@ -192,4 +192,20 @@ test.describe("Ficha do paciente no servidor", () => {
     await expect(page.getByText("Úlcera venosa server first")).toBeVisible();
     await expect(retry).toHaveCount(0);
   });
+  test("salvar a anamnese é Server Action: nenhuma chamada /api de gravação e a ficha mostra o novo texto", async ({ page }) => {
+    await page.context().addCookies([ADMIN]);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const { apiCalls } = await measure(page);
+    await page.goto(`/pacientes/${patientId}`);
+    await expect(page.getByRole("heading", { level: 1, name: patientName })).toBeVisible();
+    const note = `Alergia a látex e iodo ${Date.now()}`;
+
+    await page.getByLabel(/Alergias/).fill(note);
+    await page.getByRole("button", { name: /Salvar anamnese/ }).click();
+
+    await expect(page.getByText("Anamnese salva").first()).toBeVisible();
+    expect(apiCalls, "chamadas /api ao gravar").toEqual([]);
+    await page.reload();
+    await expect(page.getByLabel(/Alergias/)).toHaveValue(note);
+  });
 });

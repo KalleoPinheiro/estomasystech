@@ -8,9 +8,11 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
-import { apiFetch, isSessionExpiredError } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
+import { isSessionExpiredError } from '@/lib/client';
 import type { AnamnesisDto } from '@/lib/dto';
 import { useSessionDraft } from '@/lib/use-session-draft';
+import { saveAnamnesis } from './actions/cadastro';
 
 interface AnamnesisSectionProps {
   patientId: string;
@@ -96,10 +98,7 @@ export function AnamnesisSection({
     setSaving(true);
     setFormError(null);
     try {
-      await apiFetch<AnamnesisDto>(`/api/patients/${patientId}/anamnesis`, {
-        method: 'PUT',
-        body: JSON.stringify(values),
-      });
+      await unwrapAction(saveAnamnesis({ patientId, body: values }));
       toast({ description: 'Anamnese salva', variant: 'success' });
       draft.dismiss();
       onSaved();

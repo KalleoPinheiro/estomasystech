@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { OpenCarePlan } from '@/application/clinical/open-care-plan';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -9,11 +8,8 @@ import { requireStaffSession } from '@/lib/auth/require-session';
 import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toCarePlanDto } from '@/lib/dto';
+import { openCarePlanSchema } from '@/lib/patient-record-schemas';
 import { listPatientCarePlans } from '@/lib/server/data/patient-record';
-
-const openCarePlanSchema = z.object({
-  conditionId: z.string().min(1).nullish(),
-});
 
 type RouteContext = { params: Promise<{ id: string }> };
 

@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { EvaluateOutcome } from '@/application/clinical/evaluate-outcome';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -9,11 +8,7 @@ import { requireStaffSession } from '@/lib/auth/require-session';
 import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toOutcomeEvaluationDto } from '@/lib/dto';
-
-const evaluationSchema = z.object({
-  score: z.number().int().min(1).max(5),
-  notes: z.string().max(2000).nullish(),
-});
+import { evaluationSchema } from '@/lib/patient-record-schemas';
 
 type RouteContext = { params: Promise<{ id: string }> };
 

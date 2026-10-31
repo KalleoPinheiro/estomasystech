@@ -1,12 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { AddConditionAssessment } from '@/application/clinical/add-condition-assessment';
-import { EXUDATE_LEVELS } from '@/domain/clinical/condition-assessment';
-import {
-  EXUDATE_TYPES,
-  INFECTION_LEVELS,
-  WOUND_EDGES,
-} from '@/domain/clinical/wound-time';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
@@ -14,38 +7,7 @@ import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-s
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { toAssessmentDto } from '@/lib/dto';
-
-const detArea = z.number().int().min(0).max(3).nullish();
-const detSeverity = z.number().int().min(0).max(2).nullish();
-
-const tissuePct = z.number().int().min(0).max(100).nullish();
-
-const assessmentSchema = z.object({
-  lengthMm: z.number().int().min(0).max(10_000).nullish(),
-  widthMm: z.number().int().min(0).max(10_000).nullish(),
-  depthMm: z.number().int().min(0).max(10_000).nullish(),
-  tissueType: z.string().max(200).nullish(),
-  exudate: z.enum(EXUDATE_LEVELS).nullish(),
-  painScale: z.number().int().min(0).max(10).nullish(),
-  skinCondition: z.string().max(1000).nullish(),
-  complications: z.string().max(1000).nullish(),
-  complicationCodes: z.string().max(500).nullish(),
-  detDiscolorationArea: detArea,
-  detDiscolorationSeverity: detSeverity,
-  detErosionArea: detArea,
-  detErosionSeverity: detSeverity,
-  detOvergrowthArea: detArea,
-  detOvergrowthSeverity: detSeverity,
-  infectionLevel: z.enum(INFECTION_LEVELS).nullish(),
-  infectionSigns: z.string().max(500).nullish(),
-  woundEdges: z.enum(WOUND_EDGES).nullish(),
-  exudateType: z.enum(EXUDATE_TYPES).nullish(),
-  granulationPct: tissuePct,
-  epithelialPct: tissuePct,
-  sloughPct: tissuePct,
-  necroticPct: tissuePct,
-  notes: z.string().max(5000).nullish(),
-});
+import { assessmentSchema } from '@/lib/patient-record-schemas';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
