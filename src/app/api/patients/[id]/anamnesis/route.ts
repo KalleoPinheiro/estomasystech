@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { UpsertAnamnesis } from '@/application/clinical/upsert-anamnesis';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -8,15 +7,8 @@ import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-p
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toAnamnesisDto } from '@/lib/dto';
+import { anamnesisSchema } from '@/lib/patient-record-schemas';
 import { getPatientAnamnesis } from '@/lib/server/data/patient-record';
-
-const anamnesisSchema = z.object({
-  comorbidities: z.string().max(5000).optional(),
-  allergies: z.string().max(5000).optional(),
-  medications: z.string().max(5000).optional(),
-  surgicalHistory: z.string().max(5000).optional(),
-  notes: z.string().max(5000).optional(),
-});
 
 type RouteContext = { params: Promise<{ id: string }> };
 

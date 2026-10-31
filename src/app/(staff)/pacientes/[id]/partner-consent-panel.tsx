@@ -6,10 +6,14 @@ import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
 import type { PartnerShareConsentDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
 import { useStaffIdentity } from '@/lib/staff-access';
+import {
+  registerPaperConsent,
+  revokePartnerConsent,
+} from './actions/consentimento';
 
 const REVOKED_BY = { patient: 'pelo paciente', staff: 'pela equipe' };
 
@@ -64,7 +68,7 @@ export function PartnerConsentPanel({
   onChanged: () => void;
 }) {
   const { toast } = useToast();
-  const endpoint = `/api/patients/${patientId}/partner-consent`;
+  const _endpoint = `/api/patients/${patientId}/partner-consent`;
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [registering, setRegistering] = useState(false);
@@ -76,7 +80,7 @@ export function PartnerConsentPanel({
     setRegistering(true);
     setError(null);
     try {
-      await apiFetch(`${endpoint}/paper`, { method: 'POST' });
+      await unwrapAction(registerPaperConsent({ patientId }));
       toast({
         description: 'Consentimento em papel registrado',
         variant: 'success',
@@ -98,7 +102,7 @@ export function PartnerConsentPanel({
     setRevoking(true);
     setError(null);
     try {
-      await apiFetch(`${endpoint}/revoke`, { method: 'POST' });
+      await unwrapAction(revokePartnerConsent({ patientId }));
       toast({ description: 'Consentimento revogado', variant: 'success' });
       onChanged();
     } catch (err) {

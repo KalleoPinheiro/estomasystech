@@ -14,12 +14,19 @@ import {
   formatBrazilianPhone,
   parseBrazilianPhone,
 } from '@/domain/shared/phone';
+import { unwrapAction } from '@/lib/action-result';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
-import { apiFetch } from '@/lib/client';
 import type { GuardianDto, PatientDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
+import type { GuardianBody } from '@/lib/guardian-schema';
 import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
+import {
+  createGuardian,
+  deleteGuardian,
+  linkPatientGuardian,
+  updateGuardian,
+} from './actions/cadastro';
 
 /** Só Admin de Empresa e Atendente gerenciam responsáveis (#329); a API repete a regra. */
 function useCanManageGuardians(): boolean {
@@ -255,10 +262,7 @@ export function GuardianPanel({
     onChanged();
   };
   const link = (guardianId: string | null) =>
-    apiFetch(`/api/patients/${patient.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ guardianId }),
-    });
+    unwrapAction(linkPatientGuardian({ patientId: patient.id, guardianId }));
   const run = async (action: () => Promise<unknown>, success: string) => {
     setError(null);
     try {
@@ -271,15 +275,16 @@ export function GuardianPanel({
     }
   };
   const saveGuardian = async (values: GuardianFormValues) => {
-    const body = JSON.stringify({ ...values, email: values.email || null });
+    // O estado do formulário é texto; o `zod` do servidor valida a relação.
+    const body = {
+      ...values,
+      email: values.email || null,
+    } as GuardianBody;
     if (guardian) {
-      await apiFetch(`/api/guardians/${guardian.id}`, { method: 'PUT', body });
+      await unwrapAction(updateGuardian({ id: guardian.id, body }));
       return done('Responsável atualizado');
     }
-    const created = await apiFetch<GuardianDto>('/api/guardians', {
-      method: 'POST',
-      body,
-    });
+    const created = await unwrapAction(createGuardian(body));
     await link(created.id);
     done('Responsável cadastrado e vinculado');
   };
@@ -342,9 +347,7 @@ export function GuardianPanel({
                 onConfirm={() =>
                   run(async () => {
                     await link(null);
-                    await apiFetch(`/api/guardians/${guardian.id}`, {
-                      method: 'DELETE',
-                    });
+                    await unwrapAction(deleteGuardian({ id: guardian.id }));
                   }, 'Responsável excluído')
                 }
               />

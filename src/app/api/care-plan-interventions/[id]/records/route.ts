@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { RecordIntervention } from '@/application/clinical/record-intervention';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
@@ -9,10 +8,7 @@ import { requireStaffSession } from '@/lib/auth/require-session';
 import { resolveSessionProfessionalId } from '@/lib/auth/session-professional';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toInterventionRecordDto } from '@/lib/dto';
-
-const recordSchema = z.object({
-  notes: z.string().max(2000).nullish(),
-});
+import { recordSchema } from '@/lib/patient-record-schemas';
 
 type RouteContext = { params: Promise<{ id: string }> };
 

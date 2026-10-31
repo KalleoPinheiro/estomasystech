@@ -7,3 +7,5 @@ export const guardianSchema = z.object({
   phone: z.string().min(1).max(50),
   email: z.string().max(200).nullish(),
 });
+
+export type GuardianBody = z.input<typeof guardianSchema>;

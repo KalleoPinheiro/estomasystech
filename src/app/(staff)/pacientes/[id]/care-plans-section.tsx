@@ -19,7 +19,7 @@ import {
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
 import type {
   CarePlanDetailDto,
   CarePlanDto,
@@ -38,6 +38,15 @@ import {
   pesSentence,
 } from '@/lib/format';
 import { useApiQuery } from '@/lib/use-api-query';
+import {
+  addCarePlanDiagnosis,
+  evaluateCarePlanOutcome,
+  openCarePlan,
+  prescribeCarePlanIntervention,
+  prescribeCarePlanOutcome,
+  recordCarePlanIntervention,
+  resolveCarePlan,
+} from './actions/plano-cuidados';
 
 interface CarePlansSectionProps {
   patientId: string;
@@ -168,10 +177,9 @@ function OpenCarePlanForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/patients/${patientId}/care-plans`, {
-        method: 'POST',
-        body: JSON.stringify({ conditionId: conditionId || null }),
-      });
+      await unwrapAction(
+        openCarePlan({ patientId, body: { conditionId: conditionId || null } }),
+      );
       toast({ description: 'Plano de cuidados aberto', variant: 'success' });
       onSaved();
     } catch (err) {
@@ -232,10 +240,7 @@ function CarePlanPanel({
 
   const resolvePlan = async () => {
     try {
-      await apiFetch(`/api/care-plans/${planId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ action: 'resolve' }),
-      });
+      await unwrapAction(resolveCarePlan({ id: planId }));
       toast({ description: 'Plano de cuidados encerrado', variant: 'success' });
       refresh();
       onChanged();
@@ -595,10 +600,9 @@ function RecordInterventionButton({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/care-plan-interventions/${interventionId}/records`, {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
+      await unwrapAction(
+        recordCarePlanIntervention({ id: interventionId, body: {} }),
+      );
       toast({ description: 'Execução registrada', variant: 'success' });
       onRecorded();
     } catch (err) {
@@ -715,15 +719,17 @@ function AddDiagnosisForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/care-plans/${carePlanId}/diagnoses`, {
-        method: 'POST',
-        body: JSON.stringify({
-          diagnosisCode: selected.code,
-          type,
-          relatedFactors: relatedFactors || null,
-          definingCharacteristics: definingCharacteristics || null,
+      await unwrapAction(
+        addCarePlanDiagnosis({
+          id: carePlanId,
+          body: {
+            diagnosisCode: selected.code,
+            type,
+            relatedFactors: relatedFactors || null,
+            definingCharacteristics: definingCharacteristics || null,
+          },
         }),
-      });
+      );
       toast({ description: 'Diagnóstico adicionado', variant: 'success' });
       onSaved();
     } catch (err) {
@@ -846,14 +852,16 @@ function PrescribeOutcomeForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/care-plans/${carePlanId}/outcomes`, {
-        method: 'POST',
-        body: JSON.stringify({
-          outcomeCode: selected.code,
-          baselineScore: Number(baselineScore),
-          targetScore: Number(targetScore),
+      await unwrapAction(
+        prescribeCarePlanOutcome({
+          id: carePlanId,
+          body: {
+            outcomeCode: selected.code,
+            baselineScore: Number(baselineScore),
+            targetScore: Number(targetScore),
+          },
         }),
-      });
+      );
       toast({ description: 'Resultado prescrito', variant: 'success' });
       onSaved();
     } catch (err) {
@@ -967,14 +975,12 @@ function PrescribeInterventionForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/care-plans/${carePlanId}/interventions`, {
-        method: 'POST',
-        body: JSON.stringify({
-          interventionCode: selected.code,
-          frequency,
-          priority,
+      await unwrapAction(
+        prescribeCarePlanIntervention({
+          id: carePlanId,
+          body: { interventionCode: selected.code, frequency, priority },
         }),
-      });
+      );
       toast({ description: 'Intervenção prescrita', variant: 'success' });
       onSaved();
     } catch (err) {
@@ -1066,10 +1072,12 @@ function EvaluateOutcomeForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/care-plan-outcomes/${outcome.id}/evaluations`, {
-        method: 'POST',
-        body: JSON.stringify({ score, notes: notes || null }),
-      });
+      await unwrapAction(
+        evaluateCarePlanOutcome({
+          id: outcome.id,
+          body: { score, notes: notes || null },
+        }),
+      );
       toast({
         description: 'Avaliação de resultado registrada',
         variant: 'success',
