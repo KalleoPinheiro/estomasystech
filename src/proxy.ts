@@ -108,6 +108,20 @@ function unauthorized(request: NextRequest): NextResponse {
   return NextResponse.redirect(new URL(destination, request.url));
 }
 
+/**
+ * Sem sessão (ou sessão revogada). Página vai ao login e `/api` responde 401.
+ * O POST de Server Action passa direto: a resposta de um redirecionamento 307
+ * não é o envelope que a tela espera, e o rascunho de um formulário se perderia
+ * (#207). Quem barra a gravação é a própria ação, que lê a sessão (cookie e
+ * revogação) antes de qualquer coisa e responde `Não autenticado` no envelope
+ * (`defineAction`); o cliente então guarda o rascunho e vai ao login.
+ */
+function withoutSession(request: NextRequest, requestId: string): NextResponse {
+  return isServerActionRequest(request)
+    ? nextWithCsp(request, requestId)
+    : unauthorized(request);
+}
+
 function forbidden(request: NextRequest, session: Session): NextResponse {
   if (isApiPath(request.nextUrl.pathname)) {
     // Equipe sem acesso à família de rota lê a mesma mensagem do handler
@@ -257,12 +271,12 @@ async function route(
 
   const session = getRequestSession(request);
   if (!session) {
-    return unauthorized(request);
+    return withoutSession(request, requestId);
   }
   // Conta desativada ou com sessões revogadas (logout, troca de senha) perde
   // o acesso em ≤ 60s, mesmo com cookie válido (#194, ADR-005).
   if (await isSessionRevoked(session)) {
-    return unauthorized(request);
+    return withoutSession(request, requestId);
   }
   if (!isAllowedForRole(pathname, session.role)) {
     return forbidden(request, session);
