@@ -9,6 +9,7 @@ import { writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
 import { ensureLinkBestEffort } from '@/lib/patient-link';
+import { assertProfessionalActsAsSelf } from '@/lib/server/appointment-authorization';
 
 export async function POST(request: NextRequest) {
   const guard = requireStaffSession(request);
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
 
   return handleRequest(async () => {
     const body = recurringSchema.parse(await request.json());
+    assertProfessionalActsAsSelf(guard.session, body.professionalId);
     const services = await getRepositories(writeScope(guard.session));
 
     const result = await new ScheduleRecurringAppointments(
