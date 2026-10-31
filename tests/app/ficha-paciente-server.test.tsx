@@ -106,7 +106,7 @@ afterEach(() => {
 
 describe('Feature: ficha do paciente lida no servidor (#552)', () => {
   it('Dado a ficha renderizada no servidor, Quando monta no navegador, Então mostra paciente e alergia sem nenhuma chamada /api', async () => {
-    const fetchMock = vi.fn(async () => ({
+    const fetchMock = vi.fn(async (_url: string) => ({
       ok: true,
       json: async () => ({ success: true, data: identityFor('company_admin') }),
     }));
