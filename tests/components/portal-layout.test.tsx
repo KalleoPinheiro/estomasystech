@@ -8,6 +8,19 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
+// TESTE-ALTERADO (#553, ADR-081): o layout é assíncrono (lê a versão no servidor);
+// o teste o resolve como o servidor faz antes de renderizar. Mesmos cenários.
+vi.mock('@/lib/server/data/version', () => ({
+  getAppVersion: async () => null,
+}));
+
+const renderLayout = async () =>
+  render(
+    await PortalLayout({
+      children: <p>Conteúdo da página</p>,
+    }),
+  );
+
 afterEach(() => {
   cleanup();
 });
@@ -29,12 +42,8 @@ afterEach(() => {
  * hrefs/`<summary>` que o AC4 pede.
  */
 describe('Feature: Header do portal (SV3-03)', () => {
-  it('Dado o layout do portal, Quando renderizar, Então mantém marca, subtítulo e ação de logout sem regressão', () => {
-    render(
-      <PortalLayout>
-        <p>Conteúdo da página</p>
-      </PortalLayout>,
-    );
+  it('Dado o layout do portal, Quando renderizar, Então mantém marca, subtítulo e ação de logout sem regressão', async () => {
+    await renderLayout();
 
     expect(
       screen.getByRole('link', { name: /EstomaSysTech/ }),
@@ -46,12 +55,8 @@ describe('Feature: Header do portal (SV3-03)', () => {
     expect(screen.getByText('Conteúdo da página')).toBeInTheDocument();
   });
 
-  it('Dado nenhum item de navegação configurado (nunca houve, pré ou pós-migração), Então o Header não renderiza <nav>/<summary>/<details> algum', () => {
-    render(
-      <PortalLayout>
-        <p>Conteúdo da página</p>
-      </PortalLayout>,
-    );
+  it('Dado nenhum item de navegação configurado (nunca houve, pré ou pós-migração), Então o Header não renderiza <nav>/<summary>/<details> algum', async () => {
+    await renderLayout();
 
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     expect(document.querySelector('summary')).toBeNull();
@@ -60,12 +65,8 @@ describe('Feature: Header do portal (SV3-03)', () => {
 });
 
 describe('Feature: aviso de emergência do portal (layout mobile-first, AC 28)', () => {
-  it('aviso de emergência com um ícone', () => {
-    const { container } = render(
-      <PortalLayout>
-        <p>Conteúdo da página</p>
-      </PortalLayout>,
-    );
+  it('aviso de emergência com um ícone', async () => {
+    const { container } = await renderLayout();
     const notice = screen
       .getByText(/Em caso de sangramento, febre ou dor/)
       .closest('.sv-alert');

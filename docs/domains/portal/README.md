@@ -3,7 +3,7 @@ title: "Domínio: Portal do paciente e do parceiro"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-10-31
 domain: portal
 ---
 
@@ -54,6 +54,7 @@ indicou. O papel da sessão escolhe a visão.
 | POR-RN-30 | **Aceite do termo com confirmação explícita** (#481, decisão do PO em 2026-10-23): o botão «Li e aceito o termo de tratamento/imagem» fica desabilitado até a pessoa marcar «Li e concordo com o termo de …»; sem a marcação nada é enviado. Vale para o paciente e o representante legal; a revogação segue de um passo com confirmação | `src/app/portal/consent-card.tsx`, `tests/pages/portal-aceite-explicito.test.tsx` |
 | POR-RN-31 | **Termo de tratamento sem «Responsável técnico»** (#511, [ADR-065](../../adr/065-termo-de-tratamento-sem-responsavel-tecnico.md)): a linha sai do texto-base do tratamento e da variante do representante; a versão sobe para `v3` e `v3-representante` (texto e versão mudam juntos, hash do aceite). Aceites antigos (`v2`) não cobrem o texto vigente: o paciente aceita de novo | `src/lib/consent-text.ts`, `src/lib/consent-representative-text.ts` |
 | POR-RN-32 | **Evolução clínica legível no celular** (#517, 2026-10-23): em até 479px o gráfico usa geometria própria (texto de 12px, altura mínima), a legenda tem uma chave por série (traço e marcador, não só cor) e abaixo vem a lista textual das medições (data, descrição e variação da área desde a medição anterior, sem variação quando duas medições têm o mesmo instante), que é também a alternativa acessível ao gráfico. O campo de observação da foto tem rótulo visível «Observação (opcional)» | `src/components/healing-chart.tsx`, `src/app/portal/condition-progress.tsx`, `src/app/portal/consent-card.tsx`, `tests/components/condition-progress-medicoes.test.tsx` |
+| POR-RN-33 | **Portal lido no servidor, sem salto de layout** (#553, [ADR-081](../../adr/081-portal-no-servidor-leituras-por-props-e-refresh.md)): `/portal` é Server Component; o papel vem da sessão (sessão vencida → `/login?error=session_expired`) e o paciente, o responsável e o parceiro chegam no HTML, sem chamada de `/api` na carga e sem o esqueleto que trocava de forma (CLS 0,26/0,33 → meta < 0,05 em 360, 390, 768 e 1280). A leitura do titular continua auditada (`read`/`portal-patient` e `portal-partner`). Cada função de dados escopa pela sessão e não aceita identificador do cliente: o paciente A nunca lê o B, o responsável só vê o paciente do vínculo ativo, o parceiro só os indicados. As gravações seguem por `/api` e a tela se refaz por `router.refresh()` (Server Actions: PR 2) | `src/lib/server/data/portal.ts`, `src/app/portal/page.tsx`, `src/app/portal/use-portal-refresh.ts`, `tests/lib/server/data-portal.test.ts` |
 
 ## Funcionalidades
 

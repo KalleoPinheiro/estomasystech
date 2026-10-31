@@ -3,16 +3,23 @@
 import {
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import { GuardianPortalView } from '@/app/portal/guardian-view';
+import { renderServerPage } from '@/../tests/support/server-page';
 import PortalPage from '@/app/portal/page';
-import { PatientPortalView } from '@/app/portal/patient-view';
+
+import {
+  GuardianPortalHarness,
+  PatientPortalHarness,
+} from '../support/portal-harness';
+
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
+);
 
 type Handler = (init?: RequestInit) => unknown;
 
@@ -60,17 +67,35 @@ const consentPending = {
   acceptedAt: null,
 };
 
+const guardianPage = vi.hoisted(() => ({
+  signedIn: vi.fn(),
+  patientPage: vi.fn(),
+  represented: vi.fn(),
+}));
+
+vi.mock('@/lib/server/session', () => ({
+  requireSignedInPage: guardianPage.signedIn,
+  requirePatientPortalPage: guardianPage.patientPage,
+}));
+vi.mock('@/lib/server/data/portal', () => ({
+  loadRepresentedPatients: guardianPage.represented,
+  loadPatientPortalView: vi.fn(),
+  loadPartnerPortal: vi.fn(),
+}));
+
 describe('Feature: Portal do responsável (ADR-027)', () => {
+  // TESTE-ALTERADO (#553, ADR-081): a página é Server Component; o papel vem da
+  // sessão e a lista de representados chega pela camada de dados. Mesmo cenário.
   it('Dado papel guardian, Quando abrir o portal, Então mostra a visão do responsável', async () => {
-    mockFetch({
-      'GET /api/portal/me': () => ({ subject: 'ana@x.com', role: 'guardian' }),
-      'GET /api/portal/guardian/patients': () => ({
-        patients: [],
-        selectedPatientId: null,
-      }),
+    const session = { subject: 'ana@x.com', role: 'guardian' };
+    guardianPage.signedIn.mockResolvedValue(session);
+    guardianPage.patientPage.mockResolvedValue(session);
+    guardianPage.represented.mockResolvedValue({
+      patients: [],
+      selectedPatientId: null,
     });
 
-    renderWithToast(<PortalPage />);
+    await renderServerPage(() => PortalPage());
 
     expect(
       await screen.findByText(/Nenhum paciente está ligado ao seu acesso/),
@@ -99,7 +124,7 @@ describe('Feature: Portal do responsável (ADR-027)', () => {
       'GET /api/portal/patient/consent?purpose=image': () => consentPending,
     });
 
-    renderWithToast(<GuardianPortalView />);
+    renderWithToast(<GuardianPortalHarness />);
     fireEvent.click(await screen.findByRole('button', { name: 'Luiza Filha' }));
 
     expect(
@@ -153,7 +178,7 @@ describe('Feature: Portal do responsável (ADR-027)', () => {
       }),
     });
 
-    renderWithToast(<GuardianPortalView />);
+    renderWithToast(<GuardianPortalHarness />);
     fireEvent.click(
       await screen.findByRole('button', { name: 'Trocar paciente' }),
     );
@@ -174,7 +199,7 @@ describe('Feature: Portal do responsável (ADR-027)', () => {
       })),
     );
 
-    renderWithToast(<GuardianPortalView />);
+    renderWithToast(<GuardianPortalHarness />);
 
     await waitFor(() => expect(screen.getByText(/Falhou/)).toBeInTheDocument());
   });
@@ -209,7 +234,7 @@ describe('Feature: Paciente vê quem acessa em nome dele (ADR-027)', () => {
         'GET /api/portal/patient/data-requests': () => [],
       });
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText(/pode acessar este portal em seu nome/),
@@ -240,7 +265,7 @@ describe('Feature: Paciente vê quem acessa em nome dele (ADR-027)', () => {
       },
     });
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
     fireEvent.click(
       await screen.findByRole('button', { name: 'Encerrar acesso' }),
     );
@@ -270,7 +295,7 @@ describe('Feature: Paciente vê quem acessa em nome dele (ADR-027)', () => {
       },
     });
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
     fireEvent.click(
       await screen.findByRole('button', { name: 'Encerrar acesso' }),
     );

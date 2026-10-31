@@ -1,8 +1,5 @@
 import type { NextRequest } from 'next/server';
-import {
-  acceptPartnerShareConsent,
-  getPartnerShareConsent,
-} from '@/application/partners/partner-share-consent';
+import { acceptPartnerShareConsent } from '@/application/partners/partner-share-consent';
 import {
   ADULT_TITULAR_ONLY_MESSAGE,
   resolveConsentSigner,
@@ -12,9 +9,9 @@ import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { clientIp } from '@/lib/auth/client-ip';
 import { requirePatientPortalSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
-import { toPartnerShareConsentDto } from '@/lib/dto';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { PARTNER_SHARE_CONSENT as CONSENT } from '@/lib/partner-share-consent-text';
+import { loadPartnerShareConsent } from '@/lib/server/data/portal';
 
 /**
  * Consentimento do paciente logado para o parceiro que o indicou ver
@@ -25,16 +22,7 @@ export async function GET(request: NextRequest) {
   const auth = requirePatientPortalSession(request);
   if (!auth.ok) return auth.response;
 
-  return handleRequest(async () => {
-    const services = await getRepositories(sessionScope(auth.session));
-    const { patient } = await resolveConsentSigner(
-      services,
-      auth.session,
-      ADULT_TITULAR_ONLY_MESSAGE,
-    );
-    const view = await getPartnerShareConsent(services, patient, CONSENT);
-    return view ? toPartnerShareConsentDto(view, CONSENT) : null;
-  });
+  return handleRequest(() => loadPartnerShareConsent(auth.session));
 }
 
 /** Aceite: grava hash do texto exato, versão, data e IP (evidência LGPD). */

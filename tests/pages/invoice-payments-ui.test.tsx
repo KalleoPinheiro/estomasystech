@@ -25,13 +25,21 @@ import {
   mockBillingData,
   resetBillingData,
 } from '../support/billing-data';
+import { PatientPortalHarness } from '../support/portal-harness';
 import { renderWithToast } from '../support/render-with-toast';
 import { renderServerPage } from '../support/server-page';
 
 vi.mock('next/navigation', async () => {
   const { billing } = await import('../support/billing-data');
+  const { portalRouter } = await import('../support/portal-router');
   return {
-    useRouter: () => ({ refresh: billing.refresh, push: vi.fn() }),
+    useRouter: () => ({
+      refresh: () => {
+        billing.refresh();
+        portalRouter.reload();
+      },
+      push: vi.fn(),
+    }),
     usePathname: () => '/faturamento',
   };
 });
@@ -519,7 +527,6 @@ describe('Feature: Recibo de pagamento', () => {
 
 describe('Feature: Fatura parcial no portal do paciente', () => {
   it('Dado fatura com pagamento parcial, Quando abrir o portal, Então mostra o líquido, o pago e o que falta', async () => {
-    const { PatientPortalView } = await import('@/app/portal/patient-view');
     mockFetch((url) => {
       if (url.startsWith('/api/portal/patient/consent')) {
         return ok({ consentText: 'Termo', accepted: true, acceptedAt: null });
@@ -541,7 +548,7 @@ describe('Feature: Fatura parcial no portal do paciente', () => {
       }
       return undefined;
     });
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     expect(await screen.findByText('R$ 180,00')).toBeInTheDocument();
     expect(

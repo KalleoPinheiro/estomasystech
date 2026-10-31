@@ -7,7 +7,8 @@ import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { portalActorNoun } from '@/lib/auth/portal-actor';
 import { requirePatientPortalSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
+import { loadMyWaitlist } from '@/lib/server/data/portal';
 import { waitlistWithNames } from '@/lib/waitlist-names';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -25,14 +26,7 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
-  return handleRequest(async () => {
-    const services = await getRepositories(sessionScope(session));
-    const patient = await resolvePortalPatient(services, session);
-    const entries = (await services.waitlist.findByPatient(patient.id)).filter(
-      (entry) => entry.status === 'waiting',
-    );
-    return waitlistWithNames(services, entries);
-  });
+  return handleRequest(() => loadMyWaitlist(session));
 }
 
 /** Paciente entra na lista de espera quando não acha horário (portal). */

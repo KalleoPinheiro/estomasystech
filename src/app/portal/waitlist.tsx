@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { formatDateKey } from '@/domain/scheduling/schedule-availability';
 import { apiFetch } from '@/lib/client';
 import type { WaitlistEntryDto } from '@/lib/dto';
-import { useApiQuery } from '@/lib/use-api-query';
+import { usePortalRefresh } from './use-portal-refresh';
 
 const WAIT_WINDOW_DAYS = 30;
 
@@ -89,12 +89,10 @@ export function JoinWaitlist({
 }
 
 /** Pedidos do paciente na lista de espera, com opção de sair. */
-export function MyWaitlist({ version = 0 }: { version?: number }) {
+export function MyWaitlist({ entries: data }: { entries: WaitlistEntryDto[] }) {
   const { toast } = useToast();
-  const { data, refresh } = useApiQuery<WaitlistEntryDto[]>(
-    `/api/portal/patient/waitlist?v=${version}`,
-  );
-  if (!data || data.length === 0) return null;
+  const refresh = usePortalRefresh();
+  if (data.length === 0) return null;
 
   const leave = async (entry: WaitlistEntryDto) => {
     try {

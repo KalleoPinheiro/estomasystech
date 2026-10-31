@@ -23,6 +23,5 @@
   "src/app/plataforma/clinicas/nova/page.tsx",
   "src/app/plataforma/minha-conta/page.tsx",
   "src/app/plataforma/page.tsx",
-  "src/app/plataforma/taxonomia/page.tsx",
-  "src/app/portal/page.tsx"
+  "src/app/plataforma/taxonomia/page.tsx"
 ]

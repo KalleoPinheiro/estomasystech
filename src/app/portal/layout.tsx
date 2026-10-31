@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
 import { ReleaseVersion } from '@/components/release-version';
+import { getAppVersion } from '@/lib/server/data/version';
 
 export const metadata: Metadata = {
   title: 'Portal — EstomaSysTech',
 };
 
-export default function PortalLayout({
+export default async function PortalLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -53,7 +54,7 @@ export default function PortalLayout({
             </Link>
           </p>
           <div className="text-center">
-            <ReleaseVersion url="/api/portal/version" />
+            <ReleaseVersion initial={await getAppVersion()} />
           </div>
         </main>
       </Layout>

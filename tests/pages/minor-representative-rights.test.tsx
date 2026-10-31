@@ -5,8 +5,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { MajorityReviewCard } from '@/app/(staff)/majority-review-card';
 import { ConsentCard } from '@/app/portal/consent-card';
-import { DataRights } from '@/app/portal/data-rights';
-import { PartnerConsentSection } from '@/app/portal/partner-consent-card';
+
+import {
+  DataRightsHarness,
+  PartnerConsentHarness,
+} from '../support/portal-harness';
+
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
+);
 
 type Handler = (init?: RequestInit) => unknown;
 
@@ -60,7 +67,7 @@ describe('Feature: direitos do titular pelo representante do menor (#375)', () =
       },
     });
 
-    renderWithToast(<DataRights asRepresentative />);
+    renderWithToast(<DataRightsHarness asRepresentative />);
 
     expect(
       screen.getByRole('button', {
@@ -85,7 +92,7 @@ describe('Feature: direitos do titular pelo representante do menor (#375)', () =
 
   it('Dado o próprio paciente, Então escolhe correção ou eliminação', async () => {
     mockFetch({ 'GET /api/portal/patient/data-requests': () => [] });
-    renderWithToast(<DataRights />);
+    renderWithToast(<DataRightsHarness />);
     expect(
       await screen.findByText('Pedir correção ou eliminação'),
     ).toBeInTheDocument();
@@ -107,7 +114,7 @@ describe('Feature: autorização do parceiro dada pelo representante (#375)', ()
       },
     });
 
-    renderWithToast(<PartnerConsentSection />);
+    renderWithToast(<PartnerConsentHarness />);
 
     expect(
       await screen.findByText(/Autorizado pelo representante legal em/),
@@ -123,7 +130,7 @@ describe('Feature: autorização do parceiro dada pelo representante (#375)', ()
       'GET /api/portal/patient/partner-consent': () =>
         partnerConsent({ signedByRelationship: 'mae' }),
     });
-    renderWithToast(<PartnerConsentSection asRepresentative />);
+    renderWithToast(<PartnerConsentHarness asRepresentative />);
     expect(
       await screen.findByText(/Autorizado pelo representante legal/),
     ).toBeInTheDocument();
@@ -141,7 +148,7 @@ describe('Feature: autorização do parceiro dada pelo representante (#375)', ()
           representativeExpired: true,
         }),
     });
-    renderWithToast(<PartnerConsentSection />);
+    renderWithToast(<PartnerConsentHarness />);
     expect(
       await screen.findByText(/venceu 90 dias depois dos seus 18 anos/),
     ).toBeInTheDocument();
