@@ -137,7 +137,19 @@ export async function requirePortalPage(
  * leitura o revalida contra o vínculo do responsável.
  */
 export async function requirePatientPortalPage(): Promise<PatientPortalSession> {
-  const session = await requirePortalPage({ roles: ['patient', 'guardian'] });
+  return withActingPatient(
+    await requirePortalPage({ roles: ['patient', 'guardian'] }),
+  );
+}
+
+/**
+ * A sessão do portal com o paciente em nome de quem o responsável age (cookie,
+ * ADR-027). Vale para página e para Server Action: a ação lê o mesmo cookie
+ * que as rotas leem do `NextRequest`, e cada resolução o revalida no vínculo.
+ */
+export async function withActingPatient(
+  session: Session,
+): Promise<PatientPortalSession> {
   const acting =
     session.role === 'guardian'
       ? ((await cookies()).get(ACTING_PATIENT_COOKIE)?.value ?? null)

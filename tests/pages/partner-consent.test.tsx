@@ -15,6 +15,10 @@ import { PartnerConsentHarness } from '../support/portal-harness';
 import { renderWithToast } from '../support/render-with-toast';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
 
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
 vi.mock('next/navigation', async () =>
   (await import('../support/portal-router')).navigationMock(),
 );

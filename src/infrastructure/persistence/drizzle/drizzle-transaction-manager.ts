@@ -6,11 +6,14 @@ import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { DrizzleAppointmentRepository } from './drizzle-appointment-repository';
 import { DrizzleAuditEventRepository } from './drizzle-audit-event-repository';
+import { DrizzleClinicRepository } from './drizzle-clinic-repository';
 import {
   DrizzleClinicalConditionRepository,
   DrizzleConditionPhotoRepository,
+  DrizzleConsentRecordRepository,
 } from './drizzle-clinical-repositories';
 import { DrizzleCommissionPayoutRepository } from './drizzle-commission-payout-repository';
+import { DrizzleDataSubjectRequestRepository } from './drizzle-data-subject-request-repository';
 import {
   DrizzleProcedureRepository,
   DrizzleScheduleConfigRepository,
@@ -21,6 +24,7 @@ import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
 import { DrizzlePartnerRepository } from './drizzle-partner-repository';
+import { DrizzlePartnerShareConsentRepository } from './drizzle-partner-share-consent-repository';
 import { DrizzlePatientRepository } from './drizzle-patient-repository';
 import { DrizzleProducedSessionRepository } from './drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './drizzle-professional-repository';
@@ -84,6 +88,17 @@ export class DrizzleTransactionManager implements TransactionManager {
           tx,
           this.clinicId,
         ),
+        consentRecords: new DrizzleConsentRecordRepository(tx, this.clinicId),
+        partnerShareConsents: new DrizzlePartnerShareConsentRepository(
+          tx,
+          this.clinicId,
+        ),
+        dataSubjectRequests: new DrizzleDataSubjectRequestRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+        ),
+        clinics: new DrizzleClinicRepository(tx),
       }),
     );
   }

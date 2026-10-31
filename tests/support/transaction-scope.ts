@@ -50,6 +50,21 @@ export class InMemoryProfessionalPatientLinks
   }
 }
 
+/**
+ * Repositório que este escopo em memória não implementa (consentimento, pedido
+ * do titular, empresa): quem precisar usa o banco de verdade (PGlite). Falha
+ * alto em vez de devolver vazio, para um teste nunca passar por engano.
+ */
+function notInMemory<T extends object>(name: string): T {
+  return new Proxy({} as T, {
+    get: (_target, property) => () => {
+      throw new Error(
+        `${name}.${String(property)} não existe no escopo transacional em memória: use o PGlite`,
+      );
+    },
+  });
+}
+
 /** Escopo transacional em memória; o que o teste já tem entra por `parts`. */
 export function inMemoryScope(
   parts: Partial<TransactionScope> = {},
@@ -82,6 +97,10 @@ export function inMemoryScope(
     partners: new InMemoryPartnerRepository(),
     guardians: new InMemoryGuardianRepository(),
     professionalPatientLinks: new InMemoryProfessionalPatientLinks(),
+    consentRecords: notInMemory('consentRecords'),
+    partnerShareConsents: notInMemory('partnerShareConsents'),
+    dataSubjectRequests: notInMemory('dataSubjectRequests'),
+    clinics: notInMemory('clinics'),
     ...parts,
   };
 }

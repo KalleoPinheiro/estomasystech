@@ -42,3 +42,16 @@ related:
 - A carga do portal não chama `/api` (fora fotos autenticadas); a leitura auditada do titular continua gravada.
 - Paciente A nunca lê o B: o paciente sai da sessão (e-mail dentro da empresa), o responsável só do vínculo ativo (`patients.guardian_id`) revalidado a cada leitura, o parceiro só dos indicados por ele. Nenhuma função de dados do portal aceita identificador vindo do cliente.
 - Pergunta aberta (PO): nenhuma nova. As regras de negócio do portal não mudaram.
+
+## Atualização — PR 2a (atos de LGPD como Server Action)
+
+A decisão 5 foi cumprida em duas entregas (divisão aprovada pelo coordenador em 2026-10-31): o **PR 2a** leva os atos de LGPD e o **PR 2b** (próximo) leva cancelar consulta, sair da lista de espera, encerrar o acesso do responsável e «agir em nome de».
+
+- **Ações do PR 2a** (`src/app/portal/actions.ts`, `defineAction` com papéis paciente e responsável): `acceptConsent` e `revokeConsent` (os dois termos), `acceptPartnerConsent` e `revokePartnerConsent`, `openDataRequest`. Cada uma grava e **audita na mesma transação** (ADR-075): sem trilha, o ato não existe. As rotas `POST /api/portal/patient/{consent,consent/revoke,partner-consent,partner-consent/revoke,data-requests}` seguem para integrações, com a mesma regra.
+- **`TransactionScope`** ganha `consentRecords`, `partnerShareConsents`, `dataSubjectRequests` e `clinics`: tudo que o ato lê e grava vem do escopo da transação (usar o repositório de fora trava o PGlite).
+- **IP de evidência** do aceite vem de `headers()` pela mesma derivação das rotas (`clientIpFromHeaders`, `TRUSTED_PROXY_HOPS`, último salto do proxy confiável); o corpo da ação nunca o traz.
+- **Responsável**: a ação lê o cookie «agir em nome de» (`withActingPatient`) e o revalida contra o vínculo a cada chamada, como as rotas. Cookie de paciente de outro responsável não vale.
+- **Repetição idempotente** (termo já aceito, parceiro já autorizado) não grava registro nem trilha: `audit` pode devolver `null` quando o handler nada gravou.
+- **Pedido do titular**: o aviso aos Admins sai por `after()`, fora da transação já confirmada; falha no aviso nunca desfaz o pedido (#312). Se a trilha falhar depois do `after()` agendado, o pedido é desfeito e o aviso, que não leva o conteúdo, ainda pode sair.
+- **Continua Route Handler**: auto-agendamento, entrada na lista de espera, foto, exportação (decisão 5, sem mudança).
+

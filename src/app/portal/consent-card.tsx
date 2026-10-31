@@ -16,8 +16,9 @@ import { useId, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { FilePicker } from '@/components/file-picker';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
 import { formatDateTime } from '@/lib/format';
+import { acceptConsent, revokeConsent } from './actions';
 
 /** Finalidade do termo (#216): TCLE de tratamento ou autorização de imagem. */
 export type ConsentPurposeDto = 'treatment' | 'image';
@@ -100,12 +101,7 @@ export function ConsentCard({
       setRevoking(true);
       setError(null);
       try {
-        await apiFetch(
-          `/api/portal/patient/consent/revoke?purpose=${purpose}`,
-          {
-            method: 'POST',
-          },
-        );
+        await unwrapAction(revokeConsent({ purpose }));
         toast({ description: 'Consentimento revogado', variant: 'success' });
         onAccepted();
       } catch (err) {
@@ -164,9 +160,7 @@ export function ConsentCard({
     setAccepting(true);
     setError(null);
     try {
-      await apiFetch(`/api/portal/patient/consent?purpose=${purpose}`, {
-        method: 'POST',
-      });
+      await unwrapAction(acceptConsent({ purpose }));
       toast({ description: copy.acceptedLabel, variant: 'success' });
       onAccepted();
     } catch (err) {
@@ -244,9 +238,7 @@ function OwnNameAccept({
   const accept = async () => {
     setSending(true);
     try {
-      await apiFetch(`/api/portal/patient/consent?purpose=${purpose}`, {
-        method: 'POST',
-      });
+      await unwrapAction(acceptConsent({ purpose }));
       toast({ description: 'Termo aceito em seu nome', variant: 'success' });
       onAccepted();
     } catch (err) {

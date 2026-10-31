@@ -14,6 +14,10 @@ import { ConsentCard } from '@/app/portal/consent-card';
 import { PrivacyNoticeCard } from '@/app/portal/privacy-notice-card';
 import PrivacyNoticePage from '@/app/privacidade/page';
 
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
 const ok = (data: unknown) => ({
   ok: true,
   json: async () => ({ success: true, data, error: null }),
