@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { impactedSpecs, routeOf } from '../../scripts/gate/impacto';
+import { impactedSpecs, routeOf } from '../../scripts/gate-cloud/impacto';
 
 const specs = [
   { file: 'e2e/agenda.spec.ts', text: 'await page.goto("/agenda");' },

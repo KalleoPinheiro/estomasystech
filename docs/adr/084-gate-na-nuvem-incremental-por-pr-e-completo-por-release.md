@@ -41,7 +41,7 @@ Restrições: sem VPS e sem minutos pagos do Actions; a ferramenta de shell mata
    - **Integração (Postgres real):** `vitest --changed <base>` com a config de integração, que usa o grafo de
      imports do Vitest. Fallback: diff em `drizzle/`, `tests/support/`, config do Vitest, dependências ou
      `src/infrastructure/persistence/` roda a integração inteira.
-   - **E2E (prod e dev):** os specs escolhidos por `scripts/gate/impacto.ts`, que o Playwright não calcula a
+   - **E2E (prod e dev):** os specs escolhidos por `scripts/gate-cloud/impacto.ts`, que o Playwright não calcula a
      partir de `src/`. Regras do mapa: spec alterado roda; arquivo de `src/app/<rota>` ou `src/app/api/<rota>`
      roda os specs cujo nome ou URL contém a rota; arquivo de `src/domain|application/<pasta>` roda os specs
      das rotas da pasta (tabela `SLUG_ROTAS`); só documentação, changeset ou teste unitário não roda E2E.

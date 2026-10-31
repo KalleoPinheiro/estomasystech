@@ -10,7 +10,7 @@
 # Perfis (ADR-084):
 #   pr       typecheck, lint, sv, docs, integridade e a suíte unitária COMPLETA com cobertura e limiares
 #            atuais; integração (vitest --changed, grafo de imports), mutação (arquivos alterados de
-#            domain/application) e E2E (specs alcançados, scripts/gate/impacto.ts) só no que o diff
+#            domain/application) e E2E (specs alcançados, scripts/gate-cloud/impacto.ts) só no que o diff
 #            altera ou alcança. Na dúvida, inclui: arquivo transversal ou sem mapa roda tudo.
 #   release  setup + integração completa + `gate:local` (GATE_PERFIL=pr: o perfil release do gate exige
 #            Docker). Docker e backup seguem no WSL antes do `release:cut`.
@@ -106,7 +106,7 @@ integracao_impactada() {
   fi
 }
 
-# E2E só nos specs que o diff alcança (scripts/gate/impacto.ts); ALL = todos; NONE = nenhum.
+# E2E só nos specs que o diff alcança (scripts/gate-cloud/impacto.ts); ALL = todos; NONE = nenhum.
 e2e_impactado() {
   local sel="$1"
   free_port_3000
@@ -114,12 +114,16 @@ e2e_impactado() {
     step e2e-producao npm run test:e2e:prod
     free_port_3000
     step e2e-dev npm run test:e2e:dev
+    step console-limpo-dev npx playwright test -c playwright.console.config.ts
   else
+    # console limpo (#543/#584) é barato e cobre todas as telas por papel: entra em toda seleção
+    sel="$sel e2e/console-limpo.spec.ts"
     # shellcheck disable=SC2086
     step e2e-producao npx playwright test -c playwright.prod.config.ts --pass-with-no-tests $sel
     free_port_3000
     # shellcheck disable=SC2086
     step e2e-dev npx playwright test --pass-with-no-tests $sel
+    step console-limpo-dev npx playwright test -c playwright.console.config.ts
   fi
 }
 
@@ -145,7 +149,7 @@ pr_profile() {
   if git diff --name-only "${base}...HEAD" | grep -Eqv '(^docs/|^\.specs/|^\.changeset/|\.md$)'; then
     setup_postgres; setup_playwright
     integracao_impactada "$base"
-    sel=$(GATE_BASE="$base" npx tsx scripts/gate/impacto.ts)
+    sel=$(GATE_BASE="$base" npx tsx scripts/gate-cloud/impacto.ts)
     echo "E2E selecionado: ${sel}"
     if [ "$sel" != NONE ]; then
       step build npm run build
@@ -160,6 +164,9 @@ release_profile() {
   setup
   integracao
   step gate-local env GATE_PERFIL=pr npm run gate:local
+  # Etapa que o gate:local ainda não tem (scripts/gate/ é do dono; trecho no PR #584): lado `next dev`.
+  free_port_3000
+  step console-limpo-dev npx playwright test -c playwright.console.config.ts
 }
 
 run_bg() { # run_bg <modo>

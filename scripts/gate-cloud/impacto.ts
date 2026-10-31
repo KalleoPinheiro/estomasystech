@@ -9,7 +9,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
-import { detectBase } from './base';
+import { detectBase } from '../gate/base';
 
 /** Arquivos que mexem em todas as telas: mudou um, roda tudo. */
 export const TRANSVERSAL =
@@ -98,4 +98,4 @@ function main(): void {
   console.log(impact.all ? 'ALL' : impact.specs.join(' ') || 'NONE');
 }
 
-if (process.argv[1]?.endsWith('scripts/gate/impacto.ts')) main();
+if (process.argv[1]?.endsWith('scripts/gate-cloud/impacto.ts')) main();
