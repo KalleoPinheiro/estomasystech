@@ -24,7 +24,6 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  useMediaQuery,
 } from '@still-void/ui/react/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -109,9 +108,6 @@ const EXPORT_TITLE = 'Exportação completa dos dados do titular (LGPD art. 18)'
  * dois links soltos em linha tinham ~20px de altura e o de exportação parecia
  * desabilitado (#525). No computador seguem como links, com altura de toque
  * para quem usa a tela sensível ao toque.
- *
- * A consulta é `max-width` de propósito: sem `matchMedia` (SSR, testes) o
- * `useMediaQuery` responde `false`, e o padrão seguro são os links.
  */
 function PatientHeaderActions({
   consentHref,
@@ -121,52 +117,53 @@ function PatientHeaderActions({
   /** `null` quando o papel não pode exportar: o item some. */
   exportHref: string | null;
 }) {
-  const isMobile = useMediaQuery('(max-width: 767px)');
-  if (isMobile) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button type="button" variant="outline">
-            Mais ações <Icon name="chevron-down" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem asChild className="min-h-11">
-            <Link href={consentHref}>Termo de consentimento</Link>
-          </DropdownMenuItem>
-          {exportHref ? (
-            <DropdownMenuItem asChild className="min-h-11">
-              <a
-                href={exportHref}
-                target="_blank"
-                rel="noreferrer"
-                title={EXPORT_TITLE}
-              >
-                Exportar dados (LGPD)
-              </a>
-            </DropdownMenuItem>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
+  // As duas variantes vão no HTML e o CSS escolhe: `useMediaQuery` é falso no servidor, e
+  // trocar de variante ao hidratar empurrava o conteúdo (CLS, #552).
   return (
-    <span className="flex flex-wrap gap-x-4 gap-y-1 font-medium text-sm">
-      <Link href={consentHref} className="text-accent-ink hover:underline">
-        Termo de consentimento
-      </Link>
-      {exportHref ? (
-        <a
-          href={exportHref}
-          target="_blank"
-          rel="noreferrer"
-          className="text-accent-ink hover:underline"
-          title={EXPORT_TITLE}
-        >
-          Exportar dados (LGPD)
-        </a>
-      ) : null}
-    </span>
+    <>
+      <div className="md:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline">
+              Mais ações <Icon name="chevron-down" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem asChild className="min-h-11">
+              <Link href={consentHref}>Termo de consentimento</Link>
+            </DropdownMenuItem>
+            {exportHref ? (
+              <DropdownMenuItem asChild className="min-h-11">
+                <a
+                  href={exportHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={EXPORT_TITLE}
+                >
+                  Exportar dados (LGPD)
+                </a>
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <span className="hidden flex-wrap gap-x-4 gap-y-1 font-medium text-sm md:flex">
+        <Link href={consentHref} className="text-accent-ink hover:underline">
+          Termo de consentimento
+        </Link>
+        {exportHref ? (
+          <a
+            href={exportHref}
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent-ink hover:underline"
+            title={EXPORT_TITLE}
+          >
+            Exportar dados (LGPD)
+          </a>
+        ) : null}
+      </span>
+    </>
   );
 }
 

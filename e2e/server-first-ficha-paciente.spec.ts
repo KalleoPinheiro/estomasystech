@@ -135,9 +135,11 @@ test.describe("Ficha do paciente no servidor", () => {
   test("o Profissional sem vínculo recebe 404 na ficha (R4)", async ({ page }) => {
     await signIn(page.context(), "profissional");
 
-    const response = await page.goto(`/pacientes/${patientId}`);
+    await page.goto(`/pacientes/${patientId}`);
 
-    expect(response?.status()).toBe(404);
+    // A resposta já começou a fluir (loading.tsx) quando o servidor decide: o 404 chega como página «não encontrada».
+    await expect(page.getByRole("heading", { name: patientName })).toHaveCount(0);
+    await expect(page.getByText(/não encontrad/i).first()).toBeVisible();
   });
 
   test("a ficha no celular entrega o LCP em até 2,5 s (CPU 4x, 1,6 Mbps)", async ({ page }) => {
