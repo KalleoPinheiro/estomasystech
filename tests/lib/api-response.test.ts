@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type ZodError, z } from 'zod';
 import {
+  ConflictError,
+  ConsentRequiredError,
+  ForbiddenError,
+  InsufficientStockError,
   InvalidStatusTransitionError,
   NotFoundError,
+  ProvisioningDeniedError,
   SchedulingConflictError,
   ValidationError,
 } from '@/domain/shared/errors';
@@ -187,5 +192,40 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
     if (parsed.success) throw new Error('esperava falhar');
 
     expect(describeFailure(parsed.error).message).toMatch(/a: .+; b: /);
+  });
+
+  describe('Scenario: status HTTP de cada erro de domínio (regra de acesso e de conflito)', () => {
+    it.each([
+      ['ConsentRequiredError', new ConsentRequiredError('Sem termo'), 403],
+      ['ForbiddenError', new ForbiddenError('Sem acesso'), 403],
+      [
+        'ProvisioningDeniedError',
+        new ProvisioningDeniedError('Papel não permitido'),
+        403,
+      ],
+      ['NotFoundError', new NotFoundError('Paciente', 'p-1'), 404],
+      ['ConflictError', new ConflictError('Já pago'), 409],
+      [
+        'SchedulingConflictError',
+        new SchedulingConflictError('Horário ocupado'),
+        409,
+      ],
+      [
+        'InvalidStatusTransitionError',
+        new InvalidStatusTransitionError('Transição inválida'),
+        409,
+      ],
+      ['ValidationError', new ValidationError('Inválido'), 400],
+      [
+        'InsufficientStockError',
+        new InsufficientStockError('Sem estoque'),
+        400,
+      ],
+    ])(
+      'Dado %s, Quando descreve a falha, Então o status é %i',
+      (_nome, error, status) => {
+        expect(describeFailure(error).status).toBe(status);
+      },
+    );
   });
 });
