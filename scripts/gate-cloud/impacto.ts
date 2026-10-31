@@ -13,7 +13,7 @@ import { detectBase } from '../gate/base';
 
 /** Arquivos que mexem em todas as telas: mudou um, roda tudo. */
 export const TRANSVERSAL =
-  /^(src\/proxy\.ts|src\/app\/(layout|providers|globals|manifest)|src\/app\/\(staff\)\/(layout|staff-|role-gate|loading|error|forbidden|not-found)|src\/lib\/(auth\/|server\/(session|define-action|test-faults)|client|runtime-|device-mode|theme|use-)|src\/infrastructure\/(container|persistence\/)|src\/components\/|e2e\/(support\/|global-setup)|playwright[^/]*\.ts|next\.config|package(-lock)?\.json|drizzle\/|Dockerfile|tests\/support\/|scripts\/gate\/impacto)/;
+  /^(src\/proxy\.ts|src\/app\/(layout|providers|globals|manifest)|src\/app\/\(staff\)\/(layout|staff-|role-gate|loading|error|forbidden|not-found)|src\/lib\/(auth\/|server\/(session|define-action|test-faults)|client|runtime-|device-mode|theme|use-)|src\/infrastructure\/(container|persistence\/)|src\/components\/|e2e\/(support\/|global-setup)|playwright[^/]*\.ts|next\.config|package(-lock)?\.json|drizzle\/|Dockerfile|tests\/support\/|scripts\/gate-cloud\/)/;
 
 /** Pasta de `domain`/`application` → rotas (trecho de URL ou de nome de spec) que a exercitam. */
 export const SLUG_ROTAS: Record<string, string[]> = {
