@@ -38,3 +38,7 @@ As leituras da agenda já vêm do servidor (ADR-077). As gravações (agendar, s
 
 - Toda gravação da agenda pela tela deixa trilha; antes não deixava.
 - Pergunta aberta (PO): o Profissional pode confirmar/concluir consulta de paciente não vinculado? A rota nunca aplicou o R4 aqui; as ações mantêm a paridade.
+
+## Errata
+
+- A pergunta aberta sobre o R4 do Profissional em confirmar e concluir foi resolvida no [ADR-079](079-r4-nas-acoes-de-consulta.md): sem vínculo, `403`.

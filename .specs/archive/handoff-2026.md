@@ -2108,3 +2108,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Ficou para o PR 2**: as 21 mutações em Server Actions com auditoria na mesma transação (`TransactionScope` ganha o que faltar), quebra de `care-plans-section.tsx` e `conditions-section.tsx`, teste de rollback em Postgres real, `TESTE-ALTERADO` das mutações.
 - **Medição**: a régua precisa de build + banco; pendente no `gate:local` do PC (não roda na nuvem).
 - **Next step**: the-judge, validação em thread limpa, merge na release/v0.4.0. **Blockers**: nenhum.
+
+## R4 nas ações de consulta e série com paciente alheio (#603, #605) (2026-10-31) — EM REVISÃO
+- **O que mudou**: `src/lib/server/appointment-authorization.ts` (`authorizeAppointmentAct`, `assertProfessionalActsAsSelf`) é a regra única, usada por `authorize:` nas 5 Server Actions de consulta e nas rotas `PATCH /api/appointments/:id`, `POST /api/appointments` e `POST /api/appointments/recurring`. Sem vínculo = 403, outra empresa = 404, `professionalId` alheio ao agendar = 403, sem exigir vínculo prévio. `ScheduleAppointment.assertPatient` (também no avulso) é chamado pela série antes do laço: paciente inexistente/de outra empresa = 404, inativo = 400, sem auditoria. ADR-079 (+ Errata no ADR-078), AGE-RN-25, ACE-RN-68.
+- **Mudança de contrato**: `POST /api/appointments/recurring` com paciente inexistente deixa de ser 200 com tudo pulado e vira 404.
+- **Testes novos (antes do patch; 19 falhavam na base)**: `tests/api/appointment-actions-r4-603.test.ts`, `tests/app/agenda-actions-r4.test.ts`, `tests/application/schedule-recurring-patient-605.test.ts`, `tests/integracao/agenda-r4-auditoria.integracao.ts` (Postgres real). TESTE-ALTERADO: `tests/api/scheduling-catalog-routes.test.ts` (série com paciente inexistente passa de 200 com tudo pulado para 404, #605/ADR-079) e `tests/application/erros-nao-padrao.test.ts` (stub ganhou `assertPatient`).
+- **Pergunta aberta (PO)**: exigir vínculo prévio para agendar (hoje não; é como o Profissional ganha paciente novo).
+- **Next step**: the-judge, validação em thread limpa, `gate:local` e `test:integracao` (não rodam na nuvem); merge na release/v0.4.0; fechar #603, #605 e #545 à mão. **Blockers**: nenhum.
+

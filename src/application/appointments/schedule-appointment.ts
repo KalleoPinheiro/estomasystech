@@ -41,16 +41,24 @@ export class ScheduleAppointment {
     }
   }
 
-  async execute(input: ScheduleAppointmentInput): Promise<Appointment> {
-    const patient = await this.patients.findById(input.patientId);
+  /**
+   * Paciente existe na empresa e está ativo. Exposto para a série recorrente
+   * conferir uma vez, antes das ocorrências (#605).
+   */
+  async assertPatient(patientId: string): Promise<void> {
+    const patient = await this.patients.findById(patientId);
     if (!patient) {
-      throw new NotFoundError('Paciente', input.patientId);
+      throw new NotFoundError('Paciente', patientId);
     }
     if (!patient.isActive) {
       throw new ValidationError(
         'Não é possível agendar consulta para paciente inativo',
       );
     }
+  }
+
+  async execute(input: ScheduleAppointmentInput): Promise<Appointment> {
+    await this.assertPatient(input.patientId);
 
     await this.assertProfessional(input.professionalId);
 

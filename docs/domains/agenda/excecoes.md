@@ -3,7 +3,7 @@ title: "Agenda — matriz de exceções"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-20
+last_reviewed: 2026-10-31
 domain: agenda
 related: [docs/adr/049-matriz-de-excecoes-por-dominio.md]
 ---
@@ -20,9 +20,12 @@ related: [docs/adr/049-matriz-de-excecoes-por-dominio.md]
 | entrada inválida | Início igual ou depois do fim | AGE-RN-01 | `tests/domain/time-slot.test.ts` › "Dado início igual ou depois do fim, Quando criar, Então lança InvalidTimeSlotError" |
 | entrada inválida | Entrada na lista de espera com janela maior que 180 dias ou datas inválidas | AGE-RN-08 | `tests/domain/waitlist-policy.test.ts` › "Dado %s, Quando criar, Então ValidationError" |
 | entrada inválida | Profissional inativo ou inexistente ao marcar | AGE-RN-12 | `tests/api/appointment-professional-validation.test.ts` › "Dado profissional inativo, Quando POST /api/appointments, Então 400" |
+| entrada inválida | Série semanal com paciente inexistente ou de outra empresa | AGE-RN-25 | `tests/application/schedule-recurring-patient-605.test.ts` › "Dado paciente inexistente na empresa, Quando agenda a série, Então falha com NotFoundError e nada é criado"
 | sem permissão | Atendente na configuração da grade | AGE-RN-13 | `tests/api/schedule-permissions-routes.test.ts` › "Dado Atendente, Quando GET /api/settings/schedule, Então 403 (rota de edição do Admin)" |
 | sem permissão | Profissional cadastra ausência de colega ou remove feriado | AGE-RN-13 | `tests/api/schedule-permissions-routes.test.ts` › "Dado Profissional sem vínculo, Quando cadastra ausência, Então 403" ; `tests/api/schedule-permissions-routes.test.ts` › "Dado feriado e ausência de colega, Quando o Profissional remove, Então 403 e os dois ficam" |
 | sem permissão | Profissional cria retorno ou fila para paciente sem vínculo | AGE-RN-17 | `tests/api/professional-write-and-packages-296.test.ts` › "Dado paciente sem vínculo, Então o Profissional recebe 403 e nada é gravado" |
+| sem permissão | Profissional age sobre consulta de paciente sem vínculo (confirmar, concluir, cancelar, falta, remarcar) | AGE-RN-25 | `tests/app/agenda-actions-r4.test.ts` › "Dado profissional sem vínculo, Quando age sobre a consulta, Então recusa, nada muda e a tela não atualiza"
+| sem permissão | Profissional agenda no nome de outro profissional | AGE-RN-25 | `tests/app/agenda-actions-r4.test.ts` › "Dado profissional, Quando agenda com o professionalId de outro, Então recusa e não concede vínculo"
 | outra clínica | Consulta de outra empresa por id, lista ou confirmação | AGE-RN-02 | `tests/api/appointment-tenant-isolation.test.ts` › "Dada sessão da clínica A, Quando PATCH (confirm) em consulta da clínica B, Então 404" |
 | outra clínica | Mesmo horário em duas empresas não conflita | AGE-RN-02 | `tests/api/appointment-overlap-per-clinic.test.ts` › "C1 mesmo horário sem profissional em duas empresas: ambas 200" |
 | outra clínica | Profissional de outra empresa ao marcar consulta avulsa ou série | AGE-RN-12 | `tests/api/appointment-professional-validation.test.ts` › "Dado profissional de outra empresa, Quando POST /api/appointments/recurring, Então 404 e nada é criado" |

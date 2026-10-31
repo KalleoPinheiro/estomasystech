@@ -21,6 +21,7 @@ import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
+import { authorizeAppointmentAct } from '@/lib/server/appointment-authorization';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,6 +50,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = appointmentActionSchema.parse(await request.json());
+    await authorizeAppointmentAct(guard.session, writeScope(guard.session), id);
     const services = await getRepositories(writeScope(guard.session));
     const { appointments } = services;
 
