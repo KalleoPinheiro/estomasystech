@@ -31,7 +31,12 @@ import {
   DrizzleUserAccountRepository,
 } from './drizzle-foundation-repositories';
 import { DrizzleGuardianRepository } from './drizzle-guardian-repository';
-import { DrizzleFollowUpRepository } from './drizzle-inventory-repositories';
+import {
+  DrizzleFollowUpRepository,
+  DrizzleStockMovementRepository,
+  DrizzleSupplyBatchRepository,
+  DrizzleSupplyRepository,
+} from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
 import { DrizzlePartnerRepository } from './drizzle-partner-repository';
@@ -159,6 +164,9 @@ export class DrizzleTransactionManager implements TransactionManager {
         ),
         clinics: new DrizzleClinicRepository(tx),
         waitlist: new DrizzleWaitlistRepository(tx, this.clinicId, this.cipher),
+        supplies: new DrizzleSupplyRepository(tx, this.clinicId),
+        stockMovements: new DrizzleStockMovementRepository(tx, this.clinicId),
+        supplyBatches: new DrizzleSupplyBatchRepository(tx, this.clinicId),
       }),
     );
   }

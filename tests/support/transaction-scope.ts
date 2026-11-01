@@ -32,7 +32,12 @@ import {
   InMemoryUserAccountRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
 import { InMemoryGuardianRepository } from '@/infrastructure/persistence/in-memory/in-memory-guardian-repository';
-import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
+import {
+  InMemoryFollowUpRepository,
+  InMemoryStockMovementRepository,
+  InMemorySupplyBatchRepository,
+  InMemorySupplyRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
 import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
@@ -118,6 +123,9 @@ export function inMemoryScope(
     dataSubjectRequests: notInMemory('dataSubjectRequests'),
     clinics: notInMemory('clinics'),
     waitlist: notInMemory('waitlist'),
+    supplies: new InMemorySupplyRepository(),
+    stockMovements: new InMemoryStockMovementRepository(),
+    supplyBatches: new InMemorySupplyBatchRepository(),
     anamneses: new InMemoryAnamnesisRepository(),
     evolutions: new InMemoryEvolutionNoteRepository(),
     assessments: new InMemoryConditionAssessmentRepository(),

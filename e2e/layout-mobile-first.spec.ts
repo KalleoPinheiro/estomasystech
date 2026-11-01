@@ -383,11 +383,20 @@ async function seedAgendaAppointment(request: APIRequestContext, seed: SlotSeed)
   return { slot, dayKey: slot.dateInput };
 }
 
+/** Mês civil de hoje no fuso do app (APP_TIMEZONE, ADR-073), não no do processo. */
+function civilToday(): { year: number; month0: number } {
+  const key = new Intl.DateTimeFormat("en-CA", {
+    timeZone: process.env.APP_TIMEZONE ?? "America/Sao_Paulo",
+  }).format(new Date());
+  const [year, month] = key.split("-").map(Number);
+  return { year, month0: month - 1 };
+}
+
 /** Avança a agenda até o mês de `dayKey` (YYYY-MM-DD). */
 async function agendaToMonth(page: Page, dayKey: string): Promise<void> {
   const [year, month] = dayKey.split("-").map(Number);
-  const now = new Date();
-  const delta = (year - now.getFullYear()) * 12 + (month - 1 - now.getMonth());
+  const now = civilToday();
+  const delta = (year - now.year) * 12 + (month - 1 - now.month0);
   for (let i = 0; i < delta; i += 1) {
     await page.getByRole("button", { name: "Próximo mês" }).click();
   }

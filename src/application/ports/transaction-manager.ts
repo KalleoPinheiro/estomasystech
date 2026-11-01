@@ -24,6 +24,11 @@ import type { ConsentRecordRepository } from '@/domain/consent/consent-record';
 import type { PartnerShareConsentRepository } from '@/domain/consent/partner-share-consent';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
+import type {
+  StockMovementRepository,
+  SupplyBatchRepository,
+  SupplyRepository,
+} from '@/domain/inventory/inventory-repositories';
 import type { PartnerRepository } from '@/domain/partner/partner-repository';
 import type { DataSubjectRequestRepository } from '@/domain/patient/data-subject-request';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
@@ -59,7 +64,10 @@ import type {
  * `consentRecords`, `dataSubjectRequests` e `clinics` entraram com os atos de LGPD do
  * portal como Server Action (#553, PR 2a): aceite, revogação e pedido do titular
  * gravam e auditam na mesma transação. `waitlist` entrou com a saída da lista
- * de espera pelo portal (#553, PR 2b).
+ * de espera pelo portal (#553, PR 2b). `supplies`, `stockMovements` e
+ * `supplyBatches` entraram com Materiais como Server Action (#556, ADR-083):
+ * cadastro, edição e movimentação de estoque (com o lote) gravam e auditam
+ * juntos ou nada grava.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -84,6 +92,9 @@ export interface TransactionScope {
   dataSubjectRequests: DataSubjectRequestRepository;
   clinics: ClinicRepository;
   waitlist: WaitlistRepository;
+  supplies: SupplyRepository;
+  stockMovements: StockMovementRepository;
+  supplyBatches: SupplyBatchRepository;
   anamneses: AnamnesisRepository;
   evolutions: EvolutionNoteRepository;
   assessments: ConditionAssessmentRepository;
