@@ -106,6 +106,31 @@ describe('Feature: regra de gravação de profissionais (#550)', () => {
       expect(on.isActive).toBe(true);
     });
 
+    it('Dado profissional inativo, Quando edita só o registro, Então continua inativo', async () => {
+      const { professionals, id } = await seeded();
+      await updateProfessionalRecord(professionals, id, { active: false });
+
+      const updated = await updateProfessionalRecord(professionals, id, {
+        registry: 'COREN-SP 789',
+      });
+
+      expect(updated).toMatchObject({
+        registry: 'COREN-SP 789',
+        isActive: false,
+      });
+      expect((await professionals.findById(id))?.isActive).toBe(false);
+    });
+
+    it('Dado profissional ativo, Quando edita só o registro, Então continua ativo', async () => {
+      const { professionals, id } = await seeded();
+
+      const updated = await updateProfessionalRecord(professionals, id, {
+        registry: 'COREN-SP 789',
+      });
+
+      expect(updated.isActive).toBe(true);
+    });
+
     it('Dado id inexistente, Quando edita, Então responde não encontrado com o nome do recurso', async () => {
       const { professionals } = await seeded();
 
