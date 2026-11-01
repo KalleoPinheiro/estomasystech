@@ -87,19 +87,14 @@ async function setReportMonth(page: Page, year: number, month: number): Promise<
   const now = civilToday();
   const delta = (year - now.year) * 12 + (month - 1 - now.month0);
   const step = delta >= 0 ? 1 : -1;
-  const button = page.getByRole("button", { name: delta >= 0 ? "Próximo mês" : "Mês anterior" });
+  const button = page.getByRole("link", { name: delta >= 0 ? "Próximo mês" : "Mês anterior" });
 
   for (let i = 1; i <= Math.abs(delta); i += 1) {
     const target = new Date(now.year, now.month0 + step * i, 1);
     const targetValue = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
-    // Um clique só por mês — repetir o clique dentro de um toPass avançaria o mês
-    // de novo se a resposta demorasse mais que o timeout da tentativa anterior.
-    const requested = page.waitForResponse(
-      (response) => response.url().includes(`/api/reports?month=${targetValue}`),
-      { timeout: 20_000 },
-    );
+    // Um clique só por mês; o mês vai na URL e o servidor renderiza de novo (#555).
     await button.click();
-    await requested;
+    await page.waitForURL(new RegExp(`month=${targetValue}$`), { timeout: 20_000 });
   }
 }
 
