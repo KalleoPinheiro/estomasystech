@@ -9,7 +9,7 @@
 #   scripts/gate-cloud.sh setup|integracao|pr|release   # em primeiro plano (CI, WSL, depuração)
 #
 # Perfis (ADR-084, ADR-088):
-#   rapido   (padrão antes de abrir o PR, ADR-088) typecheck, lint, sv, docs, integridade e os testes que o diff
+#   rapido   (padrão antes de abrir o PR, ADR-088) typecheck, lint, sv, docs, dynamic-import, integridade e os testes que o diff
 #            alcança (`vitest --changed <base>`), ~3 a 5 min. A cobertura completa, a integração e o E2E são do
 #            `ci.yml` e do `gate-pr.yml` no PR, que são os checks exigidos; rode `pr` só para investigar um vermelho.
 #   pr       typecheck, lint, sv, docs, integridade e a suíte unitária COMPLETA com cobertura e limiares
@@ -235,6 +235,7 @@ pr_profile() {
   paralelo lint step lint npm run lint
   paralelo sv step sv npm run check:sv
   paralelo docs step docs npm run check:docs
+  paralelo dynamic-import step dynamic-import npx tsx scripts/check-dynamic-import.ts
   paralelo integridade step integridade-de-testes integridade
   espera
   step cobertura npm run test:coverage
@@ -265,6 +266,7 @@ rapido_profile() {
   paralelo lint step lint npm run lint
   paralelo sv step sv npm run check:sv
   paralelo docs step docs npm run check:docs
+  paralelo dynamic-import step dynamic-import npx tsx scripts/check-dynamic-import.ts
   paralelo integridade step integridade-de-testes integridade
   espera
   step testes-do-diff npx vitest run --changed "$base" --passWithNoTests

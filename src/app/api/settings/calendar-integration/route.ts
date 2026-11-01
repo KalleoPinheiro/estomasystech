@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
+import { googleCalendarOAuthConfigFromEnv } from '@/lib/auth/google-calendar-oauth';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 import type { CalendarIntegrationStatusDto } from '@/lib/dto';
@@ -15,12 +16,14 @@ export async function GET(request: NextRequest) {
       sessionScope(guard.session),
     );
     const account = await googleAccounts.findMostRecent();
+    const configured = googleCalendarOAuthConfigFromEnv() !== null;
     return account
       ? {
+          configured,
           connected: true,
           email: account.email,
           connectedAt: account.connectedAt.toISOString(),
         }
-      : { connected: false, email: null, connectedAt: null };
+      : { configured, connected: false, email: null, connectedAt: null };
   });
 }
