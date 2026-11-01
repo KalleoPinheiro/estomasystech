@@ -55,13 +55,14 @@ jobs:
           GATE_BASE: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
           BASE_REF: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
         run: |
-          if git diff --name-only "${BASE_REF}...HEAD" | grep -Eqv '(^docs/|^\.specs/|^\.changeset/|\.md$)'; then
-            so_doc=false
+          # Mesma regra do ADR-053 (scripts/release/docs-only.ts): só documentação não paga integração, E2E nem mutação.
+          so_doc=$(npx tsx scripts/release/docs-only.ts --base "$BASE_REF" --head HEAD | cut -d= -f2)
+          if [ "$so_doc" = true ]; then
+            e2e=NONE; mutacao=""
           else
-            so_doc=true
+            e2e=$(npx tsx scripts/gate-cloud/impacto.ts)
+            mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao)
           fi
-          e2e=$(npx tsx scripts/gate-cloud/impacto.ts)
-          mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao)
           rodar_e2e=true
           if [ "$so_doc" = true ] || [ "$e2e" = NONE ]; then rodar_e2e=false; fi
           rodar_mutacao=true

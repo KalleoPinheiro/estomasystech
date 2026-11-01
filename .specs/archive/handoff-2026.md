@@ -2254,4 +2254,4 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 ## Merge queue pendente (ADR-087, errata) (2026-11-01) — EM REVISÃO
 - **O que mudou**: só documentação. A errata do ADR-087 e `engineering/gate-na-nuvem.md` registram que o ruleset não oferece «Require merge queue» (repositório de conta pessoal; a fila exige organização). Gatilhos `merge_group` ficam nos workflows; a proteção são os checks obrigatórios do ruleset.
 - **Next step**: ligar a fila se o repositório for para uma organização. **Blockers**: nenhum.
-
+- **Também neste PR (CI curto para PR só de documentação)**: `ci.yml` ganha o job `escopo` (`docs-only.ts`, ADR-053) e pula cobertura/typecheck/lint/sv/server-first/build quando só há `.md` de documentação; `gate-pr.yml` pula integração, E2E e mutação; o job `ci` exige `skipped` nos pesados só em docs-only. Sem `paths-ignore` (check exigido ficaria pendente). `recibo-gate.yml` já dispensava o recibo (ADR-053). Regra na errata do ADR-087 e em `gate-na-nuvem.md`.

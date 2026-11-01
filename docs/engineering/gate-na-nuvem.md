@@ -78,6 +78,14 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
 - Armadilha: o E2E em namespace usa memória (servidor de produção + `next dev` + Chromium); abaixo de 12 GB prefira
   `GATE_E2E_SEQUENCIAL=1`.
 
+### PR só de documentação (ADR-087, errata)
+
+PR que toca só `.md` de documentação (regra do ADR-053) roda os workflows, mas os jobs pesados são pulados: o
+`escopo` do `ci.yml` pula cobertura, typecheck, lint, sv, server-first e build, e o `gate-pr.yml` pula
+integração, E2E e mutação. Fica o gate de docs e o de changeset, e o check exigido (`ci`) fecha verde em
+poucos minutos. Não se usa `paths-ignore`, que deixaria o check exigido pendente. Qualquer arquivo fora da
+regra no diff volta ao gate completo.
+
 ### Merge queue da `release/v0.x` (ADR-087): pendente até o repositório ir para uma organização
 
 **Situação (2026-11-01):** o ruleset **não oferece «Require merge queue»**. O GitHub só liga a fila em

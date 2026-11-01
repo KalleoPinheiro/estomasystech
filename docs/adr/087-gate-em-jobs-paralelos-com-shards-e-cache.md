@@ -121,3 +121,24 @@ organização**. Nada mais da decisão muda:
 - O passo a passo do painel em `engineering/gate-na-nuvem.md` fica registrado como «para quando houver
   organização».
 
+
+## Errata (2026-11-01, PR só de documentação não paga o CI)
+
+PR que toca só `.md` de documentação não precisa de typecheck, lint, cobertura, build, integração, E2E nem
+mutação. A regra é a mesma do [ADR-053](053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md)
+(`scripts/release/docs-only.ts`: todo arquivo tocado é `.md` fora de `src`, `tests`, `e2e`, `drizzle`,
+`scripts`, `deploy`, `.github`, `.claude`, `.gate`, `.husky`; isso inclui `docs/**` e `.changeset/*.md`).
+
+- **Sem `paths-ignore`.** Um workflow que nem começa deixa o check exigido do ruleset em «Expected» para
+  sempre e trava o merge. Os workflows rodam sempre; quem decide é um job de escopo.
+- `ci.yml`: o job `escopo` classifica o PR. Com `docs_only=true`, `cobertura-shard`, `cobertura` e os passos
+  pesados do `estatico` e do `ci` (typecheck, lint, sv, server-first, build) são **pulados**; o gate de
+  docs (`check:docs`) e o de changeset continuam. O job `ci` (o check exigido) só aceita `skipped` nos jobs
+  de cobertura quando `docs_only=true`; em código exige `success` em todos. Push na `main` e fila de merge
+  nunca são dispensados.
+- `gate-pr.yml`: com `so_doc=true` o impacto manda pular integração, E2E e mutação, e o job final `gate-pr`
+  confere que foram de fato pulados.
+- `recibo-gate.yml`: já dispensa o recibo do gate local em PR só de documentação (ADR-053), e os passos
+  restantes (integridade dos testes e homologação) duram segundos; nada a mudar.
+- Não afrouxa nenhum limiar nem teste (regra 8): PR com um único arquivo fora da regra volta ao gate
+  completo, e lista de arquivos vazia nunca é «só documentação».
