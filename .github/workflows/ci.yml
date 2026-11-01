@@ -140,6 +140,11 @@ jobs:
         if: needs.escopo.outputs.docs_only != 'true'
         run: npm run check:server-first
 
+      # `import()` com template literal faz o Vite avisar e esconde avisos reais (#646).
+      - name: Dynamic-import gate
+        if: needs.escopo.outputs.docs_only != 'true'
+        run: npx tsx scripts/check-dynamic-import.ts
+
   # O selo do corte não cobre o `check:server-first` (nem o `gate:local` o roda). No PR provado pelo corte este
   # job barato (checkout + install + um script) mantém a garantia que o `estatico` dava (ADR-088).
   server-first-provado:

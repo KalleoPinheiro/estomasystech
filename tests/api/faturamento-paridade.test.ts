@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import {
+  type CollectionPath,
+  collectionRoute,
+  type ItemPath,
+  itemRoute,
+} from '../support/api-routes';
 import { ensureTestClinics } from '../support/clinics';
 import { jsonRequest } from '../support/request';
 import { cookieHeaderFor } from '../support/session';
@@ -24,17 +30,17 @@ const call = async <T>(
   return parsed.data;
 };
 
-const post = async <T>(path: string, body: unknown): Promise<T> => {
-  const route = await import(`@/app/api${path}/route`);
+const post = async <T>(path: CollectionPath, body: unknown): Promise<T> => {
+  const route = await collectionRoute(path);
   return call<T>(route.POST(jsonRequest(`/api${path}`, 'POST', body)));
 };
 
 const patch = async <T>(
-  path: string,
+  path: ItemPath,
   id: string,
   body: unknown,
 ): Promise<T> => {
-  const route = await import(`@/app/api${path}/[id]/route`);
+  const route = await itemRoute(path);
   return call<T>(
     route.PATCH(jsonRequest(`/api${path}/${id}`, 'PATCH', body), {
       params: Promise.resolve({ id }),
