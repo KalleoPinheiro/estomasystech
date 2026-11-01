@@ -2269,3 +2269,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `tests/scripts/release-prova-corte.test.ts` (prova, selo, pré-voo). Nenhum teste existente alterado.
 - **Não feito (de propósito)**: build único e cache dos navegadores do Playwright no `gate-pr.yml` (ganho de 5 a 7 min de job por push, só se valida no Actions; adiado até medir) e a integração no `gate:local` (`scripts/gate/` é do dono; entrou no `release-cut.yml`). `actionlint` não rodou localmente (download bloqueado no sandbox): revisão estática manual e `yaml`/`bash -n`.
 - **Next step**: revisão estática dos workflows (actionlint), depois um `Release cut` com `dry_run` na v0.5.0 antes do primeiro corte real. **Blockers**: release v0.5.0 ainda não existe (a branch parte da `main`).
+
+## R4 na emissão de documento e «Fatura não encontrada» (#636, #657) (2026-11-01) — EM REVISÃO
+- **O que mudou** (ADR-089): `src/lib/server/document-authorization.ts` resolve o recurso por `documentType`+`resourceId` no escopo da empresa e aplica a R4 antes da transação de `issueDocumentFor` (rota e Server Action): Profissional sem vínculo `403`, recurso inexistente ou de outra empresa `404`, repasse só o próprio. Admin e Atendente sem mudança; tentativa negada não grava. `NotFoundError` concorda no feminino para «Fatura» (#657); o 200 das páginas fica.
+- **Testes novos**: `tests/lib/server/document-authorization.test.ts` (6 tipos × feliz/403/404/outra empresa/papéis sem mudança, mais negada não grava) e `tests/domain/not-found-error.test.ts`. Nenhum teste existente alterado.
+- **Pergunta aberta (PO)**: Admin e Atendente ainda emitem para id sem recurso (grava evento órfão); checar existência para eles muda o contrato dos papéis que o PO mandou não mexer.
+- **Next step**: revisão the-judge em contexto limpo, merge na release/v0.5.0. **Blockers**: nenhum.
