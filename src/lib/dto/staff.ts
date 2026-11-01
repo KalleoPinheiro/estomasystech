@@ -21,6 +21,8 @@ export interface SidebarIdentityDto {
 
 /** Status da conexão do Google Agenda da clínica (issue #124) — `email`/`connectedAt` são `null` quando `connected` é `false`. */
 export interface CalendarIntegrationStatusDto {
+  /** `false` quando falta GOOGLE_CLIENT_ID/SECRET ou APP_URL: a UI desabilita «Conectar» em vez de levar a um erro (#658). */
+  configured: boolean;
   connected: boolean;
   email: string | null;
   connectedAt: string | null;
