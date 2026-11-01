@@ -52,12 +52,12 @@ recibo() {
   } | tee "$RECIBO"
 }
 
-# Roda o perfil e sempre imprime o recibo, inclusive na falha.
+# Roda o perfil e sempre imprime o recibo, inclusive na falha (o `step` sai na primeira etapa vermelha).
 com_recibo() {
-  local rc=0; mkdir -p .gate; : > "$TIMES"
-  "$2" || rc=$?
-  recibo "$1" "$rc"
-  return "$rc"
+  mkdir -p .gate; : > "$TIMES"
+  # shellcheck disable=SC2064
+  trap "rc=\$?; recibo $1 \$rc; exit \$rc" EXIT
+  "$2"
 }
 
 # check:testes com o motivo do PR (corpo ou texto), sem relaxar a regra 8.
@@ -74,7 +74,7 @@ step() { # step <nome> <comando...>: mede, registra e para na primeira falha
   "$@" || rc=$?
   mkdir -p .gate
   echo "${name} rc=${rc} $(( $(stamp) - t0 ))s" | tee -a "$TIMES"
-  return "$rc"
+  [ "$rc" -eq 0 ] || exit "$rc"
 }
 
 skip() { # skip <etapa> <motivo>: o que não rodou também entra no resumo
