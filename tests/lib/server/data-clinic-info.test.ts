@@ -60,5 +60,6 @@ describe('Feature: cabeçalho e encarregado dos documentos impressos (#546)', ()
     await expect(getLegalControllerFor(session)).rejects.toBeInstanceOf(
       NotFoundError,
     );
+    await expect(getLegalControllerFor(session)).rejects.toThrow('Clínica');
   });
 });

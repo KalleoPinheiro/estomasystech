@@ -8,8 +8,8 @@ import {
   CLINIC_A_ID,
   CLINIC_B_ID,
   ensureTestClinics,
-} from '../support/clinics';
-import { sessionToken } from '../support/session';
+} from '../../support/clinics';
+import { sessionToken } from '../../support/session';
 
 process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 

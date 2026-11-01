@@ -15,6 +15,7 @@ const repos = vi.hoisted(() => ({
 }));
 const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
+  executeInput: vi.fn(),
   assertAccessible: vi.fn(),
   recordAudit: vi.fn(),
   toDetail: vi.fn((detail: unknown, catalogs: unknown) => ({
@@ -28,7 +29,10 @@ vi.mock('@/infrastructure/container', () => ({
 }));
 vi.mock('@/application/clinical/get-care-plan', () => ({
   GetCarePlan: class {
-    execute = mocks.execute;
+    execute = (input: unknown) => {
+      mocks.executeInput(input);
+      return mocks.execute(input);
+    };
   },
 }));
 vi.mock('@/lib/audit', () => ({ recordAudit: mocks.recordAudit }));
@@ -78,10 +82,19 @@ describe('Feature: plano de cuidados lido no servidor para o documento (#546)', 
         patientId: 'pac-1',
       }),
     );
-    const catalogs = mocks.toDetail.mock.calls[0][1] as {
-      diagnoses: Map<string, unknown>;
-    };
+    const catalogs = mocks.toDetail.mock.calls[0][1] as Record<
+      string,
+      Map<string, unknown>
+    >;
     expect(catalogs.diagnoses.get('D1')).toEqual({ code: 'D1' });
+    expect(catalogs.outcomes.get('O1')).toEqual({ code: 'O1' });
+    expect(catalogs.interventions.get('I1')).toEqual({ code: 'I1' });
+    expect(mocks.executeInput).toHaveBeenCalledWith({ id: 'plan-1' });
+    expect(mocks.recordAudit).toHaveBeenCalledWith(
+      repos.auditEvents,
+      session,
+      expect.objectContaining({ action: 'read' }),
+    );
   });
 
   it('Dado Profissional sem vínculo (R4), Quando ler, Então o erro sobe e nada é lido nem auditado', async () => {

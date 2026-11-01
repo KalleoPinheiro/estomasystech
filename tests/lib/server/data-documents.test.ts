@@ -133,6 +133,19 @@ describe('Feature: leituras dos documentos imprimíveis no servidor (#546)', () 
       ).rejects.toBeInstanceOf(NotFoundError);
     });
 
+    it('Dada fatura de paciente que não está mais no cadastro, Quando ler, Então segue sem o nome', async () => {
+      repos.invoices.findById.mockResolvedValue({
+        id: 'inv-1',
+        patientId: 'pac-x',
+      });
+      repos.patients.findById.mockResolvedValue(null);
+
+      expect(await getInvoiceDocumentData(admin, 'inv-1')).toEqual({
+        id: 'inv-1',
+        patientName: undefined,
+      });
+    });
+
     it('Dada fatura existente, Quando ler, Então traz o nome do paciente', async () => {
       repos.invoices.findById.mockResolvedValue({
         id: 'inv-1',
@@ -222,8 +235,8 @@ describe('Feature: leituras dos documentos imprimíveis no servidor (#546)', () 
     it('Dado repasse inexistente, Quando ler, Então 404', async () => {
       repos.commissionPayouts.findById.mockResolvedValue(null);
 
-      await expect(getPayoutReceiptFor(admin, 'po-x')).rejects.toBeInstanceOf(
-        NotFoundError,
+      await expect(getPayoutReceiptFor(admin, 'po-x')).rejects.toThrow(
+        'Repasse',
       );
     });
 
@@ -264,6 +277,9 @@ describe('Feature: leituras dos documentos imprimíveis no servidor (#546)', () 
     it('Dado papel sem acesso aos repasses da clínica, Quando ler, Então recusa antes de abrir o banco', async () => {
       await expect(
         getPayoutReceiptFor(session('atendente'), 'po-1'),
+      ).rejects.toThrow('Seu papel não tem acesso a este recurso');
+      await expect(
+        getPayoutReceiptFor(session('atendente'), 'po-1'),
       ).rejects.toBeInstanceOf(ForbiddenError);
       expect(repos.commissionPayouts.findById).not.toHaveBeenCalled();
     });
@@ -296,6 +312,7 @@ describe('Feature: leituras dos documentos imprimíveis no servidor (#546)', () 
         repos.auditEvents,
         admin,
         expect.objectContaining({
+          action: 'read',
           resourceType: 'condition',
           resourceId: 'cond-1',
           patientId: 'pac-1',
