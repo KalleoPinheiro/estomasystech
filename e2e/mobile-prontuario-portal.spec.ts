@@ -186,9 +186,10 @@ for (const viewport of VIEWPORTS) {
       expect(smallest.height).toBeGreaterThanOrEqual(180);
 
       // Legenda com uma chave por série e lista textual das duas medições, com a tendência.
-      await expect(page.getByText("Área da ferida (mm²)")).toBeVisible();
+      // Dentro do <main>: a cópia que o React deixa num <div hidden> durante o streaming não conta.
+      await expect(page.getByRole("main").getByText("Área da ferida (mm²)")).toBeVisible();
       await expect(page.getByText("Gravidade clínica")).toHaveCount(0);
-      await expect(page.getByText("Dor (0–10)")).toBeVisible();
+      await expect(page.getByRole("main").getByText("Dor (0–10)")).toBeVisible();
       const medicoes = page.getByRole("list", { name: "Medições registradas" });
       await expect(medicoes.getByRole("listitem")).toHaveCount(2);
       await expect(medicoes).toContainText("desde a anterior");

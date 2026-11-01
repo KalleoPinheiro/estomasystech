@@ -344,7 +344,7 @@ test("vazio preservado: pacientes", async ({ page }) => {
   for (const viewport of [PHONE, DESKTOP]) {
     await page.setViewportSize(viewport);
     await page.goto("/pacientes");
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(`nada-${unique()}`);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(`nada-${unique()}`);
     await expect(page.getByText("Nenhum paciente encontrado")).toBeVisible();
     await expect(page.locator("main table")).toHaveCount(0);
   }

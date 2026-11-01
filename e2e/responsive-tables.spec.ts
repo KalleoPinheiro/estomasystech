@@ -146,7 +146,7 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
     await page.goto("/pacientes");
     // A lista é paginada (100 por página, por nome): com a suíte inteira passando de 100 pacientes
     // antes de «Paciente Responsivo», ele cai na 2ª página. A busca traz o paciente para a tela.
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(patient.fullName);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(patient.fullName);
     await expect(page.getByText(shown(patient.fullName))).toBeVisible();
     await expectTableWrappedInOverflowContainer(page);
     await expectNoHorizontalScroll(page);

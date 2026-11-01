@@ -75,7 +75,7 @@ test.describe("pacientes", () => {
     const newName = `${patient.fullName} (editado)`;
 
     await page.goto("/pacientes");
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(patient.fullName);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(patient.fullName);
     await expect(page.getByRole("cell", { name: shown(patient.fullName) })).toBeVisible();
 
     await page
@@ -86,7 +86,7 @@ test.describe("pacientes", () => {
     await page.getByRole("button", { name: "Salvar" }).click();
 
     await expect(page.getByRole("heading", { name: "Editar paciente" })).not.toBeVisible();
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(newName);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(newName);
     await expect(page.getByRole("cell", { name: shown(newName) })).toBeVisible();
   });
 
@@ -94,7 +94,7 @@ test.describe("pacientes", () => {
     const patient = await createPatient(request);
 
     await page.goto("/pacientes");
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(patient.fullName);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(patient.fullName);
     await page
       .getByRole("row", { name: literal(shown(patient.fullName)) })
       .getByRole("button", { name: "Desativar" })
@@ -130,7 +130,7 @@ test.describe("pacientes", () => {
     await createPatient(request, { fullName: `Outro Paciente ${unique()}` });
 
     await page.goto("/pacientes");
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(target.fullName);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(target.fullName);
 
     await expect(page.getByRole("cell", { name: shown(target.fullName) })).toBeVisible();
   });
@@ -139,7 +139,7 @@ test.describe("pacientes", () => {
     const patient = await createPatient(request);
 
     await page.goto("/pacientes");
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(patient.fullName);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(patient.fullName);
     await page
       .getByRole("row", { name: literal(shown(patient.fullName)) })
       .getByRole("link", { name: "Prontuário" })
