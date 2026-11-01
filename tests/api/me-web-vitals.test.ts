@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { USER_ROLES } from '@/domain/auth/user-role';
+import { STAFF_ROLES } from '@/lib/auth/staff-roles';
 import { loggedLines } from '../support/log-lines';
 import { cookieHeaderFor } from '../support/session';
 
@@ -48,11 +48,20 @@ describe('Feature: POST /api/me/web-vitals (#559, ADR-060)', () => {
     expect(response.status).toBe(503);
   });
 
-  it.each(USER_ROLES)(
-    'Dado o papel %s com sessão, Quando envia, Então 202',
+  it.each(STAFF_ROLES)(
+    'Dado o papel de equipe %s com sessão, Quando envia, Então 202',
     async (role) => {
       const response = await post(PAYLOAD, cookieHeaderFor(role));
       expect(response.status).toBe(202);
+    },
+  );
+
+  it.each(['patient', 'guardian', 'partner'] as const)(
+    'Dado o papel de portal %s, Quando envia, Então 403 e nada é registrado',
+    async (role) => {
+      const response = await post(PAYLOAD, cookieHeaderFor(role));
+      expect(response.status).toBe(403);
+      expect(info).not.toHaveBeenCalled();
     },
   );
 

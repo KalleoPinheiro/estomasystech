@@ -23,11 +23,15 @@ A frente de performance (ADR-069, ADR-074) mede em laboratório: Playwright no b
 
 ## Decisão
 
-1. **Coleta com `useReportWebVitals`** (`next/web-vitals`), no componente `WebVitalsReporter`, montado só nas áreas com sessão: casco da equipe, portal e plataforma. Em `/login` e nas páginas públicas ele não existe: a rota exige sessão e a requisição sem ela só sujaria o console.
+1. **Coleta com `useReportWebVitals`** (`next/web-vitals`), no componente `WebVitalsReporter`, montado só nas áreas da equipe: casco da clínica e plataforma. Em `/login`, nas páginas públicas e no portal ele não existe: a rota exige sessão de equipe e a requisição recusada só sujaria o console.
 2. **Um envio por visita, não cinco.** As medidas ficam num buffer (a última de cada métrica vale, porque CLS e INP se atualizam) e saem numa só requisição quando a aba é escondida ou fechada (`visibilitychange`/`pagehide`), por `navigator.sendBeacon`, com `fetch` `keepalive` de reserva. O limite geral da API é por conta (120/min) e o envio não pode disputá-lo com o trabalho da clínica.
-3. **Endpoint `POST /api/me/web-vitals`**, sob o prefixo compartilhado `/api/me`: qualquer papel com sessão real envia; sem sessão é 401, sem `AUTH_SECRET` é 503 (falha fechada, ADR-002). Corpo `.strict()` validado com `zod`: rota, largura e de 1 a 5 medidas de `LCP|INP|CLS|TTFB|FCP`; qualquer campo a mais é 400. Responde 202.
+3. **Endpoint `POST /api/me/web-vitals`**, sob o prefixo compartilhado `/api/me`: os quatro papéis de equipe enviam; sem sessão é 401, sem `AUTH_SECRET` é 503 (falha fechada, ADR-002) e paciente, responsável e parceiro recebem 403, porque a conformância de rotas (`route-guard-conformance`) exige que toda rota fora de `/api/portal` seja de equipe. Corpo `.strict()` validado com `zod`: rota, largura e de 1 a 5 medidas de `LCP|INP|CLS|TTFB|FCP`; qualquer campo a mais é 400. Responde 202.
 4. **Sem identidade.** A rota perde ids (uuid, número, cadeia opaca), query e hash (`/pacientes/:id/avaliacoes`); a largura da janela é arredondada de 50 em 50 px; o log leva só métrica, valor, rating, rota, largura e papel. Nunca conta, empresa, paciente nem User-Agent. **O servidor normaliza de novo**: o corpo é entrada do cliente.
 5. **Destino: o logger estruturado.** Uma linha `web-vital` por medida (ADR-060 redige tudo de qualquer forma). Sem tabela, sem serviço de terceiros; ler como em `producao.md` § 9.4.1.
+
+## Pergunta aberta
+
+O portal (paciente, responsável, parceiro), o público mais mobile, fica sem medição de campo. Medi-lo pede uma rota irmã em `/api/portal/` com a guarda do portal; decisão de escopo para a parte 2 da #559.
 
 ## Alternativas descartadas
 

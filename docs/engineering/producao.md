@@ -871,7 +871,7 @@ mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
 #### 9.4.1 Web Vitals de campo (#559, [ADR-085](../adr/085-web-vitals-de-campo-no-log-estruturado.md))
 
-O navegador de quem está logado (equipe, portal e plataforma) manda LCP, INP, CLS, TTFB e FCP da página
+O navegador da equipe logada (casco da clínica e plataforma; o portal ainda não mede, ADR-085) manda LCP, INP, CLS, TTFB e FCP da página
 que fechou, em uma requisição por visita. Cada medida vira uma linha `web-vital` no log, sem conta, empresa
 ou paciente:
 
@@ -893,8 +893,8 @@ docker logs <container-do-app> 2>&1 | jq -c 'select(.msg == "web-vital" and .rat
 ```
 
 Metas (as mesmas do gate de laboratório): LCP ≤ 2,5 s, CLS < 0,05, INP ≤ 200 ms. Visita que fecha a aba
-sem o navegador disparar o envio não conta; a amostra é de tendência, não de contagem exata. O login e as
-páginas públicas não enviam (a rota exige sessão).
+sem o navegador disparar o envio não conta; a amostra é de tendência, não de contagem exata. O login, as
+páginas públicas e o portal não enviam (a rota exige sessão de equipe).
 
 ### 9.5 GlitchTip (error tracking)
 
