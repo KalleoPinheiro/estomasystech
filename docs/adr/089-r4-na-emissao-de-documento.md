@@ -31,10 +31,10 @@ related:
 
 ## Alternativas
 
-- **Checar a existência também para Admin e Atendente:** fecharia o evento de emissão para id inventado, mas muda o contrato dos papéis que o PO mandou não mexer. Fica como pergunta aberta (PO).
+- **Checar a existência também para Admin e Atendente:** fecha o evento de emissão para id inventado. Fora do escopo deste PR; **decidido pelo PO** (404 para todos os papéis, sem gravar evento) e registrado na issue [#674](https://github.com/KalleoPinheiro/estomasystech/issues/674).
 - **404 para Profissional sem vínculo (como na leitura da ficha):** decisão do PO foi `403` na emissão.
 
 ## Consequências
 
 - Profissional deixa de emitir documento de paciente alheio pela tela e pela API.
-- Admin e Atendente ainda emitem para um id sem recurso (grava evento órfão); é a pergunta aberta acima.
+- Até a [#674](https://github.com/KalleoPinheiro/estomasystech/issues/674), Admin e Atendente ainda emitem para um id sem recurso (grava evento órfão); a decisão do PO é 404 para todos os papéis.

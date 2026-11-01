@@ -2273,7 +2273,7 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 ## R4 na emissão de documento e «Fatura não encontrada» (#636, #657) (2026-11-01) — EM REVISÃO
 - **O que mudou** (ADR-089): `src/lib/server/document-authorization.ts` resolve o recurso por `documentType`+`resourceId` no escopo da empresa e aplica a R4 antes da transação de `issueDocumentFor` (rota e Server Action): Profissional sem vínculo `403`, recurso inexistente ou de outra empresa `404`, repasse só o próprio. Admin e Atendente sem mudança; tentativa negada não grava. `NotFoundError` concorda no feminino para «Fatura» (#657); o 200 das páginas fica.
 - **Testes novos**: `tests/lib/server/document-authorization.test.ts` (6 tipos × feliz/403/404/outra empresa/papéis sem mudança, mais negada não grava) e `tests/domain/not-found-error.test.ts`. Nenhum teste existente alterado.
-- **Pergunta aberta (PO)**: Admin e Atendente ainda emitem para id sem recurso (grava evento órfão); checar existência para eles muda o contrato dos papéis que o PO mandou não mexer.
+- **Decidido pelo PO, issue #674**: Admin e Atendente ainda emitem para id sem recurso (grava evento órfão); a decisão é 404 para todos os papéis, sem gravar evento. Fica fora deste PR.
 - **Next step**: revisão the-judge em contexto limpo, merge na release/v0.5.0. **Blockers**: nenhum.
 
 ## Zero warning do Vite: imports dinâmicos sem template literal (#646) (2026-11-01) — EM REVISÃO
