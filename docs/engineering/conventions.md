@@ -3,7 +3,7 @@ title: "Convenções de código e testes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-01
 ---
 
 # Convenções de código e testes
@@ -37,6 +37,21 @@ last_reviewed: 2026-10-25
 - Dinheiro sempre em centavos inteiros (value object `Money`).
 - Toda mudança registra o ator autenticado (auditoria); acesso cross-empresa do Super Admin é sempre auditado.
 
+## Imports dinâmicos
+
+- `import()` recebe caminho literal ou sai de um **mapa estático** `{ '/rota': () => import('...') } as const`. Nunca um template literal com `${}`: o Vite emite `vite:dynamic-import-vars` ("A file extension must be included in the static part of the import"), o aviso enche o log da suíte e esconde os avisos reais. Critério de pronto da suíte: zero warning do Vite.
+- Vale em `src/`, `tests/`, `e2e/` e `scripts/`. `scripts/check-dynamic-import.ts` lê a AST e reprova a violação (sai com 1, aponta arquivo e linha); roda no job `estatico` do `ci.yml` e nos perfis `rapido` e `pr` do `scripts/gate-cloud.sh`. Comentário e string que citam o padrão não contam.
+- Testes de rota usam o helper `tests/support/api-routes.ts` (`collectionRoute('/invoices')`, `itemRoute('/invoices')`); rota nova entra no mapa dele, com o caminho literal.
+
+```ts
+// Certo
+const ROUTES = { '/payouts': () => import('@/app/api/payouts/route') } as const;
+const route = await ROUTES[path]();
+
+// Errado
+const route = await import(`@/app/api${path}/route`);
+```
+
 ## Telas no servidor (ADR-069, ADR-074)
 
 - Página nova é Server Component. `'use client'` em `page.tsx` só entra na allowlist de `scripts/server-first-allowlist.json` (que só encolhe); `npm run check:server-first` reprova o resto e reprova entrada que já migrou.
@@ -56,7 +71,7 @@ last_reviewed: 2026-10-25
 | `tests/infrastructure/` | repositórios reais | PGlite (Postgres em memória, snapshot migrado 1× por execução) |
 | `tests/api/` | rota completa, com sessão assinada | PGlite |
 | `tests/components/`, `tests/pages/` | renderização e interação | jsdom + Testing Library |
-| `tests/scripts/`, `tests/docs/` | gates (`check:sv`, `check:docs`) e estrutura da documentação | sistema de arquivos |
+| `tests/scripts/`, `tests/docs/` | gates (`check:sv`, `check:docs`, `check-dynamic-import`) e estrutura da documentação | sistema de arquivos |
 | `e2e/` | jornadas no navegador | Playwright, servidor próprio |
 
 - **Data e hora no fuso da clínica ([ADR-073](../adr/073-datas-no-fuso-da-clinica-explicito.md)).** Regra de dia/hora usa `src/domain/shared/time-zone.ts` (e `src/lib/clinic-calendar.ts` no cliente); `getHours`/`setDate`/`new Date(y, m, d)` e `toLocale*String` sem `timeZone` são proibidos em `src/domain`, `src/application`, `src/app` e `src/lib` (`tests/lib/fuso-sem-date-local.test.ts`). Teste de fuso troca `process.env.TZ` e fixa `APP_TIMEZONE`.

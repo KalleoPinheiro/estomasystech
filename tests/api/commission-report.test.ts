@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import {
+  type CollectionPath,
+  collectionRoute,
+  type ItemPath,
+  itemRoute,
+} from '../support/api-routes';
 import { jsonRequest } from '../support/request';
 
 process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
@@ -26,16 +32,16 @@ interface ReportBody {
 // Mês exclusivo deste arquivo — o relatório é da clínica inteira.
 const MONTH = '2031-03';
 
-const post = async <T>(path: string, body: unknown): Promise<T> => {
-  const route = await import(`@/app/api${path}/route`);
+const post = async <T>(path: CollectionPath, body: unknown): Promise<T> => {
+  const route = await collectionRoute(path);
   const response = await route.POST(jsonRequest(`/api${path}`, 'POST', body));
   const parsed = (await response.json()) as Envelope<T>;
   expect(parsed.error).toBeNull();
   return parsed.data;
 };
 
-const patch = async (path: string, id: string, body: unknown) => {
-  const route = await import(`@/app/api${path}/[id]/route`);
+const patch = async (path: ItemPath, id: string, body: unknown) => {
+  const route = await itemRoute(path);
   const response = await route.PATCH(
     jsonRequest(`/api${path}/${id}`, 'PATCH', body),
     { params: Promise.resolve({ id }) },
