@@ -871,7 +871,7 @@ mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
 #### 9.4.1 Web Vitals de campo (#559, [ADR-086](../adr/086-web-vitals-de-campo-no-log-estruturado.md))
 
-O navegador da equipe logada (casco da clínica e plataforma; o portal ainda não mede, ADR-086) manda LCP, INP, CLS, TTFB e FCP da página
+O navegador logado (casco da clínica e plataforma, por `POST /api/me/web-vitals`; portal do paciente, do responsável e do parceiro, por `POST /api/portal/web-vitals`, #643) manda LCP, INP, CLS, TTFB e FCP da página
 que fechou, em uma requisição por visita. Cada medida vira uma linha `web-vital` no log, sem conta, empresa
 ou paciente:
 
@@ -881,10 +881,11 @@ ou paciente:
 
 Campos: `metric` (`LCP`, `INP`, `CLS`, `TTFB`, `FCP`), `value` (ms; o CLS não tem unidade), `rating`
 (`good`, `needs-improvement`, `poor`, ou `null`), `route` (sem id, query ou hash), `width` (janela
-arredondada de 50 em 50 px: 350 e 400 são celular, 750 tablet, 1300 desktop) e `role`.
+arredondada de 50 em 50 px: 350 e 400 são celular, 750 tablet, 1300 desktop) e `role`. No portal o `role` é `patient`, `guardian` ou `partner`; a linha nunca leva o paciente, o responsável nem o paciente representado, então a leitura do portal não separa pessoas.
 
 ```bash
-# p75 do LCP por rota, no celular (width <= 400)
+# p75 do LCP por rota, no celular (width <= 400); para só o portal, acrescente
+# `and (.role == "patient" or .role == "guardian" or .role == "partner")` ao select
 docker logs <container-do-app> 2>&1 \
   | jq -c 'select(.msg == "web-vital" and .metric == "LCP" and .width <= 400) | {route, value}' \
   | jq -s 'group_by(.route) | map({route: .[0].route, n: length, p75: (map(.value) | sort | .[(length * 0.75 | floor)])})'
@@ -893,8 +894,9 @@ docker logs <container-do-app> 2>&1 | jq -c 'select(.msg == "web-vital" and .rat
 ```
 
 Metas (as mesmas do gate de laboratório): LCP ≤ 2,5 s, CLS < 0,05, INP ≤ 200 ms. Visita que fecha a aba
-sem o navegador disparar o envio não conta; a amostra é de tendência, não de contagem exata. O login, as
-páginas públicas e o portal não enviam (a rota exige sessão de equipe).
+sem o navegador disparar o envio não conta; a amostra é de tendência, não de contagem exata. O login e as
+páginas públicas não enviam (as duas rotas exigem sessão). A equipe da clínica que abre o `/portal`
+recebe `403` na rota do portal, sem registro.
 
 ### 9.5 GlitchTip (error tracking)
 

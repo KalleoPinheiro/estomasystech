@@ -29,7 +29,7 @@ A frente de performance (ADR-069, ADR-074) mede em laboratório: Playwright no b
 4. **Sem identidade.** A rota perde ids (uuid, número, cadeia opaca), query e hash (`/pacientes/:id/avaliacoes`); a largura da janela é arredondada de 50 em 50 px; o log leva só métrica, valor, rating, rota, largura e papel. Nunca conta, empresa, paciente nem User-Agent. **O servidor normaliza de novo**: o corpo é entrada do cliente.
 5. **Destino: o logger estruturado.** Uma linha `web-vital` por medida (ADR-060 redige tudo de qualquer forma). Sem tabela, sem serviço de terceiros; ler como em `producao.md` § 9.4.1.
 
-## Decisão tomada: o portal fica fora por ora
+## Decisão tomada: o portal fica fora por ora (superada pela errata de 2026-11-02)
 
 O portal (paciente, responsável, parceiro), o público mais mobile, não mede campo nesta etapa. Decisão do orquestrador (2026-11-01): a rota é só da equipe e o portal segue na medição de laboratório. Medi-lo pede uma rota irmã em `/api/portal/` com a guarda do portal; acompanhado na issue [#643](https://github.com/KalleoPinheiro/estomasystech/issues/643).
 
@@ -44,3 +44,12 @@ O portal (paciente, responsável, parceiro), o público mais mobile, não mede c
 - O custo no cliente é um buffer em memória e dois ouvintes de evento.
 - A leitura de campo depende do log chegar ao agregador; o roteiro está em `producao.md` § 9.4.1.
 - Métricas de campo não substituem o gate de laboratório (CLS < 0,05 estrito no CI); somam o que o laboratório não vê.
+
+## Errata (2026-11-02, #643): o portal passa a medir
+
+A exclusão do portal acima durou até a #643. O portal (paciente, responsável e parceiro) é o público mais mobile; a rota irmã que a decisão previa existe agora:
+
+- **`POST /api/portal/web-vitals`**, sob `/api/portal`, com `requirePortalSession` para `patient`, `guardian` e `partner`: sem sessão `401`, sem `AUTH_SECRET` `503`, equipe e plataforma `403` (têm `/api/me/web-vitals`), corpo inválido `400`, sucesso `202`. `/api/me/web-vitals` não muda e segue só da equipe, então `route-guard-conformance` continua valendo.
+- **Mesmo corpo, mesma normalização, mesmo log.** As duas rotas chamam `recordWebVitals` (`src/lib/server/web-vitals-ingest.ts`); a linha `web-vital` leva só o papel. O sujeito da sessão, a clínica e o paciente representado nunca entram no log, então os pacientes não se distinguem entre si.
+- **`WebVitalsReporter` recebe o `endpoint` por parâmetro** (padrão `/api/me/web-vitals`); o layout do portal monta `<WebVitalsReporter endpoint="/api/portal/web-vitals" />`. O reporter e `web-vitals.ts` seguem sem `zod` (o esquema fica em `web-vitals-schema.ts`, só do servidor), por causa da CSP.
+- **Consequência:** a equipe que abre `/portal` dispara um envio que recebe `403` (sem registro); aceito por ser raro e inofensivo.
