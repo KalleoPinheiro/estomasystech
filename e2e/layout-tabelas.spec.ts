@@ -11,10 +11,12 @@ import {
   createPatient,
   createProcedure,
   createProfessional,
+  createStaffAccount,
   createSupply,
   payInvoice,
   unique,
 } from "./support/api";
+import { monthsFromCivilToday } from "./support/calendar";
 import { businessDay, type SlotSeed, slotForAttempt, ymdToDateInput } from "./support/dates";
 
 /**
@@ -43,10 +45,14 @@ interface Member {
 
 /** Leva um seletor de mês (‹ ›) até o mês do slot semeado. */
 async function goToMonth(page: Page, isoDate: string): Promise<void> {
-  const target = new Date(isoDate);
-  const now = new Date();
-  const delta =
-    (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
+  // Mês do slot e «hoje» no fuso do app, não no do processo do teste (UTC no gate da nuvem).
+  const [year, month] = new Intl.DateTimeFormat("en-CA", {
+    timeZone: process.env.APP_TIMEZONE ?? "America/Sao_Paulo",
+  })
+    .format(new Date(isoDate))
+    .split("-")
+    .map(Number);
+  const delta = monthsFromCivilToday(year, month);
   const name = delta >= 0 ? "Próximo mês" : "Mês anterior";
   for (let i = 0; i < Math.abs(delta); i += 1) {
     const done = page.waitForResponse((r) => r.url().includes("month="), { timeout: 20_000 });
@@ -203,7 +209,11 @@ const TABLE_SET: Member[] = [
   },
   {
     name: "configurações contas",
-    seed: async () => ({ url: "/configuracoes/contas", header: "Profissional vinculado" }),
+    // O Admin da sessão padrão é um cookie assinado, não uma conta: a tabela só tem linha se o spec cria uma.
+    seed: async (request) => {
+      await createStaffAccount(request);
+      return { url: "/configuracoes/contas", header: "Profissional vinculado" };
+    },
   },
   {
     name: "configurações feriados",

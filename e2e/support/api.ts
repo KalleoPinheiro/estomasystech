@@ -129,6 +129,16 @@ export interface ProfessionalDto {
   active: boolean;
 }
 
+/** Conta de equipe (atendente) própria do spec: o convite sai sem entrega, a linha aparece em Contas. */
+export async function createStaffAccount(
+  request: APIRequestContext,
+  overrides: Partial<{ email: string }> = {},
+): Promise<{ email: string }> {
+  const email = overrides.email ?? `conta-${unique()}@estomasystech.test`;
+  await apiPost<unknown>(request, "/api/accounts", { email, role: "atendente", professionalId: null });
+  return { email };
+}
+
 export async function createProfessional(
   request: APIRequestContext,
   overrides: Partial<{ fullName: string; registry: string }> = {},

@@ -10,10 +10,12 @@ import {
   createPartner,
   createPatient,
   createProcedure,
+  createStaffAccount,
   createProfessional,
   createSupply,
   unique,
 } from "./support/api";
+import { civilToday } from "./support/calendar";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
 import { shown } from "./support/patient-name";
@@ -67,15 +69,6 @@ async function seedCarePlanWithOutcomeAndIntervention(
     priority: "alta",
   });
   return plan.id;
-}
-
-/** Mês civil de hoje no fuso do app (APP_TIMEZONE, ADR-073), não no do processo. */
-function civilToday(): { year: number; month0: number } {
-  const key = new Intl.DateTimeFormat("en-CA", {
-    timeZone: process.env.APP_TIMEZONE ?? "America/Sao_Paulo",
-  }).format(new Date());
-  const [year, month] = key.split("-").map(Number);
-  return { year, month0: month - 1 };
 }
 
 /**
@@ -188,8 +181,9 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test("configurações", async ({ page }) => {
-    // A conta do Admin de Empresa da sessão padrão já garante ao menos 1 linha na tabela.
+  test("configurações", async ({ page, request }) => {
+    // O Admin de Empresa da sessão padrão é um cookie assinado, não uma conta: a linha vem desta.
+    await createStaffAccount(request);
     await page.goto("/configuracoes/contas");
     await expect(page.locator("table")).toBeVisible();
     await expectTableWrappedInOverflowContainer(page);

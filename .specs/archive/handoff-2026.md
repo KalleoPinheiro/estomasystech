@@ -2240,3 +2240,10 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 ## Teste do nit F1 da #550 (2026-11-01) — EM REVISÃO
 - **O que mudou**: só teste. `tests/lib/server/professional-writes.test.ts` ganha «profissional inativo, edita só o registro, continua inativo» (e o par ativo), que mata o mutante `change.active === true` → `true` apontado na revisão do PR #639. Sem código de produção alterado; changeset patch descreve a ausência de mudança.
 - **Next step**: revisão, gate nuvem perfil `pr`, merge na release/v0.4.0. **Blockers**: nenhum.
+
+## E2E instáveis: relógio do runner e massa de Contas (#647) (2026-11-01) — EM REVISÃO
+- **O que mudou**: só E2E. `e2e/support/calendar.ts` ganha `civilToday` e `monthsFromCivilToday` (mês civil em `APP_TIMEZONE`, não no UTC do runner); `relatorios.spec.ts` e `layout-tabelas.spec.ts` passam a usá-los (`responsive-tables.spec.ts` troca a cópia local pelo helper). `createStaffAccount` em `e2e/support/api.ts`: os specs de tabelas de Configurações > Contas criam a própria conta, porque o Admin da sessão padrão é um cookie assinado e a tabela vinha vazia fora da ordem completa.
+- **Causa provada** com `faketime` (22h de 31/10 em SP = 01/11 em UTC): 9 specs vermelhos antes, 42/42 verdes depois. Teste novo `tests/e2e/civil-month.test.ts` (Dado/Quando/Então) guarda a regra.
+- **TESTE-ALTERADO**: o relógio de referência e a origem da massa estavam errados nos specs (não o requisito de negócio): contagem de meses no fuso do app em `relatorios.spec.ts`, `layout-tabelas.spec.ts`, `responsive-tables.spec.ts`; conta própria nos dois specs de Contas. Cenários e asserções preservados; sem retries, timeouts ou limiares alterados.
+- **Não reproduzidos**: `agenda-filtro-status:48`, `pacientes:128` (6x sob CPU saturada e relógio deslocado) e a medição de bloqueio de `server-first-pacientes-triagem:188` (limiar intocável). Seguem em observação; ver a issue.
+- **Next step**: revisão, gate nuvem (3 rodadas completas no recibo do PR), merge na release/v0.4.0. **Blockers**: nenhum.

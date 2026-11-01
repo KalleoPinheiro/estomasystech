@@ -7,6 +7,7 @@ import {
   createProfessional,
   unique,
 } from "./support/api";
+import { civilToday, monthsFromCivilToday } from "./support/calendar";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
 import { literal } from "./support/regexp";
@@ -17,8 +18,7 @@ const monthValue = (year: number, month: number): string =>
 /** Nº de meses entre "hoje" e o mês alvo (positivo = alvo no futuro). */
 function monthsFromNow(value: string): number {
   const [year, month] = value.split("-").map(Number);
-  const now = new Date();
-  return (year - now.getFullYear()) * 12 + (month - 1 - now.getMonth());
+  return monthsFromCivilToday(year, month);
 }
 
 /**
@@ -31,10 +31,10 @@ async function setReportMonth(page: import("@playwright/test").Page, value: stri
   const step = delta >= 0 ? 1 : -1;
   const buttonLabel = delta >= 0 ? "Próximo mês" : "Mês anterior";
   const button = page.getByRole("link", { name: buttonLabel });
-  const now = new Date();
+  const now = civilToday();
 
   for (let i = 1; i <= Math.abs(delta); i += 1) {
-    const target = new Date(now.getFullYear(), now.getMonth() + step * i, 1);
+    const target = new Date(now.year, now.month0 + step * i, 1);
     const targetValue = monthValue(target.getFullYear(), target.getMonth() + 1);
     // O mês vai na URL e o servidor renderiza a página de novo (#555): espera a URL do mês.
     await button.click();
@@ -100,8 +100,8 @@ test.describe("relatório gerencial", () => {
   });
 
   test("mês sem consultas concluídas mostra estado vazio", async ({ page }) => {
-    const future = new Date();
-    future.setMonth(future.getMonth() + 37);
+    const today = civilToday();
+    const future = new Date(today.year, today.month0 + 37, 1);
 
     await page.goto("/relatorios");
     await setReportMonth(page, monthValue(future.getFullYear(), future.getMonth() + 1));
