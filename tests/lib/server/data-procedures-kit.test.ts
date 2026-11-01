@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Session } from '@/lib/auth/session';
-import { getProcedureKitFor } from '@/lib/server/data/procedures';
+import {
+  getProcedureKitFor,
+  listProceduresFor,
+} from '@/lib/server/data/procedures';
 import {
   CLINIC_A_ID,
   CLINIC_B_ID,
@@ -65,6 +68,10 @@ describe('Feature: leitura do kit do procedimento no servidor (#556)', () => {
       await getProcedureKitFor(session(CLINIC_A_ID), procedure.id),
     ).toEqual(viaRoute);
     expect(viaRoute).toEqual({ items: [{ supplyId: supply.id, quantity: 3 }] });
+    const listed = await listProceduresFor(session(CLINIC_A_ID));
+    expect(listed.find((item) => item.id === procedure.id)?.kitItemCount).toBe(
+      1,
+    );
   });
 
   it('Dado procedimento da clínica A, Quando a clínica B lê o kit, Então responde não encontrado', async () => {
@@ -82,6 +89,6 @@ describe('Feature: leitura do kit do procedimento no servidor (#556)', () => {
 
     await expect(
       getProcedureKitFor(session(CLINIC_B_ID), procedure.id),
-    ).rejects.toThrow(/não encontrad/i);
+    ).rejects.toThrow(/Procedimento.*não encontrad/i);
   });
 });
