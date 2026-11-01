@@ -5,9 +5,10 @@ import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { fromTimeInput, toTimeInput } from '@/domain/scheduling/time-of-day';
-import { apiFetch } from '@/lib/client';
+import { unwrapAction } from '@/lib/action-result';
 import type { ProfessionalDto, WeeklyWindowDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
+import { saveAvailability } from './professional-actions';
 
 const WEEKDAYS = [
   'Domingo',
@@ -89,9 +90,9 @@ function AvailabilityEditor({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/professionals/${professionalId}/availability`, {
-        method: 'PUT',
-        body: JSON.stringify({
+      await unwrapAction(
+        saveAvailability({
+          professionalId,
           windows: days.flatMap((day, weekday) =>
             day.enabled
               ? [
@@ -104,7 +105,7 @@ function AvailabilityEditor({
               : [],
           ),
         }),
-      });
+      );
       toast({ description: 'Horários salvos', variant: 'success' });
       onDone();
     } catch (err) {

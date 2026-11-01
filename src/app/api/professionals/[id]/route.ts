@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { COMMISSION_TYPES } from '@/domain/professional/professional';
-import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toProfessionalDto } from '@/lib/dto';
+import { updateProfessionalRecord } from '@/lib/server/professional-writes';
 
 const updateSchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
@@ -27,23 +27,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = updateSchema.parse(await request.json());
     const { professionals } = await getRepositories(writeScope(guard.session));
-
-    const existing = await professionals.findById(id);
-    if (!existing) {
-      throw new NotFoundError('Profissional', id);
-    }
-
-    let updated = existing.update({
-      fullName: body.fullName,
-      registry: body.registry !== undefined ? body.registry : undefined,
-      commissionType: body.commissionType,
-      commissionPct: body.commissionPct,
-      commissionFixedCents: body.commissionFixedCents,
-    });
-    if (body.active === true) updated = updated.reactivate();
-    if (body.active === false) updated = updated.deactivate();
-
-    await professionals.save(updated);
+    const updated = await updateProfessionalRecord(professionals, id, body);
     return toProfessionalDto(updated);
   });
 }

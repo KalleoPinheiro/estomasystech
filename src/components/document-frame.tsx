@@ -1,10 +1,13 @@
-'use client';
-
-import { Button, Icon } from '@still-void/ui/react';
 import type { ReactNode } from 'react';
 import { IdentityImage } from '@/components/identity-image';
-import { appTimeZone } from '@/domain/shared/time-zone';
+import {
+  IssueDocument,
+  IssuedDateLine,
+  IssuedFootnote,
+} from '@/components/issue-document';
+import { DocumentActions } from '@/components/print-button';
 import type { ClinicInfoDto } from '@/lib/dto';
+import type { IssueDocumentInput } from '@/lib/server/document-issuance';
 
 export type { ClinicInfoDto };
 
@@ -30,9 +33,17 @@ interface DocumentFrameProps {
   clinic: ClinicInfoDto;
   title: string;
   children: ReactNode;
-  /** Número/data de emissão persistidos (#94, DOC-01) — nunca `new Date()` no render. */
-  documentNumber: string;
-  issuedAt: string;
+  /**
+   * Documento a emitir pela ilha de emissão ao montar (#546, ADR-082): o número
+   * e a data entram em espaço fixo e a emissão nunca acontece no render.
+   */
+  issue?: IssueDocumentInput;
+  /**
+   * Número/data de emissão persistidos (#94, DOC-01) quando o documento já foi
+   * emitido (reimpressão) — nunca `new Date()` no render.
+   */
+  documentNumber?: string;
+  issuedAt?: string;
   /**
    * Quando presente, a assinatura do paciente entra ANTES da assinatura do
    * profissional, na mesma ordem [data → paciente → profissional] — corrige a
@@ -78,17 +89,11 @@ function PatientSignatureBlock({
 
 function DocumentFooter({
   clinic,
-  documentNumber,
-  dateLabel,
-  timeLabel,
   patientSignature,
   signerOverride,
   footerNote,
 }: {
   clinic: ClinicInfoDto;
-  documentNumber: string;
-  dateLabel: string;
-  timeLabel: string;
   patientSignature?: DocumentPatientSignature;
   signerOverride?: DocumentSignerOverride;
   footerNote?: ReactNode;
@@ -102,10 +107,7 @@ function DocumentFooter({
 
   return (
     <footer className="mt-12">
-      <p className="mb-10 text-sm">
-        {clinic.city ? `${clinic.city}, ` : ''}
-        {dateLabel}, {timeLabel}.
-      </p>
+      <IssuedDateLine city={clinic.city} />
 
       {patientSignature && (
         <PatientSignatureBlock signature={patientSignature} />
@@ -120,88 +122,68 @@ function DocumentFooter({
 
       {footerNote && <div className="mt-6 text-xs">{footerNote}</div>}
 
-      <p className="mt-6 text-xs">
-        Documento nº {documentNumber} — gerado eletronicamente em {dateLabel},{' '}
-        {timeLabel}, sem necessidade de assinatura manuscrita para validade
-        administrativa.
-      </p>
+      <IssuedFootnote />
     </footer>
   );
 }
 
-/** Moldura A4: cabeçalho da clínica, título, corpo e bloco de assinatura. */
+/**
+ * Moldura A4: cabeçalho da clínica, título, corpo e bloco de assinatura.
+ * Componente de servidor (#546): só a barra de ações e o número/data da emissão
+ * são ilhas de cliente.
+ */
 export function DocumentFrame({
   clinic,
   title,
   children,
+  issue,
   documentNumber,
   issuedAt,
   patientSignature,
   signerOverride,
   footerNote,
 }: DocumentFrameProps) {
-  const issuedDate = new Date(issuedAt);
-  const dateLabel = issuedDate.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    timeZone: appTimeZone(),
-  });
-  // Fuso explícito (#205): documento impresso nunca herda o fuso do processo.
-  const timeLabel = issuedDate.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: appTimeZone(),
-  });
+  const initial =
+    documentNumber && issuedAt ? { documentNumber, issuedAt } : null;
 
   return (
-    /* A moldura imprime em papel: fundo branco e tinta preta são o alvo real,
-       não o tema da tela. Por isso o corpo do documento usa `black` literal —
-       cor neutra, não paleta — enquanto a barra de ações, que só existe na tela
-       e some no `print:`, segue os tokens do design system. */
-    <div className="text-black">
-      <div className="mb-6 flex items-center justify-between border-border border-b pb-4 print:hidden">
-        <Button
-          type="button"
-          variant="link"
-          onClick={() => window.history.back()}
-        >
-          <Icon name="chevron-left" /> Voltar
-        </Button>
-        <Button type="button" onClick={() => window.print()}>
-          Imprimir / salvar PDF
-        </Button>
+    <IssueDocument request={issue} initial={initial}>
+      {/* A moldura imprime em papel: fundo branco e tinta preta são o alvo real,
+          não o tema da tela. Por isso o corpo do documento usa `black` literal —
+          cor neutra, não paleta — enquanto a barra de ações, que só existe na tela
+          e some no `print:`, segue os tokens do design system. */}
+      <div className="text-black">
+        <DocumentActions />
+
+        <header className="mb-8 border-black border-b-2 pb-4 text-center">
+          {clinic.logoUrl && (
+            <div className="mb-2 flex justify-center">
+              <IdentityImage
+                kind="logo"
+                url={clinic.logoUrl}
+                name={clinic.name}
+                size={64}
+              />
+            </div>
+          )}
+          <h1 className="font-bold text-xl">{clinic.name}</h1>
+          {clinic.cnpj && <p className="text-sm">CNPJ: {clinic.cnpj}</p>}
+          {clinic.address && <p className="text-sm">{clinic.address}</p>}
+        </header>
+
+        <h2 className="mb-6 text-center font-bold text-lg uppercase">
+          {title}
+        </h2>
+
+        <div className="text-sm leading-relaxed">{children}</div>
+
+        <DocumentFooter
+          clinic={clinic}
+          patientSignature={patientSignature}
+          signerOverride={signerOverride}
+          footerNote={footerNote}
+        />
       </div>
-
-      <header className="mb-8 border-black border-b-2 pb-4 text-center">
-        {clinic.logoUrl && (
-          <div className="mb-2 flex justify-center">
-            <IdentityImage
-              kind="logo"
-              url={clinic.logoUrl}
-              name={clinic.name}
-              size={64}
-            />
-          </div>
-        )}
-        <h1 className="font-bold text-xl">{clinic.name}</h1>
-        {clinic.cnpj && <p className="text-sm">CNPJ: {clinic.cnpj}</p>}
-        {clinic.address && <p className="text-sm">{clinic.address}</p>}
-      </header>
-
-      <h2 className="mb-6 text-center font-bold text-lg uppercase">{title}</h2>
-
-      <div className="text-sm leading-relaxed">{children}</div>
-
-      <DocumentFooter
-        clinic={clinic}
-        documentNumber={documentNumber}
-        dateLabel={dateLabel}
-        timeLabel={timeLabel}
-        patientSignature={patientSignature}
-        signerOverride={signerOverride}
-        footerNote={footerNote}
-      />
-    </div>
+    </IssueDocument>
   );
 }

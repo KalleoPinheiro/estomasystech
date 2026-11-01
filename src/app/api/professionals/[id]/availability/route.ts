@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { SetProfessionalHours } from '@/application/scheduling/schedule-availability';
-import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
+import { getProfessionalHoursFor } from '@/lib/server/data/professionals';
 
 const hoursSchema = z.object({
   windows: z
@@ -29,13 +29,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { professionals, scheduleAvailability } = await getRepositories(
-      sessionScope(guard.session),
-    );
-    if (!(await professionals.findById(id))) {
-      throw new NotFoundError('Profissional', id);
-    }
-    return { windows: await scheduleAvailability.getProfessionalHours(id) };
+    return getProfessionalHoursFor(guard.session, id);
   });
 }
 

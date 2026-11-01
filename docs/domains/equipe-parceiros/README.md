@@ -3,7 +3,7 @@ title: "Domínio: Equipe e parceiros"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-11
+last_reviewed: 2026-11-01
 domain: equipe-parceiros
 ---
 
@@ -28,14 +28,15 @@ profissional ou parceiro pode ter, opcionalmente, uma conta com o papel correspo
 | EQP-RN-05 | E-mail do parceiro é único **dentro da empresa**, não no banco inteiro: o mesmo médico pode ser parceiro de duas clínicas. Gravado em minúsculas, sem espaços. Duplicado na mesma empresa (cadastro ou edição, inclusive em corrida) responde 409 `Já existe parceiro com este e-mail`, sem citar outra empresa (#211) | índice `uq_partners_clinic_email` (migração `0046`), `src/application/partners/partner-email.ts` |
 | EQP-RN-06 | Indicar um paciente não dá ao parceiro acesso ao dado clínico: ele só vê condições e avaliações com o consentimento do paciente para ele, nos últimos 24 meses ([POR-RN-11](../portal/README.md), [#292](https://github.com/KalleoPinheiro/estomasystech/issues/292)). O consentimento é do par paciente × parceiro: trocar o "Indicado por" não leva a autorização junto | `src/domain/consent/partner-share-consent.ts`, tabela `partner_share_consents` (migração `0048`) |
 | EQP-RN-07 | Retenção da conta de parceiro (#311): conta de portal do parceiro desativada há mais de 2 anos é anonimizada como as da equipe (ACE-RN-45) e solta o vínculo com o cadastro, para o convite novo do mesmo parceiro criar uma conta nova. O cadastro do parceiro (nome, e-mail, CRM) é **guardado**, como o do profissional (decisão de 2026-10-17, [ADR-017](../../adr/017-retencao-decisoes-complementares.md)): ele sustenta a indicação, o consentimento do paciente e as comissões, que têm prazo próprio; só a eliminação por pedido do titular o anonimiza | [spec](../../../.specs/features/retencao-restante/spec.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
+| EQP-RN-09 | Comissão é dado financeiro (#550): só o Admin de Empresa lê e grava o repasse. A tela `/profissionais` e as ações dela usam a matriz de `/api/professionals` (família administrativa), então Atendente e Profissional recebem 403 sem tocar o cadastro; `/parceiros` segue operacional (Admin, Atendente e Profissional). Toda gravação de profissional, horário e parceiro registra o evento de auditoria na **mesma transação** (ADR-075): se a trilha falha, nada é gravado | `src/app/(staff)/profissionais/professional-actions.ts`, `src/app/(staff)/parceiros/partner-actions.ts`, `src/lib/staff-pages.ts` |
 | EQP-RN-08 | Cadastro do profissional é guardado (decisão de 2026-10-12, #311): nome e conselho aparecem na autoria do prontuário, que tem guarda de 20 anos. A retenção anonimiza só a conta de login | [ADR-013](../../adr/013-retencao-por-anonimizacao.md), [ADR-017](../../adr/017-retencao-decisoes-complementares.md) |
 
 ## Funcionalidades
 
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
-| Cadastro de profissionais, horário e ausências | entregue | `/profissionais` |
-| Cadastro de parceiros e indicação | entregue | `/parceiros` |
+| Cadastro de profissionais e horário semanal (#550): página no servidor, sem `/api` na carga; cadastro, edição, ativar/desativar e horário são Server Actions com auditoria na mesma transação. A leitura do horário de um profissional é sob demanda, ao abrir «Horários». Ausências ficam em Configurações | entregue | `/profissionais` (`page.tsx`, `professionals-board.tsx`, `professional-form.tsx`, `availability-form.tsx`, `professional-actions.ts`), `src/lib/server/{data/professionals,professional-writes}.ts` |
+| Cadastro de parceiros e indicação (#550): página no servidor, sem `/api` na carga; cadastro, edição e ativar/desativar são Server Actions com auditoria na mesma transação. Os links de e-mail e telefone do contato (`mailto:`, `tel:`) seguem `<a>` por serem navegação para fora do app (exceção ADR-069) | entregue | `/parceiros` (`page.tsx`, `partners-board.tsx`, `partner-form.tsx`, `partner-actions.ts`), `src/lib/server/data/partners.ts` |
 
 Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
 
@@ -45,9 +46,9 @@ Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
 | --- | --- |
 | domínio | `src/domain/{professional,partner}/` |
 | casos de uso | `src/application/partners/` (inclui o consentimento para o parceiro, também em papel — POR-RN-16) |
-| API | `src/app/api/{professionals,partners}/` |
+| API | `src/app/api/{professionals,partners}/` (as rotas e as ações dividem `src/lib/server/data/` e `src/lib/server/professional-writes.ts`) |
 | UI | `src/app/(staff)/{profissionais,parceiros}/` |
-| testes | `tests/domain/`, `e2e/equipe.spec.ts` |
+| testes | `tests/domain/`, `tests/app/equipe-actions.test.ts`, `tests/pages/staff-{profissionais,parceiros}.test.tsx`, `e2e/equipe.spec.ts` |
 | exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões

@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Table,
   TableBody,
@@ -8,12 +6,10 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
-import { type ReactNode, use } from 'react';
 import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
-import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
-import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { DocumentFrame } from '@/components/document-frame';
+import { ErrorAlert } from '@/components/feedback';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
-import type { CarePlanDetailDto, PatientDto, ProfessionalDto } from '@/lib/dto';
 import {
   CARE_PLAN_DIAGNOSIS_TYPE_LABELS,
   CARE_PLAN_STATUS_LABELS,
@@ -22,148 +18,95 @@ import {
   outcomeStatusLabel,
   pesSentence,
 } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
-import { useDocumentIssuance } from '@/lib/use-document-issuance';
+import { getCarePlanDetailFor } from '@/lib/server/data/care-plan';
+import { getClinicInfoFor } from '@/lib/server/data/clinic-info';
+import { getPrescribingProfessionalFor } from '@/lib/server/data/documents';
+import { loadBlock } from '@/lib/server/data/load-block';
+import { getPatientRecord } from '@/lib/server/data/patient-record';
+import { findDocumentIssuance } from '@/lib/server/document-issuance';
+import { requireStaffPage } from '@/lib/server/session';
 
-function guardLoading(
-  clinic: ClinicInfoDto | null,
-  detail: CarePlanDetailDto | null,
-  error: string | null,
-  issuance: { documentNumber: string; issuedAt: string } | null,
-  issuanceError: string | null,
-): ReactNode | null {
-  if (error || issuanceError)
-    return <ErrorAlert message={error ?? issuanceError ?? ''} />;
-  if (!clinic || !detail) return <LoadingIndicator />;
-  if (!isClinicInfoComplete(clinic)) {
-    return <ClinicInfoIncompleteAlert clinic={clinic} />;
+/**
+ * Plano de cuidados (SAE) para impressão no servidor (#546, ADR-082) —
+ * diagnóstico (NANDA-I), resultado esperado (NOC) com trilha basal→atual→meta, e
+ * intervenções (NIC) prescritas. Plano vazio e clínica incompleta bloqueiam a
+ * página e a emissão (#468, #94 DOC-04).
+ */
+export default async function CarePlanDocumentPage({
+  params,
+}: {
+  params: Promise<{ carePlanId: string }>;
+}) {
+  const { carePlanId } = await params;
+  const session = await requireStaffPage({
+    next: `/documentos/plano-cuidados/${carePlanId}`,
+  });
+  const [clinic, detail] = await Promise.all([
+    loadBlock(() => getClinicInfoFor(session)),
+    loadBlock(() => getCarePlanDetailFor(session, carePlanId)),
+  ]);
+  if (detail.error !== null) return <ErrorAlert message={detail.error} />;
+  if (clinic.error !== null) return <ErrorAlert message={clinic.error} />;
+  if (!isClinicInfoComplete(clinic.data)) {
+    return <ClinicInfoIncompleteAlert clinic={clinic.data} />;
   }
-  // #94, DOC-01: sem emissão persistida ainda, não renderiza.
-  if (!issuance) return <LoadingIndicator />;
-  return null;
-}
-
-// #94, DOC-04: plano sem nenhum diagnóstico/resultado/intervenção é uma
-// folha timbrada em branco pronta pra assinar — bloqueia antes do DocumentFrame.
-function guardEmptyPlan(detail: CarePlanDetailDto): ReactNode | null {
+  // #94, DOC-04: plano sem nenhum diagnóstico/resultado/intervenção é uma
+  // folha timbrada em branco pronta pra assinar — bloqueia antes da moldura.
   if (
-    detail.diagnoses.length === 0 &&
-    detail.outcomes.length === 0 &&
-    detail.interventions.length === 0
+    detail.data.diagnoses.length === 0 &&
+    detail.data.outcomes.length === 0 &&
+    detail.data.interventions.length === 0
   ) {
     return (
       <ErrorAlert message="Este plano de cuidados ainda não tem diagnóstico, resultado ou intervenção prescritos — não é possível emitir o documento vazio." />
     );
   }
-  return null;
-}
-
-function guardBlock(
-  clinic: ClinicInfoDto | null,
-  detail: CarePlanDetailDto | null,
-  error: string | null,
-  issuance: { documentNumber: string; issuedAt: string } | null,
-  issuanceError: string | null,
-): ReactNode | null {
-  const loadingGuard = guardLoading(
-    clinic,
-    detail,
-    error,
-    issuance,
-    issuanceError,
-  );
-  if (loadingGuard) return loadingGuard;
-  if (!detail) return null;
-  return guardEmptyPlan(detail);
-}
-
-/**
- * Plano de cuidados (SAE) para impressão — diagnóstico (NANDA-I), resultado
- * esperado (NOC) com trilha basal→atual→meta, e intervenções (NIC) prescritas.
- */
-export default function CarePlanDocumentPage({
-  params,
-}: {
-  params: Promise<{ carePlanId: string }>;
-}) {
-  const { carePlanId } = use(params);
-  const { data: clinic } = useApiQuery<ClinicInfoDto>('/api/clinic-info');
-  const { data: detail, error } = useApiQuery<CarePlanDetailDto>(
-    `/api/care-plans/${carePlanId}`,
-  );
-  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
-  const { issuance, error: issuanceError } = useDocumentIssuance(
-    'plano-cuidados',
-    clinic && isClinicInfoComplete(clinic) ? carePlanId : null,
-  );
-
-  const guard = guardBlock(clinic, detail, error, issuance, issuanceError);
-  if (guard) return guard;
-  if (!clinic || !detail || !issuance) return null;
-
-  return (
-    <CarePlanDocumentContent
-      clinic={clinic}
-      detail={detail}
-      documentNumber={issuance.documentNumber}
-      issuedAt={issuance.issuedAt}
-    />
-  );
-}
-
-function CarePlanDocumentContent({
-  clinic,
-  detail,
-  documentNumber,
-  issuedAt,
-}: {
-  clinic: ClinicInfoDto;
-  detail: CarePlanDetailDto;
-  documentNumber: string;
-  issuedAt: string;
-}) {
-  const { data: patient, error: patientError } = useApiQuery<PatientDto>(
-    `/api/patients/${detail.plan.patientId}`,
-  );
-  // #94, DOC-11: assinatura do responsável técnico QUE PRESCREVEU o plano, não
-  // a assinatura genérica da clínica (que podia ser qualquer profissional).
-  const { data: professional } = useApiQuery<ProfessionalDto>(
-    detail.plan.professionalId
-      ? `/api/professionals/${detail.plan.professionalId}`
+  const professionalId = detail.data.plan.professionalId;
+  const [patient, professional] = await Promise.all([
+    loadBlock(() => getPatientRecord(session, detail.data.plan.patientId)),
+    // #94, DOC-11: assina quem prescreveu o plano; sem ele, a assinatura da clínica.
+    professionalId
+      ? loadBlock(() => getPrescribingProfessionalFor(session, professionalId))
       : null,
+  ]);
+  if (patient.error !== null) return <ErrorAlert message={patient.error} />;
+  const signer = professional?.data ?? null;
+  const issuance = await findDocumentIssuance(
+    session,
+    'plano-cuidados',
+    carePlanId,
   );
-
-  if (patientError) return <ErrorAlert message={patientError} />;
-  if (!patient) return <LoadingIndicator />;
 
   return (
     <DocumentFrame
-      clinic={clinic}
+      clinic={clinic.data}
       title="Plano de Cuidados de Enfermagem (SAE)"
-      documentNumber={documentNumber}
-      issuedAt={issuedAt}
+      issue={{ documentType: 'plano-cuidados', resourceId: carePlanId }}
+      documentNumber={issuance?.documentNumber}
+      issuedAt={issuance?.issuedAt}
       signerOverride={
-        professional
-          ? { name: professional.fullName, registry: professional.registry }
+        signer
+          ? { name: signer.fullName, registry: signer.registry }
           : undefined
       }
     >
       <p className="mb-1">
-        <strong>Paciente:</strong> {patient.fullName}
+        <strong>Paciente:</strong> {patient.data.fullName}
       </p>
       <p className="mb-4">
-        <strong>Aberto em:</strong> {formatDate(detail.plan.createdAt)} ·{' '}
-        <strong>Situação:</strong> {CARE_PLAN_STATUS_LABELS[detail.plan.status]}
+        <strong>Aberto em:</strong> {formatDate(detail.data.plan.createdAt)} ·{' '}
+        <strong>Situação:</strong>{' '}
+        {CARE_PLAN_STATUS_LABELS[detail.data.plan.status]}
       </p>
 
       <h3 className="mb-2 font-semibold">
         Diagnósticos de enfermagem (NANDA-I)
       </h3>
-      {detail.diagnoses.length === 0 ? (
+      {detail.data.diagnoses.length === 0 ? (
         <p className="mb-4">Nenhum diagnóstico prescrito.</p>
       ) : (
         <ul className="mb-4 list-disc pl-5">
-          {detail.diagnoses.map((diagnosis) => (
+          {detail.data.diagnoses.map((diagnosis) => (
             <li key={diagnosis.id} className="mb-1">
               <strong>
                 {diagnosis.diagnosisCode} (
@@ -176,7 +119,7 @@ function CarePlanDocumentContent({
       )}
 
       <h3 className="mb-2 font-semibold">Resultados esperados (NOC)</h3>
-      {detail.outcomes.length === 0 ? (
+      {detail.data.outcomes.length === 0 ? (
         <p className="mb-4">Nenhum resultado prescrito.</p>
       ) : (
         // SPEC_DEVIATION: override neutro de impressão (AD-006) — literal
@@ -203,7 +146,7 @@ function CarePlanDocumentContent({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {detail.outcomes.map((outcome) => (
+              {detail.data.outcomes.map((outcome) => (
                 <TableRow key={outcome.id} className="border-black/60 border-b">
                   <TableCell className="py-1 pr-2">
                     {outcome.outcomeCode} — {outcome.outcomeLabel}
@@ -228,7 +171,7 @@ function CarePlanDocumentContent({
       )}
 
       <h3 className="mb-2 font-semibold">Intervenções de enfermagem (NIC)</h3>
-      {detail.interventions.length === 0 ? (
+      {detail.data.interventions.length === 0 ? (
         <p>Nenhuma intervenção prescrita.</p>
       ) : (
         // SPEC_DEVIATION: override neutro de impressão (AD-006) — ver
@@ -250,7 +193,7 @@ function CarePlanDocumentContent({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {detail.interventions.map((intervention) => (
+              {detail.data.interventions.map((intervention) => (
                 <TableRow
                   key={intervention.id}
                   className="border-black/60 border-b"

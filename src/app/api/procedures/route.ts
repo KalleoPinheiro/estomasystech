@@ -1,13 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { Procedure } from '@/domain/catalog/procedure';
-import { ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toProcedureDto } from '@/lib/dto';
 import { listProceduresFor } from '@/lib/server/data/procedures';
+import { createProcedureRecord } from '@/lib/server/procedure-writes';
 
 const procedureSchema = z.object({
   name: z.string().min(1).max(200),
@@ -29,16 +28,7 @@ export async function POST(request: NextRequest) {
   return handleRequest(async () => {
     const body = procedureSchema.parse(await request.json());
     const { procedures } = await getRepositories(writeScope(guard.session));
-
-    const existing = await procedures.findByName(body.name);
-    if (existing) {
-      throw new ValidationError(
-        `Já existe procedimento com o nome "${existing.name}"`,
-      );
-    }
-
-    const procedure = Procedure.create(body);
-    await procedures.save(procedure);
+    const procedure = await createProcedureRecord(procedures, body);
     return toProcedureDto(procedure);
   });
 }

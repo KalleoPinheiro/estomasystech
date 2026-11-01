@@ -100,6 +100,15 @@ export class DrizzleAuditEventRepository implements AuditEventRepository {
     return this.select(and(PLATFORM_EVENT, ...periodConditions(filter)), page);
   }
 
+  async lockResource(resourceType: string, resourceId: string): Promise<void> {
+    // Trava consultiva de transação, por empresa + tipo + recurso: serializa só
+    // a emissão do MESMO documento, sem tocar em linha nem em índice.
+    const key = `${this.clinicId ?? ''}|${resourceType}|${resourceId}`;
+    await this.db.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`,
+    );
+  }
+
   private async select(
     where: SQL | undefined,
     page: AuditEventPage,

@@ -12,6 +12,7 @@ const audit = (): AuditEventRepository => ({
   save: vi.fn(async () => undefined),
   findAll: vi.fn(async () => []),
   findPlatformTrail: vi.fn(async () => []),
+  lockResource: vi.fn(async () => undefined),
 });
 
 const retentionWith = (

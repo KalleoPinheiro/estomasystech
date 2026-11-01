@@ -4,6 +4,7 @@ import type { ProducedSessionRepository } from '@/domain/billing/commission';
 import type { CommissionPayoutRepository } from '@/domain/billing/commission-payout';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
+import type { ProcedureKitRepository } from '@/domain/catalog/procedure-kit';
 import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import type {
@@ -67,7 +68,8 @@ import type {
  * de espera pelo portal (#553, PR 2b). `supplies`, `stockMovements` e
  * `supplyBatches` entraram com Materiais como Server Action (#556, ADR-083):
  * cadastro, edição e movimentação de estoque (com o lote) gravam e auditam
- * juntos ou nada grava.
+ * juntos ou nada grava. `procedureKits` entrou com Procedimentos como Server
+ * Action (#556, PR 2): o kit de insumos grava e audita na mesma transação.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -82,6 +84,7 @@ export interface TransactionScope {
   conditions: ClinicalConditionRepository;
   conditionPhotos: ConditionPhotoRepository;
   procedures: ProcedureRepository;
+  procedureKits: ProcedureKitRepository;
   professionals: ProfessionalRepository;
   producedSessions: ProducedSessionRepository;
   commissionPayouts: CommissionPayoutRepository;
