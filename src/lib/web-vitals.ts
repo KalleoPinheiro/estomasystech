@@ -40,7 +40,7 @@ function isIdentitySegment(segment: string): boolean {
  * Query e hash saem; segmento que não é só caracteres de URL comuns vira `:id`.
  */
 export function normalizeRoute(pathname: string): string {
-  const path = pathname.split(/[?#]/, 1)[0] ?? '';
+  const path = pathname.replace(/[?#].*$/s, '');
   const segments = path.split('/').filter(Boolean).slice(0, MAX_SEGMENTS);
   if (segments.length === 0) return '/';
   const safe = segments.map((segment) =>
