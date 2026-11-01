@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
 import { type NextRequest, NextResponse } from 'next/server';
-import { fail } from '@/lib/api-response';
 import {
   CALENDAR_OAUTH_STATE_COOKIE,
   encodeCalendarOAuthState,
@@ -23,10 +22,12 @@ export async function GET(request: NextRequest) {
 
   const config = googleCalendarOAuthConfigFromEnv();
   if (!config) {
-    return fail(
-      'Integração com Google Agenda não configurada (GOOGLE_CLIENT_ID/SECRET, APP_URL)',
-      503,
-    );
+    // Quem chega aqui é uma pessoa clicando num link: volta ao app com a
+    // mensagem da allowlist em vez de JSON cru (#658). O callback faz o mesmo.
+    const url = new URL('/configuracoes', process.env.APP_URL ?? request.url);
+    url.searchParams.set('calendar', 'erro');
+    url.searchParams.set('reason', 'nao_configurado');
+    return NextResponse.redirect(url);
   }
 
   const state = randomBytes(16).toString('hex');

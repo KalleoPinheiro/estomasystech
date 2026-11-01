@@ -55,6 +55,7 @@ afterEach(() => {
 describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', () => {
   it('Dada clínica conectada, Quando carrega, Então mostra e-mail e data da conexão', async () => {
     mockStatusFetch({
+      configured: true,
       connected: true,
       email: 'agenda@clinica.com',
       connectedAt: '2026-08-01T12:00:00.000Z',
@@ -69,7 +70,12 @@ describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', (
   });
 
   it('Dada clínica sem conexão, Quando carrega, Então mostra "Nenhuma conta conectada"', async () => {
-    mockStatusFetch({ connected: false, email: null, connectedAt: null });
+    mockStatusFetch({
+      configured: true,
+      connected: false,
+      email: null,
+      connectedAt: null,
+    });
 
     renderWithToast(<CalendarIntegrationSection />);
 
@@ -82,6 +88,7 @@ describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', (
   it('Dado retorno do OAuth com ?calendar=conectado, Quando monta, Então dispara toast de sucesso', async () => {
     searchParamsRef.current = new URLSearchParams('calendar=conectado');
     mockStatusFetch({
+      configured: true,
       connected: true,
       email: 'a@b.com',
       connectedAt: '2026-08-01T12:00:00.000Z',
@@ -101,7 +108,12 @@ describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', (
     searchParamsRef.current = new URLSearchParams(
       'calendar=erro&reason=sem_credencial',
     );
-    mockStatusFetch({ connected: false, email: null, connectedAt: null });
+    mockStatusFetch({
+      configured: true,
+      connected: false,
+      email: null,
+      connectedAt: null,
+    });
 
     renderWithToast(<CalendarIntegrationSection />);
 
@@ -118,7 +130,12 @@ describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', (
     searchParamsRef.current = new URLSearchParams(
       'calendar=erro&reason=<script>alert(1)</script>',
     );
-    mockStatusFetch({ connected: false, email: null, connectedAt: null });
+    mockStatusFetch({
+      configured: true,
+      connected: false,
+      email: null,
+      connectedAt: null,
+    });
 
     renderWithToast(<CalendarIntegrationSection />);
 
@@ -132,7 +149,12 @@ describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', (
   });
 
   it('Dado nenhum parâmetro calendar na URL, Quando monta, Então nenhum toast dispara', async () => {
-    mockStatusFetch({ connected: false, email: null, connectedAt: null });
+    mockStatusFetch({
+      configured: true,
+      connected: false,
+      email: null,
+      connectedAt: null,
+    });
 
     renderWithToast(<CalendarIntegrationSection />);
 
@@ -140,5 +162,27 @@ describe('Feature: Feedback visual da conexão do Google Agenda (issue #124)', (
       expect(screen.getByText('Nenhuma conta conectada.')).toBeInTheDocument();
     });
     expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it('Dada integração não configurada, Quando carrega, Então o botão Conectar fica desabilitado com a mensagem de não configurado e sem link (#658)', async () => {
+    mockStatusFetch({
+      configured: false,
+      connected: false,
+      email: null,
+      connectedAt: null,
+    });
+
+    renderWithToast(<CalendarIntegrationSection />);
+
+    const botao = await screen.findByRole('button', {
+      name: 'Conectar Google Agenda',
+    });
+    expect(botao).toBeDisabled();
+    expect(
+      screen.getByText(
+        'Integração com Google Agenda não está configurada no momento.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });

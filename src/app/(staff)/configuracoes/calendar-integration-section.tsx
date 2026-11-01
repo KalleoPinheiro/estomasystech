@@ -1,6 +1,6 @@
 'use client';
 
-import { Card } from '@still-void/ui/react';
+import { Button, Card } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
@@ -84,14 +84,25 @@ export function CalendarIntegrationSection() {
             : 'Nenhuma conta conectada.'}
         </p>
       )}
-      <a
-        href="/api/integrations/google-calendar"
-        className="text-accent-ink text-sm hover:underline"
-      >
-        {data?.connected
-          ? 'Reconectar Google Agenda'
-          : 'Conectar Google Agenda'}
-      </a>
+      {data && !data.configured ? (
+        <>
+          <Button type="button" variant="accent" disabled>
+            Conectar Google Agenda
+          </Button>
+          <p className="mt-2 text-ink-3 text-sm">
+            {CALENDAR_ERROR_MESSAGES.nao_configurado}
+          </p>
+        </>
+      ) : (
+        <a
+          href="/api/integrations/google-calendar"
+          className="text-accent-ink text-sm hover:underline"
+        >
+          {data?.connected
+            ? 'Reconectar Google Agenda'
+            : 'Conectar Google Agenda'}
+        </a>
+      )}
     </Card>
   );
 }
