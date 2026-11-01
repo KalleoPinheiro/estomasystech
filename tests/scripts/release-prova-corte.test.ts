@@ -15,7 +15,8 @@ import { pendenciasDoPreflight } from '../../scripts/release/preflight-lib';
 
 const HEAD = 'a'.repeat(40);
 const ARVORE = 'f'.repeat(40);
-const ETAPAS = 'typecheck,lint,sv,docs,integridade-de-testes,cobertura,build,e2e-producao,e2e-dev,docker,backup,integracao';
+const ETAPAS =
+  'typecheck,lint,sv,docs,integridade-de-testes,cobertura,build,e2e-producao,e2e-dev,docker,backup,integracao';
 
 const selo = (over: Partial<CheckRunLite> = {}): CheckRunLite => ({
   name: SELO_NOME,
@@ -45,33 +46,49 @@ describe('Feature: o PR release→main e o push da main aceitam a prova do corte
   });
 
   it('Dado o merge commit na main com o selo no segundo pai, Quando é push, Então dispensa', () => {
-    expect(avaliarProva(base({ evento: 'push', headRef: '', headShaEvento: '' }))).toMatchObject({ provado: true });
+    expect(
+      avaliarProva(base({ evento: 'push', headRef: '', headShaEvento: '' })),
+    ).toMatchObject({ provado: true });
   });
 
   it('Dado o selo com docker e backup, Quando o Docker pede a prova, Então dispensa o docker.yml', () => {
-    expect(avaliarProva(base({ etapasExigidas: ETAPAS_DOCKER }))).toMatchObject({ provado: true });
+    expect(avaliarProva(base({ etapasExigidas: ETAPAS_DOCKER }))).toMatchObject(
+      { provado: true },
+    );
   });
 
   it('Dado PR que não é release→main, Então roda tudo', () => {
-    expect(avaliarProva(base({ baseRef: 'release/v0.5.0' })).provado).toBe(false);
+    expect(avaliarProva(base({ baseRef: 'release/v0.5.0' })).provado).toBe(
+      false,
+    );
     expect(avaliarProva(base({ headRef: 'feat/x' })).provado).toBe(false);
     expect(avaliarProva(base({ headRef: 'hotfix/x' })).provado).toBe(false);
   });
 
   it('Dado push fora da main ou outro evento, Então roda tudo', () => {
-    expect(avaliarProva(base({ evento: 'push', baseRef: 'staging' })).provado).toBe(false);
+    expect(
+      avaliarProva(base({ evento: 'push', baseRef: 'staging' })).provado,
+    ).toBe(false);
     expect(avaliarProva(base({ evento: 'merge_group' })).provado).toBe(false);
-    expect(avaliarProva(base({ evento: 'workflow_dispatch' })).provado).toBe(false);
+    expect(avaliarProva(base({ evento: 'workflow_dispatch' })).provado).toBe(
+      false,
+    );
   });
 
   it('Dado commit sem segundo pai, ou head do PR diferente do segundo pai, Então roda tudo', () => {
     expect(avaliarProva(base({ segundoPai: '' })).provado).toBe(false);
-    expect(avaliarProva(base({ headShaEvento: 'b'.repeat(40) })).provado).toBe(false);
+    expect(avaliarProva(base({ headShaEvento: 'b'.repeat(40) })).provado).toBe(
+      false,
+    );
   });
 
   it('Dado árvore diferente da provada (main andou, merge com conflito resolvido), Então roda tudo', () => {
-    expect(avaliarProva(base({ arvoreSegundoPai: 'e'.repeat(40) })).provado).toBe(false);
-    expect(avaliarProva(base({ arvoreCommit: '', arvoreSegundoPai: '' })).provado).toBe(false);
+    expect(
+      avaliarProva(base({ arvoreSegundoPai: 'e'.repeat(40) })).provado,
+    ).toBe(false);
+    expect(
+      avaliarProva(base({ arvoreCommit: '', arvoreSegundoPai: '' })).provado,
+    ).toBe(false);
   });
 
   it('Dado selo ausente, de outro SHA, falho, de outra app ou de outro nome, Então roda tudo', () => {
@@ -88,11 +105,17 @@ describe('Feature: o PR release→main e o push da main aceitam a prova do corte
   });
 
   it('Dado selo sem uma das etapas exigidas, Então roda tudo e nomeia a que falta', () => {
-    const semBuild = selo({ output: { summary: `${SELO_NOME} sha=${HEAD} etapas=typecheck,lint,sv,docs,cobertura,integracao` } });
+    const semBuild = selo({
+      output: {
+        summary: `${SELO_NOME} sha=${HEAD} etapas=typecheck,lint,sv,docs,cobertura,integracao`,
+      },
+    });
     const r = avaliarProva(base({ checkRuns: [semBuild] }));
     expect(r.provado).toBe(false);
     expect(r.motivo).toContain('build');
-    expect(avaliarProva(base({ checkRuns: [selo({ output: null })] })).provado).toBe(false);
+    expect(
+      avaliarProva(base({ checkRuns: [selo({ output: null })] })).provado,
+    ).toBe(false);
   });
 });
 
@@ -101,8 +124,13 @@ describe('Feature: o selo nasce do recibo do gate de release (ADR-088)', () => {
 
   it('Dado recibo pass, Então o selo leva o SHA e as etapas, mais as extras sem repetir', () => {
     const s = seloDoRecibo(`texto\n${recibo}\n`, ['integracao', 'docker']);
-    expect(s).toEqual({ sha: HEAD, etapas: ['typecheck', 'lint', 'docker', 'backup', 'integracao'] });
-    expect(etapasDoResumo(resumoDoSelo(s as NonNullable<typeof s>))).toEqual(s?.etapas);
+    expect(s).toEqual({
+      sha: HEAD,
+      etapas: ['typecheck', 'lint', 'docker', 'backup', 'integracao'],
+    });
+    expect(etapasDoResumo(resumoDoSelo(s as NonNullable<typeof s>))).toEqual(
+      s?.etapas,
+    );
   });
 
   it('Dado recibo ausente, falho ou sem etapas, Então não há selo', () => {
@@ -126,33 +154,66 @@ describe('Feature: o selo nasce do recibo do gate de release (ADR-088)', () => {
     expect(args).toContain('repos/o/r/check-runs');
     expect(args).toContain(`head_sha=${HEAD}`);
     expect(args).toContain('conclusion=success');
-    expect(args.some((a) => a.startsWith('output[summary]=') && a.includes('integracao'))).toBe(true);
+    expect(
+      args.some(
+        (a) => a.startsWith('output[summary]=') && a.includes('integracao'),
+      ),
+    ).toBe(true);
     expect(args.at(-1)).toBe('tok');
   });
 
   it('Dado corte local (sem token), recibo inválido ou API recusando, Então não sela e diz por quê', () => {
     const ok = () => ({ ok: true, out: '' });
-    expect(selarCorte({ recibo, extras: [], token: '', repo: 'o/r' }, ok).feita).toBe(false);
-    expect(selarCorte({ recibo: 'nada', extras: [], token: 't', repo: 'o/r' }, ok).feita).toBe(false);
-    const recusa = selarCorte({ recibo, extras: [], token: 't', repo: 'o/r' }, () => ({ ok: false, out: '403 Forbidden\nx' }));
-    expect(recusa).toEqual({ feita: false, motivo: 'a API recusou o selo: 403 Forbidden' });
+    expect(
+      selarCorte({ recibo, extras: [], token: '', repo: 'o/r' }, ok).feita,
+    ).toBe(false);
+    expect(
+      selarCorte({ recibo: 'nada', extras: [], token: 't', repo: 'o/r' }, ok)
+        .feita,
+    ).toBe(false);
+    const recusa = selarCorte(
+      { recibo, extras: [], token: 't', repo: 'o/r' },
+      () => ({ ok: false, out: '403 Forbidden\nx' }),
+    );
+    expect(recusa).toEqual({
+      feita: false,
+      motivo: 'a API recusou o selo: 403 Forbidden',
+    });
   });
 });
 
 describe('Feature: o pré-voo barra, em segundos, o que derrubaria o gate de 42 min (ADR-088)', () => {
-  const ok = { token: 't', repo: 'o/r', gitName: 'n', gitEmail: 'e@x', rollbackOk: true, emCi: true };
+  const ok = {
+    token: 't',
+    repo: 'o/r',
+    gitName: 'n',
+    gitEmail: 'e@x',
+    rollbackOk: true,
+    emCi: true,
+  };
 
   it('Dado ambiente completo, Então não há pendência', () => {
     expect(pendenciasDoPreflight(ok)).toEqual([]);
   });
 
   it('Dado token vazio no Actions, Então falha; no WSL com gh logado, Então passa', () => {
-    expect(pendenciasDoPreflight({ ...ok, token: '' })[0]).toContain('RELEASE_CUT_TOKEN');
-    expect(pendenciasDoPreflight({ ...ok, token: '', emCi: false })).toEqual([]);
+    expect(pendenciasDoPreflight({ ...ok, token: '' })[0]).toContain(
+      'RELEASE_CUT_TOKEN',
+    );
+    expect(pendenciasDoPreflight({ ...ok, token: '', emCi: false })).toEqual(
+      [],
+    );
   });
 
   it('Dado rollback inválido, repositório ou identidade git ausentes, Então lista todas as pendências', () => {
-    const r = pendenciasDoPreflight({ token: 't', repo: '', gitName: '', gitEmail: 'e', rollbackOk: false, emCi: true });
+    const r = pendenciasDoPreflight({
+      token: 't',
+      repo: '',
+      gitName: '',
+      gitEmail: 'e',
+      rollbackOk: false,
+      emCi: true,
+    });
     expect(r).toHaveLength(3);
     expect(r.join('|')).toContain('rollback');
     expect(r.join('|')).toContain('repositório');
