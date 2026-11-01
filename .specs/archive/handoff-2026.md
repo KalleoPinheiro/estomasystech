@@ -2186,3 +2186,7 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **TESTE-ALTERADO** (cenários e asserções iguais): `tests/pages/login.test.tsx` e `definir-senha.test.tsx` renderizam a página servidor com `searchParams` (o login não busca mais `providers` por fetch: o requisito passou a ser 0 chamadas `/api` na carga). Testes novos: `tests/pages/paginas-publicas-servidor.test.tsx`, `definir-senha-token-repetido.test.tsx`.
 - **Métricas (LCP 360 ≤ 1,5 s, CLS ≤ 0,1)**: não medidas nesta thread (sem build com banco); a medição final é do #559 / validação na staging.
 - **Next step**: gate nuvem perfil `pr`, revisão limpa e merge na release/v0.4.0; segue #555. **Blockers**: nenhum.
+## E2E: mês civil em APP_TIMEZONE (#633) (2026-11-01) — EM REVISÃO
+- **O que mudou**: `agendaToMonth` (layout-mobile-first) e `setReportMonth` (responsive-tables) calculam o mês de hoje no fuso do app (`APP_TIMEZONE`, padrão America/Sao_Paulo, ADR-073) e não no do processo (UTC no gate da nuvem). Provado às 00:45 UTC de 01/11 (SP ainda 31/10): os 98 testes passam em `TZ=UTC`; antes, 4 falhavam.
+- **TESTE-ALTERADO**: só o cálculo do mês nos dois helpers; cenários e asserções iguais. Sem `src/`, sem changeset.
+- **Next step**: revisão e merge na release/v0.4.0. **Blockers**: nenhum.
