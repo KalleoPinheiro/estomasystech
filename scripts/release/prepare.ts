@@ -19,6 +19,7 @@ import {
   sh,
   tagFor,
 } from './lib';
+import { conferirNpm, verificarLockfile } from './lockfile-lib';
 
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 const version = (): string => JSON.parse(readFileSync('package.json', 'utf8')).version as string;
@@ -51,6 +52,9 @@ if (pending.length === 0) {
   process.exit(0);
 }
 
+const npmErro = conferirNpm(JSON.parse(readFileSync('package.json', 'utf8')), must('npm', ['--version']));
+if (npmErro !== null) fail(npmErro);
+
 const before = version();
 must('npx', ['changeset', 'version']);
 const computed = version();
@@ -60,7 +64,13 @@ if (!check.ok) {
   fail(check.reason);
 }
 
+const lockAntes = readFileSync('package-lock.json', 'utf8');
 must('npm', ['install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund']);
+const lockErro = verificarLockfile(lockAntes, readFileSync('package-lock.json', 'utf8'));
+if (lockErro !== null) {
+  must('git', ['reset', '--hard', 'HEAD']);
+  fail(lockErro);
+}
 const tag = tagFor(computed);
 must('git', ['add', '-A']);
 must('git', ['commit', '-q', '-m', `chore(release): ${tag}`]);

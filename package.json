@@ -2,6 +2,10 @@
   "name": "estomasystech",
   "version": "0.4.0",
   "private": true,
+  "packageManager": "npm@11.21.1",
+  "engines": {
+    "npm": "11.21.1"
+  },
   "scripts": {
     "prepare": "husky",
     "dev": "next dev",
@@ -36,6 +40,7 @@
     "check:sv": "bash scripts/check-sv-adoption.sh",
     "check:docs": "tsx scripts/check-docs.ts",
     "check:server-first": "tsx scripts/check-server-first.ts",
+    "check:dynamic-import": "tsx scripts/check-dynamic-import.ts",
     "check:testes": "tsx scripts/gate/check-test-integrity.ts",
     "gate:local": "tsx scripts/gate/local.ts",
     "changeset": "changeset",

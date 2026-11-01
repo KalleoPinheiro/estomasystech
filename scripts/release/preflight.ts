@@ -5,6 +5,7 @@
  * identidade git, rollback) e permissão de push. O `release-cut.yml` roda isto antes do gate e, com
  * `dry_run`, para aqui.
  */
+import { readFileSync } from 'node:fs';
 import { consolidatedTesteAlterado } from './cut-lib';
 import { assertApproved, assertBranch, batchPrs, checkIntegrity, fail, step } from './cut-pre';
 import { parseRollback, sh } from './lib';
@@ -24,6 +25,7 @@ const falhas = pendenciasDoPreflight({
   rollbackOk:
     parseRollback(process.argv.find((a) => a.startsWith('--rollback='))?.slice('--rollback='.length)) !== null,
   emCi: process.env.CI === 'true',
+  npm: { pkg: JSON.parse(readFileSync('package.json', 'utf8')), atual: sh('npm', ['--version']).out },
 });
 if (falhas.length > 0) fail(falhas.join('\n✗ '));
 
