@@ -15,6 +15,7 @@ import { IdentityImage } from '@/components/identity-image';
 import { LogoutButton } from '@/components/logout-button';
 import { ReleaseVersion } from '@/components/release-version';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { WebVitalsReporter } from '@/components/web-vitals-reporter';
 import type { AppVersionDto, SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -99,6 +100,7 @@ export function StaffLayoutClient({
     // nenhum do usuário. Não afeta o desktop: o rail em modo "offcanvas"
     // renderiza incondicionalmente, sem olhar pra `open`.
     <StaffIdentityProvider initialIdentity={initialIdentity}>
+      <WebVitalsReporter />
       <SidebarProvider defaultOpen={false}>
         <SkipLink />
         <SidebarAutoClose />

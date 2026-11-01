@@ -44,6 +44,7 @@ function fetchTransport(
     ): Promise<TransportMakeRequestResponse> => {
       const response = await fetch(options.url, {
         method: 'POST',
+        cache: 'no-store',
         body: request.body as BodyInit,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
