@@ -1,7 +1,6 @@
 [
   "src/app/(staff)/auditoria/page.tsx",
   "src/app/(staff)/configuracoes/page.tsx",
-  "src/app/(staff)/materiais/page.tsx",
   "src/app/(staff)/minha-conta/page.tsx",
   "src/app/(staff)/parceiros/page.tsx",
   "src/app/(staff)/pedidos-titular/page.tsx",

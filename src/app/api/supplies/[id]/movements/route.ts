@@ -5,8 +5,9 @@ import { MOVEMENT_TYPES } from '@/domain/inventory/stock-movement';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
-import { toStockMovementDto, toSupplyDto } from '@/lib/dto';
+import { writeScope } from '@/lib/auth/tenant-scope';
+import { toSupplyDto } from '@/lib/dto';
+import { listSupplyMovementsFor } from '@/lib/server/data/supplies';
 
 const movementSchema = z.object({
   type: z.enum(MOVEMENT_TYPES),
@@ -25,11 +26,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const { stockMovements } = await getRepositories(
-      sessionScope(guard.session),
-    );
-    const movements = await stockMovements.findBySupplyId(id);
-    return movements.map(toStockMovementDto);
+    return listSupplyMovementsFor(guard.session, id);
   });
 }
 
