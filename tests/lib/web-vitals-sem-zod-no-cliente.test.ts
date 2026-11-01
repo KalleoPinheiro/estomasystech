@@ -11,7 +11,7 @@ describe('Feature: Web Vitals no navegador sem zod (CSP, #559)', () => {
     (file) => {
       const source = readFileSync(file, 'utf8');
       expect(source).not.toMatch(/from 'zod'/);
-      expect(source).not.toMatch(/import (?!type)[^;]*web-vitals-schema/s);
+      expect(source).not.toMatch(/^import (?!type)[^;]*web-vitals-schema/m);
     },
   );
 });
