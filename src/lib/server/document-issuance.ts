@@ -68,9 +68,8 @@ const toIssuance = (
  * são emissão e não podem trocar o número.
  */
 function firstEmission(events: AuditEvent[]): AuditEvent | undefined {
-  return events
-    .filter((event) => event.action === 'create')
-    .sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime())[0];
+  // `findAll` devolve do mais novo para o mais antigo: o último `create` é a emissão.
+  return events.filter((event) => event.action === 'create').at(-1);
 }
 
 /**
