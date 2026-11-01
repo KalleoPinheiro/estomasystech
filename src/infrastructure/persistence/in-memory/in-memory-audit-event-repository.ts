@@ -107,4 +107,8 @@ export class InMemoryAuditEventRepository implements AuditEventRepository {
       page,
     );
   }
+
+  async lockResource(): Promise<void> {
+    // Sem concorrência em memória: nada a travar.
+  }
 }

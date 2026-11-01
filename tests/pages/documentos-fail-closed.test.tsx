@@ -3,7 +3,6 @@
 import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
 import AttendanceDocumentPage from '@/app/documentos/atestado/[appointmentId]/page';
 import ConsentDocumentPage from '@/app/documentos/consentimento/[patientId]/page';
 import CarePlanDocumentPage from '@/app/documentos/plano-cuidados/[carePlanId]/page';
@@ -16,6 +15,32 @@ import type {
   ConditionDto,
   PatientDto,
 } from '@/lib/dto';
+import { renderDocumentPage } from '../support/documentos-over-fetch';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+}));
+vi.mock('@/lib/server/session', async () =>
+  (await import('../support/documentos-over-fetch')).sessionOverFetch(),
+);
+vi.mock('@/lib/server/data/clinic-info', async () =>
+  (await import('../support/documentos-over-fetch')).clinicInfoOverFetch(),
+);
+vi.mock('@/lib/server/data/patient-record', async () =>
+  (await import('../support/documentos-over-fetch')).patientRecordOverFetch(),
+);
+vi.mock('@/lib/server/data/care-plan', async () =>
+  (await import('../support/documentos-over-fetch')).carePlanOverFetch(),
+);
+vi.mock('@/lib/server/data/documents', async () =>
+  (await import('../support/documentos-over-fetch')).documentsDataOverFetch(),
+);
+vi.mock('@/lib/server/document-issuance', async () =>
+  (await import('../support/documentos-over-fetch')).noPriorIssuance(),
+);
+vi.mock('@/app/documentos/actions', async () =>
+  (await import('../support/documentos-over-fetch')).documentActionsOverFetch(),
+);
 
 interface FetchCall {
   url: string;
@@ -47,7 +72,7 @@ afterEach(() => {
 
 async function renderPage(ui: ReactElement) {
   await act(async () => {
-    renderWithToast(ui);
+    await renderDocumentPage(ui);
   });
 }
 
@@ -253,26 +278,6 @@ describe('Feature: bloqueio fail-closed de documentos sem dados cadastrais (#62)
     expect(
       screen.getByText(CLINIC_COMPLETE.professionalName as string),
     ).toBeInTheDocument();
-  });
-
-  it("Dado consulta ainda carregando, Quando abrir o atestado, Então exibe carregamento, não 'consulta não encontrada' (#63)", async () => {
-    mockFetch(({ url }) => {
-      if (url.includes('/api/documents/issue')) return issuance();
-      if (url.includes('/api/clinic-info'))
-        return jsonResponse(CLINIC_COMPLETE);
-      return new Promise<never>(() => {});
-    });
-
-    await renderPage(
-      <AttendanceDocumentPage
-        params={Promise.resolve({ appointmentId: 'apt-1' })}
-      />,
-    );
-
-    expect(await screen.findByText('Carregando…')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Consulta não encontrada'),
-    ).not.toBeInTheDocument();
   });
 
   it('Dado consulta cancelada, Quando abrir o atestado, Então bloqueia com o status atual', async () => {
@@ -550,9 +555,9 @@ describe('Feature: conteúdo dos documentos (#94)', () => {
       return jsonResponse(patient);
     });
 
-    let renderResult!: ReturnType<typeof renderWithToast>;
+    let renderResult!: Awaited<ReturnType<typeof renderDocumentPage>>;
     await act(async () => {
-      renderResult = renderWithToast(
+      renderResult = await renderDocumentPage(
         <ConsentDocumentPage
           params={Promise.resolve({ patientId: 'pat-1' })}
         />,

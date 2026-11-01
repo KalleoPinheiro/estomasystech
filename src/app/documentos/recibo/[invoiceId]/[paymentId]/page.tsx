@@ -1,15 +1,9 @@
-'use client';
-
 import { Table, TableBody, TableCell, TableRow } from '@still-void/ui/react';
 import Link from 'next/link';
-import { type ReactNode, use } from 'react';
 import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
-import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
-import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
-import {
-  CNPJ_UNDER_REVIEW_MESSAGE,
-  type ReceiptParties,
-} from '@/domain/billing/receipt';
+import { DocumentFrame } from '@/components/document-frame';
+import { ErrorAlert } from '@/components/feedback';
+import { CNPJ_UNDER_REVIEW_MESSAGE } from '@/domain/billing/receipt';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import type { InvoiceDto, InvoicePaymentDto } from '@/lib/dto';
 import {
@@ -17,49 +11,33 @@ import {
   formatDate,
   PAYMENT_METHOD_LABELS,
 } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
+import { getClinicInfoFor } from '@/lib/server/data/clinic-info';
 import {
-  type DocumentIssuance,
-  useDocumentIssuance,
-} from '@/lib/use-document-issuance';
+  getInvoiceDocumentData,
+  getReceiptPartiesFor,
+} from '@/lib/server/data/documents';
+import { loadBlock } from '@/lib/server/data/load-block';
+import { findDocumentIssuance } from '@/lib/server/document-issuance';
+import { requireStaffPage } from '@/lib/server/session';
 
 /**
- * Guardas de bloqueio/carregamento — mesma ordem dos demais documentos. Sem
- * CPF do pagador ou CNPJ do prestador o erro vem com a orientação (#326).
+ * Sem CPF do pagador ou CNPJ do prestador o erro vem com a orientação (#326):
+ * o recibo não é emitido, e a página bloqueada não monta a emissão.
  */
-function guardBlock(
-  clinic: ClinicInfoDto | null,
-  invoice: InvoiceDto | null,
-  payment: InvoicePaymentDto | null,
-  error: string | null,
-  parties: ReceiptParties | null,
-  issuance: DocumentIssuance | null,
-): ReactNode | null {
-  if (error) {
-    return (
-      <>
-        <ErrorAlert message={error} />
-        {error === CNPJ_UNDER_REVIEW_MESSAGE && (
-          <Link
-            href="/configuracoes"
-            className="text-accent-ink text-sm hover:underline"
-          >
-            Corrigir o CNPJ nas Configurações
-          </Link>
-        )}
-      </>
-    );
-  }
-  if (!clinic || !invoice || !parties) return <LoadingIndicator />;
-  if (!payment) {
-    return <ErrorAlert message="Pagamento não encontrado nesta fatura." />;
-  }
-  if (!isClinicInfoComplete(clinic)) {
-    return <ClinicInfoIncompleteAlert clinic={clinic} />;
-  }
-  // Sem emissão persistida, não renderiza: a data do rodapé nunca é `new Date()`.
-  if (!issuance) return <LoadingIndicator />;
-  return null;
+function ReceiptBlocked({ message }: { message: string }) {
+  return (
+    <>
+      <ErrorAlert message={message} />
+      {message === CNPJ_UNDER_REVIEW_MESSAGE && (
+        <Link
+          href="/configuracoes"
+          className="text-accent-ink text-sm hover:underline"
+        >
+          Corrigir o CNPJ nas Configurações
+        </Link>
+      )}
+    </>
+  );
 }
 
 /** Recebido até este pagamento, inclusive (os pagamentos vêm em ordem de data). */
@@ -108,52 +86,51 @@ function Summary({
 }
 
 /**
- * Recibo de um pagamento (total ou parcial) de fatura: o que foi recebido,
- * quando e como, e quanto ainda falta. Emissão persistida (`REC-…`).
+ * Recibo de um pagamento (total ou parcial) de fatura no servidor (#546,
+ * ADR-082): o que foi recebido, quando e como, e quanto ainda falta. Os valores
+ * saem das mesmas funções da fatura (`invoices.ts`, #547). Emissão persistida
+ * (`REC-…`) pela ilha de cliente, que reaplica a guarda de CPF/CNPJ (FIN-RN-15).
  */
-export default function PaymentReceiptPage({
+export default async function PaymentReceiptPage({
   params,
 }: {
   params: Promise<{ invoiceId: string; paymentId: string }>;
 }) {
-  const { invoiceId, paymentId } = use(params);
-  const { data: clinic, error: clinicError } =
-    useApiQuery<ClinicInfoDto>('/api/clinic-info');
-  const { data: invoice, error: invoiceError } = useApiQuery<InvoiceDto>(
-    `/api/invoices/${invoiceId}`,
-  );
-  // O CPF inteiro só vem deste endpoint, que também bloqueia a emissão sem os
-  // documentos exigidos; a emissão persistida só começa depois dele.
-  const { data: parties, error: partiesError } = useApiQuery<ReceiptParties>(
-    `/api/invoices/${invoiceId}/payments/${paymentId}/receipt`,
-  );
-  // #468: documento bloqueado não é emitido, então não entra na trilha.
-  const clinicReady = clinic !== null && isClinicInfoComplete(clinic);
-  const { issuance, error: issuanceError } = useDocumentIssuance(
-    'recibo',
-    clinicReady && parties ? paymentId : null,
-    invoiceId,
-  );
-  const payment = invoice?.payments.find((p) => p.id === paymentId) ?? null;
+  const { invoiceId, paymentId } = await params;
+  const session = await requireStaffPage({
+    next: `/documentos/recibo/${invoiceId}/${paymentId}`,
+  });
+  const [clinic, invoice, parties] = await Promise.all([
+    loadBlock(() => getClinicInfoFor(session)),
+    loadBlock(() => getInvoiceDocumentData(session, invoiceId)),
+    // O CPF inteiro só vem desta leitura, que também bloqueia a emissão sem os
+    // documentos exigidos.
+    loadBlock(() => getReceiptPartiesFor(session, invoiceId, paymentId)),
+  ]);
+  if (clinic.error !== null) return <ReceiptBlocked message={clinic.error} />;
+  if (invoice.error !== null) return <ReceiptBlocked message={invoice.error} />;
+  if (parties.error !== null) {
+    return <ReceiptBlocked message={parties.error} />;
+  }
+  const payment = invoice.data.payments.find((p) => p.id === paymentId);
+  if (!payment) {
+    return <ErrorAlert message="Pagamento não encontrado nesta fatura." />;
+  }
+  if (!isClinicInfoComplete(clinic.data)) {
+    return <ClinicInfoIncompleteAlert clinic={clinic.data} />;
+  }
+  const issuance = await findDocumentIssuance(session, 'recibo', paymentId);
 
-  const guard = guardBlock(
-    clinic,
-    invoice,
-    payment,
-    clinicError ?? invoiceError ?? partiesError ?? issuanceError,
-    parties,
-    issuance,
-  );
-  if (guard) return guard;
-  if (!clinic || !invoice || !payment || !parties || !issuance) return null;
-
-  const settles = receivedUpTo(invoice, payment) >= invoice.netAmountCents;
+  const settles =
+    receivedUpTo(invoice.data, payment) >= invoice.data.netAmountCents;
+  const { provider, payer, payerIsPatient } = parties.data;
   return (
     <DocumentFrame
-      clinic={clinic}
+      clinic={clinic.data}
       title="Recibo"
-      documentNumber={issuance.documentNumber}
-      issuedAt={issuance.issuedAt}
+      issue={{ documentType: 'recibo', resourceId: paymentId, invoiceId }}
+      documentNumber={issuance?.documentNumber}
+      issuedAt={issuance?.issuedAt}
       footerNote={
         settles
           ? 'Este pagamento quita a fatura.'
@@ -161,17 +138,17 @@ export default function PaymentReceiptPage({
       }
     >
       <p className="mb-4">
-        {parties.provider.name} (CNPJ {parties.provider.document}) recebeu de{' '}
-        <strong>{parties.payer.name}</strong> (CPF {parties.payer.document}) a
-        quantia de <strong>{formatCurrency(payment.amountCents)}</strong>, em{' '}
+        {provider.name} (CNPJ {provider.document}) recebeu de{' '}
+        <strong>{payer.name}</strong> (CPF {payer.document}) a quantia de{' '}
+        <strong>{formatCurrency(payment.amountCents)}</strong>, em{' '}
         <strong>{formatDate(payment.paidAt)}</strong>, via{' '}
         <strong>
           {PAYMENT_METHOD_LABELS[payment.method] ?? payment.method}
         </strong>
-        , referente a <strong>{invoice.description}</strong>
-        {parties.payerIsPatient ? '' : ` (paciente: ${invoice.patientName})`}.
+        , referente a <strong>{invoice.data.description}</strong>
+        {payerIsPatient ? '' : ` (paciente: ${invoice.data.patientName})`}.
       </p>
-      <Summary invoice={invoice} payment={payment} />
+      <Summary invoice={invoice.data} payment={payment} />
     </DocumentFrame>
   );
 }

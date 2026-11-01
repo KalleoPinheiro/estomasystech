@@ -55,6 +55,14 @@ export interface AuditEventRepository {
     filter?: PlatformTrailFilter,
     page?: AuditEventPage,
   ): Promise<AuditEvent[]>;
+  /**
+   * Trava, até o fim da transação, a emissão de um recurso da empresa do
+   * escopo (#546, ADR-082): quem chega depois espera e, ao ler, já enxerga o
+   * evento de quem chegou antes — «achar ou criar» sem duplicar. Fora de
+   * transação o Postgres solta a trava na hora (não protege nada); a memória
+   * não tem concorrência e não faz nada.
+   */
+  lockResource(resourceType: string, resourceId: string): Promise<void>;
 }
 
 /** Empresa com que o evento é gravado num repositório de escopo `scope`. */

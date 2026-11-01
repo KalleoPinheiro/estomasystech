@@ -446,52 +446,6 @@ async function seedReceipt(request: APIRequestContext) {
   return { receiptUrl: `/documentos/recibo/${paid.id}/${paid.payments[0].id}` };
 }
 
-/**
- * Comprovante de repasse: fechar um repasse de verdade exige mês encerrado, e a
- * API recusa consulta no passado. A página busca o comprovante pela API no
- * navegador, então o teste responde essa chamada com um repasse fixo e mede o
- * documento renderizado de verdade.
- */
-async function mockPayoutReceipt(page: Page): Promise<string> {
-  const payout = {
-    id: "po-layout",
-    professionalId: "pr-layout",
-    professionalName: "Enf. Layout Repasse",
-    period: "2026-08",
-    totalCents: 4000,
-    paidAt: "2026-09-05T12:00:00.000Z",
-    paymentMethod: "pix",
-    notes: null,
-    createdBy: "admin@clinica.com",
-    createdAt: "2026-09-05T12:00:00.000Z",
-    rule: { kind: "percentage", pct: 40 },
-    status: "active",
-    cancelledAt: null,
-    cancelledBy: null,
-    cancelReason: null,
-    items: [
-      {
-        appointmentId: "a1",
-        kind: "session",
-        procedure: "Troca de curativo com cobertura de prata",
-        sessionDate: "2026-08-10T12:00:00.000Z",
-        baseCents: 25000,
-        commissionCents: 10000,
-      },
-    ],
-  };
-  await page.route("**/api/commission-payouts/po-layout", (route) =>
-    route.fulfill({
-      json: {
-        success: true,
-        data: { payout, professional: { fullName: "Enf. Layout Repasse", registry: "COREN-SP 3" } },
-        error: null,
-      },
-    }),
-  );
-  return "/documentos/repasse/po-layout";
-}
-
 test.describe("agenda", () => {
   test("agenda: 7 colunas no celular", async ({ page, request }) => {
     await world(request);
@@ -771,7 +725,6 @@ test.describe("telas com defeito específico", () => {
       `/documentos/relatorio/${w.conditionId}`,
       `/documentos/plano-cuidados/${w.carePlanId}`,
       receiptUrl,
-      await mockPayoutReceipt(page),
     ]) {
       await page.goto(url);
       await settle(page);
