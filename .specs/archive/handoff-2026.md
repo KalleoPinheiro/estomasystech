@@ -2275,3 +2275,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `tests/lib/server/document-authorization.test.ts` (6 tipos × feliz/403/404/outra empresa/papéis sem mudança, mais negada não grava) e `tests/domain/not-found-error.test.ts`. Nenhum teste existente alterado.
 - **Pergunta aberta (PO)**: Admin e Atendente ainda emitem para id sem recurso (grava evento órfão); checar existência para eles muda o contrato dos papéis que o PO mandou não mexer.
 - **Next step**: revisão the-judge em contexto limpo, merge na release/v0.5.0. **Blockers**: nenhum.
+
+## Zero warning do Vite: imports dinâmicos sem template literal (#646) (2026-11-01) — EM REVISÃO
+- **O que mudou**: sem `src/`. As 14 ocorrências de `import(\`@/app/api${path}/route\`)` em 7 testes de faturamento (6 em `tests/api|app|lib` e 1 em `tests/integracao`) viraram chamadas ao helper novo `tests/support/api-routes.ts` (`collectionRoute`/`itemRoute`), que usa mapa estático `as const` com caminho literal e tipa `path` (`CollectionPath`/`ItemPath`). Trava: `scripts/check-dynamic-import.ts` (AST do TypeScript; varre `src/`, `tests/`, `e2e/`, `scripts/`), ligada ao job `estatico` do `ci.yml` (um passo) e aos perfis `rapido` e `pr` do `scripts/gate-cloud.sh`. Convenção em `AGENTS.md`, `docs/engineering/conventions.md` e `docs/governance.md`.
+- **Testes novos**: `tests/scripts/check-dynamic-import.test.ts` (19 casos). Testes existentes alterados só no mecanismo de import; comportamento, cenários e limiares idênticos.
+- **Não feito (de propósito)**: alias `npm run check:dynamic-import` (`package.json` é da #666/#667; o comando é `npx tsx scripts/check-dynamic-import.ts`); regra do Biome (não há regra nativa para isso).
+- **Next step**: se a #666 mexer em `package.json`, acrescentar o alias `check:dynamic-import`. **Blockers**: nenhum.

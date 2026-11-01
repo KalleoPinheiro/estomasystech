@@ -11,6 +11,12 @@ import {
 } from '@/lib/server/data/payouts';
 import { listProceduresFor } from '@/lib/server/data/procedures';
 import {
+  type CollectionPath,
+  collectionRoute,
+  type ItemPath,
+  itemRoute,
+} from '../../support/api-routes';
+import {
   CLINIC_A_ID,
   CLINIC_B_ID,
   ensureTestClinics,
@@ -31,14 +37,14 @@ const session = (overrides: Partial<Session> = {}): Session =>
     ...overrides,
   }) as unknown as Session;
 
-const post = async <T>(path: string, body: unknown): Promise<T> => {
-  const route = await import(`@/app/api${path}/route`);
+const post = async <T>(path: CollectionPath, body: unknown): Promise<T> => {
+  const route = await collectionRoute(path);
   const response = await route.POST(jsonRequest(`/api${path}`, 'POST', body));
   return ((await response.json()) as { data: T }).data;
 };
 
-const patch = async (path: string, id: string, body: unknown) => {
-  const route = await import(`@/app/api${path}/[id]/route`);
+const patch = async (path: ItemPath, id: string, body: unknown) => {
+  const route = await itemRoute(path);
   await route.PATCH(jsonRequest(`/api${path}/${id}`, 'PATCH', body), {
     params: Promise.resolve({ id }),
   });
