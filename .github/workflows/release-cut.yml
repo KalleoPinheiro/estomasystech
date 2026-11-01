@@ -8,6 +8,14 @@ name: Release cut
 # (PAT fine-grained do dono, Contents e Pull requests: read/write, só neste repo, com bypass no
 # ruleset) é OBRIGATÓRIO; sem ele o workflow falha logo no início.
 # Este workflow NÃO mergeia na main, NÃO cria tag e NÃO faz deploy.
+#
+# ADR-088: (1) `release:preflight` roda antes de tudo e barra em ~1 min o que derrubou cortes de ~42 min
+# (token, identidade git, rollback, pré-condições); com `dry_run` o workflow para aí, sem escrever nada.
+# (2) A integração Postgres completa roda ANTES do `release:prepare`, no SHA homologado (o commit de versão só
+# mexe em versão, CHANGELOG, changesets e lockfile), e entra como etapa `integracao` do selo.
+# (3) O `release:cut` grava o check run `release-cut/gate` com o `GITHUB_TOKEN` (app github-actions: PAT não cria
+# check run) no SHA final, ANTES de abrir o PR; o `ci.yml` e o `docker.yml` do PR→main e do push na main o
+# conferem (e a mesma árvore) em vez de repetir a prova.
 on:
   workflow_dispatch:
     inputs:
@@ -20,6 +28,10 @@ on:
         type: choice
         options: [redeploy, backup]
         default: redeploy
+      dry_run:
+        description: "Só o pré-voo (ADR-088): confere token, identidade, pré-condições e permissão, sem gate, sem commit e sem PR"
+        type: boolean
+        default: false
 
 concurrency:
   group: release-cut
@@ -28,6 +40,8 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  # Grava o check run `release-cut/gate` (selo do corte, ADR-088).
+  checks: write
 
 jobs:
   cut:
@@ -35,6 +49,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 300
     if: startsWith(inputs.branch || github.ref_name, 'release/v')
+    # Postgres 18 para a integração completa que antecede o prepare (mesma imagem do gate-pr.yml).
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: gate
+          POSTGRES_DB: estomas_integ
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
       GH_REPO: ${{ github.repository }}
@@ -78,13 +102,44 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
+      - name: Pré-voo (ADR-088)
+        run: npm run release:preflight -- --rollback=${{ inputs.rollback }}
+
       - name: Navegadores do Playwright
+        if: inputs.dry_run != true
         run: npx playwright install --with-deps chromium
 
       - name: Instalar age (smoke de backup)
+        if: inputs.dry_run != true
         run: sudo apt-get update -qq && sudo apt-get install -y -qq age
 
+      # Suíte inteira de integração (as combinações do lote contra Postgres real): o gate de release não a roda e
+      # cada PR só a viu isolada. Vermelho aqui para o corte antes dos ~42 min do gate.
+      - name: Integração Postgres completa (ADR-088)
+        if: inputs.dry_run != true
+        env:
+          AUTH_SECRET: ci-placeholder-secret-0000000000000000
+          INTEGRATION_DATABASE_URL: postgres://postgres:gate@127.0.0.1:5432/estomas_integ
+          PG_POOL_MAX: "1"
+        run: npx vitest run -c vitest.integracao.config.mts
+
+      # O release:cut exige árvore limpa: se a integração sujou algo, falha aqui, com a lista, e não depois.
+      - name: Árvore limpa depois da integração
+        if: inputs.dry_run != true
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            echo "::error::a integração deixou a árvore suja; o release:cut recusaria."
+            exit 1
+          fi
+
       - name: Cortar a release
+        if: inputs.dry_run != true
+        env:
+          # Selo do corte (ADR-088): check run só pode ser criado por GitHub App, então o selo usa o
+          # GITHUB_TOKEN e não o PAT do GH_TOKEN. `integracao` rodou no passo anterior.
+          SELO_TOKEN: ${{ github.token }}
+          RELEASE_CUT_ETAPAS_EXTRAS: integracao
         run: npm run release:cut -- --rollback=${{ inputs.rollback }}
 
       - name: Guardar corpo do PR e recibo

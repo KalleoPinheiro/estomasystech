@@ -33,10 +33,44 @@ concurrency:
 
 permissions:
   contents: read
+  # Lê o check run `release-cut/gate` do SHA provado pelo corte (ADR-088).
+  checks: read
 
 jobs:
+  # Prova do corte (ADR-088): o gate da release já rodou imagem, smoke e backup/restore neste SHA e nesta árvore
+  # (etapas `docker` e `backup` no selo). Nada de `paths-ignore`: o workflow roda, o job pesado é pulado.
+  escopo:
+    name: Escopo (já provado pelo corte?)
+    runs-on: ubuntu-24.04
+    outputs:
+      provado: ${{ steps.prova.outputs.provado }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - id: prova
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENTO: ${{ github.event_name }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --etapas docker | tee -a "$GITHUB_OUTPUT"
+
   docker:
     name: Imagem Docker + smoke do container
+    needs: escopo
+    if: needs.escopo.outputs.provado != 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
