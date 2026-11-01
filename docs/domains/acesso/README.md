@@ -107,7 +107,7 @@ cada tela faz com o dado é dos outros domínios.
 
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
-| Login, convite, definir senha (política da equipe, ACE-RN-41), esqueci a senha | entregue | `/login`, `/definir-senha`, `/esqueci-senha` |
+| Login, convite, definir senha (política da equipe, ACE-RN-41), esqueci a senha | entregue | `/login`, `/definir-senha`, `/esqueci-senha`, `/privacidade`: página e textos no servidor (Server Components); só o formulário é ilha cliente (`login-card.tsx`, `forgot-password-form.tsx`, `set-password-form.tsx`). Login, esqueci a senha, definir senha e segundo fator continuam em Route Handler `/api/auth/*` por causa do `rate-limit-strict` (ADR-069 § 2); `/login` decide no servidor se há `AUTH_SECRET` e não chama `/api` na carga; o token do convite chega por `searchParams` no servidor e não é registrado em log (#554) |
 | Segundo fator (código do autenticador, cadastro, códigos de recuperação): obrigatório para Super Admin e Admin de Empresa | entregue; recuperação de emergência no servidor só para o Super Admin (`npm run admin:recover`); cadastro opcional de Atendente/Profissional pela "Minha conta" (ACE-RN-53); reset pelo Admin (ACE-RN-54) | `/login` (etapas depois da senha), `/api/auth/mfa/**` |
 | Contas e papéis (criar, desativar, reenviar convite, link de redefinição, redefinir 2º fator) | entregue | Configurações → Contas |
 | Minha conta: trocar a própria senha, ligar o 2º fator opcional (ACE-RN-52, ACE-RN-53) | entregue (#295) | `/minha-conta`, `/plataforma/minha-conta` |
