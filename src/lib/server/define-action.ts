@@ -141,6 +141,8 @@ export function defineAction<S extends z.ZodType, R>(
 export function defineAction<S extends z.ZodType, R>(
   definition: ActionDefinition<S, R>,
 ): (input: z.input<S>) => Promise<ActionResult<R>> {
+  // Escolhido antes do `try`: a decisão vale para toda chamada, inclusive as que falham.
+  const rereadScreen = definition.refresh === false ? () => undefined : refresh;
   return async (rawInput) => {
     const state = await readSession();
     if (state.status === 'anonymous') {
@@ -165,7 +167,7 @@ export function defineAction<S extends z.ZodType, R>(
       const result = definition.audit
         ? await runAudited(definition, context)
         : await definition.handler(context);
-      if (definition.refresh !== false) refresh();
+      rereadScreen();
       return { success: true, data: result, error: null };
     } catch (error) {
       return failure(describeFailure(error).message);
