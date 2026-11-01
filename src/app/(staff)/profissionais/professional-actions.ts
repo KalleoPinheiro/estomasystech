@@ -9,6 +9,7 @@ import {
   createProfessionalRecord,
   updateProfessionalRecord,
 } from '@/lib/server/professional-writes';
+import { createdAudit, updatedAudit } from '@/lib/server/team-audit';
 import { rolesWithAccessTo } from '@/lib/staff-pages';
 
 /**
@@ -35,12 +36,7 @@ export const createProfessional = defineAction({
   input: z.object(professionalFields),
   handler: async ({ input, tx }) =>
     toProfessionalDto(await createProfessionalRecord(tx.professionals, input)),
-  audit: ({ result }) => ({
-    action: 'create',
-    resourceType: 'professional',
-    resourceId: result.id,
-    detail: 'cadastrado',
-  }),
+  audit: ({ result }) => createdAudit('professional', result.id),
 });
 
 /** Edita o cadastro, ou ativa e desativa o profissional. */
@@ -57,17 +53,8 @@ export const updateProfessional = defineAction({
     toProfessionalDto(
       await updateProfessionalRecord(tx.professionals, id, change),
     ),
-  audit: ({ input, result }) => ({
-    action: 'update',
-    resourceType: 'professional',
-    resourceId: result.id,
-    detail:
-      input.active === undefined
-        ? 'editado'
-        : input.active
-          ? 'reativado'
-          : 'desativado',
-  }),
+  audit: ({ input, result }) =>
+    updatedAudit('professional', result.id, input.active),
 });
 
 /** Substitui o horário semanal; lista vazia volta a seguir só a grade da clínica. */

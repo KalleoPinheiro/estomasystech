@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { UpdatePartner } from '@/application/partners/update-partner';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
+import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toPartnerDto } from '@/lib/dto';
+import { updatedAudit } from '@/lib/server/team-audit';
 
 const updateSchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
@@ -25,16 +27,24 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = updateSchema.parse(await request.json());
-    const { partners } = await getRepositories(writeScope(guard.session));
-    const partner = await new UpdatePartner(partners).execute({
-      id,
-      fullName: body.fullName,
-      email: body.email,
-      phone: body.phone,
-      crm: body.crm === undefined ? undefined : body.crm,
-      specialty: body.specialty === undefined ? undefined : body.specialty,
-      active: body.active,
+    const { transactions } = await getRepositories(writeScope(guard.session));
+    // Auditoria na MESMA transação da gravação (ADR-075, EQP-RN-09).
+    return transactions.run(async (tx) => {
+      const partner = await new UpdatePartner(tx.partners).execute({
+        id,
+        fullName: body.fullName,
+        email: body.email,
+        phone: body.phone,
+        crm: body.crm === undefined ? undefined : body.crm,
+        specialty: body.specialty === undefined ? undefined : body.specialty,
+        active: body.active,
+      });
+      await recordAuditNow(
+        tx.auditEvents,
+        guard.session,
+        updatedAudit('partner', partner.id, body.active),
+      );
+      return toPartnerDto(partner);
     });
-    return toPartnerDto(partner);
   });
 }
