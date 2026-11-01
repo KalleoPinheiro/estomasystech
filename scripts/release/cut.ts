@@ -94,6 +94,13 @@ function checkIntegrity(testeAlterado: string | null): void {
   live('npx', ['tsx', 'scripts/gate/check-test-integrity.ts', 'origin/main', ...motivo]);
 }
 
+/** O `git push` do `release:prepare` passa pelo `pre-push` (regra 8), que só lê o motivo de `.gate/motivo-teste.txt`. */
+function writeMotivoParaOPush(testeAlterado: string | null): void {
+  if (!testeAlterado) return;
+  mkdirSync('.gate', { recursive: true });
+  writeFileSync('.gate/motivo-teste.txt', testeAlterado.replace(/^TESTE-ALTERADO:\s*/, ''));
+}
+
 function prepare(rollback: string, version: string): void {
   live('npm', ['run', 'release:prepare', '--', `--rollback=${rollback}`]);
   const check = checkPreparedVersion(version, packageVersion());
@@ -149,7 +156,10 @@ function main(): void {
   checkIntegrity(testeAlterado);
 
   step(prepared ? '2/5 release:prepare já feito neste SHA homologado; segue' : '2/5 release:prepare');
-  if (!prepared) prepare(rollback, version);
+  if (!prepared) {
+    writeMotivoParaOPush(testeAlterado);
+    prepare(rollback, version);
+  }
   const sha = must('git', ['rev-parse', 'HEAD']);
 
   step('3/5 Worktree limpo');
