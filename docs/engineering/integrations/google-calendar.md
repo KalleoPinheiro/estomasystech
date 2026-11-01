@@ -91,7 +91,7 @@ com o mesmo conteúdo mínimo da tabela acima (`eventContent`). Roteiro de execu
 
 | Situação | Comportamento | Visível para |
 | --- | --- | --- |
-| OAuth não configurado | `GET /api/integrations/google-calendar` responde `503` | quem tenta conectar |
+| OAuth não configurado (#658) | `GET /api/settings/calendar-integration` devolve `configured: false` e a tela de Configurações desabilita «Conectar Google Agenda» com a mensagem de não configurado; `GET /api/integrations/google-calendar` (link direto) redireciona para `/configuracoes?calendar=erro&reason=nao_configurado`, nunca JSON cru | quem tenta conectar |
 | nenhuma credencial | `NullCalendarGateway`: nenhuma consulta a `google_accounts`, nenhuma chamada | ninguém |
 | Google fora do ar / token revogado | a operação na agenda **não** falha; o evento fica dessincronizado | log |
 
