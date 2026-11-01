@@ -26,6 +26,7 @@ import {
 } from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
 import { InMemoryCommissionPayoutRepository } from '@/infrastructure/persistence/in-memory/in-memory-commission-payout-repository';
 import {
+  InMemoryProcedureKitRepository,
   InMemoryProcedureRepository,
   InMemoryScheduleAvailabilityRepository,
   InMemoryScheduleConfigRepository,
@@ -109,6 +110,7 @@ export function inMemoryScope(
     conditions: new InMemoryClinicalConditionRepository(),
     conditionPhotos: new InMemoryConditionPhotoRepository(),
     procedures: new InMemoryProcedureRepository(),
+    procedureKits: new InMemoryProcedureKitRepository(),
     professionals: new InMemoryProfessionalRepository(),
     producedSessions: new InMemoryProducedSessionRepository(
       appointments as InMemoryAppointmentRepository,

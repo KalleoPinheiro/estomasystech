@@ -26,6 +26,7 @@ import {
 import { DrizzleCommissionPayoutRepository } from './drizzle-commission-payout-repository';
 import { DrizzleDataSubjectRequestRepository } from './drizzle-data-subject-request-repository';
 import {
+  DrizzleProcedureKitRepository,
   DrizzleProcedureRepository,
   DrizzleScheduleConfigRepository,
   DrizzleUserAccountRepository,
@@ -164,6 +165,7 @@ export class DrizzleTransactionManager implements TransactionManager {
         ),
         clinics: new DrizzleClinicRepository(tx),
         waitlist: new DrizzleWaitlistRepository(tx, this.clinicId, this.cipher),
+        procedureKits: new DrizzleProcedureKitRepository(tx),
         supplies: new DrizzleSupplyRepository(tx, this.clinicId),
         stockMovements: new DrizzleStockMovementRepository(tx, this.clinicId),
         supplyBatches: new DrizzleSupplyBatchRepository(tx, this.clinicId),

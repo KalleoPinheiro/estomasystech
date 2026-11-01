@@ -4,7 +4,6 @@
   "src/app/(staff)/minha-conta/page.tsx",
   "src/app/(staff)/parceiros/page.tsx",
   "src/app/(staff)/pedidos-titular/page.tsx",
-  "src/app/(staff)/procedimentos/page.tsx",
   "src/app/(staff)/profissionais/page.tsx",
   "src/app/(staff)/relatorios/page.tsx",
   "src/app/definir-senha/page.tsx",
