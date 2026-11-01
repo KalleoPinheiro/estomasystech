@@ -3,8 +3,10 @@ name: Release cut
 # Corte da release no Actions (ADR-071, emendada pela ADR-087): roda `npm run release:cut` em
 # `release/vX.Y.Z` sem depender da máquina do operador. Só `workflow_dispatch`: escolha a branch
 # `release/vX.Y.Z` em "Use workflow from". Precondição: a marca `homologacao/vX.Y.Z` no SHA da release.
-# O `release:prepare` faz push do commit de versão na release; se o ruleset `release/**` barrar o
-# GITHUB_TOKEN, dê bypass ao app GitHub Actions nesse ruleset (ou use o segredo RELEASE_CUT_TOKEN).
+# O `release:prepare` faz push do commit de versão na release e o ruleset `release/**` barra o
+# GITHUB_TOKEN (o app GitHub Actions não está na bypass list). Por isso o segredo RELEASE_CUT_TOKEN
+# (PAT fine-grained do dono, Contents e Pull requests: read/write, só neste repo, com bypass no
+# ruleset) é OBRIGATÓRIO; sem ele o workflow falha logo no início.
 # Este workflow NÃO mergeia na main, NÃO cria tag e NÃO faz deploy.
 on:
   workflow_dispatch:
@@ -30,15 +32,24 @@ jobs:
     timeout-minutes: 300
     if: startsWith(github.ref_name, 'release/v')
     env:
-      GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN || github.token }}
+      GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
       GH_REPO: ${{ github.repository }}
       TZ: UTC
       NODE_OPTIONS: --max-old-space-size=8192
     steps:
+      - name: Exigir RELEASE_CUT_TOKEN
+        env:
+          TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error title=RELEASE_CUT_TOKEN ausente::Crie o segredo RELEASE_CUT_TOKEN (PAT fine-grained do dono do repo, Contents e Pull requests em read/write, com bypass no ruleset release/**) em Settings > Secrets and variables > Actions e dispare de novo."
+            exit 1
+          fi
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_CUT_TOKEN || github.token }}
+          token: ${{ secrets.RELEASE_CUT_TOKEN }}
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
