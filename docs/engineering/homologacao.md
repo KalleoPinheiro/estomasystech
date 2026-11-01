@@ -40,7 +40,8 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | `staging` é reconstruída, não consertada | conflito ou migração colidente: reconstrua; nunca resolva em `staging` |
 | Staging aprovada | quem validou cria ou move a marca `homologacao/vX.Y.Z` para o SHA aprovado (`git push --force origin <sha>:refs/heads/homologacao/vX.Y.Z`) ([ADR-071](../adr/071-corte-de-release-em-comando-unico.md)) |
 | Cortar a release | `npm run release:cut -- --rollback=redeploy\|backup` **na release**, no WSL: confere a marca e o TESTE-ALTERADO do lote, roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo (sem mutação; Docker e backup obrigatórios) e abre o PR `release → main` com o recibo. Nada entra na release depois disso; se o gate falhar por ambiente, rode o mesmo comando de novo (não versiona outra vez) |
-| Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase) |
+| Cortar pelo Actions | workflow **Release cut**, disparado da `main` com `branch=release/vX.Y.Z`. Rode antes com `dry_run` marcado: só o pré-voo (`npm run release:preflight`: token, identidade git, rollback, pré-condições e permissão), em ~1 min e sem escrever nada. O corte real roda a integração Postgres completa antes do `release:prepare` e grava o selo `release-cut/gate` no SHA final ([ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md)) |
+| Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase). Com o selo no head e a mesma árvore, o `ci` e o Docker do PR (e do push na `main` depois do merge) passam sem repetir a prova pesada; sem selo ou com árvore diferente, rodam inteiros |
 | Depois do merge | `npm run release:publish -- --rollback=...` (tag no commit de merge, Release publicada); deploy da tag em `producao.md` § 3.1. A `staging` volta a ser = `main` |
 | Hotfix | `hotfix/*` nasce da `main`, PR direto na `main` (recibo), `release:prepare`/`release:publish --hotfix`; o `release:sync` leva a correção para a release aberta |
 
@@ -60,9 +61,12 @@ fica em `origin/staging` e um `git push` simples nunca vai para a release. Chama
 `scripts/staging/rebuild.sh` direto, sem `--deploy`, a staging continua igual à base.
 
 Os scripts rodam no seu computador (`rebuild.sh`, `sync-main.sh`, sem `gh` nem Actions). O
-`staging.yml` repete tudo a cada push na `main` (e por `workflow_dispatch`) quando houver cota
-(até ~2026-11-01 o fluxo é à mão). O workflow só empurra para `release/*` se o ruleset deixar
-(ADR-052, Consequências).
+`staging.yml` reconstrói a staging a cada push na `main` (e por `workflow_dispatch`). Desde o ADR-088 ele
+**não** empurra a `main` na release (o ruleset `release/**` recusava o push, GH013): o merge da `main` na
+release é de quem tem bypass, por `npm run release:sync`, e o `release:cut` exige a `main` dentro da release. O
+commit de deploy sai com a identidade do dono do repositório (a Vercel bloqueia autor fora do time) e o smoke
+usa o segredo opcional `VERCEL_AUTOMATION_BYPASS_SECRET`: com o SSO da Vercel ativo, sem ele o health não é
+verificado (aviso no log).
 
 **Prévia de PR não existe mais (ADR-061).** O `vercel.json` desliga o deploy automático de toda branch
 (`"**": false`) exceto `staging`. O `vercel.json` vale a partir do commit empurrado: branch antiga, criada

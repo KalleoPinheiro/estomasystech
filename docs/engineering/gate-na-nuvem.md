@@ -10,12 +10,15 @@ last_reviewed: 2026-10-31
 
 **Por PR:** suíte unitária completa com cobertura, mais integração, mutação e E2E só no que o diff altera ou alcança (regras de impacto e fallback no ADR). **Por release:** gate completo na nuvem e Docker/backup no WSL antes do `release:cut`.
 
+**Antes de abrir o PR (ADR-088):** só o perfil `rapido`. A cobertura completa, a integração e o E2E são do `ci.yml` e do `gate-pr.yml` no PR, que são os checks exigidos; rodá-los antes na thread repete a mesma prova no mesmo SHA.
+
 Decisão e motivo: [ADR-084](../adr/084-gate-na-nuvem-incremental-por-pr-e-completo-por-release.md).
 
 ## Comandos
 
 ```bash
-scripts/gate-cloud.sh bg pr        # PR: incremental, em segundo plano, log em .gate/cloud.log
+scripts/gate-cloud.sh bg rapido    # antes de abrir o PR (ADR-088): estático, integridade e testes do diff, ~3 a 5 min
+scripts/gate-cloud.sh bg pr        # investigar vermelho: incremental, em segundo plano, log em .gate/cloud.log
 scripts/gate-cloud.sh bg release   # release: setup + integração + gate:local (perfil pr, sem Docker)
 scripts/gate-cloud.sh status       # etapas terminadas com tempo; "fim rc=N" quando acabou
 ```

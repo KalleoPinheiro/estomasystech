@@ -43,6 +43,7 @@
     "release:sync": "bash scripts/release/sync-main.sh",
     "release:prepare": "tsx scripts/release/prepare.ts",
     "release:cut": "tsx scripts/release/cut.ts",
+    "release:preflight": "tsx scripts/release/preflight.ts",
     "release:publish": "tsx scripts/release/publish.ts"
   },
   "lint-staged": {

@@ -20,6 +20,8 @@ concurrency:
 
 permissions:
   contents: read
+  # Lê o check run `release-cut/gate` do SHA provado pelo corte (ADR-088).
+  checks: read
 
 # Runner fixado em ubuntu-24.04: o rótulo ubuntu-latest passa a ser Ubuntu 26 a partir de
 # 2026-10-19 (actions/runner-images#14748). Trocar de imagem vira uma mudança explícita,
@@ -35,6 +37,8 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       docs_only: ${{ steps.classe.outputs.docs_only }}
+      provado: ${{ steps.prova.outputs.provado }}
+      pesado: ${{ steps.pesado.outputs.pesado }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -62,9 +66,34 @@ jobs:
           fi
           echo "docs_only=$(grep -h '^docs_only=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)" >> "$GITHUB_STEP_SUMMARY"
 
+      # Prova do corte (ADR-088): PR `release/vX.Y.Z → main` e push do merge na `main` cujo segundo pai tem o
+      # check run `release-cut/gate` (app github-actions, success, com as etapas do CI) e a MESMA árvore. Qualquer
+      # dúvida (selo ausente, árvore diferente, API fora) dá `provado=false` e o CI roda inteiro.
+      - id: prova
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENTO: ${{ github.event_name }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --etapas ci | tee -a "$GITHUB_OUTPUT"
+
+      # `pesado=true` roda estático completo, cobertura e build; só documentação ou prova do corte os dispensa.
+      - id: pesado
+        env:
+          DOCS_ONLY: ${{ steps.classe.outputs.docs_only }}
+          PROVADO: ${{ steps.prova.outputs.provado }}
+        run: |
+          if [ "$DOCS_ONLY" = true ] || [ "$PROVADO" = true ]; then pesado=false; else pesado=true; fi
+          echo "pesado=$pesado" >> "$GITHUB_OUTPUT"
+          echo "docs_only=$DOCS_ONLY provado_pelo_corte=${PROVADO:-false} pesado=$pesado" >> "$GITHUB_STEP_SUMMARY"
+
   estatico:
     name: Estático (changeset, typecheck, lint, sv, docs, server-first)
     needs: escopo
+    if: needs.escopo.outputs.provado != 'true'
     runs-on: ubuntu-24.04
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
@@ -111,13 +140,36 @@ jobs:
         if: needs.escopo.outputs.docs_only != 'true'
         run: npm run check:server-first
 
+  # O selo do corte não cobre o `check:server-first` (nem o `gate:local` o roda). No PR provado pelo corte este
+  # job barato (checkout + install + um script) mantém a garantia que o `estatico` dava (ADR-088).
+  server-first-provado:
+    name: Server-first (PR provado pelo corte)
+    needs: escopo
+    if: needs.escopo.outputs.provado == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Server-first gate
+        run: npm run check:server-first
+
   # Cobertura em 4 fatias (vitest --shard). Cada fatia roda os testes dela e grava um blob com o relatório e a
   # cobertura bruta; os limiares só valem na junção (`cobertura`), com a config da suíte inteira. Teste
   # vermelho em qualquer fatia reprova a fatia e, por `needs`, o gate.
   cobertura-shard:
     name: Cobertura (shard ${{ matrix.shard }}/4)
     needs: escopo
-    if: needs.escopo.outputs.docs_only != 'true'
+    if: needs.escopo.outputs.pesado == 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -200,24 +252,35 @@ jobs:
   ci:
     name: Typecheck, lint, sv-gate, test:coverage, build
     if: always()
-    needs: [escopo, estatico, cobertura-shard, cobertura]
+    needs: [escopo, estatico, server-first-provado, cobertura-shard, cobertura]
     runs-on: ubuntu-24.04
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
       NODE_OPTIONS: --max-old-space-size=8192
     steps:
       # Código: todos os jobs têm de ser `success`. Só documentação: o escopo e o estático (gate de docs) passam
-      # e os jobs pesados têm de estar `skipped`; qualquer outra combinação reprova.
+      # e os jobs pesados têm de estar `skipped`. Provado pelo corte (ADR-088): só o escopo passa e TUDO o mais
+      # tem de estar `skipped`, menos o `server-first-provado`, que tem de passar. Qualquer outra combinação reprova.
       - name: Todos os jobs anteriores passaram
         env:
           DOCS_ONLY: ${{ needs.escopo.outputs.docs_only }}
+          PROVADO: ${{ needs.escopo.outputs.provado }}
           R_ESCOPO: ${{ needs.escopo.result }}
           R_ESTATICO: ${{ needs.estatico.result }}
+          R_SERVERFIRST: ${{ needs.server-first-provado.result }}
           R_SHARD: ${{ needs.cobertura-shard.result }}
           R_COBERTURA: ${{ needs.cobertura.result }}
         run: |
-          echo "docs_only=$DOCS_ONLY escopo=$R_ESCOPO estatico=$R_ESTATICO shard=$R_SHARD cobertura=$R_COBERTURA"
-          [ "$R_ESCOPO" = success ] && [ "$R_ESTATICO" = success ] || { echo "::error::escopo ou estático não passou"; exit 1; }
+          echo "docs_only=$DOCS_ONLY provado=$PROVADO escopo=$R_ESCOPO estatico=$R_ESTATICO serverfirst=$R_SERVERFIRST shard=$R_SHARD cobertura=$R_COBERTURA"
+          [ "$R_ESCOPO" = success ] || { echo "::error::o escopo não passou"; exit 1; }
+          if [ "$PROVADO" = true ]; then
+            [ "$R_ESTATICO" = skipped ] && [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR provado pelo corte não devia ter rodado estático nem cobertura"; exit 1; }
+            [ "$R_SERVERFIRST" = success ] || { echo "::error::server-first não passou no PR provado"; exit 1; }
+            echo "Provado pelo release-cut/gate no mesmo SHA e na mesma árvore (ADR-088): sem repetir."
+            exit 0
+          fi
+          [ "$R_SERVERFIRST" = skipped ] || { echo "::error::server-first do PR provado não devia ter rodado"; exit 1; }
+          [ "$R_ESTATICO" = success ] || { echo "::error::estático não passou"; exit 1; }
           if [ "$DOCS_ONLY" = true ]; then
             [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR de documentação não devia ter rodado cobertura"; exit 1; }
           else
@@ -225,23 +288,23 @@ jobs:
           fi
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        if: needs.escopo.outputs.docs_only != 'true'
+        if: needs.escopo.outputs.pesado == 'true'
         with:
           persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        if: needs.escopo.outputs.docs_only != 'true'
+        if: needs.escopo.outputs.pesado == 'true'
         with:
           node-version: "24"
           cache: npm
 
       - name: Install dependencies
-        if: needs.escopo.outputs.docs_only != 'true'
+        if: needs.escopo.outputs.pesado == 'true'
         run: npm ci
 
       # Cache do Next entre rodadas: só acelera a compilação; o build roda inteiro e falha igual.
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        if: needs.escopo.outputs.docs_only != 'true'
+        if: needs.escopo.outputs.pesado == 'true'
         with:
           path: .next/cache
           key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'next.config.*') }}
@@ -250,5 +313,5 @@ jobs:
             next-${{ runner.os }}-
 
       - name: Build
-        if: needs.escopo.outputs.docs_only != 'true'
+        if: needs.escopo.outputs.pesado == 'true'
         run: npm run build
