@@ -24,6 +24,7 @@ gerencial mensal. Só lê — nenhuma regra de negócio nasce aqui.
 | REL-RN-02 | Recebido = soma dos pagamentos (parciais inclusos); a receber = saldo das faturas pendentes | `src/application/billing/get-billing-summary.ts` |
 | REL-RN-03 | Comissão por profissional: apurada, liberada e pendente, com a mesma regra do repasse | `src/application/reports/production.ts` |
 | REL-RN-04 | Só o relatório de mês encerrado é cacheado (não muda mais) | `src/lib/report-cache.ts` |
+| REL-RN-05 | **Relatório no servidor** (#555, [ADR-085](../../adr/085-relatorios-auditoria-e-pedidos-do-titular-no-servidor.md)): `/relatorios` é Server Component; o mês vem de `?month=YYYY-MM` (inválido volta ao corrente), as setas são links, e o mês pedido e o anterior chegam no HTML sem `/api` na carga. Mês anterior que falha só tira os deltas. O cache de REL-RN-04 fica dentro da mesma função de dados da rota | `src/lib/server/data/reports.ts`, `src/app/(staff)/relatorios/page.tsx`, `tests/pages/staff-relatorios.test.tsx` |
 
 ## Funcionalidades
 

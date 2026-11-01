@@ -109,6 +109,20 @@ describe('PatientPicker (#197)', () => {
     );
   });
 
+  it('nome já lido no servidor abre o seletor sem chamar a ficha por /api (#555)', () => {
+    const fetchMock = mockFetch(() => ok(null));
+    render(
+      <PatientPicker
+        value="p1"
+        onChange={() => {}}
+        selectedName="Maria Lida"
+      />,
+    );
+
+    expect(screen.getByText('Maria Lida')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('includeInactive mostra inativos marcados', async () => {
     mockFetch(() =>
       ok([{ id: 'p-old', fullName: 'Zuleica Inativa', active: false }]),
