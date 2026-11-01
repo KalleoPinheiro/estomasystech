@@ -23,7 +23,7 @@ describe('Feature: trava da emissão por documento (#546, ADR-082)', () => {
       const held = await tx.execute(
         sql`select count(*)::int as n from pg_locks where locktype = 'advisory'`,
       );
-      return held.rows[0] as { n: number };
+      return (held as unknown as { rows: { n: number }[] }).rows[0];
     });
 
     expect(done.n).toBeGreaterThanOrEqual(1);
