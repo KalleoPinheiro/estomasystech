@@ -869,9 +869,9 @@ pontos de log, sempre com dado mascarado, está em
 cole linha crua de log em chat, issue ou PR**. O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
 mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
-#### 9.4.1 Web Vitals de campo (#559, [ADR-085](../adr/085-web-vitals-de-campo-no-log-estruturado.md))
+#### 9.4.1 Web Vitals de campo (#559, [ADR-086](../adr/086-web-vitals-de-campo-no-log-estruturado.md))
 
-O navegador da equipe logada (casco da clínica e plataforma; o portal ainda não mede, ADR-085) manda LCP, INP, CLS, TTFB e FCP da página
+O navegador da equipe logada (casco da clínica e plataforma; o portal ainda não mede, ADR-086) manda LCP, INP, CLS, TTFB e FCP da página
 que fechou, em uma requisição por visita. Cada medida vira uma linha `web-vital` no log, sem conta, empresa
 ou paciente:
 

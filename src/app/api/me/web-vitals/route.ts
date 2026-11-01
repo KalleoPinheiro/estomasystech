@@ -12,7 +12,7 @@ import { webVitalsPayloadSchema } from '@/lib/web-vitals-schema';
  * rota sem id, largura arredondada e papel — nunca conta, empresa ou paciente.
  * Rota e largura são normalizadas de novo aqui: o corpo é entrada do cliente.
  * Corpo inválido é `400`; sem sessão, `401` (o proxy barra antes); paciente e parceiro, `403`
- * (a guarda de rota exige equipe; o portal fica sem medição de campo por ora, ADR-085).
+ * (a guarda de rota exige equipe; o portal fica sem medição de campo por ora, ADR-086).
  */
 export async function POST(request: NextRequest) {
   const guard = requireStaffSession(request);

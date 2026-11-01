@@ -1,5 +1,5 @@
 ---
-title: "ADR 085 — Web Vitals de campo no log estruturado: um envio por visita, só com sessão, sem identidade"
+title: "ADR 086 — Web Vitals de campo no log estruturado: um envio por visita, só com sessão, sem identidade"
 status: living
 audience: [dev, agent, po]
 owner: "@KalleoPinheiro"
@@ -11,7 +11,7 @@ related:
   - docs/engineering/producao.md
 ---
 
-# ADR 085 — Web Vitals de campo no log estruturado: um envio por visita, só com sessão, sem identidade
+# ADR 086 — Web Vitals de campo no log estruturado: um envio por visita, só com sessão, sem identidade
 
 - **Data:** 2026-11-01
 - **Status:** aceito (decisão do orquestrador como PO e arquiteto, issue [#559](https://github.com/KalleoPinheiro/estomasystech/issues/559)).
@@ -29,9 +29,9 @@ A frente de performance (ADR-069, ADR-074) mede em laboratório: Playwright no b
 4. **Sem identidade.** A rota perde ids (uuid, número, cadeia opaca), query e hash (`/pacientes/:id/avaliacoes`); a largura da janela é arredondada de 50 em 50 px; o log leva só métrica, valor, rating, rota, largura e papel. Nunca conta, empresa, paciente nem User-Agent. **O servidor normaliza de novo**: o corpo é entrada do cliente.
 5. **Destino: o logger estruturado.** Uma linha `web-vital` por medida (ADR-060 redige tudo de qualquer forma). Sem tabela, sem serviço de terceiros; ler como em `producao.md` § 9.4.1.
 
-## Pergunta aberta
+## Decisão tomada: o portal fica fora por ora
 
-O portal (paciente, responsável, parceiro), o público mais mobile, fica sem medição de campo. Medi-lo pede uma rota irmã em `/api/portal/` com a guarda do portal; decisão de escopo para a parte 2 da #559.
+O portal (paciente, responsável, parceiro), o público mais mobile, não mede campo nesta etapa. Decisão do orquestrador (2026-11-01): a rota é só da equipe e o portal segue na medição de laboratório. Medi-lo pede uma rota irmã em `/api/portal/` com a guarda do portal; acompanhado na issue [#643](https://github.com/KalleoPinheiro/estomasystech/issues/643).
 
 ## Alternativas descartadas
 
