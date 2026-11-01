@@ -27,8 +27,7 @@ em Linux x64, e o `npm ci` do Docker (Alpine/musl) ou da Vercel quebra depois, j
 ## Decisão
 
 1. **npm fixado em um só lugar.** `package.json` declara `"packageManager": "npm@11.21.1"` e `"engines": { "npm": "11.21.1" }`.
-   A versão é a 11.x mais recente com mais de duas semanas de publicada na data da decisão; com ela o lockfile atual é
-   regenerado **sem diferença** (verificado com `npm install --package-lock-only`). Trocar de versão é um PR próprio, que
+   A versão é a 11.x mais recente com mais de duas semanas de publicada na data da decisão. O `package-lock.json` acompanha o `engines` novo (`packages[""].engines.npm`, 3 linhas); com isso, `npm install --package-lock-only` no npm 11.21.1 deixa o diff vazio (verificado). Trocar de versão é um PR próprio, que
    altera os dois campos juntos e confere o lockfile.
 2. **O corte usa o npm fixado.** O `release-cut.yml` roda `npm i -g npm@<packageManager>` (lido do `package.json`, sem
    repetir o número) antes do `npm ci`. Os demais workflows seguem com o npm do Node: só o corte regenera o lockfile.
