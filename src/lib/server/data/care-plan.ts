@@ -8,7 +8,7 @@ import { sessionScope } from '@/lib/auth/tenant-scope';
 import { type CarePlanDetailDto, toCarePlanDetailDto } from '@/lib/dto';
 
 /**
- * Plano de cuidados com diagnósticos, resultados e intervenções (#546). Mesma
+
  * resposta de `GET /api/care-plans/[id]`, que chama esta função: R4 do
  * Profissional (sem vínculo = 404) e leitura do prontuário auditada.
  */
