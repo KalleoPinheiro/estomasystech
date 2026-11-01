@@ -18,6 +18,11 @@ interface PatientPickerProps {
   label?: string;
   /** Inclui pacientes inativos nos resultados (ex.: filtro da auditoria). */
   includeInactive?: boolean;
+  /**
+   * Nome do paciente de `value` quando a tela já o leu no servidor (ADR-069):
+   * o seletor abre com ele, sem ler a ficha por `/api`.
+   */
+  selectedName?: string | null;
 }
 
 function useDebounced(value: string): string {
@@ -121,6 +126,7 @@ export function PatientPicker({
   onChange,
   label = 'Paciente',
   includeInactive = false,
+  selectedName = null,
 }: PatientPickerProps) {
   const inputId = useId();
   const [term, setTerm] = useState('');
@@ -133,7 +139,7 @@ export function PatientPicker({
         {label}
         <SelectedPatient
           patientId={value}
-          knownName={picked?.id === value ? picked.fullName : null}
+          knownName={picked?.id === value ? picked.fullName : selectedName}
           onClear={() => onChange('')}
         />
       </div>

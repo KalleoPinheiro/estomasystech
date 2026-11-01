@@ -4,13 +4,30 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import DataRequestsPage from '@/app/(staff)/pedidos-titular/page';
+import { ForbiddenError } from '@/domain/shared/errors';
 import type { DataSubjectRequestDto } from '@/lib/dto';
-
 import { DataRightsHarness } from '../support/portal-harness';
+import { renderServerPage } from '../support/server-page';
 
 vi.mock('@/app/portal/actions', async () =>
   (await import('../support/portal-actions')).portalActionsOverFetch(),
 );
+
+const queue = vi.hoisted(() => ({
+  listDataRequestsFor: vi.fn(),
+  requireStaffPageFor: vi.fn(),
+  resolveDataRequest: vi.fn(),
+}));
+
+vi.mock('@/lib/server/session', () => ({
+  requireStaffPageFor: queue.requireStaffPageFor,
+}));
+vi.mock('@/lib/server/data/data-requests', () => ({
+  listDataRequestsFor: queue.listDataRequestsFor,
+}));
+vi.mock('@/app/(staff)/pedidos-titular/data-request-actions', () => ({
+  resolveDataRequest: queue.resolveDataRequest,
+}));
 
 vi.mock('next/navigation', async () =>
   (await import('../support/portal-router')).navigationMock(),
@@ -188,21 +205,54 @@ describe('Portal: Meus dados (LGPD) (#293)', () => {
   });
 });
 
-describe('Equipe: fila de pedidos do titular (#293)', () => {
-  it('Admin aceita com justificativa e a fila recarrega', async () => {
-    let resolved = false;
-    const calls = mockFetch((url, init) => {
-      if (url === '/api/data-requests/r1' && init?.method === 'PATCH') {
-        resolved = true;
-        return { ok: true, body: { ...request(), notified: true } };
-      }
-      if (url === '/api/data-requests?status=pending')
-        return { ok: true, body: resolved ? [] : [request()] };
-      return undefined;
-    });
-    renderWithToast(<DataRequestsPage />);
+/** A fila que a camada de dados devolve por situação (a tela é do servidor, #555). */
+const mockQueue = (
+  byStatus: Partial<Record<string, DataSubjectRequestDto[]>>,
+) => {
+  queue.requireStaffPageFor.mockResolvedValue({
+    role: 'company_admin',
+    subject: 'admin@clinica.com',
+    clinicId: 'c1',
+  });
+  queue.listDataRequestsFor.mockImplementation(
+    async (_session: unknown, status: string) => byStatus[status] ?? [],
+  );
+};
 
-    expect(await screen.findByText('Maria da Silva')).toBeTruthy();
+const renderQueue = (status?: string) =>
+  renderServerPage(() =>
+    DataRequestsPage({ searchParams: Promise.resolve({ status }) }),
+  );
+
+describe('Equipe: fila de pedidos do titular (#293, #555)', () => {
+  it('a fila chega no HTML, sem chamada /api, e o filtro de situação é por link', async () => {
+    mockQueue({ pending: [request()] });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await renderQueue();
+
+    expect(screen.getByText('Maria da Silva')).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Aceito' })).toHaveAttribute(
+      'href',
+      '/pedidos-titular?status=accepted',
+    );
+    expect(screen.getByRole('link', { name: 'Em análise' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('Admin aceita com justificativa pela Server Action', async () => {
+    mockQueue({ pending: [request()] });
+    queue.resolveDataRequest.mockResolvedValue({
+      success: true,
+      data: { notified: true },
+      error: null,
+    });
+    await renderQueue();
+
     const accept = screen.getByRole('button', { name: 'Aceitar' });
     expect((accept as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(screen.getByLabelText(/Justificativa/), {
@@ -210,31 +260,32 @@ describe('Equipe: fila de pedidos do titular (#293)', () => {
     });
     fireEvent.click(accept);
 
-    expect(await screen.findByText('Nenhum pedido aqui.')).toBeTruthy();
-    const patch = calls.find((call) => call.init?.method === 'PATCH');
-    expect(JSON.parse(String(patch?.init?.body))).toEqual({
-      decision: 'accept',
-      justification: 'Telefone atualizado',
-    });
+    await waitFor(() =>
+      expect(queue.resolveDataRequest).toHaveBeenCalledWith({
+        id: 'r1',
+        decision: 'accept',
+        justification: 'Telefone atualizado',
+      }),
+    );
+    expect(await screen.findByText(/paciente avisado por e-mail/)).toBeTruthy();
   });
 
   it('recusa sem e-mail avisa que a resposta fica no portal; erro aparece na tela', async () => {
-    let attempts = 0;
-    mockFetch((url, init) => {
-      if (url === '/api/data-requests/r1' && init?.method === 'PATCH') {
-        attempts += 1;
-        return attempts === 1
-          ? { ok: false, body: 'Este pedido já foi analisado' }
-          : { ok: true, body: { ...request(), notified: false } };
-      }
-      if (url.startsWith('/api/data-requests?status=')) {
-        return { ok: true, body: [request()] };
-      }
-      return undefined;
-    });
-    renderWithToast(<DataRequestsPage />);
+    mockQueue({ pending: [request()] });
+    queue.resolveDataRequest
+      .mockResolvedValueOnce({
+        success: false,
+        data: null,
+        error: 'Este pedido já foi analisado',
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { notified: false },
+        error: null,
+      });
+    await renderQueue();
 
-    fireEvent.change(await screen.findByLabelText(/Justificativa/), {
+    fireEvent.change(screen.getByLabelText(/Justificativa/), {
       target: { value: 'Não procede' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Recusar' }));
@@ -248,53 +299,64 @@ describe('Equipe: fila de pedidos do titular (#293)', () => {
     ).toBeTruthy();
   });
 
-  it('troca a situação e mostra pedidos decididos com a justificativa', async () => {
-    mockFetch((url) => {
-      if (url === '/api/data-requests?status=pending')
-        return { ok: true, body: [] };
-      if (url === '/api/data-requests?status=accepted')
-        return {
-          ok: true,
-          body: [
-            request({
-              status: 'accepted',
-              resolution: 'Feito na ficha',
-              resolvedAt: '2026-10-11T12:00:00.000Z',
-            }),
-          ],
-        };
-      return undefined;
-    });
-    renderWithToast(<DataRequestsPage />);
+  it('fila vazia mostra o estado vazio', async () => {
+    mockQueue({});
+    await renderQueue();
+    expect(screen.getByText('Nenhum pedido aqui.')).toBeTruthy();
+  });
 
-    expect(await screen.findByText('Nenhum pedido aqui.')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Situação'), {
-      target: { value: 'accepted' },
-    });
+  it('outro papel recebe o alerta de acesso, nunca a lista', async () => {
+    queue.requireStaffPageFor.mockResolvedValue({ role: 'professional' });
+    queue.listDataRequestsFor.mockRejectedValue(
+      new ForbiddenError('Somente o Admin de Empresa'),
+    );
+    await renderQueue();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByText('Maria da Silva')).toBeNull();
+  });
 
-    expect(await screen.findByText(/Feito na ficha/)).toBeTruthy();
+  it('pede a situação da URL e mostra pedidos decididos com a justificativa, sem botões', async () => {
+    mockQueue({
+      accepted: [
+        request({
+          status: 'accepted',
+          resolution: 'Feito na ficha',
+          resolvedAt: '2026-10-11T12:00:00.000Z',
+        }),
+      ],
+    });
+    await renderQueue('accepted');
+
+    expect(queue.listDataRequestsFor).toHaveBeenCalledWith(
+      expect.anything(),
+      'accepted',
+    );
+    expect(screen.getByText(/Feito na ficha/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Aceitar' })).toBeNull();
+  });
+
+  it('situação desconhecida na URL volta para pendentes', async () => {
+    mockQueue({});
+    await renderQueue('qualquer');
+    expect(queue.listDataRequestsFor).toHaveBeenCalledWith(
+      expect.anything(),
+      'pending',
+    );
   });
 });
 
 describe('Equipe: prazo dos pedidos do titular (#312)', () => {
   const deadlineOf = async (daysLeft: number | null) => {
-    mockFetch((url) =>
-      url.startsWith('/api/data-requests?status=')
-        ? {
-            ok: true,
-            body: [
-              request({
-                daysLeft,
-                deadlineDate: '2026-10-25',
-                status: daysLeft === null ? 'accepted' : 'pending',
-              }),
-            ],
-          }
-        : undefined,
-    );
-    const view = renderWithToast(<DataRequestsPage />);
-    await screen.findByText('Maria da Silva');
+    mockQueue({
+      pending: [
+        request({
+          daysLeft,
+          deadlineDate: '2026-10-25',
+          status: daysLeft === null ? 'accepted' : 'pending',
+        }),
+      ],
+    });
+    const view = await renderQueue();
     return view.container.querySelector('[data-deadline]');
   };
 

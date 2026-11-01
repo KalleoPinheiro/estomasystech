@@ -1,108 +1,57 @@
-'use client';
-
-import { Button, Card, NativeSelect, Textarea } from '@still-void/ui/react';
-import { useToast } from '@still-void/ui/react/client';
+import { Card } from '@still-void/ui/react';
 import Link from 'next/link';
-import { useState } from 'react';
-import {
-  EmptyState,
-  ErrorAlert,
-  LoadingIndicator,
-} from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
+import { RefreshErrorAlert } from '@/components/refresh-error-alert';
 import { StatusBadge } from '@/components/status-badge';
-import { apiFetch } from '@/lib/client';
+import {
+  DATA_REQUEST_STATUSES,
+  type DataRequestStatus,
+} from '@/domain/patient/data-subject-request';
 import {
   DATA_REQUEST_KIND_LABELS,
   DATA_REQUEST_STATUS_LABELS,
   type DataSubjectRequestDto,
 } from '@/lib/dto/data-subject-request';
 import { formatDateTime } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
-
-type Status = DataSubjectRequestDto['status'];
+import { listDataRequestsFor } from '@/lib/server/data/data-requests';
+import { loadBlock } from '@/lib/server/data/load-block';
+import { requireStaffPageFor } from '@/lib/server/session';
+import { ResolveForm } from './resolve-form';
 
 /** Destaque visual do prazo a partir de quantos dias antes (o aviso por e-mail é configurável). */
 const DEADLINE_WARNING_DAYS = 3;
 
-/**
- * Fila de pedidos do titular (#293): o Admin de Empresa aceita ou recusa,
- * sempre com justificativa. Aceitar só registra a decisão — a correção é feita
- * na ficha do paciente.
- */
-export default function DataRequestsPage() {
-  const [status, setStatus] = useState<Status>('pending');
-  const { data, error, refresh } = useApiQuery<DataSubjectRequestDto[]>(
-    `/api/data-requests?status=${status}`,
-  );
+/** Situação pedida na URL; valor desconhecido volta para «Pendentes». */
+const statusFrom = (value: string | undefined): DataRequestStatus =>
+  DATA_REQUEST_STATUSES.find((status) => status === value) ?? 'pending';
 
-  return (
-    <div>
-      <PageHeader
-        title="Pedidos do titular"
-        description="Correção cadastral e eliminação/anonimização pedidas pelos pacientes no portal (LGPD art. 18)."
-        actions={
-          <label className="flex flex-col gap-1 text-ink-2 text-sm">
-            Situação
-            <NativeSelect
-              value={status}
-              onChange={(event) => setStatus(event.target.value as Status)}
-            >
-              <option value="pending">
-                {DATA_REQUEST_STATUS_LABELS.pending}
-              </option>
-              <option value="accepted">
-                {DATA_REQUEST_STATUS_LABELS.accepted}
-              </option>
-              <option value="rejected">
-                {DATA_REQUEST_STATUS_LABELS.rejected}
-              </option>
-            </NativeSelect>
-          </label>
-        }
-      />
-      {error && <ErrorAlert message={error} />}
-      <RequestQueue
-        requests={data}
-        loading={!data && !error}
-        onResolved={refresh}
-      />
-    </div>
-  );
-}
-
-function RequestQueue({
-  requests,
-  loading,
-  onResolved,
-}: {
-  requests: DataSubjectRequestDto[] | null;
-  loading: boolean;
-  onResolved: () => void;
-}) {
-  if (loading) return <LoadingIndicator />;
-  if (!requests) return null;
-  if (requests.length === 0) {
-    return <EmptyState icon="check-circle" message="Nenhum pedido aqui." />;
+/** Prazo de 15 dias (LGPD art. 19): perto de vencer e vencido ficam em destaque. */
+function DeadlineLine({ request }: { request: DataSubjectRequestDto }) {
+  const [year, month, day] = request.deadlineDate.split('-');
+  const daysLeft = request.daysLeft ?? 0;
+  const urgent = daysLeft <= DEADLINE_WARNING_DAYS;
+  let state = urgent ? 'soon' : 'ok';
+  let remaining = `faltam ${daysLeft} dias`;
+  if (daysLeft < 0) {
+    state = 'overdue';
+    remaining = `vencido há ${-daysLeft} ${daysLeft === -1 ? 'dia' : 'dias'}`;
+  } else if (daysLeft === 0) {
+    remaining = 'vence hoje';
+  } else if (daysLeft === 1) {
+    remaining = 'falta 1 dia';
   }
   return (
-    <ul className="flex flex-col gap-3" data-data-request-queue>
-      {requests.map((request) => (
-        <li key={request.id}>
-          <RequestCard request={request} onResolved={onResolved} />
-        </li>
-      ))}
-    </ul>
+    <p
+      className={urgent ? 'font-medium text-danger' : 'text-ink-2'}
+      data-deadline={state}
+    >
+      Prazo para responder: {day}/{month}/{year} · {remaining}
+    </p>
   );
 }
 
-function RequestCard({
-  request,
-  onResolved,
-}: {
-  request: DataSubjectRequestDto;
-  onResolved: () => void;
-}) {
+function RequestCard({ request }: { request: DataSubjectRequestDto }) {
   return (
     <Card className="flex flex-col gap-2 p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
@@ -133,113 +82,67 @@ function RequestCard({
           {request.resolvedAt ? ` (${formatDateTime(request.resolvedAt)})` : ''}
         </p>
       )}
-      {request.status === 'pending' && (
-        <ResolveForm requestId={request.id} onResolved={onResolved} />
-      )}
+      {request.status === 'pending' && <ResolveForm requestId={request.id} />}
     </Card>
   );
 }
 
-/** Prazo de 15 dias (LGPD art. 19): perto de vencer e vencido ficam em destaque. */
-function DeadlineLine({ request }: { request: DataSubjectRequestDto }) {
-  const [year, month, day] = request.deadlineDate.split('-');
-  const daysLeft = request.daysLeft ?? 0;
-  const urgent = daysLeft <= DEADLINE_WARNING_DAYS;
-  let state = urgent ? 'soon' : 'ok';
-  let remaining = `faltam ${daysLeft} dias`;
-  if (daysLeft < 0) {
-    state = 'overdue';
-    remaining = `vencido há ${-daysLeft} ${daysLeft === -1 ? 'dia' : 'dias'}`;
-  } else if (daysLeft === 0) {
-    remaining = 'vence hoje';
-  } else if (daysLeft === 1) {
-    remaining = 'falta 1 dia';
-  }
-  return (
-    <p
-      className={urgent ? 'font-medium text-danger' : 'text-ink-2'}
-      data-deadline={state}
-    >
-      Prazo para responder: {day}/{month}/{year} · {remaining}
-    </p>
-  );
-}
-
-function ResolveForm({
-  requestId,
-  onResolved,
-}: {
-  requestId: string;
-  onResolved: () => void;
+/**
+ * Fila de pedidos do titular no servidor (#293, #555, ADR-069/074): a lista da
+ * situação pedida em `?status=` chega no HTML e a carga não chama `/api`. O
+ * Admin de Empresa aceita ou recusa, sempre com justificativa, por Server
+ * Action com auditoria na mesma transação. Aceitar só registra a decisão — a
+ * correção é feita na ficha do paciente. Outro papel recebe o alerta de acesso
+ * (a fila é dado de pessoa), nunca a lista.
+ */
+export default async function DataRequestsPage(props?: {
+  searchParams?: Promise<{ status?: string }>;
 }) {
-  const { toast } = useToast();
-  const [justification, setJustification] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const session = await requireStaffPageFor('/pedidos-titular');
+  const status = statusFrom((await props?.searchParams)?.status);
+  const queue = await loadBlock(() => listDataRequestsFor(session, status));
 
-  const resolve = async (decision: 'accept' | 'reject') => {
-    setSaving(true);
-    setError(null);
-    try {
-      const result = await apiFetch<{ notified: boolean }>(
-        `/api/data-requests/${requestId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            decision,
-            justification: justification.trim(),
-          }),
-        },
-      );
-      toast({
-        description: result.notified
-          ? 'Decisão registrada e paciente avisado por e-mail'
-          : 'Decisão registrada. O e-mail não saiu: a resposta fica no portal do paciente.',
-        variant: 'success',
-      });
-      onResolved();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Erro ao registrar a decisão',
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const blocked = saving || !justification.trim();
   return (
-    <div className="flex flex-col gap-2">
-      <label className="flex flex-col gap-1">
-        Justificativa (o paciente vê no portal)
-        <Textarea
-          value={justification}
-          maxLength={1000}
-          rows={2}
-          onChange={(event) => setJustification(event.target.value)}
-        />
-      </label>
-      {error && <ErrorAlert message={error} />}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="accent"
-          disabled={blocked}
-          onClick={() => void resolve('accept')}
-        >
-          Aceitar
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={blocked}
-          onClick={() => void resolve('reject')}
-        >
-          Recusar
-        </Button>
-      </div>
+    <div>
+      <PageHeader
+        title="Pedidos do titular"
+        description="Correção cadastral e eliminação/anonimização pedidas pelos pacientes no portal (LGPD art. 18)."
+        actions={
+          <nav aria-label="Situação do pedido" className="flex flex-wrap gap-2">
+            {DATA_REQUEST_STATUSES.map((value) => (
+              <Link
+                key={value}
+                href={
+                  value === 'pending'
+                    ? '/pedidos-titular'
+                    : `/pedidos-titular?status=${value}`
+                }
+                aria-current={value === status ? 'page' : undefined}
+                className={`flex min-h-11 items-center rounded-full px-3 font-medium text-sm ${
+                  value === status
+                    ? 'bg-accent-ink text-bg'
+                    : 'border border-border-strong text-ink-2 hover:bg-surface-2'
+                }`}
+              >
+                {DATA_REQUEST_STATUS_LABELS[value]}
+              </Link>
+            ))}
+          </nav>
+        }
+      />
+      {queue.error && <RefreshErrorAlert message={queue.error} />}
+      {queue.data &&
+        (queue.data.length === 0 ? (
+          <EmptyState icon="check-circle" message="Nenhum pedido aqui." />
+        ) : (
+          <ul className="flex flex-col gap-3" data-data-request-queue>
+            {queue.data.map((request) => (
+              <li key={request.id}>
+                <RequestCard request={request} />
+              </li>
+            ))}
+          </ul>
+        ))}
     </div>
   );
 }

@@ -1,26 +1,10 @@
-'use client';
-
-import {
-  Button,
-  Card,
-  Icon,
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@still-void/ui/react';
-import { useState } from 'react';
+import { Card, Icon } from '@still-void/ui/react';
+import Link from 'next/link';
 import type { MonthlyReport } from '@/application/reports/get-monthly-report';
-import {
-  EmptyState,
-  ErrorAlert,
-  LoadingIndicator,
-} from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import { MetricCard } from '@/components/metric-card';
 import { PageHeader } from '@/components/page-header';
+import { RefreshErrorAlert } from '@/components/refresh-error-alert';
 import { zonedMonthKey } from '@/domain/shared/time-zone';
 import {
   APPOINTMENT_STATUS_LABELS,
@@ -29,10 +13,23 @@ import {
   monthLabelPtBr,
   shiftMonth,
 } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
+import { loadBlock } from '@/lib/server/data/load-block';
+import {
+  getMonthlyReportFor,
+  REPORT_MONTH_REGEX,
+} from '@/lib/server/data/reports';
+import { requireStaffPageFor } from '@/lib/server/session';
 import { ProductionTable } from './production-table';
+import { RevenueTable } from './revenue-table';
 
-const currentMonth = () => zonedMonthKey(new Date());
+/** Mês da URL só vale se for `YYYY-MM` com mês 01–12; senão volta ao corrente. */
+function monthFrom(value: string | undefined): string {
+  if (value && REPORT_MONTH_REGEX.test(value)) {
+    const monthNumber = Number(value.slice(5, 7));
+    if (monthNumber >= 1 && monthNumber <= 12) return value;
+  }
+  return zonedMonthKey(new Date());
+}
 
 /** Delta percentual vs. mês anterior (REL-04) — `undefined` quando não há
  * base de comparação (mês anterior não carregou ou é zero — evita divisão
@@ -92,222 +89,90 @@ function ReportKpis({ report, previousReport }: ReportKpisProps) {
   );
 }
 
-export default function ReportsPage() {
-  const [month, setMonth] = useState(currentMonth);
-  const { data: report, error } = useApiQuery<MonthlyReport>(
-    `/api/reports?month=${month}`,
-  );
-  const { data: previousReport } = useApiQuery<MonthlyReport>(
-    `/api/reports?month=${shiftMonth(month, -1)}`,
-  );
+const NAV_LINK_CLASS =
+  'flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border-strong hover:bg-surface-2';
 
-  const knownRows = (report?.revenueByProcedure ?? []).filter(
-    (row) => row.supplyCostKnown,
+/** Navegação de mês por `Link` (`?month=`): a tela inteira é renderizada no servidor. */
+function MonthNav({ month }: { month: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Link
+        href={`/relatorios?month=${shiftMonth(month, -1)}`}
+        aria-label="Mês anterior"
+        className={NAV_LINK_CLASS}
+      >
+        <Icon name="chevron-left" />
+      </Link>
+      <span className="min-w-40 text-center font-semibold text-lg">
+        {monthLabelPtBr(month)}
+      </span>
+      <Link
+        href={`/relatorios?month=${shiftMonth(month, 1)}`}
+        aria-label="Próximo mês"
+        className={NAV_LINK_CLASS}
+      >
+        <Icon name="chevron-right" />
+      </Link>
+    </div>
   );
+}
+
+function StatusCard({ report }: { report: MonthlyReport }) {
+  return (
+    <Card as="section" className="p-5">
+      <h2 className="mb-3 font-semibold text-lg">Consultas por status</h2>
+      {Object.keys(report.byStatus).length === 0 ? (
+        <EmptyState message="Nenhuma consulta no mês." />
+      ) : (
+        <ul className="divide-y divide-border text-sm">
+          {Object.entries(report.byStatus).map(([status, count]) => (
+            <li key={status} className="flex justify-between py-2">
+              <span>{APPOINTMENT_STATUS_LABELS[status] ?? status}</span>
+              <span className="font-medium">{count}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Relatório gerencial no servidor (#555, ADR-069/074): o mês pedido em
+ * `?month=` e o anterior (para os deltas) chegam no HTML, em paralelo, e a
+ * carga não chama `/api`. O cache de mês encerrado, em memória e chaveado por
+ * empresa, fica em `getMonthlyReportFor` (ADR-069 § 3). O mês anterior que
+ * falha só tira os deltas; o mês pedido que falha vira o alerta com
+ * «Tentar novamente».
+ */
+export default async function ReportsPage(props?: {
+  searchParams?: Promise<{ month?: string }>;
+}) {
+  const session = await requireStaffPageFor('/relatorios');
+  const month = monthFrom((await props?.searchParams)?.month);
+
+  const [current, previous] = await Promise.all([
+    loadBlock(() => getMonthlyReportFor(session, month)),
+    loadBlock(() => getMonthlyReportFor(session, shiftMonth(month, -1))),
+  ]);
 
   return (
     <div>
       <PageHeader
         title="Relatório gerencial"
-        actions={
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              onClick={() => setMonth((m) => shiftMonth(m, -1))}
-              aria-label="Mês anterior"
-              variant="outline"
-              className="hover:bg-surface-2"
-            >
-              <Icon name="chevron-left" />
-            </Button>
-            <span className="min-w-40 text-center font-semibold text-lg">
-              {monthLabelPtBr(month)}
-            </span>
-            <Button
-              type="button"
-              onClick={() => setMonth((m) => shiftMonth(m, 1))}
-              aria-label="Próximo mês"
-              variant="outline"
-              className="hover:bg-surface-2"
-            >
-              <Icon name="chevron-right" />
-            </Button>
-          </div>
-        }
+        actions={<MonthNav month={month} />}
       />
 
-      {error ? (
-        <ErrorAlert message={error} />
-      ) : !report ? (
-        <LoadingIndicator />
+      {current.error || !current.data ? (
+        <RefreshErrorAlert message={current.error ?? 'Erro ao carregar'} />
       ) : (
         <div className="flex flex-col gap-6">
-          <ReportKpis report={report} previousReport={previousReport ?? null} />
-
+          <ReportKpis report={current.data} previousReport={previous.data} />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card as="section" className="p-5">
-              <h2 className="mb-3 font-semibold text-lg">
-                Consultas por status
-              </h2>
-              {Object.keys(report.byStatus).length === 0 ? (
-                <EmptyState message="Nenhuma consulta no mês." />
-              ) : (
-                <ul className="divide-y divide-border text-sm">
-                  {Object.entries(report.byStatus).map(([status, count]) => (
-                    <li key={status} className="flex justify-between py-2">
-                      <span>{APPOINTMENT_STATUS_LABELS[status] ?? status}</span>
-                      <span className="font-medium">{count}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-
-            <Card as="section" className="p-5">
-              <h2 className="mb-3 font-semibold text-lg">
-                Receita e margem por procedimento (concluídas)
-              </h2>
-              {report.revenueByProcedure.length === 0 ? (
-                <EmptyState message="Nenhuma consulta concluída no mês." />
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <Table stack className="w-full text-left text-sm">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="py-2">Procedimento</TableHead>
-                          <TableHead className="py-2 text-right">
-                            Qtde
-                          </TableHead>
-                          <TableHead className="py-2 text-right">
-                            Receita
-                          </TableHead>
-                          <TableHead className="py-2 text-right">
-                            Insumos
-                          </TableHead>
-                          <TableHead className="py-2 text-right">
-                            Margem
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {report.revenueByProcedure.map((row) => (
-                          <TableRow key={row.procedure}>
-                            <TableCell label="Procedimento" className="py-2">
-                              {row.procedure}
-                            </TableCell>
-                            <TableCell label="Qtde" className="py-2 text-right">
-                              {row.count}
-                            </TableCell>
-                            <TableCell
-                              label="Receita"
-                              className="py-2 text-right font-medium"
-                            >
-                              {formatCurrency(row.totalCents)}
-                            </TableCell>
-                            <TableCell
-                              label="Insumos"
-                              className="py-2 text-right text-ink-3"
-                            >
-                              {row.supplyCostKnown
-                                ? formatCurrency(row.supplyCostCents)
-                                : 'Não apurado'}
-                            </TableCell>
-                            <TableCell
-                              label="Margem"
-                              className={`py-2 text-right font-medium ${
-                                row.supplyCostKnown
-                                  ? row.marginCents >= 0
-                                    ? 'text-success'
-                                    : 'text-danger'
-                                  : 'text-ink-3'
-                              }`}
-                            >
-                              {row.supplyCostKnown
-                                ? formatCurrency(row.marginCents)
-                                : '—'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                      <TableFooter>
-                        <TableRow>
-                          <TableCell className="py-2 font-semibold">
-                            Total
-                          </TableCell>
-                          <TableCell
-                            label="Qtde"
-                            className="py-2 text-right font-semibold"
-                          >
-                            {report.revenueByProcedure.reduce(
-                              (sum, row) => sum + row.count,
-                              0,
-                            )}
-                          </TableCell>
-                          <TableCell
-                            label="Receita"
-                            className="py-2 text-right font-semibold"
-                          >
-                            {formatCurrency(
-                              report.revenueByProcedure.reduce(
-                                (sum, row) => sum + row.totalCents,
-                                0,
-                              ),
-                            )}
-                          </TableCell>
-                          <TableCell
-                            label="Insumos"
-                            className="py-2 text-right font-semibold"
-                          >
-                            {knownRows.length > 0
-                              ? formatCurrency(
-                                  knownRows.reduce(
-                                    (sum, row) => sum + row.supplyCostCents,
-                                    0,
-                                  ),
-                                )
-                              : 'Não apurado'}
-                          </TableCell>
-                          <TableCell
-                            label="Margem"
-                            className="py-2 text-right font-semibold"
-                          >
-                            {knownRows.length > 0
-                              ? formatCurrency(
-                                  knownRows.reduce(
-                                    (sum, row) => sum + row.marginCents,
-                                    0,
-                                  ),
-                                )
-                              : '—'}
-                          </TableCell>
-                        </TableRow>
-                      </TableFooter>
-                    </Table>
-                  </div>
-                  {knownRows.length < report.revenueByProcedure.length && (
-                    <p className="mt-3 text-ink-3 text-xs">
-                      Procedimento sem saída de insumo vinculada às consultas:
-                      custo e margem não apurados (a margem não é igual à
-                      receita). Vincule o kit ou as saídas para apurar.
-                    </p>
-                  )}
-                  {report.unattributedSupplyCostCents > 0 && (
-                    <p className="mt-3 text-warning text-xs">
-                      Custo de insumos não vinculado a consulta no mês:{' '}
-                      <strong>
-                        {formatCurrency(report.unattributedSupplyCostCents)}
-                      </strong>{' '}
-                      — vincule as saídas de atendimento à consulta para margem
-                      completa.
-                    </p>
-                  )}
-                </>
-              )}
-            </Card>
+            <StatusCard report={current.data} />
+            <RevenueTable report={current.data} />
           </div>
-
-          <ProductionTable rows={report.productionByProfessional} />
+          <ProductionTable rows={current.data.productionByProfessional} />
         </div>
       )}
     </div>

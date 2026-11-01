@@ -2187,6 +2187,15 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Métricas (LCP 360 ≤ 1,5 s, CLS ≤ 0,1)**: não medidas nesta thread (sem build com banco); a medição final é do #559 / validação na staging.
 - **Next step**: gate nuvem perfil `pr`, revisão limpa e merge na release/v0.4.0; segue #555. **Blockers**: nenhum.
 
+## Relatórios, auditoria e pedidos do titular no servidor (#555) (2026-11-01) — EM REVISÃO
+- **O que mudou**: `/relatorios`, `/auditoria` e `/pedidos-titular` sem `'use client'` na página (ADR-085). Funções de dados `reports.ts`, `audit.ts` (`listAuditEventsFor`, `getPatientNameFor`) e `data-requests.ts`, divididas com as rotas `GET /api/{reports,audit,data-requests}`. Mês em `?month=`, cursor e filtros da auditoria em `?paciente=&de=&ate=&cursor=` (ilha `audit-filters.tsx`), situação em `?status=`. Decisão do pedido do titular = Server Action `resolveDataRequest` (`defineAction`, Admin, auditoria na mesma transação; e-mail depois do commit via `ResolveDataSubjectRequest.notifyDecision`). `PatientPicker` ganha `selectedName`. Allowlist: saem as 3 linhas.
+- **Decisão que o PO deve ver**: Auditoria passa a 25 eventos por página em qualquer tela (o servidor não conhece a largura; antes 25/50 por largura). Pergunta aberta no ADR-085: 50 no desktop com controle explícito?
+- **Sem gráfico**: a tela de relatórios não tem gráfico, então não há `next/dynamic` a aplicar.
+- **TESTE-ALTERADO** (cenários preservados, fonte de dados trocada de `fetch('/api/…')` para a camada de dados do servidor): `tests/pages/staff-relatorios.test.tsx`, `tests/pages/auditoria-mobile.test.tsx` (inclui os cenários de Auditoria que estavam em `staff-operations.test.tsx`, removidos de lá), `tests/pages/data-subject-rights-ui.test.tsx` (só a fila da equipe). Mudanças de requisito: sem indicador de carregamento (a carga vem no HTML, 0 chamadas `/api`); setas e filtros viram links/URL; «Carregar mais» da auditoria vira «Próxima página» com 25 por página.
+- **Testes novos**: `tests/app/pedidos-titular-actions.test.ts`, `tests/lib/server/data-relatorios-auditoria.test.ts`, `tests/lib/audit-filters.test.ts`, `tests/integracao/pedidos-titular-auditoria-transacional.integracao.ts`, caso de `selectedName` em `tests/components/patient-picker.test.tsx`.
+- **Métricas (LCP/CLS 360)**: não medidas nesta thread (sem build com banco); medição final é do #559 / staging.
+- **Next step**: revisão limpa e merge na release/v0.4.0; segue #557 → #558. **Blockers**: nenhum.
+
 ## E2E: mês civil em APP_TIMEZONE (#633) (2026-11-01) — EM REVISÃO
 - **O que mudou**: `agendaToMonth` (layout-mobile-first) e `setReportMonth` (responsive-tables) calculam o mês de hoje no fuso do app (`APP_TIMEZONE`, padrão America/Sao_Paulo, ADR-073) e não no do processo (UTC no gate da nuvem). Provado às 00:45 UTC de 01/11 (SP ainda 31/10): os 98 testes passam em `TZ=UTC`; antes, 4 falhavam.
 - **TESTE-ALTERADO**: só o cálculo do mês nos dois helpers; cenários e asserções iguais. Sem `src/`, sem changeset.
