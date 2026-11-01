@@ -78,15 +78,22 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
 - Armadilha: o E2E em namespace usa memória (servidor de produção + `next dev` + Chromium); abaixo de 12 GB prefira
   `GATE_E2E_SEQUENCIAL=1`.
 
-### Merge queue da `release/v0.x` (ADR-087, ligar no painel)
+### Merge queue da `release/v0.x` (ADR-087): pendente até o repositório ir para uma organização
 
-Os workflows já respondem a `merge_group`; falta ligar a fila (só o dono do repositório faz):
+**Situação (2026-11-01):** o ruleset **não oferece «Require merge queue»**. O GitHub só liga a fila em
+repositório de organização; este é de conta pessoal. Ver a errata do [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cache.md).
 
-1. GitHub → Settings → Rules → Rulesets → ruleset de `release/**` → marque **Require merge queue**.
-2. Método de merge: **Squash**; tamanho da fila: 1 a 5 PRs; «Only merge non-failing pull requests».
-3. Checks exigidos (Require status checks): `Typecheck, lint, sv-gate, test:coverage, build` (job `ci`) e,
-   se quiser o E2E no bloqueio, `Gate do PR`. `Recibo do gate local + integridade dos testes` pode ficar
-   exigido: na fila ele é pulado e conta como aprovado.
-4. Fluxo novo: o autor abre o PR e, com checks verdes, clica **Merge when ready**; a fila monta
-   `release + PR`, roda `ci` e `gate-pr` nesse SHA e faz o squash. Se a release andou, ninguém refaz o gate à mão.
-5. `main` não entra na fila: `release/* → main` segue por merge commit com o recibo `E2E-GATE:`.
+- Os gatilhos `merge_group` de `ci.yml`, `gate-pr.yml` e `recibo-gate.yml` **ficam** nos workflows
+  (inofensivos fora da fila; o `recibo-gate` é pulado na fila).
+- A proteção atual são os checks obrigatórios do ruleset (`Typecheck, lint, sv-gate, test:coverage, build`
+  e `Recibo do gate local + integridade dos testes`) com a branch atualizada; quando a release anda, o autor
+  mescla a release na branch e espera o CI.
+
+Para quando houver organização (só o dono faz):
+
+1. Settings → Rules → Rulesets → ruleset de `release/**` → marque **Require merge queue**.
+2. Método de merge **Squash**; tamanho da fila 1 a 5 PRs; «Only merge non-failing pull requests».
+3. Checks exigidos: `Typecheck, lint, sv-gate, test:coverage, build` (job `ci`) e, se quiser o E2E no
+   bloqueio, `Gate do PR`. O recibo pode seguir exigido: na fila ele é pulado e conta como aprovado.
+4. Fluxo: o autor clica **Merge when ready**; a fila monta `release + PR`, roda `ci` e `gate-pr` nesse SHA e
+   faz o squash. `main` não entra na fila (`release/* → main` segue por merge commit com o recibo `E2E-GATE:`).

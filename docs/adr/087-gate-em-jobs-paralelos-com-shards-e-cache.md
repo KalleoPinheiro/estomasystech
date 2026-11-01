@@ -105,3 +105,19 @@ Cortar o tempo **sem cortar teste, limiar ou rigor** (regra 8). Nada em `scripts
   deve ser corrigido, não agrupado.
 - `vitest.shard.config.mts` é config de infraestrutura do gate: não é teste nem limiar, mas qualquer
   mudança nele passa pela revisão do dono, porque é onde o shard sem limiar poderia virar o gate.
+
+## Errata (2026-11-01, merge queue indisponível)
+
+O ponto 10 (merge queue) não pôde ser ligado: o ruleset do repositório não oferece «Require merge queue»,
+porque o GitHub só disponibiliza a fila em repositórios de **organização** e este é de conta pessoal
+(confirmado por @KalleoPinheiro nas telas do ruleset). Fica **pendente até o repositório ir para uma
+organização**. Nada mais da decisão muda:
+
+- Os gatilhos `merge_group` em `ci.yml`, `gate-pr.yml` e `recibo-gate.yml` **continuam** nos workflows:
+  não fazem nada fora da fila e deixam a fila pronta para ligar sem novo PR.
+- A proteção segue sendo os **checks obrigatórios do ruleset** (`Typecheck, lint, sv-gate, test:coverage,
+  build` e `Recibo do gate local + integridade dos testes`), com a branch atualizada antes do merge. Sem a
+  fila, quando a release anda o autor ainda mescla a release na branch e espera o CI de novo (ADR-052).
+- O passo a passo do painel em `engineering/gate-na-nuvem.md` fica registrado como «para quando houver
+  organização».
+
