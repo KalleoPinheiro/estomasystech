@@ -44,8 +44,8 @@ jobs:
 
       - name: Configurar autor
         run: |
-          git config user.name "estomasystech-staging"
-          git config user.email "staging@users.noreply.github.com"
+          git config user.name "KalleoPinheiro"
+          git config user.email "15080925+KalleoPinheiro@users.noreply.github.com"
 
       - name: Reconstruir e publicar
         env:

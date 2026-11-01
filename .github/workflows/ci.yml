@@ -140,6 +140,29 @@ jobs:
         if: needs.escopo.outputs.docs_only != 'true'
         run: npm run check:server-first
 
+  # O selo do corte não cobre o `check:server-first` (nem o `gate:local` o roda). No PR provado pelo corte este
+  # job barato (checkout + install + um script) mantém a garantia que o `estatico` dava (ADR-088).
+  server-first-provado:
+    name: Server-first (PR provado pelo corte)
+    needs: escopo
+    if: needs.escopo.outputs.provado == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Server-first gate
+        run: npm run check:server-first
+
   # Cobertura em 4 fatias (vitest --shard). Cada fatia roda os testes dela e grava um blob com o relatório e a
   # cobertura bruta; os limiares só valem na junção (`cobertura`), com a config da suíte inteira. Teste
   # vermelho em qualquer fatia reprova a fatia e, por `needs`, o gate.
@@ -229,7 +252,7 @@ jobs:
   ci:
     name: Typecheck, lint, sv-gate, test:coverage, build
     if: always()
-    needs: [escopo, estatico, cobertura-shard, cobertura]
+    needs: [escopo, estatico, server-first-provado, cobertura-shard, cobertura]
     runs-on: ubuntu-24.04
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
@@ -237,23 +260,26 @@ jobs:
     steps:
       # Código: todos os jobs têm de ser `success`. Só documentação: o escopo e o estático (gate de docs) passam
       # e os jobs pesados têm de estar `skipped`. Provado pelo corte (ADR-088): só o escopo passa e TUDO o mais
-      # tem de estar `skipped`. Qualquer outra combinação reprova.
+      # tem de estar `skipped`, menos o `server-first-provado`, que tem de passar. Qualquer outra combinação reprova.
       - name: Todos os jobs anteriores passaram
         env:
           DOCS_ONLY: ${{ needs.escopo.outputs.docs_only }}
           PROVADO: ${{ needs.escopo.outputs.provado }}
           R_ESCOPO: ${{ needs.escopo.result }}
           R_ESTATICO: ${{ needs.estatico.result }}
+          R_SERVERFIRST: ${{ needs.server-first-provado.result }}
           R_SHARD: ${{ needs.cobertura-shard.result }}
           R_COBERTURA: ${{ needs.cobertura.result }}
         run: |
-          echo "docs_only=$DOCS_ONLY provado=$PROVADO escopo=$R_ESCOPO estatico=$R_ESTATICO shard=$R_SHARD cobertura=$R_COBERTURA"
+          echo "docs_only=$DOCS_ONLY provado=$PROVADO escopo=$R_ESCOPO estatico=$R_ESTATICO serverfirst=$R_SERVERFIRST shard=$R_SHARD cobertura=$R_COBERTURA"
           [ "$R_ESCOPO" = success ] || { echo "::error::o escopo não passou"; exit 1; }
           if [ "$PROVADO" = true ]; then
             [ "$R_ESTATICO" = skipped ] && [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR provado pelo corte não devia ter rodado estático nem cobertura"; exit 1; }
+            [ "$R_SERVERFIRST" = success ] || { echo "::error::server-first não passou no PR provado"; exit 1; }
             echo "Provado pelo release-cut/gate no mesmo SHA e na mesma árvore (ADR-088): sem repetir."
             exit 0
           fi
+          [ "$R_SERVERFIRST" = skipped ] || { echo "::error::server-first do PR provado não devia ter rodado"; exit 1; }
           [ "$R_ESTATICO" = success ] || { echo "::error::estático não passou"; exit 1; }
           if [ "$DOCS_ONLY" = true ]; then
             [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR de documentação não devia ter rodado cobertura"; exit 1; }

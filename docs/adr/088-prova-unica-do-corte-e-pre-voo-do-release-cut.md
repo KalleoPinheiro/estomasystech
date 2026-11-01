@@ -46,7 +46,8 @@ não são de domínio próprio). A árvore do merge commit #662 (`781ce34`) é i
    **idêntica** à do segundo pai; (d) o segundo pai tem o check run `release-cut/gate`, da app `github-actions`,
    `success`, no próprio SHA, cobrindo `typecheck, lint, sv, docs, cobertura, build, integracao` (CI) ou
    `docker, backup` (Docker). Provado: estático, cobertura, build e Docker são pulados e o job `ci` (o check
-   exigido) confere que foram pulados e passa. Qualquer dúvida roda tudo (falha fechada). Não se usa `paths-ignore`.
+   exigido) confere que foram pulados e passa. Exceção: o `check:server-first`, que nem o selo nem o `gate:local` cobrem,
+   segue rodando no job barato `server-first-provado` e o `ci` exige que ele passe. Qualquer dúvida roda tudo (falha fechada). Não se usa `paths-ignore`.
    `hotfix/*` não tem corte e continua rodando tudo.
 3. **Integração Postgres completa no corte.** O `release-cut.yml` roda `vitest.integracao.config.mts` inteira,
    com Postgres 18, **antes** do `release:prepare`, no SHA homologado (o commit de versão só mexe em versão,
