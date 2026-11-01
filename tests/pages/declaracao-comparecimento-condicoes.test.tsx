@@ -2,10 +2,36 @@
 
 import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { AppointmentDetail } from '@/app/(staff)/agenda/appointment-detail';
 import AttendanceDocumentPage from '@/app/documentos/atestado/[appointmentId]/page';
 import type { AppointmentDto } from '@/lib/dto';
+import { renderDocumentPage } from '../support/documentos-over-fetch';
+import { renderWithToast } from '../support/render-with-toast';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+}));
+vi.mock('@/lib/server/session', async () =>
+  (await import('../support/documentos-over-fetch')).sessionOverFetch(),
+);
+vi.mock('@/lib/server/data/clinic-info', async () =>
+  (await import('../support/documentos-over-fetch')).clinicInfoOverFetch(),
+);
+vi.mock('@/lib/server/data/patient-record', async () =>
+  (await import('../support/documentos-over-fetch')).patientRecordOverFetch(),
+);
+vi.mock('@/lib/server/data/care-plan', async () =>
+  (await import('../support/documentos-over-fetch')).carePlanOverFetch(),
+);
+vi.mock('@/lib/server/data/documents', async () =>
+  (await import('../support/documentos-over-fetch')).documentsDataOverFetch(),
+);
+vi.mock('@/lib/server/document-issuance', async () =>
+  (await import('../support/documentos-over-fetch')).noPriorIssuance(),
+);
+vi.mock('@/app/documentos/actions', async () =>
+  (await import('../support/documentos-over-fetch')).documentActionsOverFetch(),
+);
 
 const ok = (data: unknown) => ({
   ok: true,
@@ -55,7 +81,7 @@ function stub(clinic: unknown, status: string) {
 
 async function renderPage() {
   await act(async () => {
-    renderWithToast(
+    await renderDocumentPage(
       <AttendanceDocumentPage
         params={Promise.resolve({ appointmentId: 'apt-1' })}
       />,

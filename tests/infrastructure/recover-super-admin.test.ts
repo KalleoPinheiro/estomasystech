@@ -141,6 +141,7 @@ const failingAudit: AuditEventRepository = {
   save: () => Promise.reject(new Error('auditoria fora do ar')),
   findAll: () => Promise.resolve([]),
   findPlatformTrail: () => Promise.resolve([]),
+  lockResource: () => Promise.resolve(),
 };
 
 beforeEach(async () => {

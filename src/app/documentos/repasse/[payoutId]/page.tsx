@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Table,
   TableBody,
@@ -8,16 +6,11 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
-import { type ReactNode, use } from 'react';
 import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
-import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
-import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { DocumentFrame } from '@/components/document-frame';
+import { ErrorAlert } from '@/components/feedback';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
-import type {
-  CommissionPayoutDto,
-  PayoutReceiptDto,
-  SidebarIdentityDto,
-} from '@/lib/dto';
+import type { CommissionPayoutDto } from '@/lib/dto';
 import {
   formatCommissionRule,
   formatCurrency,
@@ -25,28 +18,11 @@ import {
   monthLabelPtBr,
   PAYMENT_METHOD_LABELS,
 } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
-import {
-  type DocumentIssuance,
-  useDocumentIssuance,
-} from '@/lib/use-document-issuance';
-
-/** Guardas de bloqueio/carregamento — mesma ordem dos demais documentos. */
-function guardBlock(
-  clinic: ClinicInfoDto | null,
-  receipt: PayoutReceiptDto | null,
-  error: string | null,
-  issuance: DocumentIssuance | null,
-): ReactNode | null {
-  if (error) return <ErrorAlert message={error} />;
-  if (!clinic || !receipt) return <LoadingIndicator />;
-  if (!isClinicInfoComplete(clinic)) {
-    return <ClinicInfoIncompleteAlert clinic={clinic} />;
-  }
-  // Sem emissão persistida, não renderiza: a data do rodapé nunca é `new Date()`.
-  if (!issuance) return <LoadingIndicator />;
-  return null;
-}
+import { getClinicInfoFor } from '@/lib/server/data/clinic-info';
+import { getPayoutReceiptFor } from '@/lib/server/data/documents';
+import { loadBlock } from '@/lib/server/data/load-block';
+import { findDocumentIssuance } from '@/lib/server/document-issuance';
+import { requireStaffPage } from '@/lib/server/session';
 
 function CancelledBanner({ payout }: { payout: CommissionPayoutDto }) {
   if (payout.status !== 'cancelled') return null;
@@ -113,48 +89,38 @@ function ReceiptItems({ payout }: { payout: CommissionPayoutDto }) {
 }
 
 /**
- * Comprovante de repasse: o Admin emite qualquer um da clínica; o
- * Profissional, só o próprio (`/api/my-payouts/:id` devolve 404 para os demais).
+ * Comprovante de repasse no servidor (#546, ADR-082): o Admin emite qualquer um
+ * da clínica; o Profissional, só o próprio (repasse de outro = 404). Os valores
+ * saem das mesmas funções do repasse (#547).
  */
-export default function PayoutReceiptPage({
+export default async function PayoutReceiptPage({
   params,
 }: {
   params: Promise<{ payoutId: string }>;
 }) {
-  const { payoutId } = use(params);
-  const { data: identity, error: identityError } =
-    useApiQuery<SidebarIdentityDto>('/api/auth/identity');
-  const { data: clinic, error: clinicError } =
-    useApiQuery<ClinicInfoDto>('/api/clinic-info');
-  const endpoint =
-    identity?.account?.role === 'profissional'
-      ? `/api/my-payouts/${payoutId}`
-      : `/api/commission-payouts/${payoutId}`;
-  const { data: receipt, error: receiptError } = useApiQuery<PayoutReceiptDto>(
-    identity ? endpoint : null,
-  );
-  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
-  const { issuance, error: issuanceError } = useDocumentIssuance(
-    'repasse',
-    clinic && isClinicInfoComplete(clinic) ? payoutId : null,
-  );
+  const { payoutId } = await params;
+  const session = await requireStaffPage({
+    next: `/documentos/repasse/${payoutId}`,
+  });
+  const [clinic, receipt] = await Promise.all([
+    loadBlock(() => getClinicInfoFor(session)),
+    loadBlock(() => getPayoutReceiptFor(session, payoutId)),
+  ]);
+  if (receipt.error !== null) return <ErrorAlert message={receipt.error} />;
+  if (clinic.error !== null) return <ErrorAlert message={clinic.error} />;
+  if (!isClinicInfoComplete(clinic.data)) {
+    return <ClinicInfoIncompleteAlert clinic={clinic.data} />;
+  }
+  const issuance = await findDocumentIssuance(session, 'repasse', payoutId);
 
-  const guard = guardBlock(
-    clinic,
-    receipt,
-    identityError ?? clinicError ?? receiptError ?? issuanceError,
-    issuance,
-  );
-  if (guard) return guard;
-  if (!clinic || !receipt || !issuance) return null;
-
-  const { payout, professional } = receipt;
+  const { payout, professional } = receipt.data;
   return (
     <DocumentFrame
-      clinic={clinic}
+      clinic={clinic.data}
       title="Comprovante de Repasse"
-      documentNumber={issuance.documentNumber}
-      issuedAt={issuance.issuedAt}
+      issue={{ documentType: 'repasse', resourceId: payoutId }}
+      documentNumber={issuance?.documentNumber}
+      issuedAt={issuance?.issuedAt}
       patientSignature={{
         name: professional.fullName,
         roleLabel: 'Profissional — recebi o valor acima',
@@ -163,7 +129,7 @@ export default function PayoutReceiptPage({
     >
       <CancelledBanner payout={payout} />
       <p className="mb-4">
-        {clinic.name} declara ter pago a{' '}
+        {clinic.data.name} declara ter pago a{' '}
         <strong>{professional.fullName}</strong>
         {professional.registry ? ` (${professional.registry})` : ''} o valor de{' '}
         <strong>{formatCurrency(payout.totalCents)}</strong>, referente ao

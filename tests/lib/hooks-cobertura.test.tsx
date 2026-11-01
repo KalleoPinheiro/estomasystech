@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiFetchPage } from '@/lib/client';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
-import { useDocumentIssuance } from '@/lib/use-document-issuance';
 import { usePagedQuery } from '@/lib/use-paged-query';
 
 interface Deferred {
@@ -55,50 +54,6 @@ const rejectWith = (reason: unknown) =>
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe('Feature: Emissão de documento persistida (#94, DOC-01)', () => {
-  it('Dado falha que não é um Error, Quando emitir, Então mostra a mensagem padrão', async () => {
-    rejectWith('queda de rede');
-
-    const { result } = renderHook(() => useDocumentIssuance('atestado', 'p-1'));
-
-    await waitFor(() =>
-      expect(result.current.error).toBe('Erro ao emitir documento'),
-    );
-  });
-
-  it('Dado a tela fechada antes da resposta, Quando a emissão responde ou falha, Então nada é aplicado', async () => {
-    const { pending } = controlledFetch();
-
-    const first = renderHook(() => useDocumentIssuance('atestado', 'p-1'));
-    const second = renderHook(() =>
-      useDocumentIssuance('recibo', 'p-2', 'f-1'),
-    );
-    first.unmount();
-    second.unmount();
-    await act(async () => {
-      pending[0].resolve(
-        ok({ documentNumber: 'DOC-1', issuedAt: '2026-10-20T00:00:00Z' }),
-      );
-      pending[1].reject(new Error('falha tardia'));
-    });
-
-    expect(first.result.current.issuance).toBeNull();
-    expect(second.result.current.error).toBeNull();
-  });
-});
-
-describe('Feature: Emissão de documento com erro do servidor', () => {
-  it('Dado erro com mensagem, Quando emitir, Então mostra a mensagem do servidor', async () => {
-    rejectWith(new Error('Documento sem CPF do paciente'));
-
-    const { result } = renderHook(() => useDocumentIssuance('recibo', 'p-1'));
-
-    await waitFor(() =>
-      expect(result.current.error).toBe('Documento sem CPF do paciente'),
-    );
-  });
 });
 
 describe('Feature: Lista paginada por deslocamento', () => {

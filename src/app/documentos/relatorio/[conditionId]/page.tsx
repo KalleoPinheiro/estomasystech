@@ -1,5 +1,3 @@
-'use client';
-
 import {
   Table,
   TableBody,
@@ -8,13 +6,11 @@ import {
   TableHeader,
   TableRow,
 } from '@still-void/ui/react';
-import { type ReactNode, use } from 'react';
 import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
-import { type ClinicInfoDto, DocumentFrame } from '@/components/document-frame';
-import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { DocumentFrame } from '@/components/document-frame';
+import { ErrorAlert } from '@/components/feedback';
 import { HealingChart } from '@/components/healing-chart';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
-import type { AssessmentDto, ConditionDto, PatientDto } from '@/lib/dto';
 import {
   CONDITION_KIND_LABELS,
   EXUDATE_LABELS,
@@ -22,153 +18,105 @@ import {
   STOMA_TYPE_LABELS,
   tissueTypeLabel,
 } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
-import { useDocumentIssuance } from '@/lib/use-document-issuance';
+import { getClinicInfoFor } from '@/lib/server/data/clinic-info';
+import {
+  getConditionDocumentData,
+  listConditionAssessmentsFor,
+} from '@/lib/server/data/documents';
+import { loadBlock } from '@/lib/server/data/load-block';
+import { getPatientRecord } from '@/lib/server/data/patient-record';
+import { findDocumentIssuance } from '@/lib/server/document-issuance';
+import { requireStaffPage } from '@/lib/server/session';
 import { timeSummary } from '@/lib/wound-time-summary';
 
-function guardLoading(
-  clinic: ClinicInfoDto | null,
-  condition: ConditionDto | null | undefined,
-  assessments: AssessmentDto[] | null,
-  error: string | null,
-): ReactNode | null {
-  if (error) return <ErrorAlert message={error} />;
-  if (!clinic || condition === undefined || !assessments)
-    return <LoadingIndicator />;
-  if (!isClinicInfoComplete(clinic)) {
-    return <ClinicInfoIncompleteAlert clinic={clinic} />;
-  }
-  if (condition === null)
-    return <ErrorAlert message="Condição não encontrada" />;
-  return null;
-}
-
-function guardBlock(
-  clinic: ClinicInfoDto | null,
-  condition: ConditionDto | null | undefined,
-  assessments: AssessmentDto[] | null,
-  error: string | null,
-  issuance: { documentNumber: string; issuedAt: string } | null,
-  issuanceError: string | null,
-): ReactNode | null {
-  const loadingGuard = guardLoading(clinic, condition, assessments, error);
-  if (loadingGuard) return loadingGuard;
-  if (!assessments) return null;
-  // #94, DOC-05: relatório sem nenhuma avaliação registrada é uma folha
-  // assinável vazia — bloqueia antes do DocumentFrame, mesma guarda do plano.
-  if (assessments.length === 0) {
-    return (
-      <ErrorAlert message="Esta condição ainda não tem nenhuma avaliação registrada — não é possível emitir o relatório vazio." />
-    );
-  }
-  if (issuanceError) return <ErrorAlert message={issuanceError} />;
-  // #94, DOC-01: sem emissão persistida ainda, não renderiza.
-  if (!issuance) return <LoadingIndicator />;
-  return null;
-}
-
 /**
- * Relatório de evolução clínica para o médico parceiro — mesma minimização do
- * portal do parceiro: sem anamnese e sem qualquer dado financeiro.
+ * Relatório de evolução clínica para o médico parceiro no servidor (#546,
+ * ADR-082) — mesma minimização do portal do parceiro: sem anamnese e sem
+ * qualquer dado financeiro. Sem avaliação registrada ou com clínica incompleta,
+ * a página é bloqueada e não emite (#468, #94 DOC-05).
  */
-export default function PartnerReportPage({
+export default async function PartnerReportPage({
   params,
 }: {
   params: Promise<{ conditionId: string }>;
 }) {
-  const { conditionId } = use(params);
-  const { data: clinic } = useApiQuery<ClinicInfoDto>('/api/clinic-info');
-  const { data: condition, error } = useApiQuery<ConditionDto | null>(
-    `/api/conditions/${conditionId}`,
+  const { conditionId } = await params;
+  const session = await requireStaffPage({
+    next: `/documentos/relatorio/${conditionId}`,
+  });
+  const [clinic, condition, assessments] = await Promise.all([
+    loadBlock(() => getClinicInfoFor(session)),
+    loadBlock(() => getConditionDocumentData(session, conditionId)),
+    loadBlock(() => listConditionAssessmentsFor(session, conditionId)),
+  ]);
+  if (condition.error !== null) return <ErrorAlert message={condition.error} />;
+  if (clinic.error !== null) return <ErrorAlert message={clinic.error} />;
+  if (!isClinicInfoComplete(clinic.data)) {
+    return <ClinicInfoIncompleteAlert clinic={clinic.data} />;
+  }
+  if (condition.data === null) {
+    return <ErrorAlert message="Condição não encontrada" />;
+  }
+  if (assessments.error !== null) {
+    return <ErrorAlert message={assessments.error} />;
+  }
+  // #94, DOC-05: relatório sem nenhuma avaliação registrada é uma folha
+  // assinável vazia — bloqueia antes da moldura, mesma guarda do plano.
+  if (assessments.data.length === 0) {
+    return (
+      <ErrorAlert message="Esta condição ainda não tem nenhuma avaliação registrada — não é possível emitir o relatório vazio." />
+    );
+  }
+  const patient = await loadBlock(() =>
+    getPatientRecord(
+      session,
+      (condition.data as { patientId: string }).patientId,
+    ),
   );
-  const { data: assessments } = useApiQuery<AssessmentDto[]>(
-    `/api/conditions/${conditionId}/assessments`,
-  );
-  // Só emite (e grava na auditoria) com a clínica apta a emitir: página bloqueada não é emissão (#468).
-  const { issuance, error: issuanceError } = useDocumentIssuance(
+  // #94, DOC-06: sem paciente resolvido, não imprime "Paciente: —".
+  if (patient.error !== null) return <ErrorAlert message={patient.error} />;
+  const issuance = await findDocumentIssuance(
+    session,
     'relatorio',
-    clinic && isClinicInfoComplete(clinic) ? conditionId : null,
+    conditionId,
   );
-
-  const guard = guardBlock(
-    clinic,
-    condition,
-    assessments,
-    error,
-    issuance,
-    issuanceError,
-  );
-  if (guard) return guard;
-  if (!clinic || !condition || !assessments || !issuance) return null;
-
-  return (
-    <ReportContent
-      clinic={clinic}
-      condition={condition}
-      assessments={assessments}
-      documentNumber={issuance.documentNumber}
-      issuedAt={issuance.issuedAt}
-    />
-  );
-}
-
-function ReportContent({
-  clinic,
-  condition,
-  assessments,
-  documentNumber,
-  issuedAt,
-}: {
-  clinic: ClinicInfoDto;
-  condition: ConditionDto;
-  assessments: AssessmentDto[];
-  documentNumber: string;
-  issuedAt: string;
-}) {
-  const { data: patient, error: patientError } = useApiQuery<PatientDto>(
-    `/api/patients/${condition.patientId}`,
-  );
-  const chronological = [...assessments].sort(
+  const chronological = [...assessments.data].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
 
-  // #94, DOC-06: sem paciente resolvido ainda, não imprime "Paciente: —" —
-  // espera a busca terminar, igual às outras guardas de carregamento.
-  if (patientError) return <ErrorAlert message={patientError} />;
-  if (!patient) return <LoadingIndicator />;
-
   return (
     <DocumentFrame
-      clinic={clinic}
+      clinic={clinic.data}
       title="Relatório de Evolução Clínica"
-      documentNumber={documentNumber}
-      issuedAt={issuedAt}
+      issue={{ documentType: 'relatorio', resourceId: conditionId }}
+      documentNumber={issuance?.documentNumber}
+      issuedAt={issuance?.issuedAt}
     >
       <p className="mb-1">
-        <strong>Paciente:</strong> {patient.fullName}
+        <strong>Paciente:</strong> {patient.data.fullName}
       </p>
       <p className="mb-1">
-        <strong>Condição:</strong> {condition.title} (
-        {CONDITION_KIND_LABELS[condition.kind] ?? condition.kind}
-        {condition.stomaType
-          ? ` — ${STOMA_TYPE_LABELS[condition.stomaType] ?? condition.stomaType}`
+        <strong>Condição:</strong> {condition.data.title} (
+        {CONDITION_KIND_LABELS[condition.data.kind] ?? condition.data.kind}
+        {condition.data.stomaType
+          ? ` — ${STOMA_TYPE_LABELS[condition.data.stomaType] ?? condition.data.stomaType}`
           : ''}
         )
       </p>
       <p className="mb-4">
         <strong>Início do acompanhamento:</strong>{' '}
-        {condition.startedAt
-          ? formatDate(condition.startedAt)
-          : formatDate(condition.createdAt)}{' '}
+        {condition.data.startedAt
+          ? formatDate(condition.data.startedAt)
+          : formatDate(condition.data.createdAt)}{' '}
         · <strong>Situação:</strong>{' '}
-        {condition.status === 'active' ? 'em acompanhamento' : 'resolvida'}
+        {condition.data.status === 'active' ? 'em acompanhamento' : 'resolvida'}
       </p>
 
       {chronological.length >= 2 && (
         // #94, DOC-07: gráfico monocromático — impressão neutra explícita,
         // não depende do tema estar fixo em claro pra ficar legível em P&B.
         <div className="mb-6 print:grayscale">
-          <HealingChart assessments={assessments} />
+          <HealingChart assessments={assessments.data} />
         </div>
       )}
 
