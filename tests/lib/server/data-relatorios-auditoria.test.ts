@@ -118,6 +118,27 @@ describe('Feature: relatórios, auditoria e pedidos do titular na camada de dado
       expect(new Set(ids).size).toBe(3);
     });
 
+    it('Dado evento sem paciente, Quando lê a trilha, Então o evento vem sem nome de paciente', async () => {
+      await ensureTestClinics();
+      const a = await getRepositories(clinicScope(CLINIC_A_ID));
+      const { recordAuditNow } = await import('@/lib/audit');
+      await recordAuditNow(a.auditEvents, session(CLINIC_A_ID), {
+        action: 'read',
+        resourceType: 'patient',
+        resourceId: 'sem-paciente-555',
+      });
+
+      const page = await listAuditEventsFor(session(CLINIC_A_ID), {
+        limit: 500,
+      });
+
+      const found = page.events.find(
+        (e) => e.resourceId === 'sem-paciente-555',
+      );
+      expect(found?.patientId).toBeNull();
+      expect(found?.patientName).toBeNull();
+    });
+
     it('Dado paciente da clínica A, Quando a clínica B pede o nome, Então volta null', async () => {
       await ensureTestClinics();
       const a = await getRepositories(clinicScope(CLINIC_A_ID));
