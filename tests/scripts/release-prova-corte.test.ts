@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { pendenciasDoPreflight } from '../../scripts/release/preflight-lib';
 import {
   avaliarProva,
   type CheckRunLite,
@@ -11,7 +12,6 @@ import {
   seloDoRecibo,
 } from '../../scripts/release/prova-corte-lib';
 import { selarCorte } from '../../scripts/release/selo';
-import { pendenciasDoPreflight } from '../../scripts/release/preflight-lib';
 
 const HEAD = 'a'.repeat(40);
 const ARVORE = 'f'.repeat(40);
