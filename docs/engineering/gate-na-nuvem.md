@@ -59,3 +59,49 @@ O ADR-084 não é editado; esta seção registra duas melhorias do `scripts/gate
 - **CI.** O job `ci` do Actions passou a definir `NODE_OPTIONS=--max-old-space-size=8192`: o
   `tsc --noEmit` estourava o heap padrão (~2 GB, exit 134).
 
+
+## Jobs em paralelo, shards e cache (ADR-087)
+
+Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cache.md). Nenhum limiar muda.
+
+- **Actions, `ci.yml`**: `estatico`, `cobertura-shard` (4 fatias) + `cobertura` (junção com os limiares de
+  `vitest.config.mts`) e `build` rodam juntos; o job `ci` (nome exigido pelo ruleset) só passa se todos passaram.
+  Reproduzir um shard: `npx vitest run -c vitest.shard.config.mts --coverage --reporter=blob --shard=1/4`;
+  juntar: `npx vitest --merge-reports --coverage` (os blobs ficam em `.vitest-reports/`).
+- **Actions, `gate-pr.yml`** (PR para `release/**`): `impacto`, `integracao`, `e2e-prod` (3 shards), `e2e-dev`
+  (papéis, login, console limpo) e `mutacao` incremental; o job `gate-pr` confere que cada job que devia rodar passou.
+  Reproduzir um shard de E2E: `npx playwright test -c playwright.prod.config.ts --shard=2/3`.
+- **Nuvem, `gate-cloud.sh`**: estáticos juntos; E2E de produção em paralelo com dev + console limpo, cada um num
+  namespace próprio (`scripts/gate-cloud/isolado.sh`); mutação com `--incremental`. `GATE_E2E_SEQUENCIAL=1` volta
+  ao E2E em sequência (também é o que acontece se a máquina não tem `unshare`). Os logs de cada etapa paralela
+  ficam em `.gate/par-<etapa>.log`.
+- Armadilha: o E2E em namespace usa memória (servidor de produção + `next dev` + Chromium); abaixo de 12 GB prefira
+  `GATE_E2E_SEQUENCIAL=1`.
+
+### PR só de documentação (ADR-087, errata)
+
+PR que toca só `.md` de documentação (regra do ADR-053) roda os workflows, mas os jobs pesados são pulados: o
+`escopo` do `ci.yml` pula cobertura, typecheck, lint, sv, server-first e build, e o `gate-pr.yml` pula
+integração, E2E e mutação. Fica o gate de docs e o de changeset, e o check exigido (`ci`) fecha verde em
+poucos minutos. Não se usa `paths-ignore`, que deixaria o check exigido pendente. Qualquer arquivo fora da
+regra no diff volta ao gate completo.
+
+### Merge queue da `release/v0.x` (ADR-087): pendente até o repositório ir para uma organização
+
+**Situação (2026-11-01):** o ruleset **não oferece «Require merge queue»**. O GitHub só liga a fila em
+repositório de organização; este é de conta pessoal. Ver a errata do [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cache.md).
+
+- Os gatilhos `merge_group` de `ci.yml`, `gate-pr.yml` e `recibo-gate.yml` **ficam** nos workflows
+  (inofensivos fora da fila; o `recibo-gate` é pulado na fila).
+- A proteção atual são os checks obrigatórios do ruleset (`Typecheck, lint, sv-gate, test:coverage, build`
+  e `Recibo do gate local + integridade dos testes`) com a branch atualizada; quando a release anda, o autor
+  mescla a release na branch e espera o CI.
+
+Para quando houver organização (só o dono faz):
+
+1. Settings → Rules → Rulesets → ruleset de `release/**` → marque **Require merge queue**.
+2. Método de merge **Squash**; tamanho da fila 1 a 5 PRs; «Only merge non-failing pull requests».
+3. Checks exigidos: `Typecheck, lint, sv-gate, test:coverage, build` (job `ci`) e, se quiser o E2E no
+   bloqueio, `Gate do PR`. O recibo pode seguir exigido: na fila ele é pulado e conta como aprovado.
+4. Fluxo: o autor clica **Merge when ready**; a fila monta `release + PR`, roda `ci` e `gate-pr` nesse SHA e
+   faz o squash. `main` não entra na fila (`release/* → main` segue por merge commit com o recibo `E2E-GATE:`).

@@ -3,10 +3,16 @@ name: CI
 # Só o gate rápido roda aqui (ADR-042). O E2E é o `gate:local`, conferido por recibo em
 # `recibo-gate.yml`; o Docker está em `docker.yml`, só quando o que ele valida muda.
 # A `staging` não dispara CI: é espelho da `main` + features que já passaram no PR.
+#
+# Jobs em paralelo (ADR-087): verificações estáticas, cobertura em 4 shards do Vitest (com junção do
+# relatório e os limiares de sempre) e build andam juntos. O job `ci` no fim mantém o nome do check
+# exigido pelo ruleset e só passa se TODOS os de cima passaram: shard, cache ou paralelo nenhum mascara falha.
 on:
   push:
     branches: [main]
   pull_request:
+  # Merge queue (ADR-087): o gate roda no SHA que a fila vai mergear, não no do PR isolado.
+  merge_group:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -20,20 +26,51 @@ permissions:
 # validada num PR próprio, e não uma surpresa no meio do go-live.
 
 jobs:
-  ci:
-    name: Typecheck, lint, sv-gate, test:coverage, build
+  # Escopo do PR (ADR-087): PR só de documentação (mesma regra do ADR-053, `scripts/release/docs-only.ts`) não
+  # paga typecheck, lint, cobertura nem build; roda só o gate de docs. Não se usa `paths-ignore` no gatilho:
+  # um workflow que nem começa deixa o check exigido do ruleset pendente para sempre e trava o merge. Aqui o
+  # workflow roda, os jobs pesados são pulados e o job `ci` (o check exigido) confere e reporta sucesso.
+  escopo:
+    name: Escopo (só documentação?)
+    runs-on: ubuntu-24.04
+    outputs:
+      docs_only: ${{ steps.classe.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      # Só PR pode ser dispensado; push na `main` e fila de merge rodam tudo.
+      - id: classe
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENTO" = pull_request ]; then
+            npx tsx scripts/release/docs-only.ts --base "origin/$BASE_REF" --head "$HEAD_SHA" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "docs_only=$(grep -h '^docs_only=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)" >> "$GITHUB_STEP_SUMMARY"
+
+  estatico:
+    name: Estático (changeset, typecheck, lint, sv, docs, server-first)
+    needs: escopo
     runs-on: ubuntu-24.04
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
       # O `tsc --noEmit` estourava o heap padrão (~2 GB, exit 134). O runner tem 16 GB; 8192 é o
       # mesmo teto do gate local e da nuvem (scripts/gate-cloud.sh).
       NODE_OPTIONS: --max-old-space-size=8192
-      # O runner não tem identidade git: tests/scripts/release-fluxo.test.ts roda `sync-main.sh`
-      # (git merge) e falhava com "Author identity unknown".
-      GIT_AUTHOR_NAME: ci
-      GIT_AUTHOR_EMAIL: ci@example.invalid
-      GIT_COMMITTER_NAME: ci
-      GIT_COMMITTER_EMAIL: ci@example.invalid
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -56,23 +93,162 @@ jobs:
           CHANGESET_BASE: origin/${{ github.base_ref }}
 
       - name: Typecheck
+        if: needs.escopo.outputs.docs_only != 'true'
         run: npm run typecheck
 
       - name: Lint
+        if: needs.escopo.outputs.docs_only != 'true'
         run: npm run lint
 
       - name: still-void adoption gate
+        if: needs.escopo.outputs.docs_only != 'true'
         run: npm run check:sv
 
       - name: Docs gate
         run: npm run check:docs
 
       - name: Server-first gate
+        if: needs.escopo.outputs.docs_only != 'true'
         run: npm run check:server-first
 
-      - name: Test (coverage)
-        run: npm run test:coverage
+  # Cobertura em 4 fatias (vitest --shard). Cada fatia roda os testes dela e grava um blob com o relatório e a
+  # cobertura bruta; os limiares só valem na junção (`cobertura`), com a config da suíte inteira. Teste
+  # vermelho em qualquer fatia reprova a fatia e, por `needs`, o gate.
+  cobertura-shard:
+    name: Cobertura (shard ${{ matrix.shard }}/4)
+    needs: escopo
+    if: needs.escopo.outputs.docs_only != 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      AUTH_SECRET: ci-placeholder-secret-0000000000000000
+      NODE_OPTIONS: --max-old-space-size=8192
+      # O runner não tem identidade git: tests/scripts/release-fluxo.test.ts roda `sync-main.sh`
+      # (git merge) e falhava com "Author identity unknown".
+      GIT_AUTHOR_NAME: ci
+      GIT_AUTHOR_EMAIL: ci@example.invalid
+      GIT_COMMITTER_NAME: ci
+      GIT_COMMITTER_EMAIL: ci@example.invalid
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
-      # Build de produção (1,5 min): barra erro de compilação sem pagar o E2E.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Testes do shard (com cobertura bruta)
+        run: >-
+          npx vitest run -c vitest.shard.config.mts --coverage --reporter=blob
+          --shard=${{ matrix.shard }}/4
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: vitest-blob-${{ matrix.shard }}
+          path: .vitest-reports/
+          if-no-files-found: error
+          # `.vitest-reports` é pasta oculta: sem isto o upload-artifact v4 a ignora.
+          include-hidden-files: true
+          retention-days: 1
+
+  cobertura:
+    name: Cobertura (junção e limiares)
+    needs: cobertura-shard
+    runs-on: ubuntu-24.04
+    env:
+      AUTH_SECRET: ci-placeholder-secret-0000000000000000
+      NODE_OPTIONS: --max-old-space-size=8192
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: vitest-blob-*
+          path: .vitest-reports
+          merge-multiple: true
+
+      # Confere que as 4 fatias chegaram: um blob a menos esconderia testes e cobertura.
+      - name: Quatro blobs
+        run: test "$(ls .vitest-reports/blob-*.json | wc -l)" -eq 4
+
+      # Config da suíte inteira: os limiares de vitest.config.mts (100% nas camadas de regra, piso 90).
+      - name: Junção e limiares
+        run: npx vitest --merge-reports --coverage
+
+  # Nome antigo do job, exigido pelo ruleset: continua sendo o único check a exigir. Confere que TODOS os
+  # jobs acima passaram (nada pulado, cancelado ou falho) e roda o build de produção (1,5 min), que barra
+  # erro de compilação sem pagar o E2E.
+  ci:
+    name: Typecheck, lint, sv-gate, test:coverage, build
+    if: always()
+    needs: [escopo, estatico, cobertura-shard, cobertura]
+    runs-on: ubuntu-24.04
+    env:
+      AUTH_SECRET: ci-placeholder-secret-0000000000000000
+      NODE_OPTIONS: --max-old-space-size=8192
+    steps:
+      # Código: todos os jobs têm de ser `success`. Só documentação: o escopo e o estático (gate de docs) passam
+      # e os jobs pesados têm de estar `skipped`; qualquer outra combinação reprova.
+      - name: Todos os jobs anteriores passaram
+        env:
+          DOCS_ONLY: ${{ needs.escopo.outputs.docs_only }}
+          R_ESCOPO: ${{ needs.escopo.result }}
+          R_ESTATICO: ${{ needs.estatico.result }}
+          R_SHARD: ${{ needs.cobertura-shard.result }}
+          R_COBERTURA: ${{ needs.cobertura.result }}
+        run: |
+          echo "docs_only=$DOCS_ONLY escopo=$R_ESCOPO estatico=$R_ESTATICO shard=$R_SHARD cobertura=$R_COBERTURA"
+          [ "$R_ESCOPO" = success ] && [ "$R_ESTATICO" = success ] || { echo "::error::escopo ou estático não passou"; exit 1; }
+          if [ "$DOCS_ONLY" = true ]; then
+            [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR de documentação não devia ter rodado cobertura"; exit 1; }
+          else
+            [ "$R_SHARD" = success ] && [ "$R_COBERTURA" = success ] || { echo "::error::cobertura não passou"; exit 1; }
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: needs.escopo.outputs.docs_only != 'true'
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: needs.escopo.outputs.docs_only != 'true'
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        if: needs.escopo.outputs.docs_only != 'true'
+        run: npm ci
+
+      # Cache do Next entre rodadas: só acelera a compilação; o build roda inteiro e falha igual.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        if: needs.escopo.outputs.docs_only != 'true'
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'next.config.*') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
+
       - name: Build
+        if: needs.escopo.outputs.docs_only != 'true'
         run: npm run build

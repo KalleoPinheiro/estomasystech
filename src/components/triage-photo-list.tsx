@@ -15,7 +15,8 @@ import {
   TooltipTrigger,
 } from '@still-void/ui/react/client';
 import Image from 'next/image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { MAIN_CONTENT_ID } from '@/components/app-shell/skip-link';
 import { ErrorAlert } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import type { TriagePhotoDto } from '@/lib/dto';
@@ -70,6 +71,19 @@ function scoreBadgeClassName(
   return 'bg-sv-surface text-accent-ink';
 }
 
+/**
+ * Depois da decisão a linha sai da fila e o botão que tinha o foco some junto:
+ * sem isto o foco cai no `body` e quem usa teclado ou leitor de tela recomeça
+ * do topo da página (#559). Vai para a próxima foto da fila ou, com a fila
+ * vazia, para o conteúdo principal. Só age se o foco de fato se perdeu.
+ */
+export function restoreFocusAfterDecision(list: HTMLElement | null) {
+  const active = document.activeElement;
+  if (active && active !== document.body) return;
+  const next = list?.querySelector<HTMLElement>('button');
+  (next ?? document.getElementById(MAIN_CONTENT_ID))?.focus();
+}
+
 interface TriagePhotoListProps {
   queue: TriagePhotoDto[];
   actionError: string | null;
@@ -97,6 +111,22 @@ export function TriagePhotoList({
     decision: TriageDecision;
   } | null>(null);
   const confirmTriggerRef = useRef<HTMLElement | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const decidedRef = useRef(false);
+  // Fila mudou depois de uma decisão: a linha decidida saiu e o foco precisa de um novo lugar.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a fila é o gatilho, não um valor lido
+  useEffect(() => {
+    if (!decidedRef.current) return;
+    decidedRef.current = false;
+    restoreFocusAfterDecision(listRef.current);
+  }, [queue]);
+  // Fila esvaziada: o componente sai da tela com a última decisão, e o foco vai ao conteúdo.
+  useEffect(
+    () => () => {
+      if (decidedRef.current) restoreFocusAfterDecision(null);
+    },
+    [],
+  );
   const confirmation = confirming && DECISION_CONFIRMATION[confirming.decision];
   const askConfirmation = (
     photo: TriagePhotoDto,
@@ -110,7 +140,7 @@ export function TriagePhotoList({
   return (
     <>
       {actionError && <ErrorAlert message={actionError} />}
-      <ul className="flex flex-col gap-2">
+      <ul ref={listRef} className="flex flex-col gap-2">
         {queue.map((photo) => (
           <li
             key={photo.id}
@@ -224,7 +254,10 @@ export function TriagePhotoList({
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => onTriage(confirming.photo, confirming.decision)}
+                onClick={() => {
+                  decidedRef.current = true;
+                  onTriage(confirming.photo, confirming.decision);
+                }}
                 className={confirmation.className}
               >
                 {confirmation.confirmLabel}
