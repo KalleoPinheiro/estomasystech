@@ -40,6 +40,8 @@ export class ResendEmailGateway implements EmailGateway {
   async send(message: EmailMessage): Promise<void> {
     const response = await fetch(RESEND_API_URL, {
       method: 'POST',
+      // Envio de e-mail nunca vem do cache do Next (#559).
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${this.config.apiKey}`,
         'Content-Type': 'application/json',

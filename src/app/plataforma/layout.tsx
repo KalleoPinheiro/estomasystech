@@ -1,5 +1,6 @@
 import { Layout } from '@still-void/ui/react';
 import type { Metadata } from 'next';
+import { WebVitalsReporter } from '@/components/web-vitals-reporter';
 import { PlatformHeader } from './platform-header';
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default function PlatformLayout({
 }) {
   return (
     <div>
+      <WebVitalsReporter />
       <PlatformHeader />
       <Layout>
         <main className="flex flex-col gap-4">{children}</main>

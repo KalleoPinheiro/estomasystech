@@ -1,6 +1,5 @@
 'use client';
 
-import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 
 interface OtpauthQrProps {
@@ -20,7 +19,15 @@ export function OtpauthQr({ uri }: OtpauthQrProps) {
   useEffect(() => {
     let active = true;
     setSrc(null);
-    QRCode.toDataURL(uri, { errorCorrectionLevel: 'M', margin: 2, width: 192 })
+    // O gerador de QR só pesa no bundle de quem chega ao cadastro do segundo fator (#559).
+    import('qrcode')
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(uri, {
+          errorCorrectionLevel: 'M',
+          margin: 2,
+          width: 192,
+        }),
+      )
       .then((url) => active && setSrc(url))
       .catch(() => active && setSrc(null));
     return () => {

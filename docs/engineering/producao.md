@@ -869,6 +869,33 @@ pontos de log, sempre com dado mascarado, está em
 cole linha crua de log em chat, issue ou PR**. O erro não tratado que o próprio Next escreve (`⨯ …`) segue em texto; o
 mesmo erro sai limpo e em JSON (`Erro não tratado na requisição`).
 
+#### 9.4.1 Web Vitals de campo (#559, [ADR-086](../adr/086-web-vitals-de-campo-no-log-estruturado.md))
+
+O navegador da equipe logada (casco da clínica e plataforma; o portal ainda não mede, ADR-086) manda LCP, INP, CLS, TTFB e FCP da página
+que fechou, em uma requisição por visita. Cada medida vira uma linha `web-vital` no log, sem conta, empresa
+ou paciente:
+
+```json
+{"time":"…","level":"info","msg":"web-vital","metric":"LCP","value":1834.457,"rating":"good","route":"/pacientes/:id","width":400,"role":"profissional"}
+```
+
+Campos: `metric` (`LCP`, `INP`, `CLS`, `TTFB`, `FCP`), `value` (ms; o CLS não tem unidade), `rating`
+(`good`, `needs-improvement`, `poor`, ou `null`), `route` (sem id, query ou hash), `width` (janela
+arredondada de 50 em 50 px: 350 e 400 são celular, 750 tablet, 1300 desktop) e `role`.
+
+```bash
+# p75 do LCP por rota, no celular (width <= 400)
+docker logs <container-do-app> 2>&1 \
+  | jq -c 'select(.msg == "web-vital" and .metric == "LCP" and .width <= 400) | {route, value}' \
+  | jq -s 'group_by(.route) | map({route: .[0].route, n: length, p75: (map(.value) | sort | .[(length * 0.75 | floor)])})'
+# quantas visitas ficaram "poor" por métrica
+docker logs <container-do-app> 2>&1 | jq -c 'select(.msg == "web-vital" and .rating == "poor") | .metric' | sort | uniq -c
+```
+
+Metas (as mesmas do gate de laboratório): LCP ≤ 2,5 s, CLS < 0,05, INP ≤ 200 ms. Visita que fecha a aba
+sem o navegador disparar o envio não conta; a amostra é de tendência, não de contagem exata. O login, as
+páginas públicas e o portal não enviam (a rota exige sessão de equipe).
+
 ### 9.5 GlitchTip (error tracking)
 
 Opcional: sem `GLITCHTIP_DSN` o app funciona igual. **Em produção está ligado desde 2026-10-19**
