@@ -1,0 +1,75 @@
+name: Release cut
+
+# Corte da release no Actions (ADR-071, emendada pela ADR-087): roda `npm run release:cut` em
+# `release/vX.Y.Z` sem depender da máquina do operador. Só `workflow_dispatch`: escolha a branch
+# `release/vX.Y.Z` em "Use workflow from". Precondição: a marca `homologacao/vX.Y.Z` no SHA da release.
+# O `release:prepare` faz push do commit de versão na release; se o ruleset `release/**` barrar o
+# GITHUB_TOKEN, dê bypass ao app GitHub Actions nesse ruleset (ou use o segredo RELEASE_CUT_TOKEN).
+# Este workflow NÃO mergeia na main, NÃO cria tag e NÃO faz deploy.
+on:
+  workflow_dispatch:
+    inputs:
+      rollback:
+        description: "Estratégia de rollback registrada na release (ADR-071)"
+        type: choice
+        options: [redeploy, backup]
+        default: redeploy
+
+concurrency:
+  group: release-cut
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cut:
+    name: release:cut
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    if: startsWith(github.ref_name, 'release/v')
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN || github.token }}
+      GH_REPO: ${{ github.repository }}
+      TZ: UTC
+      NODE_OPTIONS: --max-old-space-size=8192
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_CUT_TOKEN || github.token }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Identidade do commit de versão
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Branch local igual ao origin
+        run: git switch -C "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Navegadores do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Instalar age (smoke de backup)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Cortar a release
+        run: npm run release:cut -- --rollback=${{ inputs.rollback }}
+
+      - name: Guardar corpo do PR e recibo
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-cut
+          path: |
+            .gate/
+          include-hidden-files: true
+          if-no-files-found: ignore
