@@ -2181,10 +2181,18 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Varredura do mesmo padrão**: e-mail fire-and-forget só existe em `forgot-password` (via `after()`), e seus testes já esperam (`waitForEmails`); `bootstrap` e convites aguardam a entrega. Leitura de `auditEvents` logo após a resposta, sem `vi.waitFor`, aparece em ~40 arquivos (a gravação sai de `recordAudit` → `after()`), mas o PGlite enfileira as consultas e nenhuma falha reproduziu; não alterei (regra do brief: corrigir só o que reproduzir).
 - **Next step**: revisão limpa e merge na release/v0.4.0. **Blockers**: nenhum.
 
+## Telas públicas e de autenticação como Server Components (#554) (2026-10-31) — EM REVISÃO
+- **O que mudou**: `/login`, `/esqueci-senha`, `/definir-senha` e `/privacidade` sem `'use client'` na página. Ilhas cliente mínimas: `src/app/login/login-card.tsx`, `src/app/esqueci-senha/forgot-password-form.tsx`, `src/app/definir-senha/set-password-form.tsx`. `/login` resolve no servidor (`login-state.ts`: allowlist de erro LOG-02, `?next=` validado, `getAuthConfig() !== null`) e não chama `/api/auth/providers` na carga (rota mantida). `/definir-senha` lê o token por `searchParams` no servidor. Auth, MFA e convite seguem em Route Handler `/api/auth/*` (rate-limit-strict, ADR-069 § 2); nenhuma Server Action.
+- **TESTE-ALTERADO** (cenários e asserções iguais): `tests/pages/login.test.tsx` e `definir-senha.test.tsx` renderizam a página servidor com `searchParams` (o login não busca mais `providers` por fetch: o requisito passou a ser 0 chamadas `/api` na carga). Testes novos: `tests/pages/paginas-publicas-servidor.test.tsx`, `definir-senha-token-repetido.test.tsx`.
+- **Métricas (LCP 360 ≤ 1,5 s, CLS ≤ 0,1)**: não medidas nesta thread (sem build com banco); a medição final é do #559 / validação na staging.
+- **Next step**: gate nuvem perfil `pr`, revisão limpa e merge na release/v0.4.0; segue #555. **Blockers**: nenhum.
+
 ## E2E: mês civil em APP_TIMEZONE (#633) (2026-11-01) — EM REVISÃO
 - **O que mudou**: `agendaToMonth` (layout-mobile-first) e `setReportMonth` (responsive-tables) calculam o mês de hoje no fuso do app (`APP_TIMEZONE`, padrão America/Sao_Paulo, ADR-073) e não no do processo (UTC no gate da nuvem). Provado às 00:45 UTC de 01/11 (SP ainda 31/10): os 98 testes passam em `TZ=UTC`; antes, 4 falhavam.
 - **TESTE-ALTERADO**: só o cálculo do mês nos dois helpers; cenários e asserções iguais. Sem `src/`, sem changeset.
 - **Next step**: revisão e merge na release/v0.4.0. **Blockers**: nenhum.
+
+
 
 ## Materiais no servidor (#556, PR 1 de 2) (2026-10-31) — EM REVISÃO
 - **O que mudou**: `/materiais` é Server Component (ADR-083): insumos, previsão, lotes a vencer e consultas do dia em paralelo com `loadBlock`, sem `/api` na carga. Ilhas de cliente: `supplies-board`, `supply-form`, `movement-form`, `movement-history`, `new-supply-button`. `supply-actions.ts` com `createSupply`, `updateSupply` e `registerStockMovement` (`defineAction`, auditoria na mesma transação; a trilha leva só tipo e quantidade, nunca o motivo). `supplies.ts` ganha `getSupplyInsightsFor` e `listSupplyMovementsFor`, e as rotas de insights e movimentos chamam as mesmas funções. O histórico do insumo segue lido sob demanda por `GET /api/supplies/:id/movements`. `TransactionScope` ganha `supplies`, `stockMovements` e `supplyBatches` (uma linha cada; ponto quente com #552, #553 e o PR 2). Allowlist: sai a linha de `materiais/page.tsx`.
