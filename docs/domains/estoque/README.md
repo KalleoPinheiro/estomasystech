@@ -3,7 +3,7 @@ title: "Domínio: Estoque"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-31
 domain: estoque
 ---
 
@@ -45,10 +45,12 @@ PRD: [fase 1](../../product/prd-fase-1.md) (F4).
 | domínio | `src/domain/inventory/`, `src/domain/catalog/procedure-kit.ts` |
 | casos de uso | `src/application/inventory/` |
 | API | `src/app/api/supplies/` |
-| UI | `src/app/(staff)/materiais/` |
+| UI | `src/app/(staff)/materiais/` (página no servidor, ações em `supply-actions.ts`) |
+| leituras | `src/lib/server/data/supplies.ts` (a mesma resposta das rotas) |
 | testes | `tests/domain/`, `tests/application/`, `e2e/inventario.spec.ts` |
 | exceções | [`excecoes.md`](excecoes.md) — matriz de casos de exceção e o teste de cada um |
 
 ## Decisões
 
-- Nenhum ADR específico; segue [ADR-001](../../adr/001-multi-tenancy.md) (estoque por empresa)
+- [ADR-083](../../adr/083-materiais-e-procedimentos-no-servidor.md): `/materiais` no servidor; cadastro, edição e movimentação são Server Actions com auditoria na mesma transação
+- Segue [ADR-001](../../adr/001-multi-tenancy.md) (estoque por empresa)
