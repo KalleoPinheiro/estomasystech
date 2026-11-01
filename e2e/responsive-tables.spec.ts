@@ -69,19 +69,28 @@ async function seedCarePlanWithOutcomeAndIntervention(
   return plan.id;
 }
 
+/** Mês civil de hoje no fuso do app (APP_TIMEZONE, ADR-073), não no do processo. */
+function civilToday(): { year: number; month0: number } {
+  const key = new Intl.DateTimeFormat("en-CA", {
+    timeZone: process.env.APP_TIMEZONE ?? "America/Sao_Paulo",
+  }).format(new Date());
+  const [year, month] = key.split("-").map(Number);
+  return { year, month0: month - 1 };
+}
+
 /**
  * A página não tem mais `<input type="month">` (achado REL-02 — mês vira texto
  * pt-BR + navegação ‹›, ver relatorios.spec.ts). Chega no mês pedido clicando
  * "Próximo mês"/"Mês anterior" a quantidade de vezes necessária.
  */
 async function setReportMonth(page: Page, year: number, month: number): Promise<void> {
-  const now = new Date();
-  const delta = (year - now.getFullYear()) * 12 + (month - 1 - now.getMonth());
+  const now = civilToday();
+  const delta = (year - now.year) * 12 + (month - 1 - now.month0);
   const step = delta >= 0 ? 1 : -1;
   const button = page.getByRole("button", { name: delta >= 0 ? "Próximo mês" : "Mês anterior" });
 
   for (let i = 1; i <= Math.abs(delta); i += 1) {
-    const target = new Date(now.getFullYear(), now.getMonth() + step * i, 1);
+    const target = new Date(now.year, now.month0 + step * i, 1);
     const targetValue = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
     // Um clique só por mês — repetir o clique dentro de um toPass avançaria o mês
     // de novo se a resposta demorasse mais que o timeout da tentativa anterior.
