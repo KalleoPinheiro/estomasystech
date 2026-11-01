@@ -7,8 +7,8 @@ import {
   roundWidth,
   WEB_VITAL_NAMES,
   type WebVitalName,
-  type WebVitalsPayload,
 } from '@/lib/web-vitals';
+import type { WebVitalsPayload } from '@/lib/web-vitals-schema';
 
 const ENDPOINT = '/api/me/web-vitals';
 

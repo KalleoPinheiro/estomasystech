@@ -1,11 +1,11 @@
-import { z } from 'zod';
-
 /**
  * Web Vitals de campo (#559, ADR-060): o que o navegador mede e o servidor
  * registra no log estruturado. Nada aqui identifica pessoa: a rota perde ids e
  * tokens, a largura da janela é arredondada e o corpo não leva query, hash,
  * cabeçalho nem texto livre. O mesmo normalizador roda no cliente (antes de
- * enviar) e no servidor (que nunca confia no que chegou).
+ * enviar) e no servidor (que nunca confia no que chegou). Sem `zod` aqui: este arquivo vai
+ * para o bundle do navegador, e o `zod` testa `Function('')`, que a CSP registra como violação.
+ * O esquema do corpo mora em `web-vitals-schema.ts`, só do servidor.
  */
 
 export const WEB_VITAL_NAMES = ['LCP', 'INP', 'CLS', 'TTFB', 'FCP'] as const;
@@ -24,7 +24,7 @@ const ID_PLACEHOLDER = ':id';
 const MAX_ROUTE_LENGTH = 120;
 const MAX_SEGMENTS = 8;
 const WIDTH_STEP = 50;
-const MAX_WIDTH = 10_000;
+export const MAX_WIDTH = 10_000;
 
 function isIdentitySegment(segment: string): boolean {
   return (
@@ -56,22 +56,3 @@ export function roundWidth(width: number): number {
   if (!Number.isFinite(width) || width <= 0) return 0;
   return Math.min(MAX_WIDTH, Math.round(width / WIDTH_STEP) * WIDTH_STEP);
 }
-
-const metricSchema = z
-  .object({
-    name: z.enum(WEB_VITAL_NAMES),
-    value: z.number().finite().min(0).max(1_000_000),
-    rating: z.enum(WEB_VITAL_RATINGS).optional(),
-  })
-  .strict();
-
-/** Corpo do envio de campo: uma rota, uma largura e até uma medida por métrica. */
-export const webVitalsPayloadSchema = z
-  .object({
-    route: z.string().min(1).max(512),
-    width: z.number().finite().min(0).max(MAX_WIDTH),
-    metrics: z.array(metricSchema).min(1).max(WEB_VITAL_NAMES.length),
-  })
-  .strict();
-
-export type WebVitalsPayload = z.infer<typeof webVitalsPayloadSchema>;

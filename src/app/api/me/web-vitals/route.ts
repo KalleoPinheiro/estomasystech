@@ -2,11 +2,8 @@ import type { NextRequest } from 'next/server';
 import { fail, ok } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { logger } from '@/lib/observability/logger';
-import {
-  normalizeRoute,
-  roundWidth,
-  webVitalsPayloadSchema,
-} from '@/lib/web-vitals';
+import { normalizeRoute, roundWidth } from '@/lib/web-vitals';
+import { webVitalsPayloadSchema } from '@/lib/web-vitals-schema';
 
 /**
  * Web Vitals de campo (#559): o navegador da equipe logada (os quatro papéis de

@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  normalizeRoute,
-  roundWidth,
-  WEB_VITAL_NAMES,
-  webVitalsPayloadSchema,
-} from '@/lib/web-vitals';
+import { normalizeRoute, roundWidth, WEB_VITAL_NAMES } from '@/lib/web-vitals';
+import { webVitalsPayloadSchema } from '@/lib/web-vitals-schema';
 
 describe('Feature: rota dos Web Vitals de campo sem identidade (#559)', () => {
   it.each([
