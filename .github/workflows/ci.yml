@@ -25,6 +25,9 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
+      # O `tsc --noEmit` estourava o heap padrão (~2 GB, exit 134). O runner tem 16 GB; 8192 é o
+      # mesmo teto do gate local e da nuvem (scripts/gate-cloud.sh).
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

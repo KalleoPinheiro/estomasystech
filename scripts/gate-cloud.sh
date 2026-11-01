@@ -15,6 +15,10 @@
 #   release  setup + integração completa + `gate:local` (GATE_PERFIL=pr: o perfil release do gate exige
 #            Docker). Docker e backup seguem no WSL antes do `release:cut`.
 #
+# Recibo: ao fim de `pr`/`release` o script imprime (e grava em .gate/cloud-recibo.md) o tempo total e o de
+# cada etapa, para colar no PR. Motivo do TESTE-ALTERADO (mesma checagem do check:testes, nada mais frouxo):
+# GATE_PR_BODY_FILE=<corpo do PR>, GATE_MOTIVO_TESTE="<texto>" ou o .gate/motivo-teste.txt local.
+#
 # Base do diff: GATE_BASE, senão a release aberta (scripts/gate/base.ts). Não toca banco de produção:
 # o assertLocalEnvironment recusa host que não seja da máquina.
 set -euo pipefail
@@ -28,7 +32,41 @@ TIMES=.gate/cloud-times.txt
 export INTEGRATION_DATABASE_URL="postgres://postgres:${PGPASS}@127.0.0.1:${PGPORT}/${PGDB}"
 export CI=1 TZ=UTC NODE_OPTIONS="--max-old-space-size=8192"
 
+RECIBO=.gate/cloud-recibo.md
+T_INICIO=$(date +%s)
+
 stamp() { date +%s; }
+
+# recibo <perfil> <rc>: tempo total e por etapa, no formato que o PR cola.
+recibo() {
+  local rc="$2" total=$(( $(stamp) - T_INICIO )) sha
+  sha=$(git rev-parse --short HEAD)
+  mkdir -p .gate
+  {
+    echo "GATE-NUVEM: ${sha} perfil=$1 rc=${rc} total=${total}s ($(( total / 60 ))m$(( total % 60 ))s)"
+    echo
+    echo "| etapa | rc | duração |"
+    echo "| --- | --- | --- |"
+    sed -nE 's/^([^ ]+) rc=([0-9]+) ([0-9]+s)$/| \1 | \2 | \3 |/p' "$TIMES" 2>/dev/null
+    grep -E '^pulado:' "$TIMES" 2>/dev/null | sed -E 's/^pulado: (.*)$/- pulado: \1/'
+  } | tee "$RECIBO"
+}
+
+# Roda o perfil e sempre imprime o recibo, inclusive na falha.
+com_recibo() {
+  local rc=0; mkdir -p .gate; : > "$TIMES"
+  "$2" || rc=$?
+  recibo "$1" "$rc"
+  return "$rc"
+}
+
+# check:testes com o motivo do PR (corpo ou texto), sem relaxar a regra 8.
+integridade() {
+  local args=()
+  [ -z "${GATE_PR_BODY_FILE:-}" ] || args+=(--body-file "$GATE_PR_BODY_FILE")
+  [ -z "${GATE_MOTIVO_TESTE:-}" ] || args+=(--motivo "$GATE_MOTIVO_TESTE")
+  npm run check:testes -- ${args[@]+"${args[@]}"}
+}
 step() { # step <nome> <comando...>: mede, registra e para na primeira falha
   local name="$1"; shift
   local t0 rc=0; t0=$(stamp)
@@ -147,7 +185,7 @@ pr_profile() {
   step lint npm run lint
   step sv npm run check:sv
   step docs npm run check:docs
-  step integridade-de-testes npm run check:testes
+  step integridade-de-testes integridade
   step cobertura npm run test:coverage
   step mutacao mutation_changed "$base"
   if git diff --name-only "${base}...HEAD" | grep -Eqv '(^docs/|^\.specs/|^\.changeset/|\.md$)'; then
@@ -191,7 +229,7 @@ case "${1:-}" in
     cat .gate/cloud.done 2>/dev/null || echo "em andamento" ;;
   setup) setup ;;
   integracao) integracao ;;
-  pr) mkdir -p .gate; : > "$TIMES"; pr_profile ;;
-  release) mkdir -p .gate; : > "$TIMES"; release_profile ;;
+  pr) com_recibo pr pr_profile ;;
+  release) com_recibo release release_profile ;;
   *) echo "uso: $0 bg pr|release | status | setup | integracao | pr | release" >&2; exit 2 ;;
 esac

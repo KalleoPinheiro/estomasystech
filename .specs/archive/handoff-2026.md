@@ -2180,3 +2180,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Teste**: cenários, asserções, `timeout` e `retries` iguais; só entram o hook e o ambiente do git. Sem `src/`, sem changeset.
 - **Varredura do mesmo padrão**: e-mail fire-and-forget só existe em `forgot-password` (via `after()`), e seus testes já esperam (`waitForEmails`); `bootstrap` e convites aguardam a entrega. Leitura de `auditEvents` logo após a resposta, sem `vi.waitFor`, aparece em ~40 arquivos (a gravação sai de `recordAudit` → `after()`), mas o PGlite enfileira as consultas e nenhuma falha reproduziu; não alterei (regra do brief: corrigir só o que reproduzir).
 - **Next step**: revisão limpa e merge na release/v0.4.0. **Blockers**: nenhum.
+
+## CI: memória do typecheck e recibo do gate na nuvem (2026-11-01) — EM REVISÃO
+- **Causa**: o job `ci` rodava `tsc --noEmit` com o heap padrão do Node (~2 GB) e morria com exit 134 (PRs #632/#634).
+- **Correção**: `NODE_OPTIONS=--max-old-space-size=8192` no `env` do job em `.github/workflows/ci.yml` (runner de 16 GB). `scripts/gate-cloud.sh` agora imprime o recibo com total e duração por etapa (`.gate/cloud-recibo.md`) e aceita o motivo do TESTE-ALTERADO por `GATE_PR_BODY_FILE`/`GATE_MOTIVO_TESTE`, usando a mesma checagem; nota em `docs/engineering/gate-na-nuvem.md` (ADR-084 intacto).
+- **Sem** `src/` nem teste alterado; sem changeset. `scripts/gate/` não foi tocado.
+- **Next step**: revisão e merge na release/v0.4.0. **Blockers**: nenhum.
