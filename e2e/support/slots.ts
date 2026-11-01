@@ -142,6 +142,8 @@ export const SLOT_SEEDS = [
   "responsive-tables-relatorios",
   "agenda-bloco-curto-768",
   "agenda-bloco-curto-1280",
+  "console-limpo-portal",
+  "server-first-portal",
 ] as const;
 
 export type SlotSeed = (typeof SLOT_SEEDS)[number];

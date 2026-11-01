@@ -9,6 +9,11 @@ import type { UserRole } from '@/domain/auth/user-role';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
 
 const pathname = { current: '/' };
+// /mais é Server Component (#544): o papel vem da sessão no servidor, aqui simulada.
+const serverRole = { current: 'atendente' as UserRole };
+vi.mock('@/lib/server/session', () => ({
+  requireStaffPage: async () => ({ role: serverRole.current }),
+}));
 vi.mock('next/navigation', () => ({
   usePathname: () => pathname.current,
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -117,11 +122,10 @@ describe('Feature: barra inferior do celular (#428)', () => {
 describe('Feature: tela Mais (#428)', () => {
   it('Dado o Atendente, Então vê Parceiros e a conta, e nada de gestão', async () => {
     mockApi('atendente');
+    serverRole.current = 'atendente';
     render(
       <ThemeProvider>
-        <WithStaffIdentity>
-          <MorePage />
-        </WithStaffIdentity>
+        <WithStaffIdentity>{await MorePage()}</WithStaffIdentity>
       </ThemeProvider>,
     );
     await settle();

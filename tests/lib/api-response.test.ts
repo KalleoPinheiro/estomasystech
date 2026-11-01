@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type ZodError, z } from 'zod';
 import {
+  ConflictError,
+  ConsentRequiredError,
+  ForbiddenError,
+  InsufficientStockError,
   InvalidStatusTransitionError,
   NotFoundError,
+  ProvisioningDeniedError,
   SchedulingConflictError,
   ValidationError,
 } from '@/domain/shared/errors';
-import { fail, handleRequest, ok } from '@/lib/api-response';
+import { describeFailure, fail, handleRequest, ok } from '@/lib/api-response';
 
 describe('Feature: Envelope de resposta da API', () => {
   it('Dado dado de sucesso, Quando ok(), Então envelope success com status 200 por padrão', async () => {
@@ -128,5 +133,99 @@ describe('Feature: handleRequest — tradução de erros em envelope HTTP', () =
       msg: 'Erro inesperado na API:',
       error: { name: 'Error', stack: expect.any(String) },
     });
+  });
+
+  it('Dado erro de validação aninhado em body (Server Action), Quando descreve a falha, Então o campo vem sem «body.» e o texto em português', () => {
+    const schema = z.object({
+      id: z.string(),
+      body: z.object({ title: z.string().min(1) }),
+    });
+    const parsed = schema.safeParse({ id: 'x', body: { title: '' } });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    const { message, status } = describeFailure(parsed.error);
+
+    expect(status).toBe(400);
+    expect(message).toMatch(/^Dados inválidos: title: /);
+    expect(message).not.toContain('body.');
+    expect(message).not.toMatch(/Too small|expected string|Invalid input/);
+  });
+
+  it('Dado erro de validação no próprio campo body, Quando descreve a falha, Então o caminho de um nível não perde o nome', () => {
+    const parsed = z.object({ body: z.string() }).safeParse({ body: 1 });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(
+      /^Dados inválidos: body: /,
+    );
+  });
+
+  it('Dado erro aninhado em body com vários níveis, Quando descreve a falha, Então só o «body.» sai e o resto fica unido por ponto', () => {
+    const parsed = z
+      .object({
+        id: z.string(),
+        body: z.object({ a: z.object({ b: z.string() }) }),
+      })
+      .safeParse({ id: 'x', body: { a: { b: 1 } } });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(
+      /^Dados inválidos: a\.b: /,
+    );
+  });
+
+  it('Dado erro em campo que não é body (rota), Quando descreve a falha, Então o caminho completo é mantido', () => {
+    const parsed = z
+      .object({ id: z.string(), pessoa: z.object({ nome: z.string() }) })
+      .safeParse({ id: 'x', pessoa: { nome: 1 } });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(
+      /^Dados inválidos: pessoa\.nome: /,
+    );
+  });
+
+  it('Dados dois erros, Quando descreve a falha, Então são separados por «; »', () => {
+    const parsed = z
+      .object({ a: z.string(), b: z.string() })
+      .safeParse({ a: 1, b: 2 });
+    if (parsed.success) throw new Error('esperava falhar');
+
+    expect(describeFailure(parsed.error).message).toMatch(/a: .+; b: /);
+  });
+
+  describe('Scenario: status HTTP de cada erro de domínio (regra de acesso e de conflito)', () => {
+    it.each([
+      ['ConsentRequiredError', new ConsentRequiredError('Sem termo'), 403],
+      ['ForbiddenError', new ForbiddenError('Sem acesso'), 403],
+      [
+        'ProvisioningDeniedError',
+        new ProvisioningDeniedError('Papel não permitido'),
+        403,
+      ],
+      ['NotFoundError', new NotFoundError('Paciente', 'p-1'), 404],
+      ['ConflictError', new ConflictError('Já pago'), 409],
+      [
+        'SchedulingConflictError',
+        new SchedulingConflictError('Horário ocupado'),
+        409,
+      ],
+      [
+        'InvalidStatusTransitionError',
+        new InvalidStatusTransitionError('Transição inválida'),
+        409,
+      ],
+      ['ValidationError', new ValidationError('Inválido'), 400],
+      [
+        'InsufficientStockError',
+        new InsufficientStockError('Sem estoque'),
+        400,
+      ],
+    ])(
+      'Dado %s, Quando descreve a falha, Então o status é %i',
+      (_nome, error, status) => {
+        expect(describeFailure(error).status).toBe(status);
+      },
+    );
   });
 });

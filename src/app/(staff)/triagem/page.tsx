@@ -1,51 +1,35 @@
-'use client';
-
 import { Card } from '@still-void/ui/react';
-import {
-  EmptyState,
-  ErrorAlert,
-  LoadingIndicator,
-} from '@/components/feedback';
+import { TriageActions } from '@/app/(staff)/_hoje/triage-actions';
+import { EmptyState } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
-import { TriagePhotoList } from '@/components/triage-photo-list';
-import { useTriageQueue } from '@/lib/use-triage-queue';
+import { RefreshErrorAlert } from '@/components/refresh-error-alert';
+import { loadBlock } from '@/lib/server/data/load-block';
+import { buildLinkedTriageQueue } from '@/lib/server/data/triage';
+import { requireStaffPageFor } from '@/lib/server/session';
 
 /**
- * Lista completa da fila de triagem (issue #135) — o resumo no dashboard
- * (`src/app/(staff)/page.tsx`) capa em 8 e linka pra cá. Mesmo hook e mesmo
- * componente de lista dos dois lugares; só a moldura da página muda.
+ * Lista completa da fila de triagem (issue #135) no servidor (#549, ADR-069):
+ * a fila chega no HTML, sem chamada `/api` na carga. O resumo da tela Hoje
+ * capa em 8 e linka pra cá; os dois usam a mesma leitura (`buildLinkedTriageQueue`,
+ * escopo R4 do papel) e a mesma Server Action de decisão (`TriageActions`).
  */
-export default function TriagePage() {
-  const {
-    queue,
-    queryError,
-    isLoading,
-    actionError,
-    submittingId,
-    refresh,
-    triage,
-  } = useTriageQueue();
+export default async function TriagePage() {
+  const session = await requireStaffPageFor('/triagem');
+  const loaded = await loadBlock(() => buildLinkedTriageQueue(session));
 
   return (
     <div>
       <PageHeader title="Triagem de fotos" />
       <Card className="p-5">
-        {isLoading ? (
-          <LoadingIndicator />
-        ) : queryError ? (
-          <ErrorAlert message={queryError} onRetry={refresh} />
-        ) : !queue || queue.length === 0 ? (
+        {loaded.error !== null ? (
+          <RefreshErrorAlert message={loaded.error} />
+        ) : loaded.data.length === 0 ? (
           <EmptyState
             message="Nenhuma foto aguardando triagem."
             icon="check-circle"
           />
         ) : (
-          <TriagePhotoList
-            queue={queue}
-            actionError={actionError}
-            submittingId={submittingId}
-            onTriage={triage}
-          />
+          <TriageActions queue={loaded.data} />
         )}
       </Card>
     </div>

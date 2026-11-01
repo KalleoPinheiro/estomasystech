@@ -9,17 +9,24 @@ import { Modal } from '@/components/modal';
 import {
   GUARDIAN_RELATIONSHIP_LABELS,
   GUARDIAN_RELATIONSHIPS,
+  type GuardianRelationship,
 } from '@/domain/guardian/guardian';
 import {
   formatBrazilianPhone,
   parseBrazilianPhone,
 } from '@/domain/shared/phone';
+import { unwrapAction } from '@/lib/action-result';
 import { GUARDIAN_MANAGER_ROLES } from '@/lib/auth/guardian-access';
-import { apiFetch } from '@/lib/client';
 import type { GuardianDto, PatientDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
 import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
+import {
+  createGuardian,
+  deleteGuardian,
+  linkPatientGuardian,
+  updateGuardian,
+} from './actions/cadastro';
 
 /** Só Admin de Empresa e Atendente gerenciam responsáveis (#329); a API repete a regra. */
 function useCanManageGuardians(): boolean {
@@ -34,9 +41,13 @@ function useCanManageGuardians(): boolean {
 const errorMessage = (err: unknown, fallback: string): string =>
   err instanceof Error ? err.message : fallback;
 
+/** Parentesco válido: o que o `<select>` oferece; qualquer outro valor cai em «mãe». */
+const asRelationship = (value: string): GuardianRelationship =>
+  GUARDIAN_RELATIONSHIPS.find((key) => key === value) ?? 'mae';
+
 interface GuardianFormValues {
   fullName: string;
-  relationship: string;
+  relationship: GuardianRelationship;
   phone: string;
   email: string;
 }
@@ -52,14 +63,16 @@ function GuardianFormModal({
 }) {
   const [values, setValues] = useState<GuardianFormValues>({
     fullName: guardian?.fullName ?? '',
-    relationship: guardian?.relationship ?? 'mae',
+    relationship: asRelationship(guardian?.relationship ?? 'mae'),
     phone: guardian?.phone ?? '',
     email: guardian?.email ?? '',
   });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const set = (field: keyof GuardianFormValues) => (value: string) =>
-    setValues((prev) => ({ ...prev, [field]: value }));
+  const set =
+    (field: Exclude<keyof GuardianFormValues, 'relationship'>) =>
+    (value: string) =>
+      setValues((prev) => ({ ...prev, [field]: value }));
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -98,7 +111,12 @@ function GuardianFormModal({
           Parentesco *
           <NativeSelect
             value={values.relationship}
-            onChange={(e) => set('relationship')(e.target.value)}
+            onChange={(e) =>
+              setValues((prev) => ({
+                ...prev,
+                relationship: asRelationship(e.target.value),
+              }))
+            }
             className="mt-1"
           >
             {GUARDIAN_RELATIONSHIPS.map((key) => (
@@ -255,10 +273,7 @@ export function GuardianPanel({
     onChanged();
   };
   const link = (guardianId: string | null) =>
-    apiFetch(`/api/patients/${patient.id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ guardianId }),
-    });
+    unwrapAction(linkPatientGuardian({ patientId: patient.id, guardianId }));
   const run = async (action: () => Promise<unknown>, success: string) => {
     setError(null);
     try {
@@ -271,15 +286,12 @@ export function GuardianPanel({
     }
   };
   const saveGuardian = async (values: GuardianFormValues) => {
-    const body = JSON.stringify({ ...values, email: values.email || null });
+    const body = { ...values, email: values.email || null };
     if (guardian) {
-      await apiFetch(`/api/guardians/${guardian.id}`, { method: 'PUT', body });
+      await unwrapAction(updateGuardian({ id: guardian.id, body }));
       return done('Responsável atualizado');
     }
-    const created = await apiFetch<GuardianDto>('/api/guardians', {
-      method: 'POST',
-      body,
-    });
+    const created = await unwrapAction(createGuardian(body));
     await link(created.id);
     done('Responsável cadastrado e vinculado');
   };
@@ -342,9 +354,7 @@ export function GuardianPanel({
                 onConfirm={() =>
                   run(async () => {
                     await link(null);
-                    await apiFetch(`/api/guardians/${guardian.id}`, {
-                      method: 'DELETE',
-                    });
+                    await unwrapAction(deleteGuardian({ id: guardian.id }));
                   }, 'Responsável excluído')
                 }
               />

@@ -20,9 +20,8 @@ export interface UseConditionPhotosResult {
 }
 
 /**
- * Fotos de evolução de uma Condition (galeria da ficha do paciente) — mesmo
- * seam de use-triage-queue.ts (useApiQuery + apiFetch) pro mesmo domínio
- * (Condition Photo). Upload usa `fetch` cru: `apiFetch` fixa
+ * Fotos de evolução de uma Condition (galeria da ficha do paciente) — seam
+ * de `useApiQuery` + `apiFetch` (domínio Condition Photo). Upload usa `fetch` cru: `apiFetch` fixa
  * `Content-Type: application/json`, incompatível com `FormData` (o browser
  * precisa definir o boundary do multipart sozinho).
  */

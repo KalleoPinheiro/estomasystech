@@ -9,14 +9,14 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
+import { renderServerPage } from '@/../tests/support/server-page';
 import {
   ConditionProgress,
   type ConditionWithAssessmentsDto,
 } from '@/app/portal/condition-progress';
 import { ConsentCard, PatientPhotoUpload } from '@/app/portal/consent-card';
+import PortalLoading from '@/app/portal/loading';
 import PortalPage from '@/app/portal/page';
-import { PartnerPortalView } from '@/app/portal/partner-view';
-import { PatientPortalView } from '@/app/portal/patient-view';
 import type {
   AssessmentDto,
   ConditionDto,
@@ -29,6 +29,19 @@ import type {
   ReferredPatientSummaryDto,
 } from '@/lib/dto';
 import { formatDate, formatDateTime, formatTime } from '@/lib/format';
+
+import {
+  PartnerPortalHarness,
+  PatientPortalHarness,
+} from '../support/portal-harness';
+
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
+);
 
 function jsonResponse(
   success: boolean,
@@ -157,57 +170,60 @@ const emptyPatientBundle = {
   followUps: [] as FollowUpDto[],
 };
 
+// TESTE-ALTERADO (#553, ADR-081): a página é Server Component. O papel vem da
+// sessão (não de `/api/portal/me`), a sessão ausente vira redirecionamento da
+// guarda e o carregamento é o `loading.tsx` do segmento. Mesmos cenários.
+const pageSession = vi.hoisted(() => ({
+  signedIn: vi.fn(),
+  patientPage: vi.fn(),
+  view: vi.fn(),
+  partner: vi.fn(),
+  represented: vi.fn(),
+}));
+
+vi.mock('@/lib/server/session', () => ({
+  requireSignedInPage: pageSession.signedIn,
+  requirePatientPortalPage: pageSession.patientPage,
+}));
+vi.mock('@/lib/server/data/portal', () => ({
+  loadPatientPortalView: pageSession.view,
+  loadPartnerPortal: pageSession.partner,
+  loadRepresentedPatients: pageSession.represented,
+}));
+
 describe('Feature: Página do portal', () => {
   describe('Cenário: carregando sessão', () => {
     it('Dado que a sessão ainda não chegou, Quando renderizar, Então exibe indicador de carregamento', () => {
-      mockFetch([
-        {
-          path: '/api/portal/me',
-          respond: () =>
-            jsonResponse(true, { subject: 'x', role: 'company_admin' }),
-        },
-      ]);
-
-      render(<PortalPage />);
+      render(<PortalLoading />);
 
       expect(screen.getByText('Carregando…')).toBeInTheDocument();
     });
   });
 
   // PORT-01/PORT-10 (#93): sem sessão válida, a tela não repete a mensagem
-  // crua da API ("Não autenticado" etc.) — mostra estado dedicado com link
-  // "Entrar", não um beco sem saída.
+  // crua da API ("Não autenticado" etc.) — a guarda leva para o login com o
+  // motivo, não para um beco sem saída.
   describe('Cenário: erro ao carregar sessão', () => {
-    it('Dado falha na API de sessão, Quando renderizar, Então mostra estado de sessão expirada com link de entrar', async () => {
-      mockFetch([
-        {
-          path: '/api/portal/me',
-          respond: () => jsonResponse(false, null, 'Não autenticado'),
-        },
-      ]);
+    it('Dado sessão vencida, Quando renderizar, Então a guarda redireciona para o login com sessão expirada', async () => {
+      pageSession.signedIn.mockRejectedValue(
+        new Error('NEXT_REDIRECT:/login?error=session_expired'),
+      );
 
-      render(<PortalPage />);
-
-      expect(await screen.findByText('Sua sessão expirou')).toBeInTheDocument();
-      const link = screen.getByRole('link', { name: /Entrar/ });
-      expect(link).toHaveAttribute('href', '/login?error=session_expired');
+      await expect(PortalPage()).rejects.toThrow(
+        '/login?error=session_expired',
+      );
+      expect(pageSession.signedIn).toHaveBeenCalledWith({ next: '/portal' });
     });
   });
 
   describe('Cenário: sessão da equipe da clínica', () => {
     it('Dado role admin, Quando renderizar, Então exibe mensagem de equipe e link para o sistema', async () => {
-      mockFetch([
-        {
-          path: '/api/portal/me',
-          respond: () =>
-            jsonResponse(true, {
-              subject: 'ana@clinica.com',
-              role: 'company_admin',
-            }),
-        },
-      ]);
+      pageSession.signedIn.mockResolvedValue({
+        subject: 'ana@clinica.com',
+        role: 'company_admin',
+      });
 
-      render(<PortalPage />);
+      await renderServerPage(() => PortalPage());
 
       expect(
         await screen.findByText(
@@ -221,18 +237,12 @@ describe('Feature: Página do portal', () => {
     });
 
     it('Dado role admin, Então o bloco é um Card do Still Void, não uma div de superfície', async () => {
-      mockFetch([
-        {
-          path: '/api/portal/me',
-          respond: () =>
-            jsonResponse(true, {
-              subject: 'ana@clinica.com',
-              role: 'company_admin',
-            }),
-        },
-      ]);
+      pageSession.signedIn.mockResolvedValue({
+        subject: 'ana@clinica.com',
+        role: 'company_admin',
+      });
 
-      const { container } = render(<PortalPage />);
+      const { container } = await renderServerPage(() => PortalPage());
       await screen.findByText('Ir para o sistema da clínica');
 
       // SPEC_DEVIATION: na 3.x o <Card> do pacote emite a classe semântica
@@ -246,54 +256,39 @@ describe('Feature: Página do portal', () => {
 
   describe('Cenário: sessão de paciente', () => {
     it('Dado role patient, Quando renderizar, Então exibe a visão do paciente', async () => {
-      mockFetch([
-        {
-          path: '/api/portal/me',
-          respond: () =>
-            jsonResponse(true, { subject: 'pat-1', role: 'patient' }),
-        },
-        {
-          path: '/api/portal/patient/consent',
-          respond: () =>
-            jsonResponse(true, {
-              consentText: 'Termo',
-              accepted: true,
-              acceptedAt: null,
-            }),
-        },
-        {
-          path: '/api/portal/patient',
-          respond: () => jsonResponse(true, emptyPatientBundle),
-        },
-      ]);
+      const session = { subject: 'pat-1', role: 'patient' };
+      pageSession.signedIn.mockResolvedValue(session);
+      pageSession.patientPage.mockResolvedValue(session);
+      pageSession.view.mockResolvedValue({
+        data: emptyPatientBundle,
+        consent: { consentText: 'Termo', accepted: true, acceptedAt: null },
+        imageConsent: null,
+        waitlist: [],
+        dataRequests: [],
+        partnerConsent: null,
+      });
 
-      renderWithToast(<PortalPage />);
+      await renderServerPage(() => PortalPage());
 
       expect(
         await screen.findByRole('heading', { name: 'Olá, Ana!' }),
       ).toBeInTheDocument();
+      expect(pageSession.view).toHaveBeenCalledWith(session);
     });
   });
 
   describe('Cenário: sessão de parceiro', () => {
     it('Dado role partner, Quando renderizar, Então exibe a visão do parceiro', async () => {
-      mockFetch([
-        {
-          path: '/api/portal/me',
-          respond: () =>
-            jsonResponse(true, { subject: 'partner-1', role: 'partner' }),
-        },
-        {
-          path: '/api/portal/partner',
-          respond: () =>
-            jsonResponse(true, {
-              partner: partnerFixture,
-              referredPatients: [],
-            }),
-        },
-      ]);
+      pageSession.signedIn.mockResolvedValue({
+        subject: 'partner-1',
+        role: 'partner',
+      });
+      pageSession.partner.mockResolvedValue({
+        partner: partnerFixture,
+        referredPatients: [],
+      });
 
-      render(<PortalPage />);
+      await renderServerPage(() => PortalPage());
 
       expect(
         await screen.findByRole('heading', { name: 'Dr. Carlos Lima' }),
@@ -312,7 +307,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(screen.getByText('Carregando…')).toBeInTheDocument();
     });
@@ -327,7 +322,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText('Erro ao buscar paciente'),
@@ -353,7 +348,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText(
@@ -402,7 +397,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       const confirmButton = await screen.findByText('Confirmar presença');
       fireEvent.click(confirmButton);
@@ -444,7 +439,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       const confirmButton = await screen.findByText('Confirmar presença');
       fireEvent.click(confirmButton);
@@ -484,7 +479,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText('Uma consulta sua foi cancelada pela clínica:'),
@@ -529,7 +524,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText('Retornos recomendados'),
@@ -630,7 +625,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       );
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       fireEvent.click(await screen.findByText('Agendar retorno'));
       fireEvent.change(await screen.findByLabelText(/Procedimento/), {
@@ -724,7 +719,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       fireEvent.click(await screen.findByText('Agendar retorno'));
       fireEvent.change(await screen.findByLabelText(/Procedimento/), {
@@ -775,7 +770,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       await screen.findByText('Ferida perna E');
       expect(screen.getByText('Estomia resolvida')).toBeInTheDocument();
@@ -830,7 +825,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText('Termo de autorização de imagem pendente'),
@@ -904,7 +899,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       const button = await screen.findByText('Li e aceito o termo de imagem');
       fireEvent.click(
@@ -932,11 +927,10 @@ describe('Feature: Visão do paciente no portal', () => {
       mockFetch([
         {
           path: '/api/portal/patient/consent',
-          // Status indeterminado: a requisição nunca resolve dentro do teste.
-          respond: () => ({
-            ok: true,
-            json: () => new Promise<unknown>(() => {}),
-          }),
+          // TESTE-ALTERADO (#553): o servidor resolve o status antes de entregar a
+          // tela; «indeterminado» agora é a leitura do termo que falha (status
+          // ausente), e a asserção segue a mesma: o envio não é bloqueado.
+          respond: () => jsonResponse(false, null, 'Termo indisponível'),
         },
         {
           path: '/api/portal/patient',
@@ -948,7 +942,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       await screen.findByText('Ferida perna E');
       expect(
@@ -997,7 +991,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText('Troca de bolsa de colostomia'),
@@ -1035,7 +1029,7 @@ describe('Feature: Visão do paciente no portal', () => {
         },
       ]);
 
-      renderWithToast(<PatientPortalView />);
+      renderWithToast(<PatientPortalHarness />);
 
       expect(
         await screen.findByText(formatDateTime(pastAppointment.startsAt)),
@@ -1060,7 +1054,7 @@ describe('Feature: Visão do parceiro no portal', () => {
         },
       ]);
 
-      render(<PartnerPortalView />);
+      render(<PartnerPortalHarness />);
 
       expect(screen.getByText('Carregando…')).toBeInTheDocument();
     });
@@ -1076,7 +1070,7 @@ describe('Feature: Visão do parceiro no portal', () => {
         },
       ]);
 
-      render(<PartnerPortalView />);
+      render(<PartnerPortalHarness />);
 
       expect(
         await screen.findByText('Erro ao buscar dados do parceiro'),
@@ -1097,7 +1091,7 @@ describe('Feature: Visão do parceiro no portal', () => {
         },
       ]);
 
-      render(<PartnerPortalView />);
+      render(<PartnerPortalHarness />);
 
       expect(
         await screen.findByText(
@@ -1152,7 +1146,7 @@ describe('Feature: Visão do parceiro no portal', () => {
         },
       ]);
 
-      render(<PartnerPortalView />);
+      render(<PartnerPortalHarness />);
 
       expect(await screen.findByText('João Pereira')).toBeInTheDocument();
       expect(
@@ -1194,7 +1188,7 @@ describe('Feature: Visão do parceiro no portal', () => {
         },
       ]);
 
-      render(<PartnerPortalView />);
+      render(<PartnerPortalHarness />);
 
       fireEvent.click(await screen.findByText('Ver evolução'));
 
@@ -1232,7 +1226,7 @@ describe('Feature: Visão do parceiro sem consentimento do paciente (#292)', () 
         },
       ]);
 
-      render(<PartnerPortalView />);
+      render(<PartnerPortalHarness />);
 
       expect(
         await screen.findByText('Ana Sem Consentimento'),

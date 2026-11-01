@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DiscountForm,
   PaymentForm,
@@ -18,7 +18,75 @@ import PaymentReceiptPage from '@/app/documentos/recibo/[invoiceId]/[paymentId]/
 import type { ReceiptParties } from '@/domain/billing/receipt';
 import { CNPJ_UNDER_REVIEW_MESSAGE } from '@/domain/billing/receipt';
 import type { ClinicInfoDto, InvoiceDto } from '@/lib/dto';
+import {
+  actionError,
+  actionOk,
+  billing,
+  mockBillingData,
+  resetBillingData,
+} from '../support/billing-data';
+import { renderDocumentPage } from '../support/documentos-over-fetch';
+import { PatientPortalHarness } from '../support/portal-harness';
 import { renderWithToast } from '../support/render-with-toast';
+import { renderServerPage } from '../support/server-page';
+
+vi.mock('next/navigation', async () => {
+  const { billing } = await import('../support/billing-data');
+  const { portalRouter } = await import('../support/portal-router');
+  return {
+    useRouter: () => ({
+      refresh: () => {
+        billing.refresh();
+        portalRouter.reload();
+      },
+      push: vi.fn(),
+    }),
+    usePathname: () => '/faturamento',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { billing } = await import('../support/billing-data');
+  const documentos = await import('../support/documentos-over-fetch');
+  return {
+    requireStaffPageFor: billing.requireStaffPageFor,
+    ...documentos.sessionOverFetch(),
+  };
+});
+vi.mock('@/lib/server/data/clinic-info', async () =>
+  (await import('../support/documentos-over-fetch')).clinicInfoOverFetch(),
+);
+vi.mock('@/lib/server/data/documents', async () =>
+  (await import('../support/documentos-over-fetch')).documentsDataOverFetch(),
+);
+vi.mock('@/lib/server/document-issuance', async () =>
+  (await import('../support/documentos-over-fetch')).noPriorIssuance(),
+);
+vi.mock('@/app/documentos/actions', async () =>
+  (await import('../support/documentos-over-fetch')).documentActionsOverFetch(),
+);
+vi.mock('@/lib/server/data/invoices', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    listInvoicesFor: billing.listInvoicesFor,
+    getInvoiceSummaryFor: billing.getInvoiceSummaryFor,
+  };
+});
+vi.mock('@/lib/server/data/procedures', async () => {
+  const { billing } = await import('../support/billing-data');
+  return { listProceduresFor: billing.listProceduresFor };
+});
+vi.mock('@/app/(staff)/faturamento/billing-actions', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    createInvoice: billing.createInvoice,
+    updateInvoice: billing.updateInvoice,
+    sellPackage: billing.sellPackage,
+  };
+});
+
+/** Renderiza o Faturamento no servidor, com a leitura simulada. */
+const renderBilling = () =>
+  renderServerPage(() => BillingPage({ searchParams: Promise.resolve({}) }));
 
 interface Call {
   url: string;
@@ -93,24 +161,9 @@ function mockFetch(
   return calls;
 }
 
-const billingRouter =
-  (invoices: InvoiceDto[], patch?: () => FakeResponse) =>
-  (url: string, method: string) => {
-    if (method === 'PATCH') return patch ? patch() : ok(invoices[0]);
-    if (url.startsWith('/api/invoices/summary')) {
-      return ok({
-        paidCents: 5000,
-        pendingCents: 13000,
-        totalInvoices: 1,
-        paidCount: 0,
-        pendingCount: 1,
-        cancelledCount: 0,
-      });
-    }
-    if (url.startsWith('/api/invoices')) return ok(invoices);
-    if (url.startsWith('/api/patients')) return ok([]);
-    return undefined;
-  };
+beforeEach(() => {
+  resetBillingData();
+});
 
 afterEach(() => {
   cleanup();
@@ -199,8 +252,8 @@ describe('Feature: Recebimento e desconto (formulários)', () => {
 
 describe('Feature: Faturamento com parcial, desconto e recibos', () => {
   it('Dado fatura com desconto e parcial, Quando listar, Então mostra original riscado, líquido, saldo, recebimento com recibo e esconde Cancelar', async () => {
-    mockFetch(billingRouter([partial]));
-    renderWithToast(<BillingPage />);
+    mockBillingData({ invoices: [partial] });
+    await renderBilling();
 
     expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
     expect(screen.getByText('R$ 200,00')).toHaveClass('line-through');
@@ -214,8 +267,9 @@ describe('Feature: Faturamento com parcial, desconto e recibos', () => {
   });
 
   it('Dado recebimento parcial, Quando registrar, Então envia pay_partial e avisa', async () => {
-    const calls = mockFetch(billingRouter([base]));
-    renderWithToast(<BillingPage />);
+    mockBillingData({ invoices: [base] });
+    billing.updateInvoice.mockResolvedValue(actionOk(base));
+    await renderBilling();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Receber' }));
     fireEvent.change(await screen.findByLabelText('Valor recebido (R$)'), {
@@ -229,18 +283,16 @@ describe('Feature: Faturamento com parcial, desconto e recibos', () => {
     expect(
       await screen.findByText('Pagamento parcial registrado'),
     ).toBeInTheDocument();
-    expect(
-      JSON.parse(calls.find((c) => c.method === 'PATCH')?.body ?? '{}'),
-    ).toEqual({
-      action: 'pay_partial',
-      amountCents: 5000,
-      method: 'pix',
+    expect(billing.updateInvoice).toHaveBeenCalledWith({
+      id: 'inv-1',
+      change: { action: 'pay_partial', amountCents: 5000, method: 'pix' },
     });
   });
 
   it('Dado desconto, Quando aplicar pela tela, Então envia a ação e fecha o modal', async () => {
-    const calls = mockFetch(billingRouter([base]));
-    renderWithToast(<BillingPage />);
+    mockBillingData({ invoices: [base] });
+    billing.updateInvoice.mockResolvedValue(actionOk(base));
+    await renderBilling();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desconto' }));
     fireEvent.change(await screen.findByLabelText('Desconto (R$)'), {
@@ -253,20 +305,18 @@ describe('Feature: Faturamento com parcial, desconto e recibos', () => {
 
     expect(await screen.findByText('Desconto aplicado')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(
-      JSON.parse(calls.find((c) => c.method === 'PATCH')?.body ?? '{}'),
-    ).toEqual({
-      action: 'discount',
-      amountCents: 2000,
-      reason: 'Acordo',
+    expect(billing.updateInvoice).toHaveBeenCalledWith({
+      id: 'inv-1',
+      change: { action: 'discount', amountCents: 2000, reason: 'Acordo' },
     });
   });
 
   it('Dado erro da API no desconto, Então a mensagem aparece no modal', async () => {
-    mockFetch(
-      billingRouter([base], () => failure('Motivo do desconto é obrigatório')),
+    mockBillingData({ invoices: [base] });
+    billing.updateInvoice.mockResolvedValue(
+      actionError('Motivo do desconto é obrigatório'),
     );
-    renderWithToast(<BillingPage />);
+    await renderBilling();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desconto' }));
     fireEvent.change(await screen.findByLabelText('Motivo *'), {
@@ -317,7 +367,7 @@ const renderReceipt = async (
     return undefined;
   });
   await act(async () => {
-    renderWithToast(
+    await renderDocumentPage(
       <PaymentReceiptPage
         params={Promise.resolve({ invoiceId: 'inv-1', paymentId })}
       />,
@@ -419,7 +469,7 @@ describe('Feature: Recibo de pagamento', () => {
       return undefined;
     });
     await act(async () => {
-      renderWithToast(
+      await renderDocumentPage(
         <PaymentReceiptPage
           params={Promise.resolve({ invoiceId: 'inv-1', paymentId: 'pay-1' })}
         />,
@@ -441,7 +491,7 @@ describe('Feature: Recibo de pagamento', () => {
       return undefined;
     });
     await act(async () => {
-      renderWithToast(
+      await renderDocumentPage(
         <PaymentReceiptPage
           params={Promise.resolve({ invoiceId: 'inv-1', paymentId: 'pay-1' })}
         />,
@@ -494,7 +544,6 @@ describe('Feature: Recibo de pagamento', () => {
 
 describe('Feature: Fatura parcial no portal do paciente', () => {
   it('Dado fatura com pagamento parcial, Quando abrir o portal, Então mostra o líquido, o pago e o que falta', async () => {
-    const { PatientPortalView } = await import('@/app/portal/patient-view');
     mockFetch((url) => {
       if (url.startsWith('/api/portal/patient/consent')) {
         return ok({ consentText: 'Termo', accepted: true, acceptedAt: null });
@@ -516,7 +565,7 @@ describe('Feature: Fatura parcial no portal do paciente', () => {
       }
       return undefined;
     });
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     expect(await screen.findByText('R$ 180,00')).toBeInTheDocument();
     expect(
@@ -571,9 +620,10 @@ describe('Feature: Pagador distinto do paciente no recebimento (#326)', () => {
     expect(onPay).not.toHaveBeenCalled();
   });
 
-  it('Dado a faturamento, Quando receber com pagador, Então o PATCH leva payerName e payerCpf', async () => {
-    const calls = mockFetch(billingRouter([base]));
-    renderWithToast(<BillingPage />);
+  it('Dado a faturamento, Quando receber com pagador, Então a ação leva payerName e payerCpf', async () => {
+    mockBillingData({ invoices: [base] });
+    billing.updateInvoice.mockResolvedValue(actionOk(base));
+    await renderBilling();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Receber' }));
     fireEvent.click(
@@ -588,18 +638,20 @@ describe('Feature: Pagador distinto do paciente no recebimento (#326)', () => {
     clickPix();
 
     await screen.findByText('Pagamento registrado');
-    const patch = calls.find((c) => c.method === 'PATCH');
-    expect(JSON.parse(patch?.body ?? '{}')).toMatchObject({
-      action: 'pay',
-      method: 'pix',
-      payerName: 'João Souza',
-      payerCpf: '111.444.777-35',
+    expect(billing.updateInvoice).toHaveBeenCalledWith({
+      id: 'inv-1',
+      change: expect.objectContaining({
+        action: 'pay',
+        method: 'pix',
+        payerName: 'João Souza',
+        payerCpf: '111.444.777-35',
+      }),
     });
   });
 
   it('Dado pagamento já feito por outra pessoa, Então a lista mostra quem pagou', async () => {
-    mockFetch(
-      billingRouter([
+    mockBillingData({
+      invoices: [
         {
           ...partial,
           payments: [
@@ -609,9 +661,9 @@ describe('Feature: Pagador distinto do paciente no recebimento (#326)', () => {
             },
           ],
         },
-      ]),
-    );
-    renderWithToast(<BillingPage />);
+      ],
+    });
+    await renderBilling();
 
     expect(await screen.findByText(/pago por João Souza/)).toBeInTheDocument();
   });

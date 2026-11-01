@@ -47,6 +47,8 @@ export class ScheduleRecurringAppointments {
     input: RecurringScheduleInput,
   ): Promise<RecurringScheduleResult> {
     const interval = validateRecurrence(input);
+    // Paciente alheio ou inexistente invalida a série toda (#605).
+    await this.schedule.assertPatient(input.patientId);
     // Profissional inválido invalida a série toda — não vira N ocorrências puladas.
     await this.schedule.assertProfessional(input.professionalId);
     const result: RecurringScheduleResult = { created: [], skipped: [] };

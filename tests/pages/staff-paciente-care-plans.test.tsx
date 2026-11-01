@@ -9,7 +9,6 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import PatientRecordPage from '@/app/(staff)/pacientes/[id]/page';
 import type { CarePlanDiagnosisType } from '@/domain/clinical/care-plan-diagnosis';
 import type { InterventionPriority } from '@/domain/clinical/care-plan-intervention';
 import type {
@@ -21,6 +20,7 @@ import type {
   NursingOutcomeDto,
   PatientDto,
 } from '@/lib/dto';
+import { renderPatientRecord } from '../support/render-patient-record';
 
 const { routerMock, searchParamsRef } = vi.hoisted(() => {
   return {
@@ -28,6 +28,25 @@ const { routerMock, searchParamsRef } = vi.hoisted(() => {
     searchParamsRef: { current: new URLSearchParams() },
   };
 });
+
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/cadastro',
+  async () => (await import('../support/ficha-actions-via-fetch')).cadastro,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/prontuario',
+  async () => (await import('../support/ficha-actions-via-fetch')).prontuario,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/plano-cuidados',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).planoCuidados,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/consentimento',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).consentimento,
+);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => routerMock,
@@ -67,8 +86,10 @@ afterEach(() => {
 });
 
 async function renderDetail(id = 'pac-1') {
-  await act(async () => {
-    renderWithToast(<PatientRecordPage params={Promise.resolve({ id })} />);
+  await renderPatientRecord((children) => children, {
+    id,
+    initialTab: searchParamsRef.current.get('aba') ?? undefined,
+    router: routerMock,
   });
 }
 

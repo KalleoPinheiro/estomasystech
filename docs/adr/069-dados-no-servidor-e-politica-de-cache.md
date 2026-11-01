@@ -1,9 +1,9 @@
 ---
 title: "ADR 069 — Telas carregam dados no servidor e nenhum dado de clínica entra em cache compartilhado"
-status: draft
+status: frozen
 audience: [dev, agent, po]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-24
+last_reviewed: 2026-10-25
 related:
   - docs/engineering/performance-front-linha-de-base-2026-10.md
   - docs/adr/001-multi-tenancy.md
@@ -14,7 +14,7 @@ related:
 # ADR 069 — Telas carregam dados no servidor e nenhum dado de clínica entra em cache compartilhado
 
 - **Data:** 2026-10-24
-- **Status:** proposto (aguarda aceite do orquestrador como Product Owner; vira `frozen` no aceite)
+- **Status:** aceito em 2026-10-25 pelo orquestrador como Product Owner, ao implementar a fundação ([#544](https://github.com/KalleoPinheiro/estomasystech/issues/544), [ADR-074](074-fundacao-server-first-sessao-dados-e-acoes.md)).
 - **Domínios afetados:** todos os que têm tela (agenda, pacientes-prontuario, financeiro, estoque, equipe-parceiros, relatorios, acesso, portal)
 
 ## Contexto

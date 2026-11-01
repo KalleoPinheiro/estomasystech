@@ -32,12 +32,9 @@ for (const width of [768, 1280]) {
     }
 
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/agenda");
-    await page.getByRole("button", { name: "Semana", exact: true }).click();
+    // O período vem da URL (#551): abre direto na semana do dia da seed.
+    await page.goto(`/agenda?visao=semana&dia=${key}`);
     const column = page.locator(`[data-week-day="${key}"]`);
-    for (let attempt = 0; attempt < 14 && (await column.count()) === 0; attempt++) {
-      await page.getByRole("button", { name: "Próxima semana" }).click();
-    }
     await expect(column.locator("button[title]")).toHaveCount(SLOTS.length);
 
     const problems = await column.locator("button[title]").evaluateAll((blocks, hourPx) => {

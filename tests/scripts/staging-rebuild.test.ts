@@ -9,17 +9,31 @@ describe('Feature: rebuild da staging dispara deploy na Vercel', () => {
   let dir: string;
   let work: string;
 
+  // why: isolar do git do usuário (gpgsign, hooks, fsync) tira segundos de cada comando
+  // sob carga e deixa o teste igual em qualquer máquina (#604).
+  const gitEnv = {
+    ...process.env,
+    GIT_AUTHOR_NAME: 't',
+    GIT_AUTHOR_EMAIL: 't@t',
+    GIT_COMMITTER_NAME: 't',
+    GIT_COMMITTER_EMAIL: 't@t',
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_TERMINAL_PROMPT: '0',
+    GIT_CONFIG_COUNT: '3',
+    GIT_CONFIG_KEY_0: 'core.fsync',
+    GIT_CONFIG_VALUE_0: 'none',
+    GIT_CONFIG_KEY_1: 'gc.auto',
+    GIT_CONFIG_VALUE_1: '0',
+    GIT_CONFIG_KEY_2: 'commit.gpgsign',
+    GIT_CONFIG_VALUE_2: 'false',
+  };
+
   const git = (...args: string[]) =>
     execFileSync('git', args, {
       cwd: work,
       encoding: 'utf8',
-      env: {
-        ...process.env,
-        GIT_AUTHOR_NAME: 't',
-        GIT_AUTHOR_EMAIL: 't@t',
-        GIT_COMMITTER_NAME: 't',
-        GIT_COMMITTER_EMAIL: 't@t',
-      },
+      env: gitEnv,
     }).trim();
   const commit = (file: string, message: string) => {
     mkdirSync(join(work, file, '..'), { recursive: true });
@@ -31,13 +45,7 @@ describe('Feature: rebuild da staging dispara deploy na Vercel', () => {
     spawnSync('bash', [join(root, 'scripts/staging/rebuild.sh'), ...args], {
       cwd: work,
       encoding: 'utf8',
-      env: {
-        ...process.env,
-        GIT_AUTHOR_NAME: 't',
-        GIT_AUTHOR_EMAIL: 't@t',
-        GIT_COMMITTER_NAME: 't',
-        GIT_COMMITTER_EMAIL: 't@t',
-      },
+      env: gitEnv,
     });
 
   beforeEach(() => {

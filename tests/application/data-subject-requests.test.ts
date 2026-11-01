@@ -153,4 +153,19 @@ describe('ResolveDataSubjectRequest (#293)', () => {
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
   });
+
+  it('pedido inexistente: a mensagem nomeia o pedido e o id (#555)', async () => {
+    const { useCase } = fakes({
+      account,
+      email: { isEnabled: async () => true, send: async () => undefined },
+    });
+
+    await expect(
+      useCase.prepare({
+        requestId: 'x',
+        decision: 'accept',
+        justification: 'ok',
+      }),
+    ).rejects.toMatchObject({ entity: 'Pedido', entityId: 'x' });
+  });
 });

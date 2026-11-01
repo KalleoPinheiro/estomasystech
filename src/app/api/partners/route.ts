@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CreatePartner } from '@/application/partners/create-partner';
-import { ListPartners } from '@/application/partners/list-partners';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toPartnerDto } from '@/lib/dto';
+import { listPartnersFor } from '@/lib/server/data/partners';
 
 const partnerSchema = z.object({
   fullName: z.string().min(1).max(200),
@@ -20,11 +20,7 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { partners } = await getRepositories(sessionScope(guard.session));
-    const result = await new ListPartners(partners).execute();
-    return result.map(toPartnerDto);
-  });
+  return handleRequest(() => listPartnersFor(guard.session));
 }
 
 export async function POST(request: NextRequest) {

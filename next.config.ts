@@ -71,7 +71,13 @@ const nextConfig: NextConfig = {
   // Issue #219: não anuncia `X-Powered-By: Next.js` em toda resposta.
   poweredByHeader: false,
   output: "standalone",
-  experimental: { proxyClientMaxBodySize: PROXY_CLIENT_MAX_BODY_SIZE },
+  // authInterrupts: `forbidden()` das guardas de página (ADR-074) responde 403 com `forbidden.tsx`.
+  experimental: {
+    proxyClientMaxBodySize: PROXY_CLIENT_MAX_BODY_SIZE,
+    authInterrupts: true,
+    // #559: importa só o que cada rota usa dos pacotes de entrada única com muitas exportações.
+    optimizePackageImports: ["@still-void/ui/react", "@still-void/ui/react/client"],
+  },
   // O indicador de dev tools (<nextjs-portal>) fica fixo no canto da tela e
   // intercepta cliques em elementos reais ali embaixo (ex.: botão "Sair" da
   // sidebar) — atrapalha o Playwright em modo dev sem existir em produção.

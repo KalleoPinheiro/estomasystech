@@ -74,9 +74,8 @@ test.describe("exportação de dados do titular (LGPD art. 18)", () => {
       await page.goto("/auditoria");
       // Espera a lista já filtrada: sem isso a asserção vê a trilha inteira,
       // com leituras de outros specs.
-      const filtered = page.waitForResponse((r) => r.url().includes(`patientId=${patient.id}`));
       await pickPatient(page, patient.fullName, "Filtrar por paciente");
-      await filtered;
+      await page.waitForURL(new RegExp(`paciente=${patient.id}`));
       await expect(page.getByRole("row", { name: /Leitura/ }).first()).toBeVisible({
         timeout: 2_000,
       });

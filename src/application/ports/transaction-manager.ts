@@ -1,16 +1,48 @@
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import type { UserAccountRepository } from '@/domain/auth/user-account';
+import type { ProducedSessionRepository } from '@/domain/billing/commission';
+import type { CommissionPayoutRepository } from '@/domain/billing/commission-payout';
 import type { InvoiceRepository } from '@/domain/billing/invoice-repository';
 import type { SessionPackageRepository } from '@/domain/billing/package';
+import type { ProcedureKitRepository } from '@/domain/catalog/procedure-kit';
+import type { ProcedureRepository } from '@/domain/catalog/procedure-repository';
+import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
 import type {
+  AnamnesisRepository,
+  CarePlanDiagnosisRepository,
+  CarePlanInterventionRepository,
+  CarePlanOutcomeRepository,
+  CarePlanRepository,
   ClinicalConditionRepository,
+  ConditionAssessmentRepository,
   ConditionPhotoRepository,
+  EvolutionNoteRepository,
+  InterventionRecordRepository,
+  OutcomeEvaluationRepository,
 } from '@/domain/clinical/clinical-repositories';
+import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
+import type { ConsentRecordRepository } from '@/domain/consent/consent-record';
+import type { PartnerShareConsentRepository } from '@/domain/consent/partner-share-consent';
 import type { FollowUpRepository } from '@/domain/followup/follow-up-repository';
+import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
+import type {
+  StockMovementRepository,
+  SupplyBatchRepository,
+  SupplyRepository,
+} from '@/domain/inventory/inventory-repositories';
+import type { PartnerRepository } from '@/domain/partner/partner-repository';
+import type { DataSubjectRequestRepository } from '@/domain/patient/data-subject-request';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
+import type { ProfessionalRepository } from '@/domain/professional/professional-repository';
 import type { AppointmentRepository } from '@/domain/scheduling/appointment-repository';
 import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedule-availability';
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
+import type { WaitlistRepository } from '@/domain/scheduling/waitlist';
+import type {
+  NursingDiagnosisRepository,
+  NursingInterventionRepository,
+  NursingOutcomeRepository,
+} from '@/domain/taxonomy/taxonomy-repositories';
 
 /**
  * Repositórios disponíveis dentro de uma transação — escopo enxuto, apenas o
@@ -20,6 +52,24 @@ import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-conf
  * `patients` (com `findByIdForUpdate`), agenda e fotos entraram com o teto
  * atômico do portal (#363): tudo que o fluxo lê dentro da transação precisa vir
  * do escopo — usar o repositório de fora trava o PGlite (conexão única).
+ * `procedures`, `professionals`, `producedSessions` e `commissionPayouts` entraram
+ * com o faturamento no servidor (#547): venda de pacote e fechamento/cancelamento
+ * de repasse gravam e auditam na mesma transação (ADR-075 § 4).
+ * `partners`, `guardians` e `professionalPatientLinks` entraram com o cadastro
+ * de paciente como Server Action (#549): paciente, vínculo do Profissional e
+ * auditoria gravam juntos ou nada grava.
+ * Anamnese, evolução, avaliação da condição, plano de cuidados (com diagnósticos,
+ * resultados, intervenções, avaliações e registros), catálogos de enfermagem e
+ * consentimento do parceiro entraram com as ações da ficha do paciente (#552,
+ * ADR-080): cada gravação da ficha e a sua trilha ficam na mesma transação.
+ * `consentRecords`, `dataSubjectRequests` e `clinics` entraram com os atos de LGPD do
+ * portal como Server Action (#553, PR 2a): aceite, revogação e pedido do titular
+ * gravam e auditam na mesma transação. `waitlist` entrou com a saída da lista
+ * de espera pelo portal (#553, PR 2b). `supplies`, `stockMovements` e
+ * `supplyBatches` entraram com Materiais como Server Action (#556, ADR-083):
+ * cadastro, edição e movimentação de estoque (com o lote) gravam e auditam
+ * juntos ou nada grava. `procedureKits` entrou com Procedimentos como Server
+ * Action (#556, PR 2): o kit de insumos grava e audita na mesma transação.
  */
 export interface TransactionScope {
   appointments: AppointmentRepository;
@@ -33,6 +83,34 @@ export interface TransactionScope {
   scheduleAvailability: ScheduleAvailabilityRepository;
   conditions: ClinicalConditionRepository;
   conditionPhotos: ConditionPhotoRepository;
+  procedures: ProcedureRepository;
+  procedureKits: ProcedureKitRepository;
+  professionals: ProfessionalRepository;
+  producedSessions: ProducedSessionRepository;
+  commissionPayouts: CommissionPayoutRepository;
+  partners: PartnerRepository;
+  guardians: GuardianRepository;
+  professionalPatientLinks: ProfessionalPatientLinkRepository;
+  consentRecords: ConsentRecordRepository;
+  dataSubjectRequests: DataSubjectRequestRepository;
+  clinics: ClinicRepository;
+  waitlist: WaitlistRepository;
+  supplies: SupplyRepository;
+  stockMovements: StockMovementRepository;
+  supplyBatches: SupplyBatchRepository;
+  anamneses: AnamnesisRepository;
+  evolutions: EvolutionNoteRepository;
+  assessments: ConditionAssessmentRepository;
+  partnerShareConsents: PartnerShareConsentRepository;
+  carePlans: CarePlanRepository;
+  carePlanDiagnoses: CarePlanDiagnosisRepository;
+  carePlanOutcomes: CarePlanOutcomeRepository;
+  carePlanInterventions: CarePlanInterventionRepository;
+  outcomeEvaluations: OutcomeEvaluationRepository;
+  interventionRecords: InterventionRecordRepository;
+  nursingDiagnoses: NursingDiagnosisRepository;
+  nursingOutcomes: NursingOutcomeRepository;
+  nursingInterventions: NursingInterventionRepository;
 }
 
 /**

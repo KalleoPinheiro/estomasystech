@@ -14,7 +14,15 @@ export default defineConfig({
   ...base,
   test: {
     ...base.test,
-    include: ["tests/domain/**/*.test.ts", "tests/application/**/*.test.ts"],
+    include: [
+      "tests/domain/**/*.test.ts",
+      "tests/application/**/*.test.ts",
+      // ADR-084: src/lib/server (acesso e auditoria) entra na mutação do gate da nuvem.
+      "tests/lib/server/**/*.test.ts",
+      // Envelope e tradução de erro das ações e rotas (mutantes da revisão do #619).
+      "tests/lib/action-result.test.ts",
+      "tests/lib/api-response.test.ts",
+    ],
     coverage: { enabled: false },
   },
 });

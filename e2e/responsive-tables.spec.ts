@@ -10,10 +10,12 @@ import {
   createPartner,
   createPatient,
   createProcedure,
+  createStaffAccount,
   createProfessional,
   createSupply,
   unique,
 } from "./support/api";
+import { civilToday } from "./support/calendar";
 import { slotForAttempt } from "./support/dates";
 import { toApiDatetime } from "./support/iso-datetime";
 import { shown } from "./support/patient-name";
@@ -75,22 +77,17 @@ async function seedCarePlanWithOutcomeAndIntervention(
  * "Próximo mês"/"Mês anterior" a quantidade de vezes necessária.
  */
 async function setReportMonth(page: Page, year: number, month: number): Promise<void> {
-  const now = new Date();
-  const delta = (year - now.getFullYear()) * 12 + (month - 1 - now.getMonth());
+  const now = civilToday();
+  const delta = (year - now.year) * 12 + (month - 1 - now.month0);
   const step = delta >= 0 ? 1 : -1;
-  const button = page.getByRole("button", { name: delta >= 0 ? "Próximo mês" : "Mês anterior" });
+  const button = page.getByRole("link", { name: delta >= 0 ? "Próximo mês" : "Mês anterior" });
 
   for (let i = 1; i <= Math.abs(delta); i += 1) {
-    const target = new Date(now.getFullYear(), now.getMonth() + step * i, 1);
+    const target = new Date(now.year, now.month0 + step * i, 1);
     const targetValue = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
-    // Um clique só por mês — repetir o clique dentro de um toPass avançaria o mês
-    // de novo se a resposta demorasse mais que o timeout da tentativa anterior.
-    const requested = page.waitForResponse(
-      (response) => response.url().includes(`/api/reports?month=${targetValue}`),
-      { timeout: 20_000 },
-    );
+    // Um clique só por mês; o mês vai na URL e o servidor renderiza de novo (#555).
     await button.click();
-    await requested;
+    await page.waitForURL(new RegExp(`month=${targetValue}$`), { timeout: 20_000 });
   }
 }
 
@@ -147,6 +144,9 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
     const patient = await createPatient(request, { fullName: `Paciente Responsivo ${unique()}` });
 
     await page.goto("/pacientes");
+    // A lista é paginada (100 por página, por nome): com a suíte inteira passando de 100 pacientes
+    // antes de «Paciente Responsivo», ele cai na 2ª página. A busca traz o paciente para a tela.
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(patient.fullName);
     await expect(page.getByText(shown(patient.fullName))).toBeVisible();
     await expectTableWrappedInOverflowContainer(page);
     await expectNoHorizontalScroll(page);
@@ -181,8 +181,9 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
     await expectNoHorizontalScroll(page);
   });
 
-  test("configurações", async ({ page }) => {
-    // A conta do Admin de Empresa da sessão padrão já garante ao menos 1 linha na tabela.
+  test("configurações", async ({ page, request }) => {
+    // O Admin de Empresa da sessão padrão é um cookie assinado, não uma conta: a linha vem desta.
+    await createStaffAccount(request);
     await page.goto("/configuracoes/contas");
     await expect(page.locator("table")).toBeVisible();
     await expectTableWrappedInOverflowContainer(page);

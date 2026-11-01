@@ -165,11 +165,13 @@ npm run dev                   # http://localhost:3000
 | `UPLOADS_DIR` | não | diretório das fotos no disco local | padrão `./uploads`; no compose, `/app/uploads` (volume `uploads`) |
 | `TRUSTED_PROXY_HOPS` | não | quantos proxies reversos confiáveis ficam à frente do app (define o IP do cliente no `x-forwarded-for`) | padrão `1`; Nginx/Traefik = `1`, Cloudflare + Nginx = `2` |
 | `API_RATE_LIMIT_MAX` | não | req/min em `/api/*`, somado entre réplicas: **por conta** quando autenticado (empresa + e-mail), por IP quando anônimo | padrão `120` — cada tela faz de 2 a 8 chamadas ao abrir (Agenda 7, Configurações 8, Dashboard 5, Ficha 6), ou seja ~15 trocas de tela por minuto por pessoa |
+| `ACTION_RATE_LIMIT_MAX` | não | req/min de `POST` de Server Action (cabeçalho `Next-Action`), somado entre réplicas, mesma chave da API (conta ou IP); contador separado do da API (ADR-074) | padrão `120` |
 | `PG_POOL_MAX` / `PG_CONNECT_TIMEOUT_MS` / `PG_IDLE_TIMEOUT_MS` / `PG_STATEMENT_TIMEOUT_MS` | não | tuning do pool Postgres | — |
 | `GLITCHTIP_DSN` / `APP_RELEASE` | não | error tracking no GlitchTip self-hosted ([ADR-014](../adr/014-observabilidade-sem-pii.md)) e a versão marcada em cada evento | vazio = no-op; [glitchtip.md](integrations/glitchtip.md) |
 | `GLITCHTIP_DB_PASSWORD` / `GLITCHTIP_SECRET_KEY` | só com o GlitchTip | senha do Postgres próprio e chave do GlitchTip, lidas por `docker-compose.glitchtip.yml` (não pelo app) | [producao.md](producao.md) § 9.5 |
 | `ALERT_EMAIL_TO` / `ALERT_5XX_THRESHOLD` / `ALERT_DELIVERY_FAILURE_THRESHOLD` | não (sim em produção) | alertas por e-mail ao operador (`POST /api/alerts/run`) pelo canal da plataforma | limiares em 15 min, padrão `10` e `3`; [alertas.md](integrations/alertas.md) |
 | `ESTOMASYSTECH_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
+| `ESTOMASYSTECH_E2E_FAULTS` | não | só a suíte E2E: `1` deixa o teste fazer uma leitura do servidor falhar pelo cookie `e2e-fault` | nunca em produção; [ADR-078](../adr/078-gravacoes-da-agenda-em-server-actions.md) |
 | `POSTGRES_PORT` / `APP_PORT` | não | portas publicadas pelo compose no host | padrão `5432` (só loopback) e `3000` |
 | `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 | `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |
@@ -186,6 +188,7 @@ npm run test:mutacao      # mutantes (Stryker) em src/domain e src/application; 
 npm run test:e2e         # build + Playwright contra `next start` e contra `next dev` (ADR-021); na 1ª vez ou após bump: npx playwright install
 npm run test:e2e:prod    # só a suíte principal, contra o build (precisa de `npm run build` antes)
 npm run test:e2e:dev     # só papéis e login, contra `next dev`
+npm run test:console     # build + `e2e/console-limpo.spec.ts` no build e no `next dev`: falha em erro ou aviso de console, violação de CSP e hydration mismatch (#543)
 ```
 
 A suíte E2E sobe os próprios servidores e gera as credenciais a cada execução. Só para

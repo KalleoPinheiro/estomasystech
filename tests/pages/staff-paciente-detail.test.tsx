@@ -8,9 +8,8 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithToast } from '@/../tests/support/render-with-toast';
 import type { PackageDto } from '@/app/(staff)/pacientes/[id]/packages-section';
-import PatientRecordPage from '@/app/(staff)/pacientes/[id]/page';
+import type { PatientRecordClientProps } from '@/app/(staff)/pacientes/[id]/patient-record-client';
 import type { UserRole } from '@/domain/auth/user-role';
 import type {
   AnamnesisDto,
@@ -23,6 +22,7 @@ import type {
   ProfessionalOptionDto,
 } from '@/lib/dto';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { renderPatientRecord } from '../support/render-patient-record';
 import { WithStaffIdentity } from '../support/staff-identity';
 
 const { routerMock, searchParamsRef } = vi.hoisted(() => {
@@ -31,6 +31,25 @@ const { routerMock, searchParamsRef } = vi.hoisted(() => {
     searchParamsRef: { current: new URLSearchParams() },
   };
 });
+
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/cadastro',
+  async () => (await import('../support/ficha-actions-via-fetch')).cadastro,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/prontuario',
+  async () => (await import('../support/ficha-actions-via-fetch')).prontuario,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/plano-cuidados',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).planoCuidados,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/consentimento',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).consentimento,
+);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => routerMock,
@@ -77,17 +96,23 @@ afterEach(() => {
   vi.unstubAllGlobals();
   searchParamsRef.current = new URLSearchParams();
   routerMock.replace.mockClear();
+  routerMock.refresh.mockClear();
 });
 
-async function renderDetail(id = 'pac-1') {
-  await act(async () => {
-    // Mesmo provider do layout da equipe (#199): as abas seguem o papel.
-    renderWithToast(
-      <WithStaffIdentity>
-        <PatientRecordPage params={Promise.resolve({ id })} />
-      </WithStaffIdentity>,
-    );
-  });
+async function renderDetail(
+  id = 'pac-1',
+  overrides: Partial<PatientRecordClientProps> = {},
+) {
+  // Mesmo provider do layout da equipe (#199): as abas seguem o papel.
+  await renderPatientRecord(
+    (children) => <WithStaffIdentity>{children}</WithStaffIdentity>,
+    {
+      id,
+      initialTab: searchParamsRef.current.get('aba') ?? undefined,
+      overrides,
+      router: routerMock,
+    },
+  );
 }
 
 const patientFixture: PatientDto = {
@@ -338,19 +363,17 @@ function buildRouter({
 
 describe('Feature: PatientRecordPage', () => {
   describe('Cenário: carregamento e erro', () => {
-    it('Dado que o paciente ainda não carregou, Quando renderizar, Então exibe indicador de carregamento', async () => {
-      mockFetch(({ url }) => {
-        if (url === '/api/patients/pac-1') return new Promise<never>(() => {});
-        return jsonResponse([]);
-      });
+    it('Dado que o servidor já leu o prontuário, Quando renderizar, Então a ficha aparece completa, sem indicador de carregamento', async () => {
+      mockFetch(buildRouter({ anamnesis: anamnesisFixture }));
 
       await renderDetail();
 
-      expect(screen.getByText('Carregando…')).toBeInTheDocument();
+      expect(screen.getByText('Maria Souza')).toBeInTheDocument();
+      expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
     });
 
-    it('Dado falha ao carregar paciente, Quando renderizar, Então exibe alerta de erro', async () => {
-      mockFetch(buildRouter({ patientError: 'Paciente não encontrado' }));
+    it('Dado falha ao ler o prontuário no servidor, Quando renderizar, Então a aba mostra o alerta de erro do bloco', async () => {
+      mockFetch(buildRouter({ anamnesisError: 'Paciente não encontrado' }));
 
       await renderDetail();
 
@@ -409,38 +432,26 @@ describe('Feature: PatientRecordPage', () => {
       expect(screen.queryByText(/nasc\./)).not.toBeInTheDocument();
     });
 
-    it('Dado condições e evoluções ainda carregando, Quando exibir abas e trocar, Então cada aba mostra indicador de carregamento (não vazio)', async () => {
+    it('Dado condições e evoluções lidas no servidor, Quando exibir abas e trocar, Então cada aba já mostra o conteúdo (sem indicador de carregamento)', async () => {
       mockFetch(
         buildRouter({
-          extra: ({ url }) => {
-            if (
-              url === '/api/patients/pac-1/conditions' ||
-              url === '/api/patients/pac-1/evolutions'
-            ) {
-              return new Promise<never>(() => {});
-            }
-            return undefined;
-          },
+          conditions: [woundConditionFixture],
+          evolutions: [evolutionFixture],
         }),
       );
 
       await renderDetail();
       await screen.findByText('Maria Souza');
 
-      expect(screen.getByText('Estomias e feridas')).toBeInTheDocument();
-      expect(screen.getByText('Evoluções (SOAP)')).toBeInTheDocument();
-
-      fireEvent.mouseDown(screen.getByText('Estomias e feridas'));
-      expect(await screen.findAllByText('Carregando…')).not.toHaveLength(0);
+      fireEvent.mouseDown(screen.getByText('Estomias e feridas (1)'));
       expect(
-        screen.queryByText('Nenhuma condição clínica cadastrada.'),
-      ).not.toBeInTheDocument();
+        await screen.findByText('Úlcera venosa perna E'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
 
-      fireEvent.mouseDown(screen.getByText('Evoluções (SOAP)'));
-      expect(await screen.findByText('Carregando…')).toBeInTheDocument();
-      expect(
-        screen.queryByText('Nenhuma evolução registrada.'),
-      ).not.toBeInTheDocument();
+      fireEvent.mouseDown(screen.getByText('Evoluções (SOAP) (1)'));
+      expect(await screen.findByText(/Dor leve na região/)).toBeInTheDocument();
+      expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
     });
 
     it('Dado ?aba=evolucoes na URL, Quando montar a página, Então abre direto na aba de evoluções (PRONT-04)', async () => {
@@ -461,7 +472,8 @@ describe('Feature: PatientRecordPage', () => {
       expect(await screen.findByText('Comorbidades')).toBeInTheDocument();
     });
 
-    it('Dado troca de aba, Quando acionada, Então atualiza a URL via router.replace (PRONT-04)', async () => {
+    it('Dado troca de aba, Quando acionada, Então atualiza a URL sem reler o servidor (PRONT-04)', async () => {
+      const replaceState = vi.spyOn(window.history, 'replaceState');
       mockFetch(buildRouter({ conditions: [woundConditionFixture] }));
 
       await renderDetail();
@@ -469,11 +481,15 @@ describe('Feature: PatientRecordPage', () => {
       fireEvent.mouseDown(screen.getByText(/Estomias e feridas/));
 
       await waitFor(() => {
-        expect(routerMock.replace).toHaveBeenCalledWith(
+        expect(replaceState).toHaveBeenCalledWith(
+          null,
+          '',
           '/pacientes/pac-1?aba=condicoes',
-          { scroll: false },
         );
       });
+      expect(routerMock.replace).not.toHaveBeenCalled();
+      expect(routerMock.refresh).not.toHaveBeenCalled();
+      replaceState.mockRestore();
     });
 
     it("Dado a lista de abas, Quando renderizar, Então 'Pacotes' fica separada das clínicas (PRONT-09)", async () => {
@@ -537,19 +553,12 @@ describe('Feature: PatientRecordPage', () => {
       },
     );
 
-    it('Dado falha ao carregar a identidade, Quando renderizar, Então NÃO mostra o link (fail-closed)', async () => {
-      const fetchMock = mockFetch(
-        identityRouter(errorResponse('Falha na identidade')),
-      );
+    it('Dado que o servidor não libera a exportação para o papel, Quando renderizar, Então NÃO mostra o link (fail-closed)', async () => {
+      mockFetch(identityRouter(errorResponse('Falha na identidade')));
 
-      await renderDetail();
+      await renderDetail('pac-1', { canExport: false });
 
       expect(await screen.findByText('Maria Souza')).toBeInTheDocument();
-      await waitFor(() =>
-        expect(
-          fetchMock.mock.calls.some(([url]) => url === '/api/auth/identity'),
-        ).toBe(true),
-      );
       expect(
         screen.queryByRole('link', { name: 'Exportar dados (LGPD)' }),
       ).not.toBeInTheDocument();
@@ -586,8 +595,7 @@ describe('Feature: PatientRecordPage', () => {
       expect(screen.getByText('6 de 10 sessões restantes')).toBeInTheDocument();
       expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
       const urls = fetchMock.mock.calls.map((call) => String(call[0]));
-      expect(urls).toContain('/api/patients/pac-1/packages');
-      expect(urls.some((url) => url.startsWith('/api/packages'))).toBe(false);
+      expect(urls.some((url) => url.includes('packages'))).toBe(false);
     });
 
     it('Dado admin, Então a aba Pacotes aparece', async () => {
@@ -598,22 +606,6 @@ describe('Feature: PatientRecordPage', () => {
       expect(
         await screen.findByRole('tab', { name: 'Pacotes' }),
       ).toBeInTheDocument();
-    });
-
-    it('Dado 404 do paciente, Então a mensagem não expõe o id', async () => {
-      mockFetch(
-        buildRouter({
-          patientError: 'Paciente não encontrado(a)',
-          patientStatus: 404,
-        }),
-      );
-
-      await renderDetail();
-
-      expect(
-        await screen.findByText('Paciente não encontrado.'),
-      ).toBeInTheDocument();
-      expect(screen.queryByText(/0b7a5c1e/)).not.toBeInTheDocument();
     });
   });
 
@@ -701,22 +693,16 @@ describe('Feature: PatientRecordPage', () => {
       expect(screen.queryByLabelText('Comorbidades')).not.toBeInTheDocument();
     });
 
-    it('Dado anamnese ainda carregando, Quando renderizar, Então exibe indicador de carregamento, não formulário vazio (#65)', async () => {
-      mockFetch(
-        buildRouter({
-          extra: ({ url }) => {
-            if (url === '/api/patients/pac-1/anamnesis')
-              return new Promise<never>(() => {});
-            return undefined;
-          },
-        }),
-      );
+    it('Dado anamnese lida no servidor, Quando renderizar, Então o formulário já vem preenchido, sem indicador de carregamento (#65)', async () => {
+      mockFetch(buildRouter({ anamnesis: anamnesisFixture }));
 
       await renderDetail();
       await screen.findByText('Maria Souza');
 
-      expect(await screen.findByText('Carregando…')).toBeInTheDocument();
-      expect(screen.queryByLabelText('Comorbidades')).not.toBeInTheDocument();
+      expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Comorbidades')).toHaveValue(
+        'Diabetes tipo 2',
+      );
     });
   });
 
@@ -839,29 +825,15 @@ describe('Feature: PatientRecordPage', () => {
       ).not.toBeInTheDocument();
     });
 
-    it("Dado erro ao carregar condições, Quando clicar em 'Tentar novamente', Então refaz a busca via refresh", async () => {
-      let conditionsCallCount = 0;
-      mockFetch(
-        buildRouter({
-          extra: ({ url }) => {
-            if (url !== '/api/patients/pac-1/conditions') return undefined;
-            conditionsCallCount += 1;
-            return conditionsCallCount === 1
-              ? errorResponse('Erro ao carregar condições')
-              : jsonResponse([]);
-          },
-        }),
-      );
+    it("Dado erro ao ler condições, Quando clicar em 'Tentar novamente', Então relê o servidor via router.refresh", async () => {
+      mockFetch(buildRouter({ conditionsError: 'Erro ao carregar condições' }));
 
       await openConditionsTab();
       await screen.findByText('Erro ao carregar condições');
 
       fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-      expect(
-        await screen.findByText('Nenhuma condição clínica cadastrada.'),
-      ).toBeInTheDocument();
-      expect(conditionsCallCount).toBe(2);
+      expect(routerMock.refresh).toHaveBeenCalledTimes(1);
     });
 
     it('Dado condições ativas e resolvidas, Quando listar, Então exibe badges e ações corretas para cada uma', async () => {
@@ -2313,29 +2285,15 @@ describe('Feature: PatientRecordPage', () => {
       ).not.toBeInTheDocument();
     });
 
-    it("Dado erro ao carregar evoluções, Quando clicar em 'Tentar novamente', Então refaz a busca via refresh", async () => {
-      let evolutionsCallCount = 0;
-      mockFetch(
-        buildRouter({
-          extra: ({ url }) => {
-            if (url !== '/api/patients/pac-1/evolutions') return undefined;
-            evolutionsCallCount += 1;
-            return evolutionsCallCount === 1
-              ? errorResponse('Erro ao carregar evoluções')
-              : jsonResponse([]);
-          },
-        }),
-      );
+    it("Dado erro ao ler evoluções, Quando clicar em 'Tentar novamente', Então relê o servidor via router.refresh", async () => {
+      mockFetch(buildRouter({ evolutionsError: 'Erro ao carregar evoluções' }));
 
       await openEvolutionsTab();
       await screen.findByText('Erro ao carregar evoluções');
 
       fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
-      expect(
-        await screen.findByText('Nenhuma evolução registrada.'),
-      ).toBeInTheDocument();
-      expect(evolutionsCallCount).toBe(2);
+      expect(routerMock.refresh).toHaveBeenCalledTimes(1);
     });
 
     it('Dado evolução registrada, Quando listar, Então exibe dados SOAP e profissional responsável', async () => {
@@ -2373,7 +2331,6 @@ describe('Feature: PatientRecordPage', () => {
 
       expect(await screen.findByText(/Dra\. Ana/)).toBeInTheDocument();
       const urls = fetchMock.mock.calls.map((call) => String(call[0]));
-      expect(urls).toContain('/api/options/professionals');
       expect(urls).not.toContain('/api/professionals');
     });
 

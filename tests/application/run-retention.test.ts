@@ -46,6 +46,7 @@ function fakeAudit() {
     }),
     findAll: vi.fn(async () => []),
     findPlatformTrail: vi.fn(async () => []),
+    lockResource: vi.fn(async () => undefined),
   };
   return { repo, saved };
 }

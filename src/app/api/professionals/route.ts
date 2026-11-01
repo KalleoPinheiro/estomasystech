@@ -1,15 +1,14 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import {
-  COMMISSION_TYPES,
-  Professional,
-} from '@/domain/professional/professional';
+import { COMMISSION_TYPES } from '@/domain/professional/professional';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toProfessionalDto } from '@/lib/dto';
+import { listProfessionalsFor } from '@/lib/server/data/professionals';
+import { createProfessionalRecord } from '@/lib/server/professional-writes';
 
 const professionalSchema = z.object({
   fullName: z.string().min(1).max(200),
@@ -23,13 +22,7 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { professionals } = await getRepositories(
-      sessionScope(guard.session),
-    );
-    const result = await professionals.findAll();
-    return result.map(toProfessionalDto);
-  });
+  return handleRequest(() => listProfessionalsFor(guard.session));
 }
 
 export async function POST(request: NextRequest) {
@@ -41,14 +34,7 @@ export async function POST(request: NextRequest) {
     const { professionals, auditEvents } = await getRepositories(
       writeScope(guard.session),
     );
-    const professional = Professional.create({
-      fullName: body.fullName,
-      registry: body.registry ?? null,
-      commissionType: body.commissionType,
-      commissionPct: body.commissionPct ?? null,
-      commissionFixedCents: body.commissionFixedCents ?? null,
-    });
-    await professionals.save(professional);
+    const professional = await createProfessionalRecord(professionals, body);
     recordAudit(auditEvents, guard.session, {
       action: 'create',
       resourceType: 'professional',

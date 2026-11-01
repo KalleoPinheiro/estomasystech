@@ -1,9 +1,7 @@
 import type { NextRequest } from 'next/server';
-import { listRepresentablePatients } from '@/application/portal/portal-identity';
-import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requirePatientPortalSession } from '@/lib/auth/require-session';
-import { sessionScope } from '@/lib/auth/tenant-scope';
+import { loadRepresentedPatients } from '@/lib/server/data/portal';
 
 /**
  * Pacientes que o responsável pode representar (ADR-027) e o escolhido agora.
@@ -15,15 +13,5 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response;
   const { session } = guard;
 
-  return handleRequest(async () => {
-    const services = await getRepositories(sessionScope(session));
-    const patients = await listRepresentablePatients(services, session);
-    const only = patients.length === 1 ? patients[0] : undefined;
-    const selected =
-      patients.find((p) => p.id === session.actingPatientId) ?? only ?? null;
-    return {
-      patients: patients.map((p) => ({ id: p.id, fullName: p.fullName })),
-      selectedPatientId: selected?.id ?? null,
-    };
-  });
+  return handleRequest(() => loadRepresentedPatients(session));
 }

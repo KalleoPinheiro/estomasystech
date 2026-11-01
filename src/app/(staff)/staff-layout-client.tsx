@@ -7,6 +7,7 @@ import {
   SidebarTrigger,
 } from '@still-void/ui/react/client';
 import { BottomNav } from '@/components/app-shell/bottom-nav';
+import { SidebarSpace } from '@/components/app-shell/sidebar-space';
 import { MAIN_CONTENT_ID, SkipLink } from '@/components/app-shell/skip-link';
 import { useStaffDocumentTitle } from '@/components/app-shell/use-staff-document-title';
 import { BrandLogo } from '@/components/brand-logo';
@@ -14,16 +15,21 @@ import { IdentityImage } from '@/components/identity-image';
 import { LogoutButton } from '@/components/logout-button';
 import { ReleaseVersion } from '@/components/release-version';
 import { ThemeToggle } from '@/components/theme-toggle';
-import type { SidebarIdentityDto } from '@/lib/dto';
+import { WebVitalsReporter } from '@/components/web-vitals-reporter';
+import type { AppVersionDto, SidebarIdentityDto } from '@/lib/dto';
 import { StaffIdentityProvider, useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
-import { RoleGate } from './role-gate';
 import { ScrollFade } from './scroll-fade';
 import { SidebarAutoClose } from './sidebar-auto-close';
 import { StaffNav } from './staff-nav';
 
 interface StaffLayoutClientProps {
   children: React.ReactNode;
+  /** Identidade e versão lidas no servidor pelo layout (ADR-069): a carga não chama `/api`. */
+  initialIdentity?: SidebarIdentityDto;
+  initialVersion?: AppVersionDto | null;
+  /** Fotos aguardando triagem, contadas no servidor para a barra do celular. */
+  initialTriageCount?: number;
 }
 
 /** Clínica ativa + conta logada (issue #126) — nunca texto fixo, sempre a sessão real. Exportado pra teste isolado, sem precisar montar o SidebarProvider inteiro. */
@@ -79,7 +85,12 @@ export function SidebarIdentity() {
   );
 }
 
-export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
+export function StaffLayoutClient({
+  children,
+  initialIdentity,
+  initialVersion,
+  initialTriageCount,
+}: StaffLayoutClientProps) {
   useStaffDocumentTitle();
   return (
     // defaultOpen=false: o default da lib é `true` (pensado pro rail de
@@ -88,7 +99,8 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
     // sozinho assim que a hidratação detecta viewport mobile, sem clique
     // nenhum do usuário. Não afeta o desktop: o rail em modo "offcanvas"
     // renderiza incondicionalmente, sem olhar pra `open`.
-    <StaffIdentityProvider>
+    <StaffIdentityProvider initialIdentity={initialIdentity}>
+      <WebVitalsReporter />
       <SidebarProvider defaultOpen={false}>
         <SkipLink />
         <SidebarAutoClose />
@@ -102,6 +114,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
             a 1120px e as telas do staff são tabelas largas. */}
           {/* Colado ao topo e com a altura da janela menos a faixa de homologação (#482):
               Tema e Sair ficam sempre à vista, inclusive em janela baixa. */}
+          <SidebarSpace />
           <SidebarPanel className="flex max-h-[calc(100dvh-var(--staging-banner-h,0px))] flex-col [&>.sv-app-sidebar__body]:max-h-full [&>.sv-app-sidebar__body]:min-h-0 [&>.sv-app-sidebar__body]:flex-1 [&>.sv-app-sidebar__body]:justify-between w-56 shrink-0 justify-between border-border border-r px-3 py-5 lg:sticky lg:top-0 lg:h-[calc(100dvh-var(--staging-banner-h,0px))] lg:self-start">
             {/* px-3 (e não p-5): a marca «EstomaSysTech» mede ~144 px e o miolo útil do menu
                 (painel − padding − padding do corpo) ficava em 135 px, cortando-a (#535). A
@@ -118,7 +131,7 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
             <div className="flex shrink-0 flex-col gap-2 pt-4">
               <ThemeToggle />
               <LogoutButton />
-              <ReleaseVersion />
+              <ReleaseVersion initial={initialVersion} />
             </div>
           </SidebarPanel>
           {/* overflow-y-visible/overflow-x-clip: o pacote põe `overflow: auto` no inset, que
@@ -137,9 +150,9 @@ export function StaffLayoutClient({ children }: StaffLayoutClientProps) {
               <SidebarTrigger className="min-h-11 min-w-11" />
               <BrandLogo />
             </div>
-            <RoleGate>{children}</RoleGate>
+            {children}
           </SidebarInset>
-          <BottomNav />
+          <BottomNav triageCount={initialTriageCount} />
         </div>
       </SidebarProvider>
     </StaffIdentityProvider>

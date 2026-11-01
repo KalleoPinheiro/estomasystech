@@ -1,6 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-import { GetPatient } from '@/application/patients/get-patient';
 import { SetPatientActive } from '@/application/patients/set-patient-active';
 import { UpdatePatient } from '@/application/patients/update-patient';
 import type { GuardianRepository } from '@/domain/guardian/guardian-repository';
@@ -11,24 +9,13 @@ import { recordAudit } from '@/lib/audit';
 import { assertCanManageGuardians } from '@/lib/auth/guardian-access';
 import { assertPatientAccessibleToProfessional } from '@/lib/auth/professional-patient-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toPatientDto } from '@/lib/dto';
-
-const updatePatientSchema = z.object({
-  fullName: z.string().min(1).max(200).optional(),
-  email: z.string().max(200).nullish(),
-  phone: z.string().min(1).max(50).optional(),
-  // Ausente mantém; vazio ou null remove.
-  cpf: z.string().max(20).nullish(),
-  birthDate: z.union([z.iso.date(), z.iso.datetime()]).nullish(),
-  notes: z.string().max(5000).nullish(),
-  referredByPartnerId: z.string().max(100).nullish(),
-  guardianId: z.string().max(100).nullish(),
-});
-
-const setActiveSchema = z.object({
-  active: z.boolean(),
-});
+import {
+  setActiveSchema,
+  updatePatientSchema,
+} from '@/lib/patient-record-schemas';
+import { getPatientRecord } from '@/lib/server/data/patient-record';
 
 async function loadGuardian(guardians: GuardianRepository, patient: Patient) {
   return patient.guardianId ? guardians.findById(patient.guardianId) : null;
@@ -40,26 +27,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { id } = await context.params;
-    const { patients, guardians, auditEvents, professionalPatientLinks } =
-      await getRepositories(sessionScope(guard.session));
-    await assertPatientAccessibleToProfessional(
-      guard.session,
-      id,
-      professionalPatientLinks,
-    );
-    const patient = await new GetPatient(patients).execute({ id });
-    const clinicId = await patients.findClinicIdById(patient.id);
-    recordAudit(auditEvents, guard.session, {
-      action: 'read',
-      resourceType: 'patient',
-      resourceId: patient.id,
-      patientId: patient.id,
-      clinicId,
-    });
-    return toPatientDto(patient, await loadGuardian(guardians, patient));
-  });
+  return handleRequest(async () =>
+    getPatientRecord(guard.session, (await context.params).id),
+  );
 }
 
 export async function PUT(request: NextRequest, context: RouteContext) {

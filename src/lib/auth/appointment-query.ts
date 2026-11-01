@@ -26,16 +26,12 @@ export function parseAppointmentRange(
  * ignora `professionalId` da query. Profissional sem vínculo de conta (dado
  * legado/corrompido) nunca cai no "sem filtro = tudo": `none` pede resultado vazio.
  */
-export function appointmentProfessionalScope(
+export function professionalScopeFor(
   session: Pick<Session, 'role' | 'professionalId'>,
-  request: NextRequest,
+  requestedProfessionalId: string | undefined,
 ): { none: true } | { none: false; professionalId: string | undefined } {
   if (session.role !== 'profissional') {
-    return {
-      none: false,
-      professionalId:
-        request.nextUrl.searchParams.get('professionalId') ?? undefined,
-    };
+    return { none: false, professionalId: requestedProfessionalId };
   }
   return session.professionalId
     ? { none: false, professionalId: session.professionalId }

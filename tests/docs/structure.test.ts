@@ -69,7 +69,7 @@ function headings(text: string, level: number): string[] {
 function section(text: string, name: string): string {
   const lines = text.split('\n');
   const prose = proseLines(text);
-  const start = prose.findIndex((line) => line === `## ${name}`);
+  const start = prose.indexOf(`## ${name}`);
   if (start < 0) return '';
   const end = prose.findIndex((line, i) => i > start && /^#{1,2} /.test(line));
   return lines.slice(start + 1, end < 0 ? undefined : end).join('\n');

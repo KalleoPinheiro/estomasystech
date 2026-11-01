@@ -11,11 +11,20 @@ import { useApiQuery } from '@/lib/use-api-query';
  */
 export function ReleaseVersion({
   url = '/api/version',
+  initial,
 }: {
   /** `/api/portal/version` no portal; a equipe lê de `/api/version`. */
   url?: string;
+  /**
+   * Versão já lida no servidor (ADR-069): sem chamada de API na carga. `null` =
+   * o servidor não achou versão e vale a do build; ausente = busca em `url`.
+   */
+  initial?: AppVersionDto | null;
 }) {
-  const { data } = useApiQuery<AppVersionDto>(url);
-  const label = data ? formatAppVersion(data.version, data.sha) : null;
+  const { data } = useApiQuery<AppVersionDto>(
+    initial === undefined ? url : null,
+  );
+  const shown = initial === undefined ? data : initial;
+  const label = shown ? formatAppVersion(shown.version, shown.sha) : null;
   return label ? <AppVersion version={label} /> : <AppVersion />;
 }

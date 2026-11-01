@@ -4,9 +4,18 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { ChangeAppointment } from '@/app/portal/change-appointment';
-import { PatientPortalView } from '@/app/portal/patient-view';
 import type { PortalAppointmentDto } from '@/lib/dto';
 import { formatTime } from '@/lib/format';
+
+import { PatientPortalHarness } from '../support/portal-harness';
+
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
+);
 
 interface Call {
   url: string;
@@ -278,7 +287,7 @@ describe('Feature: Paciente cancela ou remarca pelo portal (tela)', () => {
       },
     ]);
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     expect(
       await screen.findByText('Histórico de consultas'),
@@ -312,7 +321,7 @@ describe('Feature: Paciente cancela ou remarca pelo portal (tela)', () => {
       },
     ]);
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     expect(
       await screen.findByRole('button', { name: 'Remarcar' }),

@@ -383,11 +383,20 @@ async function seedAgendaAppointment(request: APIRequestContext, seed: SlotSeed)
   return { slot, dayKey: slot.dateInput };
 }
 
+/** Mês civil de hoje no fuso do app (APP_TIMEZONE, ADR-073), não no do processo. */
+function civilToday(): { year: number; month0: number } {
+  const key = new Intl.DateTimeFormat("en-CA", {
+    timeZone: process.env.APP_TIMEZONE ?? "America/Sao_Paulo",
+  }).format(new Date());
+  const [year, month] = key.split("-").map(Number);
+  return { year, month0: month - 1 };
+}
+
 /** Avança a agenda até o mês de `dayKey` (YYYY-MM-DD). */
 async function agendaToMonth(page: Page, dayKey: string): Promise<void> {
   const [year, month] = dayKey.split("-").map(Number);
-  const now = new Date();
-  const delta = (year - now.getFullYear()) * 12 + (month - 1 - now.getMonth());
+  const now = civilToday();
+  const delta = (year - now.year) * 12 + (month - 1 - now.month0);
   for (let i = 0; i < delta; i += 1) {
     await page.getByRole("button", { name: "Próximo mês" }).click();
   }
@@ -435,52 +444,6 @@ async function seedReceipt(request: APIRequestContext) {
     { action: "pay", method: "pix" },
   );
   return { receiptUrl: `/documentos/recibo/${paid.id}/${paid.payments[0].id}` };
-}
-
-/**
- * Comprovante de repasse: fechar um repasse de verdade exige mês encerrado, e a
- * API recusa consulta no passado. A página busca o comprovante pela API no
- * navegador, então o teste responde essa chamada com um repasse fixo e mede o
- * documento renderizado de verdade.
- */
-async function mockPayoutReceipt(page: Page): Promise<string> {
-  const payout = {
-    id: "po-layout",
-    professionalId: "pr-layout",
-    professionalName: "Enf. Layout Repasse",
-    period: "2026-08",
-    totalCents: 4000,
-    paidAt: "2026-09-05T12:00:00.000Z",
-    paymentMethod: "pix",
-    notes: null,
-    createdBy: "admin@clinica.com",
-    createdAt: "2026-09-05T12:00:00.000Z",
-    rule: { kind: "percentage", pct: 40 },
-    status: "active",
-    cancelledAt: null,
-    cancelledBy: null,
-    cancelReason: null,
-    items: [
-      {
-        appointmentId: "a1",
-        kind: "session",
-        procedure: "Troca de curativo com cobertura de prata",
-        sessionDate: "2026-08-10T12:00:00.000Z",
-        baseCents: 25000,
-        commissionCents: 10000,
-      },
-    ],
-  };
-  await page.route("**/api/commission-payouts/po-layout", (route) =>
-    route.fulfill({
-      json: {
-        success: true,
-        data: { payout, professional: { fullName: "Enf. Layout Repasse", registry: "COREN-SP 3" } },
-        error: null,
-      },
-    }),
-  );
-  return "/documentos/repasse/po-layout";
 }
 
 test.describe("agenda", () => {
@@ -762,7 +725,6 @@ test.describe("telas com defeito específico", () => {
       `/documentos/relatorio/${w.conditionId}`,
       `/documentos/plano-cuidados/${w.carePlanId}`,
       receiptUrl,
-      await mockPayoutReceipt(page),
     ]) {
       await page.goto(url);
       await settle(page);

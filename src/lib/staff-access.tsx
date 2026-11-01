@@ -2,68 +2,17 @@
 
 import { createContext, type ReactNode, useContext } from 'react';
 import type { UserRole } from '@/domain/auth/user-role';
-import { classifyRoute, isFamilyAllowedForRole } from '@/lib/auth/route-family';
-import { CLINIC_STAFF_ROLES } from '@/lib/auth/staff-roles';
 import type { SidebarIdentityDto } from '@/lib/dto';
+import { canRoleAccess, isOpenToAllStaff } from '@/lib/staff-pages';
 import { useApiQuery } from '@/lib/use-api-query';
 
-/**
- * Telas da equipe e a rota de API de que cada uma depende (#199). A decisão de
- * mostrar ou esconder vem da MESMA matriz da autorização
- * (`src/lib/auth/route-family.ts`) aplicada a essa rota — nenhuma regra de
- * papel duplicada aqui. Esconder é só UX (ADR-003): a API continua barrando.
- */
-export const STAFF_PAGES = [
-  { href: '/', label: 'Hoje', api: '/api/appointments' },
-  { href: '/agenda', label: 'Agenda', api: '/api/appointments' },
-  { href: '/triagem', label: 'Triagem', api: '/api/photos/triage' },
-  { href: '/pacientes', label: 'Pacientes', api: '/api/patients' },
-  { href: '/parceiros', label: 'Parceiros', api: '/api/partners' },
-  { href: '/profissionais', label: 'Profissionais', api: '/api/professionals' },
-  { href: '/faturamento', label: 'Faturamento', api: '/api/invoices' },
-  { href: '/procedimentos', label: 'Procedimentos', api: '/api/procedures' },
-  { href: '/materiais', label: 'Materiais', api: '/api/supplies' },
-  { href: '/relatorios', label: 'Relatórios', api: '/api/reports' },
-  { href: '/repasses', label: 'Repasses', api: '/api/my-payouts' },
-  { href: '/auditoria', label: 'Auditoria', api: '/api/audit' },
-  // Toda a equipe entra: feriados e ausências são de todos os papéis; cada
-  // seção da tela se esconde quando o papel não usa a rota dela (#215).
-  {
-    href: '/pedidos-titular',
-    label: 'Pedidos do titular',
-    api: '/api/data-requests',
-  },
-  {
-    href: '/configuracoes',
-    label: 'Configurações',
-    api: '/api/settings/schedule/closures',
-  },
-  // Toda a equipe cuida da própria senha e do segundo fator (#295).
-  { href: '/minha-conta', label: 'Minha conta', api: '/api/me' },
-] as const;
-
-export type StaffPage = (typeof STAFF_PAGES)[number];
-
-export function canRoleAccess(api: string, role: UserRole): boolean {
-  return isFamilyAllowedForRole(classifyRoute(api), role);
-}
-
-/** Rota que qualquer papel da clínica usa — não precisa esperar a identidade. */
-export function isOpenToAllStaff(api: string): boolean {
-  return CLINIC_STAFF_ROLES.every((role) => canRoleAccess(api, role));
-}
-
-/**
- * Tela da equipe a que o caminho pertence (`/` só exato). Os `href` não são
- * prefixo uns dos outros, então no máximo uma tela casa.
- */
-export function staffPageFor(pathname: string): StaffPage | undefined {
-  return STAFF_PAGES.find((page) =>
-    page.href === '/'
-      ? pathname === '/'
-      : pathname === page.href || pathname.startsWith(`${page.href}/`),
-  );
-}
+export {
+  canRoleAccess,
+  isOpenToAllStaff,
+  STAFF_PAGES,
+  type StaffPage,
+  staffPageFor,
+} from '@/lib/staff-pages';
 
 interface StaffIdentityState {
   identity: SidebarIdentityDto | null;
@@ -74,13 +23,27 @@ interface StaffIdentityState {
 
 const StaffIdentityContext = createContext<StaffIdentityState | null>(null);
 
-/** Busca a identidade da sessão uma vez para todo o layout da equipe. */
-export function StaffIdentityProvider({ children }: { children: ReactNode }) {
-  const { data, error } = useApiQuery<SidebarIdentityDto>('/api/auth/identity');
+/**
+ * Identidade da sessão para todo o layout da equipe. Com `initialIdentity`
+ * (lida no servidor pelo layout, ADR-069) não há chamada de API na carga: o
+ * papel já está no HTML e nada pisca nem salta depois da hidratação. Sem ela
+ * (telas montadas isoladas, falha do servidor), busca `/api/auth/identity`.
+ */
+export function StaffIdentityProvider({
+  children,
+  initialIdentity,
+}: {
+  children: ReactNode;
+  initialIdentity?: SidebarIdentityDto;
+}) {
+  const { data, error } = useApiQuery<SidebarIdentityDto>(
+    initialIdentity ? null : '/api/auth/identity',
+  );
+  const identity = initialIdentity ?? data;
   const value: StaffIdentityState = {
-    identity: data,
-    role: (data?.account?.role as UserRole | undefined) ?? null,
-    loading: !data && !error,
+    identity,
+    role: (identity?.account?.role as UserRole | undefined) ?? null,
+    loading: !identity && !error,
   };
   return (
     <StaffIdentityContext.Provider value={value}>

@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import {
   CancelAppointmentByStaff,
   MarkNoShow,
@@ -17,33 +16,12 @@ import { localDateKey } from '@/domain/scheduling/schedule-availability';
 import { cancellationPolicyOf } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
+import { appointmentActionSchema } from '@/lib/appointment-schemas';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
-
-const actionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('confirm') }),
-  z.object({
-    action: z.literal('cancel'),
-    requestedBy: z.enum(['clinic', 'patient']).optional(),
-    reason: z.string().max(1000).nullish(),
-    chargeLateFee: z.boolean().optional(),
-  }),
-  z.object({
-    action: z.literal('no_show'),
-    chargeLateFee: z.boolean().optional(),
-  }),
-  z.object({
-    action: z.literal('complete'),
-    followUpInDays: z.number().int().positive().max(365).nullish(),
-  }),
-  z.object({
-    action: z.literal('reschedule'),
-    startsAt: z.iso.datetime(),
-    endsAt: z.iso.datetime(),
-  }),
-]);
+import { authorizeAppointmentAct } from '@/lib/server/appointment-authorization';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -71,7 +49,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    const body = actionSchema.parse(await request.json());
+    const body = appointmentActionSchema.parse(await request.json());
+    await authorizeAppointmentAct(guard.session, writeScope(guard.session), id);
     const services = await getRepositories(writeScope(guard.session));
     const { appointments } = services;
 

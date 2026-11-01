@@ -13,7 +13,6 @@ import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { AppointmentDetail } from '@/app/(staff)/agenda/appointment-detail';
 import { AppointmentForm } from '@/app/(staff)/agenda/appointment-form';
 import { CalendarGrid, dayKey } from '@/app/(staff)/agenda/calendar-grid';
-import AgendaPage from '@/app/(staff)/agenda/page';
 import { ApiError } from '@/lib/client';
 import type {
   AppointmentDto,
@@ -21,13 +20,53 @@ import type {
   ProfessionalDto,
   ScheduleClosureDto,
 } from '@/lib/dto';
+import {
+  agenda,
+  change,
+  click,
+  renderAgenda,
+  renderSkeleton,
+  resetAgenda,
+} from '../support/agenda-app';
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useParams: () => ({}),
-  usePathname: () => '/agenda',
-  useSearchParams: () => new URLSearchParams(),
-}));
+vi.mock('next/navigation', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    useRouter: () => agenda.router,
+    useParams: () => ({}),
+    usePathname: () => '/agenda',
+  };
+});
+vi.mock('@/app/(staff)/agenda/agenda-actions', async () => {
+  const { legacyActions } = await import('../support/agenda-app');
+  return legacyActions;
+});
+vi.mock('@/lib/server/session', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { requireStaffPage: agenda.requireStaffPage };
+});
+vi.mock('@/lib/server/data/appointments', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    listAppointmentsFor: agenda.listAppointmentsFor,
+    countAppointmentsFor: agenda.countAppointmentsFor,
+  };
+});
+vi.mock('@/lib/server/data/professionals', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listProfessionalOptions: agenda.listProfessionalOptions };
+});
+vi.mock('@/lib/server/data/schedule', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return {
+    loadScheduleConfig: agenda.loadScheduleConfig,
+    listClosuresFor: agenda.listClosuresFor,
+  };
+});
+vi.mock('@/lib/server/data/waitlist', async () => {
+  const { agenda } = await import('../support/agenda-app');
+  return { listWaitlistFor: agenda.listWaitlistFor };
+});
 
 function jsonResponse(
   success: boolean,
@@ -129,6 +168,11 @@ const DEFAULT_TEST_SCHEDULE_CONFIG = {
   minGapMinutes: 15,
 };
 
+/**
+ * As leituras da agenda (consultas, profissionais, fila, feriados) vêm do
+ * servidor (`resetAgenda`); o `fetch` fica só com as gravações e o que os
+ * formulários buscam ao abrir (pacientes, catálogo, grade).
+ */
 function mockAgendaFetch(options: AgendaFetchOptions = {}) {
   const {
     appointments = [],
@@ -140,6 +184,13 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
     appointmentsPostError,
     professionalsError,
   } = options;
+  resetAgenda({
+    appointments,
+    professionals,
+    scheduleConfig,
+    closures,
+    fail: professionalsError ? { professionals: professionalsError } : {},
+  });
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -169,25 +220,11 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
         }
         return jsonResponse(true, appointmentFixture);
       }
-      if (url.startsWith('/api/appointments')) {
-        return jsonResponse(true, appointments);
-      }
       if (url.startsWith('/api/patients')) {
         return jsonResponse(true, patients);
       }
-      if (url.startsWith('/api/options/professionals')) {
-        return professionalsError
-          ? jsonResponse(false, null, professionalsError)
-          : jsonResponse(true, professionals);
-      }
       if (url.startsWith('/api/options/procedures')) {
         return jsonResponse(true, []);
-      }
-      if (url.startsWith('/api/waitlist')) {
-        return jsonResponse(true, []);
-      }
-      if (url.startsWith('/api/settings/schedule/closures')) {
-        return jsonResponse(true, closures);
       }
       if (url.startsWith('/api/schedule-config')) {
         return jsonResponse(true, { config: scheduleConfig, isDefault: false });
@@ -199,27 +236,24 @@ function mockAgendaFetch(options: AgendaFetchOptions = {}) {
 
 describe('Feature: Página de agenda', () => {
   describe('Cenário: carregamento inicial', () => {
-    it('Dado que as consultas ainda não chegaram, Quando renderizar, Então exibe indicador de carregamento', () => {
+    it('Dado que as consultas ainda não chegaram, Quando renderizar, Então exibe indicador de carregamento', async () => {
       mockAgendaFetch();
-      renderWithToast(<AgendaPage />);
+      const { container } = await renderSkeleton();
 
-      expect(screen.getByText('Carregando…')).toBeInTheDocument();
+      // O servidor ainda lê: o esqueleto traz o mesmo cabeçalho e marca a tela como ocupada.
+      expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+      expect(screen.getByRole('heading', { name: 'Agenda' })).toBeVisible();
+      // Sem dado, nada de «+ Nova consulta» clicável.
+      expect(
+        screen.getByRole('button', { name: '+ Nova consulta' }),
+      ).toBeDisabled();
     });
   });
 
   describe('Cenário: erro ao carregar consultas', () => {
     it('Dado falha na API de consultas, Quando renderizar, Então exibe alerta de erro', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async (input: RequestInfo | URL) => {
-          const url = typeof input === 'string' ? input : input.toString();
-          if (url.startsWith('/api/appointments')) {
-            return jsonResponse(false, null, 'Erro ao buscar consultas');
-          }
-          return jsonResponse(true, []);
-        }),
-      );
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ fail: { appointments: 'Erro ao buscar consultas' } });
+      await renderAgenda();
 
       await waitFor(() => {
         expect(
@@ -232,7 +266,7 @@ describe('Feature: Página de agenda', () => {
   describe('Cenário: grade renderizada com consultas', () => {
     it('Dado consultas do mês, Quando renderizar, Então exibe a grade do calendário', async () => {
       mockAgendaFetch({ appointments: [appointmentFixture] });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -242,7 +276,7 @@ describe('Feature: Página de agenda', () => {
 
     it('Dado profissionais cadastrados, Quando renderizar, Então exibe o filtro de profissionais', async () => {
       mockAgendaFetch({ professionals: [professionalFixture] });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.getByText('Todos os profissionais')).toBeInTheDocument();
@@ -254,7 +288,7 @@ describe('Feature: Página de agenda', () => {
   describe('Cenário: criar nova consulta', () => {
     it("Dado clique em 'Nova consulta', Quando o formulário é submetido, Então chama a API de criação", async () => {
       mockAgendaFetch();
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -285,7 +319,7 @@ describe('Feature: Página de agenda', () => {
 
     it("Dado sucesso ao criar consulta única, Quando submetido, Então exibe toast de sucesso 'Consulta criada'", async () => {
       mockAgendaFetch();
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -333,7 +367,8 @@ describe('Feature: Página de agenda', () => {
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
       );
-      renderWithToast(<AgendaPage />);
+      resetAgenda();
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -365,7 +400,7 @@ describe('Feature: Página de agenda', () => {
   describe('Cenário: abrir detalhes de uma consulta pelo calendário', () => {
     it('Dado clique em uma consulta na grade, Quando acionado, Então abre o modal de detalhes', async () => {
       mockAgendaFetch({ appointments: [appointmentFixture] });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.getByText(/Maria Souza/)).toBeInTheDocument();
@@ -381,40 +416,23 @@ describe('Feature: Página de agenda', () => {
 
   describe('Cenário: filtro por profissional', () => {
     it('Dado seleção de um profissional no filtro, Quando alterado, Então refaz a busca das consultas com o profissional selecionado', async () => {
-      const fetchMock = vi.fn(
-        async (input: RequestInfo | URL, init?: RequestInit) => {
-          const url = typeof input === 'string' ? input : input.toString();
-          const method = init?.method ?? 'GET';
-          if (url.startsWith('/api/appointments'))
-            return jsonResponse(true, []);
-          if (url.startsWith('/api/patients'))
-            return jsonResponse(true, [patientFixture]);
-          if (url.startsWith('/api/options/professionals'))
-            return jsonResponse(true, [professionalFixture]);
-          if (url.startsWith('/api/options/procedures'))
-            return jsonResponse(true, []);
-          if (url.startsWith('/api/waitlist')) return jsonResponse(true, []);
-          throw new Error(`URL não mapeada no mock: ${method} ${url}`);
-        },
-      );
-      vi.stubGlobal('fetch', fetchMock);
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ professionals: [professionalFixture] });
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.getByText('Dra. Ana')).toBeInTheDocument();
       });
-      fireEvent.change(screen.getByDisplayValue('Todos os profissionais'), {
-        target: { value: 'prof-1' },
-      });
+      await change(
+        screen.getByDisplayValue('Todos os profissionais'),
+        'prof-1',
+      );
 
+      expect(agenda.replaced.at(-1)).toBe('/agenda?profissional=prof-1');
       await waitFor(() => {
-        expect(
-          fetchMock.mock.calls.some(([input]) =>
-            (typeof input === 'string' ? input : input.toString()).includes(
-              'professionalId=prof-1',
-            ),
-          ),
-        ).toBe(true);
+        expect(agenda.listAppointmentsFor).toHaveBeenLastCalledWith(
+          expect.anything(),
+          expect.objectContaining({ professionalId: 'prof-1' }),
+        );
       });
     });
   });
@@ -422,7 +440,7 @@ describe('Feature: Página de agenda', () => {
   describe('Cenário: navegação por mês', () => {
     it('Dado clique nas setas de navegação, Quando acionadas, Então o mês exibido muda', async () => {
       mockAgendaFetch();
-      const { container } = renderWithToast(<AgendaPage />);
+      const { container } = await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -430,17 +448,21 @@ describe('Feature: Página de agenda', () => {
       const monthLabelEl = container.querySelector('.min-w-48') as HTMLElement;
       const initialText = monthLabelEl.textContent;
 
-      fireEvent.click(screen.getByLabelText('Próximo mês'));
-      expect(monthLabelEl.textContent).not.toBe(initialText);
+      await click(screen.getByLabelText('Próximo mês'));
+      await waitFor(() =>
+        expect(monthLabelEl.textContent).not.toBe(initialText),
+      );
 
-      fireEvent.click(screen.getByLabelText('Mês anterior'));
-      fireEvent.click(screen.getByLabelText('Mês anterior'));
-      expect(monthLabelEl.textContent).not.toBe(initialText);
+      await click(screen.getByLabelText('Mês anterior'));
+      await click(screen.getByLabelText('Mês anterior'));
+      await waitFor(() =>
+        expect(monthLabelEl.textContent).not.toBe(initialText),
+      );
     });
 
     it('Dado o mês atual, Quando renderizar, Então só a primeira letra do rótulo é maiúscula (AGENDA-04)', async () => {
       mockAgendaFetch();
-      const { container } = renderWithToast(<AgendaPage />);
+      const { container } = await renderAgenda();
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
       });
@@ -457,13 +479,14 @@ describe('Feature: Página de agenda', () => {
 
     it('Dado profissionais cadastrados, Quando renderizar, Então o filtro tem largura limitada (AGENDA-04)', async () => {
       mockAgendaFetch({ professionals: [professionalFixture] });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.getByText('Dra. Ana')).toBeInTheDocument();
       });
+      // Largura limitada no desktop (`md:`); no celular ocupa a linha toda.
       expect(screen.getByDisplayValue('Todos os profissionais')).toHaveClass(
-        'max-w-56',
+        'md:max-w-56',
       );
     });
   });
@@ -471,7 +494,7 @@ describe('Feature: Página de agenda', () => {
   describe('Cenário: legenda de status e mês vazio (AGENDA-03)', () => {
     it('Dado a grade renderizada, Quando exibir, Então mostra a legenda com os 5 status', async () => {
       mockAgendaFetch();
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -485,7 +508,7 @@ describe('Feature: Página de agenda', () => {
 
     it('Dado mês sem nenhuma consulta, Quando renderizar, Então exibe mensagem de estado vazio', async () => {
       mockAgendaFetch({ appointments: [] });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(
@@ -526,7 +549,8 @@ describe('Feature: Página de agenda', () => {
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
       );
-      renderWithToast(<AgendaPage />);
+      resetAgenda();
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -586,7 +610,8 @@ describe('Feature: Página de agenda', () => {
           throw new Error(`URL não mapeada no mock: ${method} ${url}`);
         }),
       );
-      renderWithToast(<AgendaPage />);
+      resetAgenda();
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -618,7 +643,7 @@ describe('Feature: Página de agenda', () => {
 
     it("Dado aviso de série exibido, Quando clicar em 'Dispensar', Então o alerta some (AGENDA-07)", async () => {
       mockAgendaFetch();
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
@@ -674,7 +699,8 @@ describe('Feature: Página de agenda', () => {
         },
       );
       vi.stubGlobal('fetch', fetchMock);
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ appointments: [appointmentFixture] });
+      await renderAgenda();
 
       await waitFor(() =>
         expect(screen.getByText(/Maria Souza/)).toBeInTheDocument(),
@@ -726,7 +752,8 @@ describe('Feature: Página de agenda', () => {
         },
       );
       vi.stubGlobal('fetch', fetchMock);
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ appointments: [appointmentFixture] });
+      await renderAgenda();
 
       await waitFor(() =>
         expect(screen.getByText(/Maria Souza/)).toBeInTheDocument(),
@@ -770,7 +797,8 @@ describe('Feature: Página de agenda', () => {
         },
       );
       vi.stubGlobal('fetch', fetchMock);
-      renderWithToast(<AgendaPage />);
+      resetAgenda({ appointments: [appointmentFixture] });
+      await renderAgenda();
 
       await waitFor(() =>
         expect(screen.getByText(/Maria Souza/)).toBeInTheDocument(),
@@ -802,7 +830,7 @@ describe('Feature: Página de agenda', () => {
   describe('Cenário: fechar modais sem executar ação', () => {
     it('Dado modal de nova consulta aberto, Quando fechado sem submeter, Então o modal desaparece', async () => {
       mockAgendaFetch({ professionals: [professionalFixture] });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() =>
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument(),
@@ -841,7 +869,7 @@ describe('Feature: Página de agenda', () => {
         vi.setSystemTime(now);
         try {
           mockAgendaFetch();
-          const { container } = renderWithToast(<AgendaPage />);
+          const { container } = await renderAgenda();
 
           await waitFor(() =>
             expect(screen.queryByText('Carregando…')).not.toBeInTheDocument(),
@@ -864,7 +892,7 @@ describe('Feature: Página de agenda', () => {
 
     it('Dado modal de detalhes aberto, Quando fechado sem executar ação, Então o modal desaparece', async () => {
       mockAgendaFetch({ appointments: [appointmentFixture] });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() =>
         expect(screen.getByText(/Maria Souza/)).toBeInTheDocument(),
@@ -885,18 +913,11 @@ describe('Feature: Página de agenda', () => {
   });
 
   describe('Cenário: recall de um clique via parâmetros de URL', () => {
-    afterEach(() => {
-      window.history.pushState({}, '', '/');
-    });
-
     it('Dado parâmetros completos de recall na URL, Quando a página carrega, Então abre o formulário pré-preenchido', async () => {
-      window.history.pushState(
-        {},
-        '',
+      mockAgendaFetch();
+      await renderAgenda(
         '/agenda?followUpId=fu-1&patientId=pat-1&procedure=Troca+de+curativo',
       );
-      mockAgendaFetch();
-      renderWithToast(<AgendaPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument();
@@ -909,9 +930,8 @@ describe('Feature: Página de agenda', () => {
     });
 
     it('Dado apenas o followUpId presente na URL, Quando a página carrega, Então abre o formulário sem paciente ou procedimento pré-selecionados', async () => {
-      window.history.pushState({}, '', '/agenda?followUpId=fu-1');
       mockAgendaFetch();
-      renderWithToast(<AgendaPage />);
+      await renderAgenda('/agenda?followUpId=fu-1');
 
       await waitFor(() => {
         expect(screen.getByText('Nova consulta')).toBeInTheDocument();
@@ -1098,7 +1118,7 @@ describe('Feature: Formulário de nova consulta', () => {
 
     it('Dada a lista de profissionais indisponível, Então o formulário mostra o erro', async () => {
       mockAgendaFetch({ professionalsError: 'Acesso negado' });
-      renderWithToast(<AgendaPage />);
+      await renderAgenda();
 
       await waitFor(() => {
         expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();

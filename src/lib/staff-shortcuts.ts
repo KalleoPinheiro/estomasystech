@@ -1,5 +1,5 @@
 import type { UserRole } from '@/domain/auth/user-role';
-import { STAFF_PAGES, type StaffPage } from '@/lib/staff-access';
+import { STAFF_PAGES, type StaffPage } from '@/lib/staff-pages';
 
 /**
  * Atalhos da barra inferior do celular (#428). O iOS limita a 5 itens, então o

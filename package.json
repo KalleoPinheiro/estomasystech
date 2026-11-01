@@ -1,6 +1,6 @@
 {
   "name": "estomasystech",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "prepare": "husky",
@@ -30,10 +30,12 @@
     "test:e2e": "npm run build && npm run test:e2e:prod && npm run test:e2e:dev",
     "test:e2e:prod": "playwright test -c playwright.prod.config.ts",
     "test:e2e:dev": "playwright test",
+    "test:console": "npm run build && playwright test -c playwright.prod.config.ts console-limpo && playwright test -c playwright.console.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "import-taxonomy": "tsx scripts/import-taxonomy.ts",
     "check:sv": "bash scripts/check-sv-adoption.sh",
     "check:docs": "tsx scripts/check-docs.ts",
+    "check:server-first": "tsx scripts/check-server-first.ts",
     "check:testes": "tsx scripts/gate/check-test-integrity.ts",
     "gate:local": "tsx scripts/gate/local.ts",
     "changeset": "changeset",

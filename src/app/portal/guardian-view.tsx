@@ -2,14 +2,11 @@
 
 import { Button, Card } from '@still-void/ui/react';
 import { useState } from 'react';
-import {
-  EmptyState,
-  ErrorAlert,
-  LoadingIndicator,
-} from '@/components/feedback';
-import { apiFetch } from '@/lib/client';
-import { useApiQuery } from '@/lib/use-api-query';
-import { PatientPortalView } from './patient-view';
+import { EmptyState, ErrorAlert } from '@/components/feedback';
+import { unwrapAction } from '@/lib/action-result';
+import { actForPatient, stopActingForPatient } from './actions';
+import { PatientPortalView, type PatientPortalViewData } from './patient-view';
+import { usePortalRefresh } from './use-portal-refresh';
 
 interface RepresentedPatientsDto {
   patients: { id: string; fullName: string }[];
@@ -19,27 +16,28 @@ interface RepresentedPatientsDto {
 /**
  * Portal do responsável (ADR-027): escolhe o paciente que representa e passa a
  * ver o portal dele, sempre com o aviso "acessando em nome de". A escolha vai
- * ao servidor (cookie validado a cada requisição e gravado na trilha).
+ * ao servidor (cookie validado a cada requisição e gravado na trilha) e a tela
+ * é relida no servidor, já com o paciente escolhido.
  */
-export function GuardianPortalView() {
-  const { data, error, refresh } = useApiQuery<RepresentedPatientsDto>(
-    '/api/portal/guardian/patients',
-  );
+export function GuardianPortalView({
+  represented,
+  portal,
+  nowMs,
+}: {
+  represented: RepresentedPatientsDto;
+  /** Só existe com paciente escolhido; lido no servidor junto com a lista. */
+  portal: PatientPortalViewData | null;
+  nowMs: number;
+}) {
+  const refresh = usePortalRefresh();
   const [actionError, setActionError] = useState<string | null>(null);
-  // `key` refaz a leitura do portal do paciente ao trocar de paciente.
-  const [version, setVersion] = useState(0);
 
-  if (error) return <ErrorAlert message={error} />;
-  if (!data) return <LoadingIndicator />;
-
-  const change = async (method: 'PUT' | 'DELETE', patientId?: string) => {
+  const change = async (patientId?: string) => {
     try {
-      await apiFetch('/api/portal/guardian/acting-for', {
-        method,
-        body: patientId ? JSON.stringify({ patientId }) : undefined,
-      });
+      await unwrapAction<unknown>(
+        patientId ? actForPatient({ patientId }) : stopActingForPatient({}),
+      );
       setActionError(null);
-      setVersion((v) => v + 1);
       refresh();
     } catch (err) {
       setActionError(
@@ -48,7 +46,7 @@ export function GuardianPortalView() {
     }
   };
 
-  if (data.patients.length === 0) {
+  if (represented.patients.length === 0) {
     return (
       <EmptyState
         icon="info"
@@ -57,7 +55,7 @@ export function GuardianPortalView() {
     );
   }
 
-  if (!data.selectedPatientId) {
+  if (!represented.selectedPatientId || !portal) {
     return (
       <Card as="section" className="flex flex-col gap-3 p-6">
         <h1 className="font-semibold text-lg">Em nome de quem você acessa?</h1>
@@ -66,11 +64,11 @@ export function GuardianPortalView() {
           responsável.
         </p>
         {actionError && <ErrorAlert message={actionError} />}
-        {data.patients.map((patient) => (
+        {represented.patients.map((patient) => (
           <Button
             key={patient.id}
             variant="secondary"
-            onClick={() => change('PUT', patient.id)}
+            onClick={() => change(patient.id)}
           >
             {patient.fullName}
           </Button>
@@ -83,9 +81,11 @@ export function GuardianPortalView() {
     <>
       {actionError && <ErrorAlert message={actionError} />}
       <PatientPortalView
-        key={`${data.selectedPatientId}-${version}`}
+        key={represented.selectedPatientId}
+        {...portal}
+        nowMs={nowMs}
         onSwitchPatient={
-          data.patients.length > 1 ? () => change('DELETE') : undefined
+          represented.patients.length > 1 ? () => change() : undefined
         }
       />
     </>

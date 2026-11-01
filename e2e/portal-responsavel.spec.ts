@@ -6,6 +6,7 @@ import {
   linkPortalAccount,
   unique,
 } from "./support/api";
+import { ACTING_PATIENT_COOKIE } from "../src/lib/auth/acting-patient";
 import { sessionCookie } from "./support/session-token";
 
 test.describe("portal do responsável (ADR-027)", () => {
@@ -67,5 +68,36 @@ test.describe("portal do responsável (ADR-027)", () => {
     await context.addCookies([sessionCookie(guardian.email, "guardian")]);
     await page.goto("/portal");
     await expect(page.getByText(`Acessando em nome de ${patient.fullName}.`)).toHaveCount(0);
+  });
+
+  test("a escolha pela Server Action grava o cookie e a tela já renderiza com ele (#553, PR 2b)", async ({
+    page,
+    context,
+    request,
+  }) => {
+    const id = unique();
+    const guardian = await createGuardian(request, `Eva Responsável ${id}`, `eva.${id}@e2e.estomasystech.test`);
+    const child = await createPatient(request, { fullName: `Caio Filho ${id}`, guardianId: guardian.id });
+    // Com um só representado o portal já o escolhe; com dois, aparece a lista.
+    await createPatient(request, { fullName: `Duda Filha ${id}`, guardianId: guardian.id });
+    await linkGuardianAccount(request, guardian);
+    await context.addCookies([sessionCookie(guardian.email, "guardian")]);
+    await page.goto("/portal");
+    expect((await context.cookies()).some((c) => c.name === ACTING_PATIENT_COOKIE)).toBe(false);
+
+    await page.getByRole("button", { name: child.fullName }).click();
+
+    // O refresh() da própria ação já traz a tela do paciente escolhido, sem /api.
+    await expect(page.getByText(`Acessando em nome de ${child.fullName}.`)).toBeVisible();
+    const acting = (await context.cookies()).find((c) => c.name === ACTING_PATIENT_COOKIE);
+    expect(acting?.value).toBe(child.id);
+    expect(acting?.httpOnly).toBe(true);
+
+    // A escolha sobrevive a uma nova carga e «Trocar paciente» apaga o cookie.
+    await page.reload();
+    await expect(page.getByText(`Acessando em nome de ${child.fullName}.`)).toBeVisible();
+    await page.getByRole("button", { name: "Trocar paciente" }).click();
+    await expect(page.getByRole("heading", { name: "Em nome de quem você acessa?" })).toBeVisible();
+    expect((await context.cookies()).some((c) => c.name === ACTING_PATIENT_COOKIE && c.value !== "")).toBe(false);
   });
 });

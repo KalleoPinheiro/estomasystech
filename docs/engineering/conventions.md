@@ -3,7 +3,7 @@ title: "Convenções de código e testes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-26
+last_reviewed: 2026-10-25
 ---
 
 # Convenções de código e testes
@@ -36,6 +36,16 @@ last_reviewed: 2026-09-26
 - `systemScope()` (todas as clínicas) só em arquivos listados em `tests/lib/tenant-scope.test.ts`, com justificativa.
 - Dinheiro sempre em centavos inteiros (value object `Money`).
 - Toda mudança registra o ator autenticado (auditoria); acesso cross-empresa do Super Admin é sempre auditado.
+
+## Telas no servidor (ADR-069, ADR-074)
+
+- Página nova é Server Component. `'use client'` em `page.tsx` só entra na allowlist de `scripts/server-first-allowlist.json` (que só encolhe); `npm run check:server-first` reprova o resto e reprova entrada que já migrou.
+- A primeira linha da página é a guarda de `src/lib/server/session.ts`, com `next` apontando para a própria rota. Nunca leia `cookies()` à mão.
+- Tela com papel restrito: `requireStaffPageFor('/rota')` no `layout.tsx` do segmento (mesma matriz da API); nada de `RoleGate` no cliente.
+- Dado vem de `src/lib/server/data/*` (`import 'server-only'`) por DTO, com `sessionScope`/`writeScope`. Não use `use cache`, `unstable_cache` nem `cacheComponents` para dado de clínica.
+- Mutação de tela é `defineAction` (nunca Server Action solta): `audit` é obrigatório, `false` só com motivo no código; com `audit` função o handler grava só por `tx` e a trilha entra na mesma transação ([ADR-075](../adr/075-papel-por-tela-no-servidor-e-auditoria-na-mesma-transacao.md)). Teste de ação cobre sem sessão, papel errado e outra clínica, e confirma que nada foi gravado.
+- Módulo importado por Server Component não pode ser `'use client'` se exporta valor (constante, função): separe a parte pura (ex.: `staff-pages.ts` × `staff-access.tsx`).
+- Erro de servidor para o usuário: mensagem fixa e `digest`, nunca `error.message`.
 
 ## Testes
 

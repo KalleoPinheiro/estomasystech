@@ -8,7 +8,32 @@ import type {
   CommissionPayoutDto,
   PayoutReceiptDto,
 } from '@/lib/dto';
-import { renderWithToast } from '../support/render-with-toast';
+import { renderDocumentPage } from '../support/documentos-over-fetch';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+}));
+vi.mock('@/lib/server/session', async () =>
+  (await import('../support/documentos-over-fetch')).sessionOverFetch(),
+);
+vi.mock('@/lib/server/data/clinic-info', async () =>
+  (await import('../support/documentos-over-fetch')).clinicInfoOverFetch(),
+);
+vi.mock('@/lib/server/data/patient-record', async () =>
+  (await import('../support/documentos-over-fetch')).patientRecordOverFetch(),
+);
+vi.mock('@/lib/server/data/care-plan', async () =>
+  (await import('../support/documentos-over-fetch')).carePlanOverFetch(),
+);
+vi.mock('@/lib/server/data/documents', async () =>
+  (await import('../support/documentos-over-fetch')).documentsDataOverFetch(),
+);
+vi.mock('@/lib/server/document-issuance', async () =>
+  (await import('../support/documentos-over-fetch')).noPriorIssuance(),
+);
+vi.mock('@/app/documentos/actions', async () =>
+  (await import('../support/documentos-over-fetch')).documentActionsOverFetch(),
+);
 
 const jsonResponse = (data: unknown, ok = true) => ({
   ok,
@@ -93,7 +118,7 @@ const mockFetch = (
 
 const render = async () => {
   await act(async () => {
-    renderWithToast(
+    await renderDocumentPage(
       <PayoutReceiptPage params={Promise.resolve({ payoutId: 'po-1' })} />,
     );
   });

@@ -23,10 +23,16 @@ export interface ConditionWithAssessments {
   photos?: ConditionPhoto[];
 }
 
+/** Condição do portal do paciente: as fotos sempre vêm (vazio sem foto), diferente do parceiro. */
+export interface PatientConditionWithAssessments
+  extends ConditionWithAssessments {
+  photos: ConditionPhoto[];
+}
+
 export interface PatientPortalData {
   patient: Patient;
   appointments: Appointment[];
-  conditions: ConditionWithAssessments[];
+  conditions: PatientConditionWithAssessments[];
   invoices: Invoice[];
   followUps: FollowUp[];
 }

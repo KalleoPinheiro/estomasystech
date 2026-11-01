@@ -1,0 +1,10 @@
+[
+  "src/app/(staff)/configuracoes/page.tsx",
+  "src/app/(staff)/minha-conta/page.tsx",
+  "src/app/plataforma/auditoria/page.tsx",
+  "src/app/plataforma/clinicas/[id]/page.tsx",
+  "src/app/plataforma/clinicas/nova/page.tsx",
+  "src/app/plataforma/minha-conta/page.tsx",
+  "src/app/plataforma/page.tsx",
+  "src/app/plataforma/taxonomia/page.tsx"
+]

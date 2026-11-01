@@ -10,6 +10,9 @@ name: Recibo do gate
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
+  # Merge queue (ADR-087): o recibo e a integridade já foram conferidos no PR (corpo do PR); na fila o job
+  # é pulado, e check pulado conta como aprovado para o ruleset.
+  merge_group:
 
 concurrency:
   group: recibo-${{ github.workflow }}-${{ github.ref }}
@@ -20,6 +23,7 @@ permissions:
 
 jobs:
   recibo-gate:
+    if: github.event_name == 'pull_request'
     name: Recibo do gate local + integridade dos testes
     runs-on: ubuntu-24.04
     steps:

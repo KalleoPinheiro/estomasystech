@@ -5,6 +5,7 @@ import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { StatusBadge } from '@/components/status-badge';
+import { unwrapAction } from '@/lib/action-result';
 import { apiFetch } from '@/lib/client';
 import { DATA_RIGHTS_NOTICE } from '@/lib/data-rights-text';
 import {
@@ -13,7 +14,8 @@ import {
   type DataSubjectRequestDto,
 } from '@/lib/dto/data-subject-request';
 import { formatDateTime } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
+import { openDataRequest } from './actions';
+import { usePortalRefresh } from './use-portal-refresh';
 
 type Kind = DataSubjectRequestDto['kind'];
 
@@ -37,8 +39,11 @@ function saveJson(data: unknown, filename: string) {
  * só na clínica (#375, ADR-033).
  */
 export function DataRights({
+  requests,
   asRepresentative = false,
 }: {
+  /** Pedidos já feitos, lidos no servidor. */
+  requests: DataSubjectRequestDto[];
   asRepresentative?: boolean;
 }) {
   const { toast } = useToast();
@@ -83,17 +88,21 @@ export function DataRights({
             ? 'Baixar cópia dos dados do paciente'
             : 'Baixar cópia dos meus dados'}
         </Button>
-        <DataRequests asRepresentative={asRepresentative} />
+        <DataRequests requests={requests} asRepresentative={asRepresentative} />
       </Card>
     </section>
   );
 }
 
-function DataRequests({ asRepresentative }: { asRepresentative: boolean }) {
+function DataRequests({
+  requests: data,
+  asRepresentative,
+}: {
+  requests: DataSubjectRequestDto[];
+  asRepresentative: boolean;
+}) {
   const { toast } = useToast();
-  const { data, refresh } = useApiQuery<DataSubjectRequestDto[]>(
-    '/api/portal/patient/data-requests',
-  );
+  const refresh = usePortalRefresh();
   const [kind, setKind] = useState<Kind>('correction');
   const [details, setDetails] = useState('');
   const [saving, setSaving] = useState(false);
@@ -103,10 +112,9 @@ function DataRequests({ asRepresentative }: { asRepresentative: boolean }) {
     setSaving(true);
     setError(null);
     try {
-      await apiFetch('/api/portal/patient/data-requests', {
-        method: 'POST',
-        body: JSON.stringify({ kind, details: details.trim() || null }),
-      });
+      await unwrapAction(
+        openDataRequest({ kind, details: details.trim() || null }),
+      );
       setDetails('');
       toast({
         description: 'Pedido enviado. A clínica vai analisar.',

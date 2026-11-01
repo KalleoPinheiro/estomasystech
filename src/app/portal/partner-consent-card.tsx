@@ -5,12 +5,11 @@ import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
-import { apiFetch } from '@/lib/client';
+import { type ActionResult, unwrapAction } from '@/lib/action-result';
 import type { PartnerShareConsentDto } from '@/lib/dto';
 import { formatDateTime } from '@/lib/format';
-import { useApiQuery } from '@/lib/use-api-query';
-
-const ENDPOINT = '/api/portal/patient/partner-consent';
+import { acceptPartnerConsent, revokePartnerConsent } from './actions';
+import { usePortalRefresh } from './use-portal-refresh';
 
 function statusLine(consent: PartnerShareConsentDto): string {
   if (consent.active && consent.acceptedAt) {
@@ -34,24 +33,28 @@ function statusLine(consent: PartnerShareConsentDto): string {
  * confirmar em nome próprio o que o representante autorizou.
  */
 export function PartnerConsentSection({
+  consent,
   asRepresentative = false,
 }: {
+  /** Lido no servidor; `null` quando o paciente não foi indicado por parceiro. */
+  consent: PartnerShareConsentDto | null;
   asRepresentative?: boolean;
 }) {
   const { toast } = useToast();
-  const { data: consent, refresh } = useApiQuery<PartnerShareConsentDto | null>(
-    ENDPOINT,
-  );
+  const refresh = usePortalRefresh();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (!consent) return null;
 
-  const run = async (path: string, success: string) => {
+  const run = async (
+    action: (input: Record<string, never>) => Promise<ActionResult<unknown>>,
+    success: string,
+  ) => {
     setBusy(true);
     setError(null);
     try {
-      await apiFetch(path, { method: 'POST' });
+      await unwrapAction(action({}));
       toast({ description: success, variant: 'success' });
       refresh();
     } catch (err) {
@@ -82,7 +85,10 @@ export function PartnerConsentSection({
               disabled={busy}
               className="self-start"
               onClick={() =>
-                void run(ENDPOINT, 'Autorização registrada em seu nome')
+                void run(
+                  acceptPartnerConsent,
+                  'Autorização registrada em seu nome',
+                )
               }
             >
               Autorizar em meu nome
@@ -106,7 +112,7 @@ export function PartnerConsentSection({
             confirmLabel="Revogar"
             variant="danger"
             onConfirm={() =>
-              void run(`${ENDPOINT}/revoke`, 'Autorização revogada')
+              void run(revokePartnerConsent, 'Autorização revogada')
             }
           />
         ) : (
@@ -124,7 +130,9 @@ export function PartnerConsentSection({
               variant="accent"
               disabled={busy}
               className="self-start"
-              onClick={() => void run(ENDPOINT, 'Autorização registrada')}
+              onClick={() =>
+                void run(acceptPartnerConsent, 'Autorização registrada')
+              }
             >
               {busy ? 'Registrando…' : 'Li e autorizo'}
             </Button>

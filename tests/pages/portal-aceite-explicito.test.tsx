@@ -5,6 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { ConsentCard } from '@/app/portal/consent-card';
 
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

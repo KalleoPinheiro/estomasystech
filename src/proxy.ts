@@ -49,7 +49,24 @@ const API_RATE_LIMIT = new SharedRateLimiter(
   API_RATE_LIMIT_SYNC_MS,
 );
 
+// Server Action (ADR-069 § 2) é um POST no caminho da página, fora de `/api/*`:
+// sem este teto ela escaparia do limite da API. Contador próprio, mesmo teto e
+// mesma chave (conta autenticada ou IP). O teto tem variável própria: relaxar a
+// API nos E2E não relaxa as ações.
+const ACTION_RATE_LIMIT_MAX = Number(process.env.ACTION_RATE_LIMIT_MAX) || 120;
+const ACTION_RATE_LIMIT = new SharedRateLimiter(
+  'action',
+  ACTION_RATE_LIMIT_MAX,
+  60_000,
+  undefined,
+  API_RATE_LIMIT_SYNC_MS,
+);
+
 const isApiPath = (pathname: string): boolean => pathname.startsWith('/api/');
+
+/** O Next marca o POST de Server Action com o cabeçalho `Next-Action`. */
+const isServerActionRequest = (request: NextRequest): boolean =>
+  request.method === 'POST' && request.headers.has('next-action');
 
 /**
  * Liveness (#212) passa direto: sem rate limit, que conta no banco — o
@@ -89,6 +106,20 @@ function unauthorized(request: NextRequest): NextResponse {
     next: `${pathname}${search}`,
   });
   return NextResponse.redirect(new URL(destination, request.url));
+}
+
+/**
+ * Sem sessão (ou sessão revogada). Página vai ao login e `/api` responde 401.
+ * O POST de Server Action passa direto: a resposta de um redirecionamento 307
+ * não é o envelope que a tela espera, e o rascunho de um formulário se perderia
+ * (#207). Quem barra a gravação é a própria ação, que lê a sessão (cookie e
+ * revogação) antes de qualquer coisa e responde `Não autenticado` no envelope
+ * (`defineAction`); o cliente então guarda o rascunho e vai ao login.
+ */
+function withoutSession(request: NextRequest, requestId: string): NextResponse {
+  return isServerActionRequest(request)
+    ? nextWithCsp(request, requestId)
+    : unauthorized(request);
 }
 
 function forbidden(request: NextRequest, session: Session): NextResponse {
@@ -218,8 +249,10 @@ async function route(
   }
 
   if (
-    isApiPath(pathname) &&
-    !(await API_RATE_LIMIT.allow(apiRateLimitKey(request)))
+    (isApiPath(pathname) &&
+      !(await API_RATE_LIMIT.allow(apiRateLimitKey(request)))) ||
+    (isServerActionRequest(request) &&
+      !(await ACTION_RATE_LIMIT.allow(apiRateLimitKey(request))))
   ) {
     return fail(
       'Limite de requisições excedido, tente novamente em instantes',
@@ -238,12 +271,12 @@ async function route(
 
   const session = getRequestSession(request);
   if (!session) {
-    return unauthorized(request);
+    return withoutSession(request, requestId);
   }
   // Conta desativada ou com sessões revogadas (logout, troca de senha) perde
   // o acesso em ≤ 60s, mesmo com cookie válido (#194, ADR-005).
   if (await isSessionRevoked(session)) {
-    return unauthorized(request);
+    return withoutSession(request, requestId);
   }
   if (!isAllowedForRole(pathname, session.role)) {
     return forbidden(request, session);

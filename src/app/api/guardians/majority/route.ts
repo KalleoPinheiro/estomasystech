@@ -1,10 +1,7 @@
 import type { NextRequest } from 'next/server';
-import { listMajorityReviews } from '@/application/guardians/majority-review';
-import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
-import { assertCanManageGuardians } from '@/lib/auth/guardian-access';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope } from '@/lib/auth/tenant-scope';
+import { listMajorityReviewsFor } from '@/lib/server/data/majority';
 
 /**
  * Aviso de maioridade (#372, ADR-032): pacientes que fizeram 18 anos e ainda
@@ -16,19 +13,5 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    assertCanManageGuardians(guard.session);
-    const repos = await getRepositories(sessionScope(guard.session));
-    return (await listMajorityReviews(repos)).map((item) => ({
-      patientId: item.patient.id,
-      fullName: item.patient.fullName,
-      birthDate: item.patient.birthDate?.toISOString() ?? null,
-      guardianName: item.guardianName,
-      guardianRelationship: item.guardianRelationship,
-      awaitingTransfer: item.awaitingTransfer,
-      representativeConsentExpiresOn:
-        item.representativeConsentExpiresOn?.toISOString() ?? null,
-      representativeConsentExpired: item.representativeConsentExpired,
-    }));
-  });
+  return handleRequest(() => listMajorityReviewsFor(guard.session));
 }

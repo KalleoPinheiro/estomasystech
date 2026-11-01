@@ -1,12 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CreateSupply } from '@/application/inventory/create-supply';
-import { ListSupplies } from '@/application/inventory/list-supplies';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
 import { toSupplyDto } from '@/lib/dto';
+import { listSuppliesFor } from '@/lib/server/data/supplies';
 
 const supplySchema = z.object({
   name: z.string().min(1).max(200),
@@ -19,11 +19,7 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { supplies } = await getRepositories(sessionScope(guard.session));
-    const result = await new ListSupplies(supplies).execute();
-    return result.map(({ supply }) => toSupplyDto(supply));
-  });
+  return handleRequest(() => listSuppliesFor(guard.session));
 }
 
 export async function POST(request: NextRequest) {

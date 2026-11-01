@@ -10,7 +10,16 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { MajorityReviewCard } from '@/app/(staff)/majority-review-card';
-import { PatientPortalView } from '@/app/portal/patient-view';
+
+import { PatientPortalHarness } from '../support/portal-harness';
+
+vi.mock('@/app/portal/actions', async () =>
+  (await import('../support/portal-actions')).portalActionsOverFetch(),
+);
+
+vi.mock('next/navigation', async () =>
+  (await import('../support/portal-router')).navigationMock(),
+);
 
 type Handler = (init?: RequestInit) => unknown;
 
@@ -96,7 +105,7 @@ describe('Feature: Representante legal assina pelo menor (#372)', () => {
       ),
     );
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     expect(
       await screen.findByText(/Como representante legal, você lê e aceita/),
@@ -113,7 +122,7 @@ describe('Feature: Representante legal assina pelo menor (#372)', () => {
   it('Dado adulto representado, Quando o responsável abre o portal, Então só lê o estado (sem assinar)', async () => {
     mockFetch(portalRoutes(true, { canSign: false }));
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     expect(
       await screen.findByText(/Eles são aceitos pelo próprio paciente/),
@@ -132,7 +141,7 @@ describe('Feature: Representante legal assina pelo menor (#372)', () => {
       }),
     );
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     expect(
       (await screen.findAllByText(/pelo representante legal/)).length,
@@ -158,7 +167,7 @@ describe('Feature: Representante legal assina pelo menor (#372)', () => {
       ['POST /api/portal/patient/consent?purpose=image'],
     );
 
-    renderWithToast(<PatientPortalView />);
+    renderWithToast(<PatientPortalHarness />);
 
     const buttons = await screen.findAllByRole('button', {
       name: 'Aceitar em meu nome',

@@ -5,6 +5,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { RefreshErrorAlert } from '@/components/refresh-error-alert';
 
 interface SummaryCardHref {
   label: string;
@@ -20,8 +21,9 @@ interface SummaryCardProps {
   href?: SummaryCardHref;
   cardClassName?: string;
   error: string | null;
-  isLoading: boolean;
-  onRetry: () => void;
+  isLoading?: boolean;
+  /** Sem ele, o «Tentar novamente» renderiza a tela de novo no servidor (bloco de Server Component). */
+  onRetry?: () => void;
   isEmpty: boolean;
   /**
    * `TriageQueue` some inteiro (nem o `<Card>` aparece) quando a fila está
@@ -33,6 +35,20 @@ interface SummaryCardProps {
   emptyMessage?: string;
   emptyIcon?: IconName;
   children: React.ReactNode;
+}
+
+function SummaryError({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
+  return onRetry ? (
+    <ErrorAlert message={message} onRetry={onRetry} />
+  ) : (
+    <RefreshErrorAlert message={message} />
+  );
 }
 
 function SummaryCardHeader({
@@ -78,7 +94,7 @@ export function SummaryCard({
   href,
   cardClassName = 'p-5',
   error,
-  isLoading,
+  isLoading = false,
   onRetry,
   isEmpty,
   hideWhenEmpty = false,
@@ -88,7 +104,7 @@ export function SummaryCard({
 }: SummaryCardProps) {
   if (hideWhenEmpty) {
     if (isLoading) return <LoadingIndicator />;
-    if (error) return <ErrorAlert message={error} onRetry={onRetry} />;
+    if (error) return <SummaryError message={error} onRetry={onRetry} />;
     if (isEmpty) return null;
     return (
       <Card className={cardClassName}>
@@ -112,7 +128,7 @@ export function SummaryCard({
         href={href}
       />
       {error ? (
-        <ErrorAlert message={error} onRetry={onRetry} />
+        <SummaryError message={error} onRetry={onRetry} />
       ) : isLoading ? (
         <LoadingIndicator />
       ) : isEmpty ? (

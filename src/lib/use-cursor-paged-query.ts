@@ -3,6 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetchPage } from './client';
 
+/**
+ * Primeira página já lida no servidor (ADR-069): o hook parte dela e só vai à
+ * API quando a URL base muda (busca digitada), em `loadMore` ou em `refresh`.
+ */
+export interface CursorPageSeed<T> {
+  baseUrl: string;
+  items: T[];
+  nextCursor: string | null;
+}
+
 export interface CursorPagedQueryResult<T> {
   items: T[] | null;
   hasMore: boolean;
@@ -18,19 +28,28 @@ export interface CursorPagedQueryResult<T> {
  * Lista paginada por cursor (issue #75): primeira página via effect (recarrega
  * quando a URL base muda), páginas seguintes anexadas via loadMore(). Mesma
  * interface pública de `usePagedQuery` (offset) — troca é só o import na página.
+ * Com `seed`, a 1ª página da URL do `seed` não é buscada: já veio no HTML.
  */
 export function useCursorPagedQuery<T>(
   baseUrl: string,
   pageSize: number,
+  seed?: CursorPageSeed<T>,
 ): CursorPagedQueryResult<T> {
-  const [items, setItems] = useState<T[] | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [items, setItems] = useState<T[] | null>(seed?.items ?? null);
+  const [nextCursor, setNextCursor] = useState<string | null>(
+    seed?.nextCursor ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   // Chave da última 1ª página já resolvida (sucesso ou erro) — mesmo padrão de
   // `useApiQuery`: `isLoading` deriva da comparação em vez de `setState`
   // síncrono no corpo do efeito (proibido por `react-hooks/set-state-in-effect`).
-  const [settledKey, setSettledKey] = useState<string | null>(null);
+  const [settledKey, setSettledKey] = useState<string | null>(
+    seed ? `${seed.baseUrl}:0` : null,
+  );
+  // Espelho de `settledKey` para o efeito decidir, sem entrar nas dependências
+  // (e sem refazer a busca quando a página já veio pronta do servidor).
+  const settledKeyRef = useRef(settledKey);
   // Geração da requisição em curso: toda resposta (1ª página ou loadMore) só é
   // aplicada se ainda for a mais recente — evita que um loadMore atrasado (ou
   // disparado 2x antes do 1º resolver) sobrescreva um refresh()/troca de url
@@ -49,6 +68,11 @@ export function useCursorPagedQuery<T>(
   const isLoading = settledKey !== requestKey;
 
   useEffect(() => {
+    if (settledKeyRef.current === requestKey) {
+      // Já está na tela: invalida uma busca anterior ainda em voo (A → B → A).
+      requestIdRef.current++;
+      return;
+    }
     const requestId = ++requestIdRef.current;
     apiFetchPage<T>(pageUrl(null))
       .then((page) => {
@@ -56,6 +80,7 @@ export function useCursorPagedQuery<T>(
           setItems(page.items);
           setNextCursor(page.nextCursor);
           setError(null);
+          settledKeyRef.current = requestKey;
           setSettledKey(requestKey);
         }
       })
@@ -64,6 +89,7 @@ export function useCursorPagedQuery<T>(
           setError(
             err instanceof Error ? err.message : 'Erro ao carregar dados',
           );
+          settledKeyRef.current = requestKey;
           setSettledKey(requestKey);
         }
       });

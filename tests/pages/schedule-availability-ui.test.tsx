@@ -8,13 +8,20 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { CalendarGrid } from '@/app/(staff)/agenda/calendar-grid';
 import { ClosuresSection } from '@/app/(staff)/configuracoes/closures-section';
 import { LunchBreakFields } from '@/app/(staff)/configuracoes/lunch-break-fields';
 import { AvailabilityForm } from '@/app/(staff)/profissionais/availability-form';
 import type { ProfessionalDto, ScheduleClosureDto } from '@/lib/dto';
+import { actionError, equipe } from '../support/equipe-data';
+
+// Gravar o horário é Server Action (#550); a leitura segue por `/api`, sob demanda.
+vi.mock('@/app/(staff)/profissionais/professional-actions', async () => {
+  const { equipe } = await import('../support/equipe-data');
+  return { saveAvailability: equipe.saveAvailability };
+});
 
 interface FakeResponse {
   ok: boolean;
@@ -54,6 +61,10 @@ function mockFetch(
   );
   return calls;
 }
+
+beforeEach(() => {
+  equipe.reset();
+});
 
 afterEach(() => {
   cleanup();
@@ -272,12 +283,7 @@ describe('Feature: Horário do profissional (tela)', () => {
   });
 
   it('Dado dias marcados, Quando salvar, Então envia só os dias ativos em minutos', async () => {
-    const calls = mockFetch([
-      {
-        method: 'PUT',
-        path: '/api/professionals/prof-1/availability',
-        respond: () => ok({ windows: [] }),
-      },
+    mockFetch([
       {
         path: '/api/professionals/prof-1/availability',
         respond: () => ok({ windows: [] }),
@@ -294,19 +300,17 @@ describe('Feature: Horário do profissional (tela)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar horários' }));
 
     await waitFor(() => expect(onDone).toHaveBeenCalled());
-    const put = calls.find((c) => c.method === 'PUT');
-    expect(JSON.parse(put?.body ?? '{}')).toEqual({
+    expect(equipe.saveAvailability).toHaveBeenCalledWith({
+      professionalId: 'prof-1',
       windows: [{ weekday: 3, startMinute: 810, endMinute: 1080 }],
     });
   });
 
   it('Dado erro ao salvar, Quando salvar, Então mostra a mensagem e não fecha', async () => {
+    equipe.saveAvailability.mockResolvedValue(
+      actionError('Janelas sobrepostas na segunda'),
+    );
     mockFetch([
-      {
-        method: 'PUT',
-        path: '/api/professionals/prof-1/availability',
-        respond: () => failure('Janelas sobrepostas na segunda'),
-      },
       {
         path: '/api/professionals/prof-1/availability',
         respond: () => ok({ windows: [] }),

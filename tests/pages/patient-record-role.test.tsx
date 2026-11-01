@@ -3,9 +3,28 @@
 import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
-import PatientRecordPage from '@/app/(staff)/pacientes/[id]/page';
 import type { UserRole } from '@/domain/auth/user-role';
+import { renderPatientRecord } from '../support/render-patient-record';
 import { identityFor, WithStaffIdentity } from '../support/staff-identity';
+
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/cadastro',
+  async () => (await import('../support/ficha-actions-via-fetch')).cadastro,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/prontuario',
+  async () => (await import('../support/ficha-actions-via-fetch')).prontuario,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/plano-cuidados',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).planoCuidados,
+);
+vi.mock(
+  '@/app/(staff)/pacientes/[id]/actions/consentimento',
+  async () =>
+    (await import('../support/ficha-actions-via-fetch')).consentimento,
+);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
@@ -48,13 +67,10 @@ function mockApi(role: UserRole) {
 
 const renderAs = async (role: UserRole) => {
   const fetchMock = mockApi(role);
-  await act(async () => {
-    renderWithToast(
-      <WithStaffIdentity>
-        <PatientRecordPage params={Promise.resolve({ id: 'pac-1' })} />
-      </WithStaffIdentity>,
-    );
-  });
+  await renderPatientRecord(
+    (children) => <WithStaffIdentity>{children}</WithStaffIdentity>,
+    { role },
+  );
   await screen.findByText('Maria Souza');
   return fetchMock;
 };

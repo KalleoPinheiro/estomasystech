@@ -14,6 +14,7 @@ import {
   Textarea,
 } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
+import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import {
@@ -22,9 +23,9 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { FormSheet } from '@/components/form-sheet';
-import { HealingChart } from '@/components/healing-chart';
 import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
+import { unwrapAction } from '@/lib/action-result';
 import { apiFetch } from '@/lib/client';
 import type { AssessmentDto, ConditionDto } from '@/lib/dto';
 import {
@@ -36,7 +37,16 @@ import {
   STOMA_TYPE_LABELS,
   tissueTypeLabel,
 } from '@/lib/format';
+import type {
+  AssessmentBody,
+  ConditionBody,
+} from '@/lib/patient-record-schemas';
 import { timeSummary, tissueProfile } from '@/lib/wound-time-summary';
+import {
+  addConditionAssessment,
+  createCondition,
+  resolveCondition as resolveConditionAction,
+} from './actions/prontuario';
 import {
   EMPTY_TIME_VALUES,
   TimeFields,
@@ -44,6 +54,13 @@ import {
   toTimePayload,
 } from './assessment-time-fields';
 import { ConditionPhotos } from './condition-photos';
+
+// O gráfico só aparece com a condição aberta e traz a lib de gráficos: fora do JS da carga.
+// O reservado tem a altura do gráfico, então abrir a condição não desloca a tabela.
+const HealingChart = dynamic(
+  () => import('@/components/healing-chart').then((m) => m.HealingChart),
+  { loading: () => <div className="h-[200px]" aria-hidden="true" /> },
+);
 
 interface ConditionsSectionProps {
   patientId: string;
@@ -88,10 +105,7 @@ export function ConditionsSection({
 
   const resolveCondition = async (condition: ConditionDto) => {
     try {
-      await apiFetch<ConditionDto>(`/api/conditions/${condition.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ action: 'resolve' }),
-      });
+      await unwrapAction(resolveConditionAction({ id: condition.id }));
       toast({ description: 'Condição resolvida', variant: 'success' });
       onChanged();
     } catch (err) {
@@ -384,16 +398,21 @@ function ConditionForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch<ConditionDto>(`/api/patients/${patientId}/conditions`, {
-        method: 'POST',
-        body: JSON.stringify({
-          kind,
-          title,
-          stomaType: kind === 'stoma' ? stomaType : null,
-          startedAt: startedAt ? new Date(startedAt).toISOString() : null,
-          notes: notes || null,
+      await unwrapAction(
+        createCondition({
+          patientId,
+          body: {
+            kind,
+            title,
+            // O estado do formulário é texto livre; o `zod` do servidor valida.
+            stomaType: (kind === 'stoma'
+              ? stomaType
+              : null) as ConditionBody['stomaType'],
+            startedAt: startedAt ? new Date(startedAt).toISOString() : null,
+            notes: notes || null,
+          },
         }),
-      });
+      );
       toast({ description: 'Condição registrada', variant: 'success' });
       onSaved();
     } catch (err) {
@@ -661,10 +680,12 @@ function AssessmentForm({
     setSaving(true);
     setError(null);
     try {
-      await apiFetch(`/api/conditions/${condition.id}/assessments`, {
-        method: 'POST',
-        body: JSON.stringify(toAssessmentPayload(values)),
-      });
+      await unwrapAction(
+        addConditionAssessment({
+          id: condition.id,
+          body: toAssessmentPayload(values) as AssessmentBody,
+        }),
+      );
       toast({ description: 'Avaliação registrada', variant: 'success' });
       onSaved();
     } catch (err) {

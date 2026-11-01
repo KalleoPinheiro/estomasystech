@@ -3,33 +3,105 @@ import {
   type TransactionManager,
   type TransactionScope,
 } from '@/application/ports/transaction-manager';
+import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
 import type { Patient } from '@/domain/patient/patient';
 import type { PatientRepository } from '@/domain/patient/patient-repository';
 import { InMemoryAppointmentRepository } from '@/infrastructure/persistence/in-memory/in-memory-appointment-repository';
 import { InMemoryAuditEventRepository } from '@/infrastructure/persistence/in-memory/in-memory-audit-event-repository';
 import {
-  InMemoryClinicalConditionRepository,
-  InMemoryConditionPhotoRepository,
-} from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
+  InMemoryCarePlanDiagnosisRepository,
+  InMemoryCarePlanInterventionRepository,
+  InMemoryCarePlanOutcomeRepository,
+  InMemoryCarePlanRepository,
+  InMemoryInterventionRecordRepository,
+  InMemoryOutcomeEvaluationRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-care-plan-repositories';
 import {
+  InMemoryAnamnesisRepository,
+  InMemoryClinicalConditionRepository,
+  InMemoryConditionAssessmentRepository,
+  InMemoryConditionPhotoRepository,
+  InMemoryEvolutionNoteRepository,
+  InMemoryPartnerShareConsentRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-clinical-repositories';
+import { InMemoryCommissionPayoutRepository } from '@/infrastructure/persistence/in-memory/in-memory-commission-payout-repository';
+import {
+  InMemoryProcedureKitRepository,
+  InMemoryProcedureRepository,
   InMemoryScheduleAvailabilityRepository,
   InMemoryScheduleConfigRepository,
   InMemoryUserAccountRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-foundation-repositories';
-import { InMemoryFollowUpRepository } from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
+import { InMemoryGuardianRepository } from '@/infrastructure/persistence/in-memory/in-memory-guardian-repository';
+import {
+  InMemoryFollowUpRepository,
+  InMemoryStockMovementRepository,
+  InMemorySupplyBatchRepository,
+  InMemorySupplyRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-inventory-repositories';
 import { InMemoryInvoiceRepository } from '@/infrastructure/persistence/in-memory/in-memory-invoice-repository';
 import { InMemorySessionPackageRepository } from '@/infrastructure/persistence/in-memory/in-memory-package-repository';
+import { InMemoryPartnerRepository } from '@/infrastructure/persistence/in-memory/in-memory-partner-repository';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
+import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
+import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
+import {
+  InMemoryNursingDiagnosisRepository,
+  InMemoryNursingInterventionRepository,
+  InMemoryNursingOutcomeRepository,
+} from '@/infrastructure/persistence/in-memory/in-memory-taxonomy-repositories';
+
+/** Vínculos Profissional↔Paciente em memória (só no escopo transacional dos testes). */
+export class InMemoryProfessionalPatientLinks
+  implements ProfessionalPatientLinkRepository
+{
+  private readonly links = new Set<string>();
+
+  async ensureLink(professionalId: string, patientId: string): Promise<void> {
+    this.links.add(`${professionalId}:${patientId}`);
+  }
+
+  async hasLink(professionalId: string, patientId: string): Promise<boolean> {
+    return this.links.has(`${professionalId}:${patientId}`);
+  }
+
+  async findLinkedPatientIds(professionalId: string): Promise<string[]> {
+    return [...this.links].flatMap((key) => {
+      const [professional, patient] = key.split(':');
+      return professional === professionalId ? [patient] : [];
+    });
+  }
+}
+
+/**
+ * Repositório que este escopo em memória não implementa (consentimento, pedido
+ * do titular, empresa): quem precisar usa o banco de verdade (PGlite). Falha
+ * alto em vez de devolver vazio, para um teste nunca passar por engano.
+ */
+function notInMemory<T extends object>(name: string): T {
+  return new Proxy({} as T, {
+    get: (_target, property) => () => {
+      throw new Error(
+        `${name}.${String(property)} não existe no escopo transacional em memória: use o PGlite`,
+      );
+    },
+  });
+}
 
 /** Escopo transacional em memória; o que o teste já tem entra por `parts`. */
 export function inMemoryScope(
   parts: Partial<TransactionScope> = {},
 ): TransactionScope {
+  const appointments =
+    parts.appointments ?? new InMemoryAppointmentRepository();
+  const invoices = parts.invoices ?? new InMemoryInvoiceRepository();
+  const sessionPackages =
+    parts.sessionPackages ?? new InMemorySessionPackageRepository();
   return {
-    appointments: new InMemoryAppointmentRepository(),
-    invoices: new InMemoryInvoiceRepository(),
+    appointments,
+    invoices,
     followUps: new InMemoryFollowUpRepository(),
-    sessionPackages: new InMemorySessionPackageRepository(),
+    sessionPackages,
     userAccounts: new InMemoryUserAccountRepository(),
     auditEvents: new InMemoryAuditEventRepository(),
     patients: new InMemoryPatientRepository(),
@@ -37,6 +109,38 @@ export function inMemoryScope(
     scheduleAvailability: new InMemoryScheduleAvailabilityRepository(),
     conditions: new InMemoryClinicalConditionRepository(),
     conditionPhotos: new InMemoryConditionPhotoRepository(),
+    procedures: new InMemoryProcedureRepository(),
+    procedureKits: new InMemoryProcedureKitRepository(),
+    professionals: new InMemoryProfessionalRepository(),
+    producedSessions: new InMemoryProducedSessionRepository(
+      appointments as InMemoryAppointmentRepository,
+      invoices as InMemoryInvoiceRepository,
+      sessionPackages as InMemorySessionPackageRepository,
+    ),
+    commissionPayouts: new InMemoryCommissionPayoutRepository(),
+    partners: new InMemoryPartnerRepository(),
+    guardians: new InMemoryGuardianRepository(),
+    professionalPatientLinks: new InMemoryProfessionalPatientLinks(),
+    consentRecords: notInMemory('consentRecords'),
+    dataSubjectRequests: notInMemory('dataSubjectRequests'),
+    clinics: notInMemory('clinics'),
+    waitlist: notInMemory('waitlist'),
+    supplies: new InMemorySupplyRepository(),
+    stockMovements: new InMemoryStockMovementRepository(),
+    supplyBatches: new InMemorySupplyBatchRepository(),
+    anamneses: new InMemoryAnamnesisRepository(),
+    evolutions: new InMemoryEvolutionNoteRepository(),
+    assessments: new InMemoryConditionAssessmentRepository(),
+    partnerShareConsents: new InMemoryPartnerShareConsentRepository(),
+    carePlans: new InMemoryCarePlanRepository(),
+    carePlanDiagnoses: new InMemoryCarePlanDiagnosisRepository(),
+    carePlanOutcomes: new InMemoryCarePlanOutcomeRepository(),
+    carePlanInterventions: new InMemoryCarePlanInterventionRepository(),
+    outcomeEvaluations: new InMemoryOutcomeEvaluationRepository(),
+    interventionRecords: new InMemoryInterventionRecordRepository(),
+    nursingDiagnoses: new InMemoryNursingDiagnosisRepository(),
+    nursingOutcomes: new InMemoryNursingOutcomeRepository(),
+    nursingInterventions: new InMemoryNursingInterventionRepository(),
     ...parts,
   };
 }

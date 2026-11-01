@@ -1,44 +1,63 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PayoutsPage from '@/app/(staff)/repasses/page';
+import { zonedMonthKey } from '@/domain/shared/time-zone';
 import type {
   CommissionPayoutDto,
   PayoutStatementDto,
   PayoutsResponseDto,
 } from '@/lib/dto';
-import { renderWithToast } from '../support/render-with-toast';
+import { shiftMonth } from '@/lib/format';
+import {
+  actionError,
+  actionOk,
+  billing,
+  mockBillingData,
+  resetBillingData,
+} from '../support/billing-data';
+import { renderServerPage } from '../support/server-page';
 
-const jsonResponse = (data: unknown, ok = true) => ({
-  ok,
-  json: async () => ({ success: ok, data, error: ok ? null : 'Erro' }),
+vi.mock('next/navigation', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    useRouter: () => ({ refresh: billing.refresh, push: vi.fn() }),
+    usePathname: () => '/repasses',
+  };
+});
+vi.mock('@/lib/server/session', async () => {
+  const { billing } = await import('../support/billing-data');
+  return { requireStaffPageFor: billing.requireStaffPageFor };
+});
+vi.mock('@/lib/server/data/payouts', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    getClinicPayoutsFor: billing.getClinicPayoutsFor,
+    getOwnPayoutsFor: billing.getOwnPayoutsFor,
+  };
+});
+vi.mock('@/app/(staff)/repasses/payout-actions', async () => {
+  const { billing } = await import('../support/billing-data');
+  return {
+    closePayout: billing.closePayout,
+    cancelPayout: billing.cancelPayout,
+  };
 });
 
-type Router = (
-  url: string,
-  init?: RequestInit,
-) => { ok: boolean; json: () => Promise<unknown> };
-
-/** A tela primeiro lê a identidade para escolher a visão (clínica × própria). */
-const identity = (role: string) =>
-  jsonResponse({
-    clinicLabel: 'Clínica',
-    account: { email: `${role}@clinica.com`, role, roleLabel: role },
-  });
-
-const mockFetch = (router: Router, role = 'company_admin') => {
-  const fn = vi.fn(async (url: string, init?: RequestInit) =>
-    url === '/api/auth/identity' ? identity(role) : router(url, init),
-  );
-  vi.stubGlobal('fetch', fn);
-  return fn;
-};
+beforeEach(() => {
+  resetBillingData();
+});
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
+
+/** Renderiza a tela no servidor, para o mês pedido na URL (padrão: o mês anterior). */
+const renderPayouts = (month?: string) =>
+  renderServerPage(() =>
+    PayoutsPage({ searchParams: Promise.resolve({ month }) }),
+  );
 
 const item = {
   appointmentId: 'a1',
@@ -99,9 +118,9 @@ const clinicResponse: PayoutsResponseDto = {
 
 describe('Feature: Tela de repasses', () => {
   it('Dado Admin, Quando abre a tela, Então lista profissionais com regra, saldo, situação e histórico', async () => {
-    mockFetch(() => jsonResponse(clinicResponse));
+    mockBillingData({ payouts: clinicResponse });
 
-    renderWithToast(<PayoutsPage />);
+    await renderPayouts();
 
     expect(await screen.findByText('Dra. Ana')).toBeInTheDocument();
     expect(screen.getByText('40% da sessão')).toBeInTheDocument();
@@ -112,17 +131,11 @@ describe('Feature: Tela de repasses', () => {
     expect(screen.getByText('1 sessões')).toBeInTheDocument();
   });
 
-  it('Dado Admin, Quando registra o repasse do mês encerrado, Então envia o fechamento e recarrega', async () => {
-    let posted: Record<string, unknown> | undefined;
-    const fetchMock = mockFetch((url, init) => {
-      if (url === '/api/commission-payouts' && init?.method === 'POST') {
-        posted = JSON.parse(String(init.body));
-        return jsonResponse({ ...closed, id: 'po-2' });
-      }
-      return jsonResponse(clinicResponse);
-    });
+  it('Dado Admin, Quando registra o repasse do mês encerrado, Então envia o fechamento (a ação atualiza a tela)', async () => {
+    mockBillingData({ payouts: clinicResponse });
+    billing.closePayout.mockResolvedValue(actionOk({ ...closed, id: 'po-2' }));
 
-    renderWithToast(<PayoutsPage />);
+    await renderPayouts('2020-01');
     fireEvent.click(await screen.findByText('Registrar repasse'));
     fireEvent.change(screen.getByLabelText('Forma de pagamento'), {
       target: { value: 'transfer' },
@@ -130,25 +143,30 @@ describe('Feature: Tela de repasses', () => {
     fireEvent.click(screen.getByText('Confirmar repasse'));
 
     await waitFor(() => {
-      expect(posted).toMatchObject({
-        professionalId: 'pr-ana',
-        paymentMethod: 'transfer',
-      });
+      expect(billing.closePayout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          professionalId: 'pr-ana',
+          period: '2020-01',
+          paymentMethod: 'transfer',
+        }),
+      );
     });
     expect(await screen.findByText('Repasse registrado')).toBeInTheDocument();
-    const gets = fetchMock.mock.calls.filter(
-      ([url, init]) =>
-        String(url).startsWith('/api/commission-payouts?') && !init?.method,
-    );
-    expect(gets.length).toBeGreaterThanOrEqual(2);
   });
 
   it('Dado o mês corrente, Quando navega até ele, Então o fechamento fica indisponível', async () => {
-    mockFetch(() => jsonResponse(clinicResponse));
+    mockBillingData({ payouts: clinicResponse });
+    const current = zonedMonthKey(new Date());
 
-    renderWithToast(<PayoutsPage />);
-    await screen.findByText('Dra. Ana');
-    fireEvent.click(screen.getByLabelText('Próximo mês'));
+    await renderPayouts(shiftMonth(current, -1));
+    // «Próximo mês» é um link para o mês seguinte: a navegação vai ao servidor.
+    expect(await screen.findByLabelText('Próximo mês')).toHaveAttribute(
+      'href',
+      `/repasses?month=${current}`,
+    );
+    cleanup();
+
+    await renderPayouts(current);
 
     expect(
       await screen.findByText(
@@ -159,18 +177,18 @@ describe('Feature: Tela de repasses', () => {
   });
 
   it('Dado Profissional, Quando abre a tela, Então pede o próprio extrato e vê a regra, sem ações de registro', async () => {
-    const fetchMock = mockFetch(
-      () =>
-        jsonResponse({
-          scope: 'own',
-          period: '2020-01',
-          rows: [anaRow],
-          history: [],
-        } satisfies PayoutsResponseDto),
-      'profissional',
-    );
+    mockBillingData({
+      role: 'profissional',
+      professionalId: 'pr-ana',
+      payouts: {
+        scope: 'own',
+        period: '2020-01',
+        rows: [anaRow],
+        history: [],
+      } satisfies PayoutsResponseDto,
+    });
 
-    renderWithToast(<PayoutsPage />);
+    await renderPayouts();
 
     expect(await screen.findByText('Meus repasses')).toBeInTheDocument();
     expect(screen.getByText('R$ 60,00')).toBeInTheDocument();
@@ -180,26 +198,23 @@ describe('Feature: Tela de repasses', () => {
     expect(
       screen.getByText('Nenhum repasse registrado ainda.'),
     ).toBeInTheDocument();
-    const urls = fetchMock.mock.calls.map(([url]) => String(url));
-    expect(urls.some((u) => u.startsWith('/api/my-payouts?'))).toBe(true);
-    expect(urls.some((u) => u.startsWith('/api/commission-payouts'))).toBe(
-      false,
-    );
+    expect(billing.getOwnPayoutsFor).toHaveBeenCalled();
+    expect(billing.getClinicPayoutsFor).not.toHaveBeenCalled();
   });
 
   it('Dado repasse já recebido pelo Profissional, Quando abre a tela, Então mostra o valor recebido e a data', async () => {
-    mockFetch(
-      () =>
-        jsonResponse({
-          scope: 'own',
-          period: '2020-01',
-          rows: [caioRow],
-          history: [closed],
-        } satisfies PayoutsResponseDto),
-      'profissional',
-    );
+    mockBillingData({
+      role: 'profissional',
+      professionalId: 'pr-caio',
+      payouts: {
+        scope: 'own',
+        period: '2020-01',
+        rows: [caioRow],
+        history: [closed],
+      } satisfies PayoutsResponseDto,
+    });
 
-    renderWithToast(<PayoutsPage />);
+    await renderPayouts();
 
     expect(
       await screen.findByText(/Recebido pelo fechamento/),
@@ -209,16 +224,9 @@ describe('Feature: Tela de repasses', () => {
   });
 
   it('Dada falha da API, Quando abre a tela, Então mostra o erro', async () => {
-    mockFetch(() => ({
-      ok: false,
-      json: async () => ({
-        success: false,
-        data: null,
-        error: 'Sem permissão para ver repasses',
-      }),
-    }));
+    mockBillingData({ payoutsError: 'Sem permissão para ver repasses' });
 
-    renderWithToast(<PayoutsPage />);
+    await renderPayouts();
 
     expect(
       await screen.findByText('Sem permissão para ver repasses'),
@@ -246,9 +254,9 @@ describe('Feature: Tela de repasses', () => {
     };
 
     it('Dado histórico, Então mostra situação, comprovante e Cancelar só no mais recente ativo', async () => {
-      mockFetch(() => jsonResponse(withHistory));
+      mockBillingData({ payouts: withHistory });
 
-      renderWithToast(<PayoutsPage />);
+      await renderPayouts();
 
       expect(await screen.findByText('Cancelado')).toBeInTheDocument();
       expect(screen.getByText('valor errado')).toBeInTheDocument();
@@ -264,17 +272,13 @@ describe('Feature: Tela de repasses', () => {
       ]);
     });
 
-    it('Dado Admin, Quando cancela com motivo, Então envia o motivo e recarrega', async () => {
-      let posted: { url: string; body: unknown } | undefined;
-      mockFetch((url, init) => {
-        if (init?.method === 'POST') {
-          posted = { url, body: JSON.parse(String(init.body)) };
-          return jsonResponse({ ...closed, status: 'cancelled' });
-        }
-        return jsonResponse(withHistory);
-      });
+    it('Dado Admin, Quando cancela com motivo, Então envia o motivo (a ação atualiza a tela)', async () => {
+      mockBillingData({ payouts: withHistory });
+      billing.cancelPayout.mockResolvedValue(
+        actionOk({ ...closed, status: 'cancelled' }),
+      );
 
-      renderWithToast(<PayoutsPage />);
+      await renderPayouts();
       fireEvent.click(await screen.findByText('Cancelar'));
       fireEvent.change(screen.getByLabelText(/Motivo do cancelamento/), {
         target: { value: 'registrado em dobro' },
@@ -282,29 +286,21 @@ describe('Feature: Tela de repasses', () => {
       fireEvent.click(screen.getByText('Confirmar cancelamento'));
 
       await waitFor(() => {
-        expect(posted).toEqual({
-          url: '/api/commission-payouts/po-1/cancel',
-          body: { reason: 'registrado em dobro' },
+        expect(billing.cancelPayout).toHaveBeenCalledWith({
+          id: 'po-1',
+          reason: 'registrado em dobro',
         });
       });
       expect(await screen.findByText('Repasse cancelado')).toBeInTheDocument();
     });
 
     it('Dada recusa da API ao cancelar, Então mostra o erro no formulário', async () => {
-      mockFetch((_url, init) =>
-        init?.method === 'POST'
-          ? {
-              ok: false,
-              json: async () => ({
-                success: false,
-                data: null,
-                error: 'Só o repasse mais recente pode ser cancelado',
-              }),
-            }
-          : jsonResponse(withHistory),
+      mockBillingData({ payouts: withHistory });
+      billing.cancelPayout.mockResolvedValue(
+        actionError('Só o repasse mais recente pode ser cancelado'),
       );
 
-      renderWithToast(<PayoutsPage />);
+      await renderPayouts();
       fireEvent.click(await screen.findByText('Cancelar'));
       fireEvent.change(screen.getByLabelText(/Motivo do cancelamento/), {
         target: { value: 'registrado em dobro' },
@@ -317,18 +313,18 @@ describe('Feature: Tela de repasses', () => {
     });
 
     it('Dado Profissional, Então vê o comprovante mas não o Cancelar', async () => {
-      mockFetch(
-        () =>
-          jsonResponse({
-            scope: 'own',
-            period: '2020-01',
-            rows: [caioRow],
-            history: [closed],
-          } satisfies PayoutsResponseDto),
-        'profissional',
-      );
+      mockBillingData({
+        role: 'profissional',
+        professionalId: 'pr-caio',
+        payouts: {
+          scope: 'own',
+          period: '2020-01',
+          rows: [caioRow],
+          history: [closed],
+        } satisfies PayoutsResponseDto,
+      });
 
-      renderWithToast(<PayoutsPage />);
+      await renderPayouts();
 
       expect(await screen.findByText('Comprovante')).toBeInTheDocument();
       expect(screen.queryByText('Cancelar')).not.toBeInTheDocument();

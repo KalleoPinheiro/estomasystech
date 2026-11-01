@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
 import { ReleaseVersion } from '@/components/release-version';
+import { getAppVersion } from '@/lib/server/data/version';
 
 export const metadata: Metadata = {
   title: 'Portal — EstomaSysTech',
 };
 
-export default function PortalLayout({
+export default async function PortalLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -22,7 +23,9 @@ export default function PortalLayout({
         logo={
           <div>
             <BrandLogo />
-            <p className="text-ink-3 text-xs">
+            {/* Duas linhas reservadas no celular: a troca da fonte de reserva pela
+                Sora mudava a quebra do texto e o cabeçalho saltava (#613). */}
+            <p className="line-clamp-2 min-h-8 text-ink-3 text-xs sm:line-clamp-none sm:min-h-0">
               Portal do paciente, do responsável e do parceiro
             </p>
           </div>
@@ -53,7 +56,7 @@ export default function PortalLayout({
             </Link>
           </p>
           <div className="text-center">
-            <ReleaseVersion url="/api/portal/version" />
+            <ReleaseVersion initial={await getAppVersion()} />
           </div>
         </main>
       </Layout>

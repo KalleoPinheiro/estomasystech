@@ -10,10 +10,11 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from '@/app/login/page';
 
-const { routerMock, searchParamsRef } = vi.hoisted(() => {
+const { routerMock, searchParamsRef, providersRef } = vi.hoisted(() => {
   return {
     routerMock: { push: vi.fn(), refresh: vi.fn() },
     searchParamsRef: { current: new URLSearchParams() },
+    providersRef: { current: true },
   };
 });
 
@@ -21,6 +22,19 @@ vi.mock('next/navigation', () => ({
   useRouter: () => routerMock,
   useSearchParams: () => searchParamsRef.current,
 }));
+
+vi.mock('@/lib/auth/session', () => ({
+  getAuthConfig: () => (providersRef.current ? {} : null),
+}));
+
+// A página é Server Component: recebe `searchParams` do servidor e não chama
+// `/api/auth/providers` (#554).
+async function renderPage() {
+  const ui = await LoginPage({
+    searchParams: Promise.resolve(Object.fromEntries(searchParamsRef.current)),
+  });
+  return render(ui);
+}
 
 function jsonResponse(
   success: boolean,
@@ -38,16 +52,7 @@ interface Providers {
 }
 
 function mockProviders(providers: Providers) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      if (url.startsWith('/api/auth/providers')) {
-        return jsonResponse(true, providers);
-      }
-      throw new Error(`URL não mapeada no mock: ${url}`);
-    }),
-  );
+  providersRef.current = providers.password;
 }
 
 const mockLogin = (loginResponse: ReturnType<typeof jsonResponse>) => {
@@ -72,6 +77,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   searchParamsRef.current = new URLSearchParams();
+  providersRef.current = true;
   routerMock.push.mockClear();
   routerMock.refresh.mockClear();
 });
@@ -83,7 +89,7 @@ describe('Feature: Página de login', () => {
       searchParamsRef.current = new URLSearchParams('error=session_expired');
       mockProviders({ password: true });
 
-      render(<LoginPage />);
+      await renderPage();
 
       expect(
         await screen.findByText('Sua sessão expirou. Entre novamente.'),
@@ -99,7 +105,7 @@ describe('Feature: Página de login', () => {
       );
       mockProviders({ password: true });
 
-      render(<LoginPage />);
+      await renderPage();
 
       expect(
         await screen.findByText(
@@ -116,7 +122,7 @@ describe('Feature: Página de login', () => {
     it('Dado servidor sem AUTH_SECRET, Quando renderizar, Então exibe alerta de configuração ausente', async () => {
       mockProviders({ password: false });
 
-      render(<LoginPage />);
+      await renderPage();
 
       expect(
         await screen.findByText('Autenticação não configurada no servidor.'),
@@ -128,7 +134,7 @@ describe('Feature: Página de login', () => {
     it('Dado a tela carregada, Quando renderizar, Então não há botão nem link do Google', async () => {
       mockProviders({ password: true });
 
-      render(<LoginPage />);
+      await renderPage();
 
       await screen.findByLabelText('Senha');
       expect(screen.queryByText('Entrar com Google')).not.toBeInTheDocument();
@@ -141,7 +147,7 @@ describe('Feature: Página de login', () => {
     it('Dado a tela carregada, Quando renderizar, Então o e-mail é obrigatório (não há mais senha da clínica)', async () => {
       mockProviders({ password: true });
 
-      render(<LoginPage />);
+      await renderPage();
 
       const email = (await screen.findByLabelText('Email')) as HTMLInputElement;
       expect(email.required).toBe(true);
@@ -152,7 +158,7 @@ describe('Feature: Página de login', () => {
     it('Dado a senha oculta, Quando tocar em Mostrar senha, Então o campo vira texto e o botão passa a Ocultar senha', async () => {
       mockProviders({ password: true });
 
-      render(<LoginPage />);
+      await renderPage();
 
       const senha = (await screen.findByLabelText('Senha')) as HTMLInputElement;
       expect(senha.type).toBe('password');
@@ -169,7 +175,7 @@ describe('Feature: Página de login', () => {
     it('Dado a tela de login, Quando renderizar, Então oferece o link para esqueci minha senha', async () => {
       mockProviders({ password: true });
 
-      render(<LoginPage />);
+      await renderPage();
 
       const link = await screen.findByRole('link', {
         name: 'Esqueci minha senha',
@@ -182,7 +188,7 @@ describe('Feature: Página de login', () => {
     it('Dado e-mail e senha preenchidos, Quando submeter, Então envia os dois e redireciona', async () => {
       const fetchMock = mockLogin(jsonResponse(true, { ok: true }));
 
-      render(<LoginPage />);
+      await renderPage();
 
       fireEvent.change(await screen.findByLabelText('Email'), {
         target: { value: 'ana@clinica.com' },
@@ -210,7 +216,7 @@ describe('Feature: Página de login', () => {
     it('Dado credencial inválida, Quando submeter, Então exibe a mensagem de erro e reabilita o botão', async () => {
       mockLogin(jsonResponse(false, null, 'Email ou senha incorretos'));
 
-      render(<LoginPage />);
+      await renderPage();
 
       fireEvent.change(await screen.findByLabelText('Email'), {
         target: { value: 'ana@clinica.com' },
@@ -246,7 +252,7 @@ describe('Feature: Página de login', () => {
       );
       mockLogin(jsonResponse(true, { ok: true }));
 
-      render(<LoginPage />);
+      await renderPage();
       expect(
         await screen.findByText('Sua sessão expirou. Entre novamente.'),
       ).toBeInTheDocument();
@@ -265,7 +271,7 @@ describe('Feature: Página de login', () => {
         searchParamsRef.current = new URLSearchParams({ next });
         mockLogin(jsonResponse(true, { ok: true }));
 
-        render(<LoginPage />);
+        await renderPage();
         await submitLogin();
 
         await waitFor(() => {
@@ -281,7 +287,7 @@ describe('Feature: Página de login', () => {
         status: 401,
       } as ReturnType<typeof jsonResponse>);
 
-      render(<LoginPage />);
+      await renderPage();
       await submitLogin();
 
       expect(
@@ -301,7 +307,7 @@ describe('Feature: Página de login', () => {
     it('Dado o formulário de senha, Então campos e submit vêm do Still Void', async () => {
       mockProviders({ password: true });
 
-      render(<LoginPage />);
+      await renderPage();
 
       const senha = await screen.findByLabelText('Senha');
       // SPEC_DEVIATION: na 3.x o <Input> do pacote emite a classe semântica
@@ -346,7 +352,7 @@ describe('Feature: Segundo fator do super_admin na tela de login', () => {
   }
 
   async function signIn() {
-    render(<LoginPage />);
+    await renderPage();
     fireEvent.change(await screen.findByLabelText('Email'), {
       target: { value: 'dono@estomasystech.test' },
     });
