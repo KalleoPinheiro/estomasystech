@@ -2180,3 +2180,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Teste**: cenários, asserções, `timeout` e `retries` iguais; só entram o hook e o ambiente do git. Sem `src/`, sem changeset.
 - **Varredura do mesmo padrão**: e-mail fire-and-forget só existe em `forgot-password` (via `after()`), e seus testes já esperam (`waitForEmails`); `bootstrap` e convites aguardam a entrega. Leitura de `auditEvents` logo após a resposta, sem `vi.waitFor`, aparece em ~40 arquivos (a gravação sai de `recordAudit` → `after()`), mas o PGlite enfileira as consultas e nenhuma falha reproduziu; não alterei (regra do brief: corrigir só o que reproduzir).
 - **Next step**: revisão limpa e merge na release/v0.4.0. **Blockers**: nenhum.
+
+## E2E: mês civil em APP_TIMEZONE (#633) (2026-11-01) — EM REVISÃO
+- **O que mudou**: `agendaToMonth` (layout-mobile-first) e `setReportMonth` (responsive-tables) calculam o mês de hoje no fuso do app (`APP_TIMEZONE`, padrão America/Sao_Paulo, ADR-073) e não no do processo (UTC no gate da nuvem). Provado às 00:45 UTC de 01/11 (SP ainda 31/10): os 98 testes passam em `TZ=UTC`; antes, 4 falhavam.
+- **TESTE-ALTERADO**: só o cálculo do mês nos dois helpers; cenários e asserções iguais. Sem `src/`, sem changeset.
+- **Next step**: revisão e merge na release/v0.4.0. **Blockers**: nenhum.
