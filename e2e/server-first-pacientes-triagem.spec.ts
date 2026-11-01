@@ -179,7 +179,7 @@ test.describe("Pacientes e triagem no servidor", () => {
 
     const photoSearch = `Server First Foto ${testInfo.project.name}`;
     const search = page.waitForResponse((r) => r.url().includes(`/api/patients?search=${encodeURIComponent(photoSearch)}`));
-    await page.getByPlaceholder("Buscar por nome, email ou telefone…").fill(photoSearch);
+    await page.getByRole("searchbox", { name: /Buscar por nome, email ou telefone/ }).fill(photoSearch);
     await search;
     // A busca troca a lista do servidor pelas três da foto (nomes abreviados: «Zz S. F. F. …»).
     await expect(page.getByText(/^Zz S\. F\. F\. /)).toHaveCount(3);
