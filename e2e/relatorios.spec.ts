@@ -24,26 +24,21 @@ function monthsFromNow(value: string): number {
 /**
  * A página não tem mais `<input type="month">` (achado REL-02 — mês vira texto
  * pt-BR + navegação ‹›). Chega no mês pedido clicando "Próximo mês"/"Mês
- * anterior" a quantidade de vezes necessária, uma requisição por clique.
+ * anterior" a quantidade de vezes necessária, uma navegação por clique.
  */
 async function setReportMonth(page: import("@playwright/test").Page, value: string): Promise<void> {
   const delta = monthsFromNow(value);
   const step = delta >= 0 ? 1 : -1;
   const buttonLabel = delta >= 0 ? "Próximo mês" : "Mês anterior";
-  const button = page.getByRole("button", { name: buttonLabel });
+  const button = page.getByRole("link", { name: buttonLabel });
   const now = new Date();
 
   for (let i = 1; i <= Math.abs(delta); i += 1) {
     const target = new Date(now.getFullYear(), now.getMonth() + step * i, 1);
     const targetValue = monthValue(target.getFullYear(), target.getMonth() + 1);
-    await expect(async () => {
-      const requested = page.waitForResponse(
-        (response) => response.url().includes(`/api/reports?month=${targetValue}`),
-        { timeout: 5_000 },
-      );
-      await button.click();
-      await requested;
-    }).toPass({ timeout: 20_000 });
+    // O mês vai na URL e o servidor renderiza a página de novo (#555): espera a URL do mês.
+    await button.click();
+    await page.waitForURL(new RegExp(`month=${targetValue}$`), { timeout: 20_000 });
   }
 }
 

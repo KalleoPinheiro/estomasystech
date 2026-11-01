@@ -167,10 +167,15 @@ export class ResolveDataSubjectRequest {
     request: DataSubjectRequest,
   ): Promise<ResolveDataSubjectRequestResult> {
     await this.requests.save(request);
-    return { request, notified: await this.notify(request) };
+    return { request, notified: await this.notifyDecision(request) };
   }
 
-  private async notify(request: DataSubjectRequest): Promise<boolean> {
+  /**
+   * Avisa o paciente da decisão já gravada. Separado do `commit` para a Server
+   * Action gravar e auditar na transação e só então enviar o e-mail (#555): o
+   * aviso nunca desfaz a decisão e falha vira `false`.
+   */
+  async notifyDecision(request: DataSubjectRequest): Promise<boolean> {
     try {
       const account = await this.accounts.findByPortalLink({
         patientId: request.patientId,
