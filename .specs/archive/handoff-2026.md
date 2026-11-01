@@ -2181,6 +2181,12 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Varredura do mesmo padrão**: e-mail fire-and-forget só existe em `forgot-password` (via `after()`), e seus testes já esperam (`waitForEmails`); `bootstrap` e convites aguardam a entrega. Leitura de `auditEvents` logo após a resposta, sem `vi.waitFor`, aparece em ~40 arquivos (a gravação sai de `recordAudit` → `after()`), mas o PGlite enfileira as consultas e nenhuma falha reproduziu; não alterei (regra do brief: corrigir só o que reproduzir).
 - **Next step**: revisão limpa e merge na release/v0.4.0. **Blockers**: nenhum.
 
+## CI: memória do typecheck e recibo do gate na nuvem (2026-11-01) — EM REVISÃO
+- **Causa**: o job `ci` rodava `tsc --noEmit` com o heap padrão do Node (~2 GB) e morria com exit 134 (PRs #632/#634).
+- **Correção**: `NODE_OPTIONS=--max-old-space-size=8192` no `env` do job em `.github/workflows/ci.yml` (runner de 16 GB). `scripts/gate-cloud.sh` agora imprime o recibo com total e duração por etapa (`.gate/cloud-recibo.md`) e aceita o motivo do TESTE-ALTERADO por `GATE_PR_BODY_FILE`/`GATE_MOTIVO_TESTE`, usando a mesma checagem; nota em `docs/engineering/gate-na-nuvem.md` (ADR-084 intacto).
+- **Sem** `src/` nem teste alterado; sem changeset. `scripts/gate/` não foi tocado.
+- **Next step**: revisão e merge na release/v0.4.0. **Blockers**: nenhum.
+
 ## Telas públicas e de autenticação como Server Components (#554) (2026-10-31) — EM REVISÃO
 - **O que mudou**: `/login`, `/esqueci-senha`, `/definir-senha` e `/privacidade` sem `'use client'` na página. Ilhas cliente mínimas: `src/app/login/login-card.tsx`, `src/app/esqueci-senha/forgot-password-form.tsx`, `src/app/definir-senha/set-password-form.tsx`. `/login` resolve no servidor (`login-state.ts`: allowlist de erro LOG-02, `?next=` validado, `getAuthConfig() !== null`) e não chama `/api/auth/providers` na carga (rota mantida). `/definir-senha` lê o token por `searchParams` no servidor. Auth, MFA e convite seguem em Route Handler `/api/auth/*` (rate-limit-strict, ADR-069 § 2); nenhuma Server Action.
 - **TESTE-ALTERADO** (cenários e asserções iguais): `tests/pages/login.test.tsx` e `definir-senha.test.tsx` renderizam a página servidor com `searchParams` (o login não busca mais `providers` por fetch: o requisito passou a ser 0 chamadas `/api` na carga). Testes novos: `tests/pages/paginas-publicas-servidor.test.tsx`, `definir-senha-token-repetido.test.tsx`.
