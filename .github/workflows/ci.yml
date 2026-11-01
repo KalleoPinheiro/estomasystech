@@ -113,6 +113,8 @@ jobs:
           name: vitest-blob-${{ matrix.shard }}
           path: .vitest-reports/
           if-no-files-found: error
+          # `.vitest-reports` é pasta oculta: sem isto o upload-artifact v4 a ignora.
+          include-hidden-files: true
           retention-days: 1
 
   cobertura:
