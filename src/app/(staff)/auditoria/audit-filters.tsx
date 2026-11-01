@@ -1,11 +1,13 @@
 'use client';
 
-import { Input } from '@still-void/ui/react';
+import { Input, NativeSelect } from '@still-void/ui/react';
 import { useRouter } from 'next/navigation';
 import { PatientPicker } from '@/components/patient-picker';
 import {
+  AUDIT_PAGE_SIZES,
   type AuditUrlFilters,
   auditFiltersToSearch,
+  validPageSize,
 } from '@/lib/audit-filters';
 
 type Filters = Omit<AuditUrlFilters, 'cursor'>;
@@ -45,6 +47,19 @@ export function AuditFilters({
           value={filters.to}
           onChange={(e) => update({ to: e.target.value })}
         />
+      </label>
+      <label className="flex flex-col gap-1 text-ink-2 text-sm">
+        Eventos por página
+        <NativeSelect
+          value={String(filters.size)}
+          onChange={(e) => update({ size: validPageSize(e.target.value) })}
+        >
+          {AUDIT_PAGE_SIZES.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </NativeSelect>
       </label>
       <div className="min-w-64">
         <PatientPicker

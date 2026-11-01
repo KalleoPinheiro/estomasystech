@@ -1,10 +1,16 @@
 import { clinicDayEnd, clinicDayStart, instantDayKey } from './clinic-calendar';
 
-/** Filtros da tela de Auditoria como vivem na URL (`?paciente=&de=&ate=&cursor=`). */
+/** Tamanhos de página da trilha oferecidos no controle «Eventos por página» (#521, ADR-085). */
+export const AUDIT_PAGE_SIZES = [25, 50] as const;
+export const AUDIT_DEFAULT_PAGE_SIZE = 25;
+
+/** Filtros da tela de Auditoria como vivem na URL (`?paciente=&de=&ate=&por=&cursor=`). */
 export interface AuditUrlFilters {
   patientId: string;
   from: string;
   to: string;
+  /** Eventos por página: só 25 ou 50; qualquer outro valor da URL volta para 25. */
+  size: number;
   cursor: string;
 }
 
@@ -20,6 +26,12 @@ export function validDateParam(value: string | null | undefined): string {
   return instantDayKey(clinicDayStart(value)) === value ? value : '';
 }
 
+/** Tamanho pedido em `?por=`; fora da lista oferecida volta ao padrão (25). */
+export function validPageSize(value: string | null | undefined): number {
+  const size = AUDIT_PAGE_SIZES.find((option) => String(option) === value);
+  return size ?? AUDIT_DEFAULT_PAGE_SIZE;
+}
+
 /** Lê os filtros dos `searchParams` da página, descartando o que não vale. */
 export function auditFiltersFrom(
   params: Record<string, Param> | undefined,
@@ -28,6 +40,7 @@ export function auditFiltersFrom(
     patientId: first(params?.paciente) ?? '',
     from: validDateParam(first(params?.de)),
     to: validDateParam(first(params?.ate)),
+    size: validPageSize(first(params?.por)),
     cursor: first(params?.cursor) ?? '',
   };
 }
@@ -40,6 +53,9 @@ export function auditFiltersToSearch(
   if (filters.patientId) params.set('paciente', filters.patientId);
   if (filters.from) params.set('de', filters.from);
   if (filters.to) params.set('ate', filters.to);
+  if (filters.size && filters.size !== AUDIT_DEFAULT_PAGE_SIZE) {
+    params.set('por', String(filters.size));
+  }
   if (filters.cursor) params.set('cursor', filters.cursor);
   return params.toString();
 }

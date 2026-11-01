@@ -93,8 +93,9 @@ const hrefFor = (filters: Partial<AuditUrlFilters>) => {
  * Auditoria no servidor (#555, ADR-069/074): a página do cursor e os filtros
  * vêm de `searchParams` (`?paciente=&de=&ate=&cursor=`) e chegam no HTML, sem
  * chamar `/api`. A paginação por cursor (#521) é por `Link`: «Próxima página»
- * leva o cursor da última linha. Tamanho único de 25 eventos: o servidor não
- * conhece a largura da tela (ver ADR-085).
+ * leva o cursor da última linha. 25 eventos por página por padrão; 25 ou 50 é
+ * um controle explícito (`?por=`, validado no servidor), nunca detecção de
+ * largura (ADR-085).
  */
 export default async function AuditPage(props?: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -107,6 +108,7 @@ export default async function AuditPage(props?: {
       listAuditEventsFor(session, {
         patientId: filters.patientId || undefined,
         cursor: filters.cursor || undefined,
+        limit: filters.size,
         ...auditRangeFrom(filters),
       }),
     ),

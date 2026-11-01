@@ -184,6 +184,49 @@ describe('Feature: Auditoria no servidor, paginada e com filtros na URL (#521, #
     });
   });
 
+  describe('Cenário: tamanho da página é um controle explícito (ADR-085)', () => {
+    it('Dado nenhuma escolha, Quando a página carrega, Então pede 25 por página, em qualquer largura', async () => {
+      mockAudit([event()]);
+      await renderPage();
+
+      expect(audit.listAuditEventsFor.mock.calls[0][1].limit).toBe(25);
+      expect(screen.getByLabelText('Eventos por página')).toHaveValue('25');
+    });
+
+    it('Dado ?por=50, Quando a página carrega, Então pede 50 e a «Próxima página» mantém o tamanho', async () => {
+      mockAudit([event()], 'cursor-1');
+      await renderPage({ por: '50' });
+
+      expect(audit.listAuditEventsFor.mock.calls[0][1].limit).toBe(50);
+      expect(screen.getByLabelText('Eventos por página')).toHaveValue('50');
+      expect(
+        screen.getByRole('link', { name: 'Próxima página' }),
+      ).toHaveAttribute('href', '/auditoria?por=50&cursor=cursor-1');
+    });
+
+    it('Dado ?por= inválido, Quando a página carrega, Então volta para 25', async () => {
+      mockAudit([event()]);
+      await renderPage({ por: '9999' });
+
+      expect(audit.listAuditEventsFor.mock.calls[0][1].limit).toBe(25);
+    });
+
+    it('Dado o controle, Quando o usuário escolhe 50, Então a URL leva ?por=50 e volta à primeira página', async () => {
+      mockAudit([event()]);
+      await renderPage({ cursor: 'cursor-1' });
+
+      fireEvent.change(screen.getByLabelText('Eventos por página'), {
+        target: { value: '50' },
+      });
+      expect(audit.replace).toHaveBeenLastCalledWith('/auditoria?por=50');
+
+      fireEvent.change(screen.getByLabelText('Eventos por página'), {
+        target: { value: '25' },
+      });
+      expect(audit.replace).toHaveBeenLastCalledWith('/auditoria');
+    });
+  });
+
   describe('Cenário: filtros na URL', () => {
     it('Dado ?paciente=&de=&ate= na URL, Quando a página carrega, Então a consulta já usa o recorte do dia civil da clínica', async () => {
       mockAudit([event()]);
