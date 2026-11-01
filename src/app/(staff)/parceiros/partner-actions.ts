@@ -5,6 +5,7 @@ import { CreatePartner } from '@/application/partners/create-partner';
 import { UpdatePartner } from '@/application/partners/update-partner';
 import { toPartnerDto } from '@/lib/dto';
 import { defineAction } from '@/lib/server/define-action';
+import { createdAudit, updatedAudit } from '@/lib/server/team-audit';
 import { rolesWithAccessTo } from '@/lib/staff-pages';
 
 /**
@@ -38,12 +39,7 @@ export const createPartner = defineAction({
         specialty: input.specialty ?? null,
       }),
     ),
-  audit: ({ result }) => ({
-    action: 'create',
-    resourceType: 'partner',
-    resourceId: result.id,
-    detail: 'cadastrado',
-  }),
+  audit: ({ result }) => createdAudit('partner', result.id),
 });
 
 /** Edita o cadastro, ou ativa e desativa o parceiro. */
@@ -58,15 +54,6 @@ export const updatePartner = defineAction({
     .partial({ fullName: true, email: true, phone: true, active: true }),
   handler: async ({ input, tx }) =>
     toPartnerDto(await new UpdatePartner(tx.partners).execute(input)),
-  audit: ({ input, result }) => ({
-    action: 'update',
-    resourceType: 'partner',
-    resourceId: result.id,
-    detail:
-      input.active === undefined
-        ? 'editado'
-        : input.active
-          ? 'reativado'
-          : 'desativado',
-  }),
+  audit: ({ input, result }) =>
+    updatedAudit('partner', result.id, input.active),
 });
