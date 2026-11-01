@@ -1,11 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { NotFoundError, ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toProcedureDto } from '@/lib/dto';
+import { updateProcedureRecord } from '@/lib/server/procedure-writes';
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -25,28 +25,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const body = updateSchema.parse(await request.json());
     const { procedures } = await getRepositories(writeScope(guard.session));
 
-    const existing = await procedures.findById(id);
-    if (!existing) {
-      throw new NotFoundError('Procedimento', id);
-    }
-    if (body.name) {
-      const sameName = await procedures.findByName(body.name);
-      if (sameName && sameName.id !== id) {
-        throw new ValidationError(
-          `Já existe procedimento com o nome "${sameName.name}"`,
-        );
-      }
-    }
-
-    let updated = existing.update({
-      name: body.name,
-      priceCents: body.priceCents,
-      durationMinutes: body.durationMinutes,
-    });
-    if (body.active === true) updated = updated.reactivate();
-    if (body.active === false) updated = updated.deactivate();
-
-    await procedures.save(updated);
+    const updated = await updateProcedureRecord(procedures, id, body);
     return toProcedureDto(updated);
   });
 }

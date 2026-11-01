@@ -3,7 +3,7 @@ title: "Domínio: Agenda"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-17
+last_reviewed: 2026-10-31
 domain: agenda
 ---
 
@@ -79,7 +79,7 @@ Rótulos dos chips: os mesmos do selo de status (`APPOINTMENT_STATUS_LABELS`: Ag
 | Recall de retornos | entregue | dashboard, `/api/follow-ups` |
 | Tela Hoje no servidor (#548): a página é um Server Component, sem `/api` na carga; cada bloco (resumo do mês, consultas de hoje, retornos, estoque baixo e, abaixo do grid, triagem, maioridade e consultas sem desfecho) lê o próprio dado em paralelo, mas todos ficam atrás de um só `<Suspense>`: a tela chega inteira num flush e nenhum card aparece depois empurrando os outros (CLS < 0,05). O card de retornos mostra 3 e «Ver todos (N)» (`/?retornos=todos`); só aparece o que o papel pode usar (#199). Concluir/cancelar retorno, decidir triagem e manter o responsável após a maioridade são Server Actions (`hoje-actions.ts`) com sessão, papel, escopo de empresa e auditoria na mesma transação; o Profissional só age nos pacientes vinculados (R4). Falha de uma leitura mostra erro no bloco com «Tentar de novo» | entregue | `/` (`src/app/(staff)/page.tsx`, `_hoje/`, `hoje-actions.ts`), `src/lib/server/data/` |
 | Agenda no servidor (#551, ADR-077): a página é um Server Component; o período vem da URL (`?visao=semana\|dia`, `?dia=AAAA-MM-DD`, `?status=`, `?profissional=`; o padrão deixa a URL limpa) e consultas, contagem, grade, feriados, profissionais e fila são lidos em paralelo, sem `/api` na carga. Trocar período, visão, status ou profissional é navegação (`router.push/replace`) dentro de uma transição: a tela anterior fica no lugar com `aria-busy` até a resposta. No celular a Semana não existe (Mês e Dia); o HTML do mês traz as duas variantes até a hidratação, para não haver salto. Falha de uma leitura mostra erro no bloco com «Tentar de novo». **Gravações** (agendar, série, remarcar, confirmar, cancelar, falta, concluir) são Server Actions (ADR-078): a consulta e o que depende dela gravam junto com o evento de auditoria na mesma transação; vínculo do profissional, Google Agenda, baixa do kit e aviso da lista de espera rodam depois do commit | entregue | `/agenda` (`page.tsx`, `agenda-data.tsx`, `agenda-screen.tsx`, `agenda-range.ts`, `agenda-actions.ts`), `src/lib/server/data/` |
-| Catálogo de procedimentos (preço, duração, kit) | entregue | `/procedimentos` |
+| Catálogo de procedimentos (preço, duração, kit) | entregue (página no servidor, ações com auditoria na mesma transação, [ADR-083](../../adr/083-materiais-e-procedimentos-no-servidor.md)) | `/procedimentos` |
 
 Specs de execução: `.specs/features/{agenda-p1-p3-pontuais,catalogo-p0-p3-pontuais}/`; itens N6 8a–8c em `.specs/archive/handoff-2026.md`.
 

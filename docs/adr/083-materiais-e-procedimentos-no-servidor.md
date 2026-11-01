@@ -42,4 +42,13 @@ related:
 
 - Materiais chega inteiro no HTML e não troca de forma depois; gravar atualiza a tela sozinho (`refresh()` da ação).
 - Pergunta aberta (PO): nenhuma nova.
-- A parte de Procedimentos desta decisão entra no PR 2 e é registrada aqui como atualização.
+- A parte de Procedimentos está na atualização abaixo (PR 2).
+
+## Atualização — PR 2 (Procedimentos)
+
+`/procedimentos` segue as mesmas decisões 1 a 7.
+
+- **Página**: `page.tsx` lê o catálogo e os insumos do kit em paralelo (`loadBlock`). Servidor: cabeçalho e alerta de erro. Ilhas de cliente: `ProceduresBoard` (busca, linhas, ficha ao lado, ativar/desativar), `ProcedureForm`, `KitForm`, `NewProcedureButton`.
+- **Ações** (`procedure-actions.ts`, papel da API de procedimentos): `createProcedure`, `updateProcedure` (editar, ativar e desativar) e `setProcedureKit`, com auditoria na mesma transação («cadastrado», «editado», «desativado», «reativado», «kit com N itens»). A regra de nome repetido e de edição mora em `src/lib/server/procedure-writes.ts` e é a mesma das rotas `POST/PATCH /api/procedures`, que passam a chamá-la: uma regra, dois caminhos.
+- **Kit**: o kit só troca por inteiro e dentro da transação; insumo de outra empresa não entra (a baixa automática debitaria o estoque dela) e procedimento de outra empresa responde 404. Os itens do kit de um procedimento são lidos sob demanda ao abrir o kit (`getProcedureKitFor`, a mesma resposta de `GET /api/procedures/:id/kit`).
+- **`TransactionScope`** ganha `procedureKits` (o repositório do kit não tem `clinic_id`; o escopo vem do procedimento, validado na mesma transação).

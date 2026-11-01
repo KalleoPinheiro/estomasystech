@@ -4,7 +4,8 @@ import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import { writeScope } from '@/lib/auth/tenant-scope';
+import { getProcedureKitFor } from '@/lib/server/data/procedures';
 
 const kitSchema = z.object({
   items: z
@@ -25,15 +26,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   return handleRequest(async () => {
     const { id } = await context.params;
-    // `procedure_supplies` não tem clinic_id: o escopo vem do procedimento —
-    // kit só é visível se o procedimento pertence à empresa da sessão.
-    const { procedureKits, procedures } = await getRepositories(
-      sessionScope(guard.session),
-    );
-    if (!(await procedures.findById(id))) {
-      throw new NotFoundError('Procedimento', id);
-    }
-    return { items: await procedureKits.getKit(id) };
+    return getProcedureKitFor(guard.session, id);
   });
 }
 
