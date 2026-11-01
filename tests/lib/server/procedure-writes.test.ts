@@ -96,6 +96,7 @@ describe('Feature: regra de gravação de procedimentos (#556)', () => {
       });
 
       await expect(attempt).rejects.toBeInstanceOf(NotFoundError);
+      await expect(attempt).rejects.toThrow(/Procedimento/);
     });
 
     it('Dado nome de outro procedimento, Quando renomeia, Então recusa e o nome fica', async () => {
