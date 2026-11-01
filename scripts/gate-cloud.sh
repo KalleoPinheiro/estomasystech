@@ -82,6 +82,27 @@ skip() { # skip <etapa> <motivo>: o que não rodou também entra no resumo
   echo "pulado: $1 ($2)" | tee -a "$TIMES"
 }
 
+# Etapas independentes andam juntas (ADR-087). Cada uma roda num subshell com o próprio log; o `step` dentro
+# dela segue medindo, registrando e saindo na primeira falha. `espera` imprime os logs na ordem de disparo e
+# reprova o gate se qualquer uma falhou: paralelo nunca mascara etapa vermelha.
+PIDS=(); NOMES=()
+paralelo() { # paralelo <nome> <comando...>
+  local n="$1"; shift
+  mkdir -p .gate
+  ( "$@" ) > ".gate/par-${n}.log" 2>&1 &
+  PIDS+=($!); NOMES+=("$n")
+}
+espera() {
+  local rc=0 i r
+  for i in "${!PIDS[@]}"; do
+    r=0; wait "${PIDS[$i]}" || r=$?
+    [ "$r" -eq 0 ] || { echo "✗ ${NOMES[$i]} (rc=${r})"; rc=$r; }
+    cat ".gate/par-${NOMES[$i]}.log"
+  done
+  PIDS=(); NOMES=()
+  [ "$rc" -eq 0 ] || exit "$rc"
+}
+
 base_ref() { npx tsx scripts/gate/base.ts; }
 
 setup_postgres() {
@@ -149,43 +170,69 @@ integracao_impactada() {
   fi
 }
 
+# Prod e dev (e o console limpo, que também usa o `next dev`) andam juntos, cada um no seu namespace de rede e
+# de pastas (scripts/gate-cloud/isolado.sh, ADR-087). Sem `unshare` na máquina, ou com GATE_E2E_SEQUENCIAL=1,
+# voltam a rodar em sequência, como antes. O dev e o console dividem um namespace em fila: dois `next dev`
+# ao mesmo tempo estourariam a memória de 15 GB junto do servidor de produção.
+e2e_dev_e_console() {
+  scripts/gate-cloud/isolado.sh dev --next-proprio -- "$0" _step e2e-dev "${E2E_DEV[@]}"
+  scripts/gate-cloud/isolado.sh console --next-proprio -- "$0" _step console-limpo-dev "${E2E_CON[@]}"
+}
+
+e2e_executar() {
+  if [ "${GATE_E2E_SEQUENCIAL:-0}" != 1 ] && scripts/gate-cloud/isolado.sh sonda -- true >/dev/null 2>&1; then
+    echo "E2E: produção em paralelo com dev+console (namespaces isolados)"
+    paralelo e2e-producao scripts/gate-cloud/isolado.sh prod -- "$0" _step e2e-producao "${E2E_PROD[@]}"
+    paralelo e2e-dev-console e2e_dev_e_console
+    espera
+  else
+    echo "E2E em sequência (sem unshare ou GATE_E2E_SEQUENCIAL=1)"
+    free_port_3000
+    step e2e-producao "${E2E_PROD[@]}"
+    free_port_3000
+    step e2e-dev "${E2E_DEV[@]}"
+    step console-limpo-dev "${E2E_CON[@]}"
+  fi
+}
+
 # E2E só nos specs que o diff alcança (scripts/gate-cloud/impacto.ts); ALL = todos; NONE = nenhum.
 e2e_impactado() {
   local sel="$1"
-  free_port_3000
+  E2E_CON=(npx playwright test -c playwright.console.config.ts)
   if [ "$sel" = ALL ]; then
-    step e2e-producao npm run test:e2e:prod
-    free_port_3000
-    step e2e-dev npm run test:e2e:dev
-    step console-limpo-dev npx playwright test -c playwright.console.config.ts
+    E2E_PROD=(npm run test:e2e:prod)
+    E2E_DEV=(npm run test:e2e:dev)
   else
     # console limpo (#543/#584) é barato e cobre todas as telas por papel: entra em toda seleção
     sel="$sel e2e/console-limpo.spec.ts"
-    # shellcheck disable=SC2086
-    step e2e-producao npx playwright test -c playwright.prod.config.ts --pass-with-no-tests $sel
-    free_port_3000
-    # shellcheck disable=SC2086
-    step e2e-dev npx playwright test --pass-with-no-tests $sel
-    step console-limpo-dev npx playwright test -c playwright.console.config.ts
+    # shellcheck disable=SC2206
+    E2E_PROD=(npx playwright test -c playwright.prod.config.ts --pass-with-no-tests $sel)
+    # shellcheck disable=SC2206
+    E2E_DEV=(npx playwright test --pass-with-no-tests $sel)
   fi
+  e2e_executar
 }
 
 mutation_changed() {
   local base="$1" files
   files=$(GATE_BASE="$base" npx tsx scripts/gate-cloud/impacto.ts --mutacao)
   [ -n "$files" ] || { skip mutacao "nenhum arquivo de domain/application/lib/server alterado"; return 0; }
-  npm run test:mutacao -- --mutate "$files"
+  # --incremental reaproveita o resultado dos mutantes cujo código e testes não mudaram
+  # (reports/mutation/stryker-incremental.json, cacheado no Actions); o `break` 85 vale sobre o conjunto todo.
+  npm run test:mutacao -- --incremental --mutate "$files"
 }
 
 pr_profile() {
   [ -z "$(git status --porcelain)" ] || { echo "árvore suja: o gate vale para o SHA do HEAD" >&2; return 1; }
   local base sel; base=$(base_ref)
   echo "perfil pr · base ${base} · $(git rev-parse --short HEAD)"
-  step typecheck npm run typecheck
-  step lint npm run lint
-  step sv npm run check:sv
-  step docs npm run check:docs
-  step integridade-de-testes integridade
+  # Verificações estáticas independentes juntas; a cobertura (usa todos os núcleos) vem depois.
+  paralelo typecheck step typecheck npm run typecheck
+  paralelo lint step lint npm run lint
+  paralelo sv step sv npm run check:sv
+  paralelo docs step docs npm run check:docs
+  paralelo integridade step integridade-de-testes integridade
+  espera
   step cobertura npm run test:coverage
   step mutacao mutation_changed "$base"
   if git diff --name-only "${base}...HEAD" | grep -Eqv '(^docs/|^\.specs/|^\.changeset/|\.md$)'; then
@@ -222,6 +269,7 @@ run_bg() { # run_bg <modo>
 }
 
 case "${1:-}" in
+  _step) shift; name="$1"; shift; step "$name" "$@" ;; # uso interno: o `step` dentro de um namespace isolado
   bg) run_bg "${2:?uso: $0 bg pr|release}" ;;
   status)
     cat "$TIMES" 2>/dev/null

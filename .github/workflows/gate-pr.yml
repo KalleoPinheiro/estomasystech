@@ -1,0 +1,267 @@
+name: Gate do PR
+
+# O gate incremental por PR (ADR-084, perfil `pr`) como workflow, em jobs paralelos (ADR-087): integração em
+# Postgres real, E2E de produção em 3 shards do Playwright, E2E de dev (papéis + login) e console limpo,
+# e mutação incremental do Stryker. A suíte unitária completa com cobertura, o typecheck, o lint e o build
+# ficam em `ci.yml`. O `gate:local` com a linha `E2E-GATE:` (ADR-042) segue sendo o recibo do PR
+# `release/* → main`; este workflow não o substitui.
+#
+# Seleção: scripts/gate-cloud/impacto.ts decide o que o diff alcança («na dúvida, inclui»). Nada é pulado
+# por conveniência: o job final `gate-pr` reprova se um job que devia rodar não passou.
+on:
+  pull_request:
+    branches: ["release/**"]
+  # Merge queue (ADR-087): a fila monta o SHA com os PRs à frente e o gate roda nele.
+  merge_group:
+
+concurrency:
+  group: gate-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  AUTH_SECRET: ci-placeholder-secret-0000000000000000
+  NODE_OPTIONS: --max-old-space-size=8192
+  TZ: UTC
+
+jobs:
+  impacto:
+    name: Impacto do diff
+    runs-on: ubuntu-24.04
+    outputs:
+      so_doc: ${{ steps.sel.outputs.so_doc }}
+      e2e: ${{ steps.sel.outputs.e2e }}
+      rodar_e2e: ${{ steps.sel.outputs.rodar_e2e }}
+      mutacao: ${{ steps.sel.outputs.mutacao }}
+      rodar_mutacao: ${{ steps.sel.outputs.rodar_mutacao }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - id: sel
+        env:
+          # Em PR a base é a release; na fila, o SHA da base que a fila usou (já em `fetch-depth: 0`).
+          GATE_BASE: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
+          BASE_REF: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
+        run: |
+          if git diff --name-only "${BASE_REF}...HEAD" | grep -Eqv '(^docs/|^\.specs/|^\.changeset/|\.md$)'; then
+            so_doc=false
+          else
+            so_doc=true
+          fi
+          e2e=$(npx tsx scripts/gate-cloud/impacto.ts)
+          mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao)
+          rodar_e2e=true
+          if [ "$so_doc" = true ] || [ "$e2e" = NONE ]; then rodar_e2e=false; fi
+          rodar_mutacao=true
+          if [ -z "$mutacao" ]; then rodar_mutacao=false; fi
+          {
+            echo "so_doc=$so_doc"
+            echo "e2e=$e2e"
+            echo "rodar_e2e=$rodar_e2e"
+            echo "mutacao=$mutacao"
+            echo "rodar_mutacao=$rodar_mutacao"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Impacto do diff"
+            echo "- só documentação: $so_doc"
+            echo "- E2E: \`$e2e\`"
+            echo "- mutação: \`${mutacao:-nenhum arquivo}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  integracao:
+    name: Integração (Postgres 18)
+    needs: impacto
+    if: needs.impacto.outputs.so_doc != 'true'
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: gate
+          POSTGRES_DB: estomas_integ
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      INTEGRATION_DATABASE_URL: postgres://postgres:gate@127.0.0.1:5432/estomas_integ
+      PG_POOL_MAX: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      # Suíte inteira: o job corre em paralelo com os demais e não está no caminho crítico (na dúvida, inclui).
+      - run: npx vitest run -c vitest.integracao.config.mts
+
+  e2e-prod:
+    name: E2E produção (shard ${{ matrix.shard }}/3)
+    needs: impacto
+    if: needs.impacto.outputs.rodar_e2e == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'next.config.*') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run build
+
+      # Selecionado: todos os specs (ALL) ou só a lista do impacto, sempre com o console limpo.
+      - name: Playwright (shard)
+        env:
+          SEL: ${{ needs.impacto.outputs.e2e }}
+        run: |
+          if [ "$SEL" = ALL ]; then sel=""; else sel="$SEL e2e/console-limpo.spec.ts"; fi
+          # shellcheck disable=SC2086
+          npx playwright test -c playwright.prod.config.ts --pass-with-no-tests --shard=${{ matrix.shard }}/3 $sel
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: e2e-prod-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  e2e-dev:
+    name: E2E dev (papéis, login e console limpo)
+    needs: impacto
+    if: needs.impacto.outputs.rodar_e2e == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Playwright dev
+        env:
+          SEL: ${{ needs.impacto.outputs.e2e }}
+        run: |
+          if [ "$SEL" = ALL ]; then sel=""; else sel="$SEL e2e/console-limpo.spec.ts"; fi
+          # shellcheck disable=SC2086
+          npx playwright test --pass-with-no-tests $sel
+
+      - name: Console limpo (dev)
+        run: npx playwright test -c playwright.console.config.ts
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: e2e-dev
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  mutacao:
+    name: Mutação incremental
+    needs: impacto
+    if: needs.impacto.outputs.rodar_mutacao == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
+      # O cache só poupa mutantes cujo código e testes não mudaram; o `break` 85 vale sobre o conjunto.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: reports/mutation/stryker-incremental.json
+          key: stryker-pr-${{ github.run_id }}
+          restore-keys: stryker-pr-
+
+      - name: Stryker (arquivos alterados, incremental)
+        env:
+          ARQUIVOS: ${{ needs.impacto.outputs.mutacao }}
+        run: npm run test:mutacao -- --incremental --mutate "$ARQUIVOS"
+
+  # Único check a exigir deste workflow (se o ruleset passar a exigir). Reprova se um job que devia rodar
+  # não passou; só aceita `skipped` quando o impacto mandou pular.
+  gate-pr:
+    name: Gate do PR
+    if: always()
+    needs: [impacto, integracao, e2e-prod, e2e-dev, mutacao]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Conferir
+        env:
+          SO_DOC: ${{ needs.impacto.outputs.so_doc }}
+          RODAR_E2E: ${{ needs.impacto.outputs.rodar_e2e }}
+          RODAR_MUT: ${{ needs.impacto.outputs.rodar_mutacao }}
+          R_IMPACTO: ${{ needs.impacto.result }}
+          R_INTEGRACAO: ${{ needs.integracao.result }}
+          R_PROD: ${{ needs.e2e-prod.result }}
+          R_DEV: ${{ needs.e2e-dev.result }}
+          R_MUT: ${{ needs.mutacao.result }}
+        run: |
+          falhou=0
+          conferir() { # <nome> <resultado> <devia rodar: true|false>
+            if [ "$3" = true ] && [ "$2" != success ]; then echo "::error::$1: $2 (devia passar)"; falhou=1;
+            elif [ "$3" != true ] && [ "$2" != skipped ]; then echo "::error::$1: $2 (devia ser pulado)"; falhou=1;
+            else echo "$1: $2"; fi
+          }
+          [ "$R_IMPACTO" = success ] || { echo "::error::impacto: $R_IMPACTO"; exit 1; }
+          conferir integracao "$R_INTEGRACAO" "$([ "$SO_DOC" = true ] && echo false || echo true)"
+          conferir e2e-prod "$R_PROD" "$RODAR_E2E"
+          conferir e2e-dev "$R_DEV" "$RODAR_E2E"
+          conferir mutacao "$R_MUT" "$RODAR_MUT"
+          exit $falhou

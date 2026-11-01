@@ -59,3 +59,34 @@ O ADR-084 não é editado; esta seção registra duas melhorias do `scripts/gate
 - **CI.** O job `ci` do Actions passou a definir `NODE_OPTIONS=--max-old-space-size=8192`: o
   `tsc --noEmit` estourava o heap padrão (~2 GB, exit 134).
 
+
+## Jobs em paralelo, shards e cache (ADR-087)
+
+Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cache.md). Nenhum limiar muda.
+
+- **Actions, `ci.yml`**: `estatico`, `cobertura-shard` (4 fatias) + `cobertura` (junção com os limiares de
+  `vitest.config.mts`) e `build` rodam juntos; o job `ci` (nome exigido pelo ruleset) só passa se todos passaram.
+  Reproduzir um shard: `npx vitest run -c vitest.shard.config.mts --coverage --reporter=blob --shard=1/4`;
+  juntar: `npx vitest --merge-reports --coverage` (os blobs ficam em `.vitest-reports/`).
+- **Actions, `gate-pr.yml`** (PR para `release/**`): `impacto`, `integracao`, `e2e-prod` (3 shards), `e2e-dev`
+  (papéis, login, console limpo) e `mutacao` incremental; o job `gate-pr` confere que cada job que devia rodar passou.
+  Reproduzir um shard de E2E: `npx playwright test -c playwright.prod.config.ts --shard=2/3`.
+- **Nuvem, `gate-cloud.sh`**: estáticos juntos; E2E de produção em paralelo com dev + console limpo, cada um num
+  namespace próprio (`scripts/gate-cloud/isolado.sh`); mutação com `--incremental`. `GATE_E2E_SEQUENCIAL=1` volta
+  ao E2E em sequência (também é o que acontece se a máquina não tem `unshare`). Os logs de cada etapa paralela
+  ficam em `.gate/par-<etapa>.log`.
+- Armadilha: o E2E em namespace usa memória (servidor de produção + `next dev` + Chromium); abaixo de 12 GB prefira
+  `GATE_E2E_SEQUENCIAL=1`.
+
+### Merge queue da `release/v0.x` (ADR-087, ligar no painel)
+
+Os workflows já respondem a `merge_group`; falta ligar a fila (só o dono do repositório faz):
+
+1. GitHub → Settings → Rules → Rulesets → ruleset de `release/**` → marque **Require merge queue**.
+2. Método de merge: **Squash**; tamanho da fila: 1 a 5 PRs; «Only merge non-failing pull requests».
+3. Checks exigidos (Require status checks): `Typecheck, lint, sv-gate, test:coverage, build` (job `ci`) e,
+   se quiser o E2E no bloqueio, `Gate do PR`. `Recibo do gate local + integridade dos testes` pode ficar
+   exigido: na fila ele é pulado e conta como aprovado.
+4. Fluxo novo: o autor abre o PR e, com checks verdes, clica **Merge when ready**; a fila monta
+   `release + PR`, roda `ci` e `gate-pr` nesse SHA e faz o squash. Se a release andou, ninguém refaz o gate à mão.
+5. `main` não entra na fila: `release/* → main` segue por merge commit com o recibo `E2E-GATE:`.
