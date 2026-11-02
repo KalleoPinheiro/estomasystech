@@ -5,6 +5,7 @@ import {
   CLINIC_B_ID,
   ensureTestClinics,
 } from '../support/clinics';
+import { seedDocumentResource } from '../support/document-resources';
 import { jsonRequest } from '../support/request';
 import { adminCookieHeader } from '../support/session';
 
@@ -42,7 +43,7 @@ describe('Feature: emissão persistida de documentos (#94, DOC-01) — POST /api
 
   describe('Cenário: idempotência', () => {
     it('Dado o mesmo documentType e resourceId, Quando emitir duas vezes, Então devolve o mesmo número e data', async () => {
-      const resourceId = `apt-${Date.now()}`;
+      const resourceId = await seedDocumentResource('atestado', CLINIC_A_ID);
       const { json: first } = await issue('atestado', resourceId);
       const { json: second } = await issue('atestado', resourceId);
 
@@ -51,16 +52,27 @@ describe('Feature: emissão persistida de documentos (#94, DOC-01) — POST /api
     });
 
     it('Dado resourceId diferente, Quando emitir, Então devolve número diferente', async () => {
-      const { json: first } = await issue('atestado', `apt-a-${Date.now()}`);
-      const { json: second } = await issue('atestado', `apt-b-${Date.now()}`);
+      const { json: first } = await issue(
+        'atestado',
+        await seedDocumentResource('atestado', CLINIC_A_ID),
+      );
+      const { json: second } = await issue(
+        'atestado',
+        await seedDocumentResource('atestado', CLINIC_A_ID),
+      );
 
       expect(first.data.documentNumber).not.toBe(second.data.documentNumber);
     });
 
     it('Dado o mesmo resourceId em documentType diferente, Quando emitir, Então trata como documentos distintos', async () => {
-      const resourceId = `shared-${Date.now()}`;
-      const { json: attestation } = await issue('atestado', resourceId);
-      const { json: consent } = await issue('consentimento', resourceId);
+      const { json: attestation } = await issue(
+        'atestado',
+        await seedDocumentResource('atestado', CLINIC_A_ID),
+      );
+      const { json: consent } = await issue(
+        'consentimento',
+        await seedDocumentResource('consentimento', CLINIC_A_ID),
+      );
 
       expect(attestation.data.documentNumber).not.toBe(
         consent.data.documentNumber,
@@ -73,20 +85,21 @@ describe('Feature: emissão persistida de documentos (#94, DOC-01) — POST /api
   describe('Cenário: registro por empresa (B6, #210 item 4)', () => {
     it('Dado o mesmo documento emitido na clínica A e na B, Quando emitir, Então cada empresa tem o seu registro (por empresa)', async () => {
       await ensureTestClinics();
-      const resourceId = `por-empresa-${Date.now()}`;
+      const inAId = await seedDocumentResource('atestado', CLINIC_A_ID);
+      const inBId = await seedDocumentResource('atestado', CLINIC_B_ID);
       const inA = await issue(
         'atestado',
-        resourceId,
+        inAId,
         adminCookieHeader(CLINIC_A_ID),
       );
       const inB = await issue(
         'atestado',
-        resourceId,
+        inBId,
         adminCookieHeader(CLINIC_B_ID),
       );
       const againInA = await issue(
         'atestado',
-        resourceId,
+        inAId,
         adminCookieHeader(CLINIC_A_ID),
       );
 
