@@ -2301,6 +2301,12 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes novos**: `tests/api/portal-web-vitals.test.ts` (papéis, 400, normalização e isolamento entre pacientes/responsável), `tests/components/web-vitals-reporter-endpoint.test.tsx`, `tests/components/portal-layout-web-vitals.test.tsx`. Nenhum teste existente alterado. Mutação em `web-vitals-ingest.ts`: ver o PR.
 - **Next step**: revisão limpa, Actions verde, merge na release/v0.5.0. **Blockers**: nenhum. Equipe que abre `/portal` recebe 403 no envio (aceito, documentado na errata).
 
+## 404 global sem violar a CSP (#656) (2026-11-02) — EM REVISÃO
+- **O que mudou**: `src/app/not-found.tsx` (404 global, `@still-void/ui`, pt-BR e acolhedora: título «Página não encontrada», apoio e link «Voltar ao início»). Sem ele o Next servia a 404 padrão, cujo `<style>` inline não recebe o nonce e violava a CSP (`style-src-elem`). Sem estilo inline próprio, sem sessão nem menu da equipe (fica fora dos grupos de rotas, que já têm `not-found` próprio).
+- **Testes novos**: `tests/app/not-found-global.test.tsx` (3) e `e2e/console-limpo-404.spec.ts` (360/390/768/1280, status 404, h1, link, sem rolagem horizontal, console sem erro nem violação de CSP). Spec novo em vez de alterar o `console-limpo.spec.ts` (regra 8); a mensagem do próprio navegador «Failed to load resource» do documento 404 é ignorada de propósito, é o status esperado. Nenhum teste existente alterado.
+- **Observação**: deslogado, o proxy redireciona rota desconhecida para `/login`; a 404 aparece com sessão (caso do achado). Não mudei esse comportamento.
+- **Next step**: revisão the-judge em contexto limpo e merge na release/v0.5.0. **Blockers**: nenhum.
+
 ## Emissão de documento: 404 para recurso inexistente em todos os papéis (#674) (2026-11-02) — EM REVISÃO
 - **O que mudou** (emenda da ADR-089, sem número novo): `authorizeDocumentIssuance` resolve o recurso por `documentType`+`resourceId` no escopo da empresa para **todos** os papéis; inexistente ou de outra empresa é `404` e nada é gravado (sem evento órfão nem número). O vínculo R4 continua só do Profissional; Admin e Atendente com recurso válido seguem como antes. Docs: ACE-RN-69 e PRO-RN-09.
 - **Testes novos**: `tests/lib/server/document-authorization.test.ts` (6 tipos × admin/atendente × inexistente/outra empresa/não grava, recibo sem fatura, emissão válida) e helper `tests/support/document-resources.ts`.
