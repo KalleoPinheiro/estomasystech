@@ -3,6 +3,8 @@
  * ~42 min só no fim (segredo ausente, identidade git, input de branch, rollback). A regra de cada item mora
  * aqui para ser testada; `preflight.ts` só lê o ambiente.
  */
+import { conferirNpm } from './lockfile-lib';
+
 export interface PreflightEnv {
   /** `GH_TOKEN` do corte (PAT do dono). */
   token: string;
@@ -15,6 +17,8 @@ export interface PreflightEnv {
   rollbackOk: boolean;
   /** Em Actions (`CI`) o token é obrigatório; no WSL o `gh` pode estar logado e dispensa a variável. */
   emCi: boolean;
+  /** npm em uso versus o fixado em `packageManager` (ADR-091); ausente = não conferir. */
+  npm?: { pkg: { packageManager?: string }; atual: string };
 }
 
 export type Falhas = string[];
@@ -26,5 +30,7 @@ export function pendenciasDoPreflight(e: PreflightEnv): Falhas {
   if (e.repo === '') falhas.push('repositório desconhecido: defina GH_REPO ou GITHUB_REPOSITORY.');
   if (e.gitName === '' || e.gitEmail === '')
     falhas.push('identidade git ausente: defina user.name/user.email ou GIT_COMMITTER_NAME/GIT_COMMITTER_EMAIL antes do release:prepare.');
+  const npm = e.npm ? conferirNpm(e.npm.pkg, e.npm.atual) : null;
+  if (npm !== null) falhas.push(npm);
   return falhas;
 }
