@@ -274,3 +274,89 @@ describe('Feature: casos particulares da R4 na emissão (#636)', () => {
     expect(await auditEvents.findAll({ resourceId })).toHaveLength(1);
   });
 });
+
+describe.each(DOCUMENT_TYPES)(
+  'Feature: recurso do documento «%s» existe para todos os papéis (#674, ADR-089)',
+  (type) => {
+    it.each(['company_admin', 'atendente'] as const)(
+      'Dado recurso inexistente, Quando %s emite, Então 404 sem vazar o id',
+      async (role) => {
+        const err = await authorize(
+          session(role, CLINIC_A_ID),
+          type,
+          MISSING,
+        ).catch((e) => e);
+
+        expect(err).toBeInstanceOf(NotFoundError);
+        expect(err.entity).toBe(LABEL[type]);
+        expect(err.message).not.toContain('nao-existe');
+      },
+    );
+
+    it.each(['company_admin', 'atendente'] as const)(
+      'Dado recurso de outra empresa, Quando %s da empresa B emite, Então 404',
+      async (role) => {
+        const { targets } = await seed({ linked: false });
+
+        const err = await authorize(
+          session(role, CLINIC_B_ID),
+          type,
+          targets[type],
+          CLINIC_B_ID,
+        ).catch((e) => e);
+
+        expect(err).toBeInstanceOf(NotFoundError);
+      },
+    );
+
+    it.each(['company_admin', 'atendente'] as const)(
+      'Dado recurso inexistente, Quando %s emite pela regra única, Então 404 e nenhum evento é gravado',
+      async (role) => {
+        const who = session(role, CLINIC_A_ID);
+        const resourceId = `inventado-${type}-${role}`;
+
+        await expect(
+          issueDocumentFor(who, {
+            documentType: type,
+            resourceId,
+            ...(type === 'recibo' ? { invoiceId: 'fatura-inventada' } : {}),
+          }),
+        ).rejects.toBeInstanceOf(NotFoundError);
+
+        const { auditEvents } = await getRepositories(writeScope(who));
+        expect(await auditEvents.findAll({ resourceId })).toHaveLength(0);
+      },
+    );
+  },
+);
+
+describe('Feature: casos particulares do recurso do documento (#674)', () => {
+  it.each(['company_admin', 'atendente'] as const)(
+    'Dado recibo sem fatura, Quando %s emite, Então a guarda cede e a emissão responde 400',
+    async (role) => {
+      await expect(
+        authorize(session(role, CLINIC_A_ID), 'recibo', {
+          resourceId: 'pagamento',
+        }),
+      ).resolves.toBeUndefined();
+    },
+  );
+
+  it.each(['company_admin', 'atendente'] as const)(
+    'Dado atestado de consulta existente, Quando %s emite, Então a emissão grava um só evento',
+    async (role) => {
+      const { targets } = await seed({ linked: false });
+      const who = session(role, CLINIC_A_ID);
+      const { resourceId } = targets.atestado;
+
+      const issued = await issueDocumentFor(who, {
+        documentType: 'atestado',
+        resourceId,
+      });
+
+      expect(issued.documentNumber).toMatch(/^ATST-[0-9A-Z]{8}$/);
+      const { auditEvents } = await getRepositories(writeScope(who));
+      expect(await auditEvents.findAll({ resourceId })).toHaveLength(1);
+    },
+  );
+});
