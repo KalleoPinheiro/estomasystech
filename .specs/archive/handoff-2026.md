@@ -2318,8 +2318,15 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes**: nenhum criado nem alterado (script de operação, não código do app).
 - **Next step**: o Kalléo cria o segredo `VERCEL_AUTOMATION_BYPASS_SECRET` (#667); então uma rodada na staging real fecha o 2º item do aceite da #668. **Blockers**: o segredo.
 
+## Skills de agente no repositório (2026-11-02) — EM REVISÃO
+- **O que mudou**: as skills que o Claude Code lia em `~/.claude/skills` passam a viver em `.claude/skills/` (70 skills; `speckit-*` achatadas a partir da pasta aninhada `skills/`; `learned/` vazia ficou de fora). Symlink `.cursor/skills` → `../.claude/skills`, para o Cursor ler o mesmo diretório. O binário `impeccable` `linux-x64` (~18 MB) não entrou; o launcher baixa na primeira execução (nota em `impeccable/SKILL.md`, `scripts/bin/` no `.gitignore` da skill). Índice em `.claude/skills/README.md`. `docs/agents/coordenacao.md` manda carregar o `the-judge` de `.claude/skills/the-judge/SKILL.md`.
+- **Fora da suíte**: `tsconfig.json` exclui `.claude` e `.cursor`; `biome.json` ignora `.claude/skills` e `.cursor/skills`; `vitest.config.mts` exclui as duas árvores do runner e da cobertura. Não há ESLint nem Prettier no repositório (o lint é o Biome). `scripts/gate/` não foi editado.
+- **Segredos**: varredura de chaves privadas, tokens (GitHub, Slack, AWS, OpenAI), JWT e atribuições de senha não achou credencial. Os únicos e-mails são `user@example.com` e o exemplo `git@github.com:<owner>/<repo>.git`.
+- **Testes**: nenhum teste criado nem alterado. A mudança em `vitest.config.mts` é só o `exclude` dessa árvore (sem limiar, retry, timeout ou asserção).
+- **Next step**: revisão the-judge em contexto limpo; não mergear. **Blockers**: nenhum.
+
 ## Gate nuvem: recibo sem etapa pulada não falha o script (2026-11-02) — EM REVISÃO
 - **Causa** (reproduzida antes de mexer, perfil `rapido`, todas as etapas `rc=0`): `recibo` em `scripts/gate-cloud.sh` faz `grep '^pulado:' | sed` sob `set -o pipefail`. Sem linha `pulado:`, o grep sai 1 e esse 1 vira o exit do script, mesmo com o recibo impresso `rc=0`. O mesmo grep mascarava falha real: etapa com rc 7 fazia o script sair 1. `scripts/gate/` intocado.
 - **Correção**: `{ grep -E '^pulado:' ... || true; }` só nesse pipe. Os outros greps do script estão em `if`, em `||` ou já têm `|| true`. O `case` só roda quando o arquivo é executado, para o teste poder fazer `source`.
-- **Testes novos**: `tests/scripts/gate-cloud-recibo.test.ts` (nada pulado sai 0; uma pulada sai 0 e o recibo lista a etapa; etapa com rc 7 sai 7). No código anterior: 2 falharam (1 em vez de 0; 1 em vez de 7) e o de etapa pulada já passava.
+- **Testes novos**: `tests/scripts/gate-cloud-recibo.test.ts` (nada pulado sai 0; uma pulada sai 0 e o recibo lista a etapa; etapa com rc 7 sai 7). O teste faz `source`. Em `f82bcc6e` os três saem 2: o `case` roda no `source` e o script imprime `uso: bash ...` (ainda não havia o guard de `BASH_SOURCE`). O rc 1 — nada pulado esperado 0 e recebido 1, etapa com rc 7 esperado 7 e recebido 1, a pulada passando — foi medido depois, com esse guard já no arquivo e só o `grep` antigo. Com `{ grep || true; }`, os três passam.
 - **Next step**: the-judge em contexto limpo e merge na release/v0.5.0. **Blockers**: nenhum.

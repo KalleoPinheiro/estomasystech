@@ -3,7 +3,7 @@ title: "Coordenação: papel, regras e processo de release"
 status: living
 audience: [agent, dev, po]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-31
+last_reviewed: 2026-11-02
 ---
 
 # Coordenação: papel, regras e processo de release
@@ -40,6 +40,11 @@ CLI não enxerga). Não repete o que já está em [`AGENTS.md`](../../AGENTS.md)
   `harness-eval`, `tlc-discover`, `tlc-plan`, `tlc-implement`, `the-judge`, `tlc-prd`,
   `tlc-spec-driven`, `tlc-spec-lean`. `triage` e `to-tickets`: se não estiverem instaladas, ler o
   `SKILL.md` em `github.com/mattpocock/skills` e aplicar as convenções.
+
+As skills de agente moram no repositório, em [`.claude/skills/`](../../.claude/skills/README.md). O Cursor
+enxerga o mesmo diretório pelo symlink `.cursor/skills`. O `the-judge` deve ser carregado de
+[`.claude/skills/the-judge/SKILL.md`](../../.claude/skills/the-judge/SKILL.md), não de uma cópia só da máquina
+de quem abriu a sessão.
 
 ## 2. Identidade e tom
 
