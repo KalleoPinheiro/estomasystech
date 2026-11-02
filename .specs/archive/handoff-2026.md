@@ -2317,3 +2317,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **O que mudou**: `docs/engineering/homologacao.md` ganha o § 7 (validação logada após cada rebuild da staging, em thread limpa e sem corrigir código; bypass do SSO por `VERCEL_AUTOMATION_BYPASS_SECRET`; ajuste do limitador de taxa com `PAUSE_MS` na staging e `API_RATE_LIMIT_MAX` local). Novo `scripts/staging/validacao-logada.mjs` (Playwright, parametrizado por `BASE_URL`, fora do Actions, 3 papéis × 360/390/768/1280, console/CSP/API/rolagem). Rodada local na release/v0.5.0 (efc714d): 144 páginas, 0 achados, evidência em `/mnt/project-files/v0.5.0/qa-668/`. Changeset vazio.
 - **Testes**: nenhum criado nem alterado (script de operação, não código do app).
 - **Next step**: o Kalléo cria o segredo `VERCEL_AUTOMATION_BYPASS_SECRET` (#667); então uma rodada na staging real fecha o 2º item do aceite da #668. **Blockers**: o segredo.
+
+## Gate nuvem: recibo sem etapa pulada não falha o script (2026-11-02) — EM REVISÃO
+- **Causa** (reproduzida antes de mexer, perfil `rapido`, todas as etapas `rc=0`): `recibo` em `scripts/gate-cloud.sh` faz `grep '^pulado:' | sed` sob `set -o pipefail`. Sem linha `pulado:`, o grep sai 1 e esse 1 vira o exit do script, mesmo com o recibo impresso `rc=0`. O mesmo grep mascarava falha real: etapa com rc 7 fazia o script sair 1. `scripts/gate/` intocado.
+- **Correção**: `{ grep -E '^pulado:' ... || true; }` só nesse pipe. Os outros greps do script estão em `if`, em `||` ou já têm `|| true`. O `case` só roda quando o arquivo é executado, para o teste poder fazer `source`.
+- **Testes novos**: `tests/scripts/gate-cloud-recibo.test.ts` (nada pulado sai 0; uma pulada sai 0 e o recibo lista a etapa; etapa com rc 7 sai 7). No código anterior: 2 falharam (1 em vez de 0; 1 em vez de 7) e o de etapa pulada já passava.
+- **Next step**: the-judge em contexto limpo e merge na release/v0.5.0. **Blockers**: nenhum.
