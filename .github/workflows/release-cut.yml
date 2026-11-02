@@ -92,6 +92,11 @@ jobs:
           node-version: "24"
           cache: npm
 
+      # npm fixo (ADR-091): o do `packageManager` do package.json, a fonte única. O npm que vem com o Node pode
+      # mudar e regenerar o lockfile sem as dependências opcionais; o `release:prepare` recusa se divergir.
+      - name: Fixar o npm do package.json
+        run: npm i -g "npm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
+
       - name: Identidade do commit de versão
         run: |
           git config user.name "github-actions[bot]"
