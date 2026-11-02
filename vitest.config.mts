@@ -45,6 +45,14 @@ export default defineConfig({
     globalSetup: ["tests/support/pglite-global-setup.ts"],
     setupFiles: ["tests/setup.ts"],
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    // Skills de agente ficam fora da suíte. Os dois primeiros globs são o
+    // defaultExclude do Vitest 4: um `exclude` explícito substitui o padrão.
+    exclude: [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/.claude/**",
+      "**/.cursor/**",
+    ],
     coverage: {
       provider: "v8",
       include: [
@@ -74,6 +82,9 @@ export default defineConfig({
         "src/app/**/loading.tsx",
         // Páginas de impressão de documentos — renderização server pura, coberta por E2E.
         "src/app/documentos/**",
+        // Scripts das skills de agente não entram na cobertura do app.
+        "**/.claude/**",
+        "**/.cursor/**",
       ],
       thresholds: {
         // Piso global: UI (src/app/**, src/components/**) segue medida, sem baixar (ADR-050).

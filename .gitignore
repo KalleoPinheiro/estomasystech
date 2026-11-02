@@ -54,12 +54,14 @@ uploads/
 # Exceção: settings.json/hooks/commands/agents são portáveis (sem paths
 # absolutos) e precisam estar versionados pro harness-score contar de verdade
 # (HKS-05 exige script de hook commitado) e pra outros devs/CI terem os mesmos
-# guardrails e comandos.
+# guardrails e comandos. Skills de agente também: qualquer sessão (Claude Code
+# ou Cursor) lê `.claude/skills` em vez da cópia da máquina de quem abriu.
 /.claude/*
 !/.claude/settings.json
 !/.claude/hooks/
 !/.claude/commands/
 !/.claude/agents/
+!/.claude/skills/
 
 # Playwright E2E
 /test-results/
@@ -71,8 +73,10 @@ uploads/
 # IA
 .agents
 # .cursor/ fica local, exceto as regras versionadas (pontes para AGENTS.md — docs/governance.md)
+# e o symlink `.cursor/skills` → `../.claude/skills` (mesmas skills do Claude Code).
 .cursor/*
 !.cursor/rules/
+!.cursor/skills
 .windsurf
 .tlc/harness/state/
 .cursor/hooks.json
