@@ -23,6 +23,9 @@ export class InvalidStatusTransitionError extends DomainError {
   readonly code = 'INVALID_STATUS_TRANSITION';
 }
 
+/** Entidades com texto no feminino (#657); as demais seguem «não encontrado(a)». */
+const FEMININE_ENTITIES: ReadonlySet<string> = new Set(['Fatura']);
+
 /**
  * A mensagem vai para a UI e não carrega o id (issue #219): identificador
  * interno não é texto para o usuário. O id fica em `entityId`, para log.
@@ -34,7 +37,11 @@ export class NotFoundError extends DomainError {
     readonly entity: string,
     readonly entityId: string,
   ) {
-    super(`${entity} não encontrado(a)`);
+    super(
+      FEMININE_ENTITIES.has(entity)
+        ? `${entity} não encontrada`
+        : `${entity} não encontrado(a)`,
+    );
   }
 }
 

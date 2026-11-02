@@ -10,6 +10,7 @@ import {
   writeClinicId,
   writeScope,
 } from '@/lib/auth/tenant-scope';
+import { authorizeDocumentIssuance } from './document-authorization';
 
 /**
  * Emissão persistida de documento clínico (#94, DOC-01; #546, ADR-082): a data
@@ -100,7 +101,13 @@ export async function issueDocumentFor(
 ): Promise<DocumentIssuance> {
   const { documentType, resourceId, invoiceId } = input;
   const clinicId = writeClinicId(session);
-  const { transactions } = await getRepositories(writeScope(session));
+  const scope = writeScope(session);
+  // R4 do recurso antes da transação: a tentativa negada não grava (#636, ADR-089).
+  await authorizeDocumentIssuance(session, scope, documentType, {
+    resourceId,
+    invoiceId,
+  });
+  const { transactions } = await getRepositories(scope);
 
   return transactions.run(async (tx) => {
     // Sem CPF do pagador e CNPJ do prestador o recibo não vale para o IRPF:
