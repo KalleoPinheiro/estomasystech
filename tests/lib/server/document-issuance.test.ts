@@ -9,6 +9,7 @@ import {
   CLINIC_B_ID,
   ensureTestClinics,
 } from '../../support/clinics';
+import { seedDocumentResource } from '../../support/document-resources';
 import { sessionToken } from '../../support/session';
 
 process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
@@ -60,7 +61,7 @@ beforeEach(async () => {
 
 describe('Feature: emissão do documento impresso por Server Action (#546, ADR-082)', () => {
   it('Dado um atestado ainda não emitido, Quando a ilha emite, Então devolve o número ATST e grava um único evento de emissão', async () => {
-    const resourceId = newResource();
+    const resourceId = await seedDocumentResource('atestado', CLINIC_A_ID);
 
     const result = await (await action())({
       documentType: 'atestado',
@@ -73,7 +74,7 @@ describe('Feature: emissão do documento impresso por Server Action (#546, ADR-0
   });
 
   it('Dado o documento já emitido, Quando reimprimir, Então devolve o mesmo número e a mesma data, sem novo evento', async () => {
-    const resourceId = newResource();
+    const resourceId = await seedDocumentResource('consentimento', CLINIC_A_ID);
     const emit = await action();
 
     const first = await emit({ documentType: 'consentimento', resourceId });
@@ -84,7 +85,7 @@ describe('Feature: emissão do documento impresso por Server Action (#546, ADR-0
   });
 
   it('Dadas várias abas emitindo o mesmo documento ao mesmo tempo, Quando todas chamam a emissão, Então todas recebem o mesmo número e só há um evento', async () => {
-    const resourceId = newResource();
+    const resourceId = await seedDocumentResource('relatorio', CLINIC_A_ID);
     const emit = await action();
 
     const results = await Promise.all(
@@ -98,7 +99,7 @@ describe('Feature: emissão do documento impresso por Server Action (#546, ADR-0
   });
 
   it('Dada uma leitura do mesmo recurso registrada depois da emissão, Quando reimprimir, Então o número continua o da emissão', async () => {
-    const resourceId = newResource();
+    const resourceId = await seedDocumentResource('atestado', CLINIC_A_ID);
     const emit = await action();
     const first = await emit({ documentType: 'atestado', resourceId });
     const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
@@ -119,7 +120,7 @@ describe('Feature: emissão do documento impresso por Server Action (#546, ADR-0
   });
 
   it('Dada uma leitura do recurso sem emissão, Quando emitir, Então a emissão cria o próprio evento', async () => {
-    const resourceId = newResource();
+    const resourceId = await seedDocumentResource('atestado', CLINIC_A_ID);
     const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
     await auditEvents.save(
       AuditEvent.create({
@@ -148,30 +149,39 @@ describe('Feature: emissão do documento impresso por Server Action (#546, ADR-0
     expect(await emissionsOf(resourceId)).toHaveLength(1);
   });
 
-  it('Dado o mesmo documento emitido nas clínicas A e B, Quando cada uma emite, Então os registros são separados por empresa', async () => {
-    const resourceId = newResource();
+  it('Dado um documento de cada clínica, Quando cada uma emite, Então os registros são separados por empresa', async () => {
+    const inAId = await seedDocumentResource('consentimento', CLINIC_A_ID);
+    const inBId = await seedDocumentResource('consentimento', CLINIC_B_ID);
     const emit = await action();
-    const inA = await emit({ documentType: 'repasse', resourceId });
+    const inA = await emit({
+      documentType: 'consentimento',
+      resourceId: inAId,
+    });
     signIn('company_admin', CLINIC_B_ID);
 
-    const inB = await emit({ documentType: 'repasse', resourceId });
+    const inB = await emit({
+      documentType: 'consentimento',
+      resourceId: inBId,
+    });
 
     expect(inB.data?.documentNumber).not.toBe(inA.data?.documentNumber);
-    expect(await emissionsOf(resourceId, CLINIC_A_ID)).toHaveLength(1);
-    expect(await emissionsOf(resourceId, CLINIC_B_ID)).toHaveLength(1);
+    expect(await emissionsOf(inAId, CLINIC_A_ID)).toHaveLength(1);
+    expect(await emissionsOf(inAId, CLINIC_B_ID)).toHaveLength(0);
+    expect(await emissionsOf(inBId, CLINIC_B_ID)).toHaveLength(1);
+    expect(await emissionsOf(inBId, CLINIC_A_ID)).toHaveLength(0);
   });
 
   it('Dada a emissão concluída, Quando a ação responde, Então não relê a página (a leitura do prontuário não se repete)', async () => {
     await (await action())({
       documentType: 'plano-cuidados',
-      resourceId: newResource(),
+      resourceId: await seedDocumentResource('plano-cuidados', CLINIC_A_ID),
     });
 
     expect(refreshed).not.toHaveBeenCalled();
   });
 
   it('Dado documento já emitido, Quando consultar a emissão, Então a leitura devolve número e data sem gravar nada', async () => {
-    const resourceId = newResource();
+    const resourceId = await seedDocumentResource('atestado', CLINIC_A_ID);
     const emitted = await (await action())({
       documentType: 'atestado',
       resourceId,

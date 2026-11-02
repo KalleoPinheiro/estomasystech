@@ -9,9 +9,10 @@ import type { DocumentType } from './document-issuance';
 /**
  * R4 na emissão de documento (#636, ADR-089): antes de gravar o evento de
  * emissão, o recurso do documento é resolvido por `documentType`+`resourceId`
- * no escopo da empresa. Recurso inexistente ou de outra empresa é `404` (o
- * escopo não o enxerga); Profissional sem vínculo com o paciente do recurso é
- * `403`. Admin e Atendente passam sem mudança. A tentativa negada não grava.
+ * no escopo da empresa, para TODOS os papéis (#674). Recurso inexistente ou de
+ * outra empresa é `404` (o escopo não o enxerga); Profissional sem vínculo com
+ * o paciente do recurso é `403`. Admin e Atendente com recurso válido passam
+ * sem mudança. A tentativa negada não grava.
  */
 
 type Repositories = Awaited<ReturnType<typeof getRepositories>>;
@@ -88,7 +89,6 @@ export async function authorizeDocumentIssuance(
   documentType: DocumentType,
   target: Target,
 ): Promise<void> {
-  if (session.role !== 'profissional') return;
   // Recibo sem fatura é entrada inválida (400), tratada pela própria emissão.
   if (documentType === 'recibo' && target.invoiceId === undefined) return;
 
@@ -97,5 +97,7 @@ export async function authorizeDocumentIssuance(
   if (!owner) {
     throw new NotFoundError(ENTITY_LABEL[documentType], target.resourceId);
   }
+  // O vínculo R4 é só do Profissional; Admin e Atendente só precisam do recurso.
+  if (session.role !== 'profissional') return;
   await assertOwnerAllowed(session, owner, repos);
 }
