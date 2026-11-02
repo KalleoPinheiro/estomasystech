@@ -83,7 +83,7 @@ A descrição é a primeira frase do campo `description` no frontmatter de cada 
 | `to-tickets` | Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, published to the configured tracker (edges as text in one file per ticket locally, or native blocking links on a real tracker). |
 | `triage` | Move issues and external PRs through a state machine of triage roles, categorise, verify, grill if needed, and write agent-ready briefs. |
 | `vercel-react-best-practices` | React and Next.js performance optimization guidelines from Vercel Engineering. |
-| `wait-what` | Stop. |
+| `wait-what` | Stop. That last message did not land: re-pitch it. |
 | `wayfinder` | Plan a huge chunk of work (more than one agent session can hold) as a shared map of decision tickets on your issue tracker, and resolve them one at a time until the way to the destination is clear. |
 | `wiki-workflows` | Guide for ingesting sources, querying, and linting your wiki |
 | `wizard` | Generate an interactive bash wizard that walks a human through steps only they can perform. |
