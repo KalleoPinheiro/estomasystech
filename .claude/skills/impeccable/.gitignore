@@ -1,0 +1,3 @@
+# Engine binária (~18 MB) não versionada. O launcher baixa na primeira execução
+# (ver a nota no SKILL.md). Caminho local: scripts/bin/<os>-<arch>/impeccable
+scripts/bin/
