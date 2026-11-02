@@ -3,7 +3,7 @@ title: "Homologação — Vercel, Neon, MSW, faker e fluxo de git"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-21
+last_reviewed: 2026-11-02
 related: [docs/engineering/homologacao-cenarios.md, docs/adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md, docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md, docs/engineering/producao.md, docs/engineering/onboarding.md]
 ---
 
@@ -177,3 +177,38 @@ sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações,
 - Sem foto persistente se `PHOTO_STORAGE` não apontar para o bucket de homologação.
 - Dado real em homologação é incidente de LGPD: não cadastre pessoas reais; a faixa de aviso e a
   trava `PRODUCTION_DB_HOSTS` existem para isso.
+
+## 7. Validação logada após cada rebuild da staging (#668)
+
+Depois de cada rebuild da staging, uma thread **nova, em contexto limpo**, roda a validação logada. Ela **não corrige
+código**: cada falha vira issue com evidência, a correção vai para outra thread e uma nova rodada confere só o que
+reprovou. Cobre o que o build local não mostra: cabeçalhos da Vercel, variáveis ausentes (`GOOGLE_*`), SSO e CSP no
+edge (como na #658).
+
+**O que roda:** `scripts/staging/validacao-logada.mjs` (Playwright, fora do Actions, ADR-042). Entra com Admin,
+Atendente e Profissional (§ 4, login real por e-mail e senha), percorre o menu de cada papel (mais `/configuracoes/*` e
+`/auditoria` no Admin) em **360, 390, 768 e 1280** e, em cada tela, exige: status < 400 sem redirecionamento
+inesperado; `console.error`/`console.warn` e `pageerror` = 0 (#543); violação de CSP = 0; nenhuma resposta 4xx/5xx de
+`/api/*`; sem rolagem horizontal. Grava uma captura por tela e `resultados.json`; sai com código 1 se houver achado.
+
+```bash
+BASE_URL=https://estomasystech.vercel.app \
+STAGING_SEED_PASSWORD=<senha do seed> \
+VERCEL_AUTOMATION_BYPASS_SECRET=<segredo> \
+PAUSE_MS=2000 OUT_DIR=/mnt/project-files/<release>/qa-<issue> \
+node scripts/staging/validacao-logada.mjs
+```
+
+- **Bypass do SSO:** com a proteção da Vercel ativa, `VERCEL_AUTOMATION_BYPASS_SECRET` (o mesmo segredo do smoke, § 1)
+  vai no cabeçalho `x-vercel-protection-bypass` e a Vercel devolve um cookie para as navegações seguintes. Sem o
+  segredo e com SSO, o script cai na página de login da Vercel e reprova. Nunca cole o segredo em issue ou captura.
+- **Limitador de taxa:** o app limita `/api/*` a 120/min por IP (§ 6). Contra a staging, use `PAUSE_MS=2000`; sem pausa a
+  rodada gera 429 do próprio limitador, que não é defeito. Contra build local, suba o servidor com
+  `API_RATE_LIMIT_MAX=100000` e `ACTION_RATE_LIMIT_MAX=100000` (como faz o E2E).
+- **Local (sem a Vercel):** `npm run build` e `next start` sobre Postgres com `npm run seed:staging` e
+  `APP_ENV=staging`, `STAGING_DISABLE_MFA=true`; `BASE_URL` aponta para a porta local. Serve de ensaio, não substitui
+  a rodada na staging real.
+- **Navegador:** `CHROME=<caminho do Chromium>` quando o Playwright não achar o dele.
+- **Evidência:** anexe `resultados.json` e as capturas em `/mnt/project-files/` e comente o resultado na issue da
+  release. Rodada local da v0.5.0 (efc714d): 144 páginas, 0 achados.
+

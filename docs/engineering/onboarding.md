@@ -144,6 +144,11 @@ npm run dev                   # http://localhost:3000
 | `STAGING_DISABLE_MFA` | não | `true` dispensa o segundo fator no login | só com `APP_ENV=staging`; em qualquer outro ambiente o app recusa subir ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)) |
 | `PRODUCTION_DB_HOSTS` | homologação | hosts de banco de produção, separados por vírgula | `DATABASE_URL` com esse host é recusada fora de `production` |
 | `STAGING_SEED_PASSWORD` | `npm run seed:staging` | senha (≥ 10 caracteres) das contas fictícias | [homologacao.md](homologacao.md) § 4 |
+| `BASE_URL` | validação logada | ambiente que o `validacao-logada.mjs` percorre (padrão `http://localhost:3000`) | [homologacao.md](homologacao.md) § 7 |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | validação logada, smoke da staging | segredo que atravessa o SSO da Vercel (cabeçalho `x-vercel-protection-bypass`) | [homologacao.md](homologacao.md) § 7 |
+| `PAUSE_MS` | validação logada | pausa entre telas, em ms (a staging limita `/api/*` a 120/min por IP) | [homologacao.md](homologacao.md) § 7 |
+| `OUT_DIR` | validação logada | pasta das capturas e do `resultados.json` | [homologacao.md](homologacao.md) § 7 |
+| `CHROME` | validação logada | caminho do Chromium, quando o Playwright não achar o dele | [homologacao.md](homologacao.md) § 7 |
 | `NEXT_PUBLIC_APP_VERSION` | não | versão exibida às clínicas; o `next.config.ts` a embute no build a partir do `package.json` | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
 | `NEXT_PUBLIC_RELEASE_VERSION` | não | versão da release em andamento (`package.json` + changesets pendentes); o `next.config.ts` a calcula no build e ela vale antes de `NEXT_PUBLIC_APP_VERSION` | [ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md) |
 | `NEXT_PUBLIC_APP_COMMIT` | não | SHA curto exibido junto da versão; só em homologação e preview | vem de `VERCEL_GIT_COMMIT_SHA` |
