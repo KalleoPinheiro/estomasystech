@@ -64,7 +64,7 @@ Proof: `npx vitest run tests/infrastructure/gate-pr-workflow.test.ts -t "C8 "`
 ## Handoff
 
 - **Settled mid-build:** o timeout 40 da tabela vale a mutação incremental do PR (máx. 26,9 min), que sai do PR; a rodada completa de `mutacao-mensal.yml` mede ~1h20, então o teto dela fica em 120 (era 180). C43 não trava `runs-on` nem a ordem dos passos: o job `ci` permanece em `ubuntu-24.04` porque ainda roda `npm run build` quando o PR está pronto.
-- **Dispatched:** none
-- **Boundary:** none yet
+- **Dispatched:** Verifier at fcc7cc30, returned; mutations re-run at 694d9c7d, 3 killed
+- **Boundary:** C1-C8 closed at 694d9c7d
 - **Abandoned:** manter o job `mutacao` no `gate-pr.yml` para preservar as 263 combinações do POC — contradiz "mutação sai do PR". A matriz que sobra é o produto dos 4 resultados em integração e nos dois E2E, mais os casos de rascunho, política, impacto, só-doc e sem E2E.
 - **Walked:** n/a - sem tela
