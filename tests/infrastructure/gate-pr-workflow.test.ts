@@ -124,7 +124,7 @@ function esperado(env: Env): number {
 function executar(script: string, env: Env): number {
   try {
     execFileSync('bash', ['-e', '-o', 'pipefail', '-c', script], {
-      env: { ...env, PATH: '/usr/bin:/bin' },
+      env: { ...env, PATH: '/usr/bin:/bin', NODE_ENV: 'test' },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
