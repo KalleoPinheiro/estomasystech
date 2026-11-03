@@ -1,0 +1,23 @@
+[
+  {
+    "file": ".github/workflows/gate-pr.yml",
+    "old": "[ \"$R_POLITICA\" = success ] || { echo \"::error::politica: $R_POLITICA\"; exit 1; }",
+    "new": "[ \"$R_POLITICA\" = success ] || [ \"$R_POLITICA\" = failure ] || { echo \"::error::politica: $R_POLITICA\"; exit 1; }",
+    "proof": "npx vitest run tests/infrastructure/gate-pr-workflow.test.ts -t \"C5 \"",
+    "label": "conferir aceita politica failure"
+  },
+  {
+    "file": ".github/workflows/ci.yml",
+    "old": "if [ \"$EVENTO\" = pull_request ] && [ \"$DRAFT\" = true ]; then completo=false; else completo=true; fi",
+    "new": "if [ \"$EVENTO\" = pull_request ] && [ \"$DRAFT\" = false ]; then completo=false; else completo=true; fi",
+    "proof": "npx vitest run tests/infrastructure/gate-pr-workflow.test.ts -t \"C6 \"",
+    "label": "ci trata rascunho como pronto"
+  },
+  {
+    "file": "tests/infrastructure/gate-pr-workflow.test.ts",
+    "old": "if (env.COMPLETO !== 'true') return 1;",
+    "new": "if (env.COMPLETO !== 'true' && env.COMPLETO !== 'false') return 1;",
+    "proof": "npx vitest run tests/infrastructure/gate-pr-workflow.test.ts -t \"C5 \"",
+    "label": "oraculo aceita COMPLETO false"
+  }
+]

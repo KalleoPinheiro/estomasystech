@@ -3,7 +3,7 @@ title: "Homologação — Vercel, Neon, MSW, faker e fluxo de git"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-02
+last_reviewed: 2026-11-03
 related: [docs/engineering/homologacao-cenarios.md, docs/adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md, docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md, docs/engineering/producao.md, docs/engineering/onboarding.md]
 ---
 
@@ -32,7 +32,7 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | --- | --- |
 | Abrir a release | `git switch -c release/vX.Y.Z origin/main && git push -u origin release/vX.Y.Z`; o nome promete a versão |
 | Toda feature nasce da release aberta | `git fetch origin && git switch -c feat/x origin/release/vX.Y.Z` |
-| O PR da feature vai contra a **release**, em squash | CI rápido; sem recibo do gate. Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
+| O PR da feature vai contra a **release**, em squash | Nasce em **rascunho** e é marcado pronto uma vez (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de propósito. Sem recibo do gate. Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
 | Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação do `gate:local` já comparam com a release aberta de que a branch saiu (ADR-058; `GATE_BASE` força outra base) |
 | Só a `staging` vira deploy | a Vercel **não** constrói prévia de `feat/*`, `release/*` nem de branch de agente (`git.deploymentEnabled` no `vercel.json`, [ADR-061](../adr/061-vercel-constroi-so-a-staging.md)); para ver uma feature, reconstrua a staging |
 | `main` mudou (hotfix) | `npm run release:sync` **mergeia** a `main` na release aberta (nunca rebase); conflito aborta e avisa: resolva na release |

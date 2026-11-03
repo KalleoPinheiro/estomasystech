@@ -331,6 +331,7 @@ See `src/` structure:
 
 ## Related decisions
 
+- [ADR-093: Gate do PR só quando o PR está pronto](./docs/adr/093-gate-do-pr-so-quando-pronto-timeouts-e-orcamento.md) — rascunho reprova de propósito; timeouts e `ubuntu-slim` nos jobs leves; mutação sai do PR.
 - [ADR-001: Multi-tenancy strategy](./docs/adr/001-multi-tenancy.md) — `clinic_id` + RLS, incremental phases.
 - [ADR-002: Two-layer authorization](./docs/adr/002-autorizacao-em-duas-camadas.md) — proxy + handler guards, fail-closed.
 - [ADR-003: Modelo de papéis multi-empresa](./docs/adr/003-modelo-de-papeis-multi-empresa.md) — catálogo fechado de seis papéis, escopo por empresa e vínculo dinâmico do Profissional.

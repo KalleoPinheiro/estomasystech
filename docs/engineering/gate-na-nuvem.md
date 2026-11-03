@@ -3,14 +3,14 @@ title: "Gate na nuvem: como rodar numa thread sem o PC"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-31
+last_reviewed: 2026-11-03
 ---
 
 # Gate na nuvem
 
 **Por PR:** suíte unitária completa com cobertura, mais integração, mutação e E2E só no que o diff altera ou alcança (regras de impacto e fallback no ADR). **Por release:** gate completo na nuvem e Docker/backup no WSL antes do `release:cut`.
 
-**Antes de abrir o PR (ADR-088):** só o perfil `rapido`. A cobertura completa, a integração e o E2E são do `ci.yml` e do `gate-pr.yml` no PR, que são os checks exigidos; rodá-los antes na thread repete a mesma prova no mesmo SHA.
+**Antes de abrir o PR (ADR-088):** só o perfil `rapido`. A cobertura completa, a integração e o E2E são do `ci.yml` e do `gate-pr.yml` quando o PR deixa de ser rascunho (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de propósito e o pipeline pesado não roda. Rodar a rodada completa na thread antes do `ready_for_review` repete a mesma prova no mesmo SHA.
 
 Decisão e motivo: [ADR-084](../adr/084-gate-na-nuvem-incremental-por-pr-e-completo-por-release.md).
 
@@ -71,8 +71,10 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
   `vitest.config.mts`) e `build` rodam juntos; o job `ci` (nome exigido pelo ruleset) só passa se todos passaram.
   Reproduzir um shard: `npx vitest run -c vitest.shard.config.mts --coverage --reporter=blob --shard=1/4`;
   juntar: `npx vitest --merge-reports --coverage` (os blobs ficam em `.vitest-reports/`).
-- **Actions, `gate-pr.yml`** (PR para `release/**`): `impacto`, `integracao`, `e2e-prod` (3 shards), `e2e-dev`
-  (papéis, login, console limpo) e `mutacao` incremental; o job `gate-pr` confere que cada job que devia rodar passou.
+- **Actions, `gate-pr.yml`** (PR para `release/**`, ADR-093): em rascunho só `politica` e o agregador, que
+  reprova. Com o PR pronto: `impacto`, `integracao`, `e2e-prod` (3 shards) e `e2e-dev` (papéis, login, console
+  limpo). A mutação incremental saiu do PR e ficou em `mutacao-mensal.yml` (`workflow_dispatch` ou schedule).
+  O job `gate-pr` confere que cada job que devia rodar passou.
   Reproduzir um shard de E2E: `npx playwright test -c playwright.prod.config.ts --shard=2/3`.
 - **Nuvem, `gate-cloud.sh`**: estáticos juntos; E2E de produção em paralelo com dev + console limpo, cada um num
   namespace próprio (`scripts/gate-cloud/isolado.sh`); mutação com `--incremental`. `GATE_E2E_SEQUENCIAL=1` volta
@@ -83,11 +85,12 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
 
 ### PR só de documentação (ADR-087, errata)
 
-PR que toca só `.md` de documentação (regra do ADR-053) roda os workflows, mas os jobs pesados são pulados: o
-`escopo` do `ci.yml` pula cobertura, typecheck, lint, sv, server-first e build, e o `gate-pr.yml` pula
-integração, E2E e mutação. Fica o gate de docs e o de changeset, e o check exigido (`ci`) fecha verde em
-poucos minutos. Não se usa `paths-ignore`, que deixaria o check exigido pendente. Qualquer arquivo fora da
-regra no diff volta ao gate completo.
+PR que toca só `.md` de documentação (regra do ADR-053) roda os workflows, mas os jobs pesados são pulados
+quando o PR está pronto: o `escopo` do `ci.yml` pula cobertura, typecheck, lint, sv, server-first e build, e o
+`gate-pr.yml` pula integração e E2E (a mutação não está mais neste workflow, ADR-093). Fica o gate de docs e o
+de changeset, e o check exigido (`ci`) fecha verde em poucos minutos. Em rascunho, `ci` e "Gate do PR"
+reprovam de propósito mesmo nesse diff. Não se usa `paths-ignore`, que deixaria o check exigido pendente.
+Qualquer arquivo fora da regra no diff volta ao gate completo.
 
 ### Merge queue da `release/v0.x` (ADR-087): pendente até o repositório ir para uma organização
 

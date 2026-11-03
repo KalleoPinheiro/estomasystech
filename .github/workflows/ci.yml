@@ -11,6 +11,8 @@ on:
   push:
     branches: [main]
   pull_request:
+    # ADR-093: sem types o ready_for_review não dispara, e o vermelho do rascunho ficaria no SHA.
+    types: [opened, synchronize, reopened, ready_for_review]
   # Merge queue (ADR-087): o gate roda no SHA que a fila vai mergear, não no do PR isolado.
   merge_group:
 
@@ -34,11 +36,13 @@ jobs:
   # workflow roda, os jobs pesados são pulados e o job `ci` (o check exigido) confere e reporta sucesso.
   escopo:
     name: Escopo (só documentação?)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
     outputs:
       docs_only: ${{ steps.classe.outputs.docs_only }}
       provado: ${{ steps.prova.outputs.provado }}
       pesado: ${{ steps.pesado.outputs.pesado }}
+      completo: ${{ steps.pesado.outputs.completo }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -81,20 +85,28 @@ jobs:
           npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --etapas ci | tee -a "$GITHUB_OUTPUT"
 
       # `pesado=true` roda estático completo, cobertura e build; só documentação ou prova do corte os dispensa.
+      # ADR-093: rascunho não paga estático, cobertura nem build. `completo=false` só em pull_request draft.
       - id: pesado
         env:
           DOCS_ONLY: ${{ steps.classe.outputs.docs_only }}
           PROVADO: ${{ steps.prova.outputs.provado }}
+          EVENTO: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
         run: |
-          if [ "$DOCS_ONLY" = true ] || [ "$PROVADO" = true ]; then pesado=false; else pesado=true; fi
-          echo "pesado=$pesado" >> "$GITHUB_OUTPUT"
-          echo "docs_only=$DOCS_ONLY provado_pelo_corte=${PROVADO:-false} pesado=$pesado" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$EVENTO" = pull_request ] && [ "$DRAFT" = true ]; then completo=false; else completo=true; fi
+          if [ "$completo" != true ] || [ "$DOCS_ONLY" = true ] || [ "$PROVADO" = true ]; then pesado=false; else pesado=true; fi
+          {
+            echo "completo=$completo"
+            echo "pesado=$pesado"
+          } >> "$GITHUB_OUTPUT"
+          echo "docs_only=$DOCS_ONLY provado_pelo_corte=${PROVADO:-false} rascunho=${DRAFT:-n/a} completo=$completo pesado=$pesado" >> "$GITHUB_STEP_SUMMARY"
 
   estatico:
     name: Estático (changeset, typecheck, lint, sv, docs, server-first)
     needs: escopo
-    if: needs.escopo.outputs.provado != 'true'
+    if: needs.escopo.outputs.completo == 'true' && needs.escopo.outputs.provado != 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
       # O `tsc --noEmit` estourava o heap padrão (~2 GB, exit 134). O runner tem 16 GB; 8192 é o
@@ -150,8 +162,9 @@ jobs:
   server-first-provado:
     name: Server-first (PR provado pelo corte)
     needs: escopo
-    if: needs.escopo.outputs.provado == 'true'
+    if: needs.escopo.outputs.completo == 'true' && needs.escopo.outputs.provado == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -176,6 +189,7 @@ jobs:
     needs: escopo
     if: needs.escopo.outputs.pesado == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -221,6 +235,7 @@ jobs:
     name: Cobertura (junção e limiares)
     needs: cobertura-shard
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
       NODE_OPTIONS: --max-old-space-size=8192
@@ -259,6 +274,7 @@ jobs:
     if: always()
     needs: [escopo, estatico, server-first-provado, cobertura-shard, cobertura]
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
       NODE_OPTIONS: --max-old-space-size=8192
@@ -268,6 +284,7 @@ jobs:
       # tem de estar `skipped`, menos o `server-first-provado`, que tem de passar. Qualquer outra combinação reprova.
       - name: Todos os jobs anteriores passaram
         env:
+          COMPLETO: ${{ needs.escopo.outputs.completo }}
           DOCS_ONLY: ${{ needs.escopo.outputs.docs_only }}
           PROVADO: ${{ needs.escopo.outputs.provado }}
           R_ESCOPO: ${{ needs.escopo.result }}
@@ -276,7 +293,11 @@ jobs:
           R_SHARD: ${{ needs.cobertura-shard.result }}
           R_COBERTURA: ${{ needs.cobertura.result }}
         run: |
-          echo "docs_only=$DOCS_ONLY provado=$PROVADO escopo=$R_ESCOPO estatico=$R_ESTATICO serverfirst=$R_SERVERFIRST shard=$R_SHARD cobertura=$R_COBERTURA"
+          echo "completo=$COMPLETO docs_only=$DOCS_ONLY provado=$PROVADO escopo=$R_ESCOPO estatico=$R_ESTATICO serverfirst=$R_SERVERFIRST shard=$R_SHARD cobertura=$R_COBERTURA"
+          if [ "$COMPLETO" != true ]; then
+            echo "::error::PR em rascunho: o CI completo roda quando o PR for marcado como pronto (ADR-093)"
+            exit 1
+          fi
           [ "$R_ESCOPO" = success ] || { echo "::error::o escopo não passou"; exit 1; }
           if [ "$PROVADO" = true ]; then
             [ "$R_ESTATICO" = skipped ] && [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR provado pelo corte não devia ter rodado estático nem cobertura"; exit 1; }

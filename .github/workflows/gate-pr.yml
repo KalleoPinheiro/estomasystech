@@ -1,16 +1,20 @@
 name: Gate do PR
 
 # O gate incremental por PR (ADR-084, perfil `pr`) como workflow, em jobs paralelos (ADR-087): integração em
-# Postgres real, E2E de produção em 3 shards do Playwright, E2E de dev (papéis + login) e console limpo,
-# e mutação incremental do Stryker. A suíte unitária completa com cobertura, o typecheck, o lint e o build
-# ficam em `ci.yml`. O `gate:local` com a linha `E2E-GATE:` (ADR-042) segue sendo o recibo do PR
-# `release/* → main`; este workflow não o substitui.
+# Postgres real, E2E de produção em 3 shards do Playwright e E2E de dev (papéis + login) e console limpo.
+# A suíte unitária completa com cobertura, o typecheck, o lint e o build ficam em `ci.yml`. O `gate:local`
+# com a linha `E2E-GATE:` (ADR-042) segue sendo o recibo do PR `release/* → main`; este workflow não o substitui.
+#
+# ADR-093: PR em rascunho roda só a política e o agregador, que reprova (fail-closed). A mutação incremental
+# saiu daqui e foi para `mutacao-mensal.yml` (schedule ou workflow_dispatch).
 #
 # Seleção: scripts/gate-cloud/impacto.ts decide o que o diff alcança («na dúvida, inclui»). Nada é pulado
 # por conveniência: o job final `gate-pr` reprova se um job que devia rodar não passou.
 on:
   pull_request:
     branches: ["release/**"]
+    # ADR-093: rascunho não paga o gate completo; ready_for_review dispara a rodada no mesmo SHA.
+    types: [opened, synchronize, reopened, ready_for_review]
   # Merge queue (ADR-087): a fila monta o SHA com os PRs à frente e o gate roda nele.
   merge_group:
 
@@ -27,15 +31,35 @@ env:
   TZ: UTC
 
 jobs:
+  # ADR-093: PR em rascunho roda só esta política e o agregador, que reprova. Assim nenhum
+  # sucesso de rascunho fica no SHA quando o PR vira pronto: a rodada do ready_for_review decide.
+  # O nome e a saída `completo` ficam estáveis para um job `rota` futuro absorver esta política.
+  politica:
+    name: Política (rascunho ou pronto)
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    outputs:
+      completo: ${{ steps.p.outputs.completo }}
+    steps:
+      - id: p
+        env:
+          EVENTO: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          if [ "$EVENTO" = pull_request ] && [ "$DRAFT" = true ]; then completo=false; else completo=true; fi
+          echo "completo=$completo" >> "$GITHUB_OUTPUT"
+          echo "evento=$EVENTO rascunho=${DRAFT:-n/a} gate completo=$completo" >> "$GITHUB_STEP_SUMMARY"
+
   impacto:
     name: Impacto do diff
-    runs-on: ubuntu-24.04
+    needs: politica
+    if: needs.politica.outputs.completo == 'true'
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
     outputs:
       so_doc: ${{ steps.sel.outputs.so_doc }}
       e2e: ${{ steps.sel.outputs.e2e }}
       rodar_e2e: ${{ steps.sel.outputs.rodar_e2e }}
-      mutacao: ${{ steps.sel.outputs.mutacao }}
-      rodar_mutacao: ${{ steps.sel.outputs.rodar_mutacao }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -55,30 +79,24 @@ jobs:
           GATE_BASE: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
           BASE_REF: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
         run: |
-          # Mesma regra do ADR-053 (scripts/release/docs-only.ts): só documentação não paga integração, E2E nem mutação.
+          # Mesma regra do ADR-053 (scripts/release/docs-only.ts): só documentação não paga integração nem E2E.
           so_doc=$(npx tsx scripts/release/docs-only.ts --base "$BASE_REF" --head HEAD | cut -d= -f2)
           if [ "$so_doc" = true ]; then
-            e2e=NONE; mutacao=""
+            e2e=NONE
           else
             e2e=$(npx tsx scripts/gate-cloud/impacto.ts)
-            mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao)
           fi
           rodar_e2e=true
           if [ "$so_doc" = true ] || [ "$e2e" = NONE ]; then rodar_e2e=false; fi
-          rodar_mutacao=true
-          if [ -z "$mutacao" ]; then rodar_mutacao=false; fi
           {
             echo "so_doc=$so_doc"
             echo "e2e=$e2e"
             echo "rodar_e2e=$rodar_e2e"
-            echo "mutacao=$mutacao"
-            echo "rodar_mutacao=$rodar_mutacao"
           } >> "$GITHUB_OUTPUT"
           {
             echo "### Impacto do diff"
             echo "- só documentação: $so_doc"
             echo "- E2E: \`$e2e\`"
-            echo "- mutação: \`${mutacao:-nenhum arquivo}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   integracao:
@@ -86,6 +104,7 @@ jobs:
     needs: impacto
     if: needs.impacto.outputs.so_doc != 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:18
@@ -118,7 +137,7 @@ jobs:
     needs: impacto
     if: needs.impacto.outputs.rodar_e2e == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -170,7 +189,7 @@ jobs:
     needs: impacto
     if: needs.impacto.outputs.rodar_e2e == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -205,54 +224,25 @@ jobs:
             test-results/
           retention-days: 7
 
-  mutacao:
-    name: Mutação incremental
-    needs: impacto
-    if: needs.impacto.outputs.rodar_mutacao == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: "24"
-          cache: npm
-
-      - run: npm ci
-
-      # O cache só poupa mutantes cujo código e testes não mudaram; o `break` 85 vale sobre o conjunto.
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: reports/mutation/stryker-incremental.json
-          key: stryker-pr-${{ github.run_id }}
-          restore-keys: stryker-pr-
-
-      - name: Stryker (arquivos alterados, incremental)
-        env:
-          ARQUIVOS: ${{ needs.impacto.outputs.mutacao }}
-        run: npm run test:mutacao -- --incremental --mutate "$ARQUIVOS"
-
   # Único check a exigir deste workflow (se o ruleset passar a exigir). Reprova se um job que devia rodar
-  # não passou; só aceita `skipped` quando o impacto mandou pular.
+  # não passou; só aceita `skipped` quando o impacto mandou pular. Em rascunho reprova de propósito.
   gate-pr:
     name: Gate do PR
     if: always()
-    needs: [impacto, integracao, e2e-prod, e2e-dev, mutacao]
-    runs-on: ubuntu-24.04
+    needs: [politica, impacto, integracao, e2e-prod, e2e-dev]
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
     steps:
       - name: Conferir
         env:
+          R_POLITICA: ${{ needs.politica.result }}
+          COMPLETO: ${{ needs.politica.outputs.completo }}
           SO_DOC: ${{ needs.impacto.outputs.so_doc }}
           RODAR_E2E: ${{ needs.impacto.outputs.rodar_e2e }}
-          RODAR_MUT: ${{ needs.impacto.outputs.rodar_mutacao }}
           R_IMPACTO: ${{ needs.impacto.result }}
           R_INTEGRACAO: ${{ needs.integracao.result }}
           R_PROD: ${{ needs.e2e-prod.result }}
           R_DEV: ${{ needs.e2e-dev.result }}
-          R_MUT: ${{ needs.mutacao.result }}
         run: |
           falhou=0
           conferir() { # <nome> <resultado> <devia rodar: true|false>
@@ -260,9 +250,12 @@ jobs:
             elif [ "$3" != true ] && [ "$2" != skipped ]; then echo "::error::$1: $2 (devia ser pulado)"; falhou=1;
             else echo "$1: $2"; fi
           }
+          [ "$R_POLITICA" = success ] || { echo "::error::politica: $R_POLITICA"; exit 1; }
+          if [ "$COMPLETO" != true ]; then
+            echo "::error::PR em rascunho: o gate completo roda quando o PR for marcado como pronto (ADR-093)"; exit 1
+          fi
           [ "$R_IMPACTO" = success ] || { echo "::error::impacto: $R_IMPACTO"; exit 1; }
           conferir integracao "$R_INTEGRACAO" "$([ "$SO_DOC" = true ] && echo false || echo true)"
           conferir e2e-prod "$R_PROD" "$RODAR_E2E"
           conferir e2e-dev "$R_DEV" "$RODAR_E2E"
-          conferir mutacao "$R_MUT" "$RODAR_MUT"
           exit $falhou
