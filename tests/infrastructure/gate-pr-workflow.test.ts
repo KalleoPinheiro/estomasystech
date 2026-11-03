@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -76,13 +77,14 @@ function pullRequest(source: string): string {
   return rest.slice(0, end === -1 ? undefined : end).join('\n');
 }
 
-function conferir(source: string): string {
-  const lines = job('gate-pr', source).split('\n');
-  const start = lines.findIndex((line) => line.includes('name: Conferir'));
+function runBlock(source: string, marker: string): string {
+  const lines = source.split('\n');
+  const start = lines.findIndex((line) => line.includes(marker));
+  expect(start, marker).toBeGreaterThanOrEqual(0);
   const runAt = lines.findIndex(
     (line, index) => index > start && line.trim() === 'run: |',
   );
-  expect(runAt).toBeGreaterThanOrEqual(0);
+  expect(runAt, marker).toBeGreaterThanOrEqual(0);
   const body = lines.slice(runAt + 1);
   const indent = body[0]?.match(/^ */)?.[0].length ?? 0;
   const script: string[] = [];
@@ -95,6 +97,10 @@ function conferir(source: string): string {
     script.push(line.slice(indent));
   }
   return script.join('\n');
+}
+
+function conferir(source: string): string {
+  return runBlock(job('gate-pr', source), 'name: Conferir');
 }
 
 function bate(resultado: string | undefined, rodar: boolean): boolean {
@@ -135,6 +141,18 @@ function executar(script: string, env: Env): number {
   }
 }
 
+function saida(script: string, env: Env): string {
+  const dir = mkdtempSync(path.join(tmpdir(), 'adr093-'));
+  const output = path.join(dir, 'out');
+  const code = executar(script, {
+    ...env,
+    GITHUB_OUTPUT: output,
+    GITHUB_STEP_SUMMARY: path.join(dir, 'sum'),
+  });
+  expect(code).toBe(0);
+  return readFileSync(output, 'utf8');
+}
+
 function matriz(): Array<{ nome: string; env: Env; esperado: number }> {
   const casos: Array<{ nome: string; env: Env; esperado: number }> = [];
   const pronto: Env = {
@@ -157,17 +175,23 @@ function matriz(): Array<{ nome: string; env: Env; esperado: number }> {
     R_PROD: 'skipped',
     R_DEV: 'skipped',
   };
-  casos.push({ nome: 'rascunho, tudo pulado', env: pulado, esperado: 1 });
-  casos.push({
-    nome: 'rascunho com pesados em success',
-    env: { ...pronto, COMPLETO: 'false' },
-    esperado: 1,
+  const acrescentar = (nome: string, env: Env) => {
+    casos.push({ nome, env, esperado: esperado(env) });
+  };
+  acrescentar('rascunho, tudo pulado', pulado);
+  acrescentar('rascunho com pesados em success', {
+    ...pronto,
+    COMPLETO: 'false',
   });
   for (const politica of ['failure', 'cancelled', 'skipped'] as const) {
-    casos.push({
-      nome: `politica ${politica}`,
-      env: { ...pulado, R_POLITICA: politica, COMPLETO: '' },
-      esperado: 1,
+    acrescentar(`politica ${politica} com completo vazio`, {
+      ...pulado,
+      R_POLITICA: politica,
+      COMPLETO: '',
+    });
+    acrescentar(`politica ${politica} com o resto verde`, {
+      ...pronto,
+      R_POLITICA: politica,
     });
   }
   for (const integracao of ESTADOS) {
@@ -179,11 +203,7 @@ function matriz(): Array<{ nome: string; env: Env; esperado: number }> {
           R_PROD: prod,
           R_DEV: dev,
         };
-        casos.push({
-          nome: `pronto i=${integracao} p=${prod} d=${dev}`,
-          env,
-          esperado: esperado(env),
-        });
+        acrescentar(`pronto i=${integracao} p=${prod} d=${dev}`, env);
       }
     }
   }
@@ -195,44 +215,35 @@ function matriz(): Array<{ nome: string; env: Env; esperado: number }> {
     R_PROD: 'skipped',
     R_DEV: 'skipped',
   };
-  casos.push({ nome: 'pronto so_doc, tudo pulado', env: soDoc, esperado: 0 });
-  casos.push({
-    nome: 'pronto so_doc mas integracao rodou',
-    env: { ...soDoc, R_INTEGRACAO: 'success' },
-    esperado: 1,
+  acrescentar('pronto so_doc, tudo pulado', soDoc);
+  acrescentar('pronto so_doc mas integracao rodou', {
+    ...soDoc,
+    R_INTEGRACAO: 'success',
   });
-  casos.push({
-    nome: 'pronto, impacto falhou',
-    env: {
-      ...pronto,
-      R_IMPACTO: 'failure',
-      R_INTEGRACAO: 'skipped',
-      R_PROD: 'skipped',
-      R_DEV: 'skipped',
-    },
-    esperado: 1,
+  acrescentar('pronto, impacto falhou e pesados pulados', {
+    ...pronto,
+    R_IMPACTO: 'failure',
+    R_INTEGRACAO: 'skipped',
+    R_PROD: 'skipped',
+    R_DEV: 'skipped',
   });
-  casos.push({
-    nome: 'pronto, sem e2e',
-    env: {
-      ...pronto,
-      RODAR_E2E: 'false',
-      R_INTEGRACAO: 'success',
-      R_PROD: 'skipped',
-      R_DEV: 'skipped',
-    },
-    esperado: 0,
+  acrescentar('pronto, impacto falhou com pesados em success', {
+    ...pronto,
+    R_IMPACTO: 'failure',
   });
-  casos.push({
-    nome: 'pronto, sem e2e mas prod rodou',
-    env: {
-      ...pronto,
-      RODAR_E2E: 'false',
-      R_INTEGRACAO: 'success',
-      R_PROD: 'success',
-      R_DEV: 'skipped',
-    },
-    esperado: 1,
+  acrescentar('pronto, sem e2e', {
+    ...pronto,
+    RODAR_E2E: 'false',
+    R_INTEGRACAO: 'success',
+    R_PROD: 'skipped',
+    R_DEV: 'skipped',
+  });
+  acrescentar('pronto, sem e2e mas prod rodou', {
+    ...pronto,
+    RODAR_E2E: 'false',
+    R_INTEGRACAO: 'success',
+    R_PROD: 'success',
+    R_DEV: 'skipped',
   });
   return casos;
 }
@@ -291,7 +302,7 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
     const agregador = job('gate-pr', gate);
     expect(agregador).toContain('name: Gate do PR');
     expect(agregador).toMatch(/if:\s*always\(\)/);
-    expect(agregador).toContain('politica');
+    expect(agregador).toMatch(/needs:\s*\[[^\]]*politica/);
     expect(agregador).toContain(FRASE_GATE);
     const codigo = executar(conferir(gate), {
       R_POLITICA: 'success',
@@ -312,7 +323,19 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
     const ruins = casos.filter(
       (caso) => (executar(script, caso.env) === 0) !== (caso.esperado === 0),
     );
-    expect(casos).toHaveLength(2 + 3 + 4 * 4 * 4 + 5);
+    expect(
+      esperado({
+        R_POLITICA: 'success',
+        COMPLETO: 'false',
+        R_IMPACTO: 'success',
+        SO_DOC: 'false',
+        RODAR_E2E: 'true',
+        R_INTEGRACAO: 'success',
+        R_PROD: 'success',
+        R_DEV: 'success',
+      }),
+    ).toBe(1);
+    expect(casos).toHaveLength(2 + 3 + 3 + 4 * 4 * 4 + 6);
     expect(ruins.map((caso) => caso.nome)).toEqual([]);
   });
 
@@ -321,7 +344,39 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
     const bloco = job('ci', ci);
     const frase = bloco.indexOf(FRASE_CI);
     expect(runsOn(escopo)).toBe('ubuntu-slim');
-    expect(escopo).toContain('completo=');
+    expect(escopo).toContain(
+      'if [ "$EVENTO" = pull_request ] && [ "$DRAFT" = true ]; then completo=false; else completo=true; fi',
+    );
+    const pesado = runBlock(escopo, 'id: pesado');
+    expect(
+      saida(pesado, {
+        EVENTO: 'pull_request',
+        DRAFT: 'true',
+        DOCS_ONLY: 'false',
+        PROVADO: 'false',
+      }),
+    ).toContain('completo=false\npesado=false');
+    expect(
+      saida(pesado, {
+        EVENTO: 'pull_request',
+        DRAFT: 'false',
+        DOCS_ONLY: 'false',
+        PROVADO: 'false',
+      }),
+    ).toContain('completo=true\npesado=true');
+    const verde = {
+      COMPLETO: 'true',
+      DOCS_ONLY: 'false',
+      PROVADO: 'false',
+      R_ESCOPO: 'success',
+      R_ESTATICO: 'success',
+      R_SERVERFIRST: 'skipped',
+      R_SHARD: 'success',
+      R_COBERTURA: 'success',
+    };
+    const guarda = runBlock(bloco, 'name: Todos os jobs anteriores passaram');
+    expect(executar(guarda, verde)).toBe(0);
+    expect(executar(guarda, { ...verde, COMPLETO: 'false' })).toBe(1);
     expect(runsOn(bloco)).toBe('ubuntu-24.04');
     expect(frase).toBeGreaterThanOrEqual(0);
     expect(frase).toBeLessThan(bloco.indexOf('run: npm run build'));
