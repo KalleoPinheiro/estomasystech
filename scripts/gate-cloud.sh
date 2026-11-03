@@ -26,7 +26,8 @@
 # Base do diff: GATE_BASE, senão a release aberta (scripts/gate/base.ts). Não toca banco de produção:
 # o assertLocalEnvironment recusa host que não seja da máquina.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+# BASH_SOURCE coincide com $0 quando o script é executado e permite `source` nos testes.
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 PGPORT="${GATE_CLOUD_PGPORT:-5432}"
 PGDB="${GATE_CLOUD_PGDB:-estomas_integ}"
@@ -52,7 +53,8 @@ recibo() {
     echo "| etapa | rc | duração |"
     echo "| --- | --- | --- |"
     sed -nE 's/^([^ ]+) rc=([0-9]+) ([0-9]+s)$/| \1 | \2 | \3 |/p' "$TIMES" 2>/dev/null
-    grep -E '^pulado:' "$TIMES" 2>/dev/null | sed -E 's/^pulado: (.*)$/- pulado: \1/'
+    # Sem linha `pulado:`, o grep sai 1; com pipefail isso virava o exit do script.
+    { grep -E '^pulado:' "$TIMES" 2>/dev/null || true; } | sed -E 's/^pulado: (.*)$/- pulado: \1/'
   } | tee "$RECIBO"
 }
 
@@ -289,6 +291,8 @@ run_bg() { # run_bg <modo>
   echo "rodando em segundo plano: log em $LOG, andamento com '$0 status'"
 }
 
+# Executado, dispara o perfil. Um `source` (os testes) só carrega as funções.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
 case "${1:-}" in
   _step) shift; name="$1"; shift; step "$name" "$@" ;; # uso interno: o `step` dentro de um namespace isolado
   bg) run_bg "${2:?uso: $0 bg rapido|pr|release}" ;;
@@ -303,3 +307,4 @@ case "${1:-}" in
   release) com_recibo release release_profile ;;
   *) echo "uso: $0 bg rapido|pr|release | status | setup | integracao | rapido | pr | release" >&2; exit 2 ;;
 esac
+fi

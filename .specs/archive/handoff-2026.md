@@ -2324,3 +2324,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Segredos**: varredura de chaves privadas, tokens (GitHub, Slack, AWS, OpenAI), JWT e atribuições de senha não achou credencial. Os únicos e-mails são `user@example.com` e o exemplo `git@github.com:<owner>/<repo>.git`.
 - **Testes**: nenhum teste criado nem alterado. A mudança em `vitest.config.mts` é só o `exclude` dessa árvore (sem limiar, retry, timeout ou asserção).
 - **Next step**: revisão the-judge em contexto limpo; não mergear. **Blockers**: nenhum.
+
+## Gate nuvem: recibo sem etapa pulada não falha o script (2026-11-02) — EM REVISÃO
+- **Causa** (reproduzida antes de mexer, perfil `rapido`, todas as etapas `rc=0`): `recibo` em `scripts/gate-cloud.sh` faz `grep '^pulado:' | sed` sob `set -o pipefail`. Sem linha `pulado:`, o grep sai 1 e esse 1 vira o exit do script, mesmo com o recibo impresso `rc=0`. O mesmo grep mascarava falha real: etapa com rc 7 fazia o script sair 1. `scripts/gate/` intocado.
+- **Correção**: `{ grep -E '^pulado:' ... || true; }` só nesse pipe. Os outros greps do script estão em `if`, em `||` ou já têm `|| true`. O `case` só roda quando o arquivo é executado, para o teste poder fazer `source`.
+- **Testes novos**: `tests/scripts/gate-cloud-recibo.test.ts` (nada pulado sai 0; uma pulada sai 0 e o recibo lista a etapa; etapa com rc 7 sai 7). O teste faz `source`. Em `f82bcc6e` os três saem 2: o `case` roda no `source` e o script imprime `uso: bash ...` (ainda não havia o guard de `BASH_SOURCE`). O rc 1 — nada pulado esperado 0 e recebido 1, etapa com rc 7 esperado 7 e recebido 1, a pulada passando — foi medido depois, com esse guard já no arquivo e só o `grep` antigo. Com `{ grep || true; }`, os três passam.
+- **Next step**: the-judge em contexto limpo e merge na release/v0.5.0. **Blockers**: nenhum.
