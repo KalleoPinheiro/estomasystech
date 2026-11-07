@@ -82,7 +82,7 @@ As demais correções, todas na mesma emenda:
    roda tudo.
 4. **Consulta dos check runs** paginada (`gh api --paginate`) e conferindo o `app.id` numérico da app
    `github-actions` (15368), além do `slug`. Qualquer divergência recusa o selo.
-5. **`shell: bash`** explícito nos steps de prova de `ci.yml` e `docker.yml`.
+5. **`shell: bash`** explícito nos steps de prova de `ci.yml` e `docker.yml`, o que liga `-eo pipefail`: um crash do `tsx` antes do `tee` passa a reprovar o escopo (e, por `needs`, o `ci`), em vez de deixar `provado` vazio e rodar tudo. Continua falha fechada, só mais barulhenta.
 6. **`ci` segue como o único check exigido** do ruleset da `main`.
 
 Validação sem gastar cota do Actions: fixtures reais (respostas de `check-runs` paginadas, selo de outra app,

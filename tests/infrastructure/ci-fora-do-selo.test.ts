@@ -24,24 +24,26 @@ function job(name: string, source: string): string {
   return rest.slice(0, end === -1 ? undefined : end).join('\n');
 }
 
-/** Valor de cada `run:` de uma linha ou bloco do job, na ordem. */
+/** Valor de cada `run:` do job (linha única ou bloco `|`, `>`, `|-`, `>-`, `|+`), na ordem; linha em branco não encerra o bloco. */
 function runs(bloco: string): string[] {
   const out: string[] = [];
   const lines = bloco.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    const m = /^ +(?:- )?run: (.*)$/.exec(lines[i] ?? '');
+    const m = /^( +)(?:- )?run: (.*)$/.exec(lines[i] ?? '');
     if (!m) continue;
-    if (m[1] !== '|') out.push((m[1] ?? '').trim());
-    else {
-      const corpo: string[] = [];
-      for (
-        let j = i + 1;
-        j < lines.length && /^ {10,}/.test(lines[j] ?? '');
-        j++
-      )
-        corpo.push((lines[j] ?? '').trim());
-      out.push(corpo.join('\n'));
+    const valor = (m[2] ?? '').trim();
+    if (!/^[|>][-+]?$/.test(valor)) {
+      out.push(valor);
+      continue;
     }
+    const recuo = (m[1] ?? '').length;
+    const corpo: string[] = [];
+    for (let j = i + 1; j < lines.length; j++) {
+      const l = lines[j] ?? '';
+      if (l.trim() !== '' && l.length - l.trimStart().length <= recuo) break;
+      corpo.push(l.trim());
+    }
+    out.push(corpo.join('\n').trim());
   }
   return out;
 }
