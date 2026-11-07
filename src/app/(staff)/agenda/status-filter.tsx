@@ -6,7 +6,7 @@ import {
   type AppointmentStatus,
 } from '@/domain/scheduling/appointment';
 import { APPOINTMENT_STATUS_LABELS } from '@/lib/format';
-import { STATUS_COLORS } from './status-colors';
+import { STATUS_DOT_COLORS } from './status-colors';
 
 interface StatusFilterProps {
   selected: readonly AppointmentStatus[];
@@ -50,7 +50,7 @@ export function StatusFilter({
           >
             <span
               aria-hidden="true"
-              className={`h-2 w-2 rounded-full border ${STATUS_COLORS[status]}`}
+              className={`h-2 w-2 rounded-full ${STATUS_DOT_COLORS[status]}`}
             />
             <span>{`${APPOINTMENT_STATUS_LABELS[status]} ${typeof count === 'number' ? count : '—'}`}</span>
           </Button>

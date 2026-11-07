@@ -7,6 +7,19 @@ export const STATUS_COLORS: Record<string, string> = {
   no_show: 'bg-warning-soft text-warning border-warning',
 };
 
+/**
+ * Ponto de status do chip de filtro (#707, WCAG 1.4.11). Preenchimento sólido na tinta
+ * do estado (a mesma que pinta texto, ≥ 4,5:1 sobre o fundo e sobre o chip marcado),
+ * sem depender de borda translúcida nem do tom do fundo do chip.
+ */
+export const STATUS_DOT_COLORS: Record<string, string> = {
+  scheduled: 'bg-info',
+  confirmed: 'bg-accent-ink',
+  completed: 'bg-success',
+  cancelled: 'bg-ink-3',
+  no_show: 'bg-warning',
+};
+
 /** Realce da consulta que já passou sem desfecho (#480): anel de aviso além da cor da situação. */
 export const PENDING_CLOSURE_CLASS = 'ring-2 ring-warning';
 
