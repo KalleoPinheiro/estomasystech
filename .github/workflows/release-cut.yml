@@ -127,7 +127,8 @@ jobs:
         env:
           WORKFLOW_REF: ${{ github.ref }}
           BRANCH: ${{ inputs.branch }}
-        run: npm run release:preflight -- --rollback=${{ inputs.rollback }} --workflow-ref="$WORKFLOW_REF" --branch="$BRANCH"
+          ROLLBACK: ${{ inputs.rollback }}
+        run: npm run release:preflight -- --rollback="$ROLLBACK" --workflow-ref="$WORKFLOW_REF" --branch="$BRANCH"
 
       - name: Navegadores do Playwright
         if: inputs.dry_run != true
@@ -164,7 +165,8 @@ jobs:
           # GITHUB_TOKEN e não o PAT do GH_TOKEN. `integracao` rodou no passo anterior.
           SELO_TOKEN: ${{ github.token }}
           RELEASE_CUT_ETAPAS_EXTRAS: integracao
-        run: npm run release:cut -- --rollback=${{ inputs.rollback }}
+          ROLLBACK: ${{ inputs.rollback }}
+        run: npm run release:cut -- --rollback="$ROLLBACK"
 
       - name: Guardar corpo do PR e recibo
         if: always()
