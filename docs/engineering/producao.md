@@ -23,8 +23,8 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | Peça | Como está |
 | --- | --- |
 | URL | `https://estomasystech.kalleopinheiro.com.br` (DNS no Registro.br, sem curinga) |
-| Servidor | Hetzner `ubuntu-8gb-fsn1-1` (Alemanha), Ubuntu 26.04 LTS, 8 GB de RAM, 4 GB de swap; acesso por `ssh vps` |
-| Orquestração | Coolify v4.4.6 em `https://coolify.kalleopinheiro.com.br` (2FA, registro fechado), GitHub App ligado ao repositório. Backup agendado do banco pelo Coolify **desligado** em 2026-10-18 (era em claro; o cifrado do § 5 o substitui) |
+| Servidor | Hetzner `ubuntu-8gb-fsn1-1` (Alemanha), Ubuntu 26.04 LTS, 8 GB de RAM, 4 GB de swap |
+| Orquestração | Coolify (2FA, registro fechado), GitHub App ligado ao repositório. Backup agendado do banco pelo Coolify **desligado** em 2026-10-18 (era em claro; o cifrado do § 5 o substitui) |
 | Proxy | Traefik do Coolify, único na borda ([ADR-036](../adr/036-traefik-do-coolify-como-unico-proxy-de-entrada.md)); middlewares `rate-limit-app`, `rate-limit-strict` e `security-headers` (`@file`, sem CSP: o app usa nonce) |
 | Versão em produção | `v0.1.0` = commit `1aa5b27` (`docs(producao): avisos por e-mail do GlitchTip pelo Resend`, #399), deploy manual de 2026-10-19 (conferido no *Deployments* do Coolify em 2026-10-24). É a tag-base do lote da v0.2.0 (`release:prepare` lista só as migrações depois dela) e o alvo do *Redeploy* de rollback (§ 3.1) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
