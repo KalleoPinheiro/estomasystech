@@ -27,6 +27,14 @@ const VIEWPORTS = [360, 390, 768, 1280] as const;
 
 for (const width of VIEWPORTS) {
   test(`etapa do 2FA abre com o campo do código focado em ${width}px`, async ({ page }) => {
+    // Resposta do login simulada: o limite de tentativas por conta (5/min) não comporta 4 logins reais seguidos.
+    await page.route("**/api/auth/login", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, data: { mfaRequired: true, pendingToken: "pendente" }, error: null }),
+      }),
+    );
     await page.setViewportSize({ width, height: 900 });
     await submitPassword(page);
 
@@ -34,7 +42,11 @@ for (const width of VIEWPORTS) {
   });
 }
 
-test("Sair com a sessão vencida leva ao login e limpa o cookie", async ({ page }) => {
+// Balde próprio: o login tem limite de 5/min por IP e os 4 testes de foco já gastaram o deles.
+test.describe("Sair com a sessão vencida", () => {
+  test.use({ extraHTTPHeaders: { "x-forwarded-for": "198.51.100.219" } });
+
+test("leva ao login e limpa o cookie", async ({ page }) => {
   await submitPassword(page);
   await page.getByLabel("Código do autenticador", { exact: true }).fill(await nextTotpCode(totpStatePath(ACCOUNT)));
   await page.getByRole("button", { name: "Verificar" }).click();
@@ -63,4 +75,5 @@ test("Sair com a sessão vencida leva ao login e limpa o cookie", async ({ page 
   await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
   const cookies = await page.context().cookies();
   expect(cookies.find((cookie) => cookie.name === SESSION_COOKIE_NAME)?.value ?? "").toBe("");
+});
 });
