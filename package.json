@@ -1,6 +1,6 @@
 {
   "name": "estomasystech",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "packageManager": "npm@11.21.1",
   "engines": {

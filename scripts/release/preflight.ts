@@ -50,6 +50,6 @@ step('Pré-voo 3/3 Permissão de escrita');
 const permissao = sh('gh', ['api', `repos/${repo}`, '--jq', '.permissions.push']);
 if (!permissao.ok || permissao.out !== 'true')
   fail(`o token não tem permissão de push em ${repo} (${permissao.out.split('\n')[0] || 'sem resposta'}).`);
-const empurra = sh('git', ['push', '--dry-run', 'origin', `HEAD:refs/heads/${branch}`]);
+const empurra = sh('git', ['push', '--dry-run', '--no-verify', 'origin', `HEAD:refs/heads/${branch}`]);
 if (!empurra.ok) fail(`git push --dry-run recusado: ${empurra.out.split('\n')[0]}`);
 console.log(`\n✓ pré-voo ok para ${branch} (v${version}). O push real ainda depende do bypass do ruleset release/** para este token.`);

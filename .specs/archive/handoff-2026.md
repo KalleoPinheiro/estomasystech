@@ -2361,3 +2361,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Teste existente alterado (requisito mudou)**: `tests/infrastructure/gate-pr-workflow.test.ts` ganha `'build-prod': 20` na tabela de timeouts (job novo). Nenhuma asserção afrouxada. `TESTE-ALTERADO: o Gate do PR passou a ter o job build-prod; a tabela de timeouts precisa listá-lo.`
 - **Verificação**: `gate-pr-workflow` e a pasta `tests/scripts/gate*` verdes, typecheck, biome, `check:testes`, server-first e dynamic-import limpos. **Não provado no Actions**: o diff só mexe em `.github/`, então o `impacto` pula o E2E e o `build-prod` só roda de verdade no primeiro PR de feature depois do merge; rever o primeiro run de perto (download do artefato, tamanho do `.next`).
 - **Next step**: PR para a `release/v0.6.0` quando existir (não toca a v0.5.0, em corte). **Blockers**: release/v0.6.0 ainda não existe.
+
+## Pré-voo do corte: push de teste sem o hook pre-push (ADR-092) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `scripts/release/preflight.ts` passa `--no-verify` no `git push --dry-run` que só prova a permissão de escrita. Sem isso o dry_run do Release cut (run 42374776287) falhou na passagem 3/3: o husky instalado pelo `npm ci` rodava o `check:testes` no dry-run, sem o `.gate/motivo-teste.txt` que só o `release:cut` real grava. A integridade dos testes continua checada na passagem 2/3.
+- **Testes novos**: `tests/scripts/release-preflight-push.test.ts` (hook que reprova barra o push sem `--no-verify` e não o barra com; guarda da fonte). Nenhum teste existente alterado; sem changeset (só `scripts/`).
+- **Next step**: PR em rascunho (ADR-093), coordenador marca pronto; depois `release:sync`, nova marca `homologacao/v0.5.0` e um dry_run. **Blockers**: nenhum.
+
+## Handoff — changeset minor para a v0.5.0 (corte)
+O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendentes eram patch/vazios e o cálculo dava v0.4.1. O changeset `emissao-documento-exige-vinculo-r4` (nova regra de acesso do Profissional) passa a minor, o que calcula v0.5.0. Só muda o nível; o texto fica igual. O pré-voo não detecta essa divergência (lacuna a tratar depois).
