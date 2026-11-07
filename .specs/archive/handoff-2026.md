@@ -2349,3 +2349,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **Testes existentes alterados (mecânico, requisito mudou)**: `gate-pr-workflow.test.ts` (nome do job `server-first-provado`→`fora-do-selo` e a variável `R_SERVERFIRST`→`R_FORADOSELO`) e a fixture `selo()` de `release-prova-corte.test.ts` (ganha `app.id`, agora exigido). Nenhuma asserção afrouxada.
 - **Fora**: `scripts/gate/`, `docker.yml` além do `shell: bash`, `staging.yml`. `actionlint` limpo nos três workflows. O `dry_run` roda uma vez, depois do merge.
 - **Next step**: the-judge em contexto limpo, merge, `dry_run` único. **Blockers**: nenhum.
+
+## Hotfix: release-cut.yml da v0.5.0 na main, para o dry_run e o corte saírem da main (ADR-092) (2026-11-07) — EM REVISÃO
+- **O que mudou**: só `.github/workflows/release-cut.yml`, copiado de `release/v0.5.0` (4114408) sem alteração. A `main` ainda tinha o da v0.4.0, sem o input `dry_run`, sem o serviço Postgres, sem `checks: write` e sem a validação do disparo; como a definição do `workflow_dispatch` vem da `main`, o dry_run e o corte da v0.5.0 não podiam rodar. Nenhum arquivo de `src/`, `drizzle/` ou `Dockerfile`; sem changeset.
+- **Testes**: nenhum teste alterado. Os testes de estrutura do workflow (`tests/infrastructure/ci-fora-do-selo.test.ts`) já estão na release.
+- **Next step**: merge na `main` pelo Kalléo (bypass), depois `release:sync` na release (o conteúdo é idêntico, sem conflito), dry_run único da `main` com `branch=release/v0.5.0` e, passando, o corte real. **Blockers**: nenhum.
