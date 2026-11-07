@@ -41,6 +41,28 @@ describe('Feature: pré-voo reprova changesets que não calculam a versão da re
     ).toContain('não há changesets pendentes');
   });
 
+  it('Dado release já preparada (changesets consumidos) com a versão da branch, Quando confiro, Então passa no retry do corte', () => {
+    expect(
+      pendenciaDeVersao(
+        'release/v0.6.0',
+        '0.6.0',
+        { pendentes: 0, calculada: '' },
+        true,
+      ),
+    ).toBeNull();
+  });
+
+  it('Dado release já preparada com versão diferente da branch, Quando confiro, Então reprova', () => {
+    expect(
+      pendenciaDeVersao(
+        'release/v0.6.0',
+        '0.5.0',
+        { pendentes: 0, calculada: '' },
+        true,
+      ),
+    ).toContain('release já preparada');
+  });
+
   it('Dado um hotfix cujos changesets pedem minor, Quando confiro, Então reprova', () => {
     expect(
       pendenciaDeVersao('hotfix/login', '0.5.0', {
