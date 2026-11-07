@@ -331,6 +331,7 @@ See `src/` structure:
 
 ## Related decisions
 
+- [ADR-092: Emenda à 088 — disparo do corte e selo sem furos](./docs/adr/092-emenda-088-disparo-do-corte-e-selo-sem-furos.md) — corte disparado da `main` com `branch=release/vX.Y.Z`; pré-voo valida a branch; `fora-do-selo` cobre dynamic-import; selo recusado vira aviso.
 - [ADR-093: Gate do PR só quando o PR está pronto](./docs/adr/093-gate-do-pr-so-quando-pronto-timeouts-e-orcamento.md) — rascunho reprova de propósito; timeouts e `ubuntu-slim` nos jobs leves; mutação sai do PR.
 - [ADR-001: Multi-tenancy strategy](./docs/adr/001-multi-tenancy.md) — `clinic_id` + RLS, incremental phases.
 - [ADR-002: Two-layer authorization](./docs/adr/002-autorizacao-em-duas-camadas.md) — proxy + handler guards, fail-closed.
