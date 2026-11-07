@@ -23,6 +23,7 @@ const TIMEOUTS: Record<string, Record<string, number>> = {
     politica: 5,
     impacto: 10,
     integracao: 20,
+    'build-prod': 20,
     'e2e-prod': 20,
     'e2e-dev': 20,
     'gate-pr': 5,
