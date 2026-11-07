@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
+import { enforceVerifyFull } from '@/lib/database-url';
 import { logError } from '@/lib/log-error';
 import { assertNotProductionDatabase } from '@/lib/runtime-env';
 import * as schema from './schema';
@@ -78,7 +79,7 @@ async function createPostgresDb(): Promise<AppDb> {
   }
   assertNotProductionDatabase(connectionString);
   const pool = new Pool({
-    connectionString,
+    connectionString: enforceVerifyFull(connectionString),
     max: intFromEnv('PG_POOL_MAX', 10),
     connectionTimeoutMillis: intFromEnv('PG_CONNECT_TIMEOUT_MS', 5_000),
     idleTimeoutMillis: intFromEnv('PG_IDLE_TIMEOUT_MS', 30_000),
