@@ -123,8 +123,11 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Pré-voo (ADR-088)
-        run: npm run release:preflight -- --rollback=${{ inputs.rollback }}
+      - name: Pré-voo (ADR-088, ADR-092)
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          BRANCH: ${{ inputs.branch }}
+        run: npm run release:preflight -- --rollback=${{ inputs.rollback }} --workflow-ref="$WORKFLOW_REF" --branch="$BRANCH"
 
       - name: Navegadores do Playwright
         if: inputs.dry_run != true

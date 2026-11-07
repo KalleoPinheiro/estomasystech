@@ -1,6 +1,6 @@
 /**
  * `tsx scripts/release/prova-corte.ts --evento <pull_request|push> --base-ref <ref> --head-ref <ref>
- *  [--head-sha <sha>] --etapas ci|docker` — imprime `provado=true|false` (formato de `$GITHUB_OUTPUT`) e o
+ *  [--head-sha <sha>] [--resumo <arquivo>] --etapas ci|docker` — imprime `provado=true|false` (formato de `$GITHUB_OUTPUT`) e o
  * motivo no log. Lê o commit em teste (`HEAD`: merge ref do PR ou merge commit da `main`), o segundo pai dele
  * e os check runs desse segundo pai pela API (`GH_TOKEN` e `GITHUB_REPOSITORY`). Falha fechado (ADR-088).
  */
@@ -55,7 +55,7 @@ console.error(`prova do corte (${option('--etapas') || 'ci'}): ${prova.provado ?
 const aviso = avisoDaRecusa(prova, option('--etapas') || 'ci');
 if (aviso !== null) {
   console.error(aviso);
-  const resumo = process.env.GITHUB_STEP_SUMMARY;
+  const resumo = option('--resumo');
   if (resumo) appendFileSync(resumo, `### Selo do corte recusado\n\n${prova.motivo}\n`);
 }
 console.log(`provado=${prova.provado}`);

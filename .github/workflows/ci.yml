@@ -83,7 +83,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --etapas ci | tee -a "$GITHUB_OUTPUT"
+          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --resumo "$GITHUB_STEP_SUMMARY" --etapas ci | tee -a "$GITHUB_OUTPUT"
 
       # `pesado=true` roda estático completo, cobertura e build; só documentação ou prova do corte os dispensa.
       # ADR-093: rascunho não paga estático, cobertura nem build. `completo=false` só em pull_request draft.

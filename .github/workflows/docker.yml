@@ -66,7 +66,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --etapas docker | tee -a "$GITHUB_OUTPUT"
+          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --resumo "$GITHUB_STEP_SUMMARY" --etapas docker | tee -a "$GITHUB_OUTPUT"
 
   docker:
     name: Imagem Docker + smoke do container
