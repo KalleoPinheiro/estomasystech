@@ -6,6 +6,7 @@ import {
   type AppointmentStatus,
 } from '@/domain/scheduling/appointment';
 import { APPOINTMENT_STATUS_LABELS } from '@/lib/format';
+import { STATUS_COLORS } from './status-colors';
 
 interface StatusFilterProps {
   selected: readonly AppointmentStatus[];
@@ -40,14 +41,18 @@ export function StatusFilter({
             key={status}
             type="button"
             size="sm"
-            variant={active ? 'accent' : 'outline'}
+            variant="outline"
             aria-pressed={active}
             // Nome acessível com unidade; o texto visível («Agendada 3» ou traço) continua dentro dele.
             aria-label={`${APPOINTMENT_STATUS_LABELS[status]}, ${typeof count === 'number' ? `${count} ${count === 1 ? 'consulta' : 'consultas'}` : unavailable ? 'indisponível' : 'carregando'}`}
             onClick={() => onToggle(status)}
+            className={`h-9 gap-1.5 rounded-full px-2.5 font-medium text-xs ${active ? 'border-accent bg-accent-soft text-accent-ink' : 'text-ink-2'}`}
           >
-            {APPOINTMENT_STATUS_LABELS[status]}
-            {` ${typeof count === 'number' ? count : '—'}`}
+            <span
+              aria-hidden="true"
+              className={`h-2 w-2 rounded-full border ${STATUS_COLORS[status]}`}
+            />
+            <span>{`${APPOINTMENT_STATUS_LABELS[status]} ${typeof count === 'number' ? count : '—'}`}</span>
           </Button>
         );
       })}

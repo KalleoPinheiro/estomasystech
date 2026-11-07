@@ -43,6 +43,11 @@ export function decodeCalendarOAuthState(
   };
 }
 
+/** Base pública p/ redirects: a URL interna do container não é acessível ao navegador. */
+export function publicBaseUrl(requestUrl: string): string {
+  return process.env.APP_URL ?? requestUrl;
+}
+
 export const CALENDAR_CALLBACK_PATH =
   '/api/integrations/google-calendar/callback';
 
