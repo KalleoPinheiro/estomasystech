@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { enforceVerifyFull } from "../src/lib/database-url";
 import { assertNotProductionDatabase, resolveAppEnv } from "../src/lib/runtime-env";
 
 /**
@@ -34,7 +35,7 @@ function run(step: BuildStep, env: NodeJS.ProcessEnv): void {
   const databaseUrl = env.DATABASE_URL_UNPOOLED ?? env.DATABASE_URL;
   const result = spawnSync(bin, args, {
     stdio: "inherit",
-    env: { ...env, ...(databaseUrl ? { DATABASE_URL: databaseUrl } : {}) },
+    env: { ...env, ...(databaseUrl ? { DATABASE_URL: enforceVerifyFull(databaseUrl) } : {}) },
   });
   if (result.status !== 0) {
     throw new Error(`Passo falhou: ${step.join(" ")}`);
