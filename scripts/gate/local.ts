@@ -25,6 +25,9 @@ const STEPS: Step[] = [
   { name: 'lint', cmd: 'npm', args: ['run', 'lint'] },
   { name: 'sv', cmd: 'npm', args: ['run', 'check:sv'] },
   { name: 'docs', cmd: 'npm', args: ['run', 'check:docs'] },
+  // Mesmas travas do `ci.yml`: sem elas o PR passa no local e reprova no CI.
+  { name: 'server-first', cmd: 'npm', args: ['run', 'check:server-first'] },
+  { name: 'dynamic-import', cmd: 'npm', args: ['run', 'check:dynamic-import'] },
   { name: 'integridade-de-testes', cmd: 'npm', args: ['run', 'check:testes'] },
   { name: 'cobertura', cmd: 'npm', args: ['run', 'test:coverage'] },
   { name: 'build', cmd: 'npm', args: ['run', 'build'] },

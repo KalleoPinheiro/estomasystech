@@ -63,7 +63,7 @@ lista de espera e política de cancelamento. Fronteira: o que a consulta gera de
 | AGE-FLT-07 | Busca que falha (429, rede): no lugar da grade aparece o alerta «Não foi possível carregar as consultas.» com o botão «Tentar de novo» (refaz lista e contagem); a grade só desenha o dado da URL corrente e os chips mostram «—» quando a contagem falha | `LoadFailedAlert` em `agenda-screen.tsx` (`router.refresh()`), `loadBlock`, `tests/pages/agenda-busca-falha.test.tsx`, `e2e/agenda-busca-falha.spec.ts` |
 | AGE-FLT-08 | Troca de semana ou de dia: enquanto a busca corre, as colunas da `WeekView` ficam no lugar (marcadas `aria-busy`, «Carregando…» só para leitor de tela), sem consultas do período anterior e sem «Nenhuma consulta»; o mês mostra o «Carregando» | `WeekView` (`loading` = transição pendente), `agenda-screen.tsx`, `tests/pages/agenda-semana-carregando.test.tsx`, `e2e/agenda-semana-carregando.spec.ts` |
 
-Rótulos dos chips: os mesmos do selo de status (`APPOINTMENT_STATUS_LABELS`: Agendada, Confirmada, Concluída, Cancelada, **Faltou**). Interface mobile first: chips que quebram em linhas, sem rolagem horizontal (os cinco ficam à vista em 360/390 px, #582), `aria-pressed` e alvo de toque da lib.
+Rótulos dos chips: os mesmos do selo de status (`APPOINTMENT_STATUS_LABELS`: Agendada, Confirmada, Concluída, Cancelada, **Faltou**). Interface mobile first: chips em pílula que quebram em linhas, sem rolagem horizontal (os cinco ficam à vista em 360/390 px, #582), com um ponto da cor do status (a mesma da grade), a contagem ao lado e, quando marcado, fundo suave de destaque em vez de preenchimento sólido (#681); `aria-pressed` e nome acessível «Status, N consultas» inalterados.
 
 ## Funcionalidades
 
