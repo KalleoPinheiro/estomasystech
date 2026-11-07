@@ -2362,3 +2362,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 
 ## Handoff — changeset minor para a v0.5.0 (corte)
 O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendentes eram patch/vazios e o cálculo dava v0.4.1. O changeset `emissao-documento-exige-vinculo-r4` (nova regra de acesso do Profissional) passa a minor, o que calcula v0.5.0. Só muda o nível; o texto fica igual. O pré-voo não detecta essa divergência (lacuna a tratar depois).
+
+## Agenda: chips de status refinados e dois ajustes da integração Google Agenda (#681 / EST-19) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `status-filter.tsx` ganha chips em pílula com ponto da cor do status, contagem ao lado e destaque suave quando marcado (sem preenchimento sólido); nome acessível, `aria-pressed` e `data-status-filter` iguais. Nits: `publicBaseUrl` vive só em `src/lib/auth/google-calendar-oauth.ts` (as duas rotas da integração o usam) e o botão desabilitado de `configuracoes` diz «Reconectar Google Agenda» quando já há conta conectada.
+- **Testes novos**: `tests/components/agenda-status-filter-visual.test.tsx`, `tests/lib/google-calendar-public-base-url.test.ts`. Nenhum teste existente alterado. E2E de chips (#582) e filtro de status (#538) passam contra o build de produção; capturas em 360/390/768/1280.
+- **Next step**: the-judge em contexto limpo e merge na release. **Blockers**: nenhum.

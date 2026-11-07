@@ -87,7 +87,9 @@ export function CalendarIntegrationSection() {
       {data && !data.configured ? (
         <>
           <Button type="button" variant="accent" disabled>
-            Conectar Google Agenda
+            {data.connected
+              ? 'Reconectar Google Agenda'
+              : 'Conectar Google Agenda'}
           </Button>
           <p className="mt-2 text-ink-3 text-sm">
             {CALENDAR_ERROR_MESSAGES.nao_configurado}
