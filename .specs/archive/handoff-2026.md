@@ -2362,3 +2362,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 
 ## Handoff — changeset minor para a v0.5.0 (corte)
 O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendentes eram patch/vazios e o cálculo dava v0.4.1. O changeset `emissao-documento-exige-vinculo-r4` (nova regra de acesso do Profissional) passa a minor, o que calcula v0.5.0. Só muda o nível; o texto fica igual. O pré-voo não detecta essa divergência (lacuna a tratar depois).
+
+## EST-20 / #688: avisos do build da Vercel e sslmode=verify-full (2026-11-07) — EM REVISÃO
+- **O que mudou**: `src/lib/database-url.ts` (`enforceVerifyFull`) reescreve `sslmode=prefer|require|verify-ca` para `verify-full` no pool (`db.ts`), no `drizzle.config.ts` e nos passos do `scripts/vercel-build.ts` (migração, seed). URL sem `sslmode` não ganha SSL (Coolify/compose/local). `package.json`: `engines.node >=24.11` (lockfile acompanha; `engines.npm` fica, travado pelo teste do ADR-091), `overrides` do peer opcional `msw` do `@vitest/mocker` e `allowScripts.esbuild`. `troubleshooting.md` registra cada aviso: resolvido, aceito (EBADENGINE do npm) ou pendente no painel da Vercel (`cache-dir`, variável de ambiente do projeto).
+- **Testes novos**: `tests/lib/database-url.test.ts`. Nenhum teste existente alterado.
+- **Next step**: coordenador marca pronto; Kalléo apaga/renomeia a variável `cache-dir` na Vercel e decide o `ENABLE_EXPERIMENTAL_COREPACK=1`. **Blockers**: nenhum.
