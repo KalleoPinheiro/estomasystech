@@ -125,6 +125,14 @@ Leia **uma** linha. Desça para a terceira coluna só se a segunda não bastar.
 
 Índice completo de `docs/`: [`docs/README.md`](docs/README.md).
 
+## Cursor Cloud specific instructions
+
+- Node do CI é **24**. O `node` de `/exec-daemon` é 22 e vem antes no `PATH`; os scripts de boot prefixam `/usr/local/lib/nodejs/bin`.
+- Postgres **18** sobe no host com `pg_ctlcluster` (não há Docker nem systemd). Papel local `estomasystech`, banco `estomasystech`, em `127.0.0.1:5432`.
+- O app de desenvolvimento escuta em `http://127.0.0.1:3000` com `next dev --webpack`. O Turbopack desta versão entra em reload infinito neste ambiente e o formulário deixa de hidratar.
+- Segredos de desenvolvimento ficam em `.env.development.local` (gitignored). O Vitest roda em mode `test` e **não** lê esse arquivo.
+- Não crie `.env` na raiz para o app local. O Vite carrega `.env` na suíte: `APP_URL` altera o rodapé dos e-mails e `DATA_ENCRYPTION_KEY` impede o teste que exige falha fechada sem `AUTH_SECRET`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
