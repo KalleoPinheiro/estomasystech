@@ -132,16 +132,14 @@ jobs:
       # Suíte inteira: o job corre em paralelo com os demais e não está no caminho crítico (na dúvida, inclui).
       - run: npx vitest run -c vitest.integracao.config.mts
 
-  e2e-prod:
-    name: E2E produção (shard ${{ matrix.shard }}/3)
+  # Um build só para os 3 shards do E2E de produção (antes cada shard fazia o seu: 3 builds por PR).
+  # `.next/cache` fica de fora do artefato: o `next start` não o usa.
+  build-prod:
+    name: Build de produção (compartilhado)
     needs: impacto
     if: needs.impacto.outputs.rodar_e2e == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -162,9 +160,46 @@ jobs:
             next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
             next-${{ runner.os }}-
 
+      - run: npm run build
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-next
+          path: |
+            .next
+            !.next/cache
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
+
+  e2e-prod:
+    name: E2E produção (shard ${{ matrix.shard }}/3)
+    needs: [impacto, build-prod]
+    if: needs.impacto.outputs.rodar_e2e == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+
       - run: npx playwright install --with-deps chromium
 
-      - run: npm run build
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: build-next
+          path: .next
 
       # Selecionado: todos os specs (ALL) ou só a lista do impacto, sempre com o console limpo.
       - name: Playwright (shard)
@@ -224,6 +259,7 @@ jobs:
             test-results/
           retention-days: 7
 
+  # `build-prod` não entra aqui: se ele falhar, `e2e-prod` fica `skipped` e este agregador reprova.
   # Único check a exigir deste workflow (se o ruleset passar a exigir). Reprova se um job que devia rodar
   # não passou; só aceita `skipped` quando o impacto mandou pular. Em rascunho reprova de propósito.
   gate-pr:
