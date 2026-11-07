@@ -2359,3 +2359,6 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **O que mudou**: `scripts/release/preflight.ts` passa `--no-verify` no `git push --dry-run` que só prova a permissão de escrita. Sem isso o dry_run do Release cut (run 42374776287) falhou na passagem 3/3: o husky instalado pelo `npm ci` rodava o `check:testes` no dry-run, sem o `.gate/motivo-teste.txt` que só o `release:cut` real grava. A integridade dos testes continua checada na passagem 2/3.
 - **Testes novos**: `tests/scripts/release-preflight-push.test.ts` (hook que reprova barra o push sem `--no-verify` e não o barra com; guarda da fonte). Nenhum teste existente alterado; sem changeset (só `scripts/`).
 - **Next step**: PR em rascunho (ADR-093), coordenador marca pronto; depois `release:sync`, nova marca `homologacao/v0.5.0` e um dry_run. **Blockers**: nenhum.
+
+## Handoff — changeset minor para a v0.5.0 (corte)
+O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendentes eram patch/vazios e o cálculo dava v0.4.1. O changeset `emissao-documento-exige-vinculo-r4` (nova regra de acesso do Profissional) passa a minor, o que calcula v0.5.0. Só muda o nível; o texto fica igual. O pré-voo não detecta essa divergência (lacuna a tratar depois).
