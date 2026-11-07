@@ -2403,3 +2403,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: `SSL_MODE_ALIAS` em `src/lib/database-url.ts` ganha a flag `g`, então `enforceVerifyFull` reescreve todas as ocorrências de `sslmode=prefer|require|verify-ca` para `verify-full`, não só a primeira. URL sem `sslmode` segue intacta (sem ligar SSL) e `disable`, `no-verify` e `verify-full` não são tocados.
 - **Testes novos**: casos em `tests/lib/database-url.test.ts` (repetido, repetido com modo explícito, idempotência). Nenhum teste existente alterado.
 - **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Fixar o npm no Docker de produção (#716 / EST-33) (2026-11-07) — EM REVISÃO
+- **O que mudou**: estágio `deps` do `Dockerfile` instala `npm@<packageManager>` (lido do `package.json`) antes do `npm ci`, zerando o EBADENGINE do build do Coolify sem afrouxar `engines.npm`. Emenda no ADR-091 e linha nova em `troubleshooting.md`.
+- **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.
+- **Next step**: coordenador marca pronto; conferir o log do próximo deploy do Coolify sem EBADENGINE. **Blockers**: nenhum.
