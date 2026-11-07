@@ -5,6 +5,7 @@ import {
   encodeCalendarOAuthState,
   GOOGLE_CALENDAR_SCOPES,
   googleCalendarOAuthConfigFromEnv,
+  publicBaseUrl,
 } from '@/lib/auth/google-calendar-oauth';
 import { createOAuthClient } from '@/lib/auth/google-oauth-client';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
   if (!config) {
     // Quem chega aqui é uma pessoa clicando num link: volta ao app com a
     // mensagem da allowlist em vez de JSON cru (#658). O callback faz o mesmo.
-    const url = new URL('/configuracoes', process.env.APP_URL ?? request.url);
+    const url = new URL('/configuracoes', publicBaseUrl(request.url));
     url.searchParams.set('calendar', 'erro');
     url.searchParams.set('reason', 'nao_configurado');
     return NextResponse.redirect(url);
