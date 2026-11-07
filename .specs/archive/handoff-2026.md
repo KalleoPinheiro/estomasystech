@@ -2398,3 +2398,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes novos**: `tests/components/mfa-code-step.test.tsx`; casos novos em `tests/proxy.test.ts`, `tests/api/auth-routes.test.ts`, `tests/components/logout-button.test.tsx`; E2E `e2e/sair-sessao-expirada-foco-2fa.spec.ts` (foco em 360, 390, 768, 1280 e Sair com cookie vencido). Nenhum teste existente alterado.
 - **Next step**: coordenador marca pronto e abre a revisão. **Blockers**: nenhum.
 
+
+## sslmode repetido na URL do banco (#713 / EST-30) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `SSL_MODE_ALIAS` em `src/lib/database-url.ts` ganha a flag `g`, então `enforceVerifyFull` reescreve todas as ocorrências de `sslmode=prefer|require|verify-ca` para `verify-full`, não só a primeira. URL sem `sslmode` segue intacta (sem ligar SSL) e `disable`, `no-verify` e `verify-full` não são tocados.
+- **Testes novos**: casos em `tests/lib/database-url.test.ts` (repetido, repetido com modo explícito, idempotência). Nenhum teste existente alterado.
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
