@@ -91,15 +91,9 @@ Se a release aberta não estiver clara ou a branch já nasceu da `main`, pergunt
 
 ## Imports dinâmicos
 
-`import()` só com caminho literal ou mapa estático `as const`; **nunca** com template literal (`${}`): o
-Vite avisa (`vite:dynamic-import-vars`) e esconde os avisos reais. Vale em `src/`, `tests/`, `e2e/` e
-`scripts/`; `scripts/check-dynamic-import.ts` reprova o resto. Exemplos em
-[`conventions.md`](docs/engineering/conventions.md) § Imports dinâmicos.
-
-```ts
-const ROUTES = { '/payouts': () => import('@/app/api/payouts/route') } as const; // certo
-const route = await import(`@/app/api${path}/route`); // errado
-```
+`import()` só com caminho literal ou mapa estático `as const` (ex.: `{ '/payouts': () => import('@/app/api/payouts/route') }`); **nunca**
+com template literal (`${}`): o Vite esconde os avisos reais. Vale em `src/`, `tests/`, `e2e/` e `scripts/`;
+`scripts/check-dynamic-import.ts` reprova o resto. Detalhe: [`conventions.md`](docs/engineering/conventions.md) § Imports dinâmicos.
 
 ## Mapa de contexto
 
