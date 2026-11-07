@@ -355,6 +355,19 @@ describe('Feature: Proxy (camada 1 de autorização, antigo middleware)', () => 
       expect((await body(response)).data).toBeNull();
     });
 
+    it('Dado cookie de sessão vencido ou ausente, Quando POST /api/auth/logout, Então o proxy deixa passar (#718)', async () => {
+      const proxy = await loadProxy();
+
+      for (const cookie of [undefined, 'sessao-vencida-ou-invalida']) {
+        const response = await proxy(
+          request('/api/auth/logout', cookie, '10.0.0.77'),
+        );
+
+        expect(isNext(response)).toBe(true);
+        expect(response.status).not.toBe(401);
+      }
+    });
+
     it('Dada sessão de paciente numa página da equipe, Então redireciona para /portal', async () => {
       const proxy = await loadProxy();
 
