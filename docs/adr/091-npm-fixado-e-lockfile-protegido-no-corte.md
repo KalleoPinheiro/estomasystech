@@ -3,7 +3,7 @@ title: "ADR 091 — npm fixado e lockfile protegido contra perda de opcionais no
 status: frozen
 audience: [dev, agent, po]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-01
+last_reviewed: 2026-11-07
 related:
   - docs/adr/071-corte-de-release-em-comando-unico.md
   - docs/adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md
@@ -43,6 +43,14 @@ em Linux x64, e o `npm ci` do Docker (Alpine/musl) ou da Vercel quebra depois, j
 - Corte em WSL ou outra máquina exige `npm i -g npm@11.21.1`; a mensagem de erro diz o comando.
 - `npm ci` em máquina com outro npm mostra o aviso `EBADENGINE` (não é erro; não usamos `engine-strict`).
 - Perda de opcional vira falha clara no `prepare`, e não um Docker quebrado depois.
+
+## Emenda (2026-11-07, #716 / EST-33): npm fixado também no Docker de produção
+
+O build do Coolify usa o `Dockerfile`, e a imagem `node:24-alpine` traz o npm 11.19.1, diferente do `engines.npm`
+(11.21.1): o `npm ci` avisava `EBADENGINE`. O estágio `deps` agora instala o npm do `packageManager`
+(`npm i -g "npm@$(node -p ...)"`, lido do `package.json`, sem repetir o número) antes do `npm ci`. O `engines` não foi
+afrouxado. Guardado por `tests/infrastructure/dockerfile-npm-fixado.test.ts`. O build da Vercel segue com o npm dela
+(aviso aceito, ver `troubleshooting.md`).
 
 ## Alternativas descartadas
 
