@@ -2399,6 +2399,11 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Next step**: coordenador marca pronto e abre a revisão. **Blockers**: nenhum.
 
 
+## Contraste do ponto dos chips de status da agenda (#707 / EST-27) (2026-11-07) — EM REVISÃO
+- **O que mudou**: o ponto dos chips de filtro (`status-filter.tsx`) deixou de reaproveitar `STATUS_COLORS` (borda translúcida e tom do fundo do chip) e passou a usar `STATUS_DOT_COLORS` (`status-colors.ts`): preenchimento sólido na tinta do estado (`bg-info`, `bg-accent-ink`, `bg-success`, `bg-ink-3`, `bg-warning`). Nome acessível e `aria-pressed` intactos.
+- **Testes novos**: caso em `tests/components/agenda-status-filter-visual.test.tsx` e pares de 3:1 (WCAG 1.4.11, claro e escuro, sobre as superfícies e o chip marcado) em `tests/lib/contraste-tema.test.ts`. Nenhum teste existente alterado.
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
 ## Fixar o npm no Docker de produção (#716 / EST-33) (2026-11-07) — EM REVISÃO
 - **O que mudou**: estágio `deps` do `Dockerfile` instala `npm@<packageManager>` (lido do `package.json`) antes do `npm ci`, zerando o EBADENGINE do build do Coolify sem afrouxar `engines.npm`. Emenda no ADR-091 e linha nova em `troubleshooting.md`.
 - **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.

@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const TEXT_MIN = 4.5;
+const DOT_MIN = 3; // elemento gráfico (WCAG 1.4.11)
 const AA_TINT = 0.1; // fundo tingido: no máximo 10% da cor sobre a superfície
 const ACCENTS = ['cyan', 'violet', 'mint', 'amber'] as const;
 const STATES = ['danger', 'success', 'info', 'warning'] as const;
@@ -176,6 +177,32 @@ describe.each(['light', 'dark'] as const)(
             `${mode}: ${state} sobre tinta de ${surface} = ${tinted.toFixed(2)}:1`,
           ).toBeGreaterThanOrEqual(TEXT_MIN);
         }
+      },
+    );
+
+    it.each([
+      ['scheduled', 'info-ink'],
+      ['confirmed', 'accent-violet-ink'],
+      ['completed', 'success-ink'],
+      ['cancelled', 'text-3'],
+      ['no_show', 'warning-ink'],
+    ])(
+      'Dado o ponto do chip de status %s, Quando preenchido com --sv-%s, Então passa de 3:1 (WCAG 1.4.11) sobre o chip e sobre o chip marcado (#707)',
+      (_status, name) => {
+        const dot = rgb(mode, name);
+        const checked = tint(rgb(mode, 'accent-violet'), rgb(mode, 'bg'));
+        for (const surface of SURFACES) {
+          const value = ratio(dot, rgb(mode, surface));
+          expect(
+            value,
+            `${mode}: ponto ${name} sobre ${surface} = ${value.toFixed(2)}:1`,
+          ).toBeGreaterThanOrEqual(DOT_MIN);
+        }
+        const onChecked = ratio(dot, checked);
+        expect(
+          onChecked,
+          `${mode}: ponto ${name} sobre chip marcado = ${onChecked.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(DOT_MIN);
       },
     );
   },
