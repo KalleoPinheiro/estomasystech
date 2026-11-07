@@ -2398,3 +2398,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes novos**: `tests/components/mfa-code-step.test.tsx`; casos novos em `tests/proxy.test.ts`, `tests/api/auth-routes.test.ts`, `tests/components/logout-button.test.tsx`; E2E `e2e/sair-sessao-expirada-foco-2fa.spec.ts` (foco em 360, 390, 768, 1280 e Sair com cookie vencido). Nenhum teste existente alterado.
 - **Next step**: coordenador marca pronto e abre a revisão. **Blockers**: nenhum.
 
+
+## Fixar o npm no Docker de produção (#716 / EST-33) (2026-11-07) — EM REVISÃO
+- **O que mudou**: estágio `deps` do `Dockerfile` instala `npm@<packageManager>` (lido do `package.json`) antes do `npm ci`, zerando o EBADENGINE do build do Coolify sem afrouxar `engines.npm`. Emenda no ADR-091 e linha nova em `troubleshooting.md`.
+- **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.
+- **Next step**: coordenador marca pronto; conferir o log do próximo deploy do Coolify sem EBADENGINE. **Blockers**: nenhum.

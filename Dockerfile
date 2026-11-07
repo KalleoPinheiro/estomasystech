@@ -1,7 +1,10 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# npm fixado (ADR-091, emenda #716): a imagem traz o npm do Node (11.19.1 na 24-alpine), diferente do
+# `engines.npm`, e o `npm ci` avisava EBADENGINE. A versão sai do `packageManager`, sem repetir o número.
+RUN npm i -g "npm@$(node -p "require('./package.json').packageManager.split('@')[1]")" \
+  && npm ci
 
 FROM node:24-alpine AS builder
 WORKDIR /app
