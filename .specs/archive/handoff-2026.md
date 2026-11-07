@@ -2398,3 +2398,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes novos**: `tests/components/mfa-code-step.test.tsx`; casos novos em `tests/proxy.test.ts`, `tests/api/auth-routes.test.ts`, `tests/components/logout-button.test.tsx`; E2E `e2e/sair-sessao-expirada-foco-2fa.spec.ts` (foco em 360, 390, 768, 1280 e Sair com cookie vencido). Nenhum teste existente alterado.
 - **Next step**: coordenador marca pronto e abre a revisão. **Blockers**: nenhum.
 
+
+## Contraste do ponto dos chips de status da agenda (#707 / EST-27) (2026-11-07) — EM REVISÃO
+- **O que mudou**: o ponto dos chips de filtro (`status-filter.tsx`) deixou de reaproveitar `STATUS_COLORS` (borda translúcida e tom do fundo do chip) e passou a usar `STATUS_DOT_COLORS` (`status-colors.ts`): preenchimento sólido na tinta do estado (`bg-info`, `bg-accent-ink`, `bg-success`, `bg-ink-3`, `bg-warning`). Nome acessível e `aria-pressed` intactos.
+- **Testes novos**: caso em `tests/components/agenda-status-filter-visual.test.tsx` e pares de 3:1 (WCAG 1.4.11, claro e escuro, sobre as superfícies e o chip marcado) em `tests/lib/contraste-tema.test.ts`. Nenhum teste existente alterado.
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
