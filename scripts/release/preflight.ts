@@ -1,5 +1,5 @@
 /**
- * `npm run release:preflight -- --rollback=redeploy|backup` — pré-voo do corte (ADR-088), em ~1 min e sem
+ * `npm run release:preflight -- --rollback=redeploy|backup [--workflow-ref=<ref> --branch=<release>]` — pré-voo do corte (ADR-088), em ~1 min e sem
  * escrever nada: mesmas pré-condições do `release:cut` (branch, árvore limpa, igual ao origin, `main` dentro,
  * marca `homologacao/vX.Y.Z`, TESTE-ALTERADO consolidado, integridade dos testes) mais ambiente (segredo,
  * identidade git, rollback) e permissão de push. O `release-cut.yml` roda isto antes do gate e, com
@@ -10,6 +10,17 @@ import { consolidatedTesteAlterado } from './cut-lib';
 import { assertApproved, assertBranch, batchPrs, checkIntegrity, fail, step } from './cut-pre';
 import { parseRollback, sh } from './lib';
 import { pendenciasDoPreflight } from './preflight-lib';
+
+/** `--workflow-ref=` e `--branch=` (passados pelo workflow); sem nenhum dos dois é corte local (ADR-092). */
+function disparoDosArgumentos(): { workflowRef: string; branch: string } | undefined {
+  const arg = (nome: string): string | undefined =>
+    process.argv.find((a) => a.startsWith(`${nome}=`))?.slice(nome.length + 1);
+  const workflowRef = arg('--workflow-ref');
+  const branch = arg('--branch');
+  return workflowRef === undefined && branch === undefined
+    ? undefined
+    : { workflowRef: workflowRef ?? '', branch: branch ?? '' };
+}
 
 function gitConfig(key: string, envName: string): string {
   return (process.env[envName] ?? '') || sh('git', ['config', '--get', key]).out;
@@ -25,6 +36,7 @@ const falhas = pendenciasDoPreflight({
   rollbackOk:
     parseRollback(process.argv.find((a) => a.startsWith('--rollback='))?.slice('--rollback='.length)) !== null,
   emCi: process.env.CI === 'true',
+  disparo: disparoDosArgumentos(),
   npm: { pkg: JSON.parse(readFileSync('package.json', 'utf8')), atual: sh('npm', ['--version']).out },
 });
 if (falhas.length > 0) fail(falhas.join('\n✗ '));

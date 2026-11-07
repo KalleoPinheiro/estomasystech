@@ -11,6 +11,9 @@ export const SELO_NOME = 'release-cut/gate';
 /** Só um GitHub App cria check run; o `GITHUB_TOKEN` do Actions é da app `github-actions`. PAT não cria. */
 export const SELO_APP = 'github-actions';
 
+/** Id numérico da app `github-actions` (campo `app.id` dos check runs da API). ADR-092: o slug sozinho não basta. */
+export const SELO_APP_ID = 15368;
+
 /** Etapas que o `ci.yml` pesado repetiria (typecheck, lint, sv, docs, cobertura, build) mais a integração. */
 export const ETAPAS_CI = ['typecheck', 'lint', 'sv', 'docs', 'cobertura', 'build', 'integracao'] as const;
 
@@ -21,7 +24,7 @@ export interface CheckRunLite {
   name: string;
   conclusion: string | null;
   head_sha: string;
-  app?: { slug?: string | null } | null;
+  app?: { id?: number | null; slug?: string | null } | null;
   output?: { summary?: string | null } | null;
 }
 
@@ -42,11 +45,25 @@ export interface ProvaInput {
   etapasExigidas: readonly string[];
 }
 
-export type Prova = { provado: boolean; motivo: string };
+/** `esperado`: o evento era candidato à dispensa (PR release→main ou push na main), então recusa merece aviso. */
+export type Prova = { provado: boolean; motivo: string; esperado: boolean };
 
 const RELEASE_DE_VERSAO = /^release\/v\d+\.\d+\.\d+/;
 
-const recusa = (motivo: string): Prova => ({ provado: false, motivo });
+const recusa = (motivo: string, esperado = true): Prova => ({ provado: false, motivo, esperado });
+
+/**
+ * Saída de `gh api --paginate ... --jq '.check_runs[]'`: um objeto JSON por linha, de todas as páginas.
+ * Linha ilegível invalida tudo (lista vazia): sem selo legível, o CI roda inteiro.
+ */
+export function checkRunsDaSaida(stdout: string): CheckRunLite[] {
+  const linhas = stdout.split('\n').filter((l) => l.trim() !== '');
+  try {
+    return linhas.map((l) => JSON.parse(l) as CheckRunLite);
+  } catch {
+    return [];
+  }
+}
 
 /** `etapas=a,b,c` de um resumo de check run ou da linha `E2E-GATE:`; vazio se ausente. */
 export function etapasDoResumo(summary: string | null | undefined): string[] {
@@ -56,12 +73,12 @@ export function etapasDoResumo(summary: string | null | undefined): string[] {
 
 export function avaliarProva(i: ProvaInput): Prova {
   if (i.evento === 'pull_request') {
-    if (i.baseRef !== 'main') return recusa('PR que não vai para a main');
-    if (!RELEASE_DE_VERSAO.test(i.headRef)) return recusa('PR que não vem de release/vX.Y.Z');
+    if (i.baseRef !== 'main') return recusa('PR que não vai para a main', false);
+    if (!RELEASE_DE_VERSAO.test(i.headRef)) return recusa('PR que não vem de release/vX.Y.Z', false);
   } else if (i.evento === 'push') {
-    if (i.baseRef !== 'main') return recusa('push fora da main');
+    if (i.baseRef !== 'main') return recusa('push fora da main', false);
   } else {
-    return recusa(`evento ${i.evento} não é dispensável`);
+    return recusa(`evento ${i.evento} não é dispensável`, false);
   }
   if (i.segundoPai === '') return recusa('o commit em teste não é um merge commit');
   if (i.headShaEvento !== '' && i.headShaEvento !== i.segundoPai)
@@ -73,15 +90,22 @@ export function avaliarProva(i: ProvaInput): Prova {
     (c) =>
       c.name === SELO_NOME &&
       c.app?.slug === SELO_APP &&
+      c.app?.id === SELO_APP_ID &&
       c.head_sha === i.segundoPai &&
       c.conclusion === 'success',
   );
-  if (!selo) return recusa(`sem o check run ${SELO_NOME} (app ${SELO_APP}, success) no SHA ${i.segundoPai.slice(0, 7)}`);
+  if (!selo) return recusa(`sem o check run ${SELO_NOME} (app ${SELO_APP} id ${SELO_APP_ID}, success) no SHA ${i.segundoPai.slice(0, 7)}`);
 
   const feitas = etapasDoResumo(selo.output?.summary);
   const faltam = i.etapasExigidas.filter((e) => !feitas.includes(e));
   if (faltam.length > 0) return recusa(`o selo não cobre as etapas: ${faltam.join(', ')}`);
-  return { provado: true, motivo: `provado pelo corte no SHA ${i.segundoPai.slice(0, 7)} (árvore idêntica)` };
+  return { provado: true, esperado: true, motivo: `provado pelo corte no SHA ${i.segundoPai.slice(0, 7)} (árvore idêntica)` };
+}
+
+/** Aviso do Actions para o selo recusado num evento que o esperava; `null` se provado ou fora do caso (ADR-092). */
+export function avisoDaRecusa(prova: Prova, etapas: string): string | null {
+  if (prova.provado || !prova.esperado) return null;
+  return `::warning title=Selo do corte recusado (${etapas})::${prova.motivo}. O CI roda inteiro (falha fechada).`;
 }
 
 const LINHA_RECIBO = /^E2E-GATE:[ \t]+([0-9a-f]{40})[ \t]+(pass|fail)[ \t]+(.*)$/m;

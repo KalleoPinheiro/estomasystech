@@ -30,7 +30,7 @@ const TIMEOUTS: Record<string, Record<string, number>> = {
   '.github/workflows/ci.yml': {
     escopo: 10,
     estatico: 10,
-    'server-first-provado': 10,
+    'fora-do-selo': 10,
     'cobertura-shard': 15,
     cobertura: 15,
     ci: 15,
@@ -370,7 +370,7 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
       PROVADO: 'false',
       R_ESCOPO: 'success',
       R_ESTATICO: 'success',
-      R_SERVERFIRST: 'skipped',
+      R_FORADOSELO: 'skipped',
       R_SHARD: 'success',
       R_COBERTURA: 'success',
     };
@@ -387,7 +387,7 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
     expect(job('cobertura-shard', ci)).toContain(
       "needs.escopo.outputs.pesado == 'true'",
     );
-    expect(job('server-first-provado', ci)).toContain(
+    expect(job('fora-do-selo', ci)).toContain(
       "needs.escopo.outputs.completo == 'true'",
     );
   });

@@ -4,6 +4,7 @@
  * aqui para ser testada; `preflight.ts` só lê o ambiente.
  */
 import { conferirNpm } from './lockfile-lib';
+import { versionFromReleaseBranch } from './lib';
 
 export interface PreflightEnv {
   /** `GH_TOKEN` do corte (PAT do dono). */
@@ -19,6 +20,12 @@ export interface PreflightEnv {
   emCi: boolean;
   /** npm em uso versus o fixado em `packageManager` (ADR-091); ausente = não conferir. */
   npm?: { pkg: { packageManager?: string }; atual: string };
+  /**
+   * Disparo no Actions (ADR-092): ref do workflow (`GITHUB_REF`) e branch pedida (`RELEASE_BRANCH`, do input).
+   * O corte só vale disparado da `main` (a definição do workflow vem da ref protegida) e com `release/vX.Y.Z`.
+   * Ausente = corte local, onde `assertBranch` já confere a branch.
+   */
+  disparo?: { workflowRef: string; branch: string };
 }
 
 export type Falhas = string[];
@@ -30,6 +37,14 @@ export function pendenciasDoPreflight(e: PreflightEnv): Falhas {
   if (e.repo === '') falhas.push('repositório desconhecido: defina GH_REPO ou GITHUB_REPOSITORY.');
   if (e.gitName === '' || e.gitEmail === '')
     falhas.push('identidade git ausente: defina user.name/user.email ou GIT_COMMITTER_NAME/GIT_COMMITTER_EMAIL antes do release:prepare.');
+  if (e.disparo) {
+    if (e.disparo.workflowRef !== 'refs/heads/main')
+      falhas.push(
+        `o corte deve ser disparado da main (ref do workflow: ${e.disparo.workflowRef || 'vazia'}); informe a release no input branch (ADR-092).`,
+      );
+    if (versionFromReleaseBranch(e.disparo.branch) === null)
+      falhas.push(`branch de corte inválida: ${JSON.stringify(e.disparo.branch)}; use release/vX.Y.Z (ADR-092).`);
+  }
   const npm = e.npm ? conferirNpm(e.npm.pkg, e.npm.atual) : null;
   if (npm !== null) falhas.push(npm);
   return falhas;

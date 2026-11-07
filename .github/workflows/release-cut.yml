@@ -2,7 +2,8 @@ name: Release cut
 
 # Corte da release no Actions (ADR-071, emendada pela ADR-087): roda `npm run release:cut` em
 # `release/vX.Y.Z` sem depender da máquina do operador. Só `workflow_dispatch`: escolha a branch
-# `release/vX.Y.Z` em "Use workflow from" ou, a partir da `main`, informe-a no input `branch`. Precondição: a marca `homologacao/vX.Y.Z` no SHA da release.
+# `release/vX.Y.Z`. Disparo único (ADR-092): "Use workflow from" = `main` e o input `branch` = `release/vX.Y.Z`, porque a
+# definição do workflow (que usa o PAT com bypass e grava o selo) tem de vir da `main` protegida. Precondição: a marca `homologacao/vX.Y.Z` no SHA da release.
 # O `release:prepare` faz push do commit de versão na release e o ruleset `release/**` barra o
 # GITHUB_TOKEN (o app GitHub Actions não está na bypass list). Por isso o segredo RELEASE_CUT_TOKEN
 # (PAT fine-grained do dono, Contents e Pull requests: read/write, só neste repo, com bypass no
@@ -20,9 +21,9 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch release/vX.Y.Z a cortar (vazio = a branch escolhida em Use workflow from)"
+        description: "Branch release/vX.Y.Z a cortar (obrigatório; dispare da main, ADR-092)"
         type: string
-        default: ""
+        required: true
       rollback:
         description: "Estratégia de rollback registrada na release (ADR-071)"
         type: choice
@@ -48,7 +49,6 @@ jobs:
     name: release:cut
     runs-on: ubuntu-24.04
     timeout-minutes: 300
-    if: startsWith(inputs.branch || github.ref_name, 'release/v')
     # Postgres 18 para a integração completa que antecede o prepare (mesma imagem do gate-pr.yml).
     services:
       postgres:
@@ -69,9 +69,25 @@ jobs:
       GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
       GIT_COMMITTER_NAME: github-actions[bot]
       GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-      RELEASE_BRANCH: ${{ inputs.branch || github.ref_name }}
+      RELEASE_BRANCH: ${{ inputs.branch }}
       NODE_OPTIONS: --max-old-space-size=8192
     steps:
+      # ADR-092: primeiro passo, antes do checkout e do npm ci. Branch errada é vermelho, nunca job pulado.
+      - name: Validar o disparo (main + release/vX.Y.Z)
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          if [ "$WORKFLOW_REF" != refs/heads/main ]; then
+            echo "::error title=Disparo fora da main::O corte é disparado da main (ref atual: $WORKFLOW_REF). Em Use workflow from escolha main e informe a release no input branch (ADR-092)."
+            exit 1
+          fi
+          if ! [[ "$BRANCH" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error title=Branch de corte inválida::O input branch deve ser release/vX.Y.Z (recebido: '$BRANCH')."
+            exit 1
+          fi
+
       - name: Exigir RELEASE_CUT_TOKEN
         env:
           TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
@@ -83,7 +99,7 @@ jobs:
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.branch || github.ref_name }}
+          ref: ${{ inputs.branch }}
           fetch-depth: 0
           token: ${{ secrets.RELEASE_CUT_TOKEN }}
 
@@ -107,8 +123,11 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Pré-voo (ADR-088)
-        run: npm run release:preflight -- --rollback=${{ inputs.rollback }}
+      - name: Pré-voo (ADR-088, ADR-092)
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          BRANCH: ${{ inputs.branch }}
+        run: npm run release:preflight -- --rollback=${{ inputs.rollback }} --workflow-ref="$WORKFLOW_REF" --branch="$BRANCH"
 
       - name: Navegadores do Playwright
         if: inputs.dry_run != true

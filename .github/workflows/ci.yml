@@ -75,6 +75,7 @@ jobs:
       # dúvida (selo ausente, árvore diferente, API fora) dá `provado=false` e o CI roda inteiro.
       - id: prova
         if: github.event_name == 'pull_request' || github.event_name == 'push'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           EVENTO: ${{ github.event_name }}
@@ -82,7 +83,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --etapas ci | tee -a "$GITHUB_OUTPUT"
+          npx tsx scripts/release/prova-corte.ts --evento "$EVENTO" --base-ref "$BASE_REF" --head-ref "$HEAD_REF" --head-sha "$HEAD_SHA" --resumo "$GITHUB_STEP_SUMMARY" --etapas ci | tee -a "$GITHUB_OUTPUT"
 
       # `pesado=true` roda estático completo, cobertura e build; só documentação ou prova do corte os dispensa.
       # ADR-093: rascunho não paga estático, cobertura nem build. `completo=false` só em pull_request draft.
@@ -157,10 +158,12 @@ jobs:
         if: needs.escopo.outputs.docs_only != 'true'
         run: npx tsx scripts/check-dynamic-import.ts
 
-  # O selo do corte não cobre o `check:server-first` (nem o `gate:local` o roda). No PR provado pelo corte este
-  # job barato (checkout + install + um script) mantém a garantia que o `estatico` dava (ADR-088).
-  server-first-provado:
-    name: Server-first (PR provado pelo corte)
+  # O selo do corte não cobre o `check:server-first` nem o `check:dynamic-import` (nem o `gate:local` os roda). No
+  # PR provado pelo corte este job barato (checkout + install + dois scripts) mantém a garantia que o `estatico`
+  # dava (ADR-088, emenda ADR-092). Todo step do `estatico` fora do selo tem de aparecer aqui: o teste
+  # tests/infrastructure/ci-fora-do-selo.test.ts reprova o contrário.
+  fora-do-selo:
+    name: Fora do selo (server-first e dynamic-import, PR provado)
     needs: escopo
     if: needs.escopo.outputs.completo == 'true' && needs.escopo.outputs.provado == 'true'
     runs-on: ubuntu-24.04
@@ -180,6 +183,9 @@ jobs:
 
       - name: Server-first gate
         run: npm run check:server-first
+
+      - name: Dynamic-import gate
+        run: npx tsx scripts/check-dynamic-import.ts
 
   # Cobertura em 4 fatias (vitest --shard). Cada fatia roda os testes dela e grava um blob com o relatório e a
   # cobertura bruta; os limiares só valem na junção (`cobertura`), com a config da suíte inteira. Teste
@@ -272,7 +278,7 @@ jobs:
   ci:
     name: Typecheck, lint, sv-gate, test:coverage, build
     if: always()
-    needs: [escopo, estatico, server-first-provado, cobertura-shard, cobertura]
+    needs: [escopo, estatico, fora-do-selo, cobertura-shard, cobertura]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -281,7 +287,7 @@ jobs:
     steps:
       # Código: todos os jobs têm de ser `success`. Só documentação: o escopo e o estático (gate de docs) passam
       # e os jobs pesados têm de estar `skipped`. Provado pelo corte (ADR-088): só o escopo passa e TUDO o mais
-      # tem de estar `skipped`, menos o `server-first-provado`, que tem de passar. Qualquer outra combinação reprova.
+      # tem de estar `skipped`, menos o `fora-do-selo`, que tem de passar. Qualquer outra combinação reprova.
       - name: Todos os jobs anteriores passaram
         env:
           COMPLETO: ${{ needs.escopo.outputs.completo }}
@@ -289,11 +295,11 @@ jobs:
           PROVADO: ${{ needs.escopo.outputs.provado }}
           R_ESCOPO: ${{ needs.escopo.result }}
           R_ESTATICO: ${{ needs.estatico.result }}
-          R_SERVERFIRST: ${{ needs.server-first-provado.result }}
+          R_FORADOSELO: ${{ needs.fora-do-selo.result }}
           R_SHARD: ${{ needs.cobertura-shard.result }}
           R_COBERTURA: ${{ needs.cobertura.result }}
         run: |
-          echo "completo=$COMPLETO docs_only=$DOCS_ONLY provado=$PROVADO escopo=$R_ESCOPO estatico=$R_ESTATICO serverfirst=$R_SERVERFIRST shard=$R_SHARD cobertura=$R_COBERTURA"
+          echo "completo=$COMPLETO docs_only=$DOCS_ONLY provado=$PROVADO escopo=$R_ESCOPO estatico=$R_ESTATICO foradoselo=$R_FORADOSELO shard=$R_SHARD cobertura=$R_COBERTURA"
           if [ "$COMPLETO" != true ]; then
             echo "::error::PR em rascunho: o CI completo roda quando o PR for marcado como pronto (ADR-093)"
             exit 1
@@ -301,11 +307,11 @@ jobs:
           [ "$R_ESCOPO" = success ] || { echo "::error::o escopo não passou"; exit 1; }
           if [ "$PROVADO" = true ]; then
             [ "$R_ESTATICO" = skipped ] && [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR provado pelo corte não devia ter rodado estático nem cobertura"; exit 1; }
-            [ "$R_SERVERFIRST" = success ] || { echo "::error::server-first não passou no PR provado"; exit 1; }
+            [ "$R_FORADOSELO" = success ] || { echo "::error::fora-do-selo (server-first e dynamic-import) não passou no PR provado"; exit 1; }
             echo "Provado pelo release-cut/gate no mesmo SHA e na mesma árvore (ADR-088): sem repetir."
             exit 0
           fi
-          [ "$R_SERVERFIRST" = skipped ] || { echo "::error::server-first do PR provado não devia ter rodado"; exit 1; }
+          [ "$R_FORADOSELO" = skipped ] || { echo "::error::fora-do-selo do PR provado não devia ter rodado"; exit 1; }
           [ "$R_ESTATICO" = success ] || { echo "::error::estático não passou"; exit 1; }
           if [ "$DOCS_ONLY" = true ]; then
             [ "$R_SHARD" = skipped ] && [ "$R_COBERTURA" = skipped ] || { echo "::error::PR de documentação não devia ter rodado cobertura"; exit 1; }
