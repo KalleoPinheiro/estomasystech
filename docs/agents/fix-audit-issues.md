@@ -3,7 +3,7 @@ title: "Corrigir um subconjunto de issues de auditoria (fim a fim)"
 status: living
 audience: [agent, dev]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-09-23
+last_reviewed: 2026-11-03
 ---
 
 # Corrigir um subconjunto de issues de auditoria (fim a fim)
@@ -59,9 +59,12 @@ especificar → implementar → documentar → PR → merge → fechar issue.
      `docs/plano-correcao-achados-auditoria-2026-09.md` — precedente das
      Fases A–C é deixar essa tabela como está; o rastro de "feito" vive nas
      issues fechadas + `.specs/archive/handoff-2026.md`.
-7. **Push + PR**: `git push -u origin <branch>`, `gh pr create` com
+7. **Push + PR**: `git push -u origin <branch>`, `gh pr create --draft` com
    descrição assertiva (o que mudou, por quê, o que ficou fora e por quê,
-   plano de teste). PR a partir da `main` já atualizada no passo 3.
+   plano de teste). PR para `release/**` nasce em rascunho e é marcado pronto
+   uma vez, pelo coordenador, depois de confirmar a cota (ADR-093). Em
+   rascunho, "Gate do PR" e `ci` ficam vermelhos de propósito. A base do fluxo
+   atual é a release aberta (ADR-052), não a `main` do passo 3.
 8. **Acompanhar CodeRabbit**: esperar a primeira revisão automática
    (`gh pr view <n> --comments` ou `gh api .../pulls/<n>/comments`), corrigir
    achados reais em commit novo (nunca amend), registrar recusas com

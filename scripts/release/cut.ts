@@ -19,80 +19,19 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { verifyReceipt } from '../gate/receipt';
 import {
-  approvalBranch,
   checkPreparedVersion,
   consolidatedTesteAlterado,
-  cutStart,
-  prNumbersFromSubjects,
-  type PrBody,
   releaseCommitSubject,
   releasePrBody,
   worktreePath,
 } from './cut-lib';
-import { must, parseRollback, sh, tagFor, versionFromReleaseBranch } from './lib';
+import { assertApproved, assertBranch, batchPrs, checkIntegrity, fail, live, step } from './cut-pre';
+import { must, parseRollback, sh, tagFor } from './lib';
+import { SELO_NOME } from './prova-corte-lib';
+import { selarCorte } from './selo';
 
-function fail(message: string): never {
-  console.error(`✗ ${message}`);
-  process.exit(1);
-}
-
-function step(title: string): void {
-  console.log(`\n■ ${title}`);
-}
-
-/** Roda com saída no terminal; falha o corte se o comando falhar. */
-function live(cmd: string, args: readonly string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}): void {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', ...options });
-  if (r.status !== 0) fail(`${cmd} ${args.join(' ')} saiu com ${r.status}.`);
-}
-
-const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 const packageVersion = (dir = '.'): string =>
   JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).version as string;
-
-function assertBranch(): { branch: string; version: string } {
-  const branch = must('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
-  const version = versionFromReleaseBranch(branch);
-  if (version === null) fail(`rode na release aberta (\`release/vX.Y.Z\`); branch atual: ${branch}.`);
-  if (must('git', ['status', '--porcelain']) !== '') fail('árvore suja: faça commit ou stash antes.');
-  must('git', ['fetch', '-q', 'origin', 'main', branch]);
-  if (must('git', ['rev-parse', 'HEAD']) !== must('git', ['rev-parse', `origin/${branch}`]))
-    fail(`${branch} local difere de origin/${branch}: atualize ou empurre antes.`);
-  if (!sh('git', ['merge-base', '--is-ancestor', 'origin/main', 'HEAD']).ok)
-    fail('a `main` tem commits que a release não tem: rode `npm run release:sync` (merge, nunca rebase).');
-  return { branch, version };
-}
-
-function approvedSha(version: string): string | null {
-  const out = must('git', ['ls-remote', 'origin', `refs/heads/${approvalBranch(version)}`]);
-  return out.split(/\s+/)[0] || null;
-}
-
-function assertApproved(version: string): boolean {
-  const start = cutStart({
-    approved: approvedSha(version),
-    head: must('git', ['rev-parse', 'HEAD']),
-    parent: sh('git', ['rev-parse', 'HEAD^']).out,
-    subject: must('git', ['log', '-1', '--format=%s']),
-    version,
-  });
-  if (!start.ok) fail(start.reason);
-  return start.prepared;
-}
-
-function batchPrs(): PrBody[] {
-  const numbers = prNumbersFromSubjects(lines(must('git', ['log', '--format=%s', 'origin/main..HEAD'])));
-  return numbers.map((number) => {
-    const view = sh('gh', ['pr', 'view', String(number), '--json', 'body', '-q', '.body']);
-    if (!view.ok) console.warn(`⚠ não li o corpo do PR #${number} com gh; o motivo dele não entra no consolidado.`);
-    return { number, body: view.ok ? view.out : '' };
-  });
-}
-
-function checkIntegrity(testeAlterado: string | null): void {
-  const motivo = testeAlterado ? ['--motivo', testeAlterado.replace(/^TESTE-ALTERADO:\s*/, '')] : [];
-  live('npx', ['tsx', 'scripts/gate/check-test-integrity.ts', 'origin/main', ...motivo]);
-}
 
 /** O `git push` do `release:prepare` passa pelo `pre-push` (regra 8), que só lê o motivo de `.gate/motivo-teste.txt`. */
 function writeMotivoParaOPush(testeAlterado: string | null): void {
@@ -170,7 +109,14 @@ function main(): void {
   const check = verifyReceipt(receipt, sha, [], branch);
   if (!check.ok) fail(`recibo inválido: ${check.reason}`);
 
-  step('5/5 PR release → main');
+  step('5/5 Selo e PR release → main');
+  const selo = selarCorte({
+    recibo: receipt,
+    extras: (process.env.RELEASE_CUT_ETAPAS_EXTRAS ?? '').split(',').filter(Boolean),
+    token: process.env.SELO_TOKEN ?? '',
+    repo: process.env.GITHUB_REPOSITORY ?? '',
+  });
+  console.log(`${selo.feita ? '✓' : '⚠'} selo ${SELO_NOME}: ${selo.motivo}`);
   const body = releasePrBody({ version, receipt, prs: prs.map((p) => p.number), testeAlterado });
   mkdirSync('.gate', { recursive: true });
   const bodyFile = join('.gate', `pr-release-${tagFor(version)}.md`);

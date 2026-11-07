@@ -4,6 +4,12 @@ import { ConflictError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import {
+  type CollectionPath,
+  collectionRoute,
+  type ItemPath,
+  itemRoute,
+} from '../support/api-routes';
+import {
   CLINIC_A_ID,
   CLINIC_B_ID,
   ensureTestClinics,
@@ -35,16 +41,16 @@ interface PayoutsBody {
 // Mês exclusivo deste arquivo (a base PGlite é compartilhada entre testes).
 const PERIOD = '2025-03';
 
-const post = async <T>(path: string, body: unknown): Promise<T> => {
-  const route = await import(`@/app/api${path}/route`);
+const post = async <T>(path: CollectionPath, body: unknown): Promise<T> => {
+  const route = await collectionRoute(path);
   const response = await route.POST(jsonRequest(`/api${path}`, 'POST', body));
   const parsed = (await response.json()) as Envelope<T>;
   expect(parsed.error).toBeNull();
   return parsed.data;
 };
 
-const patch = async (path: string, id: string, body: unknown) => {
-  const route = await import(`@/app/api${path}/[id]/route`);
+const patch = async (path: ItemPath, id: string, body: unknown) => {
+  const route = await itemRoute(path);
   const response = await route.PATCH(
     jsonRequest(`/api${path}/${id}`, 'PATCH', body),
     { params: Promise.resolve({ id }) },

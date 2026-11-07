@@ -3,7 +3,7 @@ title: "Homologação — Vercel, Neon, MSW, faker e fluxo de git"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-21
+last_reviewed: 2026-11-03
 related: [docs/engineering/homologacao-cenarios.md, docs/adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md, docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md, docs/engineering/producao.md, docs/engineering/onboarding.md]
 ---
 
@@ -32,7 +32,7 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | --- | --- |
 | Abrir a release | `git switch -c release/vX.Y.Z origin/main && git push -u origin release/vX.Y.Z`; o nome promete a versão |
 | Toda feature nasce da release aberta | `git fetch origin && git switch -c feat/x origin/release/vX.Y.Z` |
-| O PR da feature vai contra a **release**, em squash | CI rápido; sem recibo do gate. Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
+| O PR da feature vai contra a **release**, em squash | Nasce em **rascunho** e é marcado pronto uma vez (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de propósito. Sem recibo do gate. Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
 | Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação do `gate:local` já comparam com a release aberta de que a branch saiu (ADR-058; `GATE_BASE` força outra base) |
 | Só a `staging` vira deploy | a Vercel **não** constrói prévia de `feat/*`, `release/*` nem de branch de agente (`git.deploymentEnabled` no `vercel.json`, [ADR-061](../adr/061-vercel-constroi-so-a-staging.md)); para ver uma feature, reconstrua a staging |
 | `main` mudou (hotfix) | `npm run release:sync` **mergeia** a `main` na release aberta (nunca rebase); conflito aborta e avisa: resolva na release |
@@ -40,7 +40,8 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | `staging` é reconstruída, não consertada | conflito ou migração colidente: reconstrua; nunca resolva em `staging` |
 | Staging aprovada | quem validou cria ou move a marca `homologacao/vX.Y.Z` para o SHA aprovado (`git push --force origin <sha>:refs/heads/homologacao/vX.Y.Z`) ([ADR-071](../adr/071-corte-de-release-em-comando-unico.md)) |
 | Cortar a release | `npm run release:cut -- --rollback=redeploy\|backup` **na release**, no WSL: confere a marca e o TESTE-ALTERADO do lote, roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo (sem mutação; Docker e backup obrigatórios) e abre o PR `release → main` com o recibo. Nada entra na release depois disso; se o gate falhar por ambiente, rode o mesmo comando de novo (não versiona outra vez) |
-| Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase) |
+| Cortar pelo Actions | workflow **Release cut**, disparado da `main` (único caminho) com o input obrigatório `branch=release/vX.Y.Z`; outra ref ou branch fora do padrão falha logo no primeiro step ([ADR-092](../adr/092-emenda-088-disparo-do-corte-e-selo-sem-furos.md)). Rode antes com `dry_run` marcado: só o pré-voo (`npm run release:preflight`: token, identidade git, rollback, pré-condições e permissão), em ~1 min e sem escrever nada. O corte real roda a integração Postgres completa antes do `release:prepare` e grava o selo `release-cut/gate` no SHA final ([ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md)). O workflow instala o npm de `packageManager` e o `release:prepare` (e o pré-voo) recusa npm diferente e lockfile que perca dependências opcionais; no WSL rode `npm i -g npm@<versão>` antes ([ADR-091](../adr/091-npm-fixado-e-lockfile-protegido-no-corte.md)) |
+| Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase). Com o selo no head e a mesma árvore, o `ci` e o Docker do PR (e do push na `main` depois do merge) passam sem repetir a prova pesada; sem selo ou com árvore diferente, rodam inteiros |
 | Depois do merge | `npm run release:publish -- --rollback=...` (tag no commit de merge, Release publicada); deploy da tag em `producao.md` § 3.1. A `staging` volta a ser = `main` |
 | Hotfix | `hotfix/*` nasce da `main`, PR direto na `main` (recibo), `release:prepare`/`release:publish --hotfix`; o `release:sync` leva a correção para a release aberta |
 
@@ -60,9 +61,12 @@ fica em `origin/staging` e um `git push` simples nunca vai para a release. Chama
 `scripts/staging/rebuild.sh` direto, sem `--deploy`, a staging continua igual à base.
 
 Os scripts rodam no seu computador (`rebuild.sh`, `sync-main.sh`, sem `gh` nem Actions). O
-`staging.yml` repete tudo a cada push na `main` (e por `workflow_dispatch`) quando houver cota
-(até ~2026-11-01 o fluxo é à mão). O workflow só empurra para `release/*` se o ruleset deixar
-(ADR-052, Consequências).
+`staging.yml` reconstrói a staging a cada push na `main` (e por `workflow_dispatch`). Desde o ADR-088 ele
+**não** empurra a `main` na release (o ruleset `release/**` recusava o push, GH013): o merge da `main` na
+release é de quem tem bypass, por `npm run release:sync`, e o `release:cut` exige a `main` dentro da release. O
+commit de deploy sai com a identidade do dono do repositório (a Vercel bloqueia autor fora do time) e o smoke
+usa o segredo opcional `VERCEL_AUTOMATION_BYPASS_SECRET`: com o SSO da Vercel ativo, sem ele o health não é
+verificado (aviso no log).
 
 **Prévia de PR não existe mais (ADR-061).** O `vercel.json` desliga o deploy automático de toda branch
 (`"**": false`) exceto `staging`. O `vercel.json` vale a partir do commit empurrado: branch antiga, criada
@@ -173,3 +177,38 @@ sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações,
 - Sem foto persistente se `PHOTO_STORAGE` não apontar para o bucket de homologação.
 - Dado real em homologação é incidente de LGPD: não cadastre pessoas reais; a faixa de aviso e a
   trava `PRODUCTION_DB_HOSTS` existem para isso.
+
+## 7. Validação logada após cada rebuild da staging (#668)
+
+Depois de cada rebuild da staging, uma thread **nova, em contexto limpo**, roda a validação logada. Ela **não corrige
+código**: cada falha vira issue com evidência, a correção vai para outra thread e uma nova rodada confere só o que
+reprovou. Cobre o que o build local não mostra: cabeçalhos da Vercel, variáveis ausentes (`GOOGLE_*`), SSO e CSP no
+edge (como na #658).
+
+**O que roda:** `scripts/staging/validacao-logada.mjs` (Playwright, fora do Actions, ADR-042). Entra com Admin,
+Atendente e Profissional (§ 4, login real por e-mail e senha), percorre o menu de cada papel (mais `/configuracoes/*` e
+`/auditoria` no Admin) em **360, 390, 768 e 1280** e, em cada tela, exige: status < 400 sem redirecionamento
+inesperado; `console.error`/`console.warn` e `pageerror` = 0 (#543); violação de CSP = 0; nenhuma resposta 4xx/5xx de
+`/api/*`; sem rolagem horizontal. Grava uma captura por tela e `resultados.json`; sai com código 1 se houver achado.
+
+```bash
+BASE_URL=https://estomasystech.vercel.app \
+STAGING_SEED_PASSWORD=<senha do seed> \
+VERCEL_AUTOMATION_BYPASS_SECRET=<segredo> \
+PAUSE_MS=2000 OUT_DIR=/mnt/project-files/<release>/qa-<issue> \
+node scripts/staging/validacao-logada.mjs
+```
+
+- **Bypass do SSO:** com a proteção da Vercel ativa, `VERCEL_AUTOMATION_BYPASS_SECRET` (o mesmo segredo do smoke, § 1)
+  vai no cabeçalho `x-vercel-protection-bypass` e a Vercel devolve um cookie para as navegações seguintes. Sem o
+  segredo e com SSO, o script cai na página de login da Vercel e reprova. Nunca cole o segredo em issue ou captura.
+- **Limitador de taxa:** o app limita `/api/*` a 120/min por IP (§ 6). Contra a staging, use `PAUSE_MS=2000`; sem pausa a
+  rodada gera 429 do próprio limitador, que não é defeito. Contra build local, suba o servidor com
+  `API_RATE_LIMIT_MAX=100000` e `ACTION_RATE_LIMIT_MAX=100000` (como faz o E2E).
+- **Local (sem a Vercel):** `npm run build` e `next start` sobre Postgres com `npm run seed:staging` e
+  `APP_ENV=staging`, `STAGING_DISABLE_MFA=true`; `BASE_URL` aponta para a porta local. Serve de ensaio, não substitui
+  a rodada na staging real.
+- **Navegador:** `CHROME=<caminho do Chromium>` quando o Playwright não achar o dele.
+- **Evidência:** anexe `resultados.json` e as capturas em `/mnt/project-files/` e comente o resultado na issue da
+  release. Rodada local da v0.5.0 (efc714d): 144 páginas, 0 achados.
+

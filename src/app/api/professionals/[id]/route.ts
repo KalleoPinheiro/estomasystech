@@ -3,10 +3,12 @@ import { z } from 'zod';
 import { COMMISSION_TYPES } from '@/domain/professional/professional';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
+import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { writeScope } from '@/lib/auth/tenant-scope';
 import { toProfessionalDto } from '@/lib/dto';
 import { updateProfessionalRecord } from '@/lib/server/professional-writes';
+import { updatedAudit } from '@/lib/server/team-audit';
 
 const updateSchema = z.object({
   fullName: z.string().min(1).max(200).optional(),
@@ -26,8 +28,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleRequest(async () => {
     const { id } = await context.params;
     const body = updateSchema.parse(await request.json());
-    const { professionals } = await getRepositories(writeScope(guard.session));
-    const updated = await updateProfessionalRecord(professionals, id, body);
-    return toProfessionalDto(updated);
+    const { transactions } = await getRepositories(writeScope(guard.session));
+    // Auditoria na MESMA transação da gravação (ADR-075, EQP-RN-09).
+    return transactions.run(async (tx) => {
+      const updated = await updateProfessionalRecord(
+        tx.professionals,
+        id,
+        body,
+      );
+      await recordAuditNow(
+        tx.auditEvents,
+        guard.session,
+        updatedAudit('professional', updated.id, body.active),
+      );
+      return toProfessionalDto(updated);
+    });
   });
 }

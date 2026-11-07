@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import type { CalendarIntegrationStatusDto } from '@/lib/dto';
 import {
@@ -35,6 +35,7 @@ describe('Feature: Status da conexão do Google Agenda (issue #124)', () => {
 
     expect(response.status).toBe(200);
     expect(body.data).toEqual({
+      configured: false,
       connected: false,
       email: null,
       connectedAt: null,
@@ -137,5 +138,55 @@ describe('Feature: Status da conexão do Google Agenda (issue #124)', () => {
     );
 
     expect(response.status).toBe(401);
+  });
+
+  it('Dado Google configurado (client id, secret e APP_URL), Quando GET, Então configured é true (#658)', async () => {
+    await ensureTestClinics();
+    vi.stubEnv('GOOGLE_CLIENT_ID', 'id');
+    vi.stubEnv('GOOGLE_CLIENT_SECRET', 'segredo');
+    vi.stubEnv('APP_URL', 'https://app.example.com');
+    const route = await import('@/app/api/settings/calendar-integration/route');
+
+    const response = await route.GET(
+      jsonRequest(
+        '/api/settings/calendar-integration',
+        'GET',
+        undefined,
+        adminCookieHeader(CLINIC_B_ID),
+      ),
+    );
+    const body =
+      (await response.json()) as Envelope<CalendarIntegrationStatusDto>;
+    vi.unstubAllEnvs();
+
+    expect(body.data?.configured).toBe(true);
+  });
+
+  it('Dado Google sem credenciais, Quando GET, Então configured é false mesmo com conta conectada (#658)', async () => {
+    await ensureTestClinics();
+    vi.stubEnv('GOOGLE_CLIENT_ID', '');
+    const { getRepositories } = await import('@/infrastructure/container');
+    const { googleAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
+    await googleAccounts.save({
+      email: 'conectada@clinica.com',
+      encryptedRefreshToken: 'cipher-text',
+      connectedAt: new Date(),
+    });
+    const route = await import('@/app/api/settings/calendar-integration/route');
+
+    const response = await route.GET(
+      jsonRequest(
+        '/api/settings/calendar-integration',
+        'GET',
+        undefined,
+        adminCookieHeader(CLINIC_A_ID),
+      ),
+    );
+    const body =
+      (await response.json()) as Envelope<CalendarIntegrationStatusDto>;
+    vi.unstubAllEnvs();
+
+    expect(body.data?.connected).toBe(true);
+    expect(body.data?.configured).toBe(false);
   });
 });

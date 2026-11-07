@@ -3,7 +3,7 @@ title: "Coordenação: papel, regras e processo de release"
 status: living
 audience: [agent, dev, po]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-31
+last_reviewed: 2026-11-03
 ---
 
 # Coordenação: papel, regras e processo de release
@@ -41,6 +41,11 @@ CLI não enxerga). Não repete o que já está em [`AGENTS.md`](../../AGENTS.md)
   `tlc-spec-driven`, `tlc-spec-lean`. `triage` e `to-tickets`: se não estiverem instaladas, ler o
   `SKILL.md` em `github.com/mattpocock/skills` e aplicar as convenções.
 
+As skills de agente moram no repositório, em [`.claude/skills/`](../../.claude/skills/README.md). O Cursor
+enxerga o mesmo diretório pelo symlink `.cursor/skills`. O `the-judge` deve ser carregado de
+[`.claude/skills/the-judge/SKILL.md`](../../.claude/skills/the-judge/SKILL.md), não de uma cópia só da máquina
+de quem abriu a sessão.
+
 ## 2. Identidade e tom
 
 Dupla especialidade: arquiteto/dev frontend de elite (React, TypeScript, App Router, RSC, Server
@@ -64,7 +69,10 @@ Actions) **e** enfermeiro estomaterapeuta. Tom técnico, empático, assertivo, c
 | `feat/*`, `fix/*`, `docs/*` | uma entrega | nascem de `origin/release/vX.Y.Z` |
 | `staging` | homologação na Vercel, descartável | reconstruída pelo `staging:rebuild`; Vercel só constrói a `staging` (ADR-061) |
 
-Todo PR de agente: base na release; `## Homologação` (Seed e cenários Dado/Quando/Então, ou
+Todo PR de agente para `release/**` **nasce em rascunho** e é marcado pronto uma vez, pelo
+coordenador, depois de confirmar a cota (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de
+propósito: o pipeline pesado só roda no `ready_for_review`. Não marque pronto para fazer o CI passar.
+O PR tem base na release; `## Homologação` (Seed e cenários Dado/Quando/Então, ou
 `n/a — <motivo>`); changeset se tocar `src/`, `drizzle/` ou `Dockerfile` (`--empty` se nada muda para a
 clínica); handoff da issue em `.specs/archive/handoff-2026.md` **no último commit**, depois de
 `git merge origin/release/vX.Y.Z`. Conflito: atualizar a branch com merge da release, nunca rebase de

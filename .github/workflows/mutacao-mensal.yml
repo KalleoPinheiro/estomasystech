@@ -7,6 +7,8 @@ name: Mutação mensal
 # Roda uma vez por mês, no último dia: o cron dispara de 28 a 31 e o job `ultimo-dia` só deixa
 # passar quando amanhã é dia 1 (cron não tem "último dia do mês").
 # Custo: a primeira rodada é a mais longa (~1h20 com 4 núcleos); acompanhe a cota do Actions.
+# ADR-093: a mutação incremental saiu do PR. Roda aqui, no schedule ou por workflow_dispatch
+# (inclusive no corte). O timeout de 120 cobre a rodada medida (~80 min); 40 a cortaria.
 on:
   schedule:
     - cron: "0 6 28-31 * *" # 06:00 UTC
@@ -23,6 +25,7 @@ jobs:
   ultimo-dia:
     name: É o último dia do mês?
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     outputs:
       rodar: ${{ steps.dia.outputs.rodar }}
     steps:
@@ -39,7 +42,7 @@ jobs:
     needs: ultimo-dia
     if: needs.ultimo-dia.outputs.rodar == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 120
     env:
       AUTH_SECRET: ci-placeholder-secret-0000000000000000
     steps:

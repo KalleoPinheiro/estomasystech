@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { BrandLogo } from '@/components/brand-logo';
 import { LogoutButton } from '@/components/logout-button';
 import { ReleaseVersion } from '@/components/release-version';
+import { WebVitalsReporter } from '@/components/web-vitals-reporter';
 import { getAppVersion } from '@/lib/server/data/version';
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default async function PortalLayout({
     // `portal-shell` escopa ao portal a regra de toque de links de globals.css
     // (#127) — o header do portal fica fora do `main` das telas da equipe.
     <div className="portal-shell">
+      <WebVitalsReporter endpoint="/api/portal/web-vitals" />
       <Header
         logo={
           <div>

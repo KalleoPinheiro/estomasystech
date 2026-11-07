@@ -149,7 +149,7 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
       expect(response.headers.get('location')).toBeNull();
     });
 
-    it('Dado credenciais do Google ausentes, Quando GET na rota de início, Então responde 503', async () => {
+    it('Dado credenciais do Google ausentes, Quando GET na rota de início, Então redireciona para /configuracoes?calendar=erro&reason=nao_configurado em vez de JSON cru (#658)', async () => {
       delete process.env.GOOGLE_CLIENT_ID;
       const route = await import(
         '@/app/api/integrations/google-calendar/route'
@@ -158,8 +158,12 @@ describe('Feature: Conexão do Google Agenda desacoplada do login', () => {
       const response = await route.GET(
         getRequest('/api/integrations/google-calendar'),
       );
+      const location = new URL(response.headers.get('location') ?? '');
 
-      expect(response.status).toBe(503);
+      expect(response.status).toBe(307);
+      expect(location.pathname).toBe('/configuracoes');
+      expect(location.searchParams.get('calendar')).toBe('erro');
+      expect(location.searchParams.get('reason')).toBe('nao_configurado');
     });
   });
 

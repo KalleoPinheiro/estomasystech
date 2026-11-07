@@ -2,12 +2,16 @@
 # Gate numa thread da nuvem (container Linux, sem Docker, sem WSL). ADR-084.
 #
 # Uso (sempre em segundo plano: a ferramenta de shell mata comando em primeiro plano aos 10 min):
+#   scripts/gate-cloud.sh bg rapido    # gate rápido antes do PR (ADR-088), idem
 #   scripts/gate-cloud.sh bg pr        # gate incremental do PR, em segundo plano, log em .gate/cloud.log
 #   scripts/gate-cloud.sh bg release   # gate completo (release/*), idem
 #   scripts/gate-cloud.sh status       # resumo das etapas já terminadas
 #   scripts/gate-cloud.sh setup|integracao|pr|release   # em primeiro plano (CI, WSL, depuração)
 #
-# Perfis (ADR-084):
+# Perfis (ADR-084, ADR-088):
+#   rapido   (padrão antes de abrir o PR, ADR-088) typecheck, lint, sv, docs, dynamic-import, integridade e os testes que o diff
+#            alcança (`vitest --changed <base>`), ~3 a 5 min. A cobertura completa, a integração e o E2E são do
+#            `ci.yml` e do `gate-pr.yml` no PR, que são os checks exigidos; rode `pr` só para investigar um vermelho.
 #   pr       typecheck, lint, sv, docs, integridade e a suíte unitária COMPLETA com cobertura e limiares
 #            atuais; integração (vitest --changed, grafo de imports), mutação (arquivos alterados de
 #            domain/application) e E2E (specs alcançados, scripts/gate-cloud/impacto.ts) só no que o diff
@@ -22,7 +26,8 @@
 # Base do diff: GATE_BASE, senão a release aberta (scripts/gate/base.ts). Não toca banco de produção:
 # o assertLocalEnvironment recusa host que não seja da máquina.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+# BASH_SOURCE coincide com $0 quando o script é executado e permite `source` nos testes.
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 PGPORT="${GATE_CLOUD_PGPORT:-5432}"
 PGDB="${GATE_CLOUD_PGDB:-estomas_integ}"
@@ -48,7 +53,8 @@ recibo() {
     echo "| etapa | rc | duração |"
     echo "| --- | --- | --- |"
     sed -nE 's/^([^ ]+) rc=([0-9]+) ([0-9]+s)$/| \1 | \2 | \3 |/p' "$TIMES" 2>/dev/null
-    grep -E '^pulado:' "$TIMES" 2>/dev/null | sed -E 's/^pulado: (.*)$/- pulado: \1/'
+    # Sem linha `pulado:`, o grep sai 1; com pipefail isso virava o exit do script.
+    { grep -E '^pulado:' "$TIMES" 2>/dev/null || true; } | sed -E 's/^pulado: (.*)$/- pulado: \1/'
   } | tee "$RECIBO"
 }
 
@@ -231,6 +237,7 @@ pr_profile() {
   paralelo lint step lint npm run lint
   paralelo sv step sv npm run check:sv
   paralelo docs step docs npm run check:docs
+  paralelo dynamic-import step dynamic-import npx tsx scripts/check-dynamic-import.ts
   paralelo integridade step integridade-de-testes integridade
   espera
   step cobertura npm run test:coverage
@@ -251,6 +258,22 @@ pr_profile() {
   fi
 }
 
+# Perfil rápido (ADR-088): o que pega os vermelhos baratos antes de gastar um ciclo do Actions. Não substitui
+# o `pr`: o gate autoritativo é o do PR.
+rapido_profile() {
+  [ -z "$(git status --porcelain)" ] || { echo "árvore suja: o gate vale para o SHA do HEAD" >&2; return 1; }
+  local base; base=$(base_ref)
+  echo "perfil rapido · base ${base} · $(git rev-parse --short HEAD)"
+  paralelo typecheck step typecheck npm run typecheck
+  paralelo lint step lint npm run lint
+  paralelo sv step sv npm run check:sv
+  paralelo docs step docs npm run check:docs
+  paralelo dynamic-import step dynamic-import npx tsx scripts/check-dynamic-import.ts
+  paralelo integridade step integridade-de-testes integridade
+  espera
+  step testes-do-diff npx vitest run --changed "$base" --passWithNoTests
+}
+
 release_profile() {
   setup
   integracao
@@ -268,16 +291,20 @@ run_bg() { # run_bg <modo>
   echo "rodando em segundo plano: log em $LOG, andamento com '$0 status'"
 }
 
+# Executado, dispara o perfil. Um `source` (os testes) só carrega as funções.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
 case "${1:-}" in
   _step) shift; name="$1"; shift; step "$name" "$@" ;; # uso interno: o `step` dentro de um namespace isolado
-  bg) run_bg "${2:?uso: $0 bg pr|release}" ;;
+  bg) run_bg "${2:?uso: $0 bg rapido|pr|release}" ;;
   status)
     cat "$TIMES" 2>/dev/null
     echo "puladas: docker, backup (sem daemon; rodam no WSL antes do release:cut)"
     cat .gate/cloud.done 2>/dev/null || echo "em andamento" ;;
   setup) setup ;;
   integracao) integracao ;;
+  rapido) com_recibo rapido rapido_profile ;;
   pr) com_recibo pr pr_profile ;;
   release) com_recibo release release_profile ;;
-  *) echo "uso: $0 bg pr|release | status | setup | integracao | pr | release" >&2; exit 2 ;;
+  *) echo "uso: $0 bg rapido|pr|release | status | setup | integracao | rapido | pr | release" >&2; exit 2 ;;
 esac
+fi

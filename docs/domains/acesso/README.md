@@ -3,7 +3,7 @@ title: "Domínio: Acesso, empresas e auditoria"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-25
+last_reviewed: 2026-11-01
 domain: acesso
 ---
 
@@ -91,6 +91,7 @@ cada tela faz com o dado é dos outros domínios.
 | ACE-RN-66 | **Auditoria no celular e no servidor** (#521, #555, [ADR-085](../../adr/085-relatorios-auditoria-e-pedidos-do-titular-no-servidor.md)): `/auditoria` é Server Component; a página do cursor e os filtros vêm da URL (`?paciente=&de=&ate=&por=&cursor=`) e chegam no HTML, sem `/api` na carga. A paginação é por link («Próxima página», «Voltar ao início») com **25 eventos por página** por padrão em qualquer tela e o controle explícito «Eventos por página» (25 ou 50, `?por=` validado no servidor; valor fora da lista volta para 25; o servidor não detecta largura); abaixo de 768 px a tabela empilha cada evento como cartão (`Table stack`). Mudar o filtro volta à primeira página. O isolamento por empresa não muda (`sessionScope` na função de dados, a mesma de `GET /api/audit`) | `src/app/(staff)/auditoria/`, `src/lib/server/data/audit.ts`, `src/lib/audit-filters.ts`, `tests/pages/auditoria-mobile.test.tsx`, `tests/lib/server/data-relatorios-auditoria.test.ts` |
 | ACE-RN-67 | **Configurações em sub-rotas** (#522, [ADR-072](../../adr/072-configuracoes-em-sub-rotas.md), que substitui o ADR-067): `/configuracoes` é um índice de cartões e cada seção é `/configuracoes/<slug>` (`dados`, `identidade`, `privacidade`, `horarios`, `feriados`, `google-agenda`, `email`, `contas`), com «Voltar ao índice» no topo e o mesmo corte por papel do índice (ACE-RN-43); papel sem acesso vê «Seu papel não tem acesso a esta seção.». `/configuracoes#<slug>` e `/configuracoes?calendar=…` (retorno do OAuth do Google) redirecionam para a sub-rota. Cada seção busca só os próprios dados no navegador; levar para o servidor é da #541. O `SidebarInset` do layout da equipe usa `overflow-x-clip`/`overflow-y-visible` e o menu lateral usa `px-3` (miolo de 151 px) para a marca «EstomaSysTech» caber sem corte (#535) | `src/app/(staff)/configuracoes/`, `tests/pages/configuracoes-indice-mobile.test.tsx`, `tests/pages/configuracoes-ancoras-antigas.test.tsx`, `e2e/configuracoes-indice-e-marca-gaveta.spec.ts` |
 | ACE-RN-68 | **R4 nas ações de consulta** (#603, [ADR-079](../../adr/079-r4-nas-acoes-de-consulta.md), AGE-RN-25): o Profissional só confirma, conclui, cancela, marca falta e remarca consulta de paciente vinculado (`403` sem vínculo, `404` de outra empresa) e só agenda no próprio `professionalId` (`403` com o de outro). Mesma regra na Server Action e na rota; a tentativa negada não grava nem audita | `src/lib/server/appointment-authorization.ts` |
+| ACE-RN-69 | **R4 na emissão de documento** (#636, [ADR-089](../../adr/089-r4-na-emissao-de-documento.md)): o Profissional só emite atestado, consentimento, plano de cuidados, relatório e recibo de paciente vinculado (`403` sem vínculo) e só o próprio repasse (`403` o de outro); recurso inexistente ou de outra empresa é `404` **para todos os papéis**, sem gravar evento (#674). Admin e Atendente com recurso válido sem mudança; o vínculo é só do Profissional. Mesma regra na ação e na rota; a tentativa negada não grava | `src/lib/server/document-authorization.ts`, `tests/lib/server/document-authorization.test.ts` |
 
 ### Papéis
 

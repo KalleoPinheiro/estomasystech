@@ -1,5 +1,19 @@
 # estomasystech
 
+## 0.5.0
+
+### Minor Changes
+
+- 539984c: Emissão de documento exige o vínculo do Profissional com o recurso. Profissional sem vínculo recebe 403 ao emitir atestado, consentimento, plano de cuidados, relatório, recibo ou repasse de paciente que não é dele (e só emite o próprio repasse); recurso inexistente ou de outra empresa responde 404. Admin e Atendente seguem como antes. A página do recibo passa a dizer «Fatura não encontrada».
+
+### Patch Changes
+
+- 8f0b0ea: Cadastro e edição de profissionais e parceiros feitos pela API passam a registrar o evento de auditoria na mesma operação da gravação, como já acontecia nas telas: se a trilha falhar, nada é gravado.
+- 57853a7: Emitir um documento (atestado, termo de consentimento, plano de cuidados, relatório, recibo ou comprovante de repasse) para um item que não existe, ou que é de outra clínica, agora responde «não encontrado» para todos os perfis, inclusive administrador e atendente, e não gera número nem registro de emissão.
+- d91f9d8: Google Agenda: quando a integração não está configurada, o botão «Conectar Google Agenda» fica desabilitado com a mensagem «Integração com Google Agenda não está configurada no momento.», e quem abrir o link direto volta para Configurações com o aviso, em vez de ver um JSON de erro.
+- efc714d: Endereço que não existe agora mostra uma página "Página não encontrada" no padrão do sistema, com link para voltar ao início, em vez da tela padrão do navegador de rotas, que gerava erro de segurança no console.
+- 1b97561: Portal: passa a medir o desempenho de campo (LCP, INP, CLS, TTFB e FCP) das telas de paciente, responsável e parceiro, sem identificar ninguém. Nada muda na tela.
+
 ## 0.4.0
 
 ### Minor Changes
