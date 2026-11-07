@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "npm@11.21.1",
   "engines": {
+    "node": ">=24.11",
     "npm": "11.21.1"
   },
   "scripts": {
@@ -98,5 +99,13 @@
     "tsx": "^4.23.4",
     "typescript": "^5",
     "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "esbuild": true
+  },
+  "overrides": {
+    "@vitest/mocker": {
+      "msw": "$msw"
+    }
   }
 }
