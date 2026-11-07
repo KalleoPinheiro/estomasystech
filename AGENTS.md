@@ -36,6 +36,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run test:e2e` | fluxos de UI (loop local) | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados; o E2E **não roda no Actions** |
 | `npm run check:sv` | toca JSX | adoção de `@still-void/ui` |
 | `npm run check:docs` | toca `.md` | links e frontmatter |
+| `npx tsx scripts/check-dynamic-import.ts` | escreve `import()` | reprova `import()` com template literal (`${}`); roda no `ci.yml` e no `gate-cloud.sh` |
 | `npm run ambiente:local` / `ambiente:local:down` | validar à mão com Postgres 18 + app + massa fictícia | exige daemon Docker; recusa banco de produção ([ADR-044](docs/adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md)) |
 | `npm run test:integracao` | mudou persistência, migração ou concorrência | suíte contra Postgres real, não PGlite; fora do `gate:local` |
 | `npm run db:migrate` | schema mudou | drizzle-kit |
@@ -81,11 +82,18 @@ Todo agente, antes de criar branch, confere estas decisões (o orquestrador as r
 - **Base sempre a release aberta**, nunca a `main`: `git fetch origin && git switch -c <tipo>/<slug> origin/release/vX.Y.Z`. Ache a release com `git ls-remote --heads origin 'release/*'` (uma por vez).
 - **Nome**: `feat/<slug>` para funcionalidade, `fix/<slug>` para correção, `docs/<slug>` para só documentação. `main` só recebe `release/*` e `hotfix/*`, por merge commit.
 - **PR em squash com base `release/vX.Y.Z`**, com `## Homologação` no corpo (`Seed:` e cenários Dado/Quando/Então, ou `n/a — <motivo>`). Sem recibo do gate local nesse PR.
+- **PR para `release/**` nasce em rascunho** e é marcado pronto uma vez (ADR-093). Quem marca pronto é o coordenador, depois de confirmar a cota do Actions. Em rascunho, os checks "Gate do PR" e `ci` ficam vermelhos de propósito: o pipeline pesado só roda quando o PR deixa de ser rascunho. Não marque o PR como pronto para fazer o CI passar.
 - **Changeset**: PR que toca `src/`, `drizzle/` ou `Dockerfile` leva `npm run changeset`; se nada muda para a clínica, `--empty`. PR só de documentação não precisa de changeset.
 - **Handoff** da issue em `.specs/archive/handoff-2026.md`, na mesma PR.
 - **Validação antes do PR**: `npm run test:changed -- origin/release/vX.Y.Z`, `typecheck`, `lint`, `check:docs` (se tocou `.md`). Gate completo (`gate:local`) só no PR `release/*` → `main`.
 
 Se a release aberta não estiver clara ou a branch já nasceu da `main`, pergunte ao orquestrador antes de seguir. Detalhe: [`docs/engineering/homologacao.md`](docs/engineering/homologacao.md) § 1.
+
+## Imports dinâmicos
+
+`import()` só com caminho literal ou mapa estático `as const` (ex.: `{ '/payouts': () => import('@/app/api/payouts/route') }`); **nunca**
+com template literal (`${}`): o Vite esconde os avisos reais. Vale em `src/`, `tests/`, `e2e/` e `scripts/`;
+`scripts/check-dynamic-import.ts` reprova o resto. Detalhe: [`conventions.md`](docs/engineering/conventions.md) § Imports dinâmicos.
 
 ## Mapa de contexto
 

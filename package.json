@@ -1,7 +1,11 @@
 {
   "name": "estomasystech",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
+  "packageManager": "npm@11.21.1",
+  "engines": {
+    "npm": "11.21.1"
+  },
   "scripts": {
     "prepare": "husky",
     "dev": "next dev",
@@ -36,6 +40,7 @@
     "check:sv": "bash scripts/check-sv-adoption.sh",
     "check:docs": "tsx scripts/check-docs.ts",
     "check:server-first": "tsx scripts/check-server-first.ts",
+    "check:dynamic-import": "tsx scripts/check-dynamic-import.ts",
     "check:testes": "tsx scripts/gate/check-test-integrity.ts",
     "gate:local": "tsx scripts/gate/local.ts",
     "changeset": "changeset",
@@ -43,6 +48,7 @@
     "release:sync": "bash scripts/release/sync-main.sh",
     "release:prepare": "tsx scripts/release/prepare.ts",
     "release:cut": "tsx scripts/release/cut.ts",
+    "release:preflight": "tsx scripts/release/preflight.ts",
     "release:publish": "tsx scripts/release/publish.ts"
   },
   "lint-staged": {

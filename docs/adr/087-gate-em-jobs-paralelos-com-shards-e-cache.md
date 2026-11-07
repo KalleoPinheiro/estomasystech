@@ -3,12 +3,13 @@ title: "ADR 087 — Gate em jobs paralelos: shards, E2E dev em paralelo, cache e
 status: frozen
 audience: [dev, agent, po]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-01
+last_reviewed: 2026-11-03
 related:
   - docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md
   - docs/adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md
   - docs/adr/084-gate-na-nuvem-incremental-por-pr-e-completo-por-release.md
   - docs/engineering/gate-na-nuvem.md
+  - docs/adr/093-gate-do-pr-so-quando-pronto-timeouts-e-orcamento.md
 ---
 
 # ADR 087 — Gate em jobs paralelos: shards, E2E dev em paralelo, cache e mutação incremental
@@ -142,3 +143,15 @@ mutação. A regra é a mesma do [ADR-053](053-pr-so-de-documentacao-dispensa-re
   restantes (integridade dos testes e homologação) duram segundos; nada a mudar.
 - Não afrouxa nenhum limiar nem teste (regra 8): PR com um único arquivo fora da regra volta ao gate
   completo, e lista de arquivos vazia nunca é «só documentação».
+
+## Errata (2026-11-03, quando o gate roda — ADR-093)
+
+O gatilho e o custo mudam no [ADR-093](093-gate-do-pr-so-quando-pronto-timeouts-e-orcamento.md). O que
+este ADR decidiu sobre shards, cache e limiares permanece. O que deixa de valer:
+
+- `gate-pr.yml` e `ci.yml` disparam também em `ready_for_review`. PR em rascunho não roda integração,
+  E2E, estático nem cobertura. O agregador "Gate do PR" e o job `ci` reprovam de propósito.
+- A mutação incremental saiu do `gate-pr.yml`. A rodada completa fica em `mutacao-mensal.yml`
+  (schedule ou `workflow_dispatch`).
+- Todo job de `ci.yml`, `gate-pr.yml`, `recibo-gate.yml` e `mutacao-mensal.yml` tem `timeout-minutes`.
+  Política, agregador sem checkout, escopo, impacto e recibo usam `ubuntu-slim`.

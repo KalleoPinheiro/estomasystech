@@ -1,10 +1,12 @@
 name: Staging
 
 # Homologação (ADR-041, fluxo de git do ADR-052). O deploy é a integração Git da Vercel (push na
-# `staging`); este workflow mantém as branches e confere a URL publicada. A cada push na `main`
-# (hotfix ou release mergeada): (1) a `main` é mergeada na release aberta e (2) a `staging` é
-# reconstruída = release aberta (ou = main, se não houver). Sem cota de Actions, o mesmo fluxo
-# roda local: `npm run release:sync`, `npm run staging:rebuild -- --release --push` e `curl` na URL.
+# `staging`); este workflow mantém a `staging` e confere a URL publicada. A cada push na `main` (hotfix ou
+# release mergeada) a `staging` é reconstruída = release aberta (ou = main, se não houver). ADR-088: o job que
+# empurrava a `main` na release foi removido, porque o ruleset `release/**` (PR obrigatório) recusa o push do
+# GITHUB_TOKEN (GH013) e o job falhava em todo push; o merge da `main` na release é de quem tem bypass
+# (`npm run release:sync`), e o `release:cut` já exige a `main` dentro da release. Sem cota de Actions, o mesmo
+# fluxo roda local: `npm run staging:rebuild -- --release --push` e `curl` na URL.
 on:
   push:
     branches: [main]
@@ -29,9 +31,8 @@ permissions:
   contents: read
 
 jobs:
-  # Conflito aborta e falha o job (o GitHub avisa por e-mail); a release segue como estava.
-  sync-release:
-    name: Mergear a main na release aberta
+  rebuild:
+    name: Recriar staging (release aberta ou main, mais branches extras)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
@@ -43,31 +44,8 @@ jobs:
 
       - name: Configurar autor
         run: |
-          git config user.name "estomasystech-staging"
-          git config user.email "staging@users.noreply.github.com"
-
-      - name: Merge da main na release (nunca rebase)
-        run: bash scripts/release/sync-main.sh --push
-
-  rebuild:
-    name: Recriar staging (release aberta ou main, mais branches extras)
-    needs: sync-release
-    # Reconstrói mesmo se o merge da main na release deu conflito: a staging reflete a release como está.
-    if: >-
-      always() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-
-      - name: Configurar autor
-        run: |
-          git config user.name "estomasystech-staging"
-          git config user.email "staging@users.noreply.github.com"
+          git config user.name "KalleoPinheiro"
+          git config user.email "15080925+KalleoPinheiro@users.noreply.github.com"
 
       - name: Reconstruir e publicar
         env:
@@ -88,11 +66,26 @@ jobs:
       startsWith(github.event.deployment_status.environment, 'Production')
     runs-on: ubuntu-24.04
     steps:
+      # A Vercel do projeto tem SSO em todos os deploys que não são de domínio próprio (ssoProtection =
+      # all_except_custom_domains, conferido em 2026-11-01): sem credencial o `curl` recebe 302 para o login e o
+      # smoke nunca via o health (ADR-088). Com o segredo VERCEL_AUTOMATION_BYPASS_SECRET (Settings > Deployment
+      # Protection > Protection Bypass for Automation) o header de bypass faz o 200 aparecer e o smoke vale como
+      # sempre. Sem o segredo, só um redirecionamento ao login da Vercel é aceito, com aviso de que o health NÃO
+      # foi verificado; qualquer outra resposta que não 200 reprova.
       - name: Health pronto
         env:
           TARGET_URL: ${{ github.event.deployment_status.environment_url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "${TARGET_URL}/api/health/ready")
+          headers=()
+          if [ -n "$BYPASS" ]; then headers=(-H "x-vercel-protection-bypass: ${BYPASS}"); fi
+          out=$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' --retry 5 --retry-delay 5 --retry-all-errors "${headers[@]}" "${TARGET_URL}/api/health/ready")
+          code="${out%% *}"
           echo "GET /api/health/ready -> ${code}"
-          test "${code}" = "200"
+          if [ "${code}" = "200" ]; then exit 0; fi
+          if [ -z "$BYPASS" ] && [ "${code}" = "302" ] && [[ "${out#* }" == https://vercel.com/* ]]; then
+            echo "::warning title=Health não verificado::Deploy protegido por SSO da Vercel; crie o segredo VERCEL_AUTOMATION_BYPASS_SECRET para o smoke ver o health."
+            exit 0
+          fi
+          exit 1

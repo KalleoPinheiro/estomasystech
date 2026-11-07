@@ -25,7 +25,8 @@ jobs:
   recibo-gate:
     if: github.event_name == 'pull_request'
     name: Recibo do gate local + integridade dos testes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

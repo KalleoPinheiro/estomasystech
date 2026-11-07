@@ -10,7 +10,8 @@ import {
 } from '@/lib/web-vitals';
 import type { WebVitalsPayload } from '@/lib/web-vitals-schema';
 
-const ENDPOINT = '/api/me/web-vitals';
+/** Rota da equipe; o portal passa a própria (`/api/portal/web-vitals`, #643). */
+export const STAFF_WEB_VITALS_ENDPOINT = '/api/me/web-vitals';
 
 type Metric = WebVitalsPayload['metrics'][number];
 
@@ -21,7 +22,9 @@ const isVitalName = (name: string): name is WebVitalName =>
 const buffer = new Map<WebVitalName, Metric>();
 
 /** Manda o que foi medido numa só requisição e esvazia o buffer (uma chamada `/api` por visita, não cinco). */
-export function flushWebVitals(): void {
+export function flushWebVitals(
+  endpoint: string = STAFF_WEB_VITALS_ENDPOINT,
+): void {
   if (buffer.size === 0) return;
   const payload: WebVitalsPayload = {
     route: normalizeRoute(window.location.pathname),
@@ -33,11 +36,11 @@ export function flushWebVitals(): void {
   const sent =
     typeof navigator.sendBeacon === 'function' &&
     navigator.sendBeacon(
-      ENDPOINT,
+      endpoint,
       new Blob([body], { type: 'application/json' }),
     );
   if (!sent) {
-    void fetch(ENDPOINT, {
+    void fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
@@ -63,19 +66,26 @@ function collect(metric: { name: string; value: number; rating?: string }) {
  * Web Vitals de campo (#559): coleta LCP, INP, CLS, TTFB e FCP e envia quando a
  * aba é escondida ou fechada. Só entra nas áreas com sessão (equipe, portal,
  * plataforma): a rota exige login e, sem ele, a requisição só poluiria o console.
+ * `endpoint` é a rota da área: equipe e plataforma usam o padrão; o portal passa
+ * `/api/portal/web-vitals`, cuja guarda aceita os papéis dele.
  */
-export function WebVitalsReporter() {
+export function WebVitalsReporter({
+  endpoint = STAFF_WEB_VITALS_ENDPOINT,
+}: {
+  endpoint?: string;
+}) {
   useReportWebVitals(collect);
   useEffect(() => {
+    const flush = () => flushWebVitals(endpoint);
     const onHidden = () => {
-      if (document.visibilityState === 'hidden') flushWebVitals();
+      if (document.visibilityState === 'hidden') flush();
     };
     document.addEventListener('visibilitychange', onHidden);
-    window.addEventListener('pagehide', flushWebVitals);
+    window.addEventListener('pagehide', flush);
     return () => {
       document.removeEventListener('visibilitychange', onHidden);
-      window.removeEventListener('pagehide', flushWebVitals);
+      window.removeEventListener('pagehide', flush);
     };
-  }, []);
+  }, [endpoint]);
   return null;
 }

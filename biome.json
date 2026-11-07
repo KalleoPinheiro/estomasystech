@@ -8,7 +8,9 @@
       "!**/out",
       "!**/build",
       "!**/coverage",
-      "!.claude/worktrees"
+      "!.claude/worktrees",
+      "!.claude/skills",
+      "!.cursor/skills"
     ]
   },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },

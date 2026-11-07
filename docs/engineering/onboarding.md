@@ -144,6 +144,11 @@ npm run dev                   # http://localhost:3000
 | `STAGING_DISABLE_MFA` | não | `true` dispensa o segundo fator no login | só com `APP_ENV=staging`; em qualquer outro ambiente o app recusa subir ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)) |
 | `PRODUCTION_DB_HOSTS` | homologação | hosts de banco de produção, separados por vírgula | `DATABASE_URL` com esse host é recusada fora de `production` |
 | `STAGING_SEED_PASSWORD` | `npm run seed:staging` | senha (≥ 10 caracteres) das contas fictícias | [homologacao.md](homologacao.md) § 4 |
+| `BASE_URL` | validação logada | ambiente que o `validacao-logada.mjs` percorre (padrão `http://localhost:3000`) | [homologacao.md](homologacao.md) § 7 |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | validação logada, smoke da staging | segredo que atravessa o SSO da Vercel (cabeçalho `x-vercel-protection-bypass`) | [homologacao.md](homologacao.md) § 7 |
+| `PAUSE_MS` | validação logada | pausa entre telas, em ms (a staging limita `/api/*` a 120/min por IP) | [homologacao.md](homologacao.md) § 7 |
+| `OUT_DIR` | validação logada | pasta das capturas e do `resultados.json` | [homologacao.md](homologacao.md) § 7 |
+| `CHROME` | validação logada | caminho do Chromium, quando o Playwright não achar o dele | [homologacao.md](homologacao.md) § 7 |
 | `NEXT_PUBLIC_APP_VERSION` | não | versão exibida às clínicas; o `next.config.ts` a embute no build a partir do `package.json` | [ADR-043](../adr/043-versionamento-com-changesets-e-release-por-tag.md) |
 | `NEXT_PUBLIC_RELEASE_VERSION` | não | versão da release em andamento (`package.json` + changesets pendentes); o `next.config.ts` a calcula no build e ela vale antes de `NEXT_PUBLIC_APP_VERSION` | [ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md) |
 | `NEXT_PUBLIC_APP_COMMIT` | não | SHA curto exibido junto da versão; só em homologação e preview | vem de `VERCEL_GIT_COMMIT_SHA` |
@@ -153,6 +158,11 @@ npm run dev                   # http://localhost:3000
 | `GATE_BASE` | não | base do diff de `gate:local`, `check:testes` e `check:changeset` (padrão: a release aberta de que a branch saiu; `release/*`, `hotfix/*` e `main` usam `origin/main`) | [ADR-058](../adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md) |
 | `GATE_PERFIL` | não | perfil do `gate:local`: `pr` (padrão fora de `release/*`) ou `release` (sem mutação, Docker e backup obrigatórios); o `release:cut` passa `release` | [ADR-071](../adr/071-corte-de-release-em-comando-unico.md) |
 | `GATE_POSTGRES_PORT` | não | força a porta do Postgres do compose no gate; padrão: a primeira livre a partir de 55432 (o `POSTGRES_PORT` do shell é ignorado) | [ADR-071](../adr/071-corte-de-release-em-comando-unico.md) |
+| `GH_TOKEN` | não | token do `gh` no `release:cut`, no `release:preflight` e no `release-cut.yml` (PAT do dono, `RELEASE_CUT_TOKEN`); no WSL o `gh` logado dispensa | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
+| `GH_REPO` | não | repositório `dono/nome` do `release:preflight` (cai em `GITHUB_REPOSITORY`) | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
+| `GITHUB_REPOSITORY` | não | definida pelo Actions; lida pelo selo do corte e pela prova do corte | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
+| `SELO_TOKEN` | não | `GITHUB_TOKEN` do Actions, passado só pelo `release-cut.yml`: grava o check run `release-cut/gate`; sem ele (corte local) nenhum selo é gravado | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
+| `RELEASE_CUT_ETAPAS_EXTRAS` | não | etapas a mais no selo do corte, separadas por vírgula (o workflow passa `integracao`, que roda antes do `release:prepare`) | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
 | `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |

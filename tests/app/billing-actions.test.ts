@@ -3,6 +3,12 @@ import { getRepositories } from '@/infrastructure/container';
 import { SESSION_COOKIE } from '@/lib/auth/session';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import { payoutPaidAt } from '@/lib/server/payout-input';
+import {
+  type CollectionPath,
+  collectionRoute,
+  type ItemPath,
+  itemRoute,
+} from '../support/api-routes';
 import { buildPatient, buildProcedure } from '../support/builders';
 import {
   CLINIC_A_ID,
@@ -441,13 +447,13 @@ describe('Feature: ações do Faturamento (#547)', () => {
 describe('Feature: ações dos Repasses (#547)', () => {
   const PERIOD = '2020-03';
 
-  const post = async <T>(path: string, body: unknown): Promise<T> => {
-    const route = await import(`@/app/api${path}/route`);
+  const post = async <T>(path: CollectionPath, body: unknown): Promise<T> => {
+    const route = await collectionRoute(path);
     const response = await route.POST(jsonRequest(`/api${path}`, 'POST', body));
     return ((await response.json()) as { data: T }).data;
   };
-  const patch = async (path: string, id: string, body: unknown) => {
-    const route = await import(`@/app/api${path}/[id]/route`);
+  const patch = async (path: ItemPath, id: string, body: unknown) => {
+    const route = await itemRoute(path);
     await route.PATCH(jsonRequest(`/api${path}/${id}`, 'PATCH', body), {
       params: Promise.resolve({ id }),
     });

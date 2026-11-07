@@ -4,6 +4,7 @@ import type { Session } from '@/lib/auth/session';
 import { clinicScope } from '@/lib/auth/tenant-scope';
 import { issueDocumentFor } from '@/lib/server/document-issuance';
 import { CLINIC_A_ID, ensureTestClinics } from '../support/clinics';
+import { seedDocumentResource } from '../support/document-resources';
 
 process.env.ESTOMASYSTECH_DB_DRIVER ??= 'pglite';
 
@@ -19,7 +20,7 @@ beforeEach(async () => {
 
 describe('Feature: emissão concorrente de documento (#546, ADR-082, Postgres real)', () => {
   it('Dadas 12 emissões simultâneas do mesmo documento em conexões diferentes, Quando todas terminam, Então há um único evento de emissão e um único número', async () => {
-    const resourceId = `concorrente-${Date.now()}`;
+    const resourceId = await seedDocumentResource('atestado', CLINIC_A_ID);
 
     const results = await Promise.all(
       Array.from({ length: 12 }, () =>
