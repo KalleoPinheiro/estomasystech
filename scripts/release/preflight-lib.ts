@@ -4,7 +4,7 @@
  * aqui para ser testada; `preflight.ts` só lê o ambiente.
  */
 import { conferirNpm } from './lockfile-lib';
-import { versionFromReleaseBranch } from './lib';
+import { checkVersionForBranch, versionFromReleaseBranch } from './lib';
 
 export interface PreflightEnv {
   /** `GH_TOKEN` do corte (PAT do dono). */
@@ -48,4 +48,20 @@ export function pendenciasDoPreflight(e: PreflightEnv): Falhas {
   const npm = e.npm ? conferirNpm(e.npm.pkg, e.npm.atual) : null;
   if (npm !== null) falhas.push(npm);
   return falhas;
+}
+
+/**
+ * Resultado da simulação do `changeset version` (EST-23): sem changesets pendentes o `release:prepare` não
+ * tem o que publicar; com eles, a versão calculada tem de ser a prometida pelo nome da release (ADR-052).
+ * `null` = tudo certo.
+ */
+export function pendenciaDeVersao(
+  branch: string,
+  atual: string,
+  simulada: { pendentes: number; calculada: string },
+): string | null {
+  if (simulada.pendentes === 0)
+    return 'não há changesets pendentes: o release:prepare não teria o que publicar (adicione um `.changeset/*.md` com o nível da release).';
+  const check = checkVersionForBranch(branch, atual, simulada.calculada);
+  return check.ok ? null : `changesets incompatíveis com ${branch} (simulação do changeset version): ${check.reason}`;
 }

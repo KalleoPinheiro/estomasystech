@@ -2370,6 +2370,11 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 ## Handoff — changeset minor para a v0.5.0 (corte)
 O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendentes eram patch/vazios e o cálculo dava v0.4.1. O changeset `emissao-documento-exige-vinculo-r4` (nova regra de acesso do Profissional) passa a minor, o que calcula v0.5.0. Só muda o nível; o texto fica igual. O pré-voo não detecta essa divergência (lacuna a tratar depois).
 
+## Pré-voo simula o changeset version e compara com a release (EST-23, #700) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `release:preflight` (e portanto o `dry_run` do Release cut) ganha o passo 3/4: `scripts/release/simular-versao.ts` roda `changeset version` num worktree desanexado do HEAD (descartado ao fim, árvore intacta) e `pendenciaDeVersao` (`preflight-lib.ts`) compara a versão calculada com `release/vX.Y.Z` (ou patch em `hotfix/*`) e reprova também se não houver changeset pendente. Fecha a lacuna do corte da v0.5.0, em que só o `prepare.ts` descobria o nível errado.
+- **Testes novos**: `tests/scripts/release-preflight-versao.test.ts` (regra pura e simulação em repositório temporário, minor/patch/vazio, sem sujar a árvore). Nenhum teste existente alterado.
+- **Ensaio**: simulação rodada no repositório real com um changeset patch temporário: 0.5.1 contra release/v0.6.0 reprovou com a mensagem esperada; árvore e `git worktree list` limpos.
+- **Next step**: PR em rascunho (ADR-093) para a release/v0.6.0; coordenador marca pronto.
 ## EST-24 / #699: qs, zod e vite consolidados (dependabot #693, #694, #695) (2026-11-07) — EM REVISÃO
 - **O que mudou**: `zod` 4.4.3→4.6.7 (`package.json` `^4.6.7`), `qs` 6.16.0→6.17.1 e `vite` 8.2.2→8.3.6 (transitivos, só no lockfile, com as dependências do próprio vite). Um PR só a partir da `release/v0.6.0`, no lugar dos três do dependabot contra a `main`.
 - **Cuidado com o zod (validação em runtime)**: suíte completa verde (699 arquivos, 8557 testes), typecheck e lint limpos. O 4.6 muda checagem de limites de array/set/map antes de validar elementos e tipos de `record`; nenhum teste quebrou.
