@@ -30,7 +30,7 @@ A v0.5.0 será o primeiro uso real. Lendo o código da release/v0.5.0 antes do c
 
 1. **Ponto de disparo ambíguo.** O `release-cut.yml` aceita `workflow_dispatch` de duas formas: escolhendo a
    `release/vX.Y.Z` em «Use workflow from» ou, a partir da `main`, informando o input `branch`. O cabeçalho do
-   workflow admite as duas, `homologacao.md` e a memória do projeto mandam a segunda. O runbook do corte não pode
+   workflow admite as duas, `homologacao.md` (§ «Cortar pelo Actions») manda a segunda. O runbook do corte não pode
    ter dois caminhos.
 2. **A validação da branch some em silêncio.** O job `cut` tem `if: startsWith(inputs.branch || github.ref_name,
    'release/v')`. Branch fora do padrão **pula o job**: o run termina sem erro e sem corte, e quem disparou
@@ -51,7 +51,7 @@ Para o ponto de disparo (o único ponto de produto; os demais são correções d
 
 | Opção | A favor | Contra |
 | --- | --- | --- |
-| A — Disparar da `main` com `branch=release/vX.Y.Z`, validando o input contra `release/v*` | A definição do workflow vem da `main` protegida (só entra por PR de release/hotfix, com bypass do dono); o runbook já diz isso | Um input a mais para digitar; erro de digitação precisa falhar alto (item 2) |
+| A — Disparar da `main` com `branch=release/vX.Y.Z`, validando o input contra `release/v*` | A definição do workflow vem da `main` protegida (só entra por PR de release/hotfix, com bypass do dono); `homologacao.md` já manda isso | Um input a mais para digitar; erro de digitação precisa falhar alto (item 2) |
 | B — Disparar da própria `release/vX.Y.Z` e exigir que a ref seja `release/v*` | Sem input; a ref é a branch | O workflow que roda com `RELEASE_CUT_TOKEN` (PAT com bypass) e `checks: write` é o da branch, que pode ter sido alterado por qualquer PR já mergeado nela; o selo prova o SHA, mas quem o grava é código não revisado como a `main` |
 | C — Aceitar as duas | Flexível | Dois caminhos no runbook e o furo da B continua aberto |
 
@@ -67,13 +67,17 @@ na release, muda o código que corta e sela a própria release. A opção A elim
 
 As demais correções, todas na mesma emenda:
 
-1. **Pré-voo valida a branch, e não o `if` do job.** O pré-voo (`release:preflight`) falha, com `::error`, quando
-   a branch de corte não casa com `release/v*` ou quando a ref do workflow não é a `main`. O `if` do job sai:
-   branch errada passa a ser vermelho, não «skipped». O `dry_run` cobre este caso.
+1. **Validação da branch em falha alta, antes de qualquer checkout.** O input `branch` passa a ser obrigatório e
+   perde o fallback para `github.ref_name`. O primeiro step do job `cut`, antes do `checkout` e do `npm ci`, é um
+   step próprio (`shell: bash`, sem dependência) que falha com `::error` quando `github.ref` não é `refs/heads/main`
+   ou quando `inputs.branch` está vazio ou não casa com o padrão. O `release:preflight` repete a checagem do padrão
+   (defesa em profundidade, e cobre o corte local). O `if` do job sai: branch errada vira vermelho, não «skipped».
+   O `dry_run` roda da `main` como o corte real, então exercita o mesmo caminho.
 2. **Job `server-first-provado` vira `fora-do-selo`** e roda `check:server-first` **e** `check:dynamic-import`,
    os dois checks que nem o selo nem o `gate:local` cobrem. O `ci` continua exigindo que ele passe quando o PR é
    provado. Um teste de estrutura sobre `ci.yml` reprova se algum step do `estatico` não estiver coberto pelo selo
-   (lista de etapas do ADR-088) nem rodar no `fora-do-selo`.
+   (lista de etapas do ADR-088) nem rodar no `fora-do-selo`. Ficam fora da regra, por lista explícita no teste, os
+   steps que o próprio `ci.yml` pula em `release/*` (hoje o «Changeset», que não se aplica ao PR release→main).
 3. **Selo recusado vira `::warning`** com o motivo, e vai ao step summary do job `escopo`. Continua falha fechada:
    roda tudo.
 4. **Consulta dos check runs** paginada (`gh api --paginate`) e conferindo o `app.id` numérico da app
