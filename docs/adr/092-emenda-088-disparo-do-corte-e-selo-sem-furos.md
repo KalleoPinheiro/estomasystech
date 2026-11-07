@@ -107,12 +107,13 @@ testes), **depois** deste ADR aceito e **antes** do corte da v0.5.0.
 **O que esta decisão fecha:** cortar a partir de uma branch de release. Voltar a isso exige novo ADR que prove o
 workflow da branch com a mesma proteção da `main`.
 
-## Divergência com o código atual
+## Implementação
 
-Até a implementação, o repositório diverge do decidido, e este PR **não altera o workflow**: o `release-cut.yml`
-ainda aceita as duas formas de disparo e valida o padrão por `if` de job (item 1 da Decisão); `ci.yml` ainda tem
-`server-first-provado` sem `check:dynamic-import`; `prova-corte.ts` ainda não pagina nem confere `app.id`. Enquanto
-isso, quem corta segue `homologacao.md` (da `main`, com o input).
+Entrou no PR de código seguinte ao deste ADR (EST-13): `release-cut.yml` com o input `branch` obrigatório, sem
+fallback e sem `if` de job, e o step «Validar o disparo» como primeiro do job; `ci.yml` com o job `fora-do-selo`;
+`prova-corte.ts` paginando e conferindo `app.id` (15368, lido de um check run real da API do repositório);
+`release:preflight` repetindo a checagem no Actions; testes em `tests/infrastructure/ci-fora-do-selo.test.ts` e
+`tests/scripts/release-prova-corte-adr092.test.ts`. O `dry_run` real roda uma vez, depois do merge na release.
 
 ## Relacionado
 

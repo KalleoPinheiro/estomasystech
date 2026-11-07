@@ -22,7 +22,7 @@ const selo = (over: Partial<CheckRunLite> = {}): CheckRunLite => ({
   name: SELO_NOME,
   conclusion: 'success',
   head_sha: HEAD,
-  app: { slug: 'github-actions' },
+  app: { id: 15368, slug: 'github-actions' },
   output: { summary: `${SELO_NOME} sha=${HEAD} etapas=${ETAPAS}` },
   ...over,
 });

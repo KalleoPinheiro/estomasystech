@@ -25,6 +25,10 @@ const falhas = pendenciasDoPreflight({
   rollbackOk:
     parseRollback(process.argv.find((a) => a.startsWith('--rollback='))?.slice('--rollback='.length)) !== null,
   emCi: process.env.CI === 'true',
+  disparo:
+    process.env.CI === 'true'
+      ? { workflowRef: process.env.GITHUB_REF ?? '', branch: process.env.RELEASE_BRANCH ?? '' }
+      : undefined,
   npm: { pkg: JSON.parse(readFileSync('package.json', 'utf8')), atual: sh('npm', ['--version']).out },
 });
 if (falhas.length > 0) fail(falhas.join('\n✗ '));
