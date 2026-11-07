@@ -2362,3 +2362,9 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 
 ## Handoff — changeset minor para a v0.5.0 (corte)
 O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendentes eram patch/vazios e o cálculo dava v0.4.1. O changeset `emissao-documento-exige-vinculo-r4` (nova regra de acesso do Profissional) passa a minor, o que calcula v0.5.0. Só muda o nível; o texto fica igual. O pré-voo não detecta essa divergência (lacuna a tratar depois).
+
+## Pré-voo simula o changeset version e compara com a release (EST-23, #700) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `release:preflight` (e portanto o `dry_run` do Release cut) ganha o passo 3/4: `scripts/release/simular-versao.ts` roda `changeset version` num worktree desanexado do HEAD (descartado ao fim, árvore intacta) e `pendenciaDeVersao` (`preflight-lib.ts`) compara a versão calculada com `release/vX.Y.Z` (ou patch em `hotfix/*`) e reprova também se não houver changeset pendente. Fecha a lacuna do corte da v0.5.0, em que só o `prepare.ts` descobria o nível errado.
+- **Testes novos**: `tests/scripts/release-preflight-versao.test.ts` (regra pura e simulação em repositório temporário, minor/patch/vazio, sem sujar a árvore). Nenhum teste existente alterado.
+- **Ensaio**: simulação rodada no repositório real com um changeset patch temporário: 0.5.1 contra release/v0.6.0 reprovou com a mensagem esperada; árvore e `git worktree list` limpos.
+- **Next step**: PR em rascunho (ADR-093) para a release/v0.6.0; coordenador marca pronto.
