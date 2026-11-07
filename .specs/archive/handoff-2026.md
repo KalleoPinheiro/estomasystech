@@ -2412,3 +2412,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: estágio `deps` do `Dockerfile` instala `npm@<packageManager>` (lido do `package.json`) antes do `npm ci`, zerando o EBADENGINE do build do Coolify sem afrouxar `engines.npm`. Emenda no ADR-091 e linha nova em `troubleshooting.md`.
 - **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.
 - **Next step**: coordenador marca pronto; conferir o log do próximo deploy do Coolify sem EBADENGINE. **Blockers**: nenhum.
+
+## Comentário do job fora-do-selo após a #698 (#705) (2026-11-07) — EM REVISÃO
+- **O que mudou**: só o comentário de `.github/workflows/ci.yml` acima do job `fora-do-selo`. O texto dizia que nem o `gate:local` roda `check:server-first` e `check:dynamic-import`; desde a #698 ele os roda. A conclusão do #705: o job **continua necessário**, porque o selo só exige as etapas de `ETAPAS_CI` (`typecheck, lint, sv, docs, cobertura, build, integracao`), sem as duas travas; um selo sem elas ainda é aceito e dispensaria o `estatico`. Job e `tests/infrastructure/ci-fora-do-selo.test.ts` ficam como estão.
+- **Opção futura (não feita)**: incluir `server-first` e `dynamic-import` em `ETAPAS_CI` (recibo e selo já carregam essas etapas) e então remover o job e o teste. Pede `TESTE-ALTERADO` e ADR; decisão do coordenador.
+- **Testes**: nenhum alterado ou novo. **Next step**: coordenador marca pronto. **Blockers**: nenhum.
