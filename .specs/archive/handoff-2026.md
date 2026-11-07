@@ -2392,3 +2392,9 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 ## Fixar engines.node em >=24.11 <25 (2026-11-07) — EM REVISÃO
 - **O que mudou**: `engines.node` de `>=24.11` para `>=24.11 <25` em `package.json` e no lockfile. O deploy da staging (c915db50) buildou em Node 26.13 porque a Vercel ignora o Node 24.x do projeto quando o `engines` aceita major maior; CI e Dockerfile usam Node 24. `troubleshooting.md` registra o motivo e o EBADENGINE atual (npm 11.20.0 da Vercel x 11.21.1 do `packageManager`, aceito).
 - **Testes**: nenhum alterado. **Next step**: coordenador marca pronto; reconstruir a staging e confirmar Node 24 no log. **Blockers**: nenhum.
+
+## Sair com sessão vencida e foco no 2FA (#718 / EST-35, #719 / EST-36) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `/api/auth/logout` entra em `PUBLIC_PATHS`: o proxy deixa o POST passar sem sessão e o handler (já idempotente) responde 200 e expira o cookie. `LogoutButton` redireciona para `/login` sempre, inclusive em 401 ou erro de rede. `MfaCodeStep` foca o campo do código ao entrar na etapa e ao alternar para o código de recuperação.
+- **Testes novos**: `tests/components/mfa-code-step.test.tsx`; casos novos em `tests/proxy.test.ts`, `tests/api/auth-routes.test.ts`, `tests/components/logout-button.test.tsx`; E2E `e2e/sair-sessao-expirada-foco-2fa.spec.ts` (foco em 360, 390, 768, 1280 e Sair com cookie vencido). Nenhum teste existente alterado.
+- **Next step**: coordenador marca pronto e abre a revisão. **Blockers**: nenhum.
+

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { SESSION_COOKIE } from '@/lib/auth/session';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
 import { buildUserAccount } from '../support/builders';
 import {
@@ -597,6 +598,25 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
 
       expect(response.status).toBe(200);
       expect(body.data.ok).toBe(true);
+    });
+  });
+
+  describe('POST /api/auth/logout com sessão vencida (#718)', () => {
+    it('Dado cookie de sessão vencido, Quando POST logout, Então responde 200 e expira o cookie', async () => {
+      resetAuthEnv();
+      process.env.AUTH_SECRET = 'test-secret-logout-vencida';
+
+      const response = await logoutRoute.POST(
+        jsonRequest('/api/auth/logout', 'POST', undefined, {
+          'x-forwarded-for': '10.0.0.73',
+          cookie: `${SESSION_COOKIE}=token-vencido`,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('set-cookie')).toContain(
+        `${SESSION_COOKIE}=;`,
+      );
     });
   });
 

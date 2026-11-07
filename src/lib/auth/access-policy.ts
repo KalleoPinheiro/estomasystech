@@ -37,6 +37,10 @@ export const PUBLIC_PATHS = [
   // sessão; as rotas exigem o token pendente assinado que o login entrega.
   '/api/auth/mfa/enroll',
   '/api/auth/mfa/verify',
+  // Sair com a sessão vencida (#718): sem este passe o proxy barrava o POST com
+  // 401 e o cookie vencido ficava. O handler é idempotente, lê a sessão por
+  // conta própria (só para revogar/auditar) e sempre limpa o cookie.
+  '/api/auth/logout',
   // Bootstrap do primeiro Super Admin: por definição não há sessão nem conta.
   // A própria rota exige o segredo `ESTOMASYSTECH_BOOTSTRAP_TOKEN` e só funciona
   // enquanto a instalação está vazia.
