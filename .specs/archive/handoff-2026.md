@@ -2362,3 +2362,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 
 ## Handoff — changeset minor para a v0.5.0 (corte)
 O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendentes eram patch/vazios e o cálculo dava v0.4.1. O changeset `emissao-documento-exige-vinculo-r4` (nova regra de acesso do Profissional) passa a minor, o que calcula v0.5.0. Só muda o nível; o texto fica igual. O pré-voo não detecta essa divergência (lacuna a tratar depois).
+
+## EST-24 / #699: qs, zod e vite consolidados (dependabot #693, #694, #695) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `zod` 4.4.3→4.6.7 (`package.json` `^4.6.7`), `qs` 6.16.0→6.17.1 e `vite` 8.2.2→8.3.6 (transitivos, só no lockfile, com as dependências do próprio vite). Um PR só a partir da `release/v0.6.0`, no lugar dos três do dependabot contra a `main`.
+- **Cuidado com o zod (validação em runtime)**: suíte completa verde (699 arquivos, 8557 testes), typecheck e lint limpos. O 4.6 muda checagem de limites de array/set/map antes de validar elementos e tipos de `record`; nenhum teste quebrou.
+- **Testes**: nenhum alterado. **Next step**: coordenador marca pronto; fechar #693, #694, #695 com o link. **Blockers**: nenhum; mesmo `package.json`/lockfile do #704, o segundo a entrar resolve conflito de lockfile com `npm install --package-lock-only`.
