@@ -1,7 +1,8 @@
 /**
  * `npm run release:preflight -- --rollback=redeploy|backup [--workflow-ref=<ref> --branch=<release>]` — pré-voo do corte (ADR-088), em ~1 min e sem
  * escrever nada: mesmas pré-condições do `release:cut` (branch, árvore limpa, igual ao origin, `main` dentro,
- * marca `homologacao/vX.Y.Z`, TESTE-ALTERADO consolidado, integridade dos testes) mais ambiente (segredo,
+ * marca `homologacao/vX.Y.Z`, TESTE-ALTERADO consolidado, integridade dos testes, versão que os changesets
+ * calculam numa cópia descartável contra o nome da release) mais ambiente (segredo,
  * identidade git, rollback) e permissão de push. O `release-cut.yml` roda isto antes do gate e, com
  * `dry_run`, para aqui.
  */
@@ -9,7 +10,8 @@ import { readFileSync } from 'node:fs';
 import { consolidatedTesteAlterado } from './cut-lib';
 import { assertApproved, assertBranch, batchPrs, checkIntegrity, fail, step } from './cut-pre';
 import { parseRollback, sh } from './lib';
-import { pendenciasDoPreflight } from './preflight-lib';
+import { pendenciaDeVersao, pendenciasDoPreflight } from './preflight-lib';
+import { simularVersaoDosChangesets } from './simular-versao';
 
 /** `--workflow-ref=` e `--branch=` (passados pelo workflow); sem nenhum dos dois é corte local (ADR-092). */
 function disparoDosArgumentos(): { workflowRef: string; branch: string } | undefined {
@@ -26,7 +28,7 @@ function gitConfig(key: string, envName: string): string {
   return (process.env[envName] ?? '') || sh('git', ['config', '--get', key]).out;
 }
 
-step('Pré-voo 1/3 Ambiente');
+step('Pré-voo 1/4 Ambiente');
 const repo = process.env.GH_REPO ?? process.env.GITHUB_REPOSITORY ?? '';
 const falhas = pendenciasDoPreflight({
   token: process.env.GH_TOKEN ?? '',
@@ -41,12 +43,20 @@ const falhas = pendenciasDoPreflight({
 });
 if (falhas.length > 0) fail(falhas.join('\n✗ '));
 
-step('Pré-voo 2/3 Pré-condições do corte');
+step('Pré-voo 2/4 Pré-condições do corte');
 const { branch, version } = assertBranch();
 assertApproved(version);
 checkIntegrity(consolidatedTesteAlterado(batchPrs()));
 
-step('Pré-voo 3/3 Permissão de escrita');
+step('Pré-voo 3/4 Versão dos changesets (simulação em cópia descartável)');
+const erroVersao = pendenciaDeVersao(
+  branch,
+  (JSON.parse(readFileSync('package.json', 'utf8')) as { version: string }).version,
+  simularVersaoDosChangesets(),
+);
+if (erroVersao !== null) fail(erroVersao);
+
+step('Pré-voo 4/4 Permissão de escrita');
 const permissao = sh('gh', ['api', `repos/${repo}`, '--jq', '.permissions.push']);
 if (!permissao.ok || permissao.out !== 'true')
   fail(`o token não tem permissão de push em ${repo} (${permissao.out.split('\n')[0] || 'sem resposta'}).`);

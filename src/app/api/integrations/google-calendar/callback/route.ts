@@ -5,6 +5,7 @@ import {
   decodeCalendarOAuthState,
   type GoogleCalendarOAuthConfig,
   googleCalendarOAuthConfigFromEnv,
+  publicBaseUrl,
 } from '@/lib/auth/google-calendar-oauth';
 import { createOAuthClient } from '@/lib/auth/google-oauth-client';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -15,10 +16,6 @@ import {
 } from '@/lib/auth/session';
 import { sessionScope } from '@/lib/auth/tenant-scope';
 import { logError } from '@/lib/log-error';
-
-/** Base pública p/ redirects: a URL interna do container não é acessível ao navegador. */
-const publicBaseUrl = (request: NextRequest): string =>
-  process.env.APP_URL ?? request.url;
 
 /** Códigos de falha do fluxo OAuth (issue #124) — a página lê `reason` de uma allowlist própria, nunca texto bruto. */
 type CalendarConnectReason =
@@ -32,7 +29,7 @@ function redirectWithReason(
   request: NextRequest,
   reason: CalendarConnectReason,
 ): NextResponse {
-  const url = new URL('/configuracoes', publicBaseUrl(request));
+  const url = new URL('/configuracoes', publicBaseUrl(request.url));
   url.searchParams.set('calendar', 'erro');
   url.searchParams.set('reason', reason);
   return NextResponse.redirect(url);
@@ -136,7 +133,7 @@ export async function GET(request: NextRequest) {
         ? NextResponse.redirect(
             new URL(
               '/configuracoes?calendar=conectado',
-              publicBaseUrl(request),
+              publicBaseUrl(request.url),
             ),
           )
         : redirectWithReason(request, result),
