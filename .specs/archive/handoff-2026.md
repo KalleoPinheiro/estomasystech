@@ -2354,3 +2354,8 @@ QA da staging v0.2.0. **#467**: `POST /api/accounts` gravava a conta e só depoi
 - **O que mudou**: só `.github/workflows/release-cut.yml`, copiado de `release/v0.5.0` (4114408) sem alteração. A `main` ainda tinha o da v0.4.0, sem o input `dry_run`, sem o serviço Postgres, sem `checks: write` e sem a validação do disparo; como a definição do `workflow_dispatch` vem da `main`, o dry_run e o corte da v0.5.0 não podiam rodar. Nenhum arquivo de `src/`, `drizzle/` ou `Dockerfile`; sem changeset.
 - **Testes**: nenhum teste alterado. Os testes de estrutura do workflow (`tests/infrastructure/ci-fora-do-selo.test.ts`) já estão na release.
 - **Next step**: merge na `main` pelo Kalléo (bypass), depois `release:sync` na release (o conteúdo é idêntico, sem conflito), dry_run único da `main` com `branch=release/v0.5.0` e, passando, o corte real. **Blockers**: nenhum.
+
+## Pré-voo do corte: push de teste sem o hook pre-push (ADR-092) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `scripts/release/preflight.ts` passa `--no-verify` no `git push --dry-run` que só prova a permissão de escrita. Sem isso o dry_run do Release cut (run 42374776287) falhou na passagem 3/3: o husky instalado pelo `npm ci` rodava o `check:testes` no dry-run, sem o `.gate/motivo-teste.txt` que só o `release:cut` real grava. A integridade dos testes continua checada na passagem 2/3.
+- **Testes novos**: `tests/scripts/release-preflight-push.test.ts` (hook que reprova barra o push sem `--no-verify` e não o barra com; guarda da fonte). Nenhum teste existente alterado; sem changeset (só `scripts/`).
+- **Next step**: PR em rascunho (ADR-093), coordenador marca pronto; depois `release:sync`, nova marca `homologacao/v0.5.0` e um dry_run. **Blockers**: nenhum.
