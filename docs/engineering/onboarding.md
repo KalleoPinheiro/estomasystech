@@ -186,6 +186,14 @@ npm run dev                   # http://localhost:3000
 | `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 | `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |
 | `ESTOMASYSTECH_DB_DRIVER` / `ESTOMASYSTECH_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
+| `ANTHROPIC_API_KEY` | não | segredo do repositório que o job `Veredito do the-judge` usa para julgar a PR (só no Actions; nunca em `.env`) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `JUDGE_MODEL` | não | modelo do the-judge de Actions (variável do repositório; padrão `claude-sonnet-5-5`) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `VEREDITO_JUDGE_DESDE` | não | data ISO a partir da qual o check de veredito vale na PR release→main (variável do repositório) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `PR_SHA` | não | head da PR, injetado pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `PR_AUTOR` | não | autor da PR, injetado pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `PR_TITULO` | não | título da PR, injetado como dado não confiável pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `GITHUB_OUTPUT` | não | arquivo de saídas de step do Actions, onde `julgar-pr` grava `protegido` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `GITHUB_RUN_ATTEMPT` | não | tentativa da execução, parte da identidade do revisor `actions/<run_id>/<tentativa>` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 
 ## 5. Testes
 
