@@ -60,6 +60,25 @@ jobs:
           git config user.name "KalleoPinheiro"
           git config user.email "15080925+KalleoPinheiro@users.noreply.github.com"
 
+      - name: Validar os inputs da homologação
+        env:
+          RELEASE_BRANCH: ${{ inputs.release_branch }}
+          HOMOLOGAR: ${{ inputs.homologar }}
+          BRANCHES: ${{ inputs.branches }}
+        run: |
+          if [ -n "$RELEASE_BRANCH" ] && ! [[ "$RELEASE_BRANCH" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=release_branch inválida::esperado release/vX.Y.Z, veio '${RELEASE_BRANCH}'"
+            exit 1
+          fi
+          if [ "$HOMOLOGAR" = "true" ] && [ -z "$RELEASE_BRANCH" ]; then
+            echo "::error title=homologar sem release::informe release_branch"
+            exit 1
+          fi
+          if [ "$HOMOLOGAR" = "true" ] && [ -n "$BRANCHES" ]; then
+            echo "::error title=homologar com branches extras::a marca atesta a árvore da release; deixe branches vazio"
+            exit 1
+          fi
+
       - name: Reconstruir e publicar
         env:
           BRANCHES: ${{ inputs.branches }}
@@ -91,7 +110,9 @@ jobs:
   homologar:
     name: Homologar a release (deploy, validação logada e marca)
     needs: rebuild
-    if: github.event_name == 'workflow_dispatch' && inputs.homologar && inputs.release_branch != ''
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.homologar && inputs.release_branch != '' &&
+      (github.ref == 'refs/heads/main' || github.ref_name == inputs.release_branch)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -119,6 +140,17 @@ jobs:
           [ -n "$CUT" ] || missing="$missing RELEASE_CUT_TOKEN"
           if [ -n "$missing" ]; then
             echo "::error title=Segredo ausente::Crie em Settings > Secrets and variables > Actions:${missing}"
+            exit 1
+          fi
+
+      - name: A staging publicada tem a árvore da release
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin "${RELEASE_SHA}" "${STAGING_SHA}"
+          a=$(git rev-parse "${STAGING_SHA}^{tree}")
+          b=$(git rev-parse "${RELEASE_SHA}^{tree}")
+          if [ "$a" != "$b" ]; then
+            echo "::error title=Árvore diferente::a staging (${STAGING_SHA:0:7}) não tem a árvore da release (${RELEASE_SHA:0:7}); não há marca para ela."
             exit 1
           fi
 
@@ -190,6 +222,7 @@ jobs:
             echo "::error title=A release andou::${RELEASE_BRANCH} está em ${now:0:7}, mas a validação foi do ${RELEASE_SHA:0:7}; rode de novo."
             exit 1
           fi
+          [ "$(git rev-parse "${STAGING_SHA}^{tree}")" = "$(git rev-parse "${RELEASE_SHA}^{tree}")" ] || { echo "::error::árvore da staging difere da release"; exit 1; }
           git push --force "https://x-access-token:${CUT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${RELEASE_SHA}:refs/heads/homologacao/${version}"
           echo "homologacao/${version} -> ${RELEASE_SHA}" >> "$GITHUB_STEP_SUMMARY"
 

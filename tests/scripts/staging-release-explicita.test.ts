@@ -150,3 +150,76 @@ describe('Feature: o job homologar só grava a marca depois da validação verde
       expect(homologar.slice(0, pos('Esperar o deploy'))).toContain(s);
   });
 });
+
+describe('Feature: a marca só vale para a árvore da release (ADR-099)', () => {
+  const yml = readFileSync(join(root, '.github/workflows/staging.yml'), 'utf8');
+
+  it('Dado homologar, Então o workflow valida release_branch por regex e recusa branches extras', () => {
+    expect(yml).toContain('^release/v[0-9]+\\.[0-9]+\\.[0-9]+$');
+    expect(yml).toContain('homologar com branches extras');
+    expect(yml).toContain('homologar sem release');
+  });
+
+  it('Dado homologar, Então compara a árvore da staging com a da release antes de esperar o deploy e de gravar a marca', () => {
+    const arvore = yml.indexOf('A staging publicada tem a árvore da release');
+    expect(arvore).toBeGreaterThan(-1);
+    expect(arvore).toBeLessThan(yml.indexOf('Esperar o deploy de Production'));
+    expect(yml.slice(yml.indexOf('Gravar a marca de homologação'))).toContain(
+      '^{tree}',
+    );
+  });
+});
+
+describe('Feature: a validação logada falha quando não percorre nada (ADR-099)', () => {
+  const ok = {
+    role: 'admin',
+    status: 200,
+    overflow: 0,
+    final: '/',
+    route: '/',
+    problems: [],
+    apiFail: [],
+  };
+
+  it('Dado zero páginas, Quando avalia, Então há erro', async () => {
+    const { avaliar } = await import(
+      '../../scripts/staging/validacao-logada-lib.mjs'
+    );
+    expect(avaliar([], ['admin']).erros).toContain(
+      'nenhuma página foi percorrida',
+    );
+  });
+
+  it('Dado um papel sem rotas, Quando avalia, Então nomeia o papel', async () => {
+    const { avaliar } = await import(
+      '../../scripts/staging/validacao-logada-lib.mjs'
+    );
+    const { erros } = avaliar([ok], ['admin', 'atendente']);
+    expect(erros).toEqual(['o papel atendente não percorreu nenhuma rota']);
+  });
+
+  it('Dado páginas limpas de todos os papéis, Então não há erro nem achado', async () => {
+    const { avaliar } = await import(
+      '../../scripts/staging/validacao-logada-lib.mjs'
+    );
+    const r = avaliar(
+      [ok, { ...ok, role: 'atendente' }],
+      ['admin', 'atendente'],
+    );
+    expect(r).toEqual({ bad: [], erros: [] });
+  });
+
+  it('Dado console com erro, redirecionamento, 4xx ou rolagem, Então vira achado', async () => {
+    const { avaliar } = await import(
+      '../../scripts/staging/validacao-logada-lib.mjs'
+    );
+    const ruins = [
+      { ...ok, problems: ['[console.error] x'] },
+      { ...ok, apiFail: ['GET /api/x 500'] },
+      { ...ok, overflow: 3 },
+      { ...ok, status: 404 },
+      { ...ok, final: '/login' },
+    ];
+    expect(avaliar(ruins, ['admin']).bad).toHaveLength(5);
+  });
+});
