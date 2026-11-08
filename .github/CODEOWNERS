@@ -1,0 +1,13 @@
+# Quem escreve o portão não o abre sozinho (ADR-097, regra 8 do AGENTS.md).
+# O arquivo só barra de verdade com o ruleset exigindo "Require review from Code Owners"
+# (passo do dono no painel do GitHub). Manter alinhado com `CAMINHOS_SENSIVEIS` em
+# scripts/release/classificar-risco-lib.ts.
+/.github/CODEOWNERS      @KalleoPinheiro
+/.github/workflows/      @KalleoPinheiro
+/scripts/gate/           @KalleoPinheiro
+/scripts/gate-cloud/     @KalleoPinheiro
+/scripts/gate-cloud.sh   @KalleoPinheiro
+/scripts/release/        @KalleoPinheiro
+/.husky/                 @KalleoPinheiro
+/.claude/hooks/          @KalleoPinheiro
+/.claude/settings.json   @KalleoPinheiro

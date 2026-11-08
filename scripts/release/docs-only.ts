@@ -1,7 +1,7 @@
 /**
  * `tsx scripts/release/docs-only.ts --base origin/main --head <sha>` — imprime `docs_only=true|false`
  * (formato de `$GITHUB_OUTPUT`) conforme o diff da base contra o head toque só `.md` de documentação
- * (ADR-053). O `recibo-gate.yml` dispensa o recibo do gate local quando o resultado é `true`.
+ * (ADR-053). O `gate-pr.yml` pula integração, E2E e mutação quando o resultado é `true`.
  */
 import { must, isDocsOnly } from './lib';
 

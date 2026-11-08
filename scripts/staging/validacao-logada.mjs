@@ -3,6 +3,7 @@
 // Fora do Actions (ADR-042). Uso e variáveis: docs/engineering/homologacao.md § 7.
 import fs from "node:fs";
 import { chromium } from "playwright";
+import { avaliar } from "./validacao-logada-lib.mjs";
 
 const BASE = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const OUT = process.env.OUT_DIR ?? "qa-validacao-logada";
@@ -119,9 +120,8 @@ for (const [role, email] of Object.entries(ROLES)) {
 }
 await browser.close();
 fs.writeFileSync(`${OUT}/resultados.json`, JSON.stringify(results, null, 1));
-const bad = results.filter(
-  (r) => r.problems.length || r.apiFail.length || r.overflow > 0 || (r.status && r.status >= 400) || r.final !== r.route,
-);
+const { bad, erros } = avaliar(results, Object.keys(ROLES));
 console.log(`total ${results.length} páginas, ${bad.length} com achado`);
+for (const e of erros) console.log(`ERRO: ${e}`);
 for (const b of bad) console.log(JSON.stringify(b));
-process.exit(bad.length ? 1 : 0);
+process.exit(bad.length || erros.length ? 1 : 0);

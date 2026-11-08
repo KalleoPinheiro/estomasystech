@@ -193,7 +193,7 @@ npm run dev                   # http://localhost:3000
 npm test                 # domínio, aplicação, integração Postgres via PGlite, API
 npm run test:changed     # só o afetado pelo diff (loop local; não substitui o próximo)
 npm run test:coverage    # gate de CI: 100% nas camadas de regra, piso 90% global (ADR-050; limiar em vitest.config.mts)
-npm run gate:local       # E2E + todos os gates, com recibo para o PR (ADR-042)
+npm run gate:local       # E2E + todos os gates, opcional no loop; o PR não leva recibo (ADR-098)
 npm run test:mutacao      # mutantes (Stryker) em src/domain e src/application; ~1h20, só local (ADR-047); um arquivo: npm run test:mutacao -- --mutate src/domain/shared/phone.ts
 npm run test:e2e         # build + Playwright contra `next start` e contra `next dev` (ADR-021); na 1ª vez ou após bump: npx playwright install
 npm run test:e2e:prod    # só a suíte principal, contra o build (precisa de `npm run build` antes)
@@ -206,8 +206,8 @@ reaproveitar um `npm run dev` já no ar: `E2E_AUTH_SECRET`/`E2E_BOOTSTRAP_TOKEN`
 `AUTH_SECRET`/`ESTOMASYSTECH_BOOTSTRAP_TOKEN` (servidor) precisam ter os mesmos valores.
 Estilo e níveis de teste: [conventions.md](conventions.md#testes).
 
-**Artefato de produção (#203):** o Actions roda só o gate rápido; o E2E e o resto do artefato rodam em
-`npm run gate:local` ([ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)), que executa
+**Artefato de produção (#203):** o Actions roda o gate rápido, a integração, o E2E e a mutação do PR
+([ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)); localmente, `npm run gate:local` executa
 
 ```bash
 npm run build && npx playwright test -c playwright.prod.config.ts   # E2E contra `next start`
@@ -229,8 +229,9 @@ backup faz o ciclo backup → apagar tudo → restore do [runbook](producao.md) 
 
 ## 6. Gates locais
 
-No loop de desenvolvimento: `npm run test:changed`. **Antes de marcar o PR como pronto**, uma vez, com a
-árvore limpa (tudo commitado):
+No loop de desenvolvimento: `npm run test:changed`. O PR não leva recibo: o E2E e a mutação rodam no Actions
+([ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)). Para ver o mesmo resultado antes de empurrar, rode,
+com a árvore limpa (tudo commitado):
 
 ```bash
 npm run gate:local
@@ -238,8 +239,7 @@ npm run gate:local
 
 Ele roda typecheck, lint, `check:sv`, `check:docs`, integridade dos testes, `test:coverage`, build, E2E de
 produção, E2E em `next dev`, a mutação nos arquivos de regra alterados (só se o diff toca domain/application) e, se houver daemon Docker, o smoke da imagem e do backup. No fim imprime a linha
-`E2E-GATE: <sha> pass ...`: cole-a no corpo do PR. O CI (`recibo-gate.yml`) reprova recibo ausente, de outro
-commit (qualquer push novo invalida) ou sem as etapas obrigatórias. Se o gate falhar, **corrija o código, nunca o
+`E2E-GATE: <sha> pass ...` (o `release:cut` a usa para o selo; não cole no PR). Se o gate falhar, **corrija o código, nunca o
 teste** (regra 8 do `AGENTS.md`); só mude teste existente quando o requisito de negócio mudou, com
 `TESTE-ALTERADO: <motivo>` no PR e o mesmo texto em `.gate/motivo-teste.txt` (local, fora do git; o `pre-push` e o `gate:local` leem). Sem Docker (ex.: thread na nuvem), as etapas `docker` e `backup` ficam
 registradas como puladas e o `docker.yml` cobre quando o que elas validam muda.

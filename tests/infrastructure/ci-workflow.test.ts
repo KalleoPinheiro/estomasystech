@@ -102,8 +102,8 @@ describe('E2E: next dev só para o que depende dele (#308)', () => {
   });
 });
 
-describe('E2E fora do Actions (ADR-042)', () => {
-  it('C47 o Actions não roda Playwright: quem confere o E2E é o recibo do gate local', () => {
+describe('E2E no Actions, sem recibo do gate local (ADR-098)', () => {
+  it('C47 o ci.yml não roda Playwright: o E2E é do gate-pr.yml e não há mais recibo no PR', () => {
     for (const file of [
       '.github/workflows/ci.yml',
       '.github/workflows/docker.yml',
@@ -111,8 +111,9 @@ describe('E2E fora do Actions (ADR-042)', () => {
     ]) {
       expect(read(file), file).not.toMatch(/playwright/i);
     }
-    expect(read('.github/workflows/recibo-gate.yml')).toContain(
-      'scripts/gate/verify-receipt.ts',
+    expect(read('.github/workflows/gate-pr.yml')).toMatch(/playwright test/);
+    expect(read('.github/workflows/recibo-gate.yml')).not.toContain(
+      'verify-receipt',
     );
   });
 

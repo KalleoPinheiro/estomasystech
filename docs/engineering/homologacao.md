@@ -18,6 +18,10 @@ Ambiente público e descartável para ver o lote (release aberta) **antes de ent
 Decidido no [ADR-052](../adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md): a `main` só
 recebe lote já homologado.
 
+> **Fluxo em transição ([ADR-097](../adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):**
+> este fluxo (release longa, marca `homologacao/vX.Y.Z`, PR em rascunho) segue em vigor e será simplificado em
+> fases. Nada muda aqui até cada fase ser implementada e este texto, atualizado.
+
 ```
 main  ───────────●─────────────────────────●(merge commit)──▶ só releases e hotfixes; tag vX.Y.Z aqui
                   \                       ↗
@@ -32,18 +36,19 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | --- | --- |
 | Abrir a release | `git switch -c release/vX.Y.Z origin/main && git push -u origin release/vX.Y.Z`; o nome promete a versão |
 | Toda feature nasce da release aberta | `git fetch origin && git switch -c feat/x origin/release/vX.Y.Z` |
-| O PR da feature vai contra a **release**, em squash | Nasce em **rascunho** e é marcado pronto uma vez (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de propósito. Sem recibo do gate. Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
-| Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação do `gate:local` já comparam com a release aberta de que a branch saiu (ADR-058; `GATE_BASE` força outra base) |
+| O PR da feature vai contra a **release**, em squash | Nasce em **rascunho** e é marcado pronto uma vez (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de propósito. Sem recibo do gate: o E2E e a mutação rodam no Actions ([ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)). Corpo traz `## Homologação`: `Seed:` e cenários Dado/Quando/Então (ou `n/a — <motivo>`); o CI reprova sem eles |
+| Antes de abrir o PR da feature | `npm run test:changed -- origin/release/vX.Y.Z`; `check:testes`, `check:changeset` e a mutação (`test:mutacao`) já comparam com a release aberta de que a branch saiu (ADR-058; `GATE_BASE` força outra base) |
 | Só a `staging` vira deploy | a Vercel **não** constrói prévia de `feat/*`, `release/*` nem de branch de agente (`git.deploymentEnabled` no `vercel.json`, [ADR-061](../adr/061-vercel-constroi-so-a-staging.md)); para ver uma feature, reconstrua a staging |
 | `main` mudou (hotfix) | `npm run release:sync` **mergeia** a `main` na release aberta (nunca rebase); conflito aborta e avisa: resolva na release |
 | Testar o lote na staging | `npm run staging:rebuild -- --release --push` (staging = release aberta; branches extras opcionais no fim da linha). O script já passa `--deploy` e empurra sempre para `origin HEAD:staging`; veja a nota abaixo |
 | `staging` é reconstruída, não consertada | conflito ou migração colidente: reconstrua; nunca resolva em `staging` |
 | Staging aprovada | quem validou cria ou move a marca `homologacao/vX.Y.Z` para o SHA aprovado (`git push --force origin <sha>:refs/heads/homologacao/vX.Y.Z`) ([ADR-071](../adr/071-corte-de-release-em-comando-unico.md)) |
-| Cortar a release | `npm run release:cut -- --rollback=redeploy\|backup` **na release**, no WSL: confere a marca e o TESTE-ALTERADO do lote, roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo (sem mutação; Docker e backup obrigatórios) e abre o PR `release → main` com o recibo. Nada entra na release depois disso; se o gate falhar por ambiente, rode o mesmo comando de novo (não versiona outra vez) |
+| Homologar pelo Actions | workflow **Staging** (`workflow_dispatch`), ref = `release/vX.Y.Z`, inputs `release_branch=release/vX.Y.Z` e `homologar` marcado: reconstrói a staging, espera o deploy, roda a validação logada (§ 7) e, só verde, grava `homologacao/vX.Y.Z` ([ADR-099](../adr/099-homologacao-sem-operador-pelo-actions.md)). Segredos: `STAGING_SEED_PASSWORD`, `VERCEL_AUTOMATION_BYPASS_SECRET`, `RELEASE_CUT_TOKEN`. Com mais de uma release aberta, `staging:rebuild -- --release=release/vX.Y.Z` escolhe a base |
+| Cortar a release | `npm run release:cut -- --rollback=redeploy\|backup` **na release**, no WSL: confere a marca e o TESTE-ALTERADO do lote, roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo (sem mutação; Docker e backup obrigatórios) e abre o PR `release → main`; o E2E e a mutação do PR rodam no Actions, sem recibo colado. Nada entra na release depois disso; se o gate falhar por ambiente, rode o mesmo comando de novo (não versiona outra vez) |
 | Cortar pelo Actions | workflow **Release cut**, disparado da `main` (único caminho) com o input obrigatório `branch=release/vX.Y.Z`; outra ref ou branch fora do padrão falha logo no primeiro step ([ADR-092](../adr/092-emenda-088-disparo-do-corte-e-selo-sem-furos.md)). Rode antes com `dry_run` marcado: só o pré-voo (`npm run release:preflight`: token, identidade git, rollback, pré-condições, versão que os changesets calculam numa cópia descartável contra o nome da release e permissão), em ~1 min e sem escrever nada. O corte real roda a integração Postgres completa antes do `release:prepare` e grava o selo `release-cut/gate` no SHA final ([ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md)). O workflow instala o npm de `packageManager` e o `release:prepare` (e o pré-voo) recusa npm diferente e lockfile que perca dependências opcionais; no WSL rode `npm i -g npm@<versão>` antes ([ADR-091](../adr/091-npm-fixado-e-lockfile-protegido-no-corte.md)) |
 | Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase). Com o selo no head e a mesma árvore, o `ci` e o Docker do PR (e do push na `main` depois do merge) passam sem repetir a prova pesada; sem selo ou com árvore diferente, rodam inteiros |
 | Depois do merge | `npm run release:publish -- --rollback=...` (tag no commit de merge, Release publicada); deploy da tag em `producao.md` § 3.1. A `staging` volta a ser = `main`. Automação desse trecho aceita, a partir da v0.8.0: [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md) |
-| Hotfix | `hotfix/*` nasce da `main`, PR direto na `main` (recibo), `release:prepare`/`release:publish --hotfix`; o `release:sync` leva a correção para a release aberta |
+| Hotfix | `hotfix/*` nasce da `main`, PR direto na `main` (o Gate do PR roda o E2E), `release:prepare`/`release:publish --hotfix`; o `release:sync` leva a correção para a release aberta |
 
 Numeração de migração colidente entre features da release: quem mergeia primeiro mantém o número; a
 outra renumera antes do merge. Reconstruir a `staging` expõe a colisão cedo.
