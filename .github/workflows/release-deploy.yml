@@ -1,0 +1,173 @@
+name: Release deploy
+
+# Fim da release no Actions (ADR-095, tickets 3 e 4): publica a tag e a GitHub Release e roda a fumaça de
+# produção somente leitura. Só `workflow_dispatch`, disparado da `main` ("Use workflow from" = main, ADR-092),
+# porque a definição do workflow (que usa o PAT da tag) tem de vir da `main` protegida.
+# Este workflow NÃO mergeia, NÃO faz push em branch e NÃO faz deploy: o job `producao` (backup + deploy,
+# Environment `producao`) entra na #752 (v0.8.0). Até lá o deploy da tag segue manual (producao.md § 3.1).
+#
+# - `publicar`: confere que o HEAD da `main` é o merge commit da `release/vX.Y.Z` e que `package.json` traz a
+#   versão, e roda o `release:publish` (tag anotada no commit de merge + Release publicada). Idempotente: tag
+#   já no remoto sai sem erro. É o ÚNICO job que usa o RELEASE_CUT_TOKEN (PAT fine-grained, só este repo): a
+#   trava dele é a verificação, não um humano (ADR-095, decisão do dono 4). O GITHUB_TOKEN fica só em leitura.
+# - `fumaca`: `scripts/release/fumaca-producao.sh` contra o domínio público. Só confere a versão publicada
+#   (`/api/health/version`) com `versao_implantada` marcado, depois do deploy manual.
+# - `dry_run`: faz todas as conferências e para antes de criar tag ou Release; a fumaça roda sem conferir versão.
+#
+# Segredo nunca entra em `run:`: vai por `env:`. Nada de `set -x`. Sem `pull_request_target`.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versão a publicar (X.Y.Z), a mesma do package.json da main"
+        type: string
+        required: true
+      rollback:
+        description: "Estratégia de rollback registrada na release (ADR-039)"
+        type: choice
+        options: [redeploy, backup]
+        default: redeploy
+      dry_run:
+        description: "Só conferências: sem tag, sem Release; a fumaça não confere a versão"
+        type: boolean
+        default: false
+      versao_implantada:
+        description: "Marque depois do deploy manual: a fumaça confere que a produção serve esta versão"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publicar:
+    name: Publicar a tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ inputs.version }}
+      ROLLBACK: ${{ inputs.rollback }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      GIT_AUTHOR_NAME: github-actions[bot]
+      GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+      GIT_COMMITTER_NAME: github-actions[bot]
+      GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+    steps:
+      # ADR-092: primeiro passo, antes do checkout e do npm ci. Disparo errado é vermelho, nunca job pulado.
+      - name: Validar o disparo (main + versão)
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+        run: |
+          if [ "$WORKFLOW_REF" != refs/heads/main ]; then
+            echo "::error title=Disparo fora da main::A publicação é disparada da main (ref atual: $WORKFLOW_REF). Em Use workflow from escolha main (ADR-092)."
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Versão inválida::O input version deve ser X.Y.Z (recebido: '$VERSION')."
+            exit 1
+          fi
+
+      - name: Exigir RELEASE_CUT_TOKEN
+        shell: bash
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error title=RELEASE_CUT_TOKEN ausente::Crie o segredo RELEASE_CUT_TOKEN (PAT fine-grained do dono, só este repo, Contents e Pull requests em read/write) em Settings > Secrets and variables > Actions e dispare de novo."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_CUT_TOKEN }}
+
+      # A trava do job: a tag só aponta para um commit que já está na `main` e é o merge da release.
+      - name: Conferir que a main é o merge da release
+        shell: bash
+        env:
+          DISPARO_SHA: ${{ github.sha }}
+        run: |
+          head="$(git rev-parse HEAD)"
+          if [ "$head" != "$DISPARO_SHA" ]; then
+            echo "::error title=A main avançou::A main mudou depois do disparo ($DISPARO_SHA -> $head). Dispare de novo."
+            exit 1
+          fi
+          parents="$(git rev-list --parents -n 1 HEAD | wc -w)"
+          if [ "$parents" -lt 3 ]; then
+            echo "::error title=HEAD sem merge commit::O HEAD da main não é um merge commit; a release deve entrar por merge commit (ADR-052)."
+            exit 1
+          fi
+          if ! git log -1 --format=%B HEAD | grep -Fq "release/v$VERSION"; then
+            echo "::error title=HEAD não é o merge da release::O merge commit da main não cita release/v$VERSION."
+            exit 1
+          fi
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$pkg" != "$VERSION" ]; then
+            echo "::error title=Versão divergente::package.json da main traz $pkg, não $VERSION."
+            exit 1
+          fi
+          if ! grep -Eq "^## \[?$VERSION\]?( |$)" CHANGELOG.md; then
+            echo "::error title=CHANGELOG sem a versão::CHANGELOG.md não tem a seção $VERSION."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null 2>&1; then
+            echo "A tag v$VERSION já está no remoto: o publicar é idempotente e segue sem criar nada."
+          fi
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: inputs.dry_run != true
+        with:
+          node-version: "24"
+          cache: npm
+
+      # npm fixo (ADR-091): o do `packageManager` do package.json.
+      - name: Fixar o npm do package.json
+        if: inputs.dry_run != true
+        run: npm i -g "npm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
+
+      - name: Instalar dependências
+        if: inputs.dry_run != true
+        run: npm ci --no-audit --no-fund
+
+      - name: Publicar tag e Release (release:publish)
+        if: inputs.dry_run != true
+        run: npm run release:publish -- --rollback="$ROLLBACK"
+
+      - name: Dry run
+        if: inputs.dry_run == true
+        run: |
+          echo "dry_run: conferências ok para v$VERSION; nenhuma tag e nenhuma Release foi criada."
+
+  fumaca:
+    name: Fumaça de produção
+    needs: publicar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      FUMACA_URL: ${{ vars.PRODUCAO_URL || 'https://estomasystech.kalleopinheiro.com.br' }}
+      CONFERIR_VERSAO: ${{ inputs.versao_implantada && !inputs.dry_run }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Fumaça somente leitura (producao.md § 9.6)
+        shell: bash
+        run: |
+          if [ "$CONFERIR_VERSAO" = true ]; then
+            export FUMACA_VERSAO="$VERSION"
+          fi
+          bash scripts/release/fumaca-producao.sh
