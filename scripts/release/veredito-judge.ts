@@ -1,5 +1,5 @@
 /**
- * `npm run check:veredito -- --autor <id> [--arquivo <texto|json>] [--comentarios <lista.json>] [--sha <sha>]`
+ * `npm run check:veredito -- --autor <id> [--arquivo <texto|json>] [--comentarios <lista.json>] [--sha <sha>] [--revisor-esperado <id>]`
  *
  * Check do veredito estruturado do the-judge (ADR-097). Lê o JSON `the-judge/v1` de um arquivo (o JSON puro ou
  * o texto de um comentário com bloco ```json the-judge```) ou da lista de comentários da PR (vale o último que
@@ -30,6 +30,6 @@ const veredito = comentarios
     ? extrairVeredito(readFileSync(arquivo, 'utf8'))
     : undefined;
 
-const avaliacao = avaliarVeredito(veredito, { sha, autor });
+const avaliacao = avaliarVeredito(veredito, { sha, autor, revisorEsperado: opcao('--revisor-esperado') });
 console.log(formatarAvaliacao(avaliacao));
 process.exit(avaliacao.aprovado ? 0 : 1);

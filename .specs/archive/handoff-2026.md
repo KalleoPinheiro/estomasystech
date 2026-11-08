@@ -2471,3 +2471,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
 - **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
 
+
+## Veredito do the-judge à prova de forja (#764) (2026-11-08) — EM REVISÃO
+- **O que mudou**: novo `.github/workflows/veredito-judge.yml` (`pull_request_target`, check `Veredito do the-judge`): o job gera o diff do head como dado, chama o modelo com `ANTHROPIC_API_KEY` (`scripts/release/julgar-pr.ts` + `julgar-pr-lib.ts`), **monta** o veredito (`sha`, `autor`, `revisor = actions/<run_id>/<tentativa>`) e o confere com `check:veredito --revisor-esperado`. Não lê comentário. Chave de introdução `vars.VEREDITO_JUDGE_ATIVO`. ADR-100 (o 099 já era da #765); `classe-de-risco.md` § 2 e `docs/README.md` atualizados.
+- **Prova do ruleset**: rulesets `main` e `release-branches` lidos pela API exigem os quatro checks com `integration_id` 15368 (ADR-100, seção final); `mergeable_state: blocked` na PR em rascunho.
+- **Testes**: novo `tests/scripts/release-julgar-pr.test.ts`. Nenhum teste existente alterado. `scripts/gate/` não foi tocado (sem regra 8).
+- **Fora do repositório (só o Kalléo)**: segredo `ANTHROPIC_API_KEY`; variável `VEREDITO_JUDGE_ATIVO=true`; exigir `Veredito do the-judge` nos dois rulesets; aprovar a classe 3 desta PR. Risco anotado: o dono tem bypass `always` nos rulesets.
+- **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: os três itens do dono para ativar.
