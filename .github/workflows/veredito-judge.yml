@@ -1,16 +1,18 @@
 name: Veredito do the-judge
 
-# O the-judge de Actions (ADR-100, fase 2c do ADR-097): o veredito é montado e conferido DENTRO do mesmo job,
-# com a credencial do repositório. Nenhuma sessão de agente tem como declarar um veredito: todas as PRs saem com o
-# login do dono, então comentário, autor e rótulo não provam nada e este workflow não lê comentário algum.
+# O the-judge de Actions (ADR-100, fase 2c do ADR-097): o veredito é montado e conferido DENTRO do job, com a
+# credencial do repositório. Todas as PRs dos agentes saem com o login do dono, então comentário, autor e rótulo não
+# provam nada e este workflow não lê comentário algum.
 #
-# `pull_request_target` roda a versão do workflow e dos scripts da BASE (a PR não consegue trocá-los); o código da
-# PR entra só como dado (checkout em `pr/`, nunca executado, sem `npm ci` dele). Alterar este arquivo é classe 3
-# (workflows): exige a aprovação do dono pelo Environment (portao-risco.yml).
+# `pull_request_target` roda a versão do workflow e dos scripts da BASE (a PR não consegue trocá-los); o código da PR
+# entra só como dado (checkout em `pr/`, nunca executado, sem `npm ci` dele). Alterar este arquivo é classe 3.
 #
-# Chave `VEREDITO_JUDGE_ATIVO`: variável do repositório (só o dono altera; a PR não alcança). Fora de `true`, o job
-# passa com aviso, só para a introdução do check; com `true` ele falha fechado (sem segredo, sem resposta, com
-# bloqueante, de outro SHA). `Veredito do the-judge` entra no ruleset (integration_id 15368) junto com a chave.
+# - PR de fork: reprova sem gastar a chave (o job com segredo só roda para branch do próprio repositório).
+# - Veredito fixo por SHA: o primeiro veredito de um SHA fica no cache e um re-run o reaproveita (sem novo sorteio).
+# - Diff que toca workflows, scripts/release, scripts/gate ou drizzle exige TAMBÉM a aprovação humana da classe 3.
+# - PR release→main não chama o modelo: confere que cada PR da release tem o check aprovado (`conferir-release`).
+# - Chave `VEREDITO_JUDGE_ATIVO` (variável do repositório; a PR não a altera): fora de `true` o check passa com aviso,
+#   só para a introdução. A chave sai na v0.8.0 (ADR-100); depois disso o job falha fechado sempre.
 on:
   pull_request_target:
     branches: ["release/**", main]
@@ -24,16 +26,20 @@ permissions:
   contents: read
 
 jobs:
-  veredito:
-    name: Veredito do the-judge
+  julgar:
+    name: Julgar a PR
+    # Fork e rascunho nem chegam a ver o segredo; o job `veredito` abaixo reprova os dois.
+    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    outputs:
+      protegido: ${{ steps.classe.outputs.protegido }}
     steps:
-      - name: Rascunho reprova (ADR-093)
-        if: github.event.pull_request.draft == true
-        run: echo "::error::PR em rascunho: o the-judge roda quando a PR for marcada como pronta (ADR-093)"; exit 1
-
-      - name: Chave de introdução desligada
+      - name: Chave de introdução
         id: chave
         env:
           ATIVO: ${{ vars.VEREDITO_JUDGE_ATIVO }}
@@ -56,8 +62,17 @@ jobs:
       - if: steps.chave.outputs.ativo == 'true'
         run: npm ci --ignore-scripts
 
+      # PR release→main: sem modelo; cada PR da release já foi julgada.
+      - name: Conferir os vereditos das PRs da release
+        if: steps.chave.outputs.ativo == 'true' && github.base_ref == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VEREDITO_JUDGE_DESDE: ${{ vars.VEREDITO_JUDGE_DESDE }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx tsx scripts/release/conferir-release.ts --base main --head "$HEAD_SHA"
+
       # Head da PR (não confiável): só para gerar o diff. Nada dele é executado.
-      - if: steps.chave.outputs.ativo == 'true'
+      - if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -65,25 +80,94 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Julgar e conferir
-        if: steps.chave.outputs.ativo == 'true'
+      - name: Diff da PR
+        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
+        env:
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE: origin/${{ github.base_ref }}
+        run: |
+          # Lockfile e handoff não entram no julgamento: engordam o diff sem risco de lógica.
+          git -C pr diff --no-ext-diff --no-textconv "$BASE...$PR_SHA" -- . ':(exclude)package-lock.json' ':(exclude).specs' > "$RUNNER_TEMP/pr.diff"
+          mkdir -p "$RUNNER_TEMP/veredito"
+
+      - name: Classe do diff (caminho protegido)
+        id: classe
+        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
+        run: npx tsx scripts/release/julgar-pr.ts --diff "$RUNNER_TEMP/pr.diff" --classificar
+
+      # Veredito fixo por SHA: o primeiro gravado vale; re-run não sorteia de novo (entrada de cache é imutável).
+      - name: Veredito já gravado para este SHA
+        id: cache
+        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/veredito
+          key: veredito-judge-${{ github.event.pull_request.head.sha }}
+
+      - name: Julgar
+        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main' && steps.cache.outputs.cache-hit != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           JUDGE_MODEL: ${{ vars.JUDGE_MODEL }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
           PR_AUTOR: ${{ github.event.pull_request.user.login }}
           PR_TITULO: ${{ github.event.pull_request.title }}
-          BASE: origin/${{ github.base_ref }}
         run: |
           [ -n "$ANTHROPIC_API_KEY" ] || { echo "::error::segredo ANTHROPIC_API_KEY ausente: sem o julgamento não há aprovação"; exit 1; }
-          git -C pr diff --no-ext-diff --no-textconv "$BASE...$PR_SHA" > "$RUNNER_TEMP/pr.diff"
-          npx tsx scripts/release/julgar-pr.ts --diff "$RUNNER_TEMP/pr.diff" --saida "$RUNNER_TEMP/veredito.json"
-          REVISOR="actions/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}"
-          {
-            echo "### Veredito do the-judge"
-            echo '```json'
-            cat "$RUNNER_TEMP/veredito.json"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          npx tsx scripts/release/veredito-judge.ts --autor "$PR_AUTOR" --sha "$PR_SHA" \
-            --arquivo "$RUNNER_TEMP/veredito.json" --revisor-esperado "$REVISOR"
+          npx tsx scripts/release/julgar-pr.ts --diff "$RUNNER_TEMP/pr.diff" --saida "$RUNNER_TEMP/veredito/veredito.json"
+
+      - name: Gravar o veredito deste SHA
+        if: always() && steps.chave.outputs.ativo == 'true' && github.base_ref != 'main' && steps.cache.outputs.cache-hit != 'true' && hashFiles(format('{0}/veredito/veredito.json', runner.temp)) != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/veredito
+          key: veredito-judge-${{ github.event.pull_request.head.sha }}
+
+      - name: Conferir o veredito
+        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
+        env:
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          ARQ="$RUNNER_TEMP/veredito/veredito.json"
+          [ -f "$ARQ" ] || { echo "::error::sem veredito gravado para este SHA"; exit 1; }
+          REVISOR=$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).revisor" "$ARQ")
+          case "$REVISOR" in actions/*) ;; *) echo "::error::revisor '$REVISOR' não é de job do Actions"; exit 1 ;; esac
+          { echo "### Veredito do the-judge"; echo '```json'; cat "$ARQ"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          npx tsx scripts/release/veredito-judge.ts --autor "$PR_AUTOR" --sha "$PR_SHA" --arquivo "$ARQ" --revisor-esperado "$REVISOR"
+
+  # Diff em caminho protegido: o modelo sozinho nunca basta. Fica parado até o dono aprovar no Environment.
+  humana:
+    name: Aprovação do dono (caminho protegido)
+    needs: julgar
+    if: needs.julgar.outputs.protegido == 'true'
+    environment: aprovacao-classe-3
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - run: echo "dono aprovou o diff em caminho protegido para $GITHUB_SHA"
+
+  veredito:
+    name: Veredito do the-judge
+    if: always()
+    needs: [julgar, humana]
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Conferir
+        env:
+          DRAFT: ${{ github.event.pull_request.draft }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          R_JULGAR: ${{ needs.julgar.result }}
+          PROTEGIDO: ${{ needs.julgar.outputs.protegido }}
+          R_HUMANA: ${{ needs.humana.result }}
+        run: |
+          if [ "$DRAFT" = true ]; then echo "::error::PR em rascunho: o the-judge roda quando a PR for marcada como pronta (ADR-093)"; exit 1; fi
+          if [ "$FORK" = true ]; then echo "::error::PR de fork não é julgada (custo e segredo); abra a PR de uma branch do repositório"; exit 1; fi
+          [ "$R_JULGAR" = success ] || { echo "::error::julgamento: $R_JULGAR"; exit 1; }
+          if [ "$PROTEGIDO" = true ]; then
+            [ "$R_HUMANA" = success ] || { echo "::error::diff em caminho protegido sem a aprovação do dono ($R_HUMANA)"; exit 1; }
+          else
+            [ "$R_HUMANA" = skipped ] || { echo "::error::aprovação humana rodou sem caminho protegido ($R_HUMANA)"; exit 1; }
+          fi
+          echo "ok: protegido=${PROTEGIDO:-false}"
