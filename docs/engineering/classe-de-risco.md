@@ -29,7 +29,8 @@ a PR. Sai com `1` só se o `git diff` falhar.
 | --- | --- | --- |
 | 0 | só documentação (`.md` fora de código) e testes (`tests/`, `e2e/`) | não |
 | 1 | código sem migração e sem caminho sensível | não |
-| 2 | migração **aditiva** (passa no `check:migracao`), sem caminho sensível | não |
+| 2 | mudança em `package-lock.json` sem dependência sensível de runtime | não |
+| 2 | migração **aditiva** (passa no `check:migracao`), sem caminho sensível; ou só lockfile (acima) | não |
 | 3 | qualquer caminho sensível, migração não aditiva ou com erro, relatório de migração ausente, dependência sensível | **sim** |
 
 A classe da PR é a **maior** entre os arquivos. O relatório lista só os motivos da classe final.
@@ -47,7 +48,7 @@ Lista única em `CAMINHOS_SENSIVEIS` (`scripts/release/classificar-risco-lib.ts`
 | `imagem-e-deploy` | `Dockerfile`, `deploy/` |
 | `workflow` | `.github/workflows/`, `.github/CODEOWNERS` |
 | `portao` | `scripts/gate/`, `scripts/gate-cloud*`, `scripts/release/`, `.husky/`, `.claude/hooks/`, `.claude/settings.json`, `vitest*.config.mts`, `stryker.config.json`, `playwright.config.ts`, `biome.json` |
-| `dependencia-sensivel` | mudança em `package.json` de `next`, `drizzle-orm`, `drizzle-kit`, `pg`, `@aws-sdk/client-s3`, `googleapis`, `sharp` ou de pacote com `argon`, `bcrypt`, `jose`, `jsonwebtoken`, `crypto`, `oauth`, `passport`, `auth`, `helmet` no nome |
+| `dependencia-sensivel` | mudança em `package.json`, ou de runtime (`dev` fora) no `package-lock.json`, de `next`, `drizzle-orm`, `drizzle-kit`, `pg`, `@aws-sdk/client-s3`, `googleapis`, `sharp` ou de pacote com `argon`, `bcrypt`, `jose`, `jsonwebtoken`, `crypto`, `oauth`, `passport`, `auth`, `helmet` no nome |
 
 Quando mais de uma regra casa, vale a primeira da lista (a mais específica): `src/lib/auth/tenant-scope.ts`
 é `escopo-de-empresa`, não `auth`.
@@ -80,8 +81,8 @@ Quando mais de uma regra casa, vale a primeira da lista (a mais específica): `s
 
 - **Ligar uma flag para clínica real** (portão humano da proposta, seção 5): acontece fora do diff (painel ou
   variável de ambiente), então o classificador não vê. Fica como passo humano até existir `flags.registry.ts`.
-- **Mudança só em `package-lock.json`** (dependência transitiva) conta como código (classe 1). Pergunta aberta
-  para o dono: tratar o lockfile de runtime como classe 3?
+- **Mudança só em `package-lock.json`** é classe 2; vira 3 se alterar dependência sensível de runtime
+  (direta ou transitiva). Decisão do coordenador, 2026-11-08.
 - **"Só comentários"** não é detectável por caminho; um `.ts` com só comentário é classe 1.
 
 ## 2. Veredito do the-judge (`npm run check:veredito`)
@@ -123,10 +124,44 @@ Severidades: `bloqueante`, `importante`, `sugestao`. O check sai com `1` se:
 mesmo login do GitHub, o workflow deve passar um identificador que distinga as sessões (por exemplo o id da thread do
 bloco de atribuição do corpo da PR). Ligar o check no CI é da issue do workflow (#757).
 
-## 3. CODEOWNERS
+## 3. Como a classe 3 exige o dono (mecanismo proposto)
 
-`.github/CODEOWNERS` põe o dono em `scripts/gate/`, `scripts/gate-cloud*`, `scripts/release/`,
-`.github/workflows/`, `.husky/`, `.claude/hooks/`, `.claude/settings.json` e no próprio CODEOWNERS. O arquivo só
-barra de fato com o ruleset exigindo revisão de Code Owner (passo do dono no painel). Atenção: o GitHub não
-deixa o autor aprovar a própria PR; como as PRs dos agentes saem com o login do dono, a revisão de Code Owner só
-funciona se o agente usar outra identidade (bot ou conta própria). Pergunta aberta para o dono.
+Todas as PRs dos agentes saem com o login do dono, então **CODEOWNERS não garante nada sozinho**: o GitHub não
+deixa o autor aprovar a própria PR, e um agente poderia mexer em qualquer arquivo. O sinal que o agente não
+consegue forjar é a **aprovação de um Environment protegido com o dono como revisor**, o mesmo mecanismo do
+ADR-095 para o deploy. Proposta (o workflow é da #757; aqui só o desenho):
+
+```yaml
+jobs:
+  risco:
+    outputs: { classe: ${{ steps.r.outputs.classe }}, humana: ${{ steps.r.outputs.aprovacao_humana }} }
+    steps:
+      - id: r
+        run: npm run check:risco -- --saida-github >> "$GITHUB_OUTPUT"
+  aprovacao-classe-3:
+    needs: risco
+    if: needs.risco.outputs.humana == 'true'
+    environment: aprovacao-classe-3   # Environment com o dono como Required reviewer
+    runs-on: ubuntu-latest
+    steps: [{ run: 'echo "dono aprovou a classe 3 para ${{ github.sha }}"' }]
+  portao-risco:                        # único check exigido no ruleset da main
+    needs: [risco, aprovacao-classe-3]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.risco.result }}" = success && test "${{ needs.aprovacao-classe-3.result }}" != failure && test "${{ needs.aprovacao-classe-3.result }}" != cancelled
+```
+
+- O job `aprovacao-classe-3` só roda na classe 3 e **fica parado até o dono aprovar** no Environment; o agente não
+  tem como clicar, e o aprovador não pode ser quem disparou se "Prevent self-review" estiver ligado.
+- A aprovação vale por execução (push novo reinicia). O ruleset da `main` exige o check `portao-risco`.
+- O workflow que define isso e o próprio Environment ficam em caminhos de classe 3 (`.github/workflows/`), então
+  mudá-los também exige o dono. Isto fecha o ciclo "quem escreve o portão não o abre sozinho".
+- Passo do dono no painel: criar o Environment `aprovacao-classe-3` com ele como revisor. O repositório é público
+  desde 2026-11-07, então o recurso existe no plano atual.
+
+## 4. CODEOWNERS (só documentação)
+
+`.github/CODEOWNERS` registra quem é dono de `scripts/gate/`, `scripts/gate-cloud*`, `scripts/release/`,
+`.github/workflows/`, `.husky/`, `.claude/hooks/`, `.claude/settings.json` e do próprio arquivo. Serve de mapa para
+humanos e para revisão por pessoa; **não é o mecanismo de segurança** (seção 3).

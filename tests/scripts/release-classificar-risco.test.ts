@@ -10,6 +10,7 @@ import {
   lerRelatorioMigracao,
   pacoteSensivel,
   pacotesAlterados,
+  pacotesAlteradosLock,
   type RelatorioMigracao,
   SCHEMA_RISCO,
   saidaGithub,
@@ -274,6 +275,52 @@ describe('classe de risco · dependências', () => {
   });
 });
 
+describe('classe de risco · lockfile', () => {
+  it('Dado mudança só no lockfile sem dependência sensível, Quando classifica, Então classe 2', () => {
+    const r = risco(['package-lock.json'], null, ['lodash']);
+    expect(r).toMatchObject({ classe: 2, aprovacaoHumana: false });
+    expect(r.motivos[0].regra).toBe('lockfile');
+  });
+
+  it('Dado lockfile que muda dependência sensível de runtime, Quando classifica, Então classe 3', () => {
+    expect(risco(['package-lock.json'], null, ['jose']).classe).toBe(3);
+  });
+
+  it('Dado dois lockfiles, Quando compara, Então lista só runtime que mudou, entrou ou saiu', () => {
+    const antes = {
+      packages: {
+        '': { version: '1' },
+        'node_modules/jose': { version: '1.0.0' },
+        'node_modules/a/node_modules/zod': { version: '1.0.0' },
+        'node_modules/vitest': { version: '1.0.0', dev: true },
+        'node_modules/igual': { version: '1.0.0' },
+        'node_modules/velho': { version: '1.0.0' },
+      },
+    };
+    const depois = {
+      packages: {
+        '': { version: '2' },
+        'node_modules/jose': { version: '1.0.1' },
+        'node_modules/a/node_modules/zod': { version: '1.0.0' },
+        'node_modules/vitest': { version: '2.0.0', dev: true },
+        'node_modules/igual': { version: '1.0.0' },
+        'node_modules/novo': { version: '3.0.0' },
+      },
+    };
+    expect(pacotesAlteradosLock(antes, depois)).toEqual([
+      'jose',
+      'novo',
+      'velho',
+    ]);
+    expect(pacotesAlteradosLock(null, {})).toEqual([]);
+    expect(
+      pacotesAlteradosLock(null, {
+        packages: { 'node_modules/x': { version: '1' } },
+      }),
+    ).toEqual(['x']);
+  });
+});
+
 describe('classe de risco · saída', () => {
   it('Dado classe 3, Quando formata, Então lista os motivos e pede aprovação', () => {
     const texto = formatarRisco(
@@ -407,6 +454,20 @@ describe('classe de risco · linha de comando', () => {
       ],
     });
 
+    escrever(
+      'package-lock.json',
+      JSON.stringify({
+        packages: { 'node_modules/lodash': { version: '1.0.0' } },
+      }),
+    );
+    commit('lock');
+    escrever(
+      'package-lock.json',
+      JSON.stringify({
+        packages: { 'node_modules/lodash': { version: '1.0.1' } },
+      }),
+    );
+    commit('lock2');
     escrever('.github/workflows/x.yml', 'name: x\n');
     commit('workflow');
     expect(cli('--base', 'base').stdout).toContain(

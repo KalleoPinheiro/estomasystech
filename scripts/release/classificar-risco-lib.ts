@@ -130,6 +130,26 @@ export function pacotesAlterados(antes: ManifestoPacotes | null, depois: Manifes
   return [...alterados].sort();
 }
 
+export interface ManifestoLock {
+  packages?: Record<string, { version?: string; dev?: boolean } | undefined>;
+}
+
+/**
+ * Pacotes de **runtime** (fora `dev: true`) cuja versão mudou, entrou ou saiu no `package-lock.json`.
+ * Pega a dependência transitiva sensível que o `package.json` não mostra.
+ */
+export function pacotesAlteradosLock(antes: ManifestoLock | null, depois: ManifestoLock): string[] {
+  const a = antes?.packages ?? {};
+  const d = depois.packages ?? {};
+  const alterados = new Set<string>();
+  for (const chave of new Set([...Object.keys(a), ...Object.keys(d)])) {
+    const nome = chave.replace(/^.*node_modules\//, '');
+    const emDev = (d[chave] ?? a[chave])?.dev === true;
+    if (nome !== '' && !emDev && a[chave]?.version !== d[chave]?.version) alterados.add(nome);
+  }
+  return [...alterados].sort();
+}
+
 /* ---------- 2. Documentação e teste (classe 0) ---------- */
 
 /** `.md` que é documentação (não código, pipeline nem configuração de agente), como em `isDocsOnly` (ADR-053). */
@@ -175,6 +195,9 @@ function motivoMigracao(arquivo: string, migracao: RelatorioMigracao | null): Mo
 function motivoDoArquivo(arquivo: string, migracao: RelatorioMigracao | null): Motivo {
   const sensivel = CAMINHOS_SENSIVEIS.find((r) => r.padrao.test(arquivo));
   if (sensivel) return { classe: 3, regra: sensivel.regra, arquivo, detalhe: sensivel.detalhe };
+  if (arquivo === 'package-lock.json') {
+    return { classe: 2, regra: 'lockfile', arquivo, detalhe: 'lockfile alterado (classe 3 se tocar dependência sensível de runtime)' };
+  }
   if (somenteDocsOuTeste(arquivo)) return { classe: 0, regra: 'docs-ou-teste', arquivo, detalhe: 'documentação ou teste' };
   if (MIGRACAO.test(arquivo)) return motivoMigracao(arquivo, migracao);
   return { classe: 1, regra: 'codigo', arquivo, detalhe: 'código sem migração nem caminho sensível' };

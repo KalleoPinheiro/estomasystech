@@ -16,8 +16,10 @@ import {
   classificarRisco,
   formatarRisco,
   lerRelatorioMigracao,
+  type ManifestoLock,
   type ManifestoPacotes,
   pacotesAlterados,
+  pacotesAlteradosLock,
   saidaGithub,
 } from './classificar-risco-lib';
 
@@ -64,10 +66,18 @@ const pacotes = arquivos.includes('package.json')
     )
   : [];
 
+const lockBase = git(['show', `${base}:package-lock.json`]);
+const pacotesLock = arquivos.includes('package-lock.json')
+  ? pacotesAlteradosLock(
+      lockBase.ok ? (JSON.parse(lockBase.out) as ManifestoLock) : null,
+      JSON.parse(readFileSync('package-lock.json', 'utf8')) as ManifestoLock,
+    )
+  : [];
+
 const resultado = classificarRisco({
   arquivos,
   migracao: arquivos.some((a) => a.startsWith('drizzle/')) ? relatorioMigracao(base) : null,
-  pacotesAlterados: pacotes,
+  pacotesAlterados: [...new Set([...pacotes, ...pacotesLock])],
 });
 
 console.log(flag('--saida-github') ? saidaGithub(resultado) : flag('--json') ? JSON.stringify(resultado, null, 2) : formatarRisco(resultado));
