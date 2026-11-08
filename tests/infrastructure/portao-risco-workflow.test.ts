@@ -38,7 +38,7 @@ function conferir(): string {
 function codigo(env: Record<string, string>): number {
   try {
     execFileSync('bash', ['-e', '-o', 'pipefail', '-c', conferir()], {
-      env: { ...env, PATH: '/usr/bin:/bin' },
+      env: { ...env, PATH: '/usr/bin:/bin', NODE_ENV: 'test' },
       stdio: 'ignore',
     });
     return 0;
