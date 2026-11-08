@@ -18,6 +18,10 @@ Ambiente público e descartável para ver o lote (release aberta) **antes de ent
 Decidido no [ADR-052](../adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md): a `main` só
 recebe lote já homologado.
 
+> **Fluxo em transição ([ADR-097](../adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):**
+> este fluxo (release longa, marca `homologacao/vX.Y.Z`, PR em rascunho) segue em vigor e será simplificado em
+> fases. Nada muda aqui até cada fase ser implementada e este texto, atualizado.
+
 ```
 main  ───────────●─────────────────────────●(merge commit)──▶ só releases e hotfixes; tag vX.Y.Z aqui
                   \                       ↗

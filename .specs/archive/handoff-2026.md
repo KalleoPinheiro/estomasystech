@@ -2432,3 +2432,9 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: `vitest` e `@vitest/coverage-v8` em `4.1.12`, `@stryker-mutator/*` em `10.1.1` e o lockfile regenerado com o npm 11.21.1 (`npm audit fix`, sem `--force`): 16 moderadas viram 7 (todas de desenvolvimento, sem correção publicada) e `npm audit --omit=dev` fica em 0. `ci.yml` ganha o step `npm audit --omit=dev --audit-level=high` nos jobs `estatico` e `fora-do-selo`. Triagem e prazo de revisão (2026-12-08) em `docs/engineering/security-scan.md`.
 - **Testes**: nenhum alterado ou criado.
 - **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## ADR-097: fluxo enxuto até a produção (#754) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só documentação. ADR-097 (aceito em direção e nas fases 1 e 2): piso mecânico com `tlc-*` e `the-judge` por cima, classes de risco 0 a 3 calculadas por script com aprovação humana só na 3, `main` sem bypass (inclusive para o Kalléo) e fases 1 a 5 (3 a 5 propostas). Nada do fluxo vigente muda: avisos em `producao.md` § 3.1 e `homologacao.md` § 1, ponteiro no `AGENTS.md` (150 linhas) e linha no `docs/README.md`. ADR-095 só linkado.
+- **Testes**: nenhum criado ou alterado (sem código). Sem changeset (só `.md`). `check:docs` OK.
+- **Perguntas abertas**: canário sintético em produção; autorização para `scripts/gate/` e `recibo-gate.yml` (fase 2a, regra 8).
+- **Next step**: thread revisora valida com the-judge; coordenador abre os tickets da fase 2. **Blockers**: nenhum.

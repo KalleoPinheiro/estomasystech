@@ -235,6 +235,10 @@ proposital enquanto as migrações não têm `down`
 > propõe automatizar tag, backup, deploy e fumaça por um workflow com aprovação humana. Até ele ser aceito
 > e implementado, o roteiro abaixo é o único em vigor.
 
+> **Fluxo em transição ([ADR-097](../adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):**
+> o caminho até a produção será enxugado em fases (checks determinísticos, aprovação humana só em risco alto,
+> `main` sem bypass). Nada muda neste roteiro até cada fase ser implementada e este texto, atualizado.
+
 0. **Release (ADR-052 e ADR-071):** com a staging aprovada e a marca `homologacao/vX.Y.Z` no SHA,
    `npm run release:cut -- --rollback=redeploy|backup` na `release/vX.Y.Z` (no WSL: `release:prepare` primeiro,
    gate da release uma vez em worktree limpo, PR `release → main` com o recibo); merge **commit**; depois
