@@ -285,6 +285,7 @@ proposital enquanto as migrações não têm `down`
   acontecer, `/api/health/ready` responde `503` com `migrations: "pending"`; restaure o backup
   (§ 3.1 e § 5) e refaça o deploy pelo commit completo. Mesma regra para qualquer par de migrações
   geradas em branches paralelas: confira a ordem de `when` em `drizzle/meta/_journal.json`.
+  `npm run check:migracao` confere isso (e se a migração é aditiva) antes do deploy: [`migracoes-aditivas.md`](migracoes-aditivas.md).
 - **Rollback:** as migrações não têm `down`. Reverter é restaurar o backup tirado antes do deploy
   (§ 5) ou escrever uma migração nova que desfaça a mudança.
 - **Atualizando de uma versão anterior à `0053`**: aplique **todas** as migrações `0053` a `0066`, em ordem,

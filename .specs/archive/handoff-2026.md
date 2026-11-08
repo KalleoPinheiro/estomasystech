@@ -2432,3 +2432,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: `vitest` e `@vitest/coverage-v8` em `4.1.12`, `@stryker-mutator/*` em `10.1.1` e o lockfile regenerado com o npm 11.21.1 (`npm audit fix`, sem `--force`): 16 moderadas viram 7 (todas de desenvolvimento, sem correção publicada) e `npm audit --omit=dev` fica em 0. `ci.yml` ganha o step `npm audit --omit=dev --audit-level=high` nos jobs `estatico` e `fora-do-selo`. Triagem e prazo de revisão (2026-12-08) em `docs/engineering/security-scan.md`.
 - **Testes**: nenhum alterado ou criado.
 - **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Lint de migração aditiva `check:migracao` (#755) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `npm run check:migracao` (`scripts/release/check-migracao.ts` + núcleo puro `check-migracao-lib.ts`) classifica as `drizzle/*.sql` novas do diff em aditiva ou não aditiva (falha fechada para SQL desconhecido) e confere o journal (ordem de `when`, idx, tag/arquivo, só acrescenta, migração existente intocada). Saída `--json` no formato `check-migracao/v1` para o classificador de risco (#756). Doc: `docs/engineering/migracoes-aditivas.md`; ponteiro em `producao.md` § 4. Changeset patch.
+- **Rodando em todo o histórico (`--all`)**: journal sem erros; 20 das 71 migrações são não aditivas, sobretudo as antigas (multi-clínica 0019+).
+- **Testes novos**: `tests/scripts/release-check-migracao.test.ts` (41 casos, 100% de linhas, funções, ramos e instruções no núcleo; CLI testada em repo git temporário). Nenhum teste existente alterado.
+- **Fora do escopo (pendente)**: teste de compatibilidade em Postgres 18 (suíte de integração do commit anterior contra o esquema novo) e mutação por arquivo (`scripts/` não está no `stryker.config.json`); o lint ainda não roda no `ci.yml` (workflow é de reserva do coordenador).
+- **Next step**: the-judge em thread limpa; abrir issue para o teste de compatibilidade e para ligar o check no CI. **Blockers**: nenhum.
