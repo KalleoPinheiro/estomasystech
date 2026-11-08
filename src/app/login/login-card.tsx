@@ -4,6 +4,7 @@ import { Button, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useHydrated } from '@/components/app-shell/use-hydrated';
 import { BrandMark } from '@/components/brand-mark';
 import { ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
@@ -98,6 +99,10 @@ function PasswordForm({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Antes da hidratação o formulário não é do React: o que se digita some quando ele assume e o
+  // «Entrar» faria um envio nativo (GET /login?email=…&password=…, a senha na URL). Os campos e o
+  // botão esperam, como o «+ Nova consulta» da agenda (#484, #679).
+  const hydrated = useHydrated();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -132,6 +137,7 @@ function PasswordForm({
           type="email"
           name="email"
           autoComplete="username"
+          readOnly={!hydrated}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="seu@email.com"
@@ -145,6 +151,7 @@ function PasswordForm({
           type={showPassword ? 'text' : 'password'}
           name="password"
           autoComplete="current-password"
+          readOnly={!hydrated}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1"
@@ -162,7 +169,7 @@ function PasswordForm({
       </Button>
       <Button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || !hydrated}
         variant="accent"
         className="mt-4 w-full"
       >

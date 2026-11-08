@@ -2471,3 +2471,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
 - **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
 
+## E2E instável: rótulo do mês, tabela de auditoria e login (#679) (2026-11-08) — EM REVISÃO
+- **Causa raiz** (sem alongar timeout nem retry): (1) `goToMonth` usava `getByText` solto e casava também a cópia oculta do fragmento que o React mantém fora do `<main>` durante o streaming (strict mode, 2 elementos); agora procura só em `#conteudo-principal`. (2) `/auditoria` lia antes de o evento existir: `recordAudit` grava em `after()`, depois da resposta da API; o spec agora filtra pelo paciente e relê (`toPass`) até a tabela aparecer. (3) Login: antes da hidratação o formulário não é do React; o que se digita sumia e o «Entrar» fazia um GET nativo com a senha na URL (o segundo fator nunca aparecia em `sessao-expirada*`). Os campos ficam `readOnly` e o botão `disabled` até hidratar (`useHydrated`, mesmo padrão do #484), então o Playwright espera sozinho.
+- **Testes**: novo `tests/pages/login-hidratacao.test.tsx` (HTML do servidor x cliente hidratado). Alterados (TESTE-ALTERADO): `e2e/support/calendar.ts` e `e2e/responsive-tables.spec.ts`, só a espera/escopo do locator; cenários e asserções preservados.
+- **Changeset**: patch (login). **Next step**: the-judge em thread limpa; E2E do Actions verde sem retry. **Blockers**: nenhum.
+
