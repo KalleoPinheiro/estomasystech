@@ -47,6 +47,8 @@
     "changeset": "changeset",
     "check:changeset": "tsx scripts/release/check-changeset.ts",
     "check:migracao": "tsx scripts/release/check-migracao.ts",
+    "check:risco": "tsx scripts/release/classificar-risco.ts",
+    "check:veredito": "tsx scripts/release/veredito-judge.ts",
     "release:sync": "bash scripts/release/sync-main.sh",
     "release:prepare": "tsx scripts/release/prepare.ts",
     "release:cut": "tsx scripts/release/cut.ts",
