@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Mergeia a `main` na release aberta (ADR-052). Merge, nunca rebase: a release é compartilhada
-# com as `feat/*` e o recibo do gate depende dos SHAs.
+# com as `feat/*` e o selo do corte depende dos SHAs.
 #
 # Uso: scripts/release/sync-main.sh [--push]
 #   sem --push: deixa o merge só local (na branch da release; volta à branch de origem).

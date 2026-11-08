@@ -27,7 +27,7 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run typecheck` | antes de commitar | `tsc --noEmit` |
 | `npm run lint` / `npm run format` | antes de commitar | Biome é a única ferramenta de lint+format |
 | `npm run test:coverage` | gate de CI | **100% em domain, application, infrastructure e lib; piso 90% global, UI incluída** ([ADR-050](docs/adr/050-limiar-100-por-camada-e-ui-medida.md)) |
-| `npm run gate:local` | antes de marcar o PR como pronto | build + E2E + gates + integridade dos testes; imprime a linha `E2E-GATE:` do PR ([ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)) |
+| `npm run gate:local` | opcional no loop; o `release:cut` o usa | build + E2E + gates + integridade dos testes; sem recibo no PR: o E2E e a mutação rodam no Actions ([ADR-098](docs/adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)) |
 | `npm run changeset` / `npm run check:changeset` | PR que toca `src/`, `drizzle/` ou `Dockerfile` | um `.changeset/*.md` por PR (`--empty` se nada muda para a clínica); níveis no [ADR-043](docs/adr/043-versionamento-com-changesets-e-release-por-tag.md) |
 | `npm run release:sync` / `release:cut` / `release:publish` | release de produção | fluxo `feat → release/vX.Y.Z → main` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md), `homologacao.md` § 1): `sync` mergeia a `main` na release; `cut` (na release, com a marca `homologacao/vX.Y.Z`) roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo e abre o PR para a `main` ([ADR-071](docs/adr/071-corte-de-release-em-comando-unico.md)); nunca rode o `prepare` e o gate à mão; `publish` (na `main`) tagueia o commit de merge, `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
 | `npm run check:testes` | automático no `pre-push` e no CI | regra 8: falha se um teste foi enfraquecido |
@@ -63,29 +63,27 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
    usuário: registre como pergunta aberta, não como requisito.
 6. **Doc no mesmo PR.** Mudou comportamento de um domínio → atualize `docs/domains/<slug>/`.
    Decisão arquitetural durável → novo ADR. → [`docs/governance.md`](docs/governance.md)
-7. **Merge só com CI verde e recibo do gate local.** `feat/*` entra na `release/vX.Y.Z` (squash, sem recibo, com `## Homologação`); só `release/*` e `hotfix/*` vão para a `main` (merge commit na release), e é nesse PR que o recibo vale; nunca rebase da `release/*` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md)). O Actions roda o gate rápido (typecheck, lint,
-   sv, docs, cobertura, build) e o E2E roda localmente por `npm run gate:local`, que imprime a linha
-   `E2E-GATE: <sha> pass ...` no corpo do PR; o CI reprova recibo ausente, de outro commit ou sem
-   etapas, exceto em PR que toca só `.md` de documentação, que dispensa o recibo ([ADR-053](docs/adr/053-pr-so-de-documentacao-dispensa-recibo-do-gate-local.md)). Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
-   não é do PR: corrija primeiro. Decisões de @KalleoPinheiro, 2026-09-25 e 2026-10-19. → [ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)
+7. **Merge só com CI verde.** `feat/*` entra na `release/vX.Y.Z` (squash, com `## Homologação`); só `release/*` e `hotfix/*` vão para a `main` (merge commit na release); nunca rebase da `release/*` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md)). O Actions roda tudo, em PR para a release e para a `main`: gate rápido (typecheck, lint,
+   sv, docs, cobertura, build), integração em Postgres 18, E2E (produção e dev) e mutação nos arquivos de regra alterados; não há recibo `E2E-GATE:` ([ADR-098](docs/adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md), que supera o ADR-042). Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
+   não é do PR: corrija primeiro. Decisões de @KalleoPinheiro, 2026-09-25, 2026-10-19 e 2026-11-08.
 8. **Teste é intocável.** Nunca edite, afrouxe, apague ou desligue teste (`skip`/`only`/`fixme`),
    nem reduza limiar de cobertura, nem aumente `retries`/`timeout`, para resolver problema de
    desenvolvimento: **corrija o código**. Teste novo é permitido; mudar teste existente só quando o
    requisito de negócio mudou, com `TESTE-ALTERADO: <motivo>` no PR. Imposto por script, não por
    confiança: hook do Claude Code, `pre-push` e CI (`npm run check:testes`). Teste verifica
-   comportamento de negócio (cenário Given/When/Then), não a implementação. → [ADR-042](docs/adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)
+   comportamento de negócio (cenário Given/When/Then), não a implementação. → [ADR-098](docs/adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)
 
 ## Branch e PR de agentes (ADR-052)
 
-Todo agente, antes de criar branch, confere estas decisões (o orquestrador as repete no brief da thread):
+Todo agente, antes de criar branch, confere estas decisões (o orquestrador as repete no brief; fluxo em transição, [ADR-097](docs/adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):
 
 - **Base sempre a release aberta**, nunca a `main`: `git fetch origin && git switch -c <tipo>/<slug> origin/release/vX.Y.Z`. Ache a release com `git ls-remote --heads origin 'release/*'` (uma por vez).
 - **Nome**: `feat/<slug>` para funcionalidade, `fix/<slug>` para correção, `docs/<slug>` para só documentação. `main` só recebe `release/*` e `hotfix/*`, por merge commit.
-- **PR em squash com base `release/vX.Y.Z`**, com `## Homologação` no corpo (`Seed:` e cenários Dado/Quando/Então, ou `n/a — <motivo>`). Sem recibo do gate local nesse PR.
+- **PR em squash com base `release/vX.Y.Z`**, com `## Homologação` no corpo (`Seed:` e cenários Dado/Quando/Então, ou `n/a — <motivo>`).
 - **PR para `release/**` nasce em rascunho** e é marcado pronto uma vez (ADR-093). Quem marca pronto é o coordenador, depois de confirmar a cota do Actions. Em rascunho, os checks "Gate do PR" e `ci` ficam vermelhos de propósito: o pipeline pesado só roda quando o PR deixa de ser rascunho. Não marque o PR como pronto para fazer o CI passar.
 - **Changeset**: PR que toca `src/`, `drizzle/` ou `Dockerfile` leva `npm run changeset`; se nada muda para a clínica, `--empty`. PR só de documentação não precisa de changeset.
 - **Handoff** da issue em `.specs/archive/handoff-2026.md`, na mesma PR.
-- **Validação antes do PR**: `npm run test:changed -- origin/release/vX.Y.Z`, `typecheck`, `lint`, `check:docs` (se tocou `.md`). Gate completo (`gate:local`) só no PR `release/*` → `main`.
+- **Validação antes do PR**: `npm run test:changed -- origin/release/vX.Y.Z`, `typecheck`, `lint`, `check:docs` (se tocou `.md`). O E2E e a mutação rodam no Actions; `gate:local` é opcional.
 
 Se a release aberta não estiver clara ou a branch já nasceu da `main`, pergunte ao orquestrador antes de seguir. Detalhe: [`docs/engineering/homologacao.md`](docs/engineering/homologacao.md) § 1.
 

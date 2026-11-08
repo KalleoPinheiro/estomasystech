@@ -118,9 +118,11 @@ Peculiaridades que já custaram gates:
 
 - O Actions está **sem cota até ~2026-11-01** (checks vermelhos que terminam em ~3 s sem log são a
   cota, não o PR). Quando voltar, o mesmo fluxo vira workflow; o ruleset da `main` exige os checks
-  `Typecheck, lint, sv-gate, test:coverage, build` e `Recibo do gate local + integridade dos testes`.
-- Recibo `E2E-GATE: <sha> pass ...` vale só no PR `release → main`; qualquer push novo o invalida.
-  Para PR de feat o recibo é dispensado; recibo em comentário também vale.
+  `Typecheck, lint, sv-gate, test:coverage, build` e `Recibo do gate local + integridade dos testes`
+  (o segundo passa a se chamar `Integridade dos testes e homologação` no [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md);
+  o ruleset troca quando a v0.6.2 chegar na `main`).
+- O recibo `E2E-GATE:` não é mais exigido em PR (ADR-098): o E2E e a mutação rodam no Actions. Ele só segue
+  valendo para o `release:cut` gravar o selo do corte.
 - Merge na release exige: recibo/gate verde do **head exato**, Postgres real verde quando a mudança
   toca persistência, e revalidação limpa aprovada.
 - **VPS e minutos pagos foram descartados** (decisão do Kalléo, 2026-10-31): o gate não pode depender do PC.
