@@ -70,9 +70,26 @@ describe('workflow do veredito · segredo e fork', () => {
     expect(julgar).toContain('--arquivos');
   });
 
-  it('Dado falha da API, Quando o job julga, Então o passo que grava no cache só roda se existir o arquivo do veredito', () => {
-    expect(job('julgar')).toMatch(
-      /hashFiles\(format\('\{0\}\/veredito\/veredito\.json'/,
+  it('Dado falha da API, Quando o job julga, Então o passo que grava no cache só roda se um passo próprio achou o arquivo (hashFiles não enxerga RUNNER_TEMP)', () => {
+    const julgar = job('julgar');
+    expect(semComentario(julgar)).not.toContain('hashFiles');
+    expect(julgar).toContain('id: existe');
+    expect(julgar).toMatch(
+      /\[ -f "\$RUNNER_TEMP\/veredito\/veredito\.json" \]/,
     );
+    expect(julgar).toMatch(
+      /name: Gravar o veredito deste SHA\n\s+if: always\(\) && steps\.existe\.outputs\.existe == 'true'/,
+    );
+  });
+
+  it('Dado PR só com lockfile ou handoff, Quando o diff filtrado fica vazio, Então volta ao diff sem o filtro (não reprova para sempre)', () => {
+    const julgar = job('julgar');
+    expect(julgar).toMatch(/if \[ ! -s "\$RUNNER_TEMP\/pr\.diff" \]; then/);
+  });
+
+  it('Dado o job de aprovação do dono, Quando registra o diff aprovado, Então usa o SHA do head da PR e não o GITHUB_SHA da base', () => {
+    const humana = job('humana');
+    expect(humana).toContain('github.event.pull_request.head.sha');
+    expect(humana).not.toContain('GITHUB_SHA');
   });
 });

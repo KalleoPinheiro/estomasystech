@@ -195,6 +195,8 @@ npm run dev                   # http://localhost:3000
 | `PR_AUTOR` | não | autor da PR, injetado pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 | `PR_TITULO` | não | título da PR, injetado como dado não confiável pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 | `GITHUB_OUTPUT` | não | arquivo de saídas de step do Actions, onde `julgar-pr` grava `protegido` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `VEREDITO_JUDGE_ATIVO` | não | `true` liga a exigência do veredito; fora disso o check passa com aviso (variável do repositório; sai na v0.8.0) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
+| `GITHUB_RUN_ID` | não | id da execução, parte da identidade do revisor `actions/<run_id>/<tentativa>` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 | `GITHUB_RUN_ATTEMPT` | não | tentativa da execução, parte da identidade do revisor `actions/<run_id>/<tentativa>` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 
 ## 5. Testes
