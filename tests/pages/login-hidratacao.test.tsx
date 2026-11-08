@@ -34,4 +34,8 @@ describe('login antes e depois da hidratação (#679)', () => {
     expect(screen.getByLabelText('Senha')).not.toHaveAttribute('readonly');
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeEnabled();
   });
+
+  it('Dado o HTML do servidor, quando o envio nativo acontece sem JavaScript, então o formulário usa POST e a senha não vai para a URL', () => {
+    expect(renderToString(card)).toMatch(/<form[^>]*method="post"/i);
+  });
 });

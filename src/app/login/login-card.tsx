@@ -128,7 +128,7 @@ function PasswordForm({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form method="post" onSubmit={handleSubmit}>
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Email
