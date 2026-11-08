@@ -123,7 +123,7 @@ recurso, não tag git); não documenta um parâmetro de ref git. Desenho preferi
 
 1. Pré-condição: `git rev-parse origin/main` é igual ao commit da tag `vX.Y.Z`. A `main` só recebe merge de
    release e hotfix, então o HEAD é o commit da tag; se diferir, o job falha sem deployar.
-2. `deploy` com token de habilidade **deploy** (sem escrita) no recurso da `main`.
+2. `POST /api/v1/deploy` (no 4.6.0 o `GET` responde 405) com token das habilidades **deploy** e **read** (sem escrita) no recurso da `main`; o `read` é necessário para ler o estado e o SHA em `GET /deployments/{uuid}`.
 3. Espera o deployment terminar e confere que o SHA implantado é o da tag. Divergência = falha.
 
 Se o spike mostrar que o Coolify não implanta o HEAD da `main` de forma previsível, o plano B é fixar o
@@ -133,7 +133,7 @@ o job usa um *Environment* separado e o escopo do token é revisto aqui antes de
 #### Spike do Coolify (ticket 1, #746)
 
 O script `scripts/release/spike-coolify.sh` roda no PC do operador (a nuvem do agente não alcança o Coolify):
-`COOLIFY_URL`, `COOLIFY_TOKEN` (habilidade só de deploy, ou também leitura, para o spike dizer o que falta) e
+`COOLIFY_URL`, `COOLIFY_TOKEN` (habilidades deploy e read; sem `read` o script avisa e para em vez de insistir) e
 `COOLIFY_APP_UUID` por variável de ambiente; o token segue ao curl por stdin e a saída é filtrada. Padrão só lê;
 `SPIKE_DEPLOY=1` dispara o deploy do HEAD da `main` e `SPIKE_TAG_SHA` compara o SHA do deployment com o da tag.
 Resultado (plano A ou B) **pendente**: registrar aqui, com a saída colada na #746, quando o dono rodar.

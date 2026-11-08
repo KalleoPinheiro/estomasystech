@@ -33,8 +33,8 @@ echo "$url" >> "${dir}/urls"
 case "$url" in
   */api/v1/version) echo '4.6.0' > "$out"; printf 200;;
   */api/v1/applications/*) echo '{"status":"running","git_branch":"main","git_commit_sha":"HEAD","secret":"nao-sair"}' > "$out"; printf 200;;
-  */api/v1/deployments/abc123) echo '{"status":"finished","commit":"abcdef1234567","token":"nao-sair"}' > "$out"; printf 200;;
-  */api/v1/deploy*) echo '{"deployments":[{"deployment_uuid":"abc123"}]}' > "$out"; printf 200;;
+  */api/v1/deployments/abc123) if [ -f "${dir}/sem-leitura" ]; then printf 403; else echo '{"status":"finished","commit":"abcdef1234567","token":"nao-sair"}' > "$out"; printf 200; fi;;
+  */api/v1/deploy*) if grep -q 'request = "POST"' "${dir}/stdin"; then echo '{"deployments":[{"deployment_uuid":"abc123"}]}' > "$out"; printf 200; else printf 405; fi;;
   *) printf 404;;
 esac
 `,
@@ -79,6 +79,29 @@ describe('Feature: spike do Coolify (ADR-095, #746)', () => {
     const r = rodar({ SPIKE_DEPLOY: '1', SPIKE_TAG_SHA: 'abcdef1234567890' });
     expect(r.saida).toContain('deployment_uuid=abc123');
     expect(r.saida).toContain('IGUAL');
+  });
+
+  it('Dado SPIKE_DEPLOY=1, Quando dispara, Então usa POST em /deploy (o GET responde 405 no Coolify 4.6.0)', () => {
+    const r = rodar({ SPIKE_DEPLOY: '1' });
+    expect(r.saida).toContain('deployment_uuid=abc123');
+  });
+
+  it('Dado token sem habilidade read, Quando lê o deployment (403), Então avisa e para sem insistir', () => {
+    writeFileSync(path.join(dir, 'sem-leitura'), '');
+    const r = rodar({ SPIKE_DEPLOY: '1' });
+    expect(r.saida).toContain('HTTP 403');
+    expect(r.saida).toContain('não tem habilidade de leitura');
+    expect(r.saida.match(/HTTP 403/g)).toHaveLength(1);
+  });
+
+  it('Dado falha de rede no curl, Quando roda, Então imprime HTTP 000 uma vez só', () => {
+    writeFileSync(
+      path.join(dir, 'bin', 'curl'),
+      '#!/usr/bin/env bash\ncat > /dev/null; printf 000; exit 6\n',
+    );
+    const r = rodar();
+    expect(r.saida).toContain('HTTP 000 ');
+    expect(r.saida).not.toContain('HTTP 000000');
   });
 
   it('Dado SHA diferente do da tag, Quando roda, Então aponta o plano B', () => {

@@ -23,10 +23,15 @@ espera="${SPIKE_ESPERA:-15}"
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 
-# api CAMINHO: grava o corpo em $tmp e imprime só o código HTTP. O cabeçalho do token vai por stdin (--config -).
+# api CAMINHO [MÉTODO]: grava o corpo em $tmp e imprime só o código HTTP. O cabeçalho do token (e o método,
+# quando não é GET) vai por stdin (--config -). Falha de rede imprime 000 uma vez só.
 api() {
-  printf 'header = "Authorization: Bearer %s"\n' "$COOLIFY_TOKEN" \
-    | curl -sS -m 30 --config - -H 'Accept: application/json' -o "$tmp" -w '%{http_code}' "$base$1" 2> /dev/null || echo 000
+  local metodo="${2:-GET}" codigo
+  codigo="$({
+    printf 'header = "Authorization: Bearer %s"\n' "$COOLIFY_TOKEN"
+    printf 'request = "%s"\n' "$metodo"
+  } | curl -sS -m 30 --config - -H 'Accept: application/json' -o "$tmp" -w '%{http_code}' "$base$1" 2> /dev/null || true)"
+  echo "${codigo:-000}"
 }
 
 echo "== 1. versão do Coolify"
@@ -46,7 +51,8 @@ if [ "${SPIKE_DEPLOY:-}" != 1 ]; then
 fi
 
 echo "== 3. deploy do HEAD da main (habilidade deploy)"
-code="$(api "/api/v1/deploy?uuid=$COOLIFY_APP_UUID&force=false")"; echo "HTTP $code"
+# No Coolify 4.6.0 o GET /deploy responde 405 ("changed to a POST request"); uuid e force seguem na query.
+code="$(api "/api/v1/deploy?uuid=$COOLIFY_APP_UUID&force=false" POST)"; echo "HTTP $code"
 dep="$(jq -r '.deployments[0].deployment_uuid // empty' "$tmp" 2> /dev/null)"
 [ -n "$dep" ] || { echo "sem deployment_uuid na resposta (campos: $(jq -c 'keys' "$tmp" 2> /dev/null))"; exit 1; }
 [[ "$dep" =~ ^[A-Za-z0-9]+$ ]] || { echo "deployment_uuid inesperado"; exit 1; }
@@ -58,6 +64,10 @@ while [ "$SECONDS" -lt "$fim" ]; do
   code="$(api "/api/v1/deployments/$dep")"
   estado="$(jq -r '.status // empty' "$tmp" 2> /dev/null)"
   echo "HTTP $code status=${estado:-?}"
+  if [ "$code" = 401 ] || [ "$code" = 403 ]; then
+    echo "o token não tem habilidade de leitura (GET /deployments exige read): confira o estado e o SHA no painel do Coolify."
+    break
+  fi
   case "$estado" in finished | failed | cancelled*) break ;; esac
   sleep 10
 done
