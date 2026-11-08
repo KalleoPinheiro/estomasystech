@@ -2412,3 +2412,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: estágio `deps` do `Dockerfile` instala `npm@<packageManager>` (lido do `package.json`) antes do `npm ci`, zerando o EBADENGINE do build do Coolify sem afrouxar `engines.npm`. Emenda no ADR-091 e linha nova em `troubleshooting.md`.
 - **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.
 - **Next step**: coordenador marca pronto; conferir o log do próximo deploy do Coolify sem EBADENGINE. **Blockers**: nenhum.
+
+## Automatizar o fim da release: tag, backup, deploy e fumaça (#715) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só documentação. ADR-095 (rascunho) com desenho do workflow `release-deploy.yml` (publicar → backup → deploy → fumaça), gate humano por *Environment* `producao` restrito à `main`, segredos só no *Environment* (repo público), chave SSH de comando forçado para o backup, deploy da tag exata via API do Coolify (sujeito a spike), fumaça somente leitura em `scripts/release/fumaca-producao.sh`, rollback pelo mesmo caminho e 7 tickets. Ponteiros em `producao.md` § 3.1 e `homologacao.md` § 1; linha no `docs/README.md`.
+- **Testes**: nenhum criado ou alterado (sem código). **Perguntas abertas** (ADR-095): revisor do *Environment*, versão pública sem login, primeira release com o fluxo novo, `GITHUB_TOKEN` x `RELEASE_CUT_TOKEN` para a tag.
+- **Next step**: coordenador revisa e decide as perguntas; depois abrir os tickets 1 a 7. **Blockers**: spike do Coolify depende do painel do Kalléo.

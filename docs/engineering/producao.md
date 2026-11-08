@@ -231,6 +231,10 @@ O deploy é **manual** (botão *Deploy* no Coolify): nada sobe sozinho por um pu
 proposital enquanto as migrações não têm `down`
 ([ADR-039](../adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md)).
 
+> **Em planejamento (não vigente):** [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md)
+> propõe automatizar tag, backup, deploy e fumaça por um workflow com aprovação humana. Até ele ser aceito
+> e implementado, o roteiro abaixo é o único em vigor.
+
 0. **Release (ADR-052 e ADR-071):** com a staging aprovada e a marca `homologacao/vX.Y.Z` no SHA,
    `npm run release:cut -- --rollback=redeploy|backup` na `release/vX.Y.Z` (no WSL: `release:prepare` primeiro,
    gate da release uma vez em worktree limpo, PR `release → main` com o recibo); merge **commit**; depois
