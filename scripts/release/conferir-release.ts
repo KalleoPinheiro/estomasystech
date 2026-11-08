@@ -21,7 +21,7 @@ if (!repo || !base || !head) {
 }
 
 function api<T>(caminho: string): T {
-  const r = spawnSync('gh', ['api', '--paginate', '--slurp', caminho], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync('gh', ['api', '--paginate', '--slurp', caminho], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 120_000 });
   if (r.status !== 0) throw new Error(`gh api ${caminho}: ${r.stderr}`);
   return JSON.parse(r.stdout) as T;
 }
@@ -33,7 +33,16 @@ interface CheckRun {
   app: { slug: string } | null;
 }
 
+const jaConsultados = new Map<string, 'success' | 'failure' | 'ausente'>();
 function vereditoDoHead(sha: string): 'success' | 'failure' | 'ausente' {
+  const guardado = jaConsultados.get(sha);
+  if (guardado) return guardado;
+  const v = consultarVeredito(sha);
+  jaConsultados.set(sha, v);
+  return v;
+}
+
+function consultarVeredito(sha: string): 'success' | 'failure' | 'ausente' {
   const paginas = api<{ check_runs: CheckRun[] }[]>(`repos/${repo}/commits/${sha}/check-runs?per_page=100`);
   const do_actions = paginas
     .flatMap((p) => p.check_runs)

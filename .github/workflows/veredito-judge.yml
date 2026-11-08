@@ -90,6 +90,10 @@ jobs:
         run: |
           # Lockfile e handoff não entram no julgamento: engordam o diff sem risco de lógica.
           git -C pr diff --no-ext-diff --no-textconv "$BASE...$PR_SHA" -- . ':(exclude)package-lock.json' ':(exclude).specs' > "$RUNNER_TEMP/pr.diff"
+          # PR só com lockfile/handoff: sem o filtro o diff ficaria vazio e o job reprovaria para sempre.
+          if [ ! -s "$RUNNER_TEMP/pr.diff" ]; then
+            git -C pr diff --no-ext-diff --no-textconv "$BASE...$PR_SHA" > "$RUNNER_TEMP/pr.diff"
+          fi
           # Lista separada por NUL e sem aspas: nome com acento não escapa da classificação.
           git -C pr -c core.quotePath=false diff --name-only -z --no-renames --no-ext-diff --no-textconv "$BASE...$PR_SHA" > "$RUNNER_TEMP/pr.arquivos"
           mkdir -p "$RUNNER_TEMP/veredito"
@@ -159,7 +163,9 @@ jobs:
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
-      - run: echo "dono aprovou o diff em caminho protegido para $GITHUB_SHA"
+      - env:
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: echo "dono aprovou o diff em caminho protegido para $PR_SHA"
 
   veredito:
     name: Veredito do the-judge
