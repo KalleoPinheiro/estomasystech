@@ -104,7 +104,6 @@ done
 echo "$metodo $url" >> "$FIX/chamadas"
 pref=""; case "$url" in http://*) pref="HTTP_";; esac
 caminho="\${url#*://*/}"; [ "$caminho" = "$url" ] && caminho=""
-chave="$pref$metodo__$(printf '%s' "/$caminho" | tr '/.' '__')"
 chave="$pref\${metodo}_$(printf '%s' "/$caminho" | tr '/.' '__')"
 if [ "$metodo" = POST ] && [ "$caminho" = "api/auth/login" ]; then
   codigo="$(head -n1 "$FIX/login.seq")"; sed -i 1d "$FIX/login.seq"; echo "$codigo"; exit 0
