@@ -2493,3 +2493,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes**: novos casos de WIF em `release-julgar-pr.test.ts`. Dois testes existentes mudaram porque o requisito mudou (decisão do dono: sem chave de API): o de `chamarAnthropic` (cabeçalho `Authorization: Bearer` no lugar de `x-api-key`) e o do workflow (sem `secrets.*`, só `julgar` pede `id-token`). `TESTE-ALTERADO` no corpo da PR.
 - **Fora do repositório (só o Kalléo)**: conta de serviço + emissor + regra no Console da Anthropic; variáveis acima no GitHub; apagar o segredo `ANTHROPIC_API_KEY`; aprovar a classe 3. Confirmar o `sub` real do `pull_request_target` no histórico de autenticação.
 - **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: configuração do Console.
+
+## Teste instável: configuracoes-email-channel sob carga (#617) (2026-11-08) — EM REVISÃO
+- **Causa**: `findByRole('alert')` monta a árvore de acessibilidade a cada tentativa e, na suíte completa sob carga, estourava o prazo padrão de 1 s antes de o Alert existir. Não é defeito do componente. Os dois pontos do arquivo que usavam `findByRole('alert')` passam a achar o texto (consulta barata) e subir ao `role="alert"`, com as mesmas asserções (texto e classe `sv-alert--danger`). Sem mexer em prazo, retry nem config.
+- **Testes**: alterado `tests/pages/configuracoes-email-channel.test.tsx` (TESTE-ALTERADO, asserções preservadas). Passa 8 de 8 com três suítes `tests/pages` rodando em paralelo. Sem mudança em `src/`, sem changeset.
+- **Next step**: the-judge em thread limpa. **Blockers**: nenhum.
