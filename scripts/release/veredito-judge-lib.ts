@@ -105,6 +105,11 @@ export interface AlvoVeredito {
   sha: string;
   /** Identificador de quem escreveu a PR, na mesma forma usada no veredito. */
   autor: string;
+  /**
+   * Identidade exata que o revisor deve declarar (ADR-100: `actions/<run_id>/<tentativa>`). Quando passada, o
+   * veredito só vale se foi montado pelo job que o conferiu: texto colado por uma sessão não leva essa identidade.
+   */
+  revisorEsperado?: string;
 }
 
 export interface Avaliacao {
@@ -127,6 +132,9 @@ export function avaliarVeredito(bruto: unknown, alvo: AlvoVeredito): Avaliacao {
     motivos.push('o autor não aprova a si mesmo: o revisor precisa ser outra identidade');
   }
   if (!igual(veredito.autor, alvo.autor)) motivos.push('o autor declarado no veredito não é o autor da PR');
+  if (alvo.revisorEsperado !== undefined && veredito.revisor.trim() !== alvo.revisorEsperado.trim()) {
+    motivos.push(`o revisor declarado (${veredito.revisor}) não é a identidade do job que julgou (${alvo.revisorEsperado})`);
+  }
   const bloqueantes = veredito.achados.filter((a) => a.severidade === 'bloqueante');
   if (bloqueantes.length > 0) motivos.push(`${bloqueantes.length} achado(s) bloqueante(s)`);
   return { aprovado: motivos.length === 0, motivos, bloqueantes };

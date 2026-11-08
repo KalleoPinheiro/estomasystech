@@ -2466,3 +2466,27 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
 - **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
 
+
+## Veredito do the-judge à prova de forja (#764) (2026-11-08) — EM REVISÃO
+- **O que mudou**: novo `.github/workflows/veredito-judge.yml` (`pull_request_target`, check `Veredito do the-judge`): o job gera o diff do head como dado, chama o modelo com `ANTHROPIC_API_KEY` (`scripts/release/julgar-pr.ts` + `julgar-pr-lib.ts`), **monta** o veredito (`sha`, `autor`, `revisor = actions/<run_id>/<tentativa>`) e o confere com `check:veredito --revisor-esperado`. Não lê comentário. Chave de introdução `vars.VEREDITO_JUDGE_ATIVO`. ADR-100 (o 099 já era da #765); `classe-de-risco.md` § 2 e `docs/README.md` atualizados.
+- **Prova do ruleset**: rulesets `main` e `release-branches` lidos pela API exigem os quatro checks com `integration_id` 15368 (ADR-100, seção final); `mergeable_state: blocked` na PR em rascunho.
+- **Testes**: novo `tests/scripts/release-julgar-pr.test.ts`. Nenhum teste existente alterado. `scripts/gate/` não foi tocado (sem regra 8).
+- **Fora do repositório (só o Kalléo)**: segredo `ANTHROPIC_API_KEY`; variável `VEREDITO_JUDGE_ATIVO=true`; exigir `Veredito do the-judge` nos dois rulesets; aprovar a classe 3 desta PR. Risco anotado: o dono tem bypass `always` nos rulesets.
+- **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: os três itens do dono para ativar.
+- **Rodada 3 (segunda revisão)**: lista de arquivos por `git diff -z` (acento não escapa do piso), sem `temperature` (Sonnet 5.5 dá 400), falha da API não vai para o cache do SHA, conferência da release só com PRs mescladas que não miram a `main`. ADR-100 atualizado.
+- **Rodada 2 (revisão da #774)**: fork não chega ao segredo (job `julgar` com `if` de repositório e check final que reprova); delimitador do diff com nonce e aprovação vazia reprovada; caminhos protegidos (workflows, `scripts/release/`, `scripts/gate/`, `drizzle/`) exigem o Environment do dono (job `humana`); veredito fixo por SHA no cache e temperatura 0; PR release→main confere os checks das PRs (`conferir-release.ts`, sem modelo; exige `vars.VEREDITO_JUDGE_DESDE`); modelo padrão `claude-sonnet-5-5`. Novos testes: `release-conferir-release`, `release-veredito-workflow`; ADR-100 reescrito (alternativas, bypass aceito até a fase 3, chave sai na v0.8.0).
+
+
+## Veredito do the-judge por federação de identidades, sem chave de API (#764, complemento) (2026-11-08) — EM REVISÃO
+- **O que mudou**: o job `julgar` de `veredito-judge.yml` ganha `id-token: write` e deixa de usar `secrets.ANTHROPIC_API_KEY`: `julgar-pr.ts` pede o OIDC ao GitHub (audiência `https://api.anthropic.com`), troca em `/v1/oauth/token` (`trocarTokenOidc`) e chama as mensagens com `Authorization: Bearer`. Ids em variáveis do repositório (`ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID`, `ANTHROPIC_WORKSPACE_ID`). Falha de autenticação vira veredito de falha (não aprova, não vai ao cache). ADR-100 item 11, `.env.example` e `onboarding.md` § 4 atualizados.
+- **Testes**: novos casos de WIF em `release-julgar-pr.test.ts`. Dois testes existentes mudaram porque o requisito mudou (decisão do dono: sem chave de API): o de `chamarAnthropic` (cabeçalho `Authorization: Bearer` no lugar de `x-api-key`) e o do workflow (sem `secrets.*`, só `julgar` pede `id-token`). `TESTE-ALTERADO` no corpo da PR.
+- **Fora do repositório (só o Kalléo)**: conta de serviço + emissor + regra no Console da Anthropic; variáveis acima no GitHub; apagar o segredo `ANTHROPIC_API_KEY`; aprovar a classe 3. Confirmar o `sub` real do `pull_request_target` no histórico de autenticação.
+- **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: configuração do Console.
+
+
+## Veredito do the-judge na `main` (hotfix do #764) (2026-11-08) — EM REVISÃO
+- **O que mudou**: o `pull_request_target` só dispara com o arquivo na branch padrão, e o `veredito-judge.yml` só existia na `release/v0.7.0` (zero execuções). `hotfix/veredito-judge` leva para a `main` o conteúdo da #774 e da #776 (workflow, `julgar-pr*`, `conferir-release*`, `veredito-judge*`, testes, ADR-100 item 12). Nenhum arquivo novo além desses; nada em `src/`.
+- **Testes**: os de `tests/scripts/release-{julgar-pr,conferir-release,veredito-workflow}.test.ts` chegam novos à `main` (nenhum teste existente da `main` alterado).
+- **Fora do repositório (só o Kalléo)**: aprovar a classe 3; mergear na `main` (merge commit); depois `main` → `release/v0.7.0`; recriar `VEREDITO_JUDGE_DESDE` com o instante do merge e `VEREDITO_JUDGE_ATIVO=true`; PR já aberta na release precisa de push ou fechar/reabrir para receber o check; só então exigir `Veredito do the-judge` no `release-branches` (e na `main`).
+- **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
+
