@@ -52,6 +52,11 @@ Actions não prove melhor, em ambiente limpo.
    duas mudanças de teste existente deste ADR (C47 de `ci-workflow.test.ts` e a lista de jobs de
    `gate-pr-workflow.test.ts`) saem com `TESTE-ALTERADO:` no PR.
 
+6. **Portão de risco.** Novo `portao-risco.yml` (fase 2c): `check:risco` classifica o diff e, na classe 3, o job
+   `aprovacao-classe-3` fica parado no Environment protegido de mesmo nome até o dono aprovar; `portao-risco` é o
+   check a exigir no ruleset. O veredito do the-judge (`check:veredito`) **não** entra aqui: ligá-lo pede definir
+   quem pode comentar (só um autor confiável) e o identificador que distingue as sessões dos agentes.
+
 ## Consequências
 
 - Mais minutos de Actions por PR; aceito com repositório público e runners padrão. Se o repositório voltar a
@@ -60,4 +65,6 @@ Actions não prove melhor, em ambiente limpo.
 - Fora do repositório (só o dono): trocar nos rulesets o check exigido antigo ("Recibo do gate local +
   integridade dos testes") por **Integridade dos testes e homologação**, exigir **Gate do PR** também na
   `main` e confirmar com um PR de teste que um E2E vermelho barra o merge.
+- Também só do dono: criar o Environment `aprovacao-classe-3` com ele como revisor **antes** de exigir
+  `portao-risco`; sem revisor o GitHub cria o Environment vazio e a classe 3 passaria sozinha.
 - O tempo do check, medido no primeiro PR com a mutação ligada, fica registrado na issue #757.
