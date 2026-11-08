@@ -45,3 +45,18 @@ export function avaliarRelease(commits: readonly CommitDaRelease[], desde: strin
   }
   return { aprovado: motivos.length === 0, motivos };
 }
+
+/** Forma mínima de uma PR em `GET /commits/{sha}/pulls`. */
+export interface PrDaApi {
+  number: number;
+  merged_at: string | null;
+  base: { ref: string };
+  head: { sha: string };
+}
+
+/**
+ * `commits/{sha}/pulls` devolve toda PR cuja branch contém o commit, inclusive PRs abertas e a própria PR da
+ * release. Só valem as PRs já mescladas e que não miram a base da conferência (a `main`).
+ */
+export const prsDaRelease = (prs: readonly PrDaApi[], baseDaConferencia: string): PrDaApi[] =>
+  prs.filter((pr) => pr.merged_at !== null && pr.base.ref !== baseDaConferencia);

@@ -60,4 +60,16 @@ describe('workflow do veredito · segredo e fork', () => {
     );
     expect(julgar).toContain('conferir-release.ts');
   });
+
+  it('Dado nome de arquivo com acento, Quando o job classifica, Então usa a lista NUL do git (sem aspas) e não o cabeçalho do diff', () => {
+    const julgar = job('julgar');
+    expect(julgar).toMatch(/core\.quotePath=false diff --name-only -z/);
+    expect(julgar).toContain('--arquivos');
+  });
+
+  it('Dado falha da API, Quando o job julga, Então o passo que grava no cache só roda se existir o arquivo do veredito', () => {
+    expect(job('julgar')).toMatch(
+      /hashFiles\(format\('\{0\}\/veredito\/veredito\.json'/,
+    );
+  });
 });

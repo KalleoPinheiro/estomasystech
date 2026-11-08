@@ -8,7 +8,7 @@ name: Veredito do the-judge
 # entra só como dado (checkout em `pr/`, nunca executado, sem `npm ci` dele). Alterar este arquivo é classe 3.
 #
 # - PR de fork: reprova sem gastar a chave (o job com segredo só roda para branch do próprio repositório).
-# - Veredito fixo por SHA: o primeiro veredito de um SHA fica no cache e um re-run o reaproveita (sem novo sorteio).
+# - Veredito fixo por SHA: o primeiro julgamento (não a falha) de um SHA fica no cache e um re-run o reaproveita.
 # - Diff que toca workflows, scripts/release, scripts/gate ou drizzle exige TAMBÉM a aprovação humana da classe 3.
 # - PR release→main não chama o modelo: confere que cada PR da release tem o check aprovado (`conferir-release`).
 # - Chave `VEREDITO_JUDGE_ATIVO` (variável do repositório; a PR não a altera): fora de `true` o check passa com aviso,
@@ -88,12 +88,14 @@ jobs:
         run: |
           # Lockfile e handoff não entram no julgamento: engordam o diff sem risco de lógica.
           git -C pr diff --no-ext-diff --no-textconv "$BASE...$PR_SHA" -- . ':(exclude)package-lock.json' ':(exclude).specs' > "$RUNNER_TEMP/pr.diff"
+          # Lista separada por NUL e sem aspas: nome com acento não escapa da classificação.
+          git -C pr -c core.quotePath=false diff --name-only -z --no-renames --no-ext-diff --no-textconv "$BASE...$PR_SHA" > "$RUNNER_TEMP/pr.arquivos"
           mkdir -p "$RUNNER_TEMP/veredito"
 
       - name: Classe do diff (caminho protegido)
         id: classe
         if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
-        run: npx tsx scripts/release/julgar-pr.ts --diff "$RUNNER_TEMP/pr.diff" --classificar
+        run: npx tsx scripts/release/julgar-pr.ts --arquivos "$RUNNER_TEMP/pr.arquivos" --classificar
 
       # Veredito fixo por SHA: o primeiro gravado vale; re-run não sorteia de novo (entrada de cache é imutável).
       - name: Veredito já gravado para este SHA

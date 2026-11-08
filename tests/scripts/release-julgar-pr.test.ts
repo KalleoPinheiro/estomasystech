@@ -1,7 +1,12 @@
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  arquivosDoDiff,
+  arquivosDeNul,
   chamarAnthropic,
+  ehVereditoDeFalha,
   identidadeDoJob,
   julgar,
   LIMITE_DIFF,
@@ -140,7 +145,11 @@ describe('the-judge de Actions · chamada à API', () => {
     );
     expect(texto).toBe(aprova);
     expect((init.headers as Record<string, string>)['x-api-key']).toBe('k');
-    expect(JSON.parse(init.body as string).model).toBe('m');
+    const corpo = JSON.parse(init.body as string);
+    expect(corpo.model).toBe('m');
+    // Sonnet 5.5 devolve 400 para temperature, top_p e top_k
+    for (const proibido of ['temperature', 'top_p', 'top_k'])
+      expect(corpo).not.toHaveProperty(proibido);
   });
 
   it('Dado HTTP de erro ou resposta sem texto, Quando chama, Então rejeita', async () => {
@@ -190,11 +199,63 @@ describe('the-judge de Actions · piso mecânico e injeção', () => {
     },
   );
 
-  it('Dado diff com renomeação e vários arquivos, Quando lê os cabeçalhos, Então lista origem e destino', () => {
-    const diff =
-      'diff --git a/src/a.ts b/src/b.ts\n+x\ndiff --git a/README.md b/README.md\n';
-    expect(arquivosDoDiff(diff)).toEqual(['src/a.ts', 'src/b.ts', 'README.md']);
-    expect(arquivosDoDiff('sem cabeçalho')).toEqual([]);
+  it('Dado a lista NUL do git com nome acentuado e com espaço, Quando classifica, Então protege mesmo com acento', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'julgar-'));
+    try {
+      const git = (...args: string[]) =>
+        execFileSync(
+          'git',
+          ['-C', dir, '-c', 'user.email=a@b.c', '-c', 'user.name=t', ...args],
+          { encoding: 'utf8' },
+        );
+      git('init', '-q', '-b', 'main');
+      writeFileSync(path.join(dir, 'README.md'), 'x');
+      git('add', '-A');
+      git('commit', '-q', '-m', 'base');
+      mkdirSync(path.join(dir, 'scripts/release'), { recursive: true });
+      mkdirSync(path.join(dir, '.github/workflows'), { recursive: true });
+      writeFileSync(path.join(dir, 'scripts/release/ação.ts'), 'x');
+      writeFileSync(path.join(dir, '.github/workflows/çi.yml'), 'x');
+      writeFileSync(path.join(dir, 'um arquivo.md'), 'x');
+      git('add', '-A');
+      git('commit', '-q', '-m', 'mexe');
+      const lista = git(
+        '-c',
+        'core.quotePath=false',
+        'diff',
+        '--name-only',
+        '-z',
+        '--no-renames',
+        'HEAD~1...HEAD',
+      );
+      expect(arquivosDeNul(lista).sort()).toEqual([
+        '.github/workflows/çi.yml',
+        'scripts/release/ação.ts',
+        'um arquivo.md',
+      ]);
+      expect(tocaCaminhoProtegido(arquivosDeNul(lista))).toBe(true);
+      expect(tocaCaminhoProtegido(['um arquivo.md'])).toBe(false);
+      // o cabeçalho citado do diff (o que a versão anterior lia) esconde o caminho: é por isso que a lista vem de -z
+      expect(git('diff', 'HEAD~1...HEAD')).toContain(
+        '"b/scripts/release/a\\303\\247\\303\\243o.ts"',
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    expect(arquivosDeNul('')).toEqual([]);
+  });
+
+  it('Dado veredito de falha do job, Quando checa, Então é reconhecido (e nunca vai para o cache do SHA)', async () => {
+    const falha = await julgar('d', 't', ctx, async () => {
+      throw new Error('HTTP 400');
+    });
+    expect(ehVereditoDeFalha(falha)).toBe(true);
+    expect(ehVereditoDeFalha(vereditoDaResposta(aprova, ctx))).toBe(false);
+    const bloqueioDoModelo = vereditoDaResposta(
+      '{"achados":[{"severidade":"bloqueante","titulo":"Vaza dado"}]}',
+      ctx,
+    );
+    expect(ehVereditoDeFalha(bloqueioDoModelo)).toBe(false);
   });
 
   it.each([

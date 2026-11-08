@@ -44,12 +44,17 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
    qualquer ocorrência do delimitador. Resposta fora do schema, ou `achados` vazio sem `resumo`, reprova.
 5. **Piso mecânico.** Diff que toca `.github/workflows/`, `scripts/release/`, `scripts/gate/` ou `drizzle/` exige
    também a aprovação do dono no Environment `aprovacao-classe-3` (job `humana`): o modelo sozinho nunca aprova esses
-   caminhos.
+   caminhos. A lista de arquivos vem de `git diff --name-only -z --no-renames` com `core.quotePath=false`; ler o
+   cabeçalho `diff --git` não serve, porque o git cita (com escapes octais) nomes com acento e o caminho escaparia.
 6. **Veredito fixo por SHA.** O primeiro veredito gravado para um SHA vai para o cache (`veredito-judge-<sha>`,
-   entrada imutável, escopo da base) e um re-run o reaproveita em vez de sortear de novo. Temperatura 0. Se o
-   primeiro julgamento falhou antes de gravar (API fora do ar), o re-run julga de novo.
+   entrada imutável, escopo da base) e um re-run o reaproveita em vez de sortear de novo. Não há `temperature`: o
+   Sonnet 5.5 rejeita o parâmetro com HTTP 400, então a estabilidade vem só do cache por SHA. **Falha não é
+   julgamento:** erro de API, resposta ilegível ou diff grande demais saem com código 1 e não gravam o arquivo que o
+   cache lê; o re-run julga de novo.
 7. **PR release→main não chama o modelo.** `conferir-release.ts` lista os commits `main..head`, acha a PR de cada um
-   e exige o último check `Veredito do the-judge` do github-actions aprovado no head dela. Commits anteriores a
+   e exige o último check `Veredito do the-judge` do github-actions aprovado no head dela. Só contam PRs já
+   mescladas (`merged_at`) e que não miram a `main`: a API devolve também PRs abertas cuja branch contém o commit e a
+   própria PR da release, que reprovariam para sempre. Commits anteriores a
    `vars.VEREDITO_JUDGE_DESDE` e merges sem PR (sincronização com a `main`) ficam isentos; sem a data a conferência
    reprova. Assim o limite de tamanho não afeta a release.
 8. **Custo.** Modelo padrão `claude-sonnet-5-5` (variável `JUDGE_MODEL` troca). Diff acima de 400 000 caracteres

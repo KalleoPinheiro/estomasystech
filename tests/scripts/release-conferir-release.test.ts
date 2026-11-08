@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   avaliarRelease,
   type CommitDaRelease,
+  type PrDaApi,
+  prsDaRelease,
 } from '../../scripts/release/conferir-release-lib';
 
 const DESDE = '2026-11-09T00:00:00Z';
@@ -59,4 +61,28 @@ describe('PR release→main · conferência dos vereditos', () => {
       expect(r.motivos[0]).toContain('VEREDITO_JUDGE_DESDE');
     },
   );
+});
+
+describe('PR release→main · quais PRs valem', () => {
+  const pr = (numero: number, mesclada: boolean, base: string): PrDaApi => ({
+    number: numero,
+    merged_at: mesclada ? '2026-11-08T12:00:00Z' : null,
+    base: { ref: base },
+    head: { sha: String(numero).repeat(40).slice(0, 40) },
+  });
+
+  it('Dado a resposta de commits/{sha}/pulls com PR da release, PRs abertas e a própria PR release→main, Quando filtra, Então só a PR mesclada na release vale', () => {
+    const resposta = [
+      pr(753, true, 'release/v0.7.0'),
+      pr(774, false, 'release/v0.7.0'),
+      pr(775, false, 'release/v0.7.0'),
+      pr(800, false, 'main'),
+    ];
+    expect(prsDaRelease(resposta, 'main').map((p) => p.number)).toEqual([753]);
+  });
+
+  it('Dado PR mesclada na main (a própria release), Quando filtra, Então não entra na conferência', () => {
+    expect(prsDaRelease([pr(900, true, 'main')], 'main')).toEqual([]);
+    expect(prsDaRelease([], 'main')).toEqual([]);
+  });
 });

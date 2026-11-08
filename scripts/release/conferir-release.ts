@@ -6,7 +6,7 @@
  * Variáveis: GH_TOKEN, GITHUB_REPOSITORY, VEREDITO_JUDGE_DESDE.
  */
 import { spawnSync } from 'node:child_process';
-import { avaliarRelease, type CommitDaRelease } from './conferir-release-lib';
+import { avaliarRelease, type CommitDaRelease, type PrDaApi, prsDaRelease } from './conferir-release-lib';
 
 const opcao = (nome: string): string | undefined => {
   const i = process.argv.indexOf(nome);
@@ -53,8 +53,7 @@ const commits: CommitDaRelease[] = comparacao
     sha: c.sha,
     merge: c.parents.length > 1,
     data: c.commit.committer.date,
-    prs: api<{ number: number; head: { sha: string } }[]>(`repos/${repo}/commits/${c.sha}/pulls`)
-      .flat()
+    prs: prsDaRelease(api<PrDaApi[]>(`repos/${repo}/commits/${c.sha}/pulls`).flat(), base)
       .map((pr) => ({ numero: pr.number, veredito: vereditoDoHead(pr.head.sha) })),
   }));
 

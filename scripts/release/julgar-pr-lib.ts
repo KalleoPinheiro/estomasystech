@@ -48,9 +48,14 @@ const montar = (ctx: ContextoJulgamento, achados: Achado[], resumo?: string): Ve
   ...(resumo ? { resumo } : {}),
 });
 
+export const TITULO_FALHA = 'O the-judge de Actions não conseguiu julgar esta PR';
+
+/** Falha do job (API, diff, resposta ilegível): não é julgamento, então nunca vai para o cache do SHA. */
+export const ehVereditoDeFalha = (v: Veredito): boolean => v.achados.some((a) => a.titulo === TITULO_FALHA);
+
 /** Veredito reprovado montado pelo próprio job (diff grande demais, chamada falhou, resposta ilegível). */
 export const vereditoDeFalha = (ctx: ContextoJulgamento, motivo: string): Veredito =>
-  montar(ctx, [bloqueio('O the-judge de Actions não conseguiu julgar esta PR', motivo)], 'Falha fechada: sem julgamento não há aprovação.');
+  montar(ctx, [bloqueio(TITULO_FALHA, motivo)], 'Falha fechada: sem julgamento não há aprovação.');
 
 /** Converte a resposta do modelo em veredito, ignorando qualquer `sha`/`autor`/`revisor` que ela traga. */
 export function vereditoDaResposta(resposta: string, ctx: ContextoJulgamento): Veredito {
@@ -105,7 +110,7 @@ export function chamarAnthropic(opts: { chave: string; modelo: string; buscar?: 
     const r = await buscar('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': opts.chave, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: opts.modelo, max_tokens: 8000, temperature: 0, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: opts.modelo, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const corpo = (await r.json()) as { content?: { type: string; text?: string }[] };
@@ -120,15 +125,11 @@ export function chamarAnthropic(opts: { chave: string; modelo: string; buscar?: 
 /** Mexer nestes caminhos exige também a aprovação humana da classe 3 (Environment), qualquer que seja o veredito. */
 export const CAMINHOS_PROTEGIDOS: readonly RegExp[] = [/^\.github\/workflows\//, /^scripts\/release\//, /^scripts\/gate\//, /^drizzle\//];
 
-/** Arquivos citados nos cabeçalhos `diff --git a/x b/y` (origem e destino, para pegar renomeação). */
-export function arquivosDoDiff(diff: string): string[] {
-  const achados = new Set<string>();
-  for (const m of diff.matchAll(/^diff --git a\/(.+?) b\/(.+)$/gm)) {
-    achados.add(m[1]);
-    achados.add(m[2]);
-  }
-  return [...achados];
-}
+/**
+ * Lista de arquivos de `git diff --name-only -z --no-renames`: separada por NUL e sem aspas, então nome com acento
+ * ou espaço chega íntegro (o cabeçalho `diff --git` cita esses nomes e não serve para classificar).
+ */
+export const arquivosDeNul = (texto: string): string[] => texto.split('\0').filter((a) => a !== '');
 
 export const tocaCaminhoProtegido = (arquivos: readonly string[]): boolean =>
   arquivos.some((a) => CAMINHOS_PROTEGIDOS.some((r) => r.test(a)));
