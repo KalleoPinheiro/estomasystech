@@ -54,7 +54,7 @@ Actions não prove melhor, em ambiente limpo.
 
 6. **Portão de risco.** Novo `portao-risco.yml` (fase 2c): `check:risco` classifica o diff e, na classe 3, o job
    `aprovacao-classe-3` fica parado no Environment protegido de mesmo nome até o dono aprovar; `portao-risco` é o
-   check a exigir no ruleset. O veredito do the-judge (`check:veredito`) **não** entra aqui: ligá-lo pede definir
+   check a exigir no ruleset. O veredito do the-judge (`check:veredito`) **não** entra na v0.6.2 (issue #764, v0.7.0): como todas as PRs saem com o login do dono, filtro por autor não prova nada; ligá-lo pede definir
    quem pode comentar (só um autor confiável) e o identificador que distingue as sessões dos agentes.
 
 ## Consequências
