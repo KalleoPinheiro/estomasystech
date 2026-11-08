@@ -2471,3 +2471,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
 - **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
 
+
+## Backup pré-deploy pelo CI: `ci-backup.sh` com chave SSH restrita (#747 / ADR-095 ticket 2) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `deploy/backup/ci-backup.sh` (único comando da chave do CI): inicia `estomasystech-backup.service`, confere `Result=success`, pasta nova no R2 com `db.dump.age`, `uploads.tar.age` e `SHA256SUMS`, e imprime só `BACKUP_OK <timestamp>` ou `BACKUP_FALHOU <motivo>`. `deploy/backup/estomasystech-ci-backup.sudoers` (só esse script, sem argumentos). Etapa 9 em `backup-passo-a-passo.md` (usuário `estoma-ci`, `authorized_keys` com `restrict,command=`, teste, `VPS_SSH_KEY`/`VPS_KNOWN_HOSTS`).
+- **Cifra com age (herdada da #381)**: já existe desde 2026-10-18 (ADR-040, `backup.sh` cifra `db.dump.age` e `uploads.tar.age` com a chave pública). Nada a implementar; o `ci-backup.sh` só exige que o objeto novo traga os arquivos `.age`.
+- **Testes novos**: `tests/scripts/ci-backup.test.ts` (script real com `systemctl`/`rclone` simulados; sucesso, Result≠success, timeout, sem pasta nova, arquivo faltando, destino inacessível, configuração ausente, argumento, sem vazar saída de outros programas; sudoers). Nenhum teste existente alterado. Sem changeset (sem `src/`, `drizzle/` ou `Dockerfile`).
+- **Fora do repositório (só o Kalléo)**: Etapa 9 no VPS (usuário, sudoers, `authorized_keys`, teste com `BACKUP_OK`). Os secrets `VPS_SSH_KEY` e `VPS_KNOWN_HOSTS` entram no Environment `producao` na v0.8.0 (#752).
+- **Next step**: the-judge em thread limpa; Kalléo roda a Etapa 9. **Blockers**: nenhum para o merge; a execução real depende do Kalléo.
