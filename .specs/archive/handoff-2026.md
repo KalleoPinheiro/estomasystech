@@ -2471,6 +2471,12 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
 - **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
 
+## E2E instável: rótulo do mês, tabela de auditoria e login (#679) (2026-11-08) — EM REVISÃO
+- **Causa raiz** (sem alongar timeout nem retry): (1) `goToMonth` usava `getByText` solto e casava também a cópia oculta do fragmento que o React mantém fora do `<main>` durante o streaming (strict mode, 2 elementos); agora procura só em `#conteudo-principal`. (2) `/auditoria` lia antes de o evento existir: `recordAudit` grava em `after()`, depois da resposta da API; o spec agora filtra pelo paciente e relê (`toPass`) até a tabela aparecer. (3) Login: antes da hidratação o formulário não é do React; o que se digita sumia e o «Entrar» fazia um GET nativo com a senha na URL (o segundo fator nunca aparecia em `sessao-expirada*`). Os campos ficam `readOnly` e o botão `disabled` até hidratar (`useHydrated`, mesmo padrão do #484), então o Playwright espera sozinho.
+- **Segurança/LGPD**: antes da hidratação o envio nativo era um GET com a senha na URL (log de proxy e histórico do navegador). Além de esperar a hidratação, o formulário passou a `method="post"` como defesa extra sem JS.
+- **Testes**: novo `tests/pages/login-hidratacao.test.tsx` (HTML do servidor x cliente hidratado, e `method="post"`). Alterados (TESTE-ALTERADO): `e2e/support/calendar.ts` e `e2e/responsive-tables.spec.ts`, só a espera/escopo do locator; cenários e asserções preservados.
+- **Changeset**: patch (login). **Next step**: the-judge em thread limpa; E2E do Actions verde sem retry. **Blockers**: nenhum.
+
 
 ## Veredito do the-judge à prova de forja (#764) (2026-11-08) — EM REVISÃO
 - **O que mudou**: novo `.github/workflows/veredito-judge.yml` (`pull_request_target`, check `Veredito do the-judge`): o job gera o diff do head como dado, chama o modelo com `ANTHROPIC_API_KEY` (`scripts/release/julgar-pr.ts` + `julgar-pr-lib.ts`), **monta** o veredito (`sha`, `autor`, `revisor = actions/<run_id>/<tentativa>`) e o confere com `check:veredito --revisor-esperado`. Não lê comentário. Chave de introdução `vars.VEREDITO_JUDGE_ATIVO`. ADR-100 (o 099 já era da #765); `classe-de-risco.md` § 2 e `docs/README.md` atualizados.

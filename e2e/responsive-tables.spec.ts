@@ -166,8 +166,12 @@ test.describe("tabelas responsivas em viewport mobile (375x667)", () => {
     // Criar condição gera evento de auditoria (recordAudit em .../conditions/route.ts).
     await createCondition(request, patient.id, { kind: "wound", title: `Ferida auditoria ${unique()}` });
 
-    await page.goto("/auditoria");
-    await expect(page.locator("table")).toBeVisible();
+    // O evento é gravado em `after()`, depois da resposta da API (best-effort): a primeira leitura
+    // pode vir antes dele. Filtra pelo paciente e relê até o evento aparecer, sem alongar nenhum prazo (#679).
+    await expect(async () => {
+      await page.goto(`/auditoria?paciente=${patient.id}`);
+      await expect(page.locator("table")).toBeVisible({ timeout: 2_000 });
+    }).toPass();
     await expectTableWrappedInOverflowContainer(page);
     await expectNoHorizontalScroll(page);
   });
