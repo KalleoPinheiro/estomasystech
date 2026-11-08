@@ -103,13 +103,52 @@ export async function julgar(diff: string, titulo: string, ctx: ContextoJulgamen
   }
 }
 
-/** Chamada à API de mensagens da Anthropic. `buscar` é injetável para teste. */
-export function chamarAnthropic(opts: { chave: string; modelo: string; buscar?: typeof fetch }): ChamarModelo {
+export const AUDIENCIA_OIDC = 'https://api.anthropic.com';
+
+/** Config da federação de identidades (WIF): ids públicos, nenhum deles é segredo. */
+export type ConfigFederacao = { regra: string; organizacao: string; contaDeServico: string; workspace?: string };
+
+/**
+ * Troca o token OIDC do job pelo token de acesso curto da Anthropic (`POST /v1/oauth/token`, grant jwt-bearer).
+ * Sem chave de API de longa duração: quem prova a identidade é o `sub` do job, conferido pela regra do Console.
+ */
+export async function trocarTokenOidc(jwt: string, cfg: ConfigFederacao, buscar: typeof fetch = fetch): Promise<string> {
+  const r = await buscar('https://api.anthropic.com/v1/oauth/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+      federation_rule_id: cfg.regra,
+      organization_id: cfg.organizacao,
+      service_account_id: cfg.contaDeServico,
+      ...(cfg.workspace ? { workspace_id: cfg.workspace } : {}),
+    }),
+  });
+  if (!r.ok) throw new Error(`troca do token OIDC: HTTP ${r.status}`);
+  const corpo = (await r.json()) as { access_token?: string };
+  if (!corpo.access_token) throw new Error('troca do token OIDC: resposta sem access_token');
+  return corpo.access_token;
+}
+
+/** Pede ao GitHub o token OIDC do job (exige `permissions: id-token: write`). */
+export async function tokenOidcDoGitHub(url: string, tokenDeRequisicao: string, buscar: typeof fetch = fetch): Promise<string> {
+  const r = await buscar(`${url}${url.includes('?') ? '&' : '?'}audience=${encodeURIComponent(AUDIENCIA_OIDC)}`, {
+    headers: { authorization: `Bearer ${tokenDeRequisicao}` },
+  });
+  if (!r.ok) throw new Error(`token OIDC do GitHub: HTTP ${r.status}`);
+  const corpo = (await r.json()) as { value?: string };
+  if (!corpo.value) throw new Error('token OIDC do GitHub: resposta sem value');
+  return corpo.value;
+}
+
+/** Chamada à API de mensagens da Anthropic com o token de acesso da federação. `buscar` é injetável para teste. */
+export function chamarAnthropic(opts: { token: string; modelo: string; buscar?: typeof fetch }): ChamarModelo {
   const buscar = opts.buscar ?? fetch;
   return async (prompt) => {
     const r = await buscar('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-api-key': opts.chave, 'anthropic-version': '2023-06-01' },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.token}`, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: opts.modelo, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);

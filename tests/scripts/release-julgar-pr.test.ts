@@ -12,6 +12,8 @@ import {
   LIMITE_DIFF,
   montarPrompt,
   tocaCaminhoProtegido,
+  tokenOidcDoGitHub,
+  trocarTokenOidc,
   vereditoDaResposta,
 } from '../../scripts/release/julgar-pr-lib';
 import { avaliarVeredito } from '../../scripts/release/veredito-judge-lib';
@@ -131,7 +133,7 @@ describe('the-judge de Actions · chamada à API', () => {
       json: async () => corpo,
     })) as unknown as typeof fetch;
 
-  it('Dado API que responde, Quando chama, Então devolve o texto e envia a chave no cabeçalho', async () => {
+  it('Dado API que responde, Quando chama, Então devolve o texto e envia o token de acesso no cabeçalho', async () => {
     let init: RequestInit = {};
     const buscar = (async (_u: string, i: RequestInit) => {
       init = i;
@@ -140,11 +142,13 @@ describe('the-judge de Actions · chamada à API', () => {
         json: async () => ({ content: [{ type: 'text', text: aprova }] }),
       };
     }) as unknown as typeof fetch;
-    const texto = await chamarAnthropic({ chave: 'k', modelo: 'm', buscar })(
+    const texto = await chamarAnthropic({ token: 'k', modelo: 'm', buscar })(
       'p',
     );
     expect(texto).toBe(aprova);
-    expect((init.headers as Record<string, string>)['x-api-key']).toBe('k');
+    const cab = init.headers as Record<string, string>;
+    expect(cab.authorization).toBe('Bearer k');
+    expect(cab).not.toHaveProperty('x-api-key');
     const corpo = JSON.parse(init.body as string);
     expect(corpo.model).toBe('m');
     // Sonnet 5.5 devolve 400 para temperature, top_p e top_k
@@ -155,20 +159,20 @@ describe('the-judge de Actions · chamada à API', () => {
   it('Dado HTTP de erro ou resposta sem texto, Quando chama, Então rejeita', async () => {
     await expect(
       chamarAnthropic({
-        chave: 'k',
+        token: 'k',
         modelo: 'm',
         buscar: resposta({}, false, 401),
       })('p'),
     ).rejects.toThrow('HTTP 401');
     await expect(
       chamarAnthropic({
-        chave: 'k',
+        token: 'k',
         modelo: 'm',
         buscar: resposta({ content: [] }),
       })('p'),
     ).rejects.toThrow('sem texto');
     await expect(
-      chamarAnthropic({ chave: 'k', modelo: 'm', buscar: resposta({}) })('p'),
+      chamarAnthropic({ token: 'k', modelo: 'm', buscar: resposta({}) })('p'),
     ).rejects.toThrow('sem texto');
   });
 });
@@ -272,4 +276,80 @@ describe('the-judge de Actions · piso mecânico e injeção', () => {
       expect(tocaCaminhoProtegido(['README.md', arquivo])).toBe(esperado);
     },
   );
+});
+
+describe('the-judge de Actions · federação de identidades (sem chave de API)', () => {
+  const cfg = {
+    regra: 'fdrl_1',
+    organizacao: 'org-1',
+    contaDeServico: 'svac_1',
+  };
+  const falso = (corpo: unknown, ok = true, status = 200) => {
+    const chamadas: { url: string; init: RequestInit }[] = [];
+    const buscar = (async (url: string, init: RequestInit) => {
+      chamadas.push({ url, init });
+      return { ok, status, json: async () => corpo };
+    }) as unknown as typeof fetch;
+    return { buscar, chamadas };
+  };
+
+  it('Dado o OIDC do job, Quando troca, Então envia o grant jwt-bearer com regra, organização e conta e devolve o token de acesso', async () => {
+    const { buscar, chamadas } = falso({ access_token: 'sk-ant-oat01-x' });
+    expect(
+      await trocarTokenOidc('jwt', { ...cfg, workspace: 'wrkspc_1' }, buscar),
+    ).toBe('sk-ant-oat01-x');
+    expect(chamadas[0].url).toBe('https://api.anthropic.com/v1/oauth/token');
+    expect(JSON.parse(chamadas[0].init.body as string)).toEqual({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: 'jwt',
+      federation_rule_id: 'fdrl_1',
+      organization_id: 'org-1',
+      service_account_id: 'svac_1',
+      workspace_id: 'wrkspc_1',
+    });
+  });
+
+  it('Dado workspace ausente, Quando troca, Então o corpo não leva workspace_id', async () => {
+    const { buscar, chamadas } = falso({ access_token: 't' });
+    await trocarTokenOidc('jwt', cfg, buscar);
+    expect(JSON.parse(chamadas[0].init.body as string)).not.toHaveProperty(
+      'workspace_id',
+    );
+  });
+
+  it('Dado regra que nega ou resposta sem token, Quando troca, Então rejeita (nunca aprova por omissão)', async () => {
+    await expect(
+      trocarTokenOidc('j', cfg, falso({}, false, 401).buscar),
+    ).rejects.toThrow('HTTP 401');
+    await expect(trocarTokenOidc('j', cfg, falso({}).buscar)).rejects.toThrow(
+      'sem access_token',
+    );
+  });
+
+  it('Dado o runner do GitHub, Quando pede o OIDC, Então manda a audiência da Anthropic e o bearer do runner', async () => {
+    const { buscar, chamadas } = falso({ value: 'jwt' });
+    expect(
+      await tokenOidcDoGitHub('https://gh/token?api=1', 'rt', buscar),
+    ).toBe('jwt');
+    expect(chamadas[0].url).toBe(
+      'https://gh/token?api=1&audience=https%3A%2F%2Fapi.anthropic.com',
+    );
+    expect(
+      (chamadas[0].init.headers as Record<string, string>).authorization,
+    ).toBe('Bearer rt');
+    const { buscar: b2, chamadas: c2 } = falso({ value: 'jwt' });
+    await tokenOidcDoGitHub('https://gh/token', 'rt', b2);
+    expect(c2[0].url).toBe(
+      'https://gh/token?audience=https%3A%2F%2Fapi.anthropic.com',
+    );
+  });
+
+  it('Dado GitHub sem OIDC, Quando pede, Então rejeita', async () => {
+    await expect(
+      tokenOidcDoGitHub('https://gh/t', 'rt', falso({}, false, 403).buscar),
+    ).rejects.toThrow('HTTP 403');
+    await expect(
+      tokenOidcDoGitHub('https://gh/t', 'rt', falso({}).buscar),
+    ).rejects.toThrow('sem value');
+  });
 });

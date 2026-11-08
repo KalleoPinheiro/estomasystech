@@ -3,11 +3,22 @@
  *
  * Roda só no job `Veredito do the-judge` do Actions. Lê o diff da PR, pede o julgamento ao modelo com a
  * credencial do repositório e grava o veredito `the-judge/v1` com `sha`, `autor` e `revisor` do contexto do job.
- * Variáveis: ANTHROPIC_API_KEY, JUDGE_MODEL (padrão claude-sonnet-5-5), PR_SHA, PR_AUTOR, PR_TITULO, GITHUB_RUN_ID, GITHUB_RUN_ATTEMPT.
+ * Autentica por federação de identidades (OIDC do job → token curto da Anthropic), sem chave de API.
+ * Variáveis: ANTHROPIC_FEDERATION_RULE_ID, ANTHROPIC_ORGANIZATION_ID, ANTHROPIC_SERVICE_ACCOUNT_ID, ANTHROPIC_WORKSPACE_ID (opcional),
+ * ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN (do runner), JUDGE_MODEL (padrão claude-sonnet-5-5), PR_SHA, PR_AUTOR, PR_TITULO, GITHUB_RUN_ID, GITHUB_RUN_ATTEMPT.
  * Veredito de falha (API fora do ar, resposta ilegível, diff grande) sai com 1 e não grava o arquivo que o cache lê.
  */
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
-import { arquivosDeNul, chamarAnthropic, ehVereditoDeFalha, identidadeDoJob, julgar, tocaCaminhoProtegido } from './julgar-pr-lib';
+import {
+  arquivosDeNul,
+  chamarAnthropic,
+  ehVereditoDeFalha,
+  identidadeDoJob,
+  julgar,
+  tocaCaminhoProtegido,
+  tokenOidcDoGitHub,
+  trocarTokenOidc,
+} from './julgar-pr-lib';
 
 const opcao = (nome: string): string | undefined => {
   const i = process.argv.indexOf(nome);
@@ -38,6 +49,21 @@ if (!arquivoDiff || !saida) {
   process.exit(1);
 }
 
+// Falha ao autenticar também é falha de julgamento: vira veredito de falha (nada gravado), nunca aprovação.
+let token = '';
+let falhaDeAutenticacao: string | undefined;
+try {
+  const jwt = await tokenOidcDoGitHub(exigir('ACTIONS_ID_TOKEN_REQUEST_URL'), exigir('ACTIONS_ID_TOKEN_REQUEST_TOKEN'));
+  token = await trocarTokenOidc(jwt, {
+    regra: exigir('ANTHROPIC_FEDERATION_RULE_ID'),
+    organizacao: exigir('ANTHROPIC_ORGANIZATION_ID'),
+    contaDeServico: exigir('ANTHROPIC_SERVICE_ACCOUNT_ID'),
+    workspace: process.env.ANTHROPIC_WORKSPACE_ID || undefined,
+  });
+} catch (erro) {
+  falhaDeAutenticacao = erro instanceof Error ? erro.message : String(erro);
+}
+
 const veredito = await julgar(
   readFileSync(arquivoDiff, 'utf8'),
   process.env.PR_TITULO ?? '',
@@ -46,7 +72,10 @@ const veredito = await julgar(
     autor: exigir('PR_AUTOR'),
     revisor: identidadeDoJob(exigir('GITHUB_RUN_ID'), process.env.GITHUB_RUN_ATTEMPT ?? '1'),
   },
-  chamarAnthropic({ chave: exigir('ANTHROPIC_API_KEY'), modelo: process.env.JUDGE_MODEL ?? 'claude-sonnet-5-5' }),
+  async (prompt) => {
+    if (falhaDeAutenticacao) throw new Error(falhaDeAutenticacao);
+    return chamarAnthropic({ token, modelo: process.env.JUDGE_MODEL ?? 'claude-sonnet-5-5' })(prompt);
+  },
 );
 // Falha não é julgamento: nada é gravado onde o cache por SHA lê, e o job reprova sem fixar o SHA.
 if (ehVereditoDeFalha(veredito)) {
