@@ -2412,3 +2412,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: estágio `deps` do `Dockerfile` instala `npm@<packageManager>` (lido do `package.json`) antes do `npm ci`, zerando o EBADENGINE do build do Coolify sem afrouxar `engines.npm`. Emenda no ADR-091 e linha nova em `troubleshooting.md`.
 - **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.
 - **Next step**: coordenador marca pronto; conferir o log do próximo deploy do Coolify sem EBADENGINE. **Blockers**: nenhum.
+
+## Ajustes de texto apontados pelo CodeRabbit na v0.6.0 (#714 / EST-31) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só texto. `CHANGELOG.md` limita a frase de SSL a `prefer`, `require` e `verify-ca` (`no-verify` e `disable` não são reescritos), corrigido direto na entrada 0.6.0 porque o changeset de origem já foi consumido; `docs/engineering/gate-na-nuvem.md` diz que o `gate:local` não roda todas as travas do `ci.yml` (`check:changeset` só no CI); `SECURITY.md` cita a versão implantada em produção, não a última tag.
+- **Testes**: nenhum teste alterado ou criado (sem mudança de comportamento). Sem changeset (só `.md`).
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
