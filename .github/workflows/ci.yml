@@ -159,6 +159,13 @@ jobs:
         if: needs.escopo.outputs.docs_only != 'true'
         run: npm run check:server-first
 
+      # Lint de migração aditiva (fase 2b, #755): erro estrutural reprova; migração não aditiva é decisão de classe 3.
+      - name: Migração aditiva (check:migracao)
+        if: github.event_name == 'pull_request'
+        run: npm run check:migracao
+        env:
+          GATE_BASE: origin/${{ github.base_ref }}
+
       # `import()` com template literal faz o Vite avisar e esconde avisos reais (#646).
       - name: Dynamic-import gate
         if: needs.escopo.outputs.docs_only != 'true'
@@ -179,6 +186,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -193,6 +201,12 @@ jobs:
 
       - name: Dynamic-import gate
         run: npx tsx scripts/check-dynamic-import.ts
+
+      - name: Migração aditiva (check:migracao)
+        if: github.event_name == 'pull_request'
+        run: npm run check:migracao
+        env:
+          GATE_BASE: origin/${{ github.base_ref }}
 
       - name: Audit de produção
         run: npm audit --omit=dev --audit-level=high

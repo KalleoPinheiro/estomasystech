@@ -115,3 +115,14 @@ describe('Feature: o recibo do gate local deixou de ser exigido no PR (ADR-098)'
     expect(read('.github/pull_request_template.md')).not.toContain('E2E-GATE');
   });
 });
+
+describe('Feature: lint de migração aditiva no CI (fase 2b)', () => {
+  it('Dado um PR, Quando o CI roda, Então o check:migracao roda no estático e no fora-do-selo contra a base do PR', () => {
+    const ci = read('.github/workflows/ci.yml');
+    for (const nome of ['estatico', 'fora-do-selo']) {
+      const job = bloco(ci, nome);
+      expect(job, nome).toContain('npm run check:migracao');
+      expect(job, nome).toContain('GATE_BASE: origin/${{ github.base_ref }}');
+    }
+  });
+});

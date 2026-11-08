@@ -53,6 +53,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`engineering/homologacao-cenarios.md`](engineering/homologacao-cenarios.md) | **casos de validação** de cada domínio × conta fictícia e dado do seed que os reproduz na staging |
 | [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Traefik do Coolify, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
 | [`engineering/backup-passo-a-passo.md`](engineering/backup-passo-a-passo.md) | **backup cifrado do zero**, para leigo: chave `age`, R2 na UE, scripts, alerta por e-mail, primeiro backup e teste de restauração, com as armadilhas da instalação real |
+| [`engineering/migracoes-aditivas.md`](engineering/migracoes-aditivas.md) | **lint de migração aditiva** (`check:migracao`): o que é aditivo, conferências do journal e formato JSON para o classificador de risco |
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
 | [`engineering/performance-front-linha-de-base-2026-10.md`](engineering/performance-front-linha-de-base-2026-10.md) | **linha de base do front** (Next.js): JS por rota, FCP/LCP/CLS e chamadas `/api` em 360/390/768/1280, auditoria de recursos do Next e da hidratação (retrato de 2026-10-24) |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
