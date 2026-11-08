@@ -75,8 +75,8 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
   reprova. Com o PR pronto: `impacto`, `integracao`, `build-prod` (um build só, publicado como artefato `build-next`), `e2e-prod` (3 shards que baixam esse build) e `e2e-dev` (papéis, login, console
   limpo). A mutação incremental saiu do PR e ficou em `mutacao-mensal.yml` (`workflow_dispatch` ou schedule).
   O job `gate-pr` confere que cada job que devia rodar passou (se `build-prod` falha, `e2e-prod` fica `skipped` e o
-  agregador reprova). O `gate:local` roda as mesmas travas estáticas do `ci.yml`, incluindo `check:server-first` e
-  `check:dynamic-import`.
+  agregador reprova). O `gate:local` roda as travas estáticas listadas no `ci.yml`, incluindo `check:server-first` e
+  `check:dynamic-import`, mas não todas: o `check:changeset` roda só no CI.
   Reproduzir um shard de E2E: `npx playwright test -c playwright.prod.config.ts --shard=2/3`.
 - **Nuvem, `gate-cloud.sh`**: estáticos juntos; E2E de produção em paralelo com dev + console limpo, cada um num
   namespace próprio (`scripts/gate-cloud/isolado.sh`); mutação com `--incremental`. `GATE_E2E_SEQUENCIAL=1` volta

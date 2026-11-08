@@ -2417,3 +2417,18 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: só o comentário de `.github/workflows/ci.yml` acima do job `fora-do-selo`. O texto dizia que nem o `gate:local` roda `check:server-first` e `check:dynamic-import`; desde a #698 ele os roda. A conclusão do #705: o job **continua necessário**, porque o selo só exige as etapas de `ETAPAS_CI` (`typecheck, lint, sv, docs, cobertura, build, integracao`), sem as duas travas; um selo sem elas ainda é aceito e dispensaria o `estatico`. Job e `tests/infrastructure/ci-fora-do-selo.test.ts` ficam como estão.
 - **Opção futura (não feita)**: incluir `server-first` e `dynamic-import` em `ETAPAS_CI` (recibo e selo já carregam essas etapas) e então remover o job e o teste. Pede `TESTE-ALTERADO` e ADR; decisão do coordenador.
 - **Testes**: nenhum alterado ou novo. **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Automatizar o fim da release: tag, backup, deploy e fumaça (#715) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só documentação. ADR-095 (rascunho) com desenho do workflow `release-deploy.yml` (publicar → backup → deploy → fumaça), gate humano por *Environment* `producao` restrito à `main`, segredos só no *Environment* (repo público), chave SSH de comando forçado para o backup, deploy da tag exata via API do Coolify (sujeito a spike), fumaça somente leitura em `scripts/release/fumaca-producao.sh`, rollback pelo mesmo caminho e 7 tickets. Ponteiros em `producao.md` § 3.1 e `homologacao.md` § 1; linha no `docs/README.md`.
+- **Testes**: nenhum criado ou alterado (sem código). **Perguntas abertas** (ADR-095): revisor do *Environment*, versão pública sem login, primeira release com o fluxo novo, `GITHUB_TOKEN` x `RELEASE_CUT_TOKEN` para a tag.
+- **Next step**: coordenador revisa e decide as perguntas; depois abrir os tickets 1 a 7. **Blockers**: spike do Coolify depende do painel do Kalléo.
+
+## Ajustes de texto apontados pelo CodeRabbit na v0.6.0 (#714 / EST-31) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só texto. `CHANGELOG.md` limita a frase de SSL a `prefer`, `require` e `verify-ca` (`no-verify` e `disable` não são reescritos), corrigido direto na entrada 0.6.0 porque o changeset de origem já foi consumido; `docs/engineering/gate-na-nuvem.md` diz que o `gate:local` não roda todas as travas do `ci.yml` (`check:changeset` só no CI); `SECURITY.md` cita a versão implantada em produção, não a última tag.
+- **Testes**: nenhum teste alterado ou criado (sem mudança de comportamento). Sem changeset (só `.md`).
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Triar as 16 vulnerabilidades moderadas do npm audit (#717) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `vitest` e `@vitest/coverage-v8` em `4.1.12`, `@stryker-mutator/*` em `10.1.1` e o lockfile regenerado com o npm 11.21.1 (`npm audit fix`, sem `--force`): 16 moderadas viram 7 (todas de desenvolvimento, sem correção publicada) e `npm audit --omit=dev` fica em 0. `ci.yml` ganha o step `npm audit --omit=dev --audit-level=high` nos jobs `estatico` e `fora-do-selo`. Triagem e prazo de revisão (2026-12-08) em `docs/engineering/security-scan.md`.
+- **Testes**: nenhum alterado ou criado.
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
