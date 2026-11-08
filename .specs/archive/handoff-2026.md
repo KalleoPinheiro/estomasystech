@@ -2413,6 +2413,11 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.
 - **Next step**: coordenador marca pronto; conferir o log do próximo deploy do Coolify sem EBADENGINE. **Blockers**: nenhum.
 
+## Comentário do job fora-do-selo após a #698 (#705) (2026-11-07) — EM REVISÃO
+- **O que mudou**: só o comentário de `.github/workflows/ci.yml` acima do job `fora-do-selo`. O texto dizia que nem o `gate:local` roda `check:server-first` e `check:dynamic-import`; desde a #698 ele os roda. A conclusão do #705: o job **continua necessário**, porque o selo só exige as etapas de `ETAPAS_CI` (`typecheck, lint, sv, docs, cobertura, build, integracao`), sem as duas travas; um selo sem elas ainda é aceito e dispensaria o `estatico`. Job e `tests/infrastructure/ci-fora-do-selo.test.ts` ficam como estão.
+- **Opção futura (não feita)**: incluir `server-first` e `dynamic-import` em `ETAPAS_CI` (recibo e selo já carregam essas etapas) e então remover o job e o teste. Pede `TESTE-ALTERADO` e ADR; decisão do coordenador.
+- **Testes**: nenhum alterado ou novo. **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
 ## Automatizar o fim da release: tag, backup, deploy e fumaça (#715) (2026-11-08) — EM REVISÃO
 - **O que mudou**: só documentação. ADR-095 (rascunho) com desenho do workflow `release-deploy.yml` (publicar → backup → deploy → fumaça), gate humano por *Environment* `producao` restrito à `main`, segredos só no *Environment* (repo público), chave SSH de comando forçado para o backup, deploy da tag exata via API do Coolify (sujeito a spike), fumaça somente leitura em `scripts/release/fumaca-producao.sh`, rollback pelo mesmo caminho e 7 tickets. Ponteiros em `producao.md` § 3.1 e `homologacao.md` § 1; linha no `docs/README.md`.
 - **Testes**: nenhum criado ou alterado (sem código). **Perguntas abertas** (ADR-095): revisor do *Environment*, versão pública sem login, primeira release com o fluxo novo, `GITHUB_TOKEN` x `RELEASE_CUT_TOKEN` para a tag.

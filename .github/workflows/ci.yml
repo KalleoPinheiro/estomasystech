@@ -163,8 +163,9 @@ jobs:
         if: needs.escopo.outputs.docs_only != 'true'
         run: npx tsx scripts/check-dynamic-import.ts
 
-  # O selo do corte não cobre o `check:server-first` nem o `check:dynamic-import` (nem o `gate:local` os roda). No
-  # PR provado pelo corte este job barato (checkout + install + dois scripts) mantém a garantia que o `estatico`
+  # O `gate:local` roda o `check:server-first` e o `check:dynamic-import` (#698), mas o selo do corte só exige as
+  # etapas de `ETAPAS_CI` (scripts/release/prova-corte-lib.ts), que não os incluem: um selo sem eles ainda é aceito.
+  # Por isso, no PR provado pelo corte, este job barato (checkout + install + dois scripts) mantém a garantia que o `estatico`
   # dava (ADR-088, emenda ADR-092). Todo step do `estatico` fora do selo tem de aparecer aqui: o teste
   # tests/infrastructure/ci-fora-do-selo.test.ts reprova o contrário.
   fora-do-selo:
