@@ -2436,5 +2436,5 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 ## ADR-097: fluxo enxuto até a produção (#754) (2026-11-08) — EM REVISÃO
 - **O que mudou**: só documentação. ADR-097 (aceito em direção e nas fases 1 e 2): piso mecânico com `tlc-*` e `the-judge` por cima, classes de risco 0 a 3 calculadas por script com aprovação humana só na 3, `main` sem bypass (inclusive para o Kalléo) e fases 1 a 5 (3 a 5 propostas). Nada do fluxo vigente muda: avisos em `producao.md` § 3.1 e `homologacao.md` § 1, ponteiro no `AGENTS.md` (150 linhas) e linha no `docs/README.md`. ADR-095 só linkado.
 - **Testes**: nenhum criado ou alterado (sem código). Sem changeset (só `.md`). `check:docs` OK.
-- **Perguntas abertas**: canário sintético em produção; autorização para `scripts/gate/` e `recibo-gate.yml` (fase 2a, regra 8).
+- **Perguntas abertas**: canário sintético em produção. Autorização da regra 8 para `scripts/gate/` e `recibo-gate.yml` (fase 2a, #757) dada pelo Kalléo em 2026-11-08 e registrada no ADR.
 - **Next step**: thread revisora valida com the-judge; coordenador abre os tickets da fase 2. **Blockers**: nenhum.

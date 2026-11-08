@@ -85,7 +85,7 @@ emergência: `hotfix/*` com aprovação, documentada em `producao.md`. Ninguém 
 | Fase | O que muda | Situação | Pré-requisito |
 | --- | --- | --- | --- |
 | 1 | [ADR-095](095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md) como está (v0.8.0): tag, backup, deploy e fumaça por workflow, aprovação sempre | aceita | spike do Coolify |
-| 2a | E2E e mutação por diff voltam ao Actions como checks de PR; aposentar o recibo `E2E-GATE` (supera o ADR-042) | aceita, **bloqueada** até autorização expressa de @KalleoPinheiro para tocar `scripts/gate/` e `recibo-gate.yml` (regra 8) | autorização |
+| 2a | E2E e mutação por diff voltam ao Actions como checks de PR; aposentar o recibo `E2E-GATE` (supera o ADR-042) | aceita; @KalleoPinheiro autorizou em 2026-11-08 mexer em `scripts/gate/` e `recibo-gate.yml` (regra 8), para a #757 | — |
 | 2b | `check:migracao` e teste de compatibilidade com o commit anterior | aceita | — |
 | 2c | Classificador de risco e `the-judge` com saída estruturada como check obrigatório | aceita | — |
 | 2d | Remoção do bypass da `main` (item 4) | aceita | fases 2a a 2c estáveis; hotfix documentado |
@@ -112,14 +112,13 @@ fase 3 ou 4, por emenda, e este ADR não edita o texto dele.
   humana, pelo `CODEOWNERS` nos portões e por auditoria por amostragem (`harness-eval`).
 - Rollback só é automático com migração aditiva provada; classe 3 para e avisa.
 - Mudar o processo no meio de uma release é proibido: cada fase entra entre releases.
-- Mexer em `scripts/gate/` exige autorização expressa (regra 8), como na #692.
+- Mexer em `scripts/gate/` exige autorização expressa (regra 8), como na #692. Para a fase 2a (#757) ela foi dada por @KalleoPinheiro em 2026-11-08; qualquer outra mudança nesse diretório pede nova autorização.
 
 ## Perguntas abertas
 
 1. **Canário sintético em produção** (clínica fictícia, dado 100% falso, E2E mínimo de login e agenda a cada
    deploy): toca LGPD e escopo de empresa, decisão de @KalleoPinheiro. Não implementar antes.
-2. **Autorização para `scripts/gate/` e `recibo-gate.yml`** (fase 2a): pendente.
-3. As perguntas 1 a 4 do ADR-095 seguem como estão.
+2. As perguntas 1 a 4 do ADR-095 seguem como estão.
 
 ## Tickets
 
