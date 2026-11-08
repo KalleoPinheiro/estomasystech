@@ -53,13 +53,20 @@ export function pendenciasDoPreflight(e: PreflightEnv): Falhas {
 /**
  * Resultado da simulação do `changeset version` (EST-23): sem changesets pendentes o `release:prepare` não
  * tem o que publicar; com eles, a versão calculada tem de ser a prometida pelo nome da release (ADR-052).
+ * Release já preparada (`prepared`, retorno do `assertApproved`): os changesets foram consumidos pelo
+ * `release:prepare` e o `package.json` já traz a versão; basta conferir que ela é a da branch (retry do corte).
  * `null` = tudo certo.
  */
 export function pendenciaDeVersao(
   branch: string,
   atual: string,
   simulada: { pendentes: number; calculada: string },
+  prepared = false,
 ): string | null {
+  if (prepared) {
+    const check = checkVersionForBranch(branch, atual, atual);
+    return check.ok ? null : `release já preparada, mas a versão do package.json não bate com ${branch}: ${check.reason}`;
+  }
   if (simulada.pendentes === 0)
     return 'não há changesets pendentes: o release:prepare não teria o que publicar (adicione um `.changeset/*.md` com o nível da release).';
   const check = checkVersionForBranch(branch, atual, simulada.calculada);
