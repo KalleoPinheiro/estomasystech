@@ -2502,3 +2502,9 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
 - **Revisão do the-judge (#779)**: `conferir-release` isenta o `chore(release): vX.Y.Z` do robô e os commits de PR `hotfix/*` → `main` quando são da PR sob conferência (commit comum direto na release continua reprovando); o passo que grava o veredito no cache usa um passo `existe` em vez de `hashFiles` (que não enxerga `RUNNER_TEMP`, então o cache nunca era gravado); ADR-100 item 12 diz que mudança no workflow e nos scripts só vale depois de entrar na `main` e descreve o conflito do merge `main` → release. Ao sincronizar a release, `release-veredito-workflow.test.ts` muda lá (a asserção de `hashFiles` vira a do passo `existe`): `TESTE-ALTERADO` no PR do sync.
 
+
+## Spike do Coolify 4.6.0: script para o operador (#746 / ADR-095 ticket 1) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `scripts/release/spike-coolify.sh` (somente leitura por padrão; `SPIKE_DEPLOY=1` dispara o deploy do HEAD da `main`; `SPIKE_TAG_SHA` compara com a tag). Token por variável de ambiente e stdin do curl, saída filtrada com `jq`. Seção "Spike do Coolify" no ADR-095.
+- **Testes novos**: `tests/scripts/spike-coolify.test.ts` (8 casos com curl falso: padrão sem deploy, token e campos fora da lista nunca na saída, plano A/B, entradas inválidas). Nenhum teste existente alterado. Sem changeset.
+- **Pendente (só o Kalléo)**: criar o token no Coolify (habilidade de deploy; leitura só para o spike), rodar o script no PC (com `SPIKE_DEPLOY=1` apenas com a `main` igual ao que está no ar) e colar a saída na #746. Com ela, registro no ADR-095 a decisão A ou B. A issue só fecha depois disso.
+- **Next step**: the-judge; Kalléo roda o spike. **Blockers**: o resultado do spike.

@@ -130,6 +130,14 @@ Se o spike mostrar que o Coolify não implanta o HEAD da `main` de forma previs�
 commit antes do deploy (`PATCH` do recurso com `git_commit_sha`), que exige token com escrita; nesse caso
 o job usa um *Environment* separado e o escopo do token é revisto aqui antes de aceitar.
 
+#### Spike do Coolify (ticket 1, #746)
+
+O script `scripts/release/spike-coolify.sh` roda no PC do operador (a nuvem do agente não alcança o Coolify):
+`COOLIFY_URL`, `COOLIFY_TOKEN` (habilidade só de deploy, ou também leitura, para o spike dizer o que falta) e
+`COOLIFY_APP_UUID` por variável de ambiente; o token segue ao curl por stdin e a saída é filtrada. Padrão só lê;
+`SPIKE_DEPLOY=1` dispara o deploy do HEAD da `main` e `SPIKE_TAG_SHA` compara o SHA do deployment com o da tag.
+Resultado (plano A ou B) **pendente**: registrar aqui, com a saída colada na #746, quando o dono rodar.
+
 ### Fumaça de produção
 
 `scripts/release/fumaca-producao.sh` (somente leitura, sem login, sem dado de paciente) cobre os itens
