@@ -3,6 +3,7 @@ import {
   avaliarRelease,
   type CommitDaRelease,
   type PrDaApi,
+  prAtualDoCommit,
   prsDaRelease,
 } from '../../scripts/release/conferir-release-lib';
 
@@ -68,7 +69,10 @@ describe('PR release→main · quais PRs valem', () => {
     number: numero,
     merged_at: mesclada ? '2026-11-08T12:00:00Z' : null,
     base: { ref: base },
-    head: { sha: String(numero).repeat(40).slice(0, 40) },
+    head: {
+      sha: String(numero).repeat(40).slice(0, 40),
+      ref: `feat/pr-${numero}`,
+    },
   });
 
   it('Dado a resposta de commits/{sha}/pulls com PR da release, PRs abertas e a própria PR release→main, Quando filtra, Então só a PR mesclada na release vale', () => {
@@ -84,5 +88,58 @@ describe('PR release→main · quais PRs valem', () => {
   it('Dado PR mesclada na main (a própria release), Quando filtra, Então não entra na conferência', () => {
     expect(prsDaRelease([pr(900, true, 'main')], 'main')).toEqual([]);
     expect(prsDaRelease([], 'main')).toEqual([]);
+  });
+});
+
+describe('PR release→main · commits da própria PR sob conferência', () => {
+  const robo = commit({
+    prs: [],
+    assunto: 'chore(release): v0.7.0',
+    prAtual: { headRef: 'release/v0.7.0' },
+  });
+
+  it('Dado o commit chore(release) do robô na branch da release, Quando avalia, Então não reprova por falta de PR', () => {
+    expect(avaliarRelease([robo], DESDE).aprovado).toBe(true);
+  });
+
+  it('Dado commit de PR hotfix/* contra a main, Quando avalia, Então não reprova por falta de PR', () => {
+    const hotfix = commit({
+      prs: [],
+      assunto: 'feat(ci): qualquer',
+      prAtual: { headRef: 'hotfix/veredito-judge' },
+    });
+    expect(avaliarRelease([hotfix], DESDE).aprovado).toBe(true);
+  });
+
+  it('Dado commit comum direto na branch da release, Quando avalia, Então continua reprovando (o nome do commit não basta sem ser da PR atual)', () => {
+    const direto = commit({
+      prs: [],
+      assunto: 'feat: empurrado direto',
+      prAtual: { headRef: 'release/v0.7.0' },
+    });
+    expect(avaliarRelease([direto], DESDE).aprovado).toBe(false);
+    const falsoRobo = commit({ prs: [], assunto: 'chore(release): v0.7.0' });
+    expect(avaliarRelease([falsoRobo], DESDE).aprovado).toBe(false);
+  });
+
+  it('Dado a lista de PRs de um commit, Quando acha a PR sob conferência, Então é a aberta contra a main com o head conferido', () => {
+    const doApi = [
+      {
+        number: 753,
+        merged_at: '2026-11-08T12:00:00Z',
+        base: { ref: 'release/v0.7.0' },
+        head: { sha: 'a', ref: 'feat/x' },
+      },
+      {
+        number: 800,
+        merged_at: null,
+        base: { ref: 'main' },
+        head: { sha: 'h', ref: 'release/v0.7.0' },
+      },
+    ];
+    expect(prAtualDoCommit(doApi, 'main', 'h')).toEqual({
+      headRef: 'release/v0.7.0',
+    });
+    expect(prAtualDoCommit(doApi, 'main', 'outro')).toBeUndefined();
   });
 });

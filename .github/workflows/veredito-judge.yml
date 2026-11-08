@@ -123,8 +123,15 @@ jobs:
           [ -n "$ANTHROPIC_FEDERATION_RULE_ID" ] || { echo "::error::variável ANTHROPIC_FEDERATION_RULE_ID ausente: sem o julgamento não há aprovação"; exit 1; }
           npx tsx scripts/release/julgar-pr.ts --diff "$RUNNER_TEMP/pr.diff" --saida "$RUNNER_TEMP/veredito/veredito.json"
 
+      # `hashFiles` só enxerga o workspace e o veredito fica em RUNNER_TEMP: a existência vem de um passo próprio.
+      - name: Há veredito para gravar?
+        id: existe
+        if: always() && steps.chave.outputs.ativo == 'true' && github.base_ref != 'main' && steps.cache.outputs.cache-hit != 'true'
+        run: |
+          if [ -f "$RUNNER_TEMP/veredito/veredito.json" ]; then echo "existe=true" >> "$GITHUB_OUTPUT"; else echo "existe=false" >> "$GITHUB_OUTPUT"; fi
+
       - name: Gravar o veredito deste SHA
-        if: always() && steps.chave.outputs.ativo == 'true' && github.base_ref != 'main' && steps.cache.outputs.cache-hit != 'true' && hashFiles(format('{0}/veredito/veredito.json', runner.temp)) != ''
+        if: always() && steps.existe.outputs.existe == 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/veredito

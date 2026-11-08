@@ -6,7 +6,7 @@
  * Variáveis: GH_TOKEN, GITHUB_REPOSITORY, VEREDITO_JUDGE_DESDE.
  */
 import { spawnSync } from 'node:child_process';
-import { avaliarRelease, type CommitDaRelease, type PrDaApi, prsDaRelease } from './conferir-release-lib';
+import { avaliarRelease, type CommitDaRelease, type PrDaApi, prAtualDoCommit, prsDaRelease } from './conferir-release-lib';
 
 const opcao = (nome: string): string | undefined => {
   const i = process.argv.indexOf(nome);
@@ -44,18 +44,22 @@ function vereditoDoHead(sha: string): 'success' | 'failure' | 'ausente' {
   return ultimo.conclusion === 'success' ? 'success' : 'failure';
 }
 
-const comparacao = api<{ commits: { sha: string; parents: unknown[]; commit: { committer: { date: string } } }[] }[]>(
+const comparacao = api<{ commits: { sha: string; parents: unknown[]; commit: { message: string; committer: { date: string } } }[] }[]>(
   `repos/${repo}/compare/${base}...${head}?per_page=100`,
 );
 const commits: CommitDaRelease[] = comparacao
   .flatMap((p) => p.commits)
-  .map((c) => ({
-    sha: c.sha,
-    merge: c.parents.length > 1,
-    data: c.commit.committer.date,
-    prs: prsDaRelease(api<PrDaApi[]>(`repos/${repo}/commits/${c.sha}/pulls`).flat(), base)
-      .map((pr) => ({ numero: pr.number, veredito: vereditoDoHead(pr.head.sha) })),
-  }));
+  .map((c) => {
+    const doApi = api<PrDaApi[]>(`repos/${repo}/commits/${c.sha}/pulls`).flat();
+    return {
+      sha: c.sha,
+      merge: c.parents.length > 1,
+      data: c.commit.committer.date,
+      assunto: c.commit.message.split('\n')[0],
+      prAtual: prAtualDoCommit(doApi, base, head),
+      prs: prsDaRelease(doApi, base).map((pr) => ({ numero: pr.number, veredito: vereditoDoHead(pr.head.sha) })),
+    };
+  });
 
 const r = avaliarRelease(commits, process.env.VEREDITO_JUDGE_DESDE);
 console.log(r.aprovado ? `✓ ${commits.length} commit(s) da release com veredito aprovado` : `✗ release sem veredito completo:\n${r.motivos.map((m) => `  - ${m}`).join('\n')}`);

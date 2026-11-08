@@ -16,6 +16,10 @@ export interface CommitDaRelease {
   merge: boolean;
   /** Data do commit, ISO 8601. */
   data: string;
+  /** Primeira linha da mensagem do commit. */
+  assunto?: string;
+  /** Commit pertence à PR sob conferência (a release→main ou um `hotfix/*` → main): branch dela. */
+  prAtual?: { headRef: string };
   prs: PrDaRelease[];
 }
 
@@ -23,6 +27,17 @@ export interface AvaliacaoRelease {
   aprovado: boolean;
   motivos: string[];
 }
+
+/** Commit do robô do `release:prepare` (`chore(release): vX.Y.Z`), que só existe na branch da própria release. */
+const ASSUNTO_DO_ROBO = /^chore\(release\): v\d+\.\d+\.\d+/;
+
+/**
+ * Isenção dos commits da PR sob conferência: não têm PR própria para ter veredito (a PR deles é a que está sendo
+ * conferida). Vale só para o commit do robô na branch da release e para qualquer commit de PR `hotfix/*` → `main`.
+ * Commit comum direto na branch da release continua reprovando.
+ */
+const daPrAtualIsento = (c: CommitDaRelease): boolean =>
+  c.prAtual !== undefined && (c.prAtual.headRef.startsWith('hotfix/') || ASSUNTO_DO_ROBO.test(c.assunto ?? ''));
 
 /**
  * `desde`: data ISO a partir da qual o check existe (variável do dono). Commits anteriores não tinham como ter
@@ -36,6 +51,7 @@ export function avaliarRelease(commits: readonly CommitDaRelease[], desde: strin
     if (Date.parse(c.data) < limite) continue;
     const curto = c.sha.slice(0, 7);
     if (c.prs.length === 0) {
+      if (daPrAtualIsento(c)) continue;
       if (!c.merge) motivos.push(`commit ${curto} não pertence a nenhuma PR`);
       continue; // merge sem PR é a sincronização da main
     }
@@ -51,7 +67,7 @@ export interface PrDaApi {
   number: number;
   merged_at: string | null;
   base: { ref: string };
-  head: { sha: string };
+  head: { sha: string; ref: string };
 }
 
 /**
@@ -60,3 +76,9 @@ export interface PrDaApi {
  */
 export const prsDaRelease = (prs: readonly PrDaApi[], baseDaConferencia: string): PrDaApi[] =>
   prs.filter((pr) => pr.merged_at !== null && pr.base.ref !== baseDaConferencia);
+
+/** A PR sob conferência entre as PRs do commit: aberta contra a base da conferência, com o head conferido. */
+export const prAtualDoCommit = (prs: readonly PrDaApi[], baseDaConferencia: string, headConferido: string): { headRef: string } | undefined => {
+  const pr = prs.find((p) => p.base.ref === baseDaConferencia && p.head.sha === headConferido);
+  return pr ? { headRef: pr.head.ref } : undefined;
+};
