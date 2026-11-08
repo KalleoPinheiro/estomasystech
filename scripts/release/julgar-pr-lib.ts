@@ -148,7 +148,7 @@ export function chamarAnthropic(opts: { token: string; modelo: string; buscar?: 
   return async (prompt) => {
     const r = await buscar('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.token}`, 'anthropic-version': '2023-06-01' },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.token}`, 'anthropic-version': '2026-10-21' },
       body: JSON.stringify({ model: opts.modelo, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }),
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -156,6 +156,24 @@ export function chamarAnthropic(opts: { token: string; modelo: string; buscar?: 
     const texto = corpo.content?.find((c) => c.type === 'text')?.text;
     if (!texto) throw new Error('resposta sem texto');
     return texto;
+  };
+}
+
+/**
+ * Modelo autenticado por federação: troca o OIDC do job pelo token de acesso na primeira chamada. Qualquer falha de
+ * autenticação sobe como erro de chamada, que `julgar` converte em veredito de falha (reprova, nada vai ao cache).
+ */
+export function chamarComFederacao(opts: {
+  urlOidc: string;
+  tokenDeRequisicao: string;
+  cfg: ConfigFederacao;
+  modelo: string;
+  buscar?: typeof fetch;
+}): ChamarModelo {
+  return async (prompt) => {
+    const jwt = await tokenOidcDoGitHub(opts.urlOidc, opts.tokenDeRequisicao, opts.buscar);
+    const token = await trocarTokenOidc(jwt, opts.cfg, opts.buscar);
+    return chamarAnthropic({ token, modelo: opts.modelo, buscar: opts.buscar })(prompt);
   };
 }
 

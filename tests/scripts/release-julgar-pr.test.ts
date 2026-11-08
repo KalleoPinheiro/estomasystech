@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   arquivosDeNul,
   chamarAnthropic,
+  chamarComFederacao,
   ehVereditoDeFalha,
   identidadeDoJob,
   julgar,
@@ -351,5 +352,58 @@ describe('the-judge de Actions · federação de identidades (sem chave de API)'
     await expect(
       tokenOidcDoGitHub('https://gh/t', 'rt', falso({}).buscar),
     ).rejects.toThrow('sem value');
+  });
+
+  it('Dado a regra que nega a troca, Quando julga com federação, Então o veredito é de falha e o modelo nem é chamado', async () => {
+    const urls: string[] = [];
+    const buscar = (async (url: string) => {
+      urls.push(url);
+      if (url.startsWith('https://gh/'))
+        return { ok: true, status: 200, json: async () => ({ value: 'jwt' }) };
+      return { ok: false, status: 401, json: async () => ({}) };
+    }) as unknown as typeof fetch;
+    const v = await julgar(
+      'diff\n',
+      't',
+      { sha: 's', autor: 'a', revisor: 'actions/1/1' },
+      chamarComFederacao({
+        urlOidc: 'https://gh/token',
+        tokenDeRequisicao: 'rt',
+        cfg,
+        modelo: 'm',
+        buscar,
+      }),
+    );
+    expect(ehVereditoDeFalha(v)).toBe(true);
+    expect(urls.some((u) => u.includes('/v1/messages'))).toBe(false);
+  });
+
+  it('Dado a federação autorizada, Quando julga, Então chama as mensagens com o token trocado', async () => {
+    const auth: string[] = [];
+    const buscar = (async (url: string, init: RequestInit) => {
+      if (url.startsWith('https://gh/'))
+        return { ok: true, status: 200, json: async () => ({ value: 'jwt' }) };
+      if (url.endsWith('/oauth/token'))
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ access_token: 'tk' }),
+        };
+      auth.push((init.headers as Record<string, string>).authorization);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ content: [{ type: 'text', text: 'ok' }] }),
+      };
+    }) as unknown as typeof fetch;
+    const texto = await chamarComFederacao({
+      urlOidc: 'https://gh/token',
+      tokenDeRequisicao: 'rt',
+      cfg,
+      modelo: 'm',
+      buscar,
+    })('p');
+    expect(texto).toBe('ok');
+    expect(auth).toEqual(['Bearer tk']);
   });
 });

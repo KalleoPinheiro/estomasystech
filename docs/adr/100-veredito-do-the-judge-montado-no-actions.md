@@ -76,9 +76,12 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
     reprova, não grava no cache do SHA e não aprova por omissão. Regra recomendada: `subject_prefix`
     `repo:KalleoPinheiro/estomasystech:ref:refs/heads/release/` (o `pull_request_target` roda com a ref da base, não da
     PR; **a confirmar** na aba de histórico de autenticação do Console no primeiro run), `claims.repository` e
-    `claims.event_name = pull_request_target`, `oauth_scope = workspace:inference`. A documentação da Anthropic avisa que
-    `repo:org/repo:*` casa também PR de fork; por isso a regra não usa `*` e o job ainda recusa fork. Substitui a
-    chave `ANTHROPIC_API_KEY` das primeiras versões deste ADR.
+    `claims.event_name = pull_request_target`, `oauth_scope = workspace:inference`. **A barreira contra fork é o `if`
+    do job `julgar`** (`head.repo.full_name == github.repository`, avaliado a partir da base): o job nem chega a pedir o
+    token OIDC. O prefixo e as claims são defesa adicional; a documentação da Anthropic só trata do `sub` de
+    `pull_request` e não diz qual é o de `pull_request_target`, então não se afirma que o prefixo exclua fork. Evite
+    `repo:org/repo:*`, que é mais largo. A chamada de mensagens usa `anthropic-version: 2026-10-21`, a do exemplo
+    oficial com token federado (se der 400 no primeiro run, é aqui). Substitui a chave `ANTHROPIC_API_KEY` das primeiras versões deste ADR.
 
 ## Alternativas rejeitadas
 
