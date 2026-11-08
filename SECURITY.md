@@ -12,4 +12,5 @@ altere nem baixe dados de terceiros.
 
 ## Versões suportadas
 
-Apenas a versão em produção (a última tag `v*` na `main`) recebe correções de segurança.
+Apenas a versão implantada em produção recebe correções de segurança. O deploy é manual e pode haver
+rollback, então ela nem sempre é a última tag `v*` na `main`.
