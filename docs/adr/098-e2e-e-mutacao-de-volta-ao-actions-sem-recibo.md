@@ -39,8 +39,8 @@ Actions não prove melhor, em ambiente limpo.
 2. **Mutação por arquivo alterado no Actions.** Novo job `mutacao` em `gate-pr.yml`: Stryker incremental só
    nos arquivos de regra que o diff altera (`scripts/gate-cloud/impacto.ts --mutacao`), com o `break` de
    `stryker.config.json` valendo e o cache do arquivo incremental compartilhado com a rotina mensal. Entra no
-   agregador: se devia rodar e não passou, o Gate do PR reprova. Contra a `main` ela não repete, porque a
-   release já mutou cada PR do lote; a rodada completa segue mensal.
+   agregador: se devia rodar e não passou, o Gate do PR reprova. Em `release/* → main` ela não repete, porque a
+   release já mutou cada PR do lote (o `hotfix/*` → `main` roda a mutação); a rodada completa segue mensal.
 3. **Sem recibo.** `recibo-gate.yml` deixa de conferir a linha `E2E-GATE:`; o PR não a carrega mais
    (`scripts/gate/verify-receipt.ts` removido). Ficam no workflow a **integridade dos testes** (regra 8) e a
    seção `## Homologação` (ADR-052). O nome do arquivo e o id do job `recibo-gate` ficam por compatibilidade

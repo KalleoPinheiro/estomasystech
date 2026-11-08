@@ -100,9 +100,10 @@ Qualquer arquivo fora da regra no diff volta ao gate completo.
 repositório de organização; este é de conta pessoal. Ver a errata do [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cache.md).
 
 - Os gatilhos `merge_group` de `ci.yml`, `gate-pr.yml` e `recibo-gate.yml` **ficam** nos workflows
-  (inofensivos fora da fila; o `recibo-gate` é pulado na fila).
+  (inofensivos fora da fila; o job `recibo-gate`, agora de integridade dos testes, é pulado na fila).
 - A proteção atual são os checks obrigatórios do ruleset (`Typecheck, lint, sv-gate, test:coverage, build`
-  e `Recibo do gate local + integridade dos testes`) com a branch atualizada; quando a release anda, o autor
+  e `Recibo do gate local + integridade dos testes`, renomeado para `Integridade dos testes e homologação` no
+  [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)) com a branch atualizada; quando a release anda, o autor
   mescla a release na branch e espera o CI.
 
 Para quando houver organização (só o dono faz):

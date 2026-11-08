@@ -86,6 +86,7 @@ jobs:
             echo "::error::PR em rascunho: o portão de risco roda quando o PR for marcado como pronto (ADR-093)"; exit 1
           fi
           [ "$R_RISCO" = success ] || { echo "::error::classe de risco: $R_RISCO"; exit 1; }
+          case "$HUMANA" in true|false) ;; *) echo "::error::aprovacao_humana ausente ou inválida: '$HUMANA'"; exit 1 ;; esac
           if [ "$HUMANA" = true ]; then
             [ "$R_APROVACAO" = success ] || { echo "::error::classe 3 sem a aprovação do dono ($R_APROVACAO)"; exit 1; }
           else

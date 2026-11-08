@@ -83,6 +83,7 @@ describe('Feature: E2E e mutação como check obrigatório do PR no Actions (ADR
 
   it('Dado o PR contra a main, Quando o impacto é calculado, Então a mutação da release inteira não se repete', () => {
     expect(gate).toContain('[ "$ALVO" != main ]');
+    expect(gate).toContain('[ "${ORIGEM#release/}" = "$ORIGEM" ]');
   });
 
   it('Dado a mutação que devia rodar e falhou, Quando o agregador confere, Então o Gate do PR reprova', () => {

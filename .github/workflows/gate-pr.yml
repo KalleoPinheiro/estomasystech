@@ -84,6 +84,7 @@ jobs:
           GATE_BASE: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
           BASE_REF: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
           ALVO: ${{ github.base_ref }}
+          ORIGEM: ${{ github.head_ref }}
         run: |
           # Mesma regra do ADR-053 (scripts/release/docs-only.ts): só documentação não paga integração nem E2E.
           so_doc=$(npx tsx scripts/release/docs-only.ts --base "$BASE_REF" --head HEAD | cut -d= -f2)
@@ -94,10 +95,13 @@ jobs:
           fi
           rodar_e2e=true
           if [ "$so_doc" = true ] || [ "$e2e" = NONE ]; then rodar_e2e=false; fi
-          # Mutação só nos arquivos de regra alterados (ADR-051). No PR contra a `main` (release inteira) ela já
-          # rodou em cada PR do lote e roda inteira na rotina mensal: o diff da release não a repete.
+          # Mutação só nos arquivos de regra alterados (ADR-051). No PR `release/* → main` (lote inteiro) ela já
+          # rodou em cada PR do lote e roda inteira na rotina mensal: o diff da release não a repete. O `hotfix/*`
+          # vai direto à `main` sem lote anterior: a mutação roda nele.
           mutacao=""
-          if [ "$so_doc" != true ] && [ "$ALVO" != main ]; then mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao); fi
+          if [ "$so_doc" != true ] && { [ "$ALVO" != main ] || [ "${ORIGEM#release/}" = "$ORIGEM" ]; }; then
+            mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao)
+          fi
           rodar_mutacao=true
           if [ -z "$mutacao" ]; then rodar_mutacao=false; fi
           {
