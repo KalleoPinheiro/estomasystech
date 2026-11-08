@@ -52,6 +52,8 @@ export const PUBLIC_PATHS = [
   // Health check (#212): liveness e readiness, sem dado sensível.
   '/api/health',
   '/api/health/ready',
+  // Versão pública somente leitura (ADR-095): só o número da versão, sem SHA nem dado de clínica.
+  '/api/health/version',
   // Instalar na tela inicial (#430): manifesto e ícones da marca, sem dado da clínica.
   '/manifest.webmanifest',
   '/apple-touch-icon.png',
