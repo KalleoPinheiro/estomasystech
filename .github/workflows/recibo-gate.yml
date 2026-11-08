@@ -1,17 +1,17 @@
-name: Recibo do gate
+name: Integridade dos testes
 
-# Confere, em segundos, que o E2E (que não roda mais no Actions) rodou localmente para o
-# commit atual e que nenhum teste foi enfraquecido (regra 7 e 8 do AGENTS.md, ADR-042).
-# O recibo é exigido só no PR que entra na `main` (`release/* → main` ou `hotfix/* → main`);
-# Dispensado quando o PR toca só `.md` de documentação (ADR-053).
-# `feat/* → release/*` roda a integridade dos testes e a seção de homologação (ADR-052).
-# Roda também quando o corpo do PR é editado (`edited`), que é onde o recibo e o
-# `TESTE-ALTERADO:` são colados.
+# Confere, em segundos, que nenhum teste foi enfraquecido (regra 8 do AGENTS.md) e, em PR contra
+# uma release, a seção `## Homologação` (ADR-052). O recibo `E2E-GATE:` do gate local foi
+# aposentado (ADR-098, que supera o ADR-042): o E2E e a mutação rodam no Actions, em `gate-pr.yml`.
+# O nome do arquivo e o id do job (`recibo-gate`) ficam por compatibilidade com testes e documentos;
+# o check exigido na `main` é o nome do job abaixo.
+# Roda também quando o corpo do PR é editado (`edited`), que é onde o `TESTE-ALTERADO:` e a
+# seção de homologação são escritos.
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
-  # Merge queue (ADR-087): o recibo e a integridade já foram conferidos no PR (corpo do PR); na fila o job
-  # é pulado, e check pulado conta como aprovado para o ruleset.
+  # Merge queue (ADR-087): a integridade e a homologação já foram conferidas no PR (corpo do PR); na fila o
+  # job é pulado, e check pulado conta como aprovado para o ruleset.
   merge_group:
 
 concurrency:
@@ -24,7 +24,7 @@ permissions:
 jobs:
   recibo-gate:
     if: github.event_name == 'pull_request'
-    name: Recibo do gate local + integridade dos testes
+    name: Integridade dos testes e homologação
     runs-on: ubuntu-slim
     timeout-minutes: 10
     steps:
@@ -46,22 +46,6 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
-
-      # PR só de `.md` de documentação dispensa o recibo (ADR-053); qualquer outro arquivo o exige.
-      - name: Classificar o diff (só documentação?)
-        id: classe
-        env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          BASE_REF: ${{ github.base_ref }}
-        run: npx tsx scripts/release/docs-only.ts --base "origin/$BASE_REF" --head "$HEAD_SHA" | tee -a "$GITHUB_OUTPUT"
-
-      - name: Recibo do gate local no corpo do PR
-        if: github.base_ref == 'main' && steps.classe.outputs.docs_only != 'true'
-        env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          BASE_REF: ${{ github.base_ref }}
-          HEAD_REF: ${{ github.head_ref }}
-        run: npx tsx scripts/gate/verify-receipt.ts --body-file "$RUNNER_TEMP/pr-body.txt" --head-sha "$HEAD_SHA" --base-ref "origin/$BASE_REF" --head-ref "$HEAD_REF"
 
       - name: Integridade dos testes (regra 8)
         env:

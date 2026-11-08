@@ -1,7 +1,7 @@
 name: Docker
 
 # Imagem de produção + smoke do container + backup/restore (ADR-042). Só roda quando algo
-# que a imagem ou o runbook de backup usa muda; no resto, o `gate:local` cobre.
+# que a imagem ou o runbook de backup usa muda; no resto, o `release:cut` (perfil release) cobre.
 on:
   push:
     branches: [main]
