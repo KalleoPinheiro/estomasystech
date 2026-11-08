@@ -2493,3 +2493,12 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes**: novos casos de WIF em `release-julgar-pr.test.ts`. Dois testes existentes mudaram porque o requisito mudou (decisão do dono: sem chave de API): o de `chamarAnthropic` (cabeçalho `Authorization: Bearer` no lugar de `x-api-key`) e o do workflow (sem `secrets.*`, só `julgar` pede `id-token`). `TESTE-ALTERADO` no corpo da PR.
 - **Fora do repositório (só o Kalléo)**: conta de serviço + emissor + regra no Console da Anthropic; variáveis acima no GitHub; apagar o segredo `ANTHROPIC_API_KEY`; aprovar a classe 3. Confirmar o `sub` real do `pull_request_target` no histórico de autenticação.
 - **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: configuração do Console.
+
+
+## Veredito do the-judge na `main` (hotfix do #764) (2026-11-08) — EM REVISÃO
+- **O que mudou**: o `pull_request_target` só dispara com o arquivo na branch padrão, e o `veredito-judge.yml` só existia na `release/v0.7.0` (zero execuções). `hotfix/veredito-judge` leva para a `main` o conteúdo da #774 e da #776 (workflow, `julgar-pr*`, `conferir-release*`, `veredito-judge*`, testes, ADR-100 item 12). Nenhum arquivo novo além desses; nada em `src/`.
+- **Testes**: os de `tests/scripts/release-{julgar-pr,conferir-release,veredito-workflow}.test.ts` chegam novos à `main` (nenhum teste existente da `main` alterado).
+- **Fora do repositório (só o Kalléo)**: aprovar a classe 3; mergear na `main` (merge commit); depois `main` → `release/v0.7.0`; recriar `VEREDITO_JUDGE_DESDE` com o instante do merge e `VEREDITO_JUDGE_ATIVO=true`; PR já aberta na release precisa de push ou fechar/reabrir para receber o check; só então exigir `Veredito do the-judge` no `release-branches` (e na `main`).
+- **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
+- **Revisão do the-judge (#779)**: `conferir-release` isenta o `chore(release): vX.Y.Z` do robô e os commits de PR `hotfix/*` → `main` quando são da PR sob conferência (commit comum direto na release continua reprovando); o passo que grava o veredito no cache usa um passo `existe` em vez de `hashFiles` (que não enxerga `RUNNER_TEMP`, então o cache nunca era gravado); ADR-100 item 12 diz que mudança no workflow e nos scripts só vale depois de entrar na `main` e descreve o conflito do merge `main` → release. Ao sincronizar a release, `release-veredito-workflow.test.ts` muda lá (a asserção de `hashFiles` vira a do passo `existe`): `TESTE-ALTERADO` no PR do sync.
+
