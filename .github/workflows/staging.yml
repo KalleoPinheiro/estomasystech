@@ -112,7 +112,7 @@ jobs:
     needs: rebuild
     if: >-
       github.event_name == 'workflow_dispatch' && inputs.homologar && inputs.release_branch != '' &&
-      (github.ref == 'refs/heads/main' || github.ref_name == inputs.release_branch)
+      (github.ref == 'refs/heads/main' || github.ref == format('refs/heads/{0}', inputs.release_branch))
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
