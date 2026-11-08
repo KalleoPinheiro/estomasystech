@@ -76,7 +76,7 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
     reprova, não grava no cache do SHA e não aprova por omissão. Regra recomendada: `subject_prefix`
     `repo:KalleoPinheiro/estomasystech:ref:refs/heads/release/` (o `pull_request_target` roda com a ref da base, não da
     PR; **a confirmar** na aba de histórico de autenticação do Console no primeiro run), `claims.repository` e
-    `claims.event_name = pull_request_target`, `oauth_scope = workspace:inference`. **A barreira contra fork é o `if`
+    `claims.event_name = pull_request_target`, `oauth_scope = workspace:developer` (o Console só oferece esse e `org:admin`; nunca o segundo). **A barreira contra fork é o `if`
     do job `julgar`** (`head.repo.full_name == github.repository`, avaliado a partir da base): o job nem chega a pedir o
     token OIDC. O prefixo e as claims são defesa adicional; a documentação da Anthropic só trata do `sub` de
     `pull_request` e não diz qual é o de `pull_request_target`, então não se afirma que o prefixo exclua fork. Evite
