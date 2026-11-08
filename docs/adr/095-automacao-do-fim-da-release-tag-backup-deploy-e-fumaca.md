@@ -58,24 +58,29 @@ que bloqueia o domínio de produção (a edge da Hetzner expõe 22, 80 e 443).
 
 Um workflow `release-deploy.yml`, só `workflow_dispatch`, com "Use workflow from" = `main` e os inputs
 `version` (`X.Y.Z`) e `rollback` (`redeploy` ou `backup`, igual ao `release:publish`). Valida o disparo no
-primeiro passo, como o `release-cut.yml` (ADR-092), e usa `concurrency` sem cancelar. Quatro jobs em
+primeiro passo, como o `release-cut.yml` (ADR-092), e usa `concurrency` sem cancelar. Três jobs em
 sequência, cada um com `timeout-minutes` e `permissions` mínimas:
 
 | Job | Toca produção? | Gate | O que faz |
 | --- | --- | --- | --- |
 | `publicar` | Não | Nenhum humano; a trava é a verificação | Confere que o HEAD da `main` é merge commit da `release/vX.Y.Z` e que `package.json` traz a versão. Roda o `release:publish` existente (tag anotada no commit de merge, Release publicada). Idempotente: tag já no remoto, segue sem erro |
-| `backup` | Sim | *Environment* `producao` com revisor | Executa pelo SSH o comando forçado do backup e só segue com sucesso confirmado |
-| `deploy` | Sim | `producao` (mesma aprovação do job anterior) | Dispara o deploy no Coolify e espera o resultado `healthy` com o SHA da tag |
+| `producao` | Sim | *Environment* `producao` com revisor | Um único job, em passos: (1) backup pelo SSH com comando forçado, só segue com sucesso confirmado; (2) deploy no Coolify, esperando `healthy` com o SHA da tag |
 | `fumaca` | Não (só leitura) | Nenhum | Roda `scripts/release/fumaca-producao.sh` contra o domínio público |
+
+Backup e deploy ficam no **mesmo job** porque o GitHub pede a aprovação do *Environment* por job: assim uma
+aprovação cobre os dois e o backup nunca fica separado do deploy que ele protege (a confirmar no ticket 5).
+A tag é criada antes da aprovação; se o revisor recusar, a tag fica (inofensiva: deploy é manual por
+natureza e o `publicar` é idempotente). A recusa não desfaz a Release; o operador roda o workflow de novo
+quando quiser seguir.
 
 **Merge na `main` continua humano** (com bypass do ruleset). O workflow nunca mergeia, nunca faz push em
 branch e nunca roda sem a `main` já ter a release. O ok do operador é a aprovação do *Environment* antes
-de `backup`: uma aprovação cobre backup e deploy do mesmo run; um run novo exige nova aprovação.
+de `backup`: uma aprovação cobre o job `producao` (backup e deploy) do run; um run novo exige nova aprovação.
 
 ### Segredos (repositório público)
 
 - Ficam como **secrets do *Environment* `producao`**, nunca do repositório, e o *Environment* só aceita
-  deploy da branch `main`. Só `backup` e `deploy` referenciam o *Environment*.
+  deploy da branch `main`. Só o job `producao` referencia o *Environment*.
 - O workflow é só `workflow_dispatch`. Proibido `pull_request_target` e checkout de código de PR nesse
   caminho; PR de fork não recebe segredo.
 - Segredos previstos: `VPS_SSH_KEY` (chave dedicada do backup), `VPS_KNOWN_HOSTS` (impressão digital do
@@ -143,7 +148,7 @@ fumaça nunca dispara rollback; ela avisa e para.
 | 2 | `ci-backup.sh` + sudoers + chave restrita + doc de instalação (`backup-passo-a-passo.md`) | — | Teste do script com `systemctl` simulado; execução real no VPS pelo Kalléo |
 | 3 | `scripts/release/fumaca-producao.sh` e teste | — | Teste de unidade; execução contra a staging |
 | 4 | `release-deploy.yml`: validação de disparo, `publicar`, `fumaca` (sem job de produção) em `dry_run` | 3 | `actionlint`; execução `dry_run` |
-| 5 | Jobs `backup` e `deploy` com o *Environment* `producao` | 1, 2, 4 | Execução real supervisionada na primeira release depois de ligada |
+| 5 | Job `producao` (backup + deploy) com o *Environment* `producao` | 1, 2, 4 | Execução real supervisionada na primeira release depois de ligada |
 | 6 | Rollback (`acao=rollback`) | 5 | Ensaio no `dry_run` e documento |
 | 7 | Atualizar `producao.md` § 3.1 e § 6, `homologacao.md` § 1; aposentar `release:publish` do PC (mantém para hotfix e contingência) | 5 | `check:docs` |
 

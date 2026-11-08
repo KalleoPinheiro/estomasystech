@@ -2417,3 +2417,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: só documentação. ADR-095 (rascunho) com desenho do workflow `release-deploy.yml` (publicar → backup → deploy → fumaça), gate humano por *Environment* `producao` restrito à `main`, segredos só no *Environment* (repo público), chave SSH de comando forçado para o backup, deploy da tag exata via API do Coolify (sujeito a spike), fumaça somente leitura em `scripts/release/fumaca-producao.sh`, rollback pelo mesmo caminho e 7 tickets. Ponteiros em `producao.md` § 3.1 e `homologacao.md` § 1; linha no `docs/README.md`.
 - **Testes**: nenhum criado ou alterado (sem código). **Perguntas abertas** (ADR-095): revisor do *Environment*, versão pública sem login, primeira release com o fluxo novo, `GITHUB_TOKEN` x `RELEASE_CUT_TOKEN` para a tag.
 - **Next step**: coordenador revisa e decide as perguntas; depois abrir os tickets 1 a 7. **Blockers**: spike do Coolify depende do painel do Kalléo.
+
+## Ajustes de texto apontados pelo CodeRabbit na v0.6.0 (#714 / EST-31) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só texto. `CHANGELOG.md` limita a frase de SSL a `prefer`, `require` e `verify-ca` (`no-verify` e `disable` não são reescritos), corrigido direto na entrada 0.6.0 porque o changeset de origem já foi consumido; `docs/engineering/gate-na-nuvem.md` diz que o `gate:local` não roda todas as travas do `ci.yml` (`check:changeset` só no CI); `SECURITY.md` cita a versão implantada em produção, não a última tag.
+- **Testes**: nenhum teste alterado ou criado (sem mudança de comportamento). Sem changeset (só `.md`).
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
