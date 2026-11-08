@@ -241,12 +241,12 @@ proposital enquanto as migrações não têm `down`
 
 0. **Release (ADR-052 e ADR-071):** com a staging aprovada e a marca `homologacao/vX.Y.Z` no SHA,
    `npm run release:cut -- --rollback=redeploy|backup` na `release/vX.Y.Z` (no WSL: `release:prepare` primeiro,
-   gate da release uma vez em worktree limpo, PR `release → main` com o recibo); merge **commit**; depois
+   gate da release uma vez em worktree limpo, PR `release → main`; o recibo só grava o selo do corte, o PR não o carrega, ADR-098); merge **commit**; depois
    `npm run release:publish -- --rollback=...` cria a tag `vX.Y.Z` no commit de merge e publica a
    Release (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**. Fluxo completo
    em [`homologacao.md`](homologacao.md) § 1.
-1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde e o recibo do gate local
-   ([ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md)), e o
+1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde (E2E e mutação rodam no Actions,
+   [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)), e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da
    barra lateral e em *Deployments* do recurso, com o SHA) e as migrações novas do lote
    (`drizzle/*.sql`, ordem do § 4).
@@ -289,6 +289,7 @@ proposital enquanto as migrações não têm `down`
   acontecer, `/api/health/ready` responde `503` com `migrations: "pending"`; restaure o backup
   (§ 3.1 e § 5) e refaça o deploy pelo commit completo. Mesma regra para qualquer par de migrações
   geradas em branches paralelas: confira a ordem de `when` em `drizzle/meta/_journal.json`.
+  `npm run check:migracao` confere isso (e se a migração é aditiva) antes do deploy: [`migracoes-aditivas.md`](migracoes-aditivas.md).
 - **Rollback:** as migrações não têm `down`. Reverter é restaurar o backup tirado antes do deploy
   (§ 5) ou escrever uma migração nova que desfaça a mudança.
 - **Atualizando de uma versão anterior à `0053`**: aplique **todas** as migrações `0053` a `0066`, em ordem,

@@ -1,16 +1,17 @@
 ---
 title: "ADR 042 — E2E fora do Actions: gate local com recibo e testes intocáveis"
-status: frozen
+status: superseded
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-19
+superseded_by: docs/adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md
 related: [docs/adr/021-e2e-contra-build-de-producao.md, docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/engineering/onboarding.md, AGENTS.md]
 ---
 
 # ADR 042 — E2E fora do Actions: gate local com recibo e testes intocáveis
 
 - **Data:** 2026-10-19
-- **Status:** aceito (decisão de @KalleoPinheiro em 2026-10-19; complementa o [ADR-021](021-e2e-contra-build-de-producao.md), que segue valendo para a configuração do E2E)
+- **Status:** substituído por [ADR-098](098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md) no que trata de onde o E2E roda e do recibo (2026-11-08); a regra 8 (testes intocáveis) segue em vigor. Aceito em 2026-10-19 (decisão de @KalleoPinheiro em 2026-10-19; complementa o [ADR-021](021-e2e-contra-build-de-producao.md), que segue valendo para a configuração do E2E)
 - **Domínios afetados:** engenharia (CI, testes, fluxo de merge)
 
 ## Contexto

@@ -4,12 +4,9 @@
 
 ## Como validar
 
-<!-- Comandos ou passos. O CI roda typecheck, lint, check:sv, check:docs, test:coverage e build. -->
+<!-- Comandos ou passos. O CI roda typecheck, lint, check:sv, check:docs, test:coverage, build, integração, E2E e mutação. -->
 
-<!-- Base do PR (ADR-052): `feat/*` → `release/vX.Y.Z` (squash, sem recibo); `release/*` ou `hotfix/*` → `main` (merge commit para a release, com recibo). -->
-
-<!-- Recibo do gate local (ADR-042): só no PR que entra na `main`. Cole a linha impressa por `npm run gate:local` (sem ela o CI reprova). Apague no PR para `release/*` e no PR que toca só `.md` de documentação (ADR-053). -->
-E2E-GATE:
+<!-- Base do PR (ADR-052): `feat/*` → `release/vX.Y.Z` (squash); `release/*` ou `hotfix/*` → `main` (merge commit para a release). Sem recibo do gate local: o E2E e a mutação rodam no Actions (ADR-098). -->
 
 ## Homologação
 
