@@ -5,7 +5,7 @@
  * a segurança do dado de saúde (LGPD) não pode depender de um apelido que o
  * `pg` 9 passa a tratar como o libpq (`require` sem verificar o certificado).
  */
-const SSL_MODE_ALIAS = /([?&])sslmode=(?:prefer|require|verify-ca)(?=&|$)/i;
+const SSL_MODE_ALIAS = /([?&])sslmode=(?:prefer|require|verify-ca)(?=&|$)/gi;
 
 /**
  * Deixa explícito `sslmode=verify-full` quando a string de conexão pede um dos

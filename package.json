@@ -1,6 +1,6 @@
 {
   "name": "estomasystech",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "packageManager": "npm@11.21.1",
   "engines": {
@@ -88,7 +88,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.3",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.12",
     "babel-plugin-react-compiler": "1.0.0",
     "drizzle-kit": "^0.31.10",
     "husky": "^9.1.7",
@@ -98,7 +98,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.4",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.12"
   },
   "allowScripts": {
     "esbuild": true

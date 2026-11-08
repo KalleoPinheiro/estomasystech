@@ -73,5 +73,34 @@ describe('Feature: Botão de logout', () => {
       });
       expect(refresh).toHaveBeenCalledTimes(1);
     });
+
+    describe('Cenário: sessão expirada ou rede fora (#718)', () => {
+      it('Dada resposta 401 do logout, Quando acionado, Então ainda redireciona para o login', async () => {
+        vi.stubGlobal(
+          'fetch',
+          vi.fn().mockResolvedValue({ ok: false, status: 401 }),
+        );
+        render(<LogoutButton />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Sair' }));
+
+        await waitFor(() => {
+          expect(push).toHaveBeenCalledWith('/login');
+        });
+        expect(refresh).toHaveBeenCalledTimes(1);
+      });
+
+      it('Dado erro de rede no logout, Quando acionado, Então ainda redireciona para o login', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+        render(<LogoutButton />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Sair' }));
+
+        await waitFor(() => {
+          expect(push).toHaveBeenCalledWith('/login');
+        });
+        expect(refresh).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 });

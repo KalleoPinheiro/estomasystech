@@ -1,5 +1,15 @@
 # estomasystech
 
+## 0.6.1
+
+### Patch Changes
+
+- 48e49d2: Dependências atualizadas para corrigir 9 avisos moderados do `npm audit` (inclusive os do caminho do Google Agenda, que roda em produção). Nada muda para a clínica.
+- c859963: Na agenda, o ponto de cor dos filtros de status (Cancelada, Confirmada marcada e os demais) agora tem preenchimento sólido e contraste mínimo de 3:1, nos temas claro e escuro.
+- f00c441: A imagem de produção agora usa o mesmo npm fixado do projeto na instalação das dependências, eliminando o aviso de versão incompatível no build do Coolify.
+- fe13701: Sair com a sessão vencida agora leva ao login em vez de mostrar um erro cru, e a etapa do código de verificação (2FA) abre com o campo já focado.
+- b2a182d: A conexão com o banco passa a exigir verificação completa do certificado em todas as ocorrências de `sslmode` da URL, não só na primeira.
+
 ## 0.6.0
 
 ### Minor Changes
@@ -9,7 +19,7 @@
 ### Patch Changes
 
 - 84911da: Atualização de dependências: `zod` 4.4.3 para 4.6.7 (validação de entrada, com correção que confere os limites de tamanho de array, set e map antes de validar os elementos), `qs` 6.16.0 para 6.17.1 e `vite` 8.2.2 para 8.3.6. Para clientes externos da API: desde o zod 4.5, `z.iso.datetime()` exige segundos, então uma data como `2026-01-01T06:15Z` passa a ser rejeitada nas rotas de agendamento, fatura, pacote, follow-up, auditoria e portal; `2026-01-01T06:15:00Z` continua valendo. A interface da clínica já envia segundos, então nada muda para quem a usa.
-- 465f942: Conexão com o banco sempre com `sslmode=verify-full` explícito quando a URL pede SSL (`prefer`, `require` e `verify-ca` eram só apelido no `pg` e mudariam de significado na próxima versão). Exige Node 24.11 ou mais nos `engines` e zera os avisos de instalação do build (peer do `msw` e `allowScripts` do `esbuild`).
+- 465f942: Conexão com o banco com `sslmode=verify-full` explícito quando a URL pede `prefer`, `require` ou `verify-ca` (eram só apelido no `pg` e mudariam de significado na próxima versão); `no-verify` e `disable` não são reescritos. Exige Node 24.11 ou mais nos `engines` e zera os avisos de instalação do build (peer do `msw` e `allowScripts` do `esbuild`).
 
 ## 0.5.0
 

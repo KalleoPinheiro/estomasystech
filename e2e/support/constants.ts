@@ -120,6 +120,7 @@ export const ROLE_ACCOUNT_SPECS = [
   "papeis-smoke.spec.ts",
   "sessao-expirada.spec.ts",
   "sessao-expirada-acoes.spec.ts",
+  "sair-sessao-expirada-foco-2fa.spec.ts",
   "feriados-ausencias-profissional.spec.ts",
 ] as const;
 

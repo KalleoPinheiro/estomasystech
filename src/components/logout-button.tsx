@@ -7,7 +7,12 @@ export function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Rede fora ou sessão já vencida: sair não pode travar na tela. O cookie
+      // vencido não vale mais e o proxy leva ao login de qualquer forma (#718).
+    }
     router.push('/login');
     router.refresh();
   };

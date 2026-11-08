@@ -2392,3 +2392,43 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 ## Fixar engines.node em >=24.11 <25 (2026-11-07) — EM REVISÃO
 - **O que mudou**: `engines.node` de `>=24.11` para `>=24.11 <25` em `package.json` e no lockfile. O deploy da staging (c915db50) buildou em Node 26.13 porque a Vercel ignora o Node 24.x do projeto quando o `engines` aceita major maior; CI e Dockerfile usam Node 24. `troubleshooting.md` registra o motivo e o EBADENGINE atual (npm 11.20.0 da Vercel x 11.21.1 do `packageManager`, aceito).
 - **Testes**: nenhum alterado. **Next step**: coordenador marca pronto; reconstruir a staging e confirmar Node 24 no log. **Blockers**: nenhum.
+
+## Sair com sessão vencida e foco no 2FA (#718 / EST-35, #719 / EST-36) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `/api/auth/logout` entra em `PUBLIC_PATHS`: o proxy deixa o POST passar sem sessão e o handler (já idempotente) responde 200 e expira o cookie. `LogoutButton` redireciona para `/login` sempre, inclusive em 401 ou erro de rede. `MfaCodeStep` foca o campo do código ao entrar na etapa e ao alternar para o código de recuperação.
+- **Testes novos**: `tests/components/mfa-code-step.test.tsx`; casos novos em `tests/proxy.test.ts`, `tests/api/auth-routes.test.ts`, `tests/components/logout-button.test.tsx`; E2E `e2e/sair-sessao-expirada-foco-2fa.spec.ts` (foco em 360, 390, 768, 1280 e Sair com cookie vencido). Nenhum teste existente alterado.
+- **Next step**: coordenador marca pronto e abre a revisão. **Blockers**: nenhum.
+
+
+## sslmode repetido na URL do banco (#713 / EST-30) (2026-11-07) — EM REVISÃO
+- **O que mudou**: `SSL_MODE_ALIAS` em `src/lib/database-url.ts` ganha a flag `g`, então `enforceVerifyFull` reescreve todas as ocorrências de `sslmode=prefer|require|verify-ca` para `verify-full`, não só a primeira. URL sem `sslmode` segue intacta (sem ligar SSL) e `disable`, `no-verify` e `verify-full` não são tocados.
+- **Testes novos**: casos em `tests/lib/database-url.test.ts` (repetido, repetido com modo explícito, idempotência). Nenhum teste existente alterado.
+
+## Contraste do ponto dos chips de status da agenda (#707 / EST-27) (2026-11-07) — EM REVISÃO
+- **O que mudou**: o ponto dos chips de filtro (`status-filter.tsx`) deixou de reaproveitar `STATUS_COLORS` (borda translúcida e tom do fundo do chip) e passou a usar `STATUS_DOT_COLORS` (`status-colors.ts`): preenchimento sólido na tinta do estado (`bg-info`, `bg-accent-ink`, `bg-success`, `bg-ink-3`, `bg-warning`). Nome acessível e `aria-pressed` intactos.
+- **Testes novos**: caso em `tests/components/agenda-status-filter-visual.test.tsx` e pares de 3:1 (WCAG 1.4.11, claro e escuro, sobre as superfícies e o chip marcado) em `tests/lib/contraste-tema.test.ts`. Nenhum teste existente alterado.
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Fixar o npm no Docker de produção (#716 / EST-33) (2026-11-07) — EM REVISÃO
+- **O que mudou**: estágio `deps` do `Dockerfile` instala `npm@<packageManager>` (lido do `package.json`) antes do `npm ci`, zerando o EBADENGINE do build do Coolify sem afrouxar `engines.npm`. Emenda no ADR-091 e linha nova em `troubleshooting.md`.
+- **Testes novos**: `tests/infrastructure/dockerfile-npm-fixado.test.ts`. Nenhum teste existente alterado. Docker não roda na nuvem: Dockerfile não validado por build; sintaxe conferida por hadolint se disponível.
+- **Next step**: coordenador marca pronto; conferir o log do próximo deploy do Coolify sem EBADENGINE. **Blockers**: nenhum.
+
+## Comentário do job fora-do-selo após a #698 (#705) (2026-11-07) — EM REVISÃO
+- **O que mudou**: só o comentário de `.github/workflows/ci.yml` acima do job `fora-do-selo`. O texto dizia que nem o `gate:local` roda `check:server-first` e `check:dynamic-import`; desde a #698 ele os roda. A conclusão do #705: o job **continua necessário**, porque o selo só exige as etapas de `ETAPAS_CI` (`typecheck, lint, sv, docs, cobertura, build, integracao`), sem as duas travas; um selo sem elas ainda é aceito e dispensaria o `estatico`. Job e `tests/infrastructure/ci-fora-do-selo.test.ts` ficam como estão.
+- **Opção futura (não feita)**: incluir `server-first` e `dynamic-import` em `ETAPAS_CI` (recibo e selo já carregam essas etapas) e então remover o job e o teste. Pede `TESTE-ALTERADO` e ADR; decisão do coordenador.
+- **Testes**: nenhum alterado ou novo. **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Automatizar o fim da release: tag, backup, deploy e fumaça (#715) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só documentação. ADR-095 (rascunho) com desenho do workflow `release-deploy.yml` (publicar → backup → deploy → fumaça), gate humano por *Environment* `producao` restrito à `main`, segredos só no *Environment* (repo público), chave SSH de comando forçado para o backup, deploy da tag exata via API do Coolify (sujeito a spike), fumaça somente leitura em `scripts/release/fumaca-producao.sh`, rollback pelo mesmo caminho e 7 tickets. Ponteiros em `producao.md` § 3.1 e `homologacao.md` § 1; linha no `docs/README.md`.
+- **Testes**: nenhum criado ou alterado (sem código). **Perguntas abertas** (ADR-095): revisor do *Environment*, versão pública sem login, primeira release com o fluxo novo, `GITHUB_TOKEN` x `RELEASE_CUT_TOKEN` para a tag.
+- **Next step**: coordenador revisa e decide as perguntas; depois abrir os tickets 1 a 7. **Blockers**: spike do Coolify depende do painel do Kalléo.
+
+## Ajustes de texto apontados pelo CodeRabbit na v0.6.0 (#714 / EST-31) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só texto. `CHANGELOG.md` limita a frase de SSL a `prefer`, `require` e `verify-ca` (`no-verify` e `disable` não são reescritos), corrigido direto na entrada 0.6.0 porque o changeset de origem já foi consumido; `docs/engineering/gate-na-nuvem.md` diz que o `gate:local` não roda todas as travas do `ci.yml` (`check:changeset` só no CI); `SECURITY.md` cita a versão implantada em produção, não a última tag.
+- **Testes**: nenhum teste alterado ou criado (sem mudança de comportamento). Sem changeset (só `.md`).
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Triar as 16 vulnerabilidades moderadas do npm audit (#717) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `vitest` e `@vitest/coverage-v8` em `4.1.12`, `@stryker-mutator/*` em `10.1.1` e o lockfile regenerado com o npm 11.21.1 (`npm audit fix`, sem `--force`): 16 moderadas viram 7 (todas de desenvolvimento, sem correção publicada) e `npm audit --omit=dev` fica em 0. `ci.yml` ganha o step `npm audit --omit=dev --audit-level=high` nos jobs `estatico` e `fora-do-selo`. Triagem e prazo de revisão (2026-12-08) em `docs/engineering/security-scan.md`.
+- **Testes**: nenhum alterado ou criado.
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.

@@ -2,7 +2,7 @@
 
 import { Button, Input } from '@still-void/ui/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { OtpauthQr } from '@/components/otpauth-qr';
 import { apiFetch } from '@/lib/client';
@@ -80,6 +80,14 @@ export function MfaCodeStep({ pendingToken, onStep }: CodeStepProps) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Foco no campo ao entrar na etapa e ao alternar autenticador/recuperação
+  // (#719): quem acabou de digitar a senha já segue direto para o código.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `useRecovery` só dispara o foco de novo no campo trocado.
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [useRecovery]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -117,6 +125,7 @@ export function MfaCodeStep({ pendingToken, onStep }: CodeStepProps) {
       <label className="font-medium text-sm">
         {useRecovery ? 'Código de recuperação' : 'Código do autenticador'}
         <Input
+          ref={inputRef}
           required
           name={useRecovery ? 'recovery-code' : 'code'}
           autoComplete="one-time-code"

@@ -45,14 +45,15 @@ if (falhas.length > 0) fail(falhas.join('\n✗ '));
 
 step('Pré-voo 2/4 Pré-condições do corte');
 const { branch, version } = assertBranch();
-assertApproved(version);
+const prepared = assertApproved(version);
 checkIntegrity(consolidatedTesteAlterado(batchPrs()));
 
 step('Pré-voo 3/4 Versão dos changesets (simulação em cópia descartável)');
 const erroVersao = pendenciaDeVersao(
   branch,
   (JSON.parse(readFileSync('package.json', 'utf8')) as { version: string }).version,
-  simularVersaoDosChangesets(),
+  prepared ? { pendentes: 0, calculada: '' } : simularVersaoDosChangesets(),
+  prepared,
 );
 if (erroVersao !== null) fail(erroVersao);
 
