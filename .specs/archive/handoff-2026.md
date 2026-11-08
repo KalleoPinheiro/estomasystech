@@ -2432,3 +2432,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: `vitest` e `@vitest/coverage-v8` em `4.1.12`, `@stryker-mutator/*` em `10.1.1` e o lockfile regenerado com o npm 11.21.1 (`npm audit fix`, sem `--force`): 16 moderadas viram 7 (todas de desenvolvimento, sem correção publicada) e `npm audit --omit=dev` fica em 0. `ci.yml` ganha o step `npm audit --omit=dev --audit-level=high` nos jobs `estatico` e `fora-do-selo`. Triagem e prazo de revisão (2026-12-08) em `docs/engineering/security-scan.md`.
 - **Testes**: nenhum alterado ou criado.
 - **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Fechar as decisões do ADR-095 (#715 / EST-32) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só documentação. ADR-095 sai de rascunho para aceito com as quatro decisões do Kalléo: revisor do *Environment* `producao` = só ele; versão pública sem login permitida; primeira release no fluxo novo = v0.8.0 (a v0.7.0 segue no fluxo atual); tag com o `RELEASE_CUT_TOKEN`. Ponteiros em `producao.md` § 3.1, `homologacao.md` § 1 e `docs/README.md` atualizados. Tickets de implementação abertos com `Milestone: v0.8.0`.
+- **Testes**: nenhum criado ou alterado. Sem changeset (só `.md`).
+- **Next step**: coordenador marca pronto. **Blockers**: spike do Coolify depende do painel do Kalléo.

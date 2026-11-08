@@ -1,6 +1,6 @@
 ---
 title: "ADR 095 — Automação do fim da release: tag, backup pré-deploy, deploy no Coolify e fumaça de produção"
-status: draft
+status: frozen
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-08
@@ -17,8 +17,9 @@ related:
 # ADR 095 — Automação do fim da release: tag, backup pré-deploy, deploy no Coolify e fumaça de produção
 
 - **Data:** 2026-11-08
-- **Status:** proposto (rascunho, issue #715). **Esta entrega só planeja:** nenhum workflow, script ou
-  segredo é criado aqui. Vira `aceito` quando @KalleoPinheiro aprovar as perguntas abertas abaixo.
+- **Status:** aceito em 2026-11-08 (issue #715; PR de rascunho #727). @KalleoPinheiro respondeu as quatro
+  perguntas abertas (seção "Decisões do dono"). **Esta entrega só registra a decisão:** nenhum workflow,
+  script ou segredo é criado aqui; a implementação está nos tickets do milestone v0.8.0.
 - **Domínios afetados:** engenharia (release, deploy, segredos), operação (backup, produção).
 
 ## Contexto
@@ -52,7 +53,7 @@ que bloqueia o domínio de produção (a edge da Hetzner expõe 22, 80 e 443).
 | Deploy | Deploy automático por push na `main` | Rejeitada: continua valendo o [ADR-039](039-deploy-manual-no-coolify-sem-down-de-migracao.md) |
 | Rollback automático em falha da fumaça | — | Rejeitada: migração sem `down`; decisão é humana |
 
-## Decisão (proposta)
+## Decisão
 
 ### Desenho
 
@@ -130,7 +131,7 @@ IP no runner. O script é testável (curl injetado) e tem teste de unidade no me
 
 A versão no rodapé exige sessão (`/api/version`), então a fumaça confere a versão pelo **SHA do
 deployment** no Coolify mais `ready` com `database` e `migrations` ok. Tornar a versão pública é decisão
-de produto/segurança: pergunta aberta 2.
+de produto/segurança: decisão do dono 2 (permitida).
 
 ### Rollback pelo mesmo caminho
 
@@ -140,14 +141,14 @@ forçado de SSH; `rollback=backup` **não** restaura sozinho (restore apaga dado
 o job imprime o roteiro e exige uma segunda aprovação do *Environment* `producao-restore`. A falha da
 fumaça nunca dispara rollback; ela avisa e para.
 
-## Plano de implementação (tickets a abrir, nenhum feito aqui)
+## Plano de implementação (milestone v0.8.0; nenhum feito aqui)
 
 | # | Ticket | Depende de | Prova |
 | --- | --- | --- | --- |
 | 1 | Spike do Coolify 4.6.0: deploy do HEAD da `main` e leitura de SHA/estado do deployment com token mínimo | Acesso do Kalléo ao painel | Registro no ADR; define plano A ou B |
 | 2 | `ci-backup.sh` + sudoers + chave restrita + doc de instalação (`backup-passo-a-passo.md`) | — | Teste do script com `systemctl` simulado; execução real no VPS pelo Kalléo |
 | 3 | `scripts/release/fumaca-producao.sh` e teste | — | Teste de unidade; execução contra a staging |
-| 4 | `release-deploy.yml`: validação de disparo, `publicar`, `fumaca` (sem job de produção) em `dry_run` | 3 | `actionlint`; execução `dry_run` |
+| 4 | `release-deploy.yml`: validação de disparo, `publicar` (com `RELEASE_CUT_TOKEN`), `fumaca` (sem job de produção) em `dry_run` | 3 | `actionlint`; execução `dry_run` |
 | 5 | Job `producao` (backup + deploy) com o *Environment* `producao` | 1, 2, 4 | Execução real supervisionada na primeira release depois de ligada |
 | 6 | Rollback (`acao=rollback`) | 5 | Ensaio no `dry_run` e documento |
 | 7 | Atualizar `producao.md` § 3.1 e § 6, `homologacao.md` § 1; aposentar `release:publish` do PC (mantém para hotfix e contingência) | 5 | `check:docs` |
@@ -155,16 +156,20 @@ fumaça nunca dispara rollback; ela avisa e para.
 Cada ticket que muda workflow segue a regra de cota do Actions: `actionlint` e uma correção consolidada,
 sem tentativa e erro. Mexer em `scripts/gate/` continua proibido (regra 8).
 
-## Perguntas abertas (decisão do @KalleoPinheiro, regra 5)
+## Decisões do dono (2026-11-08, @KalleoPinheiro)
 
-1. **Revisor do *Environment* `producao`.** Recomendação: o próprio Kalléo, com "Prevent self-review"
-   desligado (único dono), já que o ganho é o registro e a separação de segredo, não o duplo controle.
-2. **Versão visível sem login.** Recomendação: não expor; conferir pelo SHA do Coolify. Expor a versão
-   ajuda a fumaça e ajuda também quem mapeia vulnerabilidades.
-3. **Primeira release com o fluxo automático.** Recomendação: rodar uma vez com o Kalléo olhando o log e o
-   caminho manual de § 3.1 de reserva, e só então aposentar o `release:publish` do PC.
-4. **Aprovar a permissão `contents: write` do `GITHUB_TOKEN` para empurrar tag**, ou usar o
-   `RELEASE_CUT_TOKEN` já existente. Recomendação: testar o `GITHUB_TOKEN` primeiro; é escopo menor.
+1. **Revisor do *Environment* `producao`:** somente o @KalleoPinheiro, com "Prevent self-review"
+   desligado (único dono). O ganho é o registro da aprovação e a separação de segredo.
+2. **Versão visível sem login:** permitida. Um endpoint público somente leitura pode expor a versão
+   (sem SHA, sem dado de clínica ou paciente), e a fumaça passa a conferir a versão por ele, além do SHA do
+   deployment no Coolify. O desenho do endpoint e a revisão de segurança entram no ticket 3.
+3. **Primeira release no fluxo novo:** a **v0.8.0**. A v0.7.0 segue no fluxo atual (`release:publish` no
+   PC, `producao.md` § 3.1). Na v0.8.0 o fluxo roda uma vez com o log acompanhado e o caminho manual de
+   reserva; só depois o `release:publish` do PC é aposentado (fica para hotfix e contingência).
+4. **Tag:** criada com o `RELEASE_CUT_TOKEN` já existente (PAT fine-grained, só este repositório), não com
+   o `GITHUB_TOKEN`. O job `publicar` o referencia, e só ele; segue valendo a rotação de `producao.md` § 6.
+
+Pendente (não é decisão do dono): o spike do Coolify (ticket 1) define o plano A ou B do deploy da tag.
 
 ## Consequências
 
