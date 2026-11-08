@@ -44,6 +44,8 @@ export interface EntradaRisco {
   migracao: RelatorioMigracao | null;
   /** Nomes de pacotes de `package.json` cuja versão ou presença mudou no diff. */
   pacotesAlterados: readonly string[];
+  /** Nomes de `package.json > scripts` que mudaram, entraram ou saíram (comandos de portão são classe 3). */
+  scriptsAlterados: readonly string[];
 }
 
 /* ---------- 1. Caminhos sensíveis (classe 3) ---------- */
@@ -81,11 +83,17 @@ export const CAMINHOS_SENSIVEIS: readonly RegraCaminho[] = [
   },
   { regra: 'auth', padrao: /^src\/(domain\/auth|lib\/auth)\//, detalhe: 'autenticação, sessão ou papéis' },
   { regra: 'auth', padrao: /^src\/proxy\.ts$/, detalhe: 'camada 1 de autorização' },
+  {
+    regra: 'dados-de-producao',
+    padrao: /^scripts\/(backup|restore)[^/]*\.sh$/,
+    detalhe: 'backup e restauração de dados de produção',
+  },
   { regra: 'imagem-e-deploy', padrao: /^(Dockerfile|deploy\/)/, detalhe: 'imagem e arquivos de deploy' },
   { regra: 'workflow', padrao: /^\.github\/(workflows\/|CODEOWNERS$)/, detalhe: 'workflow do Actions ou CODEOWNERS' },
   {
     regra: 'portao',
-    padrao: /^(scripts\/(gate|gate-cloud|release)(\/|\.sh$)|\.husky\/|\.claude\/hooks\/|\.claude\/settings\.json$)/,
+    padrao:
+      /^(scripts\/(gate|gate-cloud|release)(\/|\.sh$)|scripts\/(check-[^/]+|docker-smoke\.sh)$|\.gate\/|\.husky\/|\.claude\/hooks\/|\.claude\/settings\.json$)/,
     detalhe: 'script ou hook que é o próprio portão',
   },
   {
@@ -110,7 +118,20 @@ const PADRAO_PACOTE_SENSIVEL = /(argon|bcrypt|jose|jsonwebtoken|crypto|oauth|pas
 export const pacoteSensivel = (nome: string): boolean =>
   PACOTES_SENSIVEIS.includes(nome) || PADRAO_PACOTE_SENSIVEL.test(nome);
 
+/** Comandos de `package.json > scripts` que são o próprio portão: o CI, o `pre-push` e o gate local os executam. */
+export const SCRIPT_DE_PORTAO = /^(check|test|gate|lint|typecheck|build)(:|$)/;
+
+export const scriptDePortao = (nome: string): boolean => SCRIPT_DE_PORTAO.test(nome);
+
+/** Nomes de scripts de `package.json` que mudaram, entraram ou saíram entre dois manifestos. */
+export function scriptsAlterados(antes: ManifestoPacotes | null, depois: ManifestoPacotes): string[] {
+  const a = antes?.scripts ?? {};
+  const d = depois.scripts ?? {};
+  return [...new Set([...Object.keys(a), ...Object.keys(d)])].filter((nome) => a[nome] !== d[nome]).sort();
+}
+
 export interface ManifestoPacotes {
+  scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
@@ -208,6 +229,11 @@ export function classificarRisco(entrada: EntradaRisco): ResultadoRisco {
   for (const pacote of entrada.pacotesAlterados) {
     if (pacoteSensivel(pacote)) {
       motivos.push({ classe: 3, regra: 'dependencia-sensivel', arquivo: 'package.json', detalhe: `dependência sensível alterada: ${pacote}` });
+    }
+  }
+  for (const script of entrada.scriptsAlterados) {
+    if (scriptDePortao(script)) {
+      motivos.push({ classe: 3, regra: 'portao', arquivo: 'package.json', detalhe: `comando de portão alterado: ${script}` });
     }
   }
   const classe = motivos.reduce<Classe>((max, m) => (m.classe > max ? m.classe : max), 0);

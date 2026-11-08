@@ -45,9 +45,11 @@ Lista única em `CAMINHOS_SENSIVEIS` (`scripts/release/classificar-risco-lib.ts`
 | `cifra` | `data-cipher`, `crypto`, `blind-index`, `reencrypt-clinical-data` |
 | `auditoria` | `src/{domain,application}/audit/`, repositórios de auditoria em `src/infrastructure/` |
 | `auth` | `src/domain/auth/`, `src/lib/auth/`, `src/proxy.ts` |
+| `dados-de-producao` | `scripts/backup*.sh`, `scripts/restore*.sh` (backup e restauração) |
 | `imagem-e-deploy` | `Dockerfile`, `deploy/` |
 | `workflow` | `.github/workflows/`, `.github/CODEOWNERS` |
-| `portao` | `scripts/gate/`, `scripts/gate-cloud*`, `scripts/release/`, `.husky/`, `.claude/hooks/`, `.claude/settings.json`, `vitest*.config.mts`, `stryker.config.json`, `playwright.config.ts`, `biome.json` |
+| `portao` | `scripts/gate/`, `scripts/gate-cloud*`, `scripts/release/`, `scripts/check-*` e `scripts/docker-smoke.sh` (executados pelo `ci.yml`), `.gate/`, `.husky/`, `.claude/hooks/`, `.claude/settings.json`, `vitest*.config.mts`, `stryker.config.json`, `playwright.config.ts`, `biome.json` |
+| `portao` (comandos) | mudança em `package.json > scripts` de `check:*`, `test*`, `gate*`, `lint*`, `typecheck*`, `build*` |
 | `dependencia-sensivel` | mudança em `package.json`, ou de runtime (`dev` fora) no `package-lock.json`, de `next`, `drizzle-orm`, `drizzle-kit`, `pg`, `@aws-sdk/client-s3`, `googleapis`, `sharp` ou de pacote com `argon`, `bcrypt`, `jose`, `jsonwebtoken`, `crypto`, `oauth`, `passport`, `auth`, `helmet` no nome |
 
 Quando mais de uma regra casa, vale a primeira da lista (a mais específica): `src/lib/auth/tenant-scope.ts`
@@ -119,6 +121,9 @@ Severidades: `bloqueante`, `importante`, `sugestao`. O check sai com `1` se:
 2. o `sha` não é o do head da PR (push novo pede veredito novo);
 3. o `revisor` é o `autor` (**o autor não aprova a si mesmo**) ou o `autor` declarado não é o da PR;
 4. há ao menos um achado `bloqueante`.
+
+No `pull_request`, `--sha` deve ser `github.event.pull_request.head.sha`: o `HEAD` do checkout é o commit de merge, e o veredito
+vale para o head da PR.
 
 `autor` e `revisor` são identificadores opacos, só comparados entre si. Como todas as PRs de agentes saem com o
 mesmo login do GitHub, o workflow deve passar um identificador que distinga as sessões (por exemplo o id da thread do

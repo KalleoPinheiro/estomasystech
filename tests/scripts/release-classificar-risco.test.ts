@@ -14,6 +14,8 @@ import {
   type RelatorioMigracao,
   SCHEMA_RISCO,
   saidaGithub,
+  scriptDePortao,
+  scriptsAlterados,
   somenteDocsOuTeste,
 } from '../../scripts/release/classificar-risco-lib';
 
@@ -22,7 +24,14 @@ const risco = (
   arquivos: string[],
   migracao: RelatorioMigracao | null = null,
   pacotes: string[] = [],
-) => classificarRisco({ arquivos, migracao, pacotesAlterados: pacotes });
+  scripts: string[] = [],
+) =>
+  classificarRisco({
+    arquivos,
+    migracao,
+    pacotesAlterados: pacotes,
+    scriptsAlterados: scripts,
+  });
 
 describe('classe de risco · classes 0 e 1', () => {
   it('Dado diff só em docs e testes, Quando classifica, Então classe 0 sem aprovação humana', () => {
@@ -196,6 +205,17 @@ describe('classe de risco · classe 3 (caminhos sensíveis)', () => {
     ['stryker.config.json', 'portao'],
     ['playwright.config.ts', 'portao'],
     ['biome.json', 'portao'],
+    ['scripts/check-docs.ts', 'portao'],
+    ['scripts/check-server-first.ts', 'portao'],
+    ['scripts/check-dynamic-import.ts', 'portao'],
+    ['scripts/check-sv-adoption.sh', 'portao'],
+    ['scripts/docker-smoke.sh', 'portao'],
+    ['.gate/motivo-teste.txt', 'portao'],
+    ['scripts/backup.sh', 'dados-de-producao'],
+    ['scripts/restore.sh', 'dados-de-producao'],
+    ['scripts/backup-alert.sh', 'dados-de-producao'],
+    ['scripts/backup-smoke.sh', 'dados-de-producao'],
+    ['scripts/backup-target.sh', 'dados-de-producao'],
   ])(
     'Dado diff que toca %s, Quando classifica, Então classe 3 pela regra %s',
     (arquivo, regra) => {
@@ -212,7 +232,6 @@ describe('classe de risco · classe 3 (caminhos sensíveis)', () => {
     'src/lib/auth-ui-copy.ts',
     'tests/scripts/release-x.test.ts',
     'scripts/seed/seed.ts',
-    'scripts/backup.sh',
     'vitest-setup.ts',
   ])('Dado %s, Quando classifica, Então não é caminho sensível', (arquivo) => {
     expect(risco([arquivo]).classe).toBeLessThan(3);
@@ -272,6 +291,53 @@ describe('classe de risco · dependências', () => {
     ]);
     expect(pacotesAlterados(antes, antes)).toEqual([]);
     expect(pacotesAlterados(null, { dependencies: { a: '1' } })).toEqual(['a']);
+  });
+});
+
+describe('classe de risco · comandos de portão em package.json', () => {
+  it.each([
+    'check:docs',
+    'check:sv',
+    'test',
+    'test:coverage',
+    'gate:local',
+    'lint',
+    'typecheck',
+    'build',
+  ])(
+    'Dado o script %s alterado, Quando classifica, Então classe 3 pela regra portao',
+    (nome) => {
+      expect(scriptDePortao(nome)).toBe(true);
+      const r = risco(['package.json'], null, [], [nome]);
+      expect(r).toMatchObject({ classe: 3, aprovacaoHumana: true });
+      expect(r.motivos[0]).toMatchObject({
+        regra: 'portao',
+        detalhe: `comando de portão alterado: ${nome}`,
+      });
+    },
+  );
+
+  it('Dado script que não é portão ou nenhum script alterado, Quando classifica, Então fica classe 1', () => {
+    for (const nome of [
+      'dev',
+      'start',
+      'db:migrate',
+      'changeset',
+      'prebuild',
+      'attest',
+    ])
+      expect(scriptDePortao(nome)).toBe(false);
+    expect(risco(['package.json'], null, [], ['dev']).classe).toBe(1);
+    expect(risco(['package.json'], null, [], []).classe).toBe(1);
+  });
+
+  it('Dado dois package.json, Quando compara scripts, Então lista os que mudaram, entraram ou saíram', () => {
+    const antes = { scripts: { build: 'a', dev: 'b', velho: 'c' } };
+    const depois = { scripts: { build: 'a2', dev: 'b', novo: 'd' } };
+    expect(scriptsAlterados(antes, depois)).toEqual(['build', 'novo', 'velho']);
+    expect(scriptsAlterados(antes, antes)).toEqual([]);
+    expect(scriptsAlterados(null, { scripts: { x: '1' } })).toEqual(['x']);
+    expect(scriptsAlterados(null, {})).toEqual([]);
   });
 });
 
@@ -468,6 +534,19 @@ describe('classe de risco · linha de comando', () => {
       }),
     );
     commit('lock2');
+    escrever(
+      'package.json',
+      JSON.stringify({
+        name: 'x',
+        version: '1.0.0',
+        dependencies: { next: '1.0.1', zod: '2.0.0' },
+        scripts: { 'check:docs': 'x' },
+      }),
+    );
+    commit('script de portao');
+    expect(
+      cli('--base', 'base', '--json', '--migracao', 'relatorio.json').stdout,
+    ).toContain('comando de portão alterado: check:docs');
     escrever('.github/workflows/x.yml', 'name: x\n');
     commit('workflow');
     expect(cli('--base', 'base').stdout).toContain(
