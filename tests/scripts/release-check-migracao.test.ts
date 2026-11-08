@@ -187,6 +187,27 @@ describe('check:migracao · classificação', () => {
     }
   });
 
+  it('Dado constraint sem a palavra CONSTRAINT (ADD UNIQUE, FOREIGN KEY, CHECK, EXCLUDE, PRIMARY KEY), Quando classifica, Então é tratada como constraint e não como coluna', () => {
+    for (const sql of [
+      'ALTER TABLE "a" ADD UNIQUE ("x");',
+      'ALTER TABLE "a" ADD FOREIGN KEY ("b_id") REFERENCES "b"("id");',
+      'ALTER TABLE "a" ADD CHECK ("a"."x" > 0);',
+      'ALTER TABLE "a" ADD EXCLUDE USING gist (x WITH =);',
+      'ALTER TABLE "a" ADD PRIMARY KEY ("x");',
+    ]) {
+      expect(regras(sql), sql).toEqual(['add-constraint-sem-not-valid']);
+    }
+    expect(regras('ALTER TABLE "a" ADD CHECK (x > 0) NOT VALID;')).toEqual([
+      'add-constraint-not-valid',
+    ]);
+    const novas =
+      'ALTER TABLE "a" ADD COLUMN "n" text;\nALTER TABLE "a" ADD UNIQUE ("n");';
+    expect(regras(novas)).toEqual([
+      'add-column',
+      'constraint-em-colunas-novas',
+    ]);
+  });
+
   it('Dado constraint só sobre colunas criadas na mesma migração, Quando classifica, Então é aditiva', () => {
     const sql = [
       'ALTER TABLE "a" ADD COLUMN "g_id" text;',

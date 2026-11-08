@@ -149,6 +149,8 @@ interface Contexto {
 const CREATE_TABLE = /^create (?:unlogged |temp(?:orary)? )?table (?:if not exists )?([\w.]+)/;
 const ALTER_TABLE = /^alter table (?:if exists )?(?:only )?([\w.]+) (.+)$/;
 const ADD_COLUMN = /^add (?:column )?(?:if not exists )?([\w]+) /;
+/** `ADD CONSTRAINT x ...` e as formas sem nome: `ADD UNIQUE (...)`, `ADD FOREIGN KEY ...`, `ADD CHECK (...)`... */
+const ADD_CONSTRAINT = /^add (?:constraint\b|unique\b|primary key\b|foreign key\b|check\b|exclude\b)/;
 
 /** Primeira passada: o que esta migração cria, para as regras da segunda reconhecerem alvos novos. */
 export function coletarNovidades(normalizadas: readonly string[]): Contexto {
@@ -160,7 +162,7 @@ export function coletarNovidades(normalizadas: readonly string[]): Contexto {
     if (!alter) continue;
     for (const acao of dividirPorVirgula(alter[2])) {
       const coluna = ADD_COLUMN.exec(acao)?.[1];
-      if (coluna && !acao.startsWith('add constraint')) ctx.colunasNovas.add(`${alter[1]}.${coluna}`);
+      if (coluna && !ADD_CONSTRAINT.test(acao)) ctx.colunasNovas.add(`${alter[1]}.${coluna}`);
     }
   }
   return ctx;
@@ -228,7 +230,7 @@ function acaoAlterColumn(acao: string): Veredito {
 function classificarAcao(acao: string, tabela: string, ctx: Contexto): Veredito {
   if (/^rename\b/.test(acao)) return naoAditiva('rename', 'renomear quebra o código antigo');
   if (/^drop\b/.test(acao)) return naoAditiva('drop', 'remover quebra o código antigo');
-  if (/^add constraint\b/.test(acao)) return acaoAddConstraint(acao, tabela, ctx);
+  if (ADD_CONSTRAINT.test(acao)) return acaoAddConstraint(acao, tabela, ctx);
   if (/^add (?:column )?(?:if not exists )?\w+ /.test(acao)) return acaoAddColumn(acao, tabela, ctx);
   if (/^alter (?:column )?\w+ /.test(acao)) return acaoAlterColumn(acao);
   if (/^validate constraint\b/.test(acao)) return aditiva('validate-constraint', 'valida o que já era NOT VALID');
