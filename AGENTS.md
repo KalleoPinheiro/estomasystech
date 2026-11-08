@@ -75,7 +75,7 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
 
 ## Branch e PR de agentes (ADR-052)
 
-Todo agente, antes de criar branch, confere estas decisões (o orquestrador as repete no brief da thread):
+Todo agente, antes de criar branch, confere estas decisões (o orquestrador as repete no brief; fluxo em transição, [ADR-097](docs/adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):
 
 - **Base sempre a release aberta**, nunca a `main`: `git fetch origin && git switch -c <tipo>/<slug> origin/release/vX.Y.Z`. Ache a release com `git ls-remote --heads origin 'release/*'` (uma por vez).
 - **Nome**: `feat/<slug>` para funcionalidade, `fix/<slug>` para correção, `docs/<slug>` para só documentação. `main` só recebe `release/*` e `hotfix/*`, por merge commit.

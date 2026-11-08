@@ -2433,12 +2433,19 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes**: nenhum alterado ou criado.
 - **Next step**: coordenador marca pronto. **Blockers**: nenhum.
 
+## ADR-097: fluxo enxuto até a produção (#754) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só documentação. ADR-097 (aceito em direção e nas fases 1 e 2): piso mecânico com `tlc-*` e `the-judge` por cima, classes de risco 0 a 3 calculadas por script com aprovação humana só na 3, `main` sem bypass (inclusive para o Kalléo) e fases 1 a 5 (3 a 5 propostas). Nada do fluxo vigente muda: avisos em `producao.md` § 3.1 e `homologacao.md` § 1, ponteiro no `AGENTS.md` (150 linhas) e linha no `docs/README.md`. ADR-095 só linkado.
+- **Testes**: nenhum criado ou alterado (sem código). Sem changeset (só `.md`). `check:docs` OK.
+- **Perguntas abertas**: canário sintético em produção. Autorização da regra 8 para `scripts/gate/` e `recibo-gate.yml` (fase 2a, #757) dada pelo Kalléo em 2026-11-08 e registrada no ADR.
+- **Next step**: thread revisora valida com the-judge; coordenador abre os tickets da fase 2. **Blockers**: nenhum.
+
 ## E2E e mutação de volta ao Actions, sem recibo do gate local (#757 / fase 2a do ADR-097) (2026-11-08) — EM REVISÃO
 - **O que mudou**: `gate-pr.yml` passa a rodar também em PR contra a `main` e ganha o job `mutacao` (Stryker incremental só nos arquivos de regra alterados, via `impacto.ts --mutacao`; não repete contra a `main`), incluído no agregador "Gate do PR". `recibo-gate.yml` deixa de conferir o recibo `E2E-GATE:` (mantém integridade dos testes e `## Homologação`; id do job e nome do arquivo ficam, o check passa a se chamar "Integridade dos testes e homologação"). `scripts/gate/verify-receipt.ts` removido (`receipt.ts` fica: o `release:cut` o usa). Novo ADR-098 (supera o ADR-042 no E2E fora do Actions e no recibo; regra 8 segue). AGENTS.md (regra 7, tabela de comandos, seção de agentes, 148 linhas), template de PR e docs de engenharia atualizados.
 - **Autorização (regra 8)**: "OK" escrito de @KalleoPinheiro em 2026-11-08, registrado em comentário na #757, para `scripts/gate/` e `recibo-gate.yml`.
 - **Testes**: novo `tests/infrastructure/gate-pr-e2e-mutacao-actions.test.ts`. Alterados (requisito mudou, `TESTE-ALTERADO` no PR): C47 em `ci-workflow.test.ts` e a lista de jobs em `gate-pr-workflow.test.ts`.
 - **Fora do repositório (só o Kalléo)**: trocar o check exigido do ruleset de "Recibo do gate local + integridade dos testes" para "Integridade dos testes e homologação"; exigir "Gate do PR" na `main`; PR de teste com E2E vermelho para provar o bloqueio.
 - **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093) e mede o tempo do check na #757. **Blockers**: ajustes de ruleset.
+
 ## Lint de migração aditiva `check:migracao` (#755) (2026-11-08) — EM REVISÃO
 - **O que mudou**: `npm run check:migracao` (`scripts/release/check-migracao.ts` + núcleo puro `check-migracao-lib.ts`) classifica as `drizzle/*.sql` novas do diff em aditiva ou não aditiva (falha fechada para SQL desconhecido) e confere o journal (ordem de `when`, idx, tag/arquivo, só acrescenta, migração existente intocada). Saída `--json` no formato `check-migracao/v1` para o classificador de risco (#756). Doc: `docs/engineering/migracoes-aditivas.md`; ponteiro em `producao.md` § 4. Changeset patch.
 - **Rodando em todo o histórico (`--all`)**: journal sem erros; 20 das 71 migrações são não aditivas, sobretudo as antigas (multi-clínica 0019+).
