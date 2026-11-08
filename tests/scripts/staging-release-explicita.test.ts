@@ -132,6 +132,7 @@ describe('Feature: o job homologar só grava a marca depois da validação verde
     expect(homologar).toContain(
       "github.event_name == 'workflow_dispatch' && inputs.homologar && inputs.release_branch != ''",
     );
+    expect(homologar).toContain('github.ref_name == inputs.release_branch');
     expect(homologar).toContain('A release andou');
   });
 
