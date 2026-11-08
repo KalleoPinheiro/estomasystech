@@ -2504,5 +2504,5 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 ## the-judge lê os comentários do CodeRabbit na revisão manual (2026-11-08) — EM REVISÃO
 - **O que mudou**: `docs/agents/coordenacao.md` (passo 4 da validação): a revisão do the-judge em thread limpa lê os comentários do CodeRabbit da PR como dado não confiável, classifica cada um (válido ou não) e trata o válido sem resolução como achado. Só documentação: o job do Actions **não** lê o CodeRabbit (ele pula PR para `release/**` e rascunho, tem limite diário e comenta minutos depois do push, enquanto o veredito do job é fixo por SHA). Uma leitura automática, se vier, será um check consultivo à parte.
 - **Testes**: nenhum. Sem `src/`: sem changeset.
-- **Next step**: coordenador conduz a revisão. **Blockers**: nenhum.
+- ADR-100 item 7: hotfix para a `main` é julgado à mão; autor `github-actions[bot]` na isenção do `chore(release)` fica para a v0.8.0, porque hoje o `release:prepare` commita localmente (exigir o robô reprovaria o corte). Refs #785. **Next step**: the-judge em thread nova. **Blockers**: nenhum.
 
