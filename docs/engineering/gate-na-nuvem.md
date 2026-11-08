@@ -53,8 +53,8 @@ O ADR-084 não é editado; esta seção registra duas melhorias do `scripts/gate
 
 - **Recibo com tempo.** Ao fim de `pr` e `release` (inclusive na falha) o script imprime e grava em
   `.gate/cloud-recibo.md` a linha `GATE-NUVEM: <sha> perfil=<pr|release> rc=<n> total=<s>` e uma tabela
-  com o rc e a duração de cada etapa, mais as etapas puladas. É o texto a colar no PR. Não substitui a
-  linha `E2E-GATE:` do `gate:local` no PR `release/* → main`.
+  com o rc e a duração de cada etapa, mais as etapas puladas. É o texto a colar no PR. O PR não carrega mais
+  a linha `E2E-GATE:` ([ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)).
 - **Motivo do TESTE-ALTERADO fora do disco local.** A etapa `integridade-de-testes` repassa ao
   `check:testes` o corpo do PR (`GATE_PR_BODY_FILE=<arquivo>`) e/ou o texto (`GATE_MOTIVO_TESTE="..."`),
   além do `.gate/motivo-teste.txt` local. A checagem é a mesma (`scripts/gate/check-test-integrity.ts`,
@@ -110,6 +110,6 @@ Para quando houver organização (só o dono faz):
 1. Settings → Rules → Rulesets → ruleset de `release/**` → marque **Require merge queue**.
 2. Método de merge **Squash**; tamanho da fila 1 a 5 PRs; «Only merge non-failing pull requests».
 3. Checks exigidos: `Typecheck, lint, sv-gate, test:coverage, build` (job `ci`) e, se quiser o E2E no
-   bloqueio, `Gate do PR`. O recibo pode seguir exigido: na fila ele é pulado e conta como aprovado.
+   bloqueio, `Gate do PR`. O check de integridade dos testes pode seguir exigido: na fila ele é pulado e conta como aprovado.
 4. Fluxo: o autor clica **Merge when ready**; a fila monta `release + PR`, roda `ci` e `gate-pr` nesse SHA e
-   faz o squash. `main` não entra na fila (`release/* → main` segue por merge commit com o recibo `E2E-GATE:`).
+   faz o squash. `main` não entra na fila (`release/* → main` segue por merge commit; o Gate do PR roda o E2E nela, sem recibo).

@@ -26,6 +26,7 @@ const TIMEOUTS: Record<string, Record<string, number>> = {
     'build-prod': 20,
     'e2e-prod': 20,
     'e2e-dev': 20,
+    mutacao: 45,
     'gate-pr': 5,
   },
   '.github/workflows/ci.yml': {
@@ -393,9 +394,9 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
     );
   });
 
-  it('C7 mutação sai do PR e fica no workflow_dispatch mensal', () => {
-    expect(jobNames(gate)).not.toContain('mutacao');
-    expect(gate).not.toContain('test:mutacao');
+  it('C7 mutação por arquivo alterado volta ao PR (ADR-098) e a rodada completa fica no workflow_dispatch mensal', () => {
+    expect(jobNames(gate)).toContain('mutacao');
+    expect(job('mutacao', gate)).toContain('test:mutacao');
     expect(read('.github/workflows/mutacao-mensal.yml')).toContain(
       'workflow_dispatch:',
     );

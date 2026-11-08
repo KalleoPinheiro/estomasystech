@@ -1,7 +1,8 @@
 name: CI
 
-# Só o gate rápido roda aqui (ADR-042). O E2E é o `gate:local`, conferido por recibo em
-# `recibo-gate.yml`; o Docker está em `docker.yml`, só quando o que ele valida muda.
+# Só o gate rápido roda aqui. O E2E e a mutação por arquivo alterado ficam em `gate-pr.yml` (ADR-098, que
+# supera o ADR-042); a integridade dos testes, em `recibo-gate.yml`; o Docker, em `docker.yml`, só quando o
+# que ele valida muda.
 # A `staging` não dispara CI: é espelho da `main` + features que já passaram no PR.
 #
 # Jobs em paralelo (ADR-087): verificações estáticas, cobertura em 4 shards do Vitest (com junção do
