@@ -54,7 +54,6 @@ jobs:
       VERSION: ${{ inputs.version }}
       ROLLBACK: ${{ inputs.rollback }}
       DRY_RUN: ${{ inputs.dry_run }}
-      GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
       GH_REPO: ${{ github.repository }}
       GIT_AUTHOR_NAME: github-actions[bot]
       GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
@@ -78,6 +77,8 @@ jobs:
 
       - name: Exigir RELEASE_CUT_TOKEN
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
             echo "::error title=RELEASE_CUT_TOKEN ausente::Crie o segredo RELEASE_CUT_TOKEN (PAT fine-grained do dono, só este repo, Contents e Pull requests em read/write) em Settings > Secrets and variables > Actions e dispare de novo."
@@ -88,7 +89,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_CUT_TOKEN }}
+          persist-credentials: false
 
       # A trava do job: a tag só aponta para um commit que já está na `main` e é o merge da release.
       - name: Conferir que a main é o merge da release
@@ -138,9 +139,15 @@ jobs:
         if: inputs.dry_run != true
         run: npm ci --no-audit --no-fund
 
+      # O PAT existe só neste passo (env do passo, nunca do job) e não fica no .git/config: o git o recebe do
+      # credential helper do gh, que lê o GH_TOKEN. Os passos de npm acima rodam sem ele.
       - name: Publicar tag e Release (release:publish)
         if: inputs.dry_run != true
-        run: npm run release:publish -- --rollback="$ROLLBACK"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
+        run: |
+          gh auth setup-git
+          npm run release:publish -- --rollback="$ROLLBACK"
 
       - name: Dry run
         if: inputs.dry_run == true

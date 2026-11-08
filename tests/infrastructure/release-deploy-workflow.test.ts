@@ -47,7 +47,7 @@ function passo(trecho: string): string {
 function codigo(script: string, env: Record<string, string>): number {
   try {
     execFileSync('bash', ['-e', '-o', 'pipefail', '-c', script], {
-      env: { ...env, PATH: '/usr/bin:/bin' },
+      env: { ...process.env, ...env, PATH: '/usr/bin:/bin' },
       stdio: 'ignore',
     });
     return 0;
@@ -96,6 +96,24 @@ describe('Feature: release-deploy.yml (ADR-095, #749)', () => {
       if (l.trim().startsWith('run:')) expect(l).not.toContain('${{');
     }
     expect(semComentarios).not.toMatch(/set -x|environment:/);
+  });
+
+  it('Dado o PAT, Quando procurado, Então não está no env do job nem no checkout e só o passo de publicar o usa com o helper do gh', () => {
+    const job = bloco('publicar');
+    const envDoJob = job.slice(
+      job.indexOf('    env:'),
+      job.indexOf('    steps:'),
+    );
+    expect(envDoJob).not.toContain('secrets.');
+    expect(envDoJob).not.toContain('GH_TOKEN');
+    expect(job).toMatch(
+      /actions\/checkout[^\n]*\n\s+with:[\s\S]*?persist-credentials: false/,
+    );
+    expect(job).not.toMatch(/token: \$\{\{ secrets/);
+    expect(job).toMatch(
+      /name: Publicar tag e Release[\s\S]*?GH_TOKEN: \$\{\{ secrets\.RELEASE_CUT_TOKEN \}\}[\s\S]*?gh auth setup-git\n\s+npm run release:publish/,
+    );
+    expect(source.match(/secrets\.RELEASE_CUT_TOKEN/g)).toHaveLength(2);
   });
 
   it('Dado o job de produção, Quando procurado, Então ainda não existe (entra na #752)', () => {
