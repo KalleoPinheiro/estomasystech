@@ -80,17 +80,26 @@ de `backup`: uma aprovação cobre o job `producao` (backup e deploy) do run; um
 
 ### Segredos (repositório público)
 
-- Ficam como **secrets do *Environment* `producao`**, nunca do repositório, e o *Environment* só aceita
-  deploy da branch `main`. Só o job `producao` referencia o *Environment*.
+- Os segredos que tocam a produção ficam como **secrets do *Environment* `producao`**, nunca do
+  repositório, e o *Environment* só aceita deploy da branch `main`. Só o job `producao` referencia o
+  *Environment*. A única exceção é o `RELEASE_CUT_TOKEN`, descrito abaixo.
 - O workflow é só `workflow_dispatch`. Proibido `pull_request_target` e checkout de código de PR nesse
   caminho; PR de fork não recebe segredo.
-- Segredos previstos: `VPS_SSH_KEY` (chave dedicada do backup), `VPS_KNOWN_HOSTS` (impressão digital do
+- **`RELEASE_CUT_TOKEN` (decisão do dono 4).** Continua **secret de repositório** (o `release-cut.yml` já o
+  usa; PAT fine-grained, só este repositório, Contents e Pull requests RW). Só o job `publicar` o
+  referencia, sem *Environment* e sem aprovação: a trava desse job é a verificação (HEAD da `main` é merge
+  commit da `release/vX.Y.Z` e `package.json` traz a versão), e a tag só aponta para um commit que já está
+  na `main`. Risco aceito: quem pode disparar `workflow_dispatch` na `main` aciona um job com esse PAT;
+  mitigado porque o código do workflow vem da `main` (só entra por PR revisado), o PAT não alcança produção
+  (nem VPS nem Coolify) e a conta tem um único dono. Não ganha *Environment* próprio, para manter uma só
+  aprovação por release. Se o `RELEASE_CUT_TOKEN` for rotacionado, vale para os dois workflows.
+- Segredos previstos no *Environment* `producao`: `VPS_SSH_KEY` (chave dedicada do backup), `VPS_KNOWN_HOSTS` (impressão digital do
   host; `StrictHostKeyChecking=no` é proibido), `COOLIFY_URL`, `COOLIFY_TOKEN` e `COOLIFY_APP_UUID`.
 - Contra vazamento em log: nenhum `set -x`; o segredo entra por `env:` no passo, nunca interpolado em
   `run:`; token passa por `curl -H @arquivo` ou `--config` lido de `stdin`, nunca em argumento; chave SSH
   vai para `ssh-agent`/arquivo `0600` removido ao final; respostas da API do Coolify são filtradas com
   `jq` para só o que se usa (status, SHA). Valores derivados e sensíveis passam por `::add-mask::`.
-- O workflow declara `permissions` explícitas por job (`contents: write` só em `publicar`).
+- O workflow declara `permissions` explícitas por job (a tag é empurrada com o `RELEASE_CUT_TOKEN`, então o `GITHUB_TOKEN` do `publicar` fica em `contents: read`; os demais jobs também só leem).
 - Rotação: entra na tabela de `producao.md` § 6, com a ordem "gere o novo, troque no *Environment*,
   revogue o antigo".
 
@@ -129,9 +138,10 @@ cabeçalhos, rotas de job fechadas (`401`), salto do proxy e rate limit. **Fora 
 300 requisições e os 9 logins falhos (viram passo opcional `fumaca_pesada`), porque disparam limite por
 IP no runner. O script é testável (curl injetado) e tem teste de unidade no mesmo PR da implementação.
 
-A versão no rodapé exige sessão (`/api/version`), então a fumaça confere a versão pelo **SHA do
-deployment** no Coolify mais `ready` com `database` e `migrations` ok. Tornar a versão pública é decisão
-de produto/segurança: decisão do dono 2 (permitida).
+A versão no rodapé exige sessão (`/api/version`). Pela decisão do dono 2 a versão pode ser pública: o
+ticket 3 cria um endpoint público somente leitura com a versão (sem SHA, sem dado de clínica ou paciente),
+com revisão de segurança no PR. A fumaça confere a versão por esse endpoint **e** o **SHA do deployment**
+no Coolify, mais `ready` com `database` e `migrations` ok.
 
 ### Rollback pelo mesmo caminho
 
@@ -147,7 +157,7 @@ fumaça nunca dispara rollback; ela avisa e para.
 | --- | --- | --- | --- |
 | 1 | Spike do Coolify 4.6.0: deploy do HEAD da `main` e leitura de SHA/estado do deployment com token mínimo | Acesso do Kalléo ao painel | Registro no ADR; define plano A ou B |
 | 2 | `ci-backup.sh` + sudoers + chave restrita + doc de instalação (`backup-passo-a-passo.md`) | — | Teste do script com `systemctl` simulado; execução real no VPS pelo Kalléo |
-| 3 | `scripts/release/fumaca-producao.sh` e teste | — | Teste de unidade; execução contra a staging |
+| 3 | `scripts/release/fumaca-producao.sh`, teste e endpoint público somente leitura da versão | — | Teste de unidade; revisão de segurança do endpoint; execução contra a staging |
 | 4 | `release-deploy.yml`: validação de disparo, `publicar` (com `RELEASE_CUT_TOKEN`), `fumaca` (sem job de produção) em `dry_run` | 3 | `actionlint`; execução `dry_run` |
 | 5 | Job `producao` (backup + deploy) com o *Environment* `producao` | 1, 2, 4 | Execução real supervisionada na primeira release depois de ligada |
 | 6 | Rollback (`acao=rollback`) | 5 | Ensaio no `dry_run` e documento |
