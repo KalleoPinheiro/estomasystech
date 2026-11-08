@@ -2491,3 +2491,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
 - **Revisão do the-judge (#779)**: `conferir-release` isenta o `chore(release): vX.Y.Z` do robô e os commits de PR `hotfix/*` → `main` quando são da PR sob conferência (commit comum direto na release continua reprovando); o passo que grava o veredito no cache usa um passo `existe` em vez de `hashFiles` (que não enxerga `RUNNER_TEMP`, então o cache nunca era gravado); ADR-100 item 12 diz que mudança no workflow e nos scripts só vale depois de entrar na `main` e descreve o conflito do merge `main` → release. Ao sincronizar a release, `release-veredito-workflow.test.ts` muda lá (a asserção de `hashFiles` vira a do passo `existe`): `TESTE-ALTERADO` no PR do sync.
 
+## the-judge: `await` no topo do `julgar-pr.ts` quebrava o job no Actions (#764) (2026-11-08) — EM REVISÃO
+- **Causa raiz**: primeiro run real (PR #787, com `VEREDITO_JUDGE_ATIVO=true`): `tsx` carrega o script como CJS (o pacote não é `type: module`) e rejeita `await` no topo (`TransformError`), antes de qualquer lógica. Os testes não pegavam porque só importam a lib.
+- **Correção**: o corpo vira `julgarEGravar()` com `.catch`; novo teste `tests/scripts/release-entrypoints.test.ts` carrega `julgar-pr.ts` e `conferir-release.ts` sob o `tsx` (falha no código antigo, passa no novo). Sem `src/`: sem changeset.
+- **Next step**: the-judge em thread nova; depois re-rodar o check na #787 para ver a troca de token. **Blockers**: nenhum.
+
