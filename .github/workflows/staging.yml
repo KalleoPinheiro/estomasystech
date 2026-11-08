@@ -21,6 +21,15 @@ on:
         type: boolean
         required: false
         default: true
+      release_branch:
+        description: "release/vX.Y.Z a homologar (vale mesmo com mais de uma release aberta); vazio = a única aberta"
+        required: false
+        default: ""
+      homologar:
+        description: "Depois do deploy: smoke, validação logada e marca homologacao/vX.Y.Z (exige release_branch)"
+        type: boolean
+        required: false
+        default: false
   deployment_status:
 
 concurrency:
@@ -29,6 +38,7 @@ concurrency:
 
 permissions:
   contents: read
+  deployments: read
 
 jobs:
   rebuild:
@@ -37,6 +47,9 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    outputs:
+      release_sha: ${{ steps.shas.outputs.release_sha }}
+      staging_sha: ${{ steps.shas.outputs.staging_sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -50,13 +63,135 @@ jobs:
       - name: Reconstruir e publicar
         env:
           BRANCHES: ${{ inputs.branches }}
+          RELEASE_BRANCH: ${{ inputs.release_branch }}
           # No push na main o input não existe: o padrão é a release aberta.
           USE_RELEASE: ${{ github.event_name == 'push' || inputs.release }}
         run: |
           flag=""
-          if [ "$USE_RELEASE" = "true" ]; then flag="--release"; fi
+          if [ -n "$RELEASE_BRANCH" ]; then flag="--release=${RELEASE_BRANCH}"
+          elif [ "$USE_RELEASE" = "true" ]; then flag="--release"; fi
           # shellcheck disable=SC2086
           bash scripts/staging/rebuild.sh $flag --deploy --push $BRANCHES
+
+      - name: SHAs da release e da staging publicada
+        id: shas
+        env:
+          RELEASE_BRANCH: ${{ inputs.release_branch }}
+        run: |
+          echo "staging_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ -n "$RELEASE_BRANCH" ]; then
+            echo "release_sha=$(git rev-parse "origin/${RELEASE_BRANCH}")" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ADR-099 (#765): a homologação sem operador. Depois do push na staging, espera o deploy de Production da Vercel
+  # para o SHA publicado, confere o health e roda a validação logada (scripts/staging/validacao-logada.mjs: 3
+  # papéis, 4 larguras, console, CSP, /api e rolagem). Só com tudo verde grava a marca `homologacao/vX.Y.Z` no
+  # SHA da release, e só se a release não andou desde o rebuild. Falha em qualquer passo = sem marca.
+  # A marca usa o RELEASE_CUT_TOKEN (o GITHUB_TOKEN não cria refs fora do que o ruleset libera).
+  homologar:
+    name: Homologar a release (deploy, validação logada e marca)
+    needs: rebuild
+    if: github.event_name == 'workflow_dispatch' && inputs.homologar && inputs.release_branch != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      RELEASE_BRANCH: ${{ inputs.release_branch }}
+      RELEASE_SHA: ${{ needs.rebuild.outputs.release_sha }}
+      STAGING_SHA: ${{ needs.rebuild.outputs.staging_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Exigir os segredos da homologação
+        env:
+          SEED: ${{ secrets.STAGING_SEED_PASSWORD }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CUT: ${{ secrets.RELEASE_CUT_TOKEN }}
+        run: |
+          missing=""
+          [ -n "$SEED" ] || missing="$missing STAGING_SEED_PASSWORD"
+          [ -n "$BYPASS" ] || missing="$missing VERCEL_AUTOMATION_BYPASS_SECRET"
+          [ -n "$CUT" ] || missing="$missing RELEASE_CUT_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "::error title=Segredo ausente::Crie em Settings > Secrets and variables > Actions:${missing}"
+            exit 1
+          fi
+
+      - name: Esperar o deploy de Production do SHA da staging
+        id: deploy
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            id=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${STAGING_SHA}&per_page=10" --jq '[.[] | select(.environment | startswith("Production"))][0].id // empty')
+            if [ -n "$id" ]; then
+              state=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" --jq '.[0].state // "pending"')
+              echo "tentativa ${i}: deploy ${id} ${state}"
+              if [ "$state" = "success" ]; then
+                url=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" --jq '.[0].environment_url')
+                echo "url=${url}" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
+                echo "::error title=Deploy da staging falhou::estado ${state} para ${STAGING_SHA}"
+                exit 1
+              fi
+            else
+              echo "tentativa ${i}: a Vercel ainda não abriu o deploy de ${STAGING_SHA}"
+            fi
+            sleep 30
+          done
+          echo "::error title=Deploy da staging não terminou::passaram 30 min sem sucesso para ${STAGING_SHA}"
+          exit 1
+
+      - name: Health pronto
+        env:
+          TARGET_URL: ${{ steps.deploy.outputs.url }}
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors -H "x-vercel-protection-bypass: ${BYPASS}" "${TARGET_URL}/api/health/ready")
+          echo "GET /api/health/ready -> ${code}"
+          [ "$code" = "200" ]
+
+      - run: npm ci --no-audit --no-fund
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Validação logada (3 papéis, 4 larguras)
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+          STAGING_SEED_PASSWORD: ${{ secrets.STAGING_SEED_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          PAUSE_MS: "2000"
+          OUT_DIR: qa-validacao-logada
+        run: node scripts/staging/validacao-logada.mjs
+
+      - name: Guardar capturas e resultados
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: validacao-logada
+          path: qa-validacao-logada/
+          if-no-files-found: ignore
+
+      - name: Gravar a marca de homologação
+        env:
+          CUT_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_BRANCH#release/}"
+          now=$(git ls-remote origin "refs/heads/${RELEASE_BRANCH}" | cut -f1)
+          if [ "$now" != "$RELEASE_SHA" ]; then
+            echo "::error title=A release andou::${RELEASE_BRANCH} está em ${now:0:7}, mas a validação foi do ${RELEASE_SHA:0:7}; rode de novo."
+            exit 1
+          fi
+          git push --force "https://x-access-token:${CUT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${RELEASE_SHA}:refs/heads/homologacao/${version}"
+          echo "homologacao/${version} -> ${RELEASE_SHA}" >> "$GITHUB_STEP_SUMMARY"
 
   smoke:
     name: Fumaça da homologação publicada

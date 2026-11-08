@@ -2459,3 +2459,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Decisões do coordenador (2026-11-08)**: flag para clínica real segue passo humano fora do check; só lockfile é classe 2 (3 se tocar dependência sensível de runtime); lista de sensíveis aceita; CODEOWNERS vira documentação e o sinal da classe 3 é a aprovação de um Environment protegido com o dono (desenho em `classe-de-risco.md` § 3, workflow na #757; falta o dono criar o Environment).
 - **Next step**: the-judge em thread limpa; thread do #757 liga os dois checks nos workflows. **Blockers**: nenhum.
 - **Atualização (#757, após #759 e #763)**: `ci.yml` roda `check:migracao` (estático e fora-do-selo, só em PR); novo `.github/workflows/portao-risco.yml` com `risco`, `aprovacao-classe-3` (Environment) e `portao-risco`. Pendente: `check:veredito` (autor confiável e identificador de sessão) e o Environment do dono.
+
+## Homologação sem operador pelo Actions (#765) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `rebuild.sh --release=release/vX.Y.Z` (base explícita; recusa inexistente e já na `main`; funciona com duas releases abertas). `staging.yml` ganha `release_branch`, `homologar` e o job `homologar`: espera o deploy de Production do SHA da staging, health, `validacao-logada.mjs` e, só verde e com a release no mesmo SHA, grava `homologacao/vX.Y.Z` com o `RELEASE_CUT_TOKEN`. ADR-099; `homologacao.md` e `docs/README.md` atualizados. Achado: o rebuild já rodava no Actions com a identidade do dono; não é preciso `VERCEL_TOKEN`.
+- **Testes**: novo `tests/scripts/staging-release-explicita.test.ts`. Nenhum teste existente alterado. Sem changeset (sem `src/`, `drizzle/` ou `Dockerfile`).
+- **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
+- **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
+

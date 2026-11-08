@@ -2,10 +2,12 @@
 # Recria a branch `staging` (descartável) a partir da base + as branches informadas.
 # A base é a origin/main (ADR-041) ou, com --release, a release aberta (ADR-052).
 #
-# Uso: scripts/staging/rebuild.sh [--release] [--push] [<branch> ...]
+# Uso: scripts/staging/rebuild.sh [--release[=release/vX.Y.Z]] [--push] [<branch> ...]
 #   sem branches: staging = a base.
 #   --release: base = `origin/release/vX.Y.Z` aberta (não mergeada na main); sem release
 #              aberta, a base é a main (staging volta a ser = main depois do merge da release).
+#   --release=release/vX.Y.Z: base = essa release, mesmo com mais de uma aberta (o Actions passa a
+#              release a homologar; sem o valor, vale a regra de uma só aberta).
 #   --push: publica com --force-with-lease, sempre em `origin HEAD:staging` (nunca no upstream que
 #           a branch local herdasse, p. ex. a release) e deixa o upstream da staging em origin/staging.
 #   --deploy: se algum ref remoto já aponta para o SHA final, acrescenta um commit vazio. A Vercel
@@ -15,14 +17,17 @@ set -euo pipefail
 
 push=false
 use_release=false
+release_branch=""
 deploy=false
 branches=()
 for arg in "$@"; do
   case "$arg" in
     --push) push=true ;;
     --release) use_release=true ;;
+    --release=release/v*) use_release=true; release_branch="${arg#--release=}" ;;
+    --release=*) echo "Release inválida: ${arg#--release=} (esperado release/vX.Y.Z)." >&2; exit 2 ;;
     --deploy) deploy=true ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
     *) branches+=("$arg") ;;
   esac
 done
@@ -34,7 +39,14 @@ fi
 
 git fetch origin --prune --quiet
 base=origin/main
-if [ "$use_release" = true ]; then
+if [ -n "$release_branch" ]; then
+  git rev-parse --verify --quiet "origin/${release_branch}" >/dev/null || { echo "Release inexistente: ${release_branch}" >&2; exit 1; }
+  if git merge-base --is-ancestor "origin/${release_branch}" origin/main; then
+    echo "${release_branch} já está na main; não há o que homologar." >&2
+    exit 1
+  fi
+  base="origin/${release_branch}"
+elif [ "$use_release" = true ]; then
   mapfile -t open < <(git for-each-ref --format='%(refname:short)' --no-merged origin/main 'refs/remotes/origin/release/v*')
   if [ "${#open[@]}" -gt 1 ]; then
     echo "Mais de uma release aberta (${open[*]}); só uma por vez (ADR-052)." >&2
