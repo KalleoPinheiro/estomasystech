@@ -21,11 +21,14 @@ describe('workflow do veredito · segredo e fork', () => {
     expect(job('veredito')).toMatch(/FORK" = true \]; then echo "::error::/);
   });
 
-  it('Dado o workflow, Quando procura o segredo da API, Então só o job julgar o usa', () => {
+  it('Dado o workflow, Quando procura credencial da API, Então não há segredo e só o job julgar pede o token OIDC', () => {
+    expect(semComentario(wf)).not.toContain('secrets.');
+    expect(semComentario(wf)).not.toContain('ANTHROPIC_API_KEY');
     for (const nome of ['humana', 'veredito'])
-      expect(job(nome)).not.toContain('secrets.');
-    expect(semComentario(wf).match(/secrets\./g)).toHaveLength(1);
-    expect(job('julgar')).toContain('secrets.ANTHROPIC_API_KEY');
+      expect(job(nome)).not.toContain('id-token');
+    expect(semComentario(wf).match(/id-token: write/g)).toHaveLength(1);
+    expect(job('julgar')).toContain('id-token: write');
+    expect(job('julgar')).toContain('vars.ANTHROPIC_FEDERATION_RULE_ID');
   });
 
   it('Dado o gatilho, Quando lê o workflow, Então roda pela base e não lê comentário', () => {

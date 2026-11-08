@@ -30,16 +30,16 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
 1. **O veredito nasce dentro do Actions, não de um comentário.** O workflow `veredito-judge.yml` usa
    `pull_request_target` (a versão do workflow e dos scripts é a da **base**; a PR não os troca). O job `julgar` gera o
    diff do head (que entra só como dado, sem `npm ci` nem execução do código dela; lockfile e `.specs/` ficam de
-   fora), chama o modelo com o segredo `ANTHROPIC_API_KEY` (`scripts/release/julgar-pr.ts`) e **monta** o JSON:
+   fora), chama o modelo autenticado por **federação de identidades de carga de trabalho** (WIF, sem chave de API; item 11) (`scripts/release/julgar-pr.ts`) e **monta** o JSON:
    `sha` é o head da PR, `autor` é o da PR e `revisor` é `actions/<run_id>/<tentativa>`. O modelo devolve só `achados`
    e `resumo`; qualquer `sha`/`autor`/`revisor` que ele traga é ignorado.
 2. **Conferência.** `check:veredito --revisor-esperado` reprova se faltar veredito, se o SHA for outro ou se houver
    achado bloqueante. O workflow não lê comentário algum. A proteção real contra forja não é essa igualdade de
-   revisor (o job confere o que ele mesmo gravou) e sim **onde** o veredito é produzido: job da base, com segredo que
+   revisor (o job confere o que ele mesmo gravou) e sim **onde** o veredito é produzido: job da base, com uma identidade (OIDC do job) que
    sessão nenhuma alcança.
 3. **Fork não chega ao segredo.** O job `julgar` só roda se `head.repo.full_name == github.repository`; o check final
-   reprova PR de fork sem chamar a API (o `pull_request_target` entregaria o segredo a um fork). Um teste do
-   workflow (`release-veredito-workflow.test.ts`) prova a condição e que só esse job usa `secrets.*`.
+   reprova PR de fork sem chamar a API (o `pull_request_target` entregaria a identidade a um fork). Um teste do
+   workflow (`release-veredito-workflow.test.ts`) prova a condição, que não há `secrets.*` e que só esse job pede `id-token: write`.
 4. **Injeção de prompt.** O diff vai entre `<diff-NONCE>` e `</diff-NONCE>` com um UUID por execução, e o diff perde
    qualquer ocorrência do delimitador. Resposta fora do schema, ou `achados` vazio sem `resumo`, reprova.
 5. **Piso mecânico.** Diff que toca `.github/workflows/`, `scripts/release/`, `scripts/gate/` ou `drizzle/` exige
@@ -66,6 +66,23 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
     só para a introdução. Não dá para distinguir "nunca ligada" de "apagada depois"; por isso a chave **sai na
     v0.8.0**, quando o job passa a falhar fechado sempre.
 
+11. **Autenticação por WIF, sem chave de API** (decisão do dono, 2026-11-08). O job `julgar` tem `id-token: write`,
+    pede ao GitHub o token OIDC com audiência `https://api.anthropic.com` e o troca em `POST /v1/oauth/token`
+    (grant `jwt-bearer`) por um token de acesso curto (`sk-ant-oat01-…`), usado como `Authorization: Bearer` nas
+    mensagens. Os ids (`ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID`,
+    `ANTHROPIC_WORKSPACE_ID`) são **variáveis** do repositório, não segredo: vazar um deles não dá acesso. Quem
+    autoriza é a regra de federação no Console, que confere o `sub` e as claims do token do GitHub. Não existe
+    credencial de longa duração no repositório. Falha de troca (regra nega, GitHub sem OIDC) vira veredito de falha:
+    reprova, não grava no cache do SHA e não aprova por omissão. Regra recomendada: `subject_prefix`
+    `repo:KalleoPinheiro/estomasystech:ref:refs/heads/release/` (o `pull_request_target` roda com a ref da base, não da
+    PR; **a confirmar** na aba de histórico de autenticação do Console no primeiro run), `claims.repository` e
+    `claims.event_name = pull_request_target`, `oauth_scope = workspace:developer` (o Console só oferece esse e `org:admin`; nunca o segundo). **A barreira contra fork é o `if`
+    do job `julgar`** (`head.repo.full_name == github.repository`, avaliado a partir da base): o job nem chega a pedir o
+    token OIDC. O prefixo e as claims são defesa adicional; a documentação da Anthropic só trata do `sub` de
+    `pull_request` e não diz qual é o de `pull_request_target`, então não se afirma que o prefixo exclua fork. Evite
+    `repo:org/repo:*`, que é mais largo. A chamada de mensagens usa `anthropic-version: 2026-10-21`, a do exemplo
+    oficial com token federado (se der 400 no primeiro run, é aqui). Substitui a chave `ANTHROPIC_API_KEY` das primeiras versões deste ADR.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -87,7 +104,7 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
 
 ## Pendências do dono (fora do repositório)
 
-1. Segredo `ANTHROPIC_API_KEY` (opcional: variável `JUDGE_MODEL`).
+1. No Console da Anthropic: conta de serviço, emissor `github-actions` e regra de federação (item 11); no GitHub, as variáveis `ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID` (e `ANTHROPIC_WORKSPACE_ID` se a regra cobrir mais de um workspace). Sem segredo. Opcional: `JUDGE_MODEL`.
 2. Variáveis `VEREDITO_JUDGE_ATIVO=true` e `VEREDITO_JUDGE_DESDE=<data ISO da ativação>`.
 3. Exigir `Veredito do the-judge` primeiro em `release-branches`; na `main` depois que o workflow estiver nela.
 4. Aprovar esta PR no Environment `aprovacao-classe-3` (toca workflow e `scripts/release/`).
