@@ -2432,3 +2432,37 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: `vitest` e `@vitest/coverage-v8` em `4.1.12`, `@stryker-mutator/*` em `10.1.1` e o lockfile regenerado com o npm 11.21.1 (`npm audit fix`, sem `--force`): 16 moderadas viram 7 (todas de desenvolvimento, sem correção publicada) e `npm audit --omit=dev` fica em 0. `ci.yml` ganha o step `npm audit --omit=dev --audit-level=high` nos jobs `estatico` e `fora-do-selo`. Triagem e prazo de revisão (2026-12-08) em `docs/engineering/security-scan.md`.
 - **Testes**: nenhum alterado ou criado.
 - **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## ADR-097: fluxo enxuto até a produção (#754) (2026-11-08) — EM REVISÃO
+- **O que mudou**: só documentação. ADR-097 (aceito em direção e nas fases 1 e 2): piso mecânico com `tlc-*` e `the-judge` por cima, classes de risco 0 a 3 calculadas por script com aprovação humana só na 3, `main` sem bypass (inclusive para o Kalléo) e fases 1 a 5 (3 a 5 propostas). Nada do fluxo vigente muda: avisos em `producao.md` § 3.1 e `homologacao.md` § 1, ponteiro no `AGENTS.md` (150 linhas) e linha no `docs/README.md`. ADR-095 só linkado.
+- **Testes**: nenhum criado ou alterado (sem código). Sem changeset (só `.md`). `check:docs` OK.
+- **Perguntas abertas**: canário sintético em produção. Autorização da regra 8 para `scripts/gate/` e `recibo-gate.yml` (fase 2a, #757) dada pelo Kalléo em 2026-11-08 e registrada no ADR.
+- **Next step**: thread revisora valida com the-judge; coordenador abre os tickets da fase 2. **Blockers**: nenhum.
+
+## E2E e mutação de volta ao Actions, sem recibo do gate local (#757 / fase 2a do ADR-097) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `gate-pr.yml` passa a rodar também em PR contra a `main` e ganha o job `mutacao` (Stryker incremental só nos arquivos de regra alterados, via `impacto.ts --mutacao`; não repete contra a `main`), incluído no agregador "Gate do PR". `recibo-gate.yml` deixa de conferir o recibo `E2E-GATE:` (mantém integridade dos testes e `## Homologação`; id do job e nome do arquivo ficam, o check passa a se chamar "Integridade dos testes e homologação"). `scripts/gate/verify-receipt.ts` removido (`receipt.ts` fica: o `release:cut` o usa). Novo ADR-098 (supera o ADR-042 no E2E fora do Actions e no recibo; regra 8 segue). AGENTS.md (regra 7, tabela de comandos, seção de agentes, 148 linhas), template de PR e docs de engenharia atualizados.
+- **Autorização (regra 8)**: "OK" escrito de @KalleoPinheiro em 2026-11-08, registrado em comentário na #757, para `scripts/gate/` e `recibo-gate.yml`.
+- **Testes**: novo `tests/infrastructure/gate-pr-e2e-mutacao-actions.test.ts`. Alterados (requisito mudou, `TESTE-ALTERADO` no PR): C47 em `ci-workflow.test.ts` e a lista de jobs em `gate-pr-workflow.test.ts`.
+- **Fora do repositório (só o Kalléo)**: trocar o check exigido do ruleset de "Recibo do gate local + integridade dos testes" para "Integridade dos testes e homologação"; exigir "Gate do PR" na `main`; PR de teste com E2E vermelho para provar o bloqueio.
+- **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093) e mede o tempo do check na #757. **Blockers**: ajustes de ruleset.
+
+## Lint de migração aditiva `check:migracao` (#755) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `npm run check:migracao` (`scripts/release/check-migracao.ts` + núcleo puro `check-migracao-lib.ts`) classifica as `drizzle/*.sql` novas do diff em aditiva ou não aditiva (falha fechada para SQL desconhecido) e confere o journal (ordem de `when`, idx, tag/arquivo, só acrescenta, migração existente intocada). Saída `--json` no formato `check-migracao/v1` para o classificador de risco (#756). Doc: `docs/engineering/migracoes-aditivas.md`; ponteiro em `producao.md` § 4. Changeset patch.
+- **Rodando em todo o histórico (`--all`)**: journal sem erros; 20 das 71 migrações são não aditivas, sobretudo as antigas (multi-clínica 0019+).
+- **Testes novos**: `tests/scripts/release-check-migracao.test.ts` (41 casos, 100% de linhas, funções, ramos e instruções no núcleo; CLI testada em repo git temporário). Nenhum teste existente alterado.
+- **Fora do escopo (pendente)**: teste de compatibilidade em Postgres 18 (suíte de integração do commit anterior contra o esquema novo) e mutação por arquivo (`scripts/` não está no `stryker.config.json`); o lint ainda não roda no `ci.yml` (workflow é de reserva do coordenador).
+- **Next step**: the-judge em thread limpa; abrir issue para o teste de compatibilidade e para ligar o check no CI. **Blockers**: nenhum.
+
+## Classificador de risco da PR e veredito do the-judge (#756) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `npm run check:risco` (`scripts/release/classificar-risco.ts` + núcleo `classificar-risco-lib.ts`) calcula a classe 0 a 3 pelo diff e pelo `check-migracao/v1` (falha fechada); `npm run check:veredito` (`veredito-judge.ts` + `veredito-judge-lib.ts`) lê o JSON `the-judge/v1` e reprova sem veredito, de outro SHA, do próprio autor ou com achado bloqueante. `.github/CODEOWNERS` nos portões. Doc: `docs/engineering/classe-de-risco.md`. Changeset vazio. Empilhada na #759 (usa o formato dela).
+- **Testes novos**: `tests/scripts/release-classificar-risco.test.ts` e `release-veredito-judge.test.ts` (99 casos Dado/Quando/Então; 100% de instruções, ramos, funções e linhas nos dois núcleos; CLIs em repo git temporário). Nenhum teste existente alterado.
+- **Decisões do coordenador (2026-11-08)**: flag para clínica real segue passo humano fora do check; só lockfile é classe 2 (3 se tocar dependência sensível de runtime); lista de sensíveis aceita; CODEOWNERS vira documentação e o sinal da classe 3 é a aprovação de um Environment protegido com o dono (desenho em `classe-de-risco.md` § 3, workflow na #757; falta o dono criar o Environment).
+- **Next step**: the-judge em thread limpa; thread do #757 liga os dois checks nos workflows. **Blockers**: nenhum.
+- **Atualização (#757, após #759 e #763)**: `ci.yml` roda `check:migracao` (estático e fora-do-selo, só em PR); novo `.github/workflows/portao-risco.yml` com `risco`, `aprovacao-classe-3` (Environment) e `portao-risco`. Pendente: `check:veredito` (autor confiável e identificador de sessão) e o Environment do dono.
+
+## Homologação sem operador pelo Actions (#765) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `rebuild.sh --release=release/vX.Y.Z` (base explícita; recusa inexistente e já na `main`; funciona com duas releases abertas). `staging.yml` ganha `release_branch`, `homologar` e o job `homologar`: espera o deploy de Production do SHA da staging, health, `validacao-logada.mjs` e, só verde e com a release no mesmo SHA, grava `homologacao/vX.Y.Z` com o `RELEASE_CUT_TOKEN`. ADR-099; `homologacao.md` e `docs/README.md` atualizados. Achado: o rebuild já rodava no Actions com a identidade do dono; não é preciso `VERCEL_TOKEN`.
+- **Testes**: novo `tests/scripts/staging-release-explicita.test.ts`. Nenhum teste existente alterado. Sem changeset (sem `src/`, `drizzle/` ou `Dockerfile`).
+- **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
+- **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
+

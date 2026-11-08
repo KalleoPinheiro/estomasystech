@@ -1,0 +1,95 @@
+name: Portão de risco
+
+# Classe de risco da PR (0 a 3, calculada por script a partir do diff; `docs/engineering/classe-de-risco.md`) e,
+# na classe 3, a aprovação do dono por um Environment protegido (ADR-097, fase 2c; ADR-098). O sinal que um agente
+# não forja é o clique do revisor do Environment `aprovacao-classe-3`: todas as PRs dos agentes saem com o login
+# do dono, então CODEOWNERS e review sozinhos não bastam.
+#
+# `portao-risco` é o único check a exigir no ruleset (depois que o Environment existir com o dono como revisor;
+# sem revisor o GitHub cria o Environment vazio e a aprovação passa sozinha). Rascunho reprova (fail-closed,
+# ADR-093): o pedido de aprovação só chega ao dono com a PR pronta. Sem `pull_request_target` e sem segredo.
+on:
+  pull_request:
+    branches: ["release/**", main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  # Merge queue (ADR-087): a aprovação vale por execução da PR; na fila o portão apenas passa.
+  merge_group:
+
+concurrency:
+  group: portao-risco-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  risco:
+    name: Classe de risco
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      classe: ${{ steps.r.outputs.classe }}
+      humana: ${{ steps.r.outputs.aprovacao_humana }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - id: r
+        env:
+          GATE_BASE: origin/${{ github.base_ref }}
+        run: |
+          npm run --silent check:risco -- --saida-github | tee -a "$GITHUB_OUTPUT"
+          {
+            echo "### Classe de risco"
+            npm run --silent check:risco
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Só roda na classe 3 e fica parado até o dono aprovar no Environment; a aprovação vale por execução
+  # (push novo reinicia). O agente não tem como clicar.
+  aprovacao-classe-3:
+    name: Aprovação do dono (classe 3)
+    needs: risco
+    if: needs.risco.outputs.humana == 'true'
+    environment: aprovacao-classe-3
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - run: echo "dono aprovou a classe 3 para $GITHUB_SHA"
+
+  portao-risco:
+    name: Portão de risco
+    if: always()
+    needs: [risco, aprovacao-classe-3]
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Conferir
+        env:
+          EVENTO: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          R_RISCO: ${{ needs.risco.result }}
+          HUMANA: ${{ needs.risco.outputs.humana }}
+          R_APROVACAO: ${{ needs.aprovacao-classe-3.result }}
+        run: |
+          if [ "$EVENTO" = merge_group ]; then echo "fila: a aprovação já foi dada na PR"; exit 0; fi
+          if [ "$DRAFT" = true ]; then
+            echo "::error::PR em rascunho: o portão de risco roda quando o PR for marcado como pronto (ADR-093)"; exit 1
+          fi
+          [ "$R_RISCO" = success ] || { echo "::error::classe de risco: $R_RISCO"; exit 1; }
+          case "$HUMANA" in true|false) ;; *) echo "::error::aprovacao_humana ausente ou inválida: '$HUMANA'"; exit 1 ;; esac
+          if [ "$HUMANA" = true ]; then
+            [ "$R_APROVACAO" = success ] || { echo "::error::classe 3 sem a aprovação do dono ($R_APROVACAO)"; exit 1; }
+          else
+            [ "$R_APROVACAO" = skipped ] || { echo "::error::aprovação rodou sem classe 3 ($R_APROVACAO)"; exit 1; }
+          fi
+          echo "ok: aprovacao_humana=$HUMANA"
