@@ -1,5 +1,15 @@
 # estomasystech
 
+## 0.6.1
+
+### Patch Changes
+
+- 48e49d2: Dependências atualizadas para corrigir 9 avisos moderados do `npm audit` (inclusive os do caminho do Google Agenda, que roda em produção). Nada muda para a clínica.
+- c859963: Na agenda, o ponto de cor dos filtros de status (Cancelada, Confirmada marcada e os demais) agora tem preenchimento sólido e contraste mínimo de 3:1, nos temas claro e escuro.
+- f00c441: A imagem de produção agora usa o mesmo npm fixado do projeto na instalação das dependências, eliminando o aviso de versão incompatível no build do Coolify.
+- fe13701: Sair com a sessão vencida agora leva ao login em vez de mostrar um erro cru, e a etapa do código de verificação (2FA) abre com o campo já focado.
+- b2a182d: A conexão com o banco passa a exigir verificação completa do certificado em todas as ocorrências de `sslmode` da URL, não só na primeira.
+
 ## 0.6.0
 
 ### Minor Changes
