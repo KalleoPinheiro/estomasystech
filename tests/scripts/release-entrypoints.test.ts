@@ -9,7 +9,7 @@ describe('Feature: scripts de release carregam sob o tsx do Actions', () => {
     (arquivo) => {
       const r = spawnSync('npx', ['tsx', `scripts/release/${arquivo}`], {
         encoding: 'utf8',
-        env: { PATH: process.env.PATH },
+        env: { ...process.env },
       });
       expect(`${r.stdout}${r.stderr}`).not.toMatch(
         /TransformError|Top-level await/,
