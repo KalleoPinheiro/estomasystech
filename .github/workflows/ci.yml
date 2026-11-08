@@ -149,6 +149,11 @@ jobs:
       - name: Docs gate
         run: npm run check:docs
 
+      # Dependências de produção sem vulnerabilidade alta ou crítica (#717). As de desenvolvimento ficam
+      # fora de propósito: a triagem delas é a de docs/engineering/security-scan.md § Triagem do npm audit.
+      - name: Audit de produção
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Server-first gate
         if: needs.escopo.outputs.docs_only != 'true'
         run: npm run check:server-first
@@ -186,6 +191,9 @@ jobs:
 
       - name: Dynamic-import gate
         run: npx tsx scripts/check-dynamic-import.ts
+
+      - name: Audit de produção
+        run: npm audit --omit=dev --audit-level=high
 
   # Cobertura em 4 fatias (vitest --shard). Cada fatia roda os testes dela e grava um blob com o relatório e a
   # cobertura bruta; os limiares só valem na junção (`cobertura`), com a config da suíte inteira. Teste

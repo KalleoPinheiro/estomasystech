@@ -2417,3 +2417,8 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **O que mudou**: só texto. `CHANGELOG.md` limita a frase de SSL a `prefer`, `require` e `verify-ca` (`no-verify` e `disable` não são reescritos), corrigido direto na entrada 0.6.0 porque o changeset de origem já foi consumido; `docs/engineering/gate-na-nuvem.md` diz que o `gate:local` não roda todas as travas do `ci.yml` (`check:changeset` só no CI); `SECURITY.md` cita a versão implantada em produção, não a última tag.
 - **Testes**: nenhum teste alterado ou criado (sem mudança de comportamento). Sem changeset (só `.md`).
 - **Next step**: coordenador marca pronto. **Blockers**: nenhum.
+
+## Triar as 16 vulnerabilidades moderadas do npm audit (#717) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `vitest` e `@vitest/coverage-v8` em `4.1.12`, `@stryker-mutator/*` em `10.1.1` e o lockfile regenerado com o npm 11.21.1 (`npm audit fix`, sem `--force`): 16 moderadas viram 7 (todas de desenvolvimento, sem correção publicada) e `npm audit --omit=dev` fica em 0. `ci.yml` ganha o step `npm audit --omit=dev --audit-level=high` nos jobs `estatico` e `fora-do-selo`. Triagem e prazo de revisão (2026-12-08) em `docs/engineering/security-scan.md`.
+- **Testes**: nenhum alterado ou criado.
+- **Next step**: coordenador marca pronto. **Blockers**: nenhum.
