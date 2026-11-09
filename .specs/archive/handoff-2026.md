@@ -2496,3 +2496,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Correção**: o corpo vira `julgarEGravar()` com `.catch`; novo teste `tests/scripts/release-entrypoints.test.ts` carrega `julgar-pr.ts` e `conferir-release.ts` sob o `tsx` (falha no código antigo, passa no novo). Sem `src/`: sem changeset.
 - **Next step**: the-judge em thread nova; depois re-rodar o check na #787 para ver a troca de token. **Blockers**: nenhum.
 
+
+## the-judge: diagnóstico da troca OIDC que dá 401 e `JUDGE_MODEL` vazio (#764) (2026-11-09) — EM REVISÃO
+- **Causa**: a troca em `/v1/oauth/token` devolve 401 mesmo com o `sub` corrigido, e o erro só dizia `HTTP 401`. `JUDGE_MODEL` vazio (variável criada sem valor) passava como modelo vazio por causa do `??`.
+- **O que mudou**: `trocarTokenOidc` agora inclui no erro o corpo da resposta (até 1000 caracteres, sem o JWT) e as claims não secretas do JWT (`iss`, `sub`, `aud`, `event_name`, `repository`, `job_workflow_ref`); nenhuma outra claim nem o token saem no log. `julgar-pr.ts` usa `||` para string vazia cair no modelo padrão.
+- **Testes**: novo `tests/scripts/release-julgar-pr-diagnostico.test.ts`; nenhum teste existente alterado. Sem `src/`: sem changeset.
+- **Fora do repositório (só o Kalléo)**: aprovar a classe 3 e mergear na `main` (merge commit); depois `main` → release.
+- **Next step**: the-judge em thread nova; depois re-rodar o check numa PR para ler o corpo do erro. **Blockers**: merge do dono.

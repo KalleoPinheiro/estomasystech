@@ -108,6 +108,29 @@ export const AUDIENCIA_OIDC = 'https://api.anthropic.com';
 /** Config da federação de identidades (WIF): ids públicos, nenhum deles é segredo. */
 export type ConfigFederacao = { regra: string; organizacao: string; contaDeServico: string; workspace?: string };
 
+const CLAIMS_NAO_SECRETAS = ['iss', 'sub', 'aud', 'event_name', 'repository', 'job_workflow_ref'] as const;
+
+/** Claims públicas do JWT do job (as que a regra do Console confere). Nunca devolve o token nem outras claims. */
+export function claimsNaoSecretas(jwt: string): Record<string, unknown> {
+  try {
+    const payload = JSON.parse(Buffer.from(jwt.split('.')[1] ?? '', 'base64url').toString('utf8')) as Record<string, unknown>;
+    return Object.fromEntries(CLAIMS_NAO_SECRETAS.filter((k) => k in payload).map((k) => [k, payload[k]]));
+  } catch {
+    return {};
+  }
+}
+
+/** Corpo do erro da troca (sem JWT nem token) e claims não secretas, para achar por que a regra negou. */
+async function diagnosticoDaTroca(r: Response, jwt: string): Promise<string> {
+  let corpo = '';
+  try {
+    corpo = (await r.text()).split(jwt).join('[jwt]').replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g, '[jwt]').slice(0, 1000);
+  } catch {
+    corpo = '(corpo ilegível)';
+  }
+  return ` | corpo: ${corpo} | claims: ${JSON.stringify(claimsNaoSecretas(jwt))}`;
+}
+
 /**
  * Troca o token OIDC do job pelo token de acesso curto da Anthropic (`POST /v1/oauth/token`, grant jwt-bearer).
  * Sem chave de API de longa duração: quem prova a identidade é o `sub` do job, conferido pela regra do Console.
@@ -125,7 +148,7 @@ export async function trocarTokenOidc(jwt: string, cfg: ConfigFederacao, buscar:
       ...(cfg.workspace ? { workspace_id: cfg.workspace } : {}),
     }),
   });
-  if (!r.ok) throw new Error(`troca do token OIDC: HTTP ${r.status}`);
+  if (!r.ok) throw new Error(`troca do token OIDC: HTTP ${r.status}${await diagnosticoDaTroca(r, jwt)}`);
   const corpo = (await r.json()) as { access_token?: string };
   if (!corpo.access_token) throw new Error('troca do token OIDC: resposta sem access_token');
   return corpo.access_token;

@@ -66,7 +66,7 @@ async function julgarEGravar(diff: string, destino: string): Promise<void> {
         contaDeServico: exigir('ANTHROPIC_SERVICE_ACCOUNT_ID'),
         workspace: process.env.ANTHROPIC_WORKSPACE_ID || undefined,
       },
-      modelo: process.env.JUDGE_MODEL ?? 'claude-sonnet-5-5',
+      modelo: process.env.JUDGE_MODEL || 'claude-sonnet-5-5',
     }),
   );
   // Falha não é julgamento: nada é gravado onde o cache por SHA lê, e o job reprova sem fixar o SHA.
