@@ -209,6 +209,13 @@ jobs:
       - name: Dynamic-import gate
         run: npx tsx scripts/check-dynamic-import.ts
 
+      # Também no PR provado: o selo não cobre o handoff por issue (ADR-102).
+      - name: Handoff (ADR-102)
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
+        run: npm run check:handoff
+        env:
+          CHANGESET_BASE: origin/${{ github.base_ref }}
+
       - name: Migração aditiva (check:migracao)
         if: github.event_name == 'pull_request'
         run: npm run check:migracao
