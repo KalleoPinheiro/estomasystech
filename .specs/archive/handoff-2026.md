@@ -2536,3 +2536,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes novos**: `tests/scripts/spike-coolify.test.ts` (8 casos com curl falso: padrão sem deploy, token e campos fora da lista nunca na saída, plano A/B, entradas inválidas). Nenhum teste existente alterado. Sem changeset.
 - **Pendente (só o Kalléo)**: criar o token no Coolify (habilidade de deploy; leitura só para o spike), rodar o script no PC (com `SPIKE_DEPLOY=1` apenas com a `main` igual ao que está no ar) e colar a saída na #746. Com ela, registro no ADR-095 a decisão A ou B. A issue só fecha depois disso.
 - **Next step**: the-judge; Kalléo roda o spike. **Blockers**: o resultado do spike.
+
+## the-judge sem API: veredito pela review da revisora (#796, ADR-101) (2026-11-09) — EM REVISÃO
+- **Por quê**: o Kalléo não vai pôr saldo no Console da Anthropic; a troca OIDC não pode ser a fonte do veredito.
+- **O que mudou**: `veredito-judge.yml` deixa de chamar o modelo (sem `id-token`, federação, `ANTHROPIC_*`, cache de veredito); o job passa a rodar `scripts/release/review-judge.ts`, que exige a review COMMENT mais nova do head SHA com `the-judge/v1` e `APPROVE` na primeira linha. `--classificar` (caminho protegido → Environment `aprovacao-classe-3`) e `conferir-release` seguem. ADR-101 (risco de identidade única aceito, mitigação por processo), `AGENTS.md`, `coordenacao.md`, `classe-de-risco.md`, `docs/README.md`.
+- **Testes**: novo `release-review-judge.test.ts`. `release-veredito-workflow.test.ts` alterado porque o requisito mudou (sem API): trocadas as asserções de `id-token`/`ANTHROPIC`/cache/`existe` pelas da review; ver `TESTE-ALTERADO` na PR.
+- **Fora do repositório (só o Kalléo)**: aprovar a classe 3, mergear na `main` (merge commit), depois `main` → release; apagar federação, conta de serviço e `ANTHROPIC_*` no fim; manter `VEREDITO_JUDGE_ATIVO=false` até uma PR real passar com a review e só então `true` e exigir o check na `main` (depois da v0.7.0).
+- **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
