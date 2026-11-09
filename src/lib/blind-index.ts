@@ -5,7 +5,7 @@ import { normalizeBrazilianPhoneOrThrow } from '@/domain/shared/phone';
 import { logger } from '@/lib/observability/logger';
 
 /**
- * Índice cego da PII cifrada (#734, ADR-096 na PR #805): permite achar um paciente por
+ * Índice cego da PII cifrada (#734, ADR-096): permite achar um paciente por
  * CPF, telefone ou e-mail exatos sem decifrar a clínica inteira. O banco guarda
  * só o hash; o valor legível continua cifrado com a `DATA_ENCRYPTION_KEY`.
  *

@@ -2549,5 +2549,11 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Decisões**: o tipo (`cpf`/`phone`/`email`) entra no HMAC além do `clinicId`, para um telefone nunca colidir com um CPF; o build não exige a variável (só runtime, conforme a #734); `ambiente:local` deriva o pepper da chave de dados descartável, sem novo segredo no estado.
 - **Regra 8**: `scripts/gate/ambiente.ts` e `scripts/gate/docker-step.sh` alterados só para incluir a variável, com a autorização do Kalléo na #734 (`cmsg_01D6ist5ZPDEqtgML2r9GFJfDVnfXjPmXUNV7DUqCz8Nf5`). Nenhum teste existente alterado.
 - **Fora do escopo**: colunas, migração, backfill e busca (#735 em diante, v0.8.0).
-- **Next step**: the-judge em thread nova. **Blockers**: o ADR-096 está na #805 (links dos docs apontam para o arquivo dela).
+- **Next step**: the-judge em thread nova. **Blockers**: nenhum.
 - **Pré-requisito antes do merge na release (só o Kalléo)**: `BLIND_INDEX_PEPPER` precisa estar na **Vercel staging** (Production, runtime) e no **Coolify** (runtime) *antes* do merge/deploy; sem ela o app **não sobe** (falha fechada no boot em `NODE_ENV=production`). Gerar: `openssl rand -base64 32` (44 caracteres; o mínimo é 32; `openssl rand -hex 32` também serve). Valor diferente em cada ambiente, cópia no cofre. O Kalléo já registrou na #734 que criou a variável nos dois; conferir o nome exato e que o valor tem 32+ caracteres.
+## ADR-096: PII cifrada, índice cego e busca por nome em memória (#733) (2026-11-09) — EM REVISÃO
+- **O que mudou**: só documentação. Novo `docs/adr/096-…md` (aceito) com a decisão da #730: cifrar nome, e-mail, telefone e nascimento do paciente e do responsável; índice cego HMAC (pepper próprio `BLIND_INDEX_PEPPER`, escopo de clínica) só para CPF, telefone e e-mail; busca por nome em memória por lote; CPF duplicado bloqueia; cursor sem nome; expandir e contrair. Emenda o ADR-025 e estende o ADR-006 sem editá-los. Índices em `docs/README.md`, `CONTEXT.md` e README do domínio.
+- **Decisões minhas (não vieram do PO)**: pepper variável própria em vez de HKDF da chave de dados; `partners`/`professionals` fora desta onda; busca por documento via `POST`/Server Action. Justificativas no ADR.
+- **Testes**: nenhum. Sem `src/`: sem changeset.
+- **Fora do repositório (só o Kalléo)**: valor de produção do pepper no cofre, variável na Vercel `staging` e no Coolify antes do merge que a exige; aplicar a migração em produção com backup.
+- **Next step**: the-judge em thread nova; depois #734. **Blockers**: nenhum.
