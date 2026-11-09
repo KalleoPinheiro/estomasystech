@@ -128,9 +128,10 @@ vale para o head da PR.
 `autor` e `revisor` são identificadores opacos, só comparados entre si. Como todas as PRs de agentes saem com o
 mesmo login do GitHub, o workflow deve passar um identificador que distinga as sessões (por exemplo o id da thread do
 bloco de atribuição do corpo da PR). **No CI o veredito não vem de comentário**: o job `Veredito do the-judge`
-(`.github/workflows/veredito-judge.yml`) monta o JSON a partir do diff com a credencial do repositório e confere com
-`--revisor-esperado actions/<run_id>/<tentativa>`; comentário, `autor` e `revisor` declarados por sessão não valem
-([ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md)). O uso manual acima segue valendo para
+(`.github/workflows/veredito-judge.yml`) confere a review `the-judge/v1` (COMMENT, veredito `APPROVE` na primeira linha) que a thread revisora
+publica no head SHA, sem chamar modelo; comentário, `autor` e `revisor` declarados por sessão não valem
+([ADR-101](../adr/101-veredito-do-the-judge-por-status-da-revisora.md), que substitui a chamada à API do
+[ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md)). O uso manual acima segue valendo para
 investigação, nunca como portão.
 
 ## 3. Como a classe 3 exige o dono (mecanismo proposto)
