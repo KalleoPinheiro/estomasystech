@@ -10,6 +10,7 @@ const SHA = 'abc123';
 const rev = (o: Partial<ReviewGitHub> & { id: number }): ReviewGitHub => ({
   commit_id: SHA,
   state: 'COMMENTED',
+  author_association: 'OWNER',
   body: '## the-judge/v1 — PR #7 @ abc123 — veredito: APPROVE\n\nresto',
   ...o,
 });
@@ -68,6 +69,33 @@ describe('review the-judge/v1 do head (ADR-101)', () => {
         avaliarReviews([rev({ id: 1, ...o })], SHA),
         JSON.stringify(o),
       ).toMatchObject({ ok: false });
+  });
+
+  it('Dado review APPROVE de conta externa ou bot, Quando avalia, Então não conta (repositório público)', () => {
+    for (const quem of [
+      'NONE',
+      'CONTRIBUTOR',
+      'FIRST_TIME_CONTRIBUTOR',
+      'MEMBER',
+      'COLLABORATOR',
+    ])
+      expect(
+        avaliarReviews([rev({ id: 1, author_association: quem })], SHA),
+        quem,
+      ).toMatchObject({ ok: false });
+    expect(
+      avaliarReviews(
+        [
+          rev({ id: 1 }),
+          rev({
+            id: 2,
+            author_association: 'NONE',
+            body: '## the-judge/v1 — veredito: REQUEST_CHANGES',
+          }),
+        ],
+        SHA,
+      ),
+    ).toEqual({ ok: true, reviewId: 1 });
   });
 
   it('Dado veredito posterior que não é APPROVE, Quando avalia, Então a review mais nova revoga a anterior', () => {

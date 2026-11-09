@@ -33,7 +33,7 @@ no GitHub.
    ou `**the-judge/v1: APPROVE**`. Veredito sem `APPROVE`, ou com `REQUEST_CHANGES`, `REJECT` ou `BLOCK`, reprova.
    Não há commit status: a review é o rastro (decisão do @KalleoPinheiro, 2026-11-09).
 2. O check `Veredito do the-judge` (mesmo nome, mesmo ruleset) **não chama modelo**: `scripts/release/review-judge.ts`
-   lê as reviews da PR e considera só as `COMMENTED` do **head SHA** (`commit_id`) com a marca `the-judge/v1` na
+   lê as reviews da PR e considera só as `COMMENTED` do **head SHA** (`commit_id`) escritas por quem tem `author_association` `OWNER` (o repositório é público: review de conta externa, bot ou colaborador não vale) com a marca `the-judge/v1` na
    primeira linha; vale a **mais nova** e ela precisa ser `APPROVE`. Sem review do the-judge no SHA, ou com a mais nova
    reprovando, fica vermelho (falha fechado, inclusive em erro de API).
 3. **Push novo** muda o SHA: a review antiga deixa de valer e a revisora julga e publica de novo. Uma review posterior
