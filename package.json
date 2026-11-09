@@ -46,6 +46,8 @@
     "gate:local": "tsx scripts/gate/local.ts",
     "changeset": "changeset",
     "check:changeset": "tsx scripts/release/check-changeset.ts",
+    "check:handoff": "tsx scripts/release/check-handoff.ts",
+    "handoff:agregar": "tsx scripts/release/handoff-agregar.ts",
     "check:migracao": "tsx scripts/release/check-migracao.ts",
     "check:risco": "tsx scripts/release/classificar-risco.ts",
     "check:veredito": "tsx scripts/release/veredito-judge.ts",
