@@ -2501,6 +2501,11 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **actionlint**: o binário não está no ambiente; rodei a versão WASM (2.0.6): só os falsos positivos de rótulo `ubuntu-24.04` e contexto `vars`, que o `release-cut.yml` também produz. Primeira execução real (`dry_run`) é do Kalléo, da `main`, depois do merge na release e na `main`.
 - **Next step**: the-judge em thread limpa. **Blockers**: o `dry_run` só existe depois que o workflow chega à `main` (o Actions só dispara workflow que está na branch padrão).
 
+## Teste instável: configuracoes-email-channel sob carga (#617) (2026-11-08) — EM REVISÃO
+- **Causa**: `findByRole('alert')` monta a árvore de acessibilidade a cada tentativa e, na suíte completa sob carga, estourava o prazo padrão de 1 s antes de o Alert existir. Não é defeito do componente. Os dois pontos do arquivo que usavam `findByRole('alert')` passam a achar o texto (consulta barata) e subir ao `role="alert"`, com as mesmas asserções (texto e classe `sv-alert--danger`). Sem mexer em prazo, retry nem config.
+- **Testes**: alterado `tests/pages/configuracoes-email-channel.test.tsx` (TESTE-ALTERADO, asserções preservadas). Passa 8 de 8 com três suítes `tests/pages` rodando em paralelo. Sem mudança em `src/`, sem changeset.
+- **Next step**: the-judge em thread limpa. **Blockers**: nenhum.
+
 ## Fumaça de produção somente leitura e versão pública sem login (#748 / ADR-095 ticket 3) (2026-11-08) — EM REVISÃO
 - **O que mudou**: `scripts/release/fumaca-producao.sh` (curl injetável por `FUMACA_CURL`): liveness, readiness (banco e migrações ok), TLS/HSTS, redirecionamento HTTP→HTTPS, CSP única com nonce, cabeçalhos, rotas de job fechadas (401), versão pública e SHA do deployment (`FUMACA_SHA_ESPERADO` + `FUMACA_SHA_IMPLANTADO`, vindo do Coolify no workflow). Passo opcional `FUMACA_PESADA=1` (9 logins falhos e rajada de 300). Novo `GET /api/health/version` (público, só `{ version }`, sem SHA, sem banco, `Cache-Control: no-store`; 404 sem versão), liberado em `PUBLIC_PATHS`. `producao.md` § 9.6 e ACE-RN-46 atualizados.
 - **Revisão de segurança do endpoint**: expõe só o número da versão do build (já público no changelog/Release do repositório público); sem sessão, sem I/O, sem SHA (a fumaça reprova se o corpo trouxer `sha`/`commit`); entra no rate limit geral de `/api/*` (só a liveness é isenta).
@@ -2525,3 +2530,9 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Correção**: o corpo vira `julgarEGravar()` com `.catch`; novo teste `tests/scripts/release-entrypoints.test.ts` carrega `julgar-pr.ts` e `conferir-release.ts` sob o `tsx` (falha no código antigo, passa no novo). Sem `src/`: sem changeset.
 - **Next step**: the-judge em thread nova; depois re-rodar o check na #787 para ver a troca de token. **Blockers**: nenhum.
 
+
+## Spike do Coolify 4.6.0: script para o operador (#746 / ADR-095 ticket 1) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `scripts/release/spike-coolify.sh` (somente leitura por padrão; `SPIKE_DEPLOY=1` dispara o deploy do HEAD da `main`; `SPIKE_TAG_SHA` compara com a tag). Token por variável de ambiente e stdin do curl, saída filtrada com `jq`. Seção "Spike do Coolify" no ADR-095.
+- **Testes novos**: `tests/scripts/spike-coolify.test.ts` (8 casos com curl falso: padrão sem deploy, token e campos fora da lista nunca na saída, plano A/B, entradas inválidas). Nenhum teste existente alterado. Sem changeset.
+- **Pendente (só o Kalléo)**: criar o token no Coolify (habilidade de deploy; leitura só para o spike), rodar o script no PC (com `SPIKE_DEPLOY=1` apenas com a `main` igual ao que está no ar) e colar a saída na #746. Com ela, registro no ADR-095 a decisão A ou B. A issue só fecha depois disso.
+- **Next step**: the-judge; Kalléo roda o spike. **Blockers**: o resultado do spike.
