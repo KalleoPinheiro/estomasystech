@@ -37,10 +37,13 @@ export function avaliarStatus(statuses: readonly StatusGitHub[], alvo: Alvo): Re
   return { ok: true, revisaoId: id };
 }
 
-/** A review apontada tem de ser deste SHA, ter sido enviada e citar o the-judge. Devolve o motivo da recusa ou `null`. */
+/**
+ * A review apontada tem de ser deste SHA, ser um comentário (`COMMENTED`: o the-judge revisa por COMMENT, nunca por
+ * aprovação nem por pedido de mudanças) e citar o the-judge. Devolve o motivo da recusa ou `null`.
+ */
 export function avaliarRevisao(revisao: RevisaoGitHub, sha: string): string | null {
   if (revisao.commit_id !== sha) return `a review apontada é do commit ${revisao.commit_id}, não do head ${sha}`;
-  if (revisao.state === 'PENDING' || revisao.state === 'DISMISSED') return `a review apontada está '${revisao.state}'`;
+  if (revisao.state !== 'COMMENTED') return `a review apontada está '${revisao.state}', não 'COMMENTED'`;
   if (!/the-judge/i.test(revisao.body ?? '')) return "o corpo da review apontada não cita o 'the-judge'";
   return null;
 }

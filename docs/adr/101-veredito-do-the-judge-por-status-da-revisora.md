@@ -33,7 +33,7 @@ no GitHub.
    veredito `the-judge/v1` no corpo). Reprovação publica `failure` com o mesmo contexto.
 2. O check `Veredito do the-judge` (mesmo nome, mesmo ruleset) **não chama modelo**: `scripts/release/status-judge.ts`
    exige que o status mais novo do contexto `the-judge` no SHA seja `success`, que o `target_url` aponte para uma review
-   desta PR, e que a review seja do mesmo SHA, enviada e cite o `the-judge`. Sem isso, vermelho (falha fechado).
+   desta PR, e que a review seja do mesmo SHA, seja um comentário (`COMMENTED`; o the-judge nunca revisa por aprovação nem por pedido de mudanças) e cite o `the-judge`. Sem isso, vermelho (falha fechado).
 3. **Push novo** muda o SHA: o status antigo deixa de valer e a revisora julga e publica de novo. Um `failure` ou
    `pending` posterior no mesmo SHA revoga um `success`.
 4. Depois de publicar o status, a revisora **roda de novo** o check (re-run do workflow) para ele ler o status.
