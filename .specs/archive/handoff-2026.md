@@ -2494,6 +2494,11 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: conta de serviço + emissor + regra no Console da Anthropic; variáveis acima no GitHub; apagar o segredo `ANTHROPIC_API_KEY`; aprovar a classe 3. Confirmar o `sub` real do `pull_request_target` no histórico de autenticação.
 - **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: configuração do Console.
 
+## Teste instável: configuracoes-email-channel sob carga (#617) (2026-11-08) — EM REVISÃO
+- **Causa**: `findByRole('alert')` monta a árvore de acessibilidade a cada tentativa e, na suíte completa sob carga, estourava o prazo padrão de 1 s antes de o Alert existir. Não é defeito do componente. Os dois pontos do arquivo que usavam `findByRole('alert')` passam a achar o texto (consulta barata) e subir ao `role="alert"`, com as mesmas asserções (texto e classe `sv-alert--danger`). Sem mexer em prazo, retry nem config.
+- **Testes**: alterado `tests/pages/configuracoes-email-channel.test.tsx` (TESTE-ALTERADO, asserções preservadas). Passa 8 de 8 com três suítes `tests/pages` rodando em paralelo. Sem mudança em `src/`, sem changeset.
+- **Next step**: the-judge em thread limpa. **Blockers**: nenhum.
+
 ## Fumaça de produção somente leitura e versão pública sem login (#748 / ADR-095 ticket 3) (2026-11-08) — EM REVISÃO
 - **O que mudou**: `scripts/release/fumaca-producao.sh` (curl injetável por `FUMACA_CURL`): liveness, readiness (banco e migrações ok), TLS/HSTS, redirecionamento HTTP→HTTPS, CSP única com nonce, cabeçalhos, rotas de job fechadas (401), versão pública e SHA do deployment (`FUMACA_SHA_ESPERADO` + `FUMACA_SHA_IMPLANTADO`, vindo do Coolify no workflow). Passo opcional `FUMACA_PESADA=1` (9 logins falhos e rajada de 300). Novo `GET /api/health/version` (público, só `{ version }`, sem SHA, sem banco, `Cache-Control: no-store`; 404 sem versão), liberado em `PUBLIC_PATHS`. `producao.md` § 9.6 e ACE-RN-46 atualizados.
 - **Revisão de segurança do endpoint**: expõe só o número da versão do build (já público no changelog/Release do repositório público); sem sessão, sem I/O, sem SHA (a fumaça reprova se o corpo trouxer `sha`/`commit`); entra no rate limit geral de `/api/*` (só a liveness é isenta).
