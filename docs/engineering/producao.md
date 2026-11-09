@@ -29,7 +29,7 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | Versão em produção | `v0.1.0` = commit `1aa5b27` (`docs(producao): avisos por e-mail do GlitchTip pelo Resend`, #399), deploy manual de 2026-10-19 (conferido no *Deployments* do Coolify em 2026-10-24). É a tag-base do lote da v0.2.0 (`release:prepare` lista só as migrações depois dela) e o alvo do *Redeploy* de rollback (§ 3.1) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
 | Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18). Compose, CI e smoke rodam no mesmo major ([ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md)); os testes de unidade usam PGlite |
-| Variáveis | 10 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`, `GLITCHTIP_DSN` (desde 2026-10-19). `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
+| Variáveis | 11 só de runtime (a 11ª, `BLIND_INDEX_PEPPER`, entra na v0.7.0, #734): `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `BLIND_INDEX_PEPPER`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`, `GLITCHTIP_DSN` (desde 2026-10-19). `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
 | Fotos | volume do Coolify em `/app/uploads` (uma réplica) |
 | Migrações | aplicadas no boot, com advisory lock; `/api/health/ready` responde `200` ([#384](https://github.com/KalleoPinheiro/estomasystech/pull/384)) |
 | Jobs | Scheduled Tasks do Coolify, não crontab do host (§ 7) |
@@ -114,6 +114,7 @@ Provisionamento, uma vez:
    POSTGRES_PASSWORD=...      # openssl rand -hex 24
    AUTH_SECRET=...            # openssl rand -hex 32
    DATA_ENCRYPTION_KEY=...    # openssl rand -hex 32 — cópia no cofre (§ 6)
+   BLIND_INDEX_PEPPER=...     # openssl rand -hex 32 — só runtime, cópia no cofre (§ 6); sem ela o app não sobe
    CRON_SECRET=...            # openssl rand -hex 24
    ESTOMASYSTECH_BOOTSTRAP_TOKEN=...  # só até o primeiro acesso (§ 8)
    RESEND_API_KEY=...         # canal da plataforma: convite do Super Admin e alertas (§ 9)
@@ -343,7 +344,7 @@ Meta decidida: RPO 24 h, RTO 4 h. Desenho: [ADR-040](../adr/040-backup-cifrado-n
 | Destino | `/var/backups/estomasystech/<data UTC>/` no servidor e cópia num **bucket R2 com jurisdição `eu`** (`BACKUP_RCLONE_DEST`) |
 | Retenção | 7 dias no servidor (`BACKUP_KEEP_DAYS`); no R2, **trava de objeto de 30 dias** (nem o token do servidor apaga) e ciclo de vida que apaga com 35 |
 | Falha | e-mail ao operador por `msmtp` no SMTP do Resend (`OnFailure`, [`scripts/backup-alert.sh`](../../scripts/backup-alert.sh)) |
-| Chaves | `DATA_ENCRYPTION_KEY` (e as anteriores) e a chave privada `age` no cofre de segredos, **nunca** dentro do backup |
+| Chaves | `DATA_ENCRYPTION_KEY` e `BLIND_INDEX_PEPPER` (e as anteriores) e a chave privada `age` no cofre de segredos, **nunca** dentro do backup |
 
 O backup nativo do Coolify (03:00, bucket `estomasystech-backups`) **não é cifrado**: desligue o
 envio dele para o S3 depois do primeiro backup cifrado conferido e da primeira restauração de
@@ -590,6 +591,7 @@ controle de versão. Nenhum dos dois entra no backup. Trocar uma variável no Co
 | --- | --- | --- |
 | `AUTH_SECRET` | incidente ou troca de pessoal | derruba **todas** as sessões (todos logam de novo). Não afeta o dado clínico ([ADR-006](../adr/006-chave-de-dados-clinicos.md)); mantenha o valor antigo só se ainda houver dado no formato legado (antes de rodar a recifra) |
 | `DATA_ENCRYPTION_KEY` | anual ou incidente | 1) valor atual → `DATA_ENCRYPTION_KEY_PREVIOUS`; 2) novo valor em `DATA_ENCRYPTION_KEY`; 3) deploy; 4) `npm run data:reencrypt`; 5) quando o script reportar 0 pendências, remova o antigo de `_PREVIOUS`. Guarde a chave antiga no cofre enquanto houver backup (30 dias) cifrado com ela |
+| `BLIND_INDEX_PEPPER` | anual ou incidente | chave do índice cego da PII cifrada (ADR-096 (PR #805), `src/lib/blind-index.ts`). **Só runtime**: o build não a exige, e em produção o app recusa subir sem ela (mínimo 32 caracteres). Rotação: 1) valor atual → `BLIND_INDEX_PEPPER_PREVIOUS`; 2) novo valor em `BLIND_INDEX_PEPPER`; 3) deploy (a busca testa o hash atual e os anteriores); 4) reindexar com o `data:reencrypt` estendido (#735 em diante); 5) remover o antigo de `_PREVIOUS`. Perda é recuperável (gera outro e reindexa decifrando o dado), mas a busca por CPF, telefone e e-mail fica fora até lá |
 | Senha do Postgres | incidente | no Coolify a senha é do recurso do banco: troque lá e atualize a `DATABASE_URL` do app, depois *Deploy*. No compose: `ALTER ROLE estomasystech PASSWORD '…'` no `db`, novo valor no `.env`, `docker compose up -d` |
 | Chave `age` do backup | incidente ou troca de operador | gere outra, troque `/etc/estomasystech/backup.pub`; guarde a privada antiga enquanto houver backup (30 dias) cifrado com ela |
 | `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **removido** da produção depois do primeiro acesso (§ 8) |

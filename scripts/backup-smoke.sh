@@ -10,6 +10,7 @@ set -euo pipefail
 export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(openssl rand -hex 16)}"
 export AUTH_SECRET="${AUTH_SECRET:-$(openssl rand -hex 32)}"
 export DATA_ENCRYPTION_KEY="${DATA_ENCRYPTION_KEY:-$(openssl rand -hex 32)}"
+export BLIND_INDEX_PEPPER="${BLIND_INDEX_PEPPER:-$(openssl rand -hex 32)}"
 export COMPOSE_FILE=docker-compose.yml
 
 cd "$(dirname "$0")/.."
