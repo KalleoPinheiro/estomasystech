@@ -245,6 +245,12 @@ proposital enquanto as migrações não têm `down`
    `npm run release:publish -- --rollback=...` cria a tag `vX.Y.Z` no commit de merge e publica a
    Release (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**. Fluxo completo
    em [`homologacao.md`](homologacao.md) § 1.
+   **Alternativa pelo Actions (ADR-095, `release-deploy.yml`):** depois do merge na `main`, dispare o
+   workflow *Release deploy* **da `main`** com `version` (X.Y.Z) e `rollback`. O job `publicar` confere que o HEAD
+   é o merge de `release/vX.Y.Z` e que `package.json` e o `CHANGELOG.md` trazem a versão, e roda o mesmo
+   `release:publish` com o `RELEASE_CUT_TOKEN` (idempotente). Use `dry_run` para só conferir. O `fumaca` roda a
+   fumaça do § 9.6; depois do deploy manual, redispare com `versao_implantada` para conferir a versão
+   servida. Backup e deploy pelo Actions entram na #752 (v0.8.0); até lá os passos 2 e 3 seguem manuais.
 1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde (E2E e mutação rodam no Actions,
    [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)), e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da
