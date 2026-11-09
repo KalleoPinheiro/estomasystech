@@ -73,6 +73,19 @@ const sequence = (...responses: unknown[]): Handler => {
   return () => responses[Math.min(i++, responses.length - 1)];
 };
 
+/**
+ * O Alert de erro que contém o texto. Busca o texto (barato) e sobe até o `role="alert"`:
+ * `findByRole` monta a árvore de acessibilidade a cada tentativa e, na suíte completa sob
+ * carga, estourava o prazo de 1 s antes de o Alert existir (#617).
+ */
+const findAlertWithText = async (text: string): Promise<HTMLElement> => {
+  const alert = (
+    await screen.findByText(text, { exact: false })
+  ).closest<HTMLElement>('[role="alert"]');
+  expect(alert).not.toBeNull();
+  return alert as HTMLElement;
+};
+
 const renderSection = () =>
   renderWithToast(
     <StaffIdentityProvider>
@@ -186,7 +199,9 @@ describe('Feature: seção "Canal de e-mail" em /configuracoes (C3, #266)', () =
 
     fireEvent.click(await screen.findByText('Enviar e-mail de teste'));
 
-    const alert = await screen.findByRole('alert');
+    const alert = await findAlertWithText(
+      'Resend API 403: domain is not verified',
+    );
     expect(alert).toHaveTextContent('Resend API 403: domain is not verified');
     expect(alert).toHaveClass('sv-alert--danger');
   });
@@ -291,7 +306,7 @@ describe('Feature: seção "Canal de e-mail" em /configuracoes (C3, #266)', () =
     expect(await screen.findByText('Carregando…')).toBeInTheDocument();
     release(failEnvelope(500, 'Erro interno do servidor'));
 
-    const alert = await screen.findByRole('alert');
+    const alert = await findAlertWithText('Erro interno do servidor');
     expect(alert).toHaveTextContent('Erro interno do servidor');
     expect(screen.queryByText('Carregando…')).toBeNull();
   });
