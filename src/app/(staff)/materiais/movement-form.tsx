@@ -5,6 +5,7 @@ import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { unwrapAction } from '@/lib/action-result';
 import type { AppointmentDto, SupplyDto } from '@/lib/dto';
 import { formatTime } from '@/lib/format';
@@ -193,7 +194,7 @@ export function MovementForm({
   return (
     // Confirmação (MAT-08) acontece só via ConfirmAction abaixo — o form não
     // envia sozinho no Enter, só bloqueia o reload padrão.
-    <form
+    <SafeForm
       onSubmit={(event) => event.preventDefault()}
       className="flex flex-col gap-3"
     >
@@ -271,6 +272,6 @@ export function MovementForm({
         confirmLabel="Confirmar"
         onConfirm={doSubmit}
       />
-    </form>
+    </SafeForm>
   );
 }

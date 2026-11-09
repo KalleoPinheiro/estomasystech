@@ -2543,3 +2543,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes**: novo `release-review-judge.test.ts`. `release-veredito-workflow.test.ts` alterado porque o requisito mudou (sem API): trocadas as asserções de `id-token`/`ANTHROPIC`/cache/`existe` pelas da review; ver `TESTE-ALTERADO` na PR.
 - **Fora do repositório (só o Kalléo)**: aprovar a classe 3, mergear na `main` (merge commit), depois `main` → release; apagar federação, conta de serviço e `ANTHROPIC_*` no fim; manter `VEREDITO_JUDGE_ATIVO=false` até uma PR real passar com a review e só então `true` e exigir o check na `main` (depois da v0.7.0).
 - **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
+
+## Formulário sem `method` vazava dado na URL antes da hidratação (#777) (2026-11-09) — EM REVISÃO
+- **Causa raiz**: `<form onSubmit>` sem `method` faz envio nativo GET antes de o React hidratar; o e-mail do «Esqueci a senha» (e os dados dos demais formulários) iam na query string (log de proxy, histórico). O login já estava coberto pela #679.
+- **Correção**: novo `src/components/safe-form.tsx` (`SafeForm`): `method="post"` fixo e `<fieldset disabled>` invisível (`contents`) até `useHydrated()`. Os 28 arquivos com `<form>` cru migraram. `login-card.tsx` mantém o `<form method="post">` próprio (readOnly + botão desabilitado, #679).
+- **Regra**: `tests/architecture/form-method.test.ts` reprova `<form>` sem `method` em `src/` (fora do `SafeForm`). Biome não tem regra para isso sem plugin; o teste de arquitetura roda no CI.
+- **Testes novos**: `tests/components/safe-form.test.tsx`, a regra de arquitetura e `e2e/formulario-sem-js.spec.ts` (JS desligado: e-mail não aparece na URL, 360/390/768/1280). Nenhum teste existente alterado.
+- **Next step**: the-judge em thread nova. **Blockers**: nenhum.

@@ -18,6 +18,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { SafeForm } from '@/components/safe-form';
 import { StatusBadge } from '@/components/status-badge';
 import { unwrapAction } from '@/lib/action-result';
 import type {
@@ -190,7 +191,7 @@ function OpenCarePlanForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Condição associada
@@ -210,7 +211,7 @@ function OpenCarePlanForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Abrindo…' : 'Abrir plano'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
 
@@ -742,7 +743,7 @@ function AddDiagnosisForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Buscar diagnóstico (NANDA-I)
@@ -813,7 +814,7 @@ function AddDiagnosisForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Salvando…' : 'Prescrever diagnóstico'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
 
@@ -874,7 +875,7 @@ function PrescribeOutcomeForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Buscar resultado (NOC)
@@ -934,7 +935,7 @@ function PrescribeOutcomeForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Salvando…' : 'Prescrever resultado'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
 
@@ -993,7 +994,7 @@ function PrescribeInterventionForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Buscar intervenção (NIC)
@@ -1048,7 +1049,7 @@ function PrescribeInterventionForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Salvando…' : 'Prescrever intervenção'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
 
@@ -1093,7 +1094,7 @@ function EvaluateOutcomeForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <RadioGroup legend="Pontuação atual" name="outcome-score">
         {outcome.scaleAnchors.map((anchor, index) => {
@@ -1122,6 +1123,6 @@ function EvaluateOutcomeForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Salvando…' : 'Registrar avaliação'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

@@ -3,6 +3,7 @@
 import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { normalizeOptionalCpf } from '@/domain/shared/cpf';
 import { parseBrazilianPhone } from '@/domain/shared/phone';
 import type { PartnerDto, PatientDto } from '@/lib/dto';
@@ -92,7 +93,7 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Nome completo *
@@ -187,6 +188,6 @@ export function PatientForm({ initial, partners, onSubmit }: PatientFormProps) {
       <Button type="submit" disabled={saving} variant="accent" className="mt-2">
         {saving ? 'Salvando…' : 'Salvar'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

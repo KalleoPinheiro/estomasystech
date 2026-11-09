@@ -21,6 +21,10 @@ last_reviewed: 2026-11-01
 - Variável não usada: prefixo `_`.
 - Supressão só com motivo: `// biome-ignore lint/<categoria>/<regra>: <motivo>`.
 
+## Formulários (`SafeForm`)
+
+- Todo `<form>` de `src/` usa `SafeForm` (`src/components/safe-form.tsx`): `method="post"` fixo e campos desabilitados até a hidratação. Um `<form>` sem `method` faz GET nativo antes de o React assumir e põe os campos na URL (#777). `tests/architecture/form-method.test.ts` reprova o `<form>` cru sem `method`.
+
 ## UI (`@still-void/ui`)
 
 - Proibidos: `<button>`, `<input>`, `<select>`, `<textarea>`, `<table>` crus e utilitários de cor Tailwind crus.
