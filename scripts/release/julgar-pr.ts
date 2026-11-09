@@ -47,32 +47,39 @@ if (!arquivoDiff || !saida) {
   process.exit(1);
 }
 
-const veredito = await julgar(
-  readFileSync(arquivoDiff, 'utf8'),
-  process.env.PR_TITULO ?? '',
-  {
-    sha: exigir('PR_SHA'),
-    autor: exigir('PR_AUTOR'),
-    revisor: identidadeDoJob(exigir('GITHUB_RUN_ID'), process.env.GITHUB_RUN_ATTEMPT ?? '1'),
-  },
-  chamarComFederacao({
-    urlOidc: exigir('ACTIONS_ID_TOKEN_REQUEST_URL'),
-    tokenDeRequisicao: exigir('ACTIONS_ID_TOKEN_REQUEST_TOKEN'),
-    cfg: {
-      regra: exigir('ANTHROPIC_FEDERATION_RULE_ID'),
-      organizacao: exigir('ANTHROPIC_ORGANIZATION_ID'),
-      contaDeServico: exigir('ANTHROPIC_SERVICE_ACCOUNT_ID'),
-      workspace: process.env.ANTHROPIC_WORKSPACE_ID || undefined,
+// Sem `await` no topo: o `tsx` roda este arquivo como CJS (o pacote não é `type: module`) e rejeita top-level await.
+async function julgarEGravar(diff: string, destino: string): Promise<void> {
+  const veredito = await julgar(
+    readFileSync(diff, 'utf8'),
+    process.env.PR_TITULO ?? '',
+    {
+      sha: exigir('PR_SHA'),
+      autor: exigir('PR_AUTOR'),
+      revisor: identidadeDoJob(exigir('GITHUB_RUN_ID'), process.env.GITHUB_RUN_ATTEMPT ?? '1'),
     },
-    modelo: process.env.JUDGE_MODEL ?? 'claude-sonnet-5-5',
-  }),
-
-);
-// Falha não é julgamento: nada é gravado onde o cache por SHA lê, e o job reprova sem fixar o SHA.
-if (ehVereditoDeFalha(veredito)) {
-  writeFileSync(`${saida}.falha`, `${JSON.stringify(veredito, null, 2)}\n`);
-  console.error(`✗ ${veredito.achados[0].detalhe ?? 'falha ao julgar'} (nada gravado para o SHA; um re-run julga de novo)`);
-  process.exit(1);
+    chamarComFederacao({
+      urlOidc: exigir('ACTIONS_ID_TOKEN_REQUEST_URL'),
+      tokenDeRequisicao: exigir('ACTIONS_ID_TOKEN_REQUEST_TOKEN'),
+      cfg: {
+        regra: exigir('ANTHROPIC_FEDERATION_RULE_ID'),
+        organizacao: exigir('ANTHROPIC_ORGANIZATION_ID'),
+        contaDeServico: exigir('ANTHROPIC_SERVICE_ACCOUNT_ID'),
+        workspace: process.env.ANTHROPIC_WORKSPACE_ID || undefined,
+      },
+      modelo: process.env.JUDGE_MODEL ?? 'claude-sonnet-5-5',
+    }),
+  );
+  // Falha não é julgamento: nada é gravado onde o cache por SHA lê, e o job reprova sem fixar o SHA.
+  if (ehVereditoDeFalha(veredito)) {
+    writeFileSync(`${destino}.falha`, `${JSON.stringify(veredito, null, 2)}\n`);
+    console.error(`✗ ${veredito.achados[0].detalhe ?? 'falha ao julgar'} (nada gravado para o SHA; um re-run julga de novo)`);
+    process.exit(1);
+  }
+  writeFileSync(destino, `${JSON.stringify(veredito, null, 2)}\n`);
+  console.log(`veredito gravado em ${destino}: ${veredito.achados.length} achado(s)`);
 }
-writeFileSync(saida, `${JSON.stringify(veredito, null, 2)}\n`);
-console.log(`veredito gravado em ${saida}: ${veredito.achados.length} achado(s)`);
+
+julgarEGravar(arquivoDiff, saida).catch((e: unknown) => {
+  console.error(`✗ ${e instanceof Error ? e.message : String(e)}`);
+  process.exit(1);
+});
