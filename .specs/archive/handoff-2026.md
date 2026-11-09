@@ -2518,3 +2518,9 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Correção**: o corpo vira `julgarEGravar()` com `.catch`; novo teste `tests/scripts/release-entrypoints.test.ts` carrega `julgar-pr.ts` e `conferir-release.ts` sob o `tsx` (falha no código antigo, passa no novo). Sem `src/`: sem changeset.
 - **Next step**: the-judge em thread nova; depois re-rodar o check na #787 para ver a troca de token. **Blockers**: nenhum.
 
+
+## Spike do Coolify 4.6.0: script para o operador (#746 / ADR-095 ticket 1) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `scripts/release/spike-coolify.sh` (somente leitura por padrão; `SPIKE_DEPLOY=1` dispara o deploy do HEAD da `main`; `SPIKE_TAG_SHA` compara com a tag). Token por variável de ambiente e stdin do curl, saída filtrada com `jq`. Seção "Spike do Coolify" no ADR-095.
+- **Testes novos**: `tests/scripts/spike-coolify.test.ts` (8 casos com curl falso: padrão sem deploy, token e campos fora da lista nunca na saída, plano A/B, entradas inválidas). Nenhum teste existente alterado. Sem changeset.
+- **Pendente (só o Kalléo)**: criar o token no Coolify (habilidade de deploy; leitura só para o spike), rodar o script no PC (com `SPIKE_DEPLOY=1` apenas com a `main` igual ao que está no ar) e colar a saída na #746. Com ela, registro no ADR-095 a decisão A ou B. A issue só fecha depois disso.
+- **Next step**: the-judge; Kalléo roda o spike. **Blockers**: o resultado do spike.
