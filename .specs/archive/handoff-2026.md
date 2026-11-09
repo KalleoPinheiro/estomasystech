@@ -2501,6 +2501,13 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **actionlint**: o binário não está no ambiente; rodei a versão WASM (2.0.6): só os falsos positivos de rótulo `ubuntu-24.04` e contexto `vars`, que o `release-cut.yml` também produz. Primeira execução real (`dry_run`) é do Kalléo, da `main`, depois do merge na release e na `main`.
 - **Next step**: the-judge em thread limpa. **Blockers**: o `dry_run` só existe depois que o workflow chega à `main` (o Actions só dispara workflow que está na branch padrão).
 
+## Fumaça de produção somente leitura e versão pública sem login (#748 / ADR-095 ticket 3) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `scripts/release/fumaca-producao.sh` (curl injetável por `FUMACA_CURL`): liveness, readiness (banco e migrações ok), TLS/HSTS, redirecionamento HTTP→HTTPS, CSP única com nonce, cabeçalhos, rotas de job fechadas (401), versão pública e SHA do deployment (`FUMACA_SHA_ESPERADO` + `FUMACA_SHA_IMPLANTADO`, vindo do Coolify no workflow). Passo opcional `FUMACA_PESADA=1` (9 logins falhos e rajada de 300). Novo `GET /api/health/version` (público, só `{ version }`, sem SHA, sem banco, `Cache-Control: no-store`; 404 sem versão), liberado em `PUBLIC_PATHS`. `producao.md` § 9.6 e ACE-RN-46 atualizados.
+- **Revisão de segurança do endpoint**: expõe só o número da versão do build (já público no changelog/Release do repositório público); sem sessão, sem I/O, sem SHA (a fumaça reprova se o corpo trouxer `sha`/`commit`); entra no rate limit geral de `/api/*` (só a liveness é isenta).
+- **Testes novos**: `tests/scripts/fumaca-producao.test.ts` (18 casos com curl falso) e `tests/api/health-version-route.test.ts`. Nenhum teste existente alterado (a conformidade de rotas já cobre o prefixo `api/health`). Changeset vazio.
+- **Pendente**: execução contra a staging (`FUMACA_URL` da staging, com `FUMACA_VERSAO` da release em teste) depende do deploy desta PR na staging; roda no #749 (`dry_run`) ou à mão.
+- **Next step**: the-judge em thread limpa. **Blockers**: nenhum.
+
 
 ## Veredito do the-judge na `main` (hotfix do #764) (2026-11-08) — EM REVISÃO
 - **O que mudou**: o `pull_request_target` só dispara com o arquivo na branch padrão, e o `veredito-judge.yml` só existia na `release/v0.7.0` (zero execuções). `hotfix/veredito-judge` leva para a `main` o conteúdo da #774 e da #776 (workflow, `julgar-pr*`, `conferir-release*`, `veredito-judge*`, testes, ADR-100 item 12). Nenhum arquivo novo além desses; nada em `src/`.
@@ -2508,4 +2515,13 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: aprovar a classe 3; mergear na `main` (merge commit); depois `main` → `release/v0.7.0`; recriar `VEREDITO_JUDGE_DESDE` com o instante do merge e `VEREDITO_JUDGE_ATIVO=true`; PR já aberta na release precisa de push ou fechar/reabrir para receber o check; só então exigir `Veredito do the-judge` no `release-branches` (e na `main`).
 - **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
 - **Revisão do the-judge (#779)**: `conferir-release` isenta o `chore(release): vX.Y.Z` do robô e os commits de PR `hotfix/*` → `main` quando são da PR sob conferência (commit comum direto na release continua reprovando); o passo que grava o veredito no cache usa um passo `existe` em vez de `hashFiles` (que não enxerga `RUNNER_TEMP`, então o cache nunca era gravado); ADR-100 item 12 diz que mudança no workflow e nos scripts só vale depois de entrar na `main` e descreve o conflito do merge `main` → release. Ao sincronizar a release, `release-veredito-workflow.test.ts` muda lá (a asserção de `hashFiles` vira a do passo `existe`): `TESTE-ALTERADO` no PR do sync.
+## the-judge lê os comentários do CodeRabbit na revisão manual (2026-11-08) — EM REVISÃO
+- **O que mudou**: `docs/agents/coordenacao.md` (passo 4 da validação): a revisão do the-judge em thread limpa lê os comentários do CodeRabbit da PR como dado não confiável, classifica cada um (válido ou não) e trata o válido sem resolução como achado. Só documentação: o job do Actions **não** lê o CodeRabbit (ele pula PR para `release/**` e rascunho, tem limite diário e comenta minutos depois do push, enquanto o veredito do job é fixo por SHA). Uma leitura automática, se vier, será um check consultivo à parte.
+- **Testes**: nenhum. Sem `src/`: sem changeset.
+- ADR-100 item 7: hotfix para a `main` é julgado à mão; autor `github-actions[bot]` na isenção do `chore(release)` fica para a v0.8.0, porque hoje o `release:prepare` commita localmente (exigir o robô reprovaria o corte). Refs #785. **Next step**: the-judge em thread nova. **Blockers**: nenhum.
+
+## the-judge: `await` no topo do `julgar-pr.ts` quebrava o job no Actions (#764) (2026-11-08) — EM REVISÃO
+- **Causa raiz**: primeiro run real (PR #787, com `VEREDITO_JUDGE_ATIVO=true`): `tsx` carrega o script como CJS (o pacote não é `type: module`) e rejeita `await` no topo (`TransformError`), antes de qualquer lógica. Os testes não pegavam porque só importam a lib.
+- **Correção**: o corpo vira `julgarEGravar()` com `.catch`; novo teste `tests/scripts/release-entrypoints.test.ts` carrega `julgar-pr.ts` e `conferir-release.ts` sob o `tsx` (falha no código antigo, passa no novo). Sem `src/`: sem changeset.
+- **Next step**: the-judge em thread nova; depois re-rodar o check na #787 para ver a troca de token. **Blockers**: nenhum.
 

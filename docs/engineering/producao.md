@@ -974,6 +974,15 @@ O modo `all_in_one` usa cerca de 512 MB a mais.
 
 ### 9.6 Fumaça pós-deploy (somente leitura)
 
+**Automática (ADR-095):** `FUMACA_URL=https://… FUMACA_VERSAO=X.Y.Z scripts/release/fumaca-producao.sh`
+roda a tabela abaixo sem login e sem escrita (liveness, readiness, TLS/HSTS, redirecionamento HTTPS, CSP
+com nonce, cabeçalhos, rotas de job fechadas e versão pública em `GET /api/health/version`, que devolve só
+`{ version }`, sem SHA). Com `FUMACA_SHA_ESPERADO` e `FUMACA_SHA_IMPLANTADO` (lido no Coolify) confere
+também o SHA do deployment. `FUMACA_PESADA=1` liga o passo opcional `fumaca_pesada` (9 logins falhos e rajada
+de 300 requisições), que dispara limite por IP: não entra no automático. Imprime `OK <item>` ou
+`FALHOU <item>: <motivo>`, nunca corpo de resposta, e sai 1 se algo falhou. Os comandos manuais abaixo
+continuam valendo para investigar um item.
+
 Roda depois de todo deploy e em qualquer revisão de produção. Não escreve nada, não usa login nem
 dado de paciente. Substitua `U=https://estomasystech.kalleopinheiro.com.br`.
 
