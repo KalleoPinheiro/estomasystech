@@ -25,7 +25,7 @@ describe('workflow do veredito · segredo e fork', () => {
     expect(semComentario(wf)).not.toContain('secrets.');
     expect(semComentario(wf)).not.toContain('ANTHROPIC');
     expect(semComentario(wf)).not.toContain('id-token');
-    expect(job('julgar')).toContain('statuses: read');
+    expect(job('julgar')).not.toContain('statuses:');
   });
 
   it('Dado o gatilho, Quando lê o workflow, Então roda pela base e não lê comentário', () => {
@@ -47,10 +47,10 @@ describe('workflow do veredito · segredo e fork', () => {
     expect(job('veredito')).toContain('R_HUMANA');
   });
 
-  it('Dado PR para a main, Quando julga, Então confere a release e não exige o status de review', () => {
+  it('Dado PR para a main, Quando julga, Então confere a release e não exige a review do the-judge', () => {
     const julgar = job('julgar');
     const passo = julgar.slice(
-      julgar.indexOf('- name: Conferir o status the-judge do head'),
+      julgar.indexOf('- name: Conferir a review the-judge do head'),
     );
     expect(passo.split('\n').slice(0, 3).join('\n')).toContain(
       "github.base_ref != 'main'",
@@ -58,9 +58,9 @@ describe('workflow do veredito · segredo e fork', () => {
     expect(julgar).toContain('conferir-release.ts');
   });
 
-  it('Dado PR para a release, Quando julga, Então confere o status the-judge do head sem chamar o modelo (ADR-101)', () => {
+  it('Dado PR para a release, Quando julga, Então confere a review the-judge do head sem chamar o modelo (ADR-101)', () => {
     const julgar = job('julgar');
-    expect(julgar).toContain('scripts/release/status-judge.ts');
+    expect(julgar).toContain('scripts/release/review-judge.ts');
     expect(julgar).toContain('github.event.pull_request.head.sha');
     expect(julgar).not.toContain('julgar-pr.ts --diff');
   });
