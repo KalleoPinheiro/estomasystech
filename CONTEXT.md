@@ -333,6 +333,7 @@ See `src/` structure:
 
 - [ADR-092: Emenda à 088 — disparo do corte e selo sem furos](./docs/adr/092-emenda-088-disparo-do-corte-e-selo-sem-furos.md) — corte disparado da `main` com `branch=release/vX.Y.Z`; pré-voo valida a branch; `fora-do-selo` cobre dynamic-import; selo recusado vira aviso.
 - [ADR-093: Gate do PR só quando o PR está pronto](./docs/adr/093-gate-do-pr-so-quando-pronto-timeouts-e-orcamento.md) — rascunho reprova de propósito; timeouts e `ubuntu-slim` nos jobs leves; mutação sai do PR.
+- [ADR-096: PII cifrada em repouso, índice cego e busca por nome em memória](./docs/adr/096-pii-cifrada-em-repouso-com-indice-cego-e-busca-por-nome-em-memoria.md) — cadastro do paciente e do responsável cifrado; HMAC só para CPF, telefone e e-mail; nome buscado em memória; emenda o ADR-025 e estende o ADR-006.
 - [ADR-001: Multi-tenancy strategy](./docs/adr/001-multi-tenancy.md) — `clinic_id` + RLS, incremental phases.
 - [ADR-002: Two-layer authorization](./docs/adr/002-autorizacao-em-duas-camadas.md) — proxy + handler guards, fail-closed.
 - [ADR-003: Modelo de papéis multi-empresa](./docs/adr/003-modelo-de-papeis-multi-empresa.md) — catálogo fechado de seis papéis, escopo por empresa e vínculo dinâmico do Profissional.

@@ -88,4 +88,5 @@ Specs de execução: `.specs/features/{fase-3-compliance-ux-clinico,fase-b-clini
 - [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — acesso clínico do Profissional por vínculo
 - [ADR-024](../../adr/024-responsavel-do-paciente.md) — responsável do paciente: entidade própria, só de contato
 - [ADR-006](../../adr/006-chave-de-dados-clinicos.md) — chave dedicada e versionada para o dado clínico
+- [ADR-096](../../adr/096-pii-cifrada-em-repouso-com-indice-cego-e-busca-por-nome-em-memoria.md) — cadastro (nome, e-mail, telefone, nascimento) cifrado, índice cego para CPF/telefone/e-mail e busca por nome em memória; **decisão aceita, implementação em andamento** (PRO-RN-22 e PRO-RN-12 mudam quando os tickets #735–#741 entrarem)
 - Integração: [armazenamento de fotos](../../engineering/integrations/s3-storage.md)
