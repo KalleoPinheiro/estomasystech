@@ -2543,3 +2543,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes**: novo `release-review-judge.test.ts`. `release-veredito-workflow.test.ts` alterado porque o requisito mudou (sem API): trocadas as asserções de `id-token`/`ANTHROPIC`/cache/`existe` pelas da review; ver `TESTE-ALTERADO` na PR.
 - **Fora do repositório (só o Kalléo)**: aprovar a classe 3, mergear na `main` (merge commit), depois `main` → release; apagar federação, conta de serviço e `ANTHROPIC_*` no fim; manter `VEREDITO_JUDGE_ATIVO=false` até uma PR real passar com a review e só então `true` e exigir o check na `main` (depois da v0.7.0).
 - **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
+
+## ADR-096: PII cifrada, índice cego e busca por nome em memória (#733) (2026-11-09) — EM REVISÃO
+- **O que mudou**: só documentação. Novo `docs/adr/096-…md` (aceito) com a decisão da #730: cifrar nome, e-mail, telefone e nascimento do paciente e do responsável; índice cego HMAC (pepper próprio `BLIND_INDEX_PEPPER`, escopo de clínica) só para CPF, telefone e e-mail; busca por nome em memória por lote; CPF duplicado bloqueia; cursor sem nome; expandir e contrair. Emenda o ADR-025 e estende o ADR-006 sem editá-los. Índices em `docs/README.md`, `CONTEXT.md` e README do domínio.
+- **Decisões minhas (não vieram do PO)**: pepper variável própria em vez de HKDF da chave de dados; `partners`/`professionals` fora desta onda; busca por documento via `POST`/Server Action. Justificativas no ADR.
+- **Testes**: nenhum. Sem `src/`: sem changeset.
+- **Fora do repositório (só o Kalléo)**: valor de produção do pepper no cofre, variável na Vercel `staging` e no Coolify antes do merge que a exige; aplicar a migração em produção com backup.
+- **Next step**: the-judge em thread nova; depois #734. **Blockers**: nenhum.
