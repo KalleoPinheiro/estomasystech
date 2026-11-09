@@ -2496,3 +2496,10 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Correção**: o corpo vira `julgarEGravar()` com `.catch`; novo teste `tests/scripts/release-entrypoints.test.ts` carrega `julgar-pr.ts` e `conferir-release.ts` sob o `tsx` (falha no código antigo, passa no novo). Sem `src/`: sem changeset.
 - **Next step**: the-judge em thread nova; depois re-rodar o check na #787 para ver a troca de token. **Blockers**: nenhum.
 
+
+## the-judge sem API: veredito por commit status da revisora (#796, ADR-101) (2026-11-09) — EM REVISÃO
+- **Por quê**: o Kalléo não vai pôr saldo no Console da Anthropic; a troca OIDC não pode ser a fonte do veredito.
+- **O que mudou**: `veredito-judge.yml` deixa de chamar o modelo (sem `id-token`, federação, `ANTHROPIC_*`, cache de veredito); o job passa a rodar `scripts/release/status-judge.ts`, que exige o status `the-judge` = success no head SHA com `target_url` apontando para uma review desta PR do mesmo SHA que cita o the-judge. `--classificar` (caminho protegido → Environment `aprovacao-classe-3`) e `conferir-release` seguem. ADR-101 (risco de identidade única aceito, mitigação por processo), `AGENTS.md`, `coordenacao.md`, `classe-de-risco.md`, `docs/README.md`.
+- **Testes**: novo `release-status-judge.test.ts`. `release-veredito-workflow.test.ts` alterado porque o requisito mudou (sem API): trocadas as asserções de `id-token`/`ANTHROPIC`/cache/`existe` pelas do status; ver `TESTE-ALTERADO` na PR.
+- **Fora do repositório (só o Kalléo)**: aprovar a classe 3, mergear na `main` (merge commit), depois `main` → release; apagar federação, conta de serviço e `ANTHROPIC_*` no fim; manter `VEREDITO_JUDGE_ATIVO=false` até uma PR real passar com o status e só então `true` e exigir o check na `main` (depois da v0.7.0).
+- **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
