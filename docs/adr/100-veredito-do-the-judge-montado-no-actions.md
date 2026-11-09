@@ -56,7 +56,14 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
    mescladas (`merged_at`) e que não miram a `main`: a API devolve também PRs abertas cuja branch contém o commit e a
    própria PR da release, que reprovariam para sempre. Commits anteriores a
    `vars.VEREDITO_JUDGE_DESDE` e merges sem PR (sincronização com a `main`) ficam isentos; sem a data a conferência
-   reprova. Assim o limite de tamanho não afeta a release.
+   reprova. Isentos também os commits da **PR sob conferência** que não têm PR própria: o `chore(release): vX.Y.Z` do
+   robô (só se estiver na PR atual) e qualquer commit de PR `hotfix/*` → `main`; commit comum direto na branch da
+   release continua reprovando. Assim o limite de tamanho não afeta a release.
+   A isenção de `hotfix/*` depende só do nome da branch (quem escreve no repositório pode nomeá-la), então **o
+   hotfix para a `main` é julgado à mão** (revisão do the-judge em thread nova, como qualquer PR de classe 3), e a
+   `main` só recebe merge do dono. O `chore(release)` hoje é commitado localmente pelo `release:prepare` (autor
+   humano, não `github-actions[bot]`): exigir o robô como autor só cabe depois da tag e do corte automáticos
+   (#750–#752, v0.8.0).
 8. **Custo.** Modelo padrão `claude-sonnet-5-5` (variável `JUDGE_MODEL` troca). Diff acima de 400 000 caracteres
    reprova com mensagem pedindo para dividir a PR.
 9. **Check obrigatório:** `Veredito do the-judge` (`integration_id` 15368). Como `pull_request_target` usa o workflow
@@ -83,6 +90,14 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
     `repo:org/repo:*`, que é mais largo. A chamada de mensagens usa `anthropic-version: 2026-10-21`, a do exemplo
     oficial com token federado (se der 400 no primeiro run, é aqui). Substitui a chave `ANTHROPIC_API_KEY` das primeiras versões deste ADR.
 
+12. **O arquivo precisa estar na `main`.** O GitHub só dispara um workflow `pull_request_target` se o arquivo existir na
+    branch padrão; com o arquivo só em `release/v0.7.0` nenhuma execução aconteceu (2026-11-08). O workflow, os scripts,
+    os testes e este ADR entram na `main` por `hotfix/veredito-judge` (ADR-052) e voltam à release pelo merge
+    `main` → release (conflita em ADR-100 e no handoff: no ADR fica o lado do hotfix; no handoff, a união das entradas). Sem a ativação (`VEREDITO_JUDGE_ATIVO`), o job da `main` só passa com aviso e não usa script nenhum.
+    **O workflow e os scripts valem sempre na versão da `main`** (o evento roda no contexto da branch padrão): mudança em `veredito-judge.yml` ou em `scripts/release/` só tem efeito depois de entrar na `main`, mesmo em PR para `release/**`; corrigir só na release não adianta. **Não exija o check nos rulesets antes de ele existir na `main`**: check obrigatório que não roda trava toda PR.
+    `VEREDITO_JUDGE_DESDE` deve ser o instante em que o hotfix entra na `main`: PR da release mergeada antes disso
+    nunca recebeu veredito e ficaria reprovando a conferência da release → `main`.
+
 ## Alternativas rejeitadas
 
 | Alternativa | Por que não |
@@ -105,7 +120,7 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
 ## Pendências do dono (fora do repositório)
 
 1. No Console da Anthropic: conta de serviço, emissor `github-actions` e regra de federação (item 11); no GitHub, as variáveis `ANTHROPIC_FEDERATION_RULE_ID`, `ANTHROPIC_ORGANIZATION_ID`, `ANTHROPIC_SERVICE_ACCOUNT_ID` (e `ANTHROPIC_WORKSPACE_ID` se a regra cobrir mais de um workspace). Sem segredo. Opcional: `JUDGE_MODEL`.
-2. Variáveis `VEREDITO_JUDGE_ATIVO=true` e `VEREDITO_JUDGE_DESDE=<data ISO da ativação>`.
+2. Variáveis `VEREDITO_JUDGE_ATIVO=true` e `VEREDITO_JUDGE_DESDE=<instante ISO em que o hotfix entra na main>` (item 12).
 3. Exigir `Veredito do the-judge` primeiro em `release-branches`; na `main` depois que o workflow estiver nela.
 4. Aprovar esta PR no Environment `aprovacao-classe-3` (toca workflow e `scripts/release/`).
 

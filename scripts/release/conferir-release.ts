@@ -6,7 +6,7 @@
  * Variáveis: GH_TOKEN, GITHUB_REPOSITORY, VEREDITO_JUDGE_DESDE.
  */
 import { spawnSync } from 'node:child_process';
-import { avaliarRelease, type CommitDaRelease, type PrDaApi, prsDaRelease } from './conferir-release-lib';
+import { avaliarRelease, type CommitDaRelease, type PrDaApi, prAtualDoCommit, prsDaRelease } from './conferir-release-lib';
 
 const opcao = (nome: string): string | undefined => {
   const i = process.argv.indexOf(nome);
@@ -21,7 +21,7 @@ if (!repo || !base || !head) {
 }
 
 function api<T>(caminho: string): T {
-  const r = spawnSync('gh', ['api', '--paginate', '--slurp', caminho], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync('gh', ['api', '--paginate', '--slurp', caminho], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 120_000 });
   if (r.status !== 0) throw new Error(`gh api ${caminho}: ${r.stderr}`);
   return JSON.parse(r.stdout) as T;
 }
@@ -33,7 +33,16 @@ interface CheckRun {
   app: { slug: string } | null;
 }
 
+const jaConsultados = new Map<string, 'success' | 'failure' | 'ausente'>();
 function vereditoDoHead(sha: string): 'success' | 'failure' | 'ausente' {
+  const guardado = jaConsultados.get(sha);
+  if (guardado) return guardado;
+  const v = consultarVeredito(sha);
+  jaConsultados.set(sha, v);
+  return v;
+}
+
+function consultarVeredito(sha: string): 'success' | 'failure' | 'ausente' {
   const paginas = api<{ check_runs: CheckRun[] }[]>(`repos/${repo}/commits/${sha}/check-runs?per_page=100`);
   const do_actions = paginas
     .flatMap((p) => p.check_runs)
@@ -44,18 +53,22 @@ function vereditoDoHead(sha: string): 'success' | 'failure' | 'ausente' {
   return ultimo.conclusion === 'success' ? 'success' : 'failure';
 }
 
-const comparacao = api<{ commits: { sha: string; parents: unknown[]; commit: { committer: { date: string } } }[] }[]>(
+const comparacao = api<{ commits: { sha: string; parents: unknown[]; commit: { message: string; committer: { date: string } } }[] }[]>(
   `repos/${repo}/compare/${base}...${head}?per_page=100`,
 );
 const commits: CommitDaRelease[] = comparacao
   .flatMap((p) => p.commits)
-  .map((c) => ({
-    sha: c.sha,
-    merge: c.parents.length > 1,
-    data: c.commit.committer.date,
-    prs: prsDaRelease(api<PrDaApi[]>(`repos/${repo}/commits/${c.sha}/pulls`).flat(), base)
-      .map((pr) => ({ numero: pr.number, veredito: vereditoDoHead(pr.head.sha) })),
-  }));
+  .map((c) => {
+    const doApi = api<PrDaApi[]>(`repos/${repo}/commits/${c.sha}/pulls`).flat();
+    return {
+      sha: c.sha,
+      merge: c.parents.length > 1,
+      data: c.commit.committer.date,
+      assunto: c.commit.message.split('\n')[0],
+      prAtual: prAtualDoCommit(doApi, base, head),
+      prs: prsDaRelease(doApi, base).map((pr) => ({ numero: pr.number, veredito: vereditoDoHead(pr.head.sha) })),
+    };
+  });
 
 const r = avaliarRelease(commits, process.env.VEREDITO_JUDGE_DESDE);
 console.log(r.aprovado ? `✓ ${commits.length} commit(s) da release com veredito aprovado` : `✗ release sem veredito completo:\n${r.motivos.map((m) => `  - ${m}`).join('\n')}`);
