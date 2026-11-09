@@ -2494,6 +2494,13 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: conta de serviço + emissor + regra no Console da Anthropic; variáveis acima no GitHub; apagar o segredo `ANTHROPIC_API_KEY`; aprovar a classe 3. Confirmar o `sub` real do `pull_request_target` no histórico de autenticação.
 - **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: configuração do Console.
 
+## Fumaça de produção somente leitura e versão pública sem login (#748 / ADR-095 ticket 3) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `scripts/release/fumaca-producao.sh` (curl injetável por `FUMACA_CURL`): liveness, readiness (banco e migrações ok), TLS/HSTS, redirecionamento HTTP→HTTPS, CSP única com nonce, cabeçalhos, rotas de job fechadas (401), versão pública e SHA do deployment (`FUMACA_SHA_ESPERADO` + `FUMACA_SHA_IMPLANTADO`, vindo do Coolify no workflow). Passo opcional `FUMACA_PESADA=1` (9 logins falhos e rajada de 300). Novo `GET /api/health/version` (público, só `{ version }`, sem SHA, sem banco, `Cache-Control: no-store`; 404 sem versão), liberado em `PUBLIC_PATHS`. `producao.md` § 9.6 e ACE-RN-46 atualizados.
+- **Revisão de segurança do endpoint**: expõe só o número da versão do build (já público no changelog/Release do repositório público); sem sessão, sem I/O, sem SHA (a fumaça reprova se o corpo trouxer `sha`/`commit`); entra no rate limit geral de `/api/*` (só a liveness é isenta).
+- **Testes novos**: `tests/scripts/fumaca-producao.test.ts` (18 casos com curl falso) e `tests/api/health-version-route.test.ts`. Nenhum teste existente alterado (a conformidade de rotas já cobre o prefixo `api/health`). Changeset vazio.
+- **Pendente**: execução contra a staging (`FUMACA_URL` da staging, com `FUMACA_VERSAO` da release em teste) depende do deploy desta PR na staging; roda no #749 (`dry_run`) ou à mão.
+- **Next step**: the-judge em thread limpa. **Blockers**: nenhum.
+
 
 ## Veredito do the-judge na `main` (hotfix do #764) (2026-11-08) — EM REVISÃO
 - **O que mudou**: o `pull_request_target` só dispara com o arquivo na branch padrão, e o `veredito-judge.yml` só existia na `release/v0.7.0` (zero execuções). `hotfix/veredito-judge` leva para a `main` o conteúdo da #774 e da #776 (workflow, `julgar-pr*`, `conferir-release*`, `veredito-judge*`, testes, ADR-100 item 12). Nenhum arquivo novo além desses; nada em `src/`.
