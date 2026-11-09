@@ -100,7 +100,10 @@ Peculiaridades que já custaram gates:
 3. A validação **não corrige código**: cada falha vira issue com evidência; a correção vai para
    outra thread; nova validação limpa confere só os pontos reprovados.
 4. `the-judge` (versão mais recente, recarregada) em toda PR antes do merge; veredito como
-   comentário (COMMENT), nunca aprovação do autor.
+   review (COMMENT), nunca aprovação do autor. A **primeira linha** da review é o contrato
+   (`the-judge/v1 … veredito: APPROVE`); **só a thread revisora** a publica, no head SHA, e roda de novo o
+   check `Veredito do the-judge`; push novo derruba a review
+   ([ADR-101](../adr/101-veredito-do-the-judge-por-status-da-revisora.md)).
 5. **Teste pré-patch:** o teste que prova o comportamento novo é escrito e visto falhar antes do
    código. **Regra 8:** teste existente só muda com `TESTE-ALTERADO: <motivo>` no PR, com tabela de
    paridade (cenário × asserção preservada). Mutante sobrevivente em regra de acesso ou auditoria é
