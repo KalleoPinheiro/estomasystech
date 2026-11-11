@@ -36,6 +36,9 @@ services:
       DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?defina DATA_ENCRYPTION_KEY (ex. openssl rand -hex 32)}
       # Chaves anteriores (só leitura) durante a rotação — ver docs/engineering/producao.md.
       DATA_ENCRYPTION_KEY_PREVIOUS: ${DATA_ENCRYPTION_KEY_PREVIOUS:-}
+      # Pepper do índice cego da PII (#734, ADR-096) — separado da chave de dados; só runtime.
+      BLIND_INDEX_PEPPER: ${BLIND_INDEX_PEPPER:?defina BLIND_INDEX_PEPPER (ex. openssl rand -hex 32)}
+      BLIND_INDEX_PEPPER_PREVIOUS: ${BLIND_INDEX_PEPPER_PREVIOUS:-}
       APP_URL: ${APP_URL:-http://localhost:3000}
       # E-mail da plataforma (opcional, ADR-011): só contas sem clínica. Sem elas o
       # canal da plataforma fica desativado e o bootstrap devolve o link em inviteUrl.

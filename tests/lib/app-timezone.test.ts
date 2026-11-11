@@ -67,6 +67,8 @@ describe('Feature: checagem de fuso na inicialização (#205)', () => {
     const { register } = await import('@/instrumentation');
     vi.stubEnv('TZ', 'UTC');
     vi.stubEnv('NODE_ENV', 'production');
+    // O boot de produção recusa subir sem o pepper (#734). O cenário segue sendo o fuso.
+    vi.stubEnv('BLIND_INDEX_PEPPER', 'p'.repeat(40));
     const exit = vi
       .spyOn(process, 'exit')
       .mockImplementation((() => undefined) as never);
@@ -94,6 +96,8 @@ describe('Feature: checagem de fuso na inicialização (#205)', () => {
   it('instrumentation.register com fuso correto segue a subida', async () => {
     const { register } = await import('@/instrumentation');
     vi.stubEnv('NODE_ENV', 'production');
+    // O boot de produção recusa subir sem o pepper (#734). O cenário segue sendo o fuso.
+    vi.stubEnv('BLIND_INDEX_PEPPER', 'p'.repeat(40));
     vi.stubEnv('APP_TIMEZONE', 'UTC');
     vi.stubEnv('NEXT_RUNTIME', 'nodejs');
     const exit = vi
