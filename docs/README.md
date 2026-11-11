@@ -3,7 +3,7 @@ title: "Índice de docs/"
 status: living
 audience: [dev, po, stakeholder, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-11-11
 ---
 
 # docs/
@@ -55,6 +55,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`engineering/backup-passo-a-passo.md`](engineering/backup-passo-a-passo.md) | **backup cifrado do zero**, para leigo: chave `age`, R2 na UE, scripts, alerta por e-mail, primeiro backup e teste de restauração, com as armadilhas da instalação real |
 | [`engineering/migracoes-aditivas.md`](engineering/migracoes-aditivas.md) | **lint de migração aditiva** (`check:migracao`): o que é aditivo, conferências do journal e formato JSON para o classificador de risco |
 | [`engineering/classe-de-risco.md`](engineering/classe-de-risco.md) | **classe de risco da PR** (`check:risco`, 0 a 3) e **veredito estruturado do the-judge** (`check:veredito`), CODEOWNERS nos portões |
+| [`engineering/convivencia-llms.md`](engineering/convivencia-llms.md) | convivência entre orquestradores de LLM equivalentes: dono único, três vagas globais e handoff (ADR-103) |
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
 | [`engineering/performance-front-linha-de-base-2026-10.md`](engineering/performance-front-linha-de-base-2026-10.md) | **linha de base do front** (Next.js): JS por rota, FCP/LCP/CLS e chamadas `/api` em 360/390/768/1280, auditoria de recursos do Next e da hidratação (retrato de 2026-10-24) |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
@@ -117,6 +118,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/099-homologacao-sem-operador-pelo-actions.md`](adr/099-homologacao-sem-operador-pelo-actions.md) | Homologação pelo Actions: `staging.yml` reconstrói a release escolhida, valida (logada, 3 papéis) e grava `homologacao/vX.Y.Z` sem operador; `rebuild.sh --release=release/vX.Y.Z` |
 | [`adr/100-veredito-do-the-judge-montado-no-actions.md`](adr/100-veredito-do-the-judge-montado-no-actions.md) | O veredito do the-judge é montado e conferido por job do Actions (`pull_request_target`, federação de identidades OIDC sem chave de API, revisor = identidade do job); comentário não vale; check `Veredito do the-judge` no ruleset |
 | [`adr/101-veredito-do-the-judge-por-status-da-revisora.md`](adr/101-veredito-do-the-judge-por-status-da-revisora.md) | O veredito do the-judge vem da review COMMENT `the-judge/v1 … APPROVE` que a thread revisora publica no head SHA; o check do workflow só confere, sem API; substitui a chamada à API do ADR-100 |
+| [`adr/103-orquestracao-compartilhada-entre-llms.md`](adr/103-orquestracao-compartilhada-entre-llms.md) | orquestração compartilhada entre LLMs equivalentes, com posse única por issue, três vagas globais e handoff; exceção ao ADR-097 só para a coordenação, já na v0.7.0 |
 | [`adr/043-versionamento-com-changesets-e-release-por-tag.md`](adr/043-versionamento-com-changesets-e-release-por-tag.md) | versionamento semântico com Changesets, release por tag e versão visível às clínicas |
 | [`adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md`](adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md) | `ambiente:local` (Postgres 18 + app + seed) e suíte de integração em Postgres real |
 | [`adr/045-borda-atras-do-traefik-app-dono-dos-cabecalhos.md`](adr/045-borda-atras-do-traefik-app-dono-dos-cabecalhos.md) | borda atrás do Traefik: `TRUSTED_PROXY_HOPS=1` provado, o app é dono dos cabeçalhos, cookies que expiram com `Secure`, logs sem PII |
