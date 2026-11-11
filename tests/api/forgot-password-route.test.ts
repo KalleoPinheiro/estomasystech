@@ -312,4 +312,28 @@ describe('Feature: POST /api/auth/forgot-password', () => {
       expect(await second.json()).toEqual(await first.json());
     });
   });
+
+  it('Dado um pedido de reset, Quando a rota trata o e-mail, Então o endereço não aparece em claro no log', async () => {
+    const email = 'sigiloso-reset@exemplo.com';
+    await createAccount(email);
+    const lines: string[] = [];
+    const capture = (...args: unknown[]) => {
+      lines.push(args.map((part) => String(part)).join(' '));
+    };
+    vi.spyOn(console, 'info').mockImplementation(capture);
+    vi.spyOn(console, 'warn').mockImplementation(capture);
+    vi.spyOn(console, 'error').mockImplementation(capture);
+    vi.spyOn(console, 'log').mockImplementation(capture);
+
+    const response = await forgot(email);
+
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => {
+      expect(lines.join('\n')).toContain('[e-mail desativado]');
+    });
+    const log = lines.join('\n');
+    expect(log).not.toContain(email);
+    expect(log).not.toContain('email=');
+    expect(log).not.toContain('sigiloso-reset');
+  });
 });

@@ -4,6 +4,7 @@ import { Button, Textarea } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { unwrapAction } from '@/lib/action-result';
 import type { CommissionPayoutDto } from '@/lib/dto';
 import { formatCurrency, monthLabelPtBr } from '@/lib/format';
@@ -38,7 +39,7 @@ export function CancelPayoutForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <p className="text-sm">
         Cancelar o repasse de <strong>{monthLabelPtBr(payout.period)}</strong>{' '}
@@ -71,6 +72,6 @@ export function CancelPayoutForm({
       >
         {saving ? 'Cancelando…' : 'Confirmar cancelamento'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
