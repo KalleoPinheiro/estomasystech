@@ -217,8 +217,8 @@ describe('Feature: o job homologar autentica sem persistir o token (#767)', () =
 });
 
 const SERVIDOR = String.raw`
-import base64, os, ssl, subprocess
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import base64, os, socket, ssl, subprocess, threading
+from http.server import BaseHTTPRequestHandler
 
 ROOT = os.environ["GIT_HTTP_ROOT"]
 LOG = os.environ["AUTH_LOG"]
@@ -300,13 +300,55 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(rest)
 
-import threading
-server = ThreadingHTTPServer(("127.0.0.1", 443), Handler)
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.load_cert_chain(os.environ["CERT"], os.environ["KEY"])
-server.socket = context.wrap_socket(server.socket, server_side=True)
-threading.Thread(target=server.serve_forever, daemon=True).start()
+
+class DummyServer:
+    def shutdown_request(self, request):
+        try:
+            request.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass
+        request.close()
+
+def atender(conn):
+    try:
+        dados = b""
+        while b"\r\n\r\n" not in dados:
+            bloco = conn.recv(4096)
+            if not bloco:
+                return
+            dados += bloco
+            if len(dados) > 8192:
+                return
+        linha = dados.split(b"\r\n", 1)[0]
+        if not linha.startswith(b"CONNECT github.com:443 "):
+            conn.sendall(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
+            return
+        conn.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+        tls = context.wrap_socket(conn, server_side=True)
+        Handler(tls, ("127.0.0.1", 0), DummyServer())
+    except (BrokenPipeError, ConnectionResetError, ssl.SSLError, TimeoutError):
+        return
+    finally:
+        try:
+            conn.close()
+        except OSError:
+            pass
+
+ouvinte = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ouvinte.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+ouvinte.bind(("127.0.0.1", 0))
+ouvinte.listen(16)
+note("PORT " + str(ouvinte.getsockname()[1]))
 note("SERVER_UP")
+
+def loop():
+    while True:
+        conn, _ = ouvinte.accept()
+        threading.Thread(target=atender, args=(conn,), daemon=True).start()
+
+threading.Thread(target=loop, daemon=True).start()
 threading.Event().wait()
 `;
 
@@ -527,13 +569,11 @@ function rodarPrivado(job: Job): Cenario {
       ],
       { stdio: 'ignore' },
     );
-    writeFileSync(join(dir, 'hosts'), '127.0.0.1 github.com\n');
     writeFileSync(join(dir, 'roteiro.sh'), roteiro(dir, { rel, stg, other }));
-    const execucao = spawnSync(
-      'unshare',
-      ['--net', '--mount', '--map-root-user', 'bash', join(dir, 'roteiro.sh')],
-      { encoding: 'utf8', timeout: 50_000 },
-    );
+    const execucao = spawnSync('bash', [join(dir, 'roteiro.sh')], {
+      encoding: 'utf8',
+      timeout: 50_000,
+    });
     if (execucao.status !== 0) {
       const detalhe = [
         execucao.stdout,
@@ -591,17 +631,6 @@ function roteiro(
 ): string {
   return String.raw`
 set -euo pipefail
-if [ -x /usr/sbin/ip ]; then /usr/sbin/ip link set lo up
-elif [ -x /sbin/ip ]; then /sbin/ip link set lo up
-elif command -v ip >/dev/null 2>&1; then ip link set lo up
-else /usr/sbin/ifconfig lo up
-fi
-mount --bind '${dir}/hosts' /etc/hosts
-resolvido=$(getent hosts github.com | awk '{print $1; exit}')
-if [ "$resolvido" != "127.0.0.1" ]; then
-  echo "github.com nao isolado: $resolvido" >&2
-  exit 1
-fi
 export CERT='${dir}/cert.pem' KEY='${dir}/key.pem'
 export GIT_HTTP_ROOT='${dir}/srv' AUTH_LOG='${dir}/server.log'
 export TOKEN_LEITURA='${LEITURA}' TOKEN_ESCRITA='${ESCRITA}'
@@ -615,6 +644,12 @@ for _ in $(seq 1 50); do
   sleep 0.05
 done
 grep -q SERVER_UP "$AUTH_LOG"
+porta=$(sed -n 's/^PORT //p' "$AUTH_LOG" | head -1)
+if [ -z "$porta" ]; then
+  echo "proxy sem porta" >&2
+  exit 1
+fi
+export PROXY="http://127.0.0.1:$porta"
 git -C '${dir}/srv/KalleoPinheiro/estomasystech.git' show-ref > '${dir}/refs.before'
 set +e
 rodar() {
@@ -623,9 +658,10 @@ rodar() {
     env -i \
       PATH="$1" HOME="$HOME" \
       GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_TERMINAL_PROMPT=0 \
-      GIT_CONFIG_COUNT=2 \
+      GIT_CONFIG_COUNT=3 \
       GIT_CONFIG_KEY_0=http.sslCAInfo GIT_CONFIG_VALUE_0="$CERT" \
       GIT_CONFIG_KEY_1=http.version GIT_CONFIG_VALUE_1=HTTP/1.1 \
+      GIT_CONFIG_KEY_2=http.proxy GIT_CONFIG_VALUE_2="$PROXY" \
       FAKE_LOG='${dir}/fake.log' \
       bash -c 'set -a; source "$1"; set +a; bash "$2"' _ "$3" "$4" >"$5" 2>&1
     echo $? > "$6"
