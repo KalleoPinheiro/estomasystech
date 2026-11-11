@@ -7,6 +7,7 @@
   - `NODE_OPTIONS=--max-old-space-size=4096 npm run typecheck` → exit 0.
   - `npm run lint` → exit 0 (avisos já existentes no repositório; o teste novo repete o aviso `noTemplateCurlyInString` de quem cita `${{ }}` literal).
   - `npm run check:docs` → exit 0.
+  - `npm run check:changeset` → exit 0 e `npm run check:handoff` → exit 0, no commit `deb2bcf85fba1af1665fe8f90869b5a7c5139f12`.
 - **Fora**: job `rebuild` (continua com `contents: write`), `release-cut.yml`, troca de token, GitHub App, rulesets, vars, seleção de deployment, âncoras `pos()` (#770), timeout de mutação (#761), `contents: write` no `GITHUB_TOKEN`, `scripts/gate/`, `stryker.config.json`, configs do Vitest e do Playwright, ADR novo. Sem changeset: não toca `src/`, `drizzle/` nem `Dockerfile`.
 - **Limite da prova**: o teste hermético isola `github.com` em `127.0.0.1` dentro de um netns, com TLS local e tokens fictícios. Não dispara a Vercel, não usa o PAT real e não roda `npm ci` nem o Playwright de verdade: esses passos rodam com binários que só conferem o ambiente. A homologação real continua numa janela autorizada pelo Kalléo.
 - **Next step**: the-judge em thread nova; a PR fica em rascunho (ADR-093, classe 3). Quem marca pronto é o coordenador, numa janela do Kalléo. **Blockers**: nenhum para o rascunho. A rodada real do workflow Staging depende da janela e dos segredos já existentes (`STAGING_SEED_PASSWORD`, `VERCEL_AUTOMATION_BYPASS_SECRET`, `RELEASE_CUT_TOKEN`).
