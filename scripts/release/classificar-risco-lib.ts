@@ -38,7 +38,7 @@ export interface RelatorioMigracao {
 }
 
 export interface EntradaRisco {
-  /** Caminhos tocados no diff (`git diff --name-only --no-renames base...HEAD`). */
+  /** Caminhos tocados no diff (`git diff --name-only -z --no-renames base...head`). */
   arquivos: readonly string[];
   /** Saída do `check:migracao --json`; `null` quando não rodou ou não foi legível. */
   migracao: RelatorioMigracao | null;
@@ -98,7 +98,7 @@ export const CAMINHOS_SENSIVEIS: readonly RegraCaminho[] = [
   },
   {
     regra: 'portao',
-    padrao: /^(vitest(\.[a-z]+)?\.config\.mts|stryker\.config\.json|playwright\.config\.ts|biome\.json)$/,
+    padrao: /^(vitest(\.[a-z]+)?\.config\.mts|stryker\.config\.json|playwright(\.[a-z]+)?\.config\.ts|biome\.json)$/,
     detalhe: 'configuração de teste, cobertura, mutação ou lint (limiares)',
   },
 ];
