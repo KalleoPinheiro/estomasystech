@@ -2494,6 +2494,13 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: conta de serviço + emissor + regra no Console da Anthropic; variáveis acima no GitHub; apagar o segredo `ANTHROPIC_API_KEY`; aprovar a classe 3. Confirmar o `sub` real do `pull_request_target` no histórico de autenticação.
 - **Next step**: the-judge em thread nova; coordenador marca pronto (ADR-093). **Blockers**: configuração do Console.
 
+## `release-deploy.yml`: publicar a tag e a fumaça em dry_run (#749 / ADR-095 ticket 4) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `.github/workflows/release-deploy.yml`, só `workflow_dispatch` (inputs `version`, `rollback`, `dry_run`, `versao_implantada`), disparo validado como o `release-cut.yml` (ADR-092) no primeiro passo; `concurrency` sem cancelar; `permissions: contents: read` no topo e em cada job. Job `publicar`: confere HEAD == SHA do disparo, merge commit citando `release/vX.Y.Z`, `package.json` e `CHANGELOG.md` na versão, e roda `release:publish` com o `RELEASE_CUT_TOKEN` (único segredo do workflow; só no `env:` do passo de publicar e no passo que confere a presença, nunca no env do job, no checkout (`persist-credentials: false`) ou em `run:`; o git recebe o PAT pelo helper do `gh auth setup-git`); idempotente. Job `fumaca`: `fumaca-producao.sh` contra o domínio público, sem segredo; confere a versão só com `versao_implantada`. Sem job `producao` (backup + deploy: #752). `producao.md` § 3.1 passo 0 cita o caminho pelo Actions.
+- **Classe 3**: workflow novo; aprovação do dono no Environment `aprovacao-classe-3`. Regra 8: não toca `scripts/gate/`.
+- **Testes novos**: `tests/infrastructure/release-deploy-workflow.test.ts` (16 casos: gatilho, concorrência, permissões, segredos, ausência do job de produção, validação do disparo executada de verdade). Nenhum teste existente alterado.
+- **actionlint**: o binário não está no ambiente; rodei a versão WASM (2.0.6): só os falsos positivos de rótulo `ubuntu-24.04` e contexto `vars`, que o `release-cut.yml` também produz. Primeira execução real (`dry_run`) é do Kalléo, da `main`, depois do merge na release e na `main`.
+- **Next step**: the-judge em thread limpa. **Blockers**: o `dry_run` só existe depois que o workflow chega à `main` (o Actions só dispara workflow que está na branch padrão).
+
 ## Teste instável: configuracoes-email-channel sob carga (#617) (2026-11-08) — EM REVISÃO
 - **Causa**: `findByRole('alert')` monta a árvore de acessibilidade a cada tentativa e, na suíte completa sob carga, estourava o prazo padrão de 1 s antes de o Alert existir. Não é defeito do componente. Os dois pontos do arquivo que usavam `findByRole('alert')` passam a achar o texto (consulta barata) e subir ao `role="alert"`, com as mesmas asserções (texto e classe `sv-alert--danger`). Sem mexer em prazo, retry nem config.
 - **Testes**: alterado `tests/pages/configuracoes-email-channel.test.tsx` (TESTE-ALTERADO, asserções preservadas). Passa 8 de 8 com três suítes `tests/pages` rodando em paralelo. Sem mudança em `src/`, sem changeset.
@@ -2529,3 +2536,17 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes novos**: `tests/scripts/spike-coolify.test.ts` (8 casos com curl falso: padrão sem deploy, token e campos fora da lista nunca na saída, plano A/B, entradas inválidas). Nenhum teste existente alterado. Sem changeset.
 - **Pendente (só o Kalléo)**: criar o token no Coolify (habilidade de deploy; leitura só para o spike), rodar o script no PC (com `SPIKE_DEPLOY=1` apenas com a `main` igual ao que está no ar) e colar a saída na #746. Com ela, registro no ADR-095 a decisão A ou B. A issue só fecha depois disso.
 - **Next step**: the-judge; Kalléo roda o spike. **Blockers**: o resultado do spike.
+
+## the-judge sem API: veredito pela review da revisora (#796, ADR-101) (2026-11-09) — EM REVISÃO
+- **Por quê**: o Kalléo não vai pôr saldo no Console da Anthropic; a troca OIDC não pode ser a fonte do veredito.
+- **O que mudou**: `veredito-judge.yml` deixa de chamar o modelo (sem `id-token`, federação, `ANTHROPIC_*`, cache de veredito); o job passa a rodar `scripts/release/review-judge.ts`, que exige a review COMMENT mais nova do head SHA com `the-judge/v1` e `APPROVE` na primeira linha. `--classificar` (caminho protegido → Environment `aprovacao-classe-3`) e `conferir-release` seguem. ADR-101 (risco de identidade única aceito, mitigação por processo), `AGENTS.md`, `coordenacao.md`, `classe-de-risco.md`, `docs/README.md`.
+- **Testes**: novo `release-review-judge.test.ts`. `release-veredito-workflow.test.ts` alterado porque o requisito mudou (sem API): trocadas as asserções de `id-token`/`ANTHROPIC`/cache/`existe` pelas da review; ver `TESTE-ALTERADO` na PR.
+- **Fora do repositório (só o Kalléo)**: aprovar a classe 3, mergear na `main` (merge commit), depois `main` → release; apagar federação, conta de serviço e `ANTHROPIC_*` no fim; manter `VEREDITO_JUDGE_ATIVO=false` até uma PR real passar com a review e só então `true` e exigir o check na `main` (depois da v0.7.0).
+- **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
+
+## ADR-096: PII cifrada, índice cego e busca por nome em memória (#733) (2026-11-09) — EM REVISÃO
+- **O que mudou**: só documentação. Novo `docs/adr/096-…md` (aceito) com a decisão da #730: cifrar nome, e-mail, telefone e nascimento do paciente e do responsável; índice cego HMAC (pepper próprio `BLIND_INDEX_PEPPER`, escopo de clínica) só para CPF, telefone e e-mail; busca por nome em memória por lote; CPF duplicado bloqueia; cursor sem nome; expandir e contrair. Emenda o ADR-025 e estende o ADR-006 sem editá-los. Índices em `docs/README.md`, `CONTEXT.md` e README do domínio.
+- **Decisões minhas (não vieram do PO)**: pepper variável própria em vez de HKDF da chave de dados; `partners`/`professionals` fora desta onda; busca por documento via `POST`/Server Action. Justificativas no ADR.
+- **Testes**: nenhum. Sem `src/`: sem changeset.
+- **Fora do repositório (só o Kalléo)**: valor de produção do pepper no cofre, variável na Vercel `staging` e no Coolify antes do merge que a exige; aplicar a migração em produção com backup.
+- **Next step**: the-judge em thread nova; depois #734. **Blockers**: nenhum.

@@ -3,7 +3,7 @@ title: "Onboarding técnico e setup"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-11-11
 related:
   - .env.example
   - docs/engineering/integrations/README.md
@@ -135,6 +135,8 @@ npm run dev                   # http://localhost:3000
 | `AUTH_SECRET` | sim em produção | assina a sessão (só isso: o dado clínico tem chave própria) | `openssl rand -hex 32`; sem ele, 503 em toda rota. Rotacionar derruba todas as sessões |
 | `DATA_ENCRYPTION_KEY` | sim em produção | cifra o texto clínico e o token do Google em repouso ([ADR-006](../adr/006-chave-de-dados-clinicos.md)) | `openssl rand -hex 32` (≥ 32 caracteres); fora de produção, sem ela, usa chave de desenvolvimento. Perdê-la é perder o prontuário: guarde no cofre |
 | `DATA_ENCRYPTION_KEY_PREVIOUS` | só na rotação | chaves anteriores, separadas por vírgula, só para leitura | roteiro em [producao.md](producao.md) § 6 |
+| `BLIND_INDEX_PEPPER` | sim em produção | pepper do índice cego (HMAC) de CPF, telefone e e-mail ([ADR-096](../adr/096-pii-cifrada-em-repouso-com-indice-cego-e-busca-por-nome-em-memoria.md), #734) | `openssl rand -hex 32` (≥ 32 caracteres); só runtime — o build não exige. Fora de produção, sem ela, deriva do `AUTH_SECRET` com aviso. Guarde no cofre |
+| `BLIND_INDEX_PEPPER_PREVIOUS` | só na rotação | peppers anteriores, separados por vírgula, só para a busca | roteiro em [producao.md](producao.md) § 6 |
 | `APP_URL` | sim em produção | links de convite/reset, redirect do OAuth, link do recall | — |
 | `VERCEL_PROJECT_PRODUCTION_URL` | não (injetada pela Vercel) | base dos links de convite na homologação quando `APP_URL` não está definida | não defina à mão |
 | `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | primeira instalação | header `x-bootstrap-token` de `POST /api/auth/bootstrap` | [ADR-004](../adr/004-remocao-google-oauth-autenticacao.md) |
@@ -183,7 +185,7 @@ npm run dev                   # http://localhost:3000
 | `ESTOMASYSTECH_MIGRATE_ON_BOOT` | não | `false` desliga a migração no boot | padrão: migra |
 | `ESTOMASYSTECH_E2E_FAULTS` | não | só a suíte E2E: `1` deixa o teste fazer uma leitura do servidor falhar pelo cookie `e2e-fault` | nunca em produção; [ADR-078](../adr/078-gravacoes-da-agenda-em-server-actions.md) |
 | `POSTGRES_PORT` / `APP_PORT` | não | portas publicadas pelo compose no host | padrão `5432` (só loopback) e `3000` |
-| `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
+| `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` / `E2E_BLIND_INDEX_PEPPER` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 | `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |
 | `ESTOMASYSTECH_DB_DRIVER` / `ESTOMASYSTECH_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
 | `ANTHROPIC_FEDERATION_RULE_ID` / `ANTHROPIC_ORGANIZATION_ID` / `ANTHROPIC_SERVICE_ACCOUNT_ID` | não | ids da federação de identidades (WIF) que o job `Veredito do the-judge` usa no lugar de chave de API (variáveis do repositório; não são segredo) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |

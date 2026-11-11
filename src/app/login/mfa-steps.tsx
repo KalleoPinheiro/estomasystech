@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { OtpauthQr } from '@/components/otpauth-qr';
+import { SafeForm } from '@/components/safe-form';
 import { apiFetch } from '@/lib/client';
 import { safeNextPath } from '@/lib/login-redirect';
 
@@ -115,7 +116,7 @@ export function MfaCodeStep({ pendingToken, onStep }: CodeStepProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <SafeForm onSubmit={handleSubmit}>
       <p className="mb-4 text-ink-3 text-sm">
         {useRecovery
           ? 'Digite um dos códigos de recuperação que você guardou. Depois dele, cadastre o autenticador de novo.'
@@ -152,7 +153,7 @@ export function MfaCodeStep({ pendingToken, onStep }: CodeStepProps) {
         </Button>
       </p>
       <RestartLogin onRestart={() => onStep({ kind: 'password' })} />
-    </form>
+    </SafeForm>
   );
 }
 
@@ -206,7 +207,7 @@ export function MfaEnrollStep({ pendingToken, onStep }: CodeStepProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <SafeForm onSubmit={handleSubmit}>
       <h2 className="font-semibold text-base">Cadastre o app autenticador</h2>
       <p className="mt-1 mb-4 text-ink-3 text-sm">
         Sua conta exige um segundo fator. No app autenticador (Google
@@ -254,7 +255,7 @@ export function MfaEnrollStep({ pendingToken, onStep }: CodeStepProps) {
         {submitting ? 'Confirmando…' : 'Confirmar'}
       </Button>
       <RestartLogin onRestart={() => onStep({ kind: 'password' })} />
-    </form>
+    </SafeForm>
   );
 }
 

@@ -21,14 +21,11 @@ describe('workflow do veredito · segredo e fork', () => {
     expect(job('veredito')).toMatch(/FORK" = true \]; then echo "::error::/);
   });
 
-  it('Dado o workflow, Quando procura credencial da API, Então não há segredo e só o job julgar pede o token OIDC', () => {
+  it('Dado o workflow, Quando procura credencial, Então não há segredo, token OIDC nem chamada à Anthropic (ADR-101)', () => {
     expect(semComentario(wf)).not.toContain('secrets.');
-    expect(semComentario(wf)).not.toContain('ANTHROPIC_API_KEY');
-    for (const nome of ['humana', 'veredito'])
-      expect(job(nome)).not.toContain('id-token');
-    expect(semComentario(wf).match(/id-token: write/g)).toHaveLength(1);
-    expect(job('julgar')).toContain('id-token: write');
-    expect(job('julgar')).toContain('vars.ANTHROPIC_FEDERATION_RULE_ID');
+    expect(semComentario(wf)).not.toContain('ANTHROPIC');
+    expect(semComentario(wf)).not.toContain('id-token');
+    expect(job('julgar')).not.toContain('statuses:');
   });
 
   it('Dado o gatilho, Quando lê o workflow, Então roda pela base e não lê comentário', () => {
@@ -45,46 +42,33 @@ describe('workflow do veredito · segredo e fork', () => {
     expect(corpo.match(/npm ci --ignore-scripts/g)).toHaveLength(1);
   });
 
-  it('Dado diff em caminho protegido, Quando o check agrega, Então exige o Environment do dono e o veredito fica fixo por SHA', () => {
+  it('Dado diff em caminho protegido, Quando o check agrega, Então exige o Environment do dono', () => {
     expect(job('humana')).toContain('environment: aprovacao-classe-3');
     expect(job('veredito')).toContain('R_HUMANA');
-    expect(job('julgar')).toContain('actions/cache/restore');
-    expect(job('julgar')).toContain('actions/cache/save');
-    expect(job('julgar')).toMatch(
-      /veredito-judge-\$\{\{ github\.event\.pull_request\.head\.sha \}\}/,
-    );
   });
 
-  it('Dado PR para a main, Quando julga, Então não chama o modelo', () => {
+  it('Dado PR para a main, Quando julga, Então confere a release e não exige a review do the-judge', () => {
     const julgar = job('julgar');
-    const passoModelo = julgar.slice(julgar.indexOf('- name: Julgar\n'));
-    expect(passoModelo.split('\n').slice(0, 3).join('\n')).toContain(
+    const passo = julgar.slice(
+      julgar.indexOf('- name: Conferir a review the-judge do head'),
+    );
+    expect(passo.split('\n').slice(0, 3).join('\n')).toContain(
       "github.base_ref != 'main'",
     );
     expect(julgar).toContain('conferir-release.ts');
+  });
+
+  it('Dado PR para a release, Quando julga, Então confere a review the-judge do head sem chamar o modelo (ADR-101)', () => {
+    const julgar = job('julgar');
+    expect(julgar).toContain('scripts/release/review-judge.ts');
+    expect(julgar).toContain('github.event.pull_request.head.sha');
+    expect(julgar).not.toContain('julgar-pr.ts --diff');
   });
 
   it('Dado nome de arquivo com acento, Quando o job classifica, Então usa a lista NUL do git (sem aspas) e não o cabeçalho do diff', () => {
     const julgar = job('julgar');
     expect(julgar).toMatch(/core\.quotePath=false diff --name-only -z/);
     expect(julgar).toContain('--arquivos');
-  });
-
-  it('Dado falha da API, Quando o job julga, Então o passo que grava no cache só roda se um passo próprio achou o arquivo (hashFiles não enxerga RUNNER_TEMP)', () => {
-    const julgar = job('julgar');
-    expect(semComentario(julgar)).not.toContain('hashFiles');
-    expect(julgar).toContain('id: existe');
-    expect(julgar).toMatch(
-      /\[ -f "\$RUNNER_TEMP\/veredito\/veredito\.json" \]/,
-    );
-    expect(julgar).toMatch(
-      /name: Gravar o veredito deste SHA\n\s+if: always\(\) && steps\.existe\.outputs\.existe == 'true'/,
-    );
-  });
-
-  it('Dado PR só com lockfile ou handoff, Quando o diff filtrado fica vazio, Então volta ao diff sem o filtro (não reprova para sempre)', () => {
-    const julgar = job('julgar');
-    expect(julgar).toMatch(/if \[ ! -s "\$RUNNER_TEMP\/pr\.diff" \]; then/);
   });
 
   it('Dado o job de aprovação do dono, Quando registra o diff aprovado, Então usa o SHA do head da PR e não o GITHUB_SHA da base', () => {

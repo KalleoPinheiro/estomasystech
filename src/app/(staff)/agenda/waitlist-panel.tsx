@@ -7,7 +7,6 @@ import {
   NativeSelect,
   Textarea,
 } from '@still-void/ui/react';
-
 import { useToast } from '@still-void/ui/react/client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -15,6 +14,7 @@ import { ConfirmAction } from '@/components/confirm-action';
 import { EmptyState, ErrorAlert } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PatientPicker } from '@/components/patient-picker';
+import { SafeForm } from '@/components/safe-form';
 import { formatDateKey } from '@/domain/scheduling/schedule-availability';
 import { apiFetch } from '@/lib/client';
 import type {
@@ -227,7 +227,7 @@ function WaitlistForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       {catalogError && (
         <ErrorAlert
@@ -309,6 +309,6 @@ function WaitlistForm({
       <Button type="submit" variant="accent" disabled={saving}>
         {saving ? 'Salvando…' : 'Adicionar à lista'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

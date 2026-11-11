@@ -11,6 +11,7 @@ import {
 } from '@/components/clinic-fields';
 import { ErrorAlert } from '@/components/feedback';
 import { PageHeader } from '@/components/page-header';
+import { SafeForm } from '@/components/safe-form';
 import { apiFetch } from '@/lib/client';
 import type { PlatformClinicDto } from '@/lib/dto';
 
@@ -124,7 +125,7 @@ function NewClinicForm({
         description="Ao criar, você recebe o link de convite do primeiro Admin de Empresa para repassar a ele."
       />
       <Card as="section" className="p-5">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error && <ErrorAlert message={error} />}
           <ClinicFieldsGrid
             draft={draft}
@@ -148,7 +149,7 @@ function NewClinicForm({
               {saving ? 'Criando…' : 'Criar clínica e convidar admin'}
             </Button>
           </div>
-        </form>
+        </SafeForm>
       </Card>
     </>
   );

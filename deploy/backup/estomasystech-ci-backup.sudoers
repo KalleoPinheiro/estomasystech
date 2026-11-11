@@ -1,0 +1,7 @@
+# Instalar em /etc/sudoers.d/estomasystech-ci-backup (modo 0440, dono root) com:
+#   sudo visudo -cf deploy/backup/estomasystech-ci-backup.sudoers && \
+#   sudo install -m 0440 -o root -g root deploy/backup/estomasystech-ci-backup.sudoers /etc/sudoers.d/estomasystech-ci-backup
+# ADR-095: o usuário do CI só pode rodar o ci-backup.sh, sem argumentos (o "" final proíbe argumento).
+Defaults:estoma-ci !requiretty
+Defaults:estoma-ci env_reset
+estoma-ci ALL=(root) NOPASSWD: /opt/estomasystech-backup/ci-backup.sh ""

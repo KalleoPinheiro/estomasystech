@@ -113,7 +113,7 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 | `ESTOMASYSTECH_MIGRATE_ON_BOOT` | `false` |
 | `PG_POOL_MAX` | `5` |
 | `PRODUCTION_DB_HOSTS` | host do banco de produção (trava de segurança) |
-| `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET` | valores novos, diferentes dos de produção |
+| `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `BLIND_INDEX_PEPPER`, `CRON_SECRET` | valores novos, diferentes dos de produção. `BLIND_INDEX_PEPPER` (≥ 32 caracteres, só runtime, #734) é obrigatória: a staging roda com `NODE_ENV=production` e o app recusa subir sem ela |
 | `STAGING_SEED_PASSWORD` | senha (≥ 10 caracteres) das contas fictícias |
 | `MOCK_INTEGRATIONS` | `true` |
 | `STAGING_DISABLE_MFA` | `true` só em Production (a staging); nunca em Preview. Dispensa o 2FA no login por e-mail e senha ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)); com `APP_ENV` diferente de `staging` o app recusa subir |
@@ -165,7 +165,7 @@ sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações,
 3. **Integração Neon–Vercel** (Marketplace): ligar ao projeto para injetar `DATABASE_URL` e
    `DATABASE_URL_UNPOOLED`. **Deixe desligado** *Create a branch for every preview deployment* (o plano
    grátis do Neon tem limite de branches e só a `staging` é construída, ADR-061).
-4. **Variáveis** da seção 3; gerar `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` e `CRON_SECRET` novos.
+4. **Variáveis** da seção 3; gerar `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `BLIND_INDEX_PEPPER` e `CRON_SECRET` novos.
 5. **Vercel Authentication** nos previews (Settings → Deployment Protection → Standard).
 6. **GitHub**: criar o branch `staging` (`git push origin origin/main:refs/heads/staging`) e proteger
    (sem push direto de humanos, force-push só do rebuild). Para o fluxo do ADR-052: *Allow merge

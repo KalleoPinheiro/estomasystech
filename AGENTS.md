@@ -81,6 +81,7 @@ Todo agente, antes de criar branch, confere estas decisões (o orquestrador as r
 - **Nome**: `feat/<slug>` para funcionalidade, `fix/<slug>` para correção, `docs/<slug>` para só documentação. `main` só recebe `release/*` e `hotfix/*`, por merge commit.
 - **PR em squash com base `release/vX.Y.Z`**, com `## Homologação` no corpo (`Seed:` e cenários Dado/Quando/Então, ou `n/a — <motivo>`).
 - **PR para `release/**` nasce em rascunho** e é marcado pronto uma vez (ADR-093). Quem marca pronto é o coordenador, depois de confirmar a cota do Actions. Em rascunho, os checks "Gate do PR" e `ci` ficam vermelhos de propósito: o pipeline pesado só roda quando o PR deixa de ser rascunho. Não marque o PR como pronto para fazer o CI passar.
+- **the-judge**: só a thread revisora julga e publica a review COMMENT `the-judge/v1 … APPROVE` no head SHA ([ADR-101](docs/adr/101-veredito-do-the-judge-por-status-da-revisora.md)); quem implementou nunca a publica.
 - **Changeset**: PR que toca `src/`, `drizzle/` ou `Dockerfile` leva `npm run changeset`; se nada muda para a clínica, `--empty`. PR só de documentação não precisa de changeset.
 - **Handoff** da issue em `.specs/archive/handoff/<issue>-<slug>.md` (arquivo novo por PR; o `handoff-2026.md` está congelado), na mesma PR ([ADR-102](docs/adr/102-handoff-por-issue-sem-conflito.md)).
 - **Validação antes do PR**: `npm run test:changed -- origin/release/vX.Y.Z`, `typecheck`, `lint`, `check:docs` (se tocou `.md`). O E2E e a mutação rodam no Actions; `gate:local` é opcional.
@@ -143,6 +144,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | Triagem (labels canônicos) | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | Fluxo de sete estações e labels de fila (`pronta`, `em-andamento`, `bloqueada`) | [ADR-070](docs/adr/070-fluxo-de-sete-estacoes-com-labels-de-fila.md) |
 | **Coordenação (papel, release, gate, autonomia)** e estado da release aberta | [`docs/agents/coordenacao.md`](docs/agents/coordenacao.md), [`docs/agents/estado-v0.4.0.md`](docs/agents/estado-v0.4.0.md) |
+| Orquestração entre LLMs equivalentes (dono único, vagas globais e handoff) | [Convivência](docs/engineering/convivencia-llms.md) |
 | Glossário e ADRs | [`docs/agents/domain.md`](docs/agents/domain.md) |
 | Planejamento (PRD vs `.specs/`, dois logs de decisão) | [`docs/agents/planning.md`](docs/agents/planning.md) |
 | Corrigir subconjunto de achados de auditoria | [`docs/agents/fix-audit-issues.md`](docs/agents/fix-audit-issues.md) |
