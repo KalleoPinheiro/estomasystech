@@ -3,7 +3,7 @@ title: "Backup cifrado — passo a passo do zero"
 status: living
 audience: [ops]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-11-08
 related: [docs/engineering/producao.md, docs/adr/040-backup-cifrado-no-coolify-para-o-r2-na-ue.md]
 ---
 
@@ -317,6 +317,49 @@ Só depois da etapa 7 aprovada:
    ```
 
 Depois, passe pelo [checklist de segurança](producao.md#54-segurança-do-backup-checklist): apague o token de restauração, recoloque o filtro de IP no token do servidor e tire a chave privada do disco.
+
+## Etapa 9 — Backup disparado pelo CI, antes do deploy 🖥️ + 💻 (ADR-095)
+
+O workflow de release (`release-deploy.yml`, v0.8.0) precisa de um backup confirmado antes de
+mexer na produção. Para isso o Actions entra no servidor com uma **chave SSH só dele**, que **não
+abre shell**: ela só consegue rodar `ci-backup.sh`, que inicia o mesmo `estomasystech-backup.service`
+do timer e responde uma linha: `BACKUP_OK <timestamp>` ou `BACKUP_FALHOU <motivo>`. O backup
+continua cifrado com `age` (a chave pública de `/etc/estomasystech/backup.pub`; a privada segue só
+no cofre). O CI nunca vê a chave privada nem o conteúdo do backup.
+
+O script confere três coisas: o serviço terminou com `Result=success`, apareceu uma pasta nova no
+R2 e essa pasta tem `db.dump.age`, `uploads.tar.age` e `SHA256SUMS`.
+
+Faça uma vez (💻 = sua máquina, 🖥️ = servidor):
+
+1. 💻 Gere a chave do CI, sem senha (ela só vale para esse comando):
+   `ssh-keygen -t ed25519 -N '' -C estomasystech-ci-backup -f ./ci-backup-key`
+2. 🖥️ Crie o usuário e instale o script e o sudoers (a partir de um checkout do repositório):
+   ```bash
+   sudo adduser --disabled-password --gecos '' estoma-ci
+   sudo install -m 0755 -o root -g root deploy/backup/ci-backup.sh /opt/estomasystech-backup/ci-backup.sh
+   sudo visudo -cf deploy/backup/estomasystech-ci-backup.sudoers
+   sudo install -m 0440 -o root -g root deploy/backup/estomasystech-ci-backup.sudoers /etc/sudoers.d/estomasystech-ci-backup
+   ```
+3. 🖥️ Autorize a chave **pública** com comando forçado (cole a linha de `ci-backup-key.pub` no lugar de `<CHAVE_PUBLICA>`):
+   ```bash
+   sudo install -d -m 0700 -o estoma-ci -g estoma-ci /home/estoma-ci/.ssh
+   echo 'restrict,command="sudo /opt/estomasystech-backup/ci-backup.sh" <CHAVE_PUBLICA>' \
+     | sudo -u estoma-ci tee /home/estoma-ci/.ssh/authorized_keys > /dev/null
+   sudo chmod 600 /home/estoma-ci/.ssh/authorized_keys
+   ```
+4. 💻 Teste (tem que demorar o tempo de um backup e imprimir só uma linha):
+   `ssh -i ./ci-backup-key -o IdentitiesOnly=yes estoma-ci@<host-do-servidor>`
+   Esperado: `BACKUP_OK 2026…Z`. Tentar `ssh … ls` deve imprimir o mesmo (o comando é forçado) e
+   `sudo -l` como `estoma-ci` deve listar só o `ci-backup.sh`.
+5. 💻 Guarde `ci-backup-key` (privada) no cofre e **apague** o arquivo (`shred -u ci-backup-key`).
+   Ela vira o secret `VPS_SSH_KEY` do *Environment* `producao` no GitHub, junto de `VPS_KNOWN_HOSTS`
+   (saída de `ssh-keyscan -t ed25519 <host>` conferida com a impressão digital do servidor). Isso
+   é feito na v0.8.0, quando o job de produção entrar. Nunca cole a chave em chat ou issue.
+
+Se o teste do passo 4 falhar, a linha `BACKUP_FALHOU <motivo>` diz o que olhar (`journalctl -u
+estomasystech-backup.service` no servidor). A chave do CI é revogada apagando a linha do
+`authorized_keys`.
 
 ## Rotina do Super Admin
 

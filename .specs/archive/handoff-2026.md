@@ -2471,6 +2471,14 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: segredos `STAGING_SEED_PASSWORD` e `VERCEL_AUTOMATION_BYPASS_SECRET` (conferir se já existem); `RELEASE_CUT_TOKEN` já existe. PR é classe 3 (workflow): aprovação do dono.
 - **Next step**: the-judge em thread limpa; depois de mergeada, dispatch do Staging com ref `release/v0.6.2` e `homologar`. **Blockers**: segredos.
 
+
+## Backup pré-deploy pelo CI: `ci-backup.sh` com chave SSH restrita (#747 / ADR-095 ticket 2) (2026-11-08) — EM REVISÃO
+- **O que mudou**: `deploy/backup/ci-backup.sh` (único comando da chave do CI): inicia `estomasystech-backup.service`, confere `Result=success`, pasta nova no R2 com `db.dump.age`, `uploads.tar.age` e `SHA256SUMS`, e imprime só `BACKUP_OK <timestamp>` ou `BACKUP_FALHOU <motivo>`. `deploy/backup/estomasystech-ci-backup.sudoers` (só esse script, sem argumentos). Etapa 9 em `backup-passo-a-passo.md` (usuário `estoma-ci`, `authorized_keys` com `restrict,command=`, teste, `VPS_SSH_KEY`/`VPS_KNOWN_HOSTS`).
+- **Cifra com age (herdada da #381)**: já existe desde 2026-10-18 (ADR-040, `backup.sh` cifra `db.dump.age` e `uploads.tar.age` com a chave pública). Nada a implementar; o `ci-backup.sh` só exige que o objeto novo traga os arquivos `.age`.
+- **Testes novos**: `tests/scripts/ci-backup.test.ts` (script real com `systemctl`/`rclone` simulados; sucesso, Result≠success, timeout, sem pasta nova, arquivo faltando, destino inacessível, configuração ausente, argumento, sem vazar saída de outros programas; sudoers). Nenhum teste existente alterado. Sem changeset (sem `src/`, `drizzle/` ou `Dockerfile`).
+- **Fora do repositório (só o Kalléo)**: Etapa 9 no VPS (usuário, sudoers, `authorized_keys`, teste com `BACKUP_OK`). Os secrets `VPS_SSH_KEY` e `VPS_KNOWN_HOSTS` entram no Environment `producao` na v0.8.0 (#752).
+- **Next step**: the-judge em thread limpa; Kalléo roda a Etapa 9. **Blockers**: nenhum para o merge; a execução real depende do Kalléo.
+
 ## E2E instável: rótulo do mês, tabela de auditoria e login (#679) (2026-11-08) — EM REVISÃO
 - **Causa raiz** (sem alongar timeout nem retry): (1) `goToMonth` usava `getByText` solto e casava também a cópia oculta do fragmento que o React mantém fora do `<main>` durante o streaming (strict mode, 2 elementos); agora procura só em `#conteudo-principal`. (2) `/auditoria` lia antes de o evento existir: `recordAudit` grava em `after()`, depois da resposta da API; o spec agora filtra pelo paciente e relê (`toPass`) até a tabela aparecer. (3) Login: antes da hidratação o formulário não é do React; o que se digita sumia e o «Entrar» fazia um GET nativo com a senha na URL (o segundo fator nunca aparecia em `sessao-expirada*`). Os campos ficam `readOnly` e o botão `disabled` até hidratar (`useHydrated`, mesmo padrão do #484), então o Playwright espera sozinho.
 - **Segurança/LGPD**: antes da hidratação o envio nativo era um GET com a senha na URL (log de proxy e histórico do navegador). Além de esperar a hidratação, o formulário passou a `method="post"` como defesa extra sem JS.
@@ -2543,6 +2551,13 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Testes**: novo `release-review-judge.test.ts`. `release-veredito-workflow.test.ts` alterado porque o requisito mudou (sem API): trocadas as asserções de `id-token`/`ANTHROPIC`/cache/`existe` pelas da review; ver `TESTE-ALTERADO` na PR.
 - **Fora do repositório (só o Kalléo)**: aprovar a classe 3, mergear na `main` (merge commit), depois `main` → release; apagar federação, conta de serviço e `ANTHROPIC_*` no fim; manter `VEREDITO_JUDGE_ATIVO=false` até uma PR real passar com a review e só então `true` e exigir o check na `main` (depois da v0.7.0).
 - **Next step**: the-judge em thread nova. **Blockers**: merge do dono.
+
+## ADR-096: PII cifrada, índice cego e busca por nome em memória (#733) (2026-11-09) — EM REVISÃO
+- **O que mudou**: só documentação. Novo `docs/adr/096-…md` (aceito) com a decisão da #730: cifrar nome, e-mail, telefone e nascimento do paciente e do responsável; índice cego HMAC (pepper próprio `BLIND_INDEX_PEPPER`, escopo de clínica) só para CPF, telefone e e-mail; busca por nome em memória por lote; CPF duplicado bloqueia; cursor sem nome; expandir e contrair. Emenda o ADR-025 e estende o ADR-006 sem editá-los. Índices em `docs/README.md`, `CONTEXT.md` e README do domínio.
+- **Decisões minhas (não vieram do PO)**: pepper variável própria em vez de HKDF da chave de dados; `partners`/`professionals` fora desta onda; busca por documento via `POST`/Server Action. Justificativas no ADR.
+- **Testes**: nenhum. Sem `src/`: sem changeset.
+- **Fora do repositório (só o Kalléo)**: valor de produção do pepper no cofre, variável na Vercel `staging` e no Coolify antes do merge que a exige; aplicar a migração em produção com backup.
+- **Next step**: the-judge em thread nova; depois #734. **Blockers**: nenhum.
 
 ## Formulário sem `method` vazava dado na URL antes da hidratação (#777) (2026-11-09) — EM REVISÃO
 - **Causa raiz**: `<form onSubmit>` sem `method` faz envio nativo GET antes de o React hidratar; o e-mail do «Esqueci a senha» (e os dados dos demais formulários) iam na query string (log de proxy, histórico). O login já estava coberto pela #679.
