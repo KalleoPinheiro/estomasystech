@@ -51,6 +51,7 @@ export function ForgotPasswordForm() {
             <Input
               required
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"

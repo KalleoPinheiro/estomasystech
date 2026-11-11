@@ -2559,9 +2559,9 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: valor de produção do pepper no cofre, variável na Vercel `staging` e no Coolify antes do merge que a exige; aplicar a migração em produção com backup.
 - **Next step**: the-judge em thread nova; depois #734. **Blockers**: nenhum.
 
-## Formulário sem `method` vazava dado na URL antes da hidratação (#777) (2026-11-09) — EM REVISÃO
-- **Causa raiz**: `<form onSubmit>` sem `method` faz envio nativo GET antes de o React hidratar; o e-mail do «Esqueci a senha» (e os dados dos demais formulários) iam na query string (log de proxy, histórico). O login já estava coberto pela #679.
-- **Correção**: novo `src/components/safe-form.tsx` (`SafeForm`): `method="post"` fixo e `<fieldset disabled>` invisível (`contents`) até `useHydrated()`. Os 28 arquivos com `<form>` cru migraram. `login-card.tsx` mantém o `<form method="post">` próprio (readOnly + botão desabilitado, #679).
-- **Regra**: `tests/architecture/form-method.test.ts` reprova `<form>` sem `method` em `src/` (fora do `SafeForm`). Biome não tem regra para isso sem plugin; o teste de arquitetura roda no CI.
-- **Testes novos**: `tests/components/safe-form.test.tsx`, a regra de arquitetura e `e2e/formulario-sem-js.spec.ts` (JS desligado: e-mail não aparece na URL, 360/390/768/1280). Nenhum teste existente alterado.
+## Formulário sem `method` vazava dado na URL antes da hidratação (#777) (2026-11-11) — EM REVISÃO
+- **Causa raiz**: `<form onSubmit>` sem `method` faz envio nativo GET antes de o React hidratar; com `name` no campo, o e-mail do «Esqueci a senha» (e os dados dos demais formulários) iam na query string (log de proxy, histórico). O login já estava coberto pela #679.
+- **Correção**: `SafeForm` (`src/components/safe-form.tsx`): `method="post"` fixo e `<fieldset disabled class="contents">` até `useHydrated()`. Os `<form>` crus migraram. `login-card.tsx` mantém o `<form method="post">` próprio (#679). O campo de `/esqueci-senha` tem `name="email"`: o envio nativo leva o endereço no corpo do POST, nunca na URL nem no log de acesso.
+- **Regra**: `tests/architecture/form-method.test.ts` reprova `<form>` sem `method` e `method` que não seja `post`. Convenção em `docs/engineering/conventions.md` § Formulários (`SafeForm`). ACE-RN-35 registra que o e-mail não vai para a URL nem para o log.
+- **Testes novos**: `tests/components/safe-form.test.tsx`, `tests/pages/esqueci-senha-hidratacao.test.tsx` (HTML do servidor: POST e log de acesso sem o e-mail), caso novo em `tests/api/forgot-password-route.test.ts` (stdout sem o e-mail em claro), a regra de arquitetura, `e2e/formulario-sem-js.spec.ts` (JS desligado, 360/390/768/1280) e `e2e/esqueci-senha-sem-email-no-log.spec.ts` (corpo tem o e-mail; URL e registro da requisição não). Nenhum teste existente alterado.
 - **Next step**: the-judge em thread nova. **Blockers**: nenhum.

@@ -3,7 +3,7 @@ title: "Convenções de código e testes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-01
+last_reviewed: 2026-11-11
 ---
 
 # Convenções de código e testes
@@ -23,7 +23,13 @@ last_reviewed: 2026-11-01
 
 ## Formulários (`SafeForm`)
 
-- Todo `<form>` de `src/` usa `SafeForm` (`src/components/safe-form.tsx`): `method="post"` fixo e campos desabilitados até a hidratação. Um `<form>` sem `method` faz GET nativo antes de o React assumir e põe os campos na URL (#777). `tests/architecture/form-method.test.ts` reprova o `<form>` cru sem `method`.
+Todo `<form>` novo em `src/` usa `SafeForm` (`src/components/safe-form.tsx`).
+
+- `method="post"` é fixo: um `method` vindo de fora não vence. Sem `method`, o envio nativo antes da hidratação é GET e o valor dos campos vai para a URL — histórico do navegador e log de proxy (#777).
+- Os campos ficam num `<fieldset disabled>` com `class="contents"` até `useHydrated()`. O que se digita não se perde, e o envio não sai antes de o React assumir.
+- Dado pessoal (e-mail, senha, prontuário) não aparece na URL nem no log de acesso. O corpo do POST não entra nesse log.
+- Exceção: `src/app/login/login-card.tsx` mantém o `<form method="post">` próprio, com campo somente leitura e botão desabilitado até hidratar (#679).
+- `tests/architecture/form-method.test.ts` reprova `<form>` sem `method` e reprova `method` que não seja `post`. O Biome não tem essa regra sem plugin.
 
 ## UI (`@still-void/ui`)
 
