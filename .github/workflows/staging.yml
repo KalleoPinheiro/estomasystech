@@ -107,6 +107,8 @@ jobs:
   # papéis, 4 larguras, console, CSP, /api e rolagem). Só com tudo verde grava a marca `homologacao/vX.Y.Z` no
   # SHA da release, e só se a release não andou desde o rebuild. Falha em qualquer passo = sem marca.
   # A marca usa o RELEASE_CUT_TOKEN (o GITHUB_TOKEN não cria refs fora do que o ruleset libera).
+  # O checkout não persiste o extraheader: fetch e ls-remote autenticam com helper transitório,
+  # e o push zera http.https://github.com/.extraheader para o PAT da URL autenticar a marca.
   homologar:
     name: Homologar a release (deploy, validação logada e marca)
     needs: rebuild
@@ -119,9 +121,10 @@ jobs:
       RELEASE_BRANCH: ${{ inputs.release_branch }}
       RELEASE_SHA: ${{ needs.rebuild.outputs.release_sha }}
       STAGING_SHA: ${{ needs.rebuild.outputs.staging_sha }}
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -144,9 +147,14 @@ jobs:
           fi
 
       - name: A staging publicada tem a árvore da release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git fetch --quiet origin "${RELEASE_SHA}" "${STAGING_SHA}"
+          git -c http.https://github.com/.extraheader= \
+            -c credential.helper= \
+            -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' \
+            fetch --quiet origin "${RELEASE_SHA}" "${STAGING_SHA}"
           a=$(git rev-parse "${STAGING_SHA}^{tree}")
           b=$(git rev-parse "${RELEASE_SHA}^{tree}")
           if [ "$a" != "$b" ]; then
@@ -156,6 +164,8 @@ jobs:
 
       - name: Esperar o deploy de Production do SHA da staging
         id: deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           for i in $(seq 1 60); do
@@ -213,17 +223,21 @@ jobs:
 
       - name: Gravar a marca de homologação
         env:
+          GH_TOKEN: ${{ github.token }}
           CUT_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
         run: |
           set -euo pipefail
           version="${RELEASE_BRANCH#release/}"
-          now=$(git ls-remote origin "refs/heads/${RELEASE_BRANCH}" | cut -f1)
+          now=$(git -c http.https://github.com/.extraheader= \
+            -c credential.helper= \
+            -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' \
+            ls-remote origin "refs/heads/${RELEASE_BRANCH}" | cut -f1)
           if [ "$now" != "$RELEASE_SHA" ]; then
             echo "::error title=A release andou::${RELEASE_BRANCH} está em ${now:0:7}, mas a validação foi do ${RELEASE_SHA:0:7}; rode de novo."
             exit 1
           fi
           [ "$(git rev-parse "${STAGING_SHA}^{tree}")" = "$(git rev-parse "${RELEASE_SHA}^{tree}")" ] || { echo "::error::árvore da staging difere da release"; exit 1; }
-          git push --force "https://x-access-token:${CUT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${RELEASE_SHA}:refs/heads/homologacao/${version}"
+          git -c http.https://github.com/.extraheader= push --force "https://x-access-token:${CUT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${RELEASE_SHA}:refs/heads/homologacao/${version}"
           echo "homologacao/${version} -> ${RELEASE_SHA}" >> "$GITHUB_STEP_SUMMARY"
 
   smoke:
