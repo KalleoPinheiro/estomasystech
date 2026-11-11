@@ -2,6 +2,12 @@ import { expect, test } from "@playwright/test";
 
 const EMAIL = "paciente@exemplo.com";
 
+// Quem esqueceu a senha ainda não tem sessão. O cookie do admin da suíte
+// não entra neste fluxo.
+test.use({
+  storageState: { cookies: [], origins: [] },
+});
+
 // #777: o envio nativo (o mesmo de antes da hidratação, forçado aqui) leva o
 // e-mail no corpo. A URL e o registro da requisição — o que um proxy grava —
 // ficam sem o endereço.
