@@ -62,7 +62,8 @@ describe('Feature: portão de risco com aprovação do dono na classe 3', () => 
     expect(job).toContain("needs.risco.outputs.humana == 'true'");
   });
 
-  it('Dado o workflow, Quando dispara, Então não usa segredo', () => {
+  it('Dado o workflow, Quando dispara, Então não usa pull_request_target nem segredo', () => {
+    expect(source).not.toMatch(/^\s+pull_request_target:/m);
     expect(source).not.toMatch(/\$\{\{\s*secrets\./);
   });
 
@@ -92,13 +93,14 @@ describe('Feature: portão de risco com aprovação do dono na classe 3', () => 
 
   it('Dado o portão, Quando classifica, Então o checkout e o script são os da base e o head é só SHA', () => {
     const job = bloco('risco');
-    expect(source).toMatch(/^\s+pull_request_target:/m);
+    expect(source).not.toMatch(/pull_request_target/);
     expect(source).not.toMatch(/\$\{\{\s*secrets\./);
     expect(source).toMatch(/^permissions:\n {2}contents: read\n/m);
     expect(job).toContain('github.event.pull_request.base.sha');
     expect(job).toContain('persist-credentials: false');
     expect(job).toContain('--base');
     expect(job).toContain('--head');
+    expect(job).toMatch(/refs\/pull\/\$\{PR_NUMBER\}\/head/);
     expect(job).not.toMatch(
       /ref:\s*\$\{\{\s*github\.event\.pull_request\.head/,
     );

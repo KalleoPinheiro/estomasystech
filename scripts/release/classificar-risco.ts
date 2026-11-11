@@ -15,6 +15,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { detectBase } from '../gate/base';
 import {
   classificarRisco,
@@ -29,8 +30,14 @@ import {
 } from './classificar-risco-lib';
 import { arquivosDeNul } from './diff-nul';
 
+const AMBIENTE_OFFLINE = { ...process.env, npm_config_offline: 'true' };
+
 function git(args: readonly string[]): { ok: boolean; out: string } {
-  const r = spawnSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const r = spawnSync('git', args, {
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+    env: AMBIENTE_OFFLINE,
+  });
   return { ok: r.status === 0, out: r.stdout ?? '' };
 }
 
@@ -76,9 +83,13 @@ function relatorioMigracao(base: string, head: string | undefined): ReturnType<t
   try {
     const arquivo = opcao('--migracao');
     if (arquivo) return lerRelatorioMigracao(JSON.parse(readFileSync(arquivo, 'utf8')));
-    const args = ['tsx', 'scripts/release/check-migracao.ts', '--json', '--base', base];
+    const args = ['scripts/release/check-migracao.ts', '--json', '--base', base];
     if (head) args.push('--head', head);
-    const r = spawnSync('npx', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    const r = spawnSync(path.join('node_modules', '.bin', 'tsx'), args, {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      env: AMBIENTE_OFFLINE,
+    });
     return lerRelatorioMigracao(JSON.parse(r.stdout));
   } catch {
     return null;

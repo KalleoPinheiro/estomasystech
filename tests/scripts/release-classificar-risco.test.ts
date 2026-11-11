@@ -700,3 +700,65 @@ describe('classe de risco · diff com -z a partir da base', () => {
     );
   });
 });
+
+describe('classe de risco · subprocesso offline', () => {
+  const raiz = path.resolve(import.meta.dirname, '../..');
+  const dir = mkdtempSync(path.join(tmpdir(), 'check-risco-offline-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  const git = (...args: string[]): void => {
+    const r = spawnSync(
+      'git',
+      [
+        '-C',
+        dir,
+        '-c',
+        'user.name=t',
+        '-c',
+        'user.email=t@t',
+        '-c',
+        'commit.gpgsign=false',
+        ...args,
+      ],
+      { encoding: 'utf8' },
+    );
+    if (r.status !== 0) throw new Error(r.stderr || r.stdout);
+  };
+
+  it('Dado o lint sem --migracao, Quando o tsx local roda, Então recebe npm_config_offline e a falha vira classe 3', () => {
+    git('init', '-q', '-b', 'main');
+    mkdirSync(path.join(dir, 'node_modules/.bin'), { recursive: true });
+    writeFileSync(path.join(dir, 'package.json'), '{"name":"x"}\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    const baseSha = spawnSync('git', ['-C', dir, 'rev-parse', 'HEAD'], {
+      encoding: 'utf8',
+    }).stdout.trim();
+    mkdirSync(path.join(dir, 'drizzle'), { recursive: true });
+    writeFileSync(path.join(dir, 'drizzle/0001_x.sql'), 'SELECT 1;\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'sql');
+    const marca = path.join(dir, 'offline.env');
+    const falso = path.join(dir, 'node_modules/.bin/tsx');
+    writeFileSync(
+      falso,
+      `#!/bin/sh\nprintf '%s' "$npm_config_offline" > '${marca}'\nexit 1\n`,
+    );
+    spawnSync('chmod', ['+x', falso]);
+
+    const r = spawnSync(
+      path.join(raiz, 'node_modules/.bin/tsx'),
+      [
+        path.join(raiz, 'scripts/release/classificar-risco.ts'),
+        '--base',
+        baseSha,
+        '--json',
+      ],
+      { cwd: dir, encoding: 'utf8' },
+    );
+    expect(r.status, String(r.stderr)).toBe(0);
+    expect(JSON.parse(String(r.stdout)).classe).toBe(3);
+    const gravado = spawnSync('cat', [marca], { encoding: 'utf8' });
+    expect(gravado.stdout).toBe('true');
+  });
+});

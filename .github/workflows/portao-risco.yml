@@ -5,22 +5,18 @@ name: Portão de risco
 #
 # O classificador (`scripts/release/classificar-risco*.ts`) e o `check-migracao*.ts` vêm do checkout de
 # `base.sha`, nunca do head. O head entra só como objeto (`--head`, diff `-z`, `git cat-file`): sem
-# checkout dele, sem `npm ci` dele, sem execução. `pull_request_target` dispara a cópia deste arquivo
-# que está na branch padrão (`main`): a PR não a troca (ADR-100 §12). `pull_request` permanece enquanto
-# essa cópia não está na `main`, senão o portão apaga; nesse evento o YAML ainda é o do merge, e só um
-# ruleset fecha isso. Sem segredo. `permissions: contents: read`. Rascunho reprova (ADR-093).
+# checkout dele, sem `npm ci` dele, sem execução. No `pull_request` o YAML ainda é o do merge: uma PR
+# que edita este arquivo pode desligar isso. Fechar exige ruleset (decisão do Kalléo). Sem segredo.
+# `permissions: contents: read`. Rascunho reprova (ADR-093).
 on:
   pull_request:
-    branches: ["release/**", main]
-    types: [opened, synchronize, reopened, ready_for_review]
-  pull_request_target:
     branches: ["release/**", main]
     types: [opened, synchronize, reopened, ready_for_review]
   # Merge queue (ADR-087): a aprovação vale por execução da PR; na fila o portão apenas passa.
   merge_group:
 
 concurrency:
-  group: portao-risco-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: portao-risco-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -29,7 +25,7 @@ permissions:
 jobs:
   risco:
     name: Classe de risco
-    if: (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && github.event.pull_request.draft != true
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -54,6 +50,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           sha() {
             case "$1" in
@@ -63,8 +60,11 @@ jobs:
           }
           sha "$BASE_SHA" base
           sha "$HEAD_SHA" head
+          case "$PR_NUMBER" in
+            ''|*[!0-9]*) echo "::error::número da PR inválido"; exit 1 ;;
+          esac
           git cat-file -e "$BASE_SHA^{commit}"
-          git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "$HEAD_SHA"
+          git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "refs/pull/${PR_NUMBER}/head"
           git cat-file -e "$HEAD_SHA^{commit}"
 
       - id: r

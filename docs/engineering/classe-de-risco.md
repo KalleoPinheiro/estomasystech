@@ -91,21 +91,24 @@ Quando mais de uma regra casa, vale a primeira da lista (a mais específica): `s
 
 ### De onde o classificador roda
 
-O `check:risco` e o `check:migracao` que o portão executa são os do commit da **base** da PR
-(`pull_request.base.sha`), nunca os do head. O head entra só como objeto git (`--head <sha>`): o diff
-usa `-z` e o conteúdo (`package.json`, lock, SQL, journal) sai de `git cat-file`. Não há checkout do
-head, nem `npm ci` dele, nem execução de script da PR.
+No evento `pull_request`, o `check:risco` e o `check:migracao` que o portão executa são os do commit
+da **base** da PR (`pull_request.base.sha`), nunca os do head. O head entra só como objeto git
+(`--head <sha>`): o diff usa `-z` (`core.quotePath=false`, `--no-ext-diff`, `--no-textconv`) e o
+conteúdo (`package.json`, lock, SQL, journal) sai de `git cat-file` e `git ls-tree -z`. Não há
+checkout do head, nem `npm ci` dele, nem execução de script da PR. O `npm ci --ignore-scripts` é o
+da base. O subprocesso do lint usa `node_modules/.bin/tsx` com `npm_config_offline=true`.
 
-O evento `pull_request_target` dispara a cópia de `.github/workflows/portao-risco.yml` que está na
-**branch padrão** (`main`), não a do head (documentação do GitHub; o mesmo limite do
-[ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) § 12). Uma PR não troca esse arquivo.
-O evento `pull_request` continua no workflow para o portão não apagar enquanto essa cópia não estiver
-na `main`: nele, o YAML ainda é o do merge. Apagar o checkout da base nesse evento só se fecha com
-ruleset (Code Owners não basta: o autor não aprova a própria PR, e um agente usa o login do dono).
-Este registro não altera a `main`.
+O YAML de `.github/workflows/portao-risco.yml` que o GitHub dispara nesse evento é o do **merge**.
+Uma PR que edita esse arquivo pode desligar o checkout da base. Isso só se fecha com ruleset (por
+exemplo, "require workflows to pass" apontando para o arquivo numa ref protegida). Essa decisão é do
+Kalléo e esta PR não a aplica.
+
+A mitigação que já existe: editar o workflow é classe 3 e exige o clique do dono no Environment
+`aprovacao-classe-3`.
 
 Sem segredo. `permissions: contents: read`. `persist-credentials: false`. O SHA do head é conferido
-como 40 hex antes de qualquer `git fetch`.
+como 40 hex. Se o objeto não está no clone, o fetch é `refs/pull/<número>/head` e o `cat-file`
+seguinte falha fechado (também se o repositório for privado e o checkout não tiver credencial).
 
 ## 2. Veredito do the-judge (`npm run check:veredito`)
 
