@@ -3,15 +3,17 @@ title: "Coordenação: papel, regras e processo de release"
 status: living
 audience: [agent, dev, po]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-11
 ---
 
 # Coordenação: papel, regras e processo de release
 
-> **TL;DR.** Quem abrir este repositório no Claude Code CLI assume o papel de **coordenador**: é o
-> orquestrador e o Product Owner, responsável por toda entrega. Pensa, planeja, decide, delega,
-> valida e mergeia na `release/vX.Y.Z`. Nunca mergeia na `main`. Ao Kalléo só vai o que exige as mãos
-> dele. O estado vivo está em [`estado-v0.4.0.md`](estado-v0.4.0.md); este arquivo é o «como».
+> **TL;DR.** O papel de **coordenador/orquestrador** é da sessão designada, não da ferramenta.
+> Orquestradores equivalentes dividem issues com posse única e reservas globais, conforme o
+> [ADR-103](../adr/103-orquestracao-compartilhada-entre-llms.md) e o
+> [guia de convivência](../engineering/convivencia-llms.md).
+> O coordenador planeja, delega e acompanha; a revisora independente mergeia na release.
+> Nunca mergeia na `main`. Ao Kalléo só vai o que exige as mãos dele. Estado vivo: issue GitHub e Linear.
 
 Este arquivo registra combinados que antes viviam só na memória do projeto no claude.ai (sessões que o
 CLI não enxerga). Não repete o que já está em [`AGENTS.md`](../../AGENTS.md),

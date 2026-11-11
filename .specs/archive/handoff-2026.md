@@ -2559,6 +2559,13 @@ O corte real da v0.5.0 falhou em `release:prepare`: todos os changesets pendente
 - **Fora do repositório (só o Kalléo)**: valor de produção do pepper no cofre, variável na Vercel `staging` e no Coolify antes do merge que a exige; aplicar a migração em produção com backup.
 - **Next step**: the-judge em thread nova; depois #734. **Blockers**: nenhum.
 
+## Convivência entre orquestradores de LLM (EST-100, #808, ADR-103) (2026-11-11) — EM REVISÃO
+- **O que mudou**: só documentação. Novo `docs/engineering/convivencia-llms.md` (living) e ADR-103 aceito (`docs/adr/103-orquestracao-compartilhada-entre-llms.md`). `docs/agents/coordenacao.md` deixa de atribuir o coordenador a quem abre o Claude CLI: o papel é da sessão designada. Uma linha no `AGENTS.md` (150 linhas). Índices em `docs/README.md`, porque o teste de estrutura exige que o índice linke todo arquivo de `docs/`.
+- **Decisão do dono**: em 2026-11-10 às 23:21 (America/Sao_Paulo), Kalléo abriu exceção expressa ao ADR-097 (proibição de mudar processo no meio da release), só para a coordenação entre LLMs, já na v0.7.0. Workflow, revisão, main, homologação, corte e deploy ficam de fora.
+- **Testes**: nenhum criado ou alterado. Sem `src/`, `drizzle/` ou `Dockerfile`: sem changeset. `scripts/gate/` não foi tocado.
+- **Checks locais**: `npm run check:docs` OK, 0 avisos. `tests/docs/structure.test.ts` 61/61, com `AGENTS.md` em 150 linhas. O Biome do repositório não inclui Markdown (`biome.json`): nos arquivos tocados processou 0 arquivos. Não há script de handoff neste branch; o ADR-102 segue na #800.
+- **Next step**: the-judge em thread nova. A PR nasce em rascunho (ADR-093); quem marca pronto é o coordenador. **Blockers**: nenhum para o rascunho.
+
 ## Formulário sem `method` vazava dado na URL antes da hidratação (#777) (2026-11-11) — EM REVISÃO
 - **Causa raiz**: `<form onSubmit>` sem `method` faz envio nativo GET antes de o React hidratar; com `name` no campo, o e-mail do «Esqueci a senha» (e os dados dos demais formulários) iam na query string (log de proxy, histórico). O login já estava coberto pela #679.
 - **Correção**: `SafeForm` (`src/components/safe-form.tsx`): `method="post"` fixo e `<fieldset disabled class="contents">` até `useHydrated()`. Os `<form>` crus migraram. `login-card.tsx` mantém o `<form method="post">` próprio (#679). O campo de `/esqueci-senha` tem `name="email"`: o envio nativo leva o endereço no corpo do POST, nunca na URL nem no log de acesso.
