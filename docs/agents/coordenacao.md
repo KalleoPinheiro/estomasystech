@@ -76,8 +76,8 @@ coordenador, depois de confirmar a cota (ADR-093). Em rascunho, "Gate do PR" e `
 propósito: o pipeline pesado só roda no `ready_for_review`. Não marque pronto para fazer o CI passar.
 O PR tem base na release; `## Homologação` (Seed e cenários Dado/Quando/Então, ou
 `n/a — <motivo>`); changeset se tocar `src/`, `drizzle/` ou `Dockerfile` (`--empty` se nada muda para a
-clínica); handoff da issue em `.specs/archive/handoff-2026.md` **no último commit**, depois de
-`git merge origin/release/vX.Y.Z`. Conflito: atualizar a branch com merge da release, nunca rebase de
+clínica); handoff da issue em `.specs/archive/handoff/<issue>-<slug>.md` (arquivo novo, sem conflito;
+ADR-102) no último commit, depois de `git merge origin/release/vX.Y.Z`. Conflito: atualizar a branch com merge da release, nunca rebase de
 branch compartilhada. A instrução do usuário vence qualquer branch `claude/*` sugerida pelo ambiente.
 
 Peculiaridades que já custaram gates:
@@ -85,7 +85,7 @@ Peculiaridades que já custaram gates:
 - O GitHub **não fecha issue** por `Closes` em merge na release: fechar à mão.
 - Conferir conflito **antes** de rodar o gate; o autor mergeia a release na branch antes de avisar «pronto».
 - **Serializar merges** na release; nunca mergear nada depois de iniciado o gate final da release.
-- Arquivos quentes: `.specs/archive/handoff-2026.md`, `scripts/server-first-allowlist.json` (cada PR
+- Arquivos quentes: `scripts/server-first-allowlist.json` (cada PR
   remove só as próprias linhas; a lista só encolhe), `TransactionScope`
   (`src/application/ports/transaction-manager.ts` + gerenciador Drizzle: uma linha por repositório
   novo, avisada na descrição), `src/lib/dto.ts`, `docs/adr/` (número reservado por issue).

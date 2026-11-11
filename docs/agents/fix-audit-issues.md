@@ -58,7 +58,7 @@ especificar → implementar → documentar → PR → merge → fechar issue.
    - **Não** edite `docs/audits/*.md` (frozen) nem a tabela geral de fases em
      `docs/plano-correcao-achados-auditoria-2026-09.md` — precedente das
      Fases A–C é deixar essa tabela como está; o rastro de "feito" vive nas
-     issues fechadas + `.specs/archive/handoff-2026.md`.
+     issues fechadas + `.specs/archive/handoff/`.
 7. **Push + PR**: `git push -u origin <branch>`, `gh pr create --draft` com
    descrição assertiva (o que mudou, por quê, o que ficou fora e por quê,
    plano de teste). PR para `release/**` nasce em rascunho e é marcado pronto
