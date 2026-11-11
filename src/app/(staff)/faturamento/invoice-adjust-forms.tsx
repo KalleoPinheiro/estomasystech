@@ -3,6 +3,7 @@
 import { Button, Checkbox, Input } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { normalizeCpf } from '@/domain/shared/cpf';
 import type { InvoiceDto } from '@/lib/dto';
 import { formatCurrency, PAYMENT_METHOD_LABELS } from '@/lib/format';
@@ -201,7 +202,7 @@ export function DiscountForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <p className="text-ink-2 text-sm">
         {invoice.patientName} — fatura de {formatCurrency(invoice.amountCents)}
@@ -235,6 +236,6 @@ export function DiscountForm({
       <Button type="submit" variant="accent" disabled={saving}>
         {saving ? 'Salvando…' : 'Aplicar desconto'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

@@ -4,6 +4,7 @@ import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import type { PayoutMethod } from '@/domain/billing/commission-payout';
 import { zonedDateKey } from '@/domain/shared/time-zone';
 import { unwrapAction } from '@/lib/action-result';
@@ -57,7 +58,7 @@ export function ClosePayoutForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <p className="text-sm">
         Fechamento de <strong>{monthLabelPtBr(period)}</strong> para{' '}
@@ -102,6 +103,6 @@ export function ClosePayoutForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Registrando…' : 'Confirmar repasse'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

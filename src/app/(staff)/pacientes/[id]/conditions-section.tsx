@@ -24,6 +24,7 @@ import {
 } from '@/components/feedback';
 import { FormSheet } from '@/components/form-sheet';
 import { Modal } from '@/components/modal';
+import { SafeForm } from '@/components/safe-form';
 import { StatusBadge } from '@/components/status-badge';
 import { unwrapAction } from '@/lib/action-result';
 import { apiFetch } from '@/lib/client';
@@ -423,7 +424,7 @@ function ConditionForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Tipo *
@@ -487,7 +488,7 @@ function ConditionForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Salvando…' : 'Criar condição'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
 
@@ -698,7 +699,7 @@ function AssessmentForm({
   };
 
   return (
-    <form
+    <SafeForm
       onSubmit={handleSubmit}
       className="flex min-h-0 flex-1 flex-col gap-3"
     >
@@ -885,7 +886,7 @@ function AssessmentForm({
           {saving ? 'Registrando…' : 'Registrar avaliação'}
         </Button>
       </div>
-    </form>
+    </SafeForm>
   );
 }
 

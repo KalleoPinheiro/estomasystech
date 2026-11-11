@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ConfirmAction } from '@/components/confirm-action';
 import { ErrorAlert } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { SafeForm } from '@/components/safe-form';
 import {
   GUARDIAN_RELATIONSHIP_LABELS,
   GUARDIAN_RELATIONSHIPS,
@@ -96,7 +97,7 @@ function GuardianFormModal({
       title={guardian ? 'Editar responsável' : 'Novo responsável'}
       onClose={onClose}
     >
-      <form onSubmit={submit} className="flex flex-col gap-3">
+      <SafeForm onSubmit={submit} className="flex flex-col gap-3">
         {error && <ErrorAlert message={error} />}
         <label className="font-medium text-sm">
           Nome completo *
@@ -154,7 +155,7 @@ function GuardianFormModal({
         <Button type="submit" disabled={saving} variant="accent">
           {saving ? 'Salvando…' : 'Salvar'}
         </Button>
-      </form>
+      </SafeForm>
     </Modal>
   );
 }

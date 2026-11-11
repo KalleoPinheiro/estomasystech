@@ -4,6 +4,7 @@ import { Button, Input } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { PatientPicker } from '@/components/patient-picker';
+import { SafeForm } from '@/components/safe-form';
 
 export interface InvoiceFormValues {
   patientId: string;
@@ -44,7 +45,7 @@ export function InvoiceForm({ onSubmit }: InvoiceFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <PatientPicker
         label="Paciente *"
@@ -93,6 +94,6 @@ export function InvoiceForm({ onSubmit }: InvoiceFormProps) {
       <Button type="submit" disabled={saving} variant="accent" className="mt-2">
         {saving ? 'Emitindo…' : 'Emitir fatura'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
