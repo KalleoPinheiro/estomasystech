@@ -190,4 +190,4 @@ workflow/ADR paralisa a ação de risco e vira decisão registrada, nunca remoç
 - `npm run estado` gera `reports/estado-release.md` (não versionado): leia ao iniciar a sessão, antes de pedir reserva.
 - Vagas: label `em-andamento`, teto 3 somadas. Cadência: lote de valor homologado, no máximo quinzenal.
 
-Revezamento quando os créditos de um agente acabam (passagem de bastão, sem paralelismo): [ADR-105 § 9](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md), proposto, aguardando o aceite do Kalléo.
+Revezamento quando os créditos de um agente acabam (passagem de bastão, sem paralelismo): [ADR-105 § 9](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md), aceito em 2026-11-14.

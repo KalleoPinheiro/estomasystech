@@ -1,6 +1,6 @@
 ---
 title: "ADR 105 — Classe 3 dividida em 3A automática e 3B humana"
-status: draft
+status: frozen
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-14
@@ -15,15 +15,19 @@ related:
 # ADR 105 — Classe 3 dividida em 3A automática e 3B humana
 
 - **Data:** 2026-11-14
-- **Status:** **proposto, aguarda o aceite do @KalleoPinheiro.** Nasce de um pedido dele (2026-11-14, "como manter
-  qualidade e segurança e velocidade sem depender de mim"), mas muda a regra de aprovação humana e **só vira aceito
-  (e `frozen`) com a mensagem dele citada aqui**. **Supera parcialmente o [ADR-097](097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)
+- **Status:** **aceito em 2026-11-14 (07:06 UTC)** pelo @KalleoPinheiro, que escolheu "Aceitar o ADR-105" no cartão de
+  decisão do chat do projeto (toque dele no app, registrado pela plataforma e relatado pelo coordenador). A pergunta
+  deixava explícito que o aceite **inclui o § 9.2** (o agente que entra troca as labels `dono:*`, o que emenda o
+  ADR-103) **e a pré-condição da staging**. Nasce de um pedido dele (2026-11-14, "como manter qualidade e segurança e
+  velocidade sem depender de mim"). **Staging, confirmada por ele às 07:04 UTC:** "Staging não usa dados de prod, são
+  dados isolados e variáveis diferentes". A #819 ainda verifica a pré-condição por script antes de ligar a 3B-lote.
+  **Supera parcialmente o [ADR-097](097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)
   na parte da classe 3 (fase 2c)**; o resto do ADR-097 segue. O ADR-097 proíbe mudar processo no meio da release e a
   exceção do [ADR-103](103-orquestracao-compartilhada-entre-llms.md) é só para a coordenação entre LLMs, **não se
   aplica aqui**: por isso só o **desenho** entra na v0.7.0 e a implementação é a issue
   [#819](https://github.com/KalleoPinheiro/estomasystech/issues/819), na v0.8.0, depois dos PRs #811 (#769) e #816
   (ADR-104). Até lá, e mesmo depois, a classe 3 segue como em [`classe-de-risco.md`](../engineering/classe-de-risco.md)
-  (todo caminho sensível pede o clique) enquanto a chave da seção 8 não for ligada pelo Kalléo.
+  (todo caminho sensível pede o clique) até a #819 entrar e o Kalléo ligar a chave da seção 8. Aceitar não liga nada.
 - **Domínios afetados:** engenharia (portões do PR). Sem `src/`, `drizzle/`, `Dockerfile`, limiar ou teste.
 - **Issue:** [#818](https://github.com/KalleoPinheiro/estomasystech/issues/818).
 
@@ -169,7 +173,7 @@ job de risco pulado e agregador reprova (item 2.2).
 - O `main` segue recebendo merge só do Kalléo; deploy e backup seguem dele. Esta decisão não delega nada disso.
 
 Custo aceito: código de auth e de cifra entra na release, e portanto na staging, sem clique por PR e é visto no corte.
-**Pré-condição a provar, não afirmação:** a staging não tem segredo de produção (`AUTH_SECRET`,
+**Pré-condição (confirmada pelo Kalléo em 2026-11-14, ver Status; a #819 a verifica por script):** a staging não tem segredo de produção (`AUTH_SECRET`,
 `DATA_ENCRYPTION_KEY`, tokens reais de Resend, WhatsApp e S3), não tem integração que envie a pessoas reais e usa banco
 separado (Neon `staging`). Se isso for verdade, o dano máximo de uma 3B-lote ruim é na staging fictícia e a produção só
 muda depois do clique em `release → main` e do deploy manual. **A #819 inclui uma verificação desta pré-condição
@@ -273,12 +277,11 @@ já pedem.
    o mesmo com `dono:cursor` e `--label em-andamento`, mais `gh pr list --state open --json number,title,headRefName,isDraft`;
    no painel, os filtros `is:issue is:open label:dono:cursor` e `is:pr is:open`. Ler `convivencia-llms.md`.
 2. Separar **o que é do agente que saiu e está parado**: issue com o dono anterior, `em-andamento` e PR sem atividade.
-   O ADR-103 já diz que recuperar sem o cedente **depende do Kalléo; não há takeover automático por timeout**. **Proposta
-   deste ADR, que muda o ADR-103 e depende do aceite do Kalléo:** o agente que entra **faz ele mesmo a troca** da label
+   O ADR-103 já diz que recuperar sem o cedente **depende do Kalléo; não há takeover automático por timeout**. **Decisão
+   deste ADR (aceita em 2026-11-14), que emenda o ADR-103:** o agente que entra **faz ele mesmo a troca** da label
    `dono:*` (a que saiu para a sua) e **registra um comentário em cada issue** ("assumo no lugar de `<agente>`, que
    ficou sem créditos; estado lido de `<handoff>`/`<PR>`"), sem esperar o Kalléo, porque os dois nunca estão ativos
-   juntos e quem saiu não pode ceder. O Kalléo audita pelo comentário. As vagas órfãs voltam à contagem. Até o aceite,
-   vale o ADR-103: o Kalléo faz a troca, e o agente que entra prepara a lista e os links para ele responder "ok".
+   juntos e quem saiu não pode ceder. O Kalléo audita pelo comentário. As vagas órfãs voltam à contagem.
 3. **Nunca dar push na branch do outro agente** (`claude/*` ou `cursor/*`). Trabalho em voo continua em branch nova do
    agente que entra, criada a partir do head da anterior (preserva os commits), com PR novo que cita `Closes #N`; o PR
    antigo recebe um comentário que aponta o novo. O fechamento do antigo segue o `convivencia-llms.md`; se não cobrir,

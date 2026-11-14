@@ -184,7 +184,7 @@ produção, auth, cifra e PII, migração não aditiva, o próprio classificador
 controles de máquina (gate rodando da base, não regressão de limiar, canário em job isolado, `compat-migracao`,
 análise estrutural do YAML por lista branca) mais duas reviews do the-judge em sessões limpas, que são processo fraco e
 declarado, e por auditoria por release. Na primeira fase a 3A é estreita (`biome.json` e acréscimos puros a workflow);
-scripts de gate e `package.json > scripts` seguem 3B. O ADR está **proposto**, aguardando o aceite do Kalléo. A 3B de produto passa a ter um clique por
+scripts de gate e `package.json > scripts` seguem 3B. O ADR foi **aceito** em 2026-11-14; a implementação é a #819. A 3B de produto passa a ter um clique por
 release, no PR `release → main`; a 3B que mexe no portão mantém o clique por PR.
 
 **Nada disso vale hoje.** Esta página, as seções 1 a 4 e o `check:risco` seguem como estão até a issue
