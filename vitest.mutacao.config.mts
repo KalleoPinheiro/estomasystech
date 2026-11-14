@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import type { TestUserConfig } from "vitest/node";
 
 // Config do Stryker (npm run test:mutacao): mesma configuração da suíte, mas só
@@ -22,7 +22,11 @@ export default defineConfig({
       // Envelope e tradução de erro das ações e rotas (mutantes da revisão do #619).
       "tests/lib/action-result.test.ts",
       "tests/lib/api-response.test.ts",
+      // #761: libs puras de scripts/release (check-migracao-lib e demais *-lib.ts).
+      "tests/scripts/release-*.test.ts",
     ],
+    // process.chdir() não existe em worker do Vitest; esse teste de preflight roda só na suíte normal.
+    exclude: [...configDefaults.exclude, "tests/scripts/release-preflight-versao.test.ts"],
     coverage: { enabled: false },
   },
 });

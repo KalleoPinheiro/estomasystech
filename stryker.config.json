@@ -8,6 +8,7 @@
     "src/lib/server/**/*.ts",
     "src/lib/action-result.ts",
     "src/lib/api-response.ts",
+    "scripts/release/*-lib.ts",
     "!src/**/*.d.ts",
     "!src/**/index.ts"
   ],
