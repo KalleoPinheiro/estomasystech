@@ -18,10 +18,17 @@ export interface Finding {
   rule: string;
   severity: Severity;
   line: string;
+  /** `gate`: mudança não proibida em config de lint/gate; pede `GATE-ALTERADO:` (não `TESTE-ALTERADO:`). */
+  kind?: 'gate';
 }
 
 const TEST_FILE = /^(tests|e2e)\/.+\.(ts|tsx)$/;
-const CONFIG_FILE = /^(vitest\.config\.mts|playwright\.config\.ts|playwright\.prod\.config\.ts)$/;
+const CONFIG_FILE = /^(vitest(\.[a-z]+)?\.config\.mts|playwright(\.[a-z]+)?\.config\.ts)$/;
+/**
+ * Configurações que afrouxam o gate mas que o agente também edita no dia a dia (lint, mutação, CI):
+ * `gate-config.ts` compara base e HEAD (CI e `pre-push`); o hook não as bloqueia.
+ */
+const GATE_SETTING_FILE = /^(stryker\.config\.json|biome\.json|\.github\/workflows\/(ci|gate-pr)\.yml)$/;
 /** Arquivos que definem o próprio gate: só o dono muda (hook bloqueia o agente). */
 const GATE_FILE = /^(\.claude\/(settings\.json|hooks\/.+)|\.husky\/.+|scripts\/gate\/.+)$/;
 
@@ -40,6 +47,10 @@ export function isTestFile(path: string): boolean {
 
 export function isConfigFile(path: string): boolean {
   return CONFIG_FILE.test(path);
+}
+
+export function isSettingFile(path: string): boolean {
+  return GATE_SETTING_FILE.test(path);
 }
 
 export function isGateFile(path: string): boolean {
@@ -115,6 +126,7 @@ function configFindings(h: Hunk): Finding[] {
     push('config-de-teste-alterada', 'justifiable', h.added[0] ?? h.removed[0] ?? '');
   return out;
 }
+
 
 /** Analisa um diff unificado (`git diff <base>...HEAD`) e devolve os achados. */
 export function analyzeDiff(diff: string): Finding[] {
@@ -197,10 +209,16 @@ export function analyzeEdit(edit: EditIntent): Finding[] {
 }
 
 const REASON = /^TESTE-ALTERADO:[ \t]*(.{20,})$/m;
+const GATE_REASON = /^GATE-ALTERADO:[ \t]*(.{20,})$/m;
 
 /** Motivo de negócio declarado no corpo do PR, ou `null` se ausente/curto. */
 export function findReason(prBody: string): string | null {
   return REASON.exec(prBody)?.[1]?.trim() ?? null;
+}
+
+/** Motivo de `GATE-ALTERADO:` (config de lint/gate), ou `null` se ausente/curto. */
+export function findGateReason(prBody: string): string | null {
+  return GATE_REASON.exec(prBody)?.[1]?.trim() ?? null;
 }
 
 export interface Verdict {
@@ -208,13 +226,18 @@ export interface Verdict {
   messages: string[];
 }
 
-export function judge(findings: Finding[], reason: string | null): Verdict {
+export function judge(findings: Finding[], reason: string | null, gateReason: string | null = null): Verdict {
   const messages: string[] = [];
   const hard = findings.filter((f) => f.severity === 'hard');
-  const soft = findings.filter((f) => f.severity === 'justifiable');
+  const soft = findings.filter((f) => f.severity === 'justifiable' && f.kind !== 'gate');
+  const gate = findings.filter((f) => f.severity === 'justifiable' && f.kind === 'gate');
   for (const f of hard) messages.push(`PROIBIDO ${f.rule}: ${f.file}: ${f.line}`);
   for (const f of soft) messages.push(`${reason ? 'JUSTIFICADO' : 'SEM MOTIVO'} ${f.rule}: ${f.file}: ${f.line}`);
+  for (const f of gate) messages.push(`${gateReason ? 'JUSTIFICADO' : 'SEM MOTIVO'} ${f.rule}: ${f.file}: ${f.line}`);
   if (soft.length > 0 && !reason)
     messages.push('Declare `TESTE-ALTERADO: <motivo de negócio, 20+ caracteres>` no corpo do PR.');
-  return { ok: hard.length === 0 && (soft.length === 0 || reason !== null), messages };
+  if (gate.length > 0 && !gateReason)
+    messages.push('Declare `GATE-ALTERADO: <motivo, 20+ caracteres>` no corpo do PR (config de lint ou do gate).');
+  const ok = hard.length === 0 && (soft.length === 0 || reason !== null) && (gate.length === 0 || gateReason !== null);
+  return { ok, messages };
 }
