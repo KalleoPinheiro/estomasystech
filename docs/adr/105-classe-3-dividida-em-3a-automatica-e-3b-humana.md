@@ -237,10 +237,11 @@ passo 3 (ligar) só depois que a #819 mergear.
    login dele, então a opção pode impedir o próprio Kalléo de aprovar. Para testar, abra um PR descartável **pronto para
    revisão** (rascunho reprova o portão antes de pedir aprovação, então não testa nada) que toque uma linha de
    `.github/CODEOWNERS` (3B-trava), com a opção ligada, e veja se o botão de aprovar aparece; **feche o PR sem merge**
-   depois. Na dúvida, mantenha como está hoje. Depois que o `portao-risco.yml` virar
-   `pull_request_target`, em *Deployment branches and tags* escolher *Selected branches and tags* e acrescentar
-   `release/**` e `main` (com `pull_request` a referência era `refs/pull/N/merge` e isso não era possível; confira no
-   painel se a opção aparece assim).
+   depois. Na dúvida, mantenha como está hoje. **Não restrinja *Deployment branches and tags***: deixe *No
+   restriction*. O `portao-risco.yml` roda em `pull_request`, e nele a referência do run é `refs/pull/N/merge`, que
+   não casa com `release/**` nem com `main`; com a restrição o job é recusado em segundos, sem botão de aprovar (visto
+   no #817, 2026-11-14). Esta instrução antes mandava restringir a `release/**` e `main`; foi corrigida em #825.
+   A proteção contra PR de outra branch vem do ruleset (item 4) e do `portao-risco`, não da restrição do Environment.
 3. **Ligar.** Quando a #819 estiver mergeada e o relatório de canário estiver verde na release, mudar
    `CLASSE_3A_AUTOMATICA` para `true`. Para desligar, de volta a `false`: a próxima execução já trata tudo como hoje.
 4. **Ruleset.** *Settings* → *Rules* → *Rulesets*: conferir que `release/**` e `main` exigem os checks `portao-risco`,
