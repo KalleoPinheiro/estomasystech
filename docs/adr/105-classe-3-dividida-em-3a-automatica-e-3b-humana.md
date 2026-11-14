@@ -203,7 +203,7 @@ para o lote no `main`). Nenhum segredo, flag de clínica real, jurídico (#376) 
 2. **Sessão declarada.** `sessao` e `papel` são texto na review, com o mesmo login do Kalléo. Uma sessão mal
    comportada poderia publicar as duas. Aceito porque a defesa real está nos controles mecânicos e na auditoria; um
    login próprio de review não acrescentaria independência de modelo, só identidade, e fica como evolução.
-3. **Step acrescentado roda código do PR** no CI comum (item 2.7, limite conhecido). Sem segredo e sem permissão de
+3. **Job novo roda código do PR** no CI comum (item 2.7, limite conhecido). Sem segredo e sem permissão de
    escrita, mas é código não revisado por clique. A lista branca por análise estrutural reduz a superfície; não a
    elimina.
 4. **Auth e cifra entram na release sem clique por PR** (seção 4); o freio é o clique do lote, a staging e o deploy
