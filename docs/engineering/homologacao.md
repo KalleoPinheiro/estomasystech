@@ -3,7 +3,7 @@ title: "Homologação — Vercel, Neon, MSW, faker e fluxo de git"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-14
 related: [docs/engineering/homologacao-cenarios.md, docs/adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md, docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md, docs/engineering/producao.md, docs/engineering/onboarding.md]
 ---
 
@@ -49,6 +49,11 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase). Com o selo no head e a mesma árvore, o `ci` e o Docker do PR (e do push na `main` depois do merge) passam sem repetir a prova pesada; sem selo ou com árvore diferente, rodam inteiros |
 | Depois do merge | `npm run release:publish -- --rollback=...` (tag no commit de merge, Release publicada); deploy da tag em `producao.md` § 3.1. A `staging` volta a ser = `main`. Automação desse trecho aceita, a partir da v0.8.0: [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md) |
 | Hotfix | `hotfix/*` nasce da `main`, PR direto na `main` (o Gate do PR roda o E2E), `release:prepare`/`release:publish --hotfix`; o `release:sync` leva a correção para a release aberta |
+
+> **Classe 3 (decidido no [ADR-105](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md), ainda não implementado, #819):**
+> o PR `release → main` passa a trazer o resumo do que é 3B no lote e o resumo das mudanças 3A que passaram sem clique;
+> o clique do Environment `aprovacao-classe-3` vale uma vez por release para a 3B de produto. Até a #819 entrar, vale
+> o fluxo desta seção sem mudança.
 
 Numeração de migração colidente entre features da release: quem mergeia primeiro mantém o número; a
 outra renumera antes do merge. Reconstruir a `staging` expõe a colisão cedo.
