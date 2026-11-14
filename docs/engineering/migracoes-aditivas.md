@@ -3,7 +3,7 @@ title: "Migrações aditivas: o lint check:migracao"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-08
+last_reviewed: 2026-11-14
 ---
 
 # Migrações aditivas (`npm run check:migracao`)
@@ -81,8 +81,30 @@ Regras (`regra`): `create-table`, `create-objeto-novo`, `add-column`, `add-colum
 Mapeamento sugerido ao classificador de risco (ADR-095, proposta § 5): `nenhuma` → classe 1, `aditiva` → classe 2,
 `nao_aditiva` ou `ok: false` → classe 3. Contrato versionado: mudar campo exige novo `schema`.
 
-## Fora do escopo desta entrega
+## Teste de compatibilidade em Postgres 18 (job `compat-migracao`, issue #760)
 
-O **teste de compatibilidade em Postgres 18** (aplicar a migração nova e rodar a suíte de integração do commit
-anterior contra o esquema novo) depende de job de CI próprio e fica na issue de acompanhamento. O lint cobre a
-parte estática; aquele teste prova o que o lint só presume.
+O lint só presume; este job prova. No `gate-pr.yml`, quando o diff do PR toca `drizzle/*.sql`, o job
+`compat-migracao` sobe um Postgres 18 descartável e roda a **suíte de integração do código da base** (a release,
+ou a `main` no PR `release → main`; na fila, o `base_sha`) sobre o **esquema do HEAD** (o `drizzle/` do PR). É o
+cenário do deploy e do rollback: código antigo sobre esquema novo.
+
+| Cenário | Resultado |
+| --- | --- |
+| Migração só com `ADD COLUMN` nula | verde: a suíte antiga passa |
+| Migração que remove coluna usada pelo código antigo | vermelho: a suíte antiga falha (`column ... does not exist`) |
+| Diff sem `drizzle/*.sql` | o job é pulado; o agregador `Gate do PR` exige `skipped` |
+
+Como funciona: `scripts/release/compat-migracao.sh precisa <base>` decide se roda; `... rodar <base>` cria um
+worktree da base, troca o `drizzle/` pelo do HEAD, instala as dependências da base e roda
+`vitest.integracao.config.mts` (o global setup migra o banco-modelo com o `drizzle/` trocado). O agregador
+`Gate do PR` reprova se o job devia rodar e não passou.
+
+Rodar à mão (exige Postgres descartável; recusa produção como o resto da suíte de integração):
+
+```bash
+INTEGRATION_DATABASE_URL=postgres://postgres:senha@127.0.0.1:5432/banco_descartavel \
+  bash scripts/release/compat-migracao.sh rodar origin/release/vX.Y.Z
+```
+
+Reprovou? A migração não é compatível com o código anterior: separe em expandir (esta release) e contrair
+(a próxima), conforme a regra deste guia. Só o Kalléo decide exceção, por ser classe 3.
