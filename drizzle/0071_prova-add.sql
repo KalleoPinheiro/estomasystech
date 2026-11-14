@@ -1,1 +1,1 @@
-ALTER TABLE "patients" DROP COLUMN "notes";
+ALTER TABLE "patients" ADD COLUMN "zz_extra" text;
