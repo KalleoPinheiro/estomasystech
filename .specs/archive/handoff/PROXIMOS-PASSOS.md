@@ -53,8 +53,8 @@ Mergeados na release e aguardando ativação (label `aguarda-operador`, ADR-108 
 
 ## 5. Triagem de 2026-11-14 (ADR-108)
 
-Prioridade pelo critério do ADR-108 § 6. Toda issue aberta e ainda não entregue tem EST, versão e prioridade . Estado estável de entregue
-na release: issue **aberta** + EST "Na release" (fecham no `release:publish`).
+Prioridade pelo critério do ADR-108 § 6. Toda issue aberta e ainda não entregue tem EST, versão e prioridade. Estado estável de entregue
+na release: issue **aberta** + EST "Na release" (fecham no fechamento do lote, `producao.md` § 3.1 passo 8; automação na #841).
 
 - **P1 (LGPD, v0.8.0):** #730, #735 a #741 (#735 é a única `pronta`; #736 a #741 ficam bloqueadas por ela na EST).
 - **P1 (humano):** #376 (jurídico).
