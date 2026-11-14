@@ -189,6 +189,7 @@ workflow/ADR paralisa a ação de risco e vira decisão registrada, nunca remoç
 - Em `feat/*` o agente é identificado pelo trailer dos commits; em `<agente>/*` (`claude/*`, `codex/*`), também pela branch. Ninguém empurra na branch do outro.
 - Os agentes vêm do registro [`scripts/release/agentes.json`](../../scripts/release/agentes.json) (ADR-106): acrescentar um é uma linha mais um teste. Nenhum script nomeia fornecedor. O `AGENTS.md` é a fonte única; `.cursor/rules`, `.github/copilot-instructions.md` e similares só apontam para ele.
 - `npm run estado` gera `reports/estado-release.md` (não versionado): leia ao iniciar a sessão, antes de pedir reserva.
+- A ordem do que vem a seguir mora em [`.specs/archive/handoff/PROXIMOS-PASSOS.md`](../../.specs/archive/handoff/PROXIMOS-PASSOS.md) ([ADR-107](../adr/107-fila-de-proximos-passos-no-handoff.md)): leia junto do estado; todo PR que entrega issue e toda troca de agente a atualizam no mesmo PR. Comentário de issue/PR não substitui.
 - Vagas: label `em-andamento`, teto 3 somadas. Cadência: lote de valor homologado, no máximo quinzenal.
 
 Revezamento quando os créditos de um agente acabam (passagem de bastão, sem paralelismo): [ADR-105 § 9](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md), aceito em 2026-11-14.
