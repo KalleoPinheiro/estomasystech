@@ -114,6 +114,36 @@ function biomeFindings(base: unknown, head: unknown, push: Push): void {
     if (n > (b.off.get(path) ?? 0)) push('regra-de-lint-nao-estrita', 'justifiable', path, true);
 }
 
+/** Tira comentários (`//` e `/* *\/` em TS, `#` em YAML) fora de string: valor comentado não conta. */
+export function stripComments(text: string, style: 'ts' | 'yaml'): string {
+  let out = '';
+  let quote = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i] ?? '';
+    const next = text[i + 1];
+    if (quote) {
+      out += c;
+      if (c === '\\' && style === 'ts') out += text[++i] ?? '';
+      else if (c === quote) quote = '';
+    } else if (c === '"' || c === "'" || (c === '`' && style === 'ts')) {
+      quote = c;
+      out += c;
+    } else if ((style === 'ts' && c === '/' && next === '/') || (style === 'yaml' && c === '#')) {
+      while (i < text.length && text[i] !== '\n') i++;
+      out += '\n';
+    } else if (style === 'ts' && c === '/' && next === '*') {
+      const end = text.indexOf('*/', i + 2);
+      if (end < 0) throw new Error('comentário sem fim');
+      i = end + 1;
+      out += ' ';
+    } else {
+      out += c;
+    }
+  }
+  if (quote && style === 'ts') throw new Error('string sem fim');
+  return out;
+}
+
 const THRESHOLDS = /\b(lines|functions|branches|statements)\s*:\s*([^,}\n]+)/g;
 const LIMITS = /\b(retries|timeout|testTimeout|hookTimeout)\s*:\s*([^,}\n]+)/g;
 
@@ -175,8 +205,8 @@ function compare(pair: ConfigPair, base: string, head: string, push: Push): void
     const parsedBase = parseJsonc(base);
     if (file === 'biome.json') biomeFindings(parsedBase, parsedHead, push);
     else strykerFindings(parsedBase, parsedHead, push);
-  } else if (WORKFLOW.test(file)) workflowFindings(base, head, push);
-  else tsFindings(base, head, push);
+  } else if (WORKFLOW.test(file)) workflowFindings(stripComments(base, 'yaml'), stripComments(head, 'yaml'), push);
+  else tsFindings(stripComments(base, 'ts'), stripComments(head, 'ts'), push);
 }
 
 /** Julga cada config da base contra o HEAD. Só arquivo que mudou entra na análise. */

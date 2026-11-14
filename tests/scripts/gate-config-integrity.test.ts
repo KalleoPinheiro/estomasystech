@@ -281,6 +281,63 @@ describe('Regra 8: configurações do gate comparadas base × HEAD (#732)', () =
     });
   });
 
+  describe('dado valor antigo deixado em comentário', () => {
+    it('quando o shard é trocado por um comentário com o valor antigo, é proibido', () => {
+      const ci = '        shard: [1, 2, 3, 4]\n';
+      expect(
+        rules(
+          '.github/workflows/ci.yml',
+          ci,
+          '        # shard: [1, 2, 3, 4]\n        shard: [1]\n',
+        ),
+      ).toEqual(['hard:shard-removido']);
+    });
+    it('quando o limiar é comentado (// e /* */), é proibido', () => {
+      const base = 'thresholds: { lines: 90,\n branches: 90 }';
+      expect(
+        rules(
+          'vitest.config.mts',
+          base,
+          'thresholds: {\n // lines: 90,\n branches: 90 }',
+        ),
+      ).toEqual(['hard:limiar-de-cobertura-removido']);
+      expect(
+        rules(
+          'vitest.config.mts',
+          base,
+          'thresholds: { /* lines: 90, */ branches: 90 }',
+        ),
+      ).toEqual(['hard:limiar-de-cobertura-removido']);
+    });
+    it('quando a limpeza de comentário não é confiável (bloco ou string sem fim), falha fechado', () => {
+      const base = 'thresholds: { lines: 90 }';
+      expect(
+        rules(
+          'vitest.config.mts',
+          base,
+          'thresholds: { lines: 90 } /* sem fim',
+        ),
+      ).toEqual(['hard:config-do-gate-ilegivel']);
+      expect(
+        rules(
+          'vitest.config.mts',
+          base,
+          "thresholds: { lines: 90 }; const x = 'aberta",
+        ),
+      ).toEqual(['hard:config-do-gate-ilegivel']);
+    });
+    it('quando o texto parecido com comentário está dentro de string, mantém o valor', () => {
+      const base = "const u = 'http://x'; thresholds: { lines: 90 }";
+      expect(
+        rules(
+          'vitest.config.mts',
+          base,
+          "const u = 'http://y'; thresholds: { lines: 90 }",
+        ),
+      ).toEqual([]);
+    });
+  });
+
   describe('dado o corpo do PR', () => {
     it('lê o motivo GATE-ALTERADO com 20+ caracteres, separado do TESTE-ALTERADO', () => {
       const body =
