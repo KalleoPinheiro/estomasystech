@@ -32,7 +32,8 @@ e o PR que o carrega pode ser mergeado e esquecido.
 2. **Todo PR que entrega uma issue** atualiza a fila no mesmo PR: remove o entregue, reordena o que mudou e acrescenta
    o que surgiu. PR só de documentação que não muda a ordem não precisa tocá-la.
 3. **Toda troca de agente** (ADR-105 § 9) atualiza a fila no mesmo PR ou, sem PR, num PR só de docs antes de soltar a
-   reserva. Quem entra lê a fila e `reports/estado-release.md` antes de pedir reserva.
+   reserva. Se os créditos acabam sem permitir PR, o agente que sai registra o delta da fila na issue (ADR-105 § 9)
+   e quem entra o leva para a fila no primeiro PR. Quem entra lê a fila e `reports/estado-release.md` antes de pedir reserva.
 4. A fila é escrita em linguagem neutra: sem nome de fornecedor (ADR-106). Comentário em issue ou PR **não** substitui
    a fila.
 5. Em divergência, valem o remoto e as issues; quem notar corrige a fila no mesmo PR.
