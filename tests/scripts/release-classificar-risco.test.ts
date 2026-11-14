@@ -560,3 +560,205 @@ describe('classe de risco · linha de comando', () => {
     expect(r.stderr).toContain('git diff contra nao-existe falhou');
   });
 });
+
+describe('classe de risco · configs do Playwright além da padrão', () => {
+  it.each([
+    'playwright.config.ts',
+    'playwright.prod.config.ts',
+    'playwright.console.config.ts',
+  ])(
+    'Dado %s, Quando classifica, Então classe 3 pela regra portao',
+    (arquivo) => {
+      const r = risco([arquivo]);
+      expect(r).toMatchObject({ classe: 3, aprovacaoHumana: true });
+      expect(r.motivos).toEqual([
+        expect.objectContaining({ regra: 'portao', arquivo }),
+      ]);
+    },
+  );
+});
+
+describe('classe de risco · diff com -z a partir da base', () => {
+  const raiz = path.resolve(import.meta.dirname, '../..');
+
+  function repo(prefixo: string): {
+    git: (...args: string[]) => string;
+    escrever: (arquivo: string, texto: string) => void;
+    cli: (...args: string[]) => ReturnType<typeof spawnSync>;
+  } {
+    const dir = mkdtempSync(path.join(tmpdir(), prefixo));
+    afterAll(() => rmSync(dir, { recursive: true, force: true }));
+    const git = (...args: string[]): string => {
+      const r = spawnSync(
+        'git',
+        [
+          '-C',
+          dir,
+          '-c',
+          'user.name=t',
+          '-c',
+          'user.email=t@t',
+          '-c',
+          'commit.gpgsign=false',
+          ...args,
+        ],
+        { encoding: 'utf8' },
+      );
+      if (r.status !== 0) throw new Error(r.stderr || r.stdout);
+      return r.stdout.trim();
+    };
+    const escrever = (arquivo: string, texto: string): void => {
+      mkdirSync(path.dirname(path.join(dir, arquivo)), { recursive: true });
+      writeFileSync(path.join(dir, arquivo), texto);
+    };
+    const cli = (...args: string[]) =>
+      spawnSync(
+        path.join(raiz, 'node_modules/.bin/tsx'),
+        [path.join(raiz, 'scripts/release/classificar-risco.ts'), ...args],
+        { cwd: dir, encoding: 'utf8' },
+      );
+    return { git, escrever, cli };
+  }
+
+  const auth = repo('check-risco-nul-auth-');
+  const migracao = repo('check-risco-nul-mig-');
+
+  it('Dado acento, espaço, aspas ou quebra de linha só no head, Quando classifica no checkout da base, Então a classe 3 usa o caminho cru', () => {
+    const { git, escrever, cli } = auth;
+    git('init', '-q', '-b', 'main');
+    escrever('package.json', '{"name":"x","version":"1.0.0"}\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    const baseSha = git('rev-parse', 'HEAD');
+    const caminhos = [
+      'src/lib/auth/ação.ts',
+      'src/lib/auth/a b.ts',
+      'src/lib/auth/a"b.ts',
+      'src/lib/auth/a\nb.ts',
+    ];
+    for (const caminho of caminhos) escrever(caminho, 'export {};\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'head');
+    const headSha = git('rev-parse', 'HEAD');
+    git('checkout', '-q', baseSha);
+
+    const r = cli('--base', baseSha, '--head', headSha, '--json');
+    expect(r.status, String(r.stderr)).toBe(0);
+    const corpo = JSON.parse(String(r.stdout)) as {
+      classe: number;
+      motivos: { arquivo?: string; regra: string }[];
+    };
+    expect(corpo.classe).toBe(3);
+    for (const caminho of caminhos) {
+      expect(corpo.motivos, caminho).toContainEqual(
+        expect.objectContaining({ regra: 'auth', arquivo: caminho }),
+      );
+    }
+  });
+
+  it('Dado migração não ASCII só no head, Quando classifica no checkout da base, Então o caminho casa sem aspas', () => {
+    const { git, escrever, cli } = migracao;
+    git('init', '-q', '-b', 'main');
+    escrever('package.json', '{"name":"x","version":"1.0.0"}\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    const baseSha = git('rev-parse', 'HEAD');
+    const arquivo = 'drizzle/0001_ação.sql';
+    escrever(arquivo, 'ALTER TABLE a ADD COLUMN x text;\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'head');
+    const headSha = git('rev-parse', 'HEAD');
+    git('checkout', '-q', baseSha);
+    escrever(
+      'relatorio.json',
+      JSON.stringify({
+        schema: 'check-migracao/v1',
+        ok: true,
+        classificacao: 'aditiva',
+        migracoes: [],
+        erros: [],
+      }),
+    );
+
+    const r = cli(
+      '--base',
+      baseSha,
+      '--head',
+      headSha,
+      '--json',
+      '--migracao',
+      'relatorio.json',
+    );
+    expect(r.status, String(r.stderr)).toBe(0);
+    const corpo = JSON.parse(String(r.stdout)) as {
+      classe: number;
+      motivos: { arquivo?: string; regra: string }[];
+    };
+    expect(corpo.classe).toBe(2);
+    expect(corpo.motivos).toContainEqual(
+      expect.objectContaining({ regra: 'migracao-aditiva', arquivo }),
+    );
+  });
+});
+
+describe('classe de risco · subprocesso offline', () => {
+  const raiz = path.resolve(import.meta.dirname, '../..');
+  const dir = mkdtempSync(path.join(tmpdir(), 'check-risco-offline-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  const git = (...args: string[]): void => {
+    const r = spawnSync(
+      'git',
+      [
+        '-C',
+        dir,
+        '-c',
+        'user.name=t',
+        '-c',
+        'user.email=t@t',
+        '-c',
+        'commit.gpgsign=false',
+        ...args,
+      ],
+      { encoding: 'utf8' },
+    );
+    if (r.status !== 0) throw new Error(r.stderr || r.stdout);
+  };
+
+  it('Dado o lint sem --migracao, Quando o tsx local roda, Então recebe npm_config_offline e a falha vira classe 3', () => {
+    git('init', '-q', '-b', 'main');
+    mkdirSync(path.join(dir, 'node_modules/.bin'), { recursive: true });
+    writeFileSync(path.join(dir, 'package.json'), '{"name":"x"}\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    const baseSha = spawnSync('git', ['-C', dir, 'rev-parse', 'HEAD'], {
+      encoding: 'utf8',
+    }).stdout.trim();
+    mkdirSync(path.join(dir, 'drizzle'), { recursive: true });
+    writeFileSync(path.join(dir, 'drizzle/0001_x.sql'), 'SELECT 1;\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'sql');
+    const marca = path.join(dir, 'offline.env');
+    const falso = path.join(dir, 'node_modules/.bin/tsx');
+    writeFileSync(
+      falso,
+      `#!/bin/sh\nprintf '%s' "$npm_config_offline" > '${marca}'\nexit 1\n`,
+    );
+    spawnSync('chmod', ['+x', falso]);
+
+    const r = spawnSync(
+      path.join(raiz, 'node_modules/.bin/tsx'),
+      [
+        path.join(raiz, 'scripts/release/classificar-risco.ts'),
+        '--base',
+        baseSha,
+        '--json',
+      ],
+      { cwd: dir, encoding: 'utf8' },
+    );
+    expect(r.status, String(r.stderr)).toBe(0);
+    expect(JSON.parse(String(r.stdout)).classe).toBe(3);
+    const gravado = spawnSync('cat', [marca], { encoding: 'utf8' });
+    expect(gravado.stdout).toBe('true');
+  });
+});
