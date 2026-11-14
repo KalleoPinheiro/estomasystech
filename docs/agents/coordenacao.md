@@ -72,7 +72,7 @@ Actions) **e** enfermeiro estomaterapeuta. Tom técnico, empático, assertivo, c
 | `staging` | homologação na Vercel, descartável | reconstruída pelo `staging:rebuild`; Vercel só constrói a `staging` (ADR-061) |
 
 Todo PR de agente para `release/**` **nasce em rascunho** e é marcado pronto uma vez, pelo
-coordenador, depois de confirmar a cota (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de
+coordenador (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de
 propósito: o pipeline pesado só roda no `ready_for_review`. Não marque pronto para fazer o CI passar.
 O PR tem base na release; `## Homologação` (Seed e cenários Dado/Quando/Então, ou
 `n/a — <motivo>`); changeset se tocar `src/`, `drizzle/` ou `Dockerfile` (`--empty` se nada muda para a
@@ -126,18 +126,17 @@ Peculiaridades que já custaram gates:
 
 | Momento | O que roda | Onde |
 | --- | --- | --- |
-| PR `feat/*` → release | typecheck, lint, `check:sv`, `check:docs`, integridade dos testes, suíte unitária **completa** com cobertura; E2E, mutação e integração só no **impactado** (na dúvida, inclui) | nuvem (`scripts/gate-cloud.sh`, perfil `pr`) ou PC |
-| PR `release/*` → `main` | gate completo: cobertura por camada, E2E prod+dev, integração Postgres real, `console-limpo-dev`, imagem Docker + smoke + backup | nuvem para tudo que não precisa de Docker; **Docker/backup só no WSL** |
+| PR `feat/*` → release | typecheck, lint, `check:sv`, `check:docs`, integridade dos testes, suíte unitária **completa** com cobertura; E2E, mutação e integração só no **impactado** (na dúvida, inclui) | Actions (`gate-pr.yml`, ADR-098); `gate-cloud.sh` perfil `pr` ou PC, opcional |
+| PR `release/*` → `main` | gate completo: cobertura por camada, E2E prod+dev, integração Postgres real, `console-limpo-dev`, imagem Docker + smoke + backup; sem repetir a mutação (ADR-098) | Actions para tudo que não precisa de Docker; **Docker/backup só no WSL** |
 | Mensal (último dia) | mutação completa (~1h20) | Actions / PC |
 
-- O Actions está **sem cota até ~2026-11-01** (checks vermelhos que terminam em ~3 s sem log são a
-  cota, não o PR). Quando voltar, o mesmo fluxo vira workflow; o ruleset da `main` exige os checks
+- O repositório é **público** e os runners padrão do Actions não gastam cota (ADR-098); o fluxo abaixo já é
+  workflow. O ruleset da `main` exige os checks
   `Typecheck, lint, sv-gate, test:coverage, build` e `Recibo do gate local + integridade dos testes`
-  (o segundo passa a se chamar `Integridade dos testes e homologação` no [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md);
-  o ruleset troca quando a v0.6.2 chegar na `main`).
+  (o segundo agora se chama `Integridade dos testes e homologação`, [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)).
 - O recibo `E2E-GATE:` não é mais exigido em PR (ADR-098): o E2E e a mutação rodam no Actions. Ele só segue
   valendo para o `release:cut` gravar o selo do corte.
-- Merge na release exige: recibo/gate verde do **head exato**, Postgres real verde quando a mudança
+- Merge na release exige: Gate do PR verde no **head exato**, Postgres real verde quando a mudança
   toca persistência, e revalidação limpa aprovada.
 - **VPS e minutos pagos foram descartados** (decisão do Kalléo, 2026-10-31): o gate não pode depender do PC.
 - Como rodar, passo a passo: [§ 7](#7-como-rodar-o-gate).
@@ -150,7 +149,7 @@ Ordem obrigatória (ADR-071, provada na v0.3.0: gate uma vez, 23 min):
    `homologacao/vX.Y.Z` nesse SHA. Issues do lote fechadas; `TESTE-ALTERADO` consolidado e aprovado.
 2. `release:cut` numa thread com WSL: árvore limpa, `release:prepare` primeiro, gate **uma** vez,
    recibo e PR. Nunca rodar `prepare` e gate à mão.
-3. PR `release` → `main` (merge commit) com recibo; `the-judge` em thread limpa.
+3. PR `release` → `main` (merge commit; Gate do PR sem recibo e sem repetir a mutação); `the-judge` em thread limpa.
 4. **Kalléo:** merge (bypass), backup (`ssh vps` e `sudo systemctl start estomasystech-backup.service`;
    conferir `sudo journalctl -u estomasystech-backup.service -n 50 --no-pager`) e deploy no Coolify.
    A tag sai por `npm run release:publish -- --rollback=redeploy|backup` **só com ok escrito e
