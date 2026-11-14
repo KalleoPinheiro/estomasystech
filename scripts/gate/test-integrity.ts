@@ -21,7 +21,12 @@ export interface Finding {
 }
 
 const TEST_FILE = /^(tests|e2e)\/.+\.(ts|tsx)$/;
-const CONFIG_FILE = /^(vitest\.config\.mts|playwright\.config\.ts|playwright\.prod\.config\.ts)$/;
+const CONFIG_FILE = /^(vitest(\.[a-z]+)?\.config\.mts|playwright(\.[a-z]+)?\.config\.ts)$/;
+/**
+ * Configurações que afrouxam o gate mas que o agente também edita no dia a dia (lint, mutação, CI):
+ * só o diff é julgado (CI e `pre-push`); o hook não as bloqueia.
+ */
+const GATE_SETTING_FILE = /^(stryker\.config\.json|biome\.json|\.github\/workflows\/(ci|gate-pr)\.yml)$/;
 /** Arquivos que definem o próprio gate: só o dono muda (hook bloqueia o agente). */
 const GATE_FILE = /^(\.claude\/(settings\.json|hooks\/.+)|\.husky\/.+|scripts\/gate\/.+)$/;
 
@@ -40,6 +45,10 @@ export function isTestFile(path: string): boolean {
 
 export function isConfigFile(path: string): boolean {
   return CONFIG_FILE.test(path);
+}
+
+export function isSettingFile(path: string): boolean {
+  return GATE_SETTING_FILE.test(path);
 }
 
 export function isGateFile(path: string): boolean {
@@ -116,12 +125,79 @@ function configFindings(h: Hunk): Finding[] {
   return out;
 }
 
+
+const BREAK_THRESHOLD = /"break"\s*:\s*(\d+)/;
+const MUTATION_TIMEOUT = /^\s*"timeoutMS"\s*:\s*(\d+)/;
+const MUTATE_ENTRY = /^\s*"(!?[^"]+)"\s*,?\s*$/;
+const LINT_LEVEL = /"(\w+)"\s*:\s*"(error|warn|off)"/;
+const LINT_RANK: Record<string, number> = { error: 2, warn: 1, off: 0 };
+const SHARD_LIST = /^\s*shard\s*:\s*\[([^\]]*)\]/;
+const SHARD_FLAG = /--shard=.*\/(\d+)/;
+
+const first = (lines: string[], re: RegExp, group = 1): number[] =>
+  lines.flatMap((l) => {
+    const m = re.exec(l);
+    return m?.[group] ? [Number(m[group])] : [];
+  });
+const countItems = (list: string): number => list.split(',').filter((x) => x.trim()).length;
+
+function settingFindings(h: Hunk): Finding[] {
+  const out: Finding[] = [];
+  const push = (rule: string, severity: Severity, line: string) =>
+    out.push({ file: h.file, rule, severity, line: line.trim() });
+  if (h.file === 'stryker.config.json') {
+    for (const line of h.added) {
+      const b = BREAK_THRESHOLD.exec(line);
+      if (b && first(h.removed, BREAK_THRESHOLD).some((n) => n > Number(b[1])))
+        push('limiar-de-mutacao-reduzido', 'hard', line);
+      const t = MUTATION_TIMEOUT.exec(line);
+      if (t && first(h.removed, MUTATION_TIMEOUT).some((n) => n < Number(t[1])))
+        push('retry-ou-timeout-aumentado', 'hard', line);
+      const e = MUTATE_ENTRY.exec(line);
+      if (e?.[1]?.startsWith('!') && !h.removed.includes(line))
+        push('mutacao-escopo-reduzido', 'hard', line);
+    }
+    for (const line of h.removed) {
+      const e = MUTATE_ENTRY.exec(line);
+      if (e?.[1] && !e[1].startsWith('!') && /[/*]/.test(e[1]) && !h.added.includes(line))
+        push('mutacao-escopo-reduzido', 'hard', line);
+    }
+  } else if (h.file === 'biome.json') {
+    for (const line of h.added) {
+      const m = LINT_LEVEL.exec(line);
+      if (!m?.[2] || m[2] === 'error') continue;
+      const rank = LINT_RANK[m[2]] ?? 0;
+      const olds = h.removed.flatMap((l) => {
+        const o = LINT_LEVEL.exec(l);
+        return o?.[1] === m[1] && o[2] ? [LINT_RANK[o[2]] ?? 0] : [];
+      });
+      if (olds.some((n) => n > rank)) push('regra-de-lint-rebaixada', 'hard', line);
+      else if (olds.length === 0) push('regra-de-lint-nao-estrita', 'justifiable', line);
+    }
+  } else {
+    for (const line of h.removed) {
+      const list = SHARD_LIST.exec(line);
+      if (list?.[1] !== undefined) {
+        const now = h.added.flatMap((l) => SHARD_LIST.exec(l)?.[1] ?? []);
+        if (now.length === 0 || now.every((n) => countItems(n) < countItems(list[1] ?? '')))
+          push('shard-removido', 'hard', line);
+      }
+      const flag = SHARD_FLAG.exec(line);
+      if (flag?.[1] && !first(h.added, SHARD_FLAG).some((n) => n >= Number(flag[1])))
+        push('shard-removido', 'hard', line);
+    }
+  }
+  return out;
+}
+
 /** Analisa um diff unificado (`git diff <base>...HEAD`) e devolve os achados. */
 export function analyzeDiff(diff: string): Finding[] {
   const findings: Finding[] = [];
   for (const h of parseDiff(diff)) {
     if (isConfigFile(h.file)) {
       findings.push(...configFindings(h));
+    } else if (isSettingFile(h.file)) {
+      findings.push(...settingFindings(h));
     } else if (isTestFile(h.file)) {
       if (h.deleted) {
         findings.push({

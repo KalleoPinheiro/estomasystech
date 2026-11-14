@@ -1,0 +1,4 @@
+## Regra 8 estendida às configs do gate (#732, #812) (2026-11-14) — EM REVISÃO
+- **O que mudou**: `scripts/gate/test-integrity.ts` agora julga também `vitest.{integracao,mutacao,shard}.config.mts`, `playwright.console.config.ts`, `stryker.config.json` (`break`, `timeoutMS`, `mutate`), `biome.json` (regra rebaixada) e shards de `ci.yml`/`gate-pr.yml`. Testes em `tests/scripts/gate-test-integrity.test.ts` (só acréscimo). `docs/engineering/conventions.md` registra a decisão da #812 (estabilização declarada em `TESTE-ALTERADO:`).
+- **Decisão**: o hook continua sem bloquear `biome.json`, `stryker.config.json` e workflows (agentes os editam no dia a dia); só o diff os julga.
+- **Next step**: revisora; classe 3 (`scripts/gate/`), clique do Kalléo depois do APPROVE no head final. Sem changeset (não toca `src/`, `drizzle/` nem `Dockerfile`).
