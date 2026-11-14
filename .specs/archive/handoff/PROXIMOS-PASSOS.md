@@ -27,7 +27,7 @@ mergeia; a revisora (the-judge) julga e mergeia.
    gate.
 6. **#832**, **#831**, **#820**, **#828** (lacunas do gate, consolidação do `GATE-ALTERADO:`, `rodar_mutacao` falha
    aberta, endurecer `staging.yml`): lote do gate; um domínio por vez.
-7. **#835** (check que barra PR sem atualizar esta fila). Depende do ADR-107.
+7. **#839** (piso de mutação por arquivo em `scripts/release`: 8 libs abaixo de 85, v0.8.0, P2). **#835** (check que barra PR sem atualizar esta fila). Depende do ADR-107.
 8. **#750**, **#751**, **#752** (job `producao`, rollback, docs de release): dependem do #746 e do #747, que são do
    Kalléo (seção 4).
 9. Cifra do cadastro: **#735** a **#741** e **#730** (P1, LGPD). Ordem pela numeração; #735 abre (migração 0071), os
