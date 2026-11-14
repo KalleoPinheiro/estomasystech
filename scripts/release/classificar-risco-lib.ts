@@ -254,3 +254,15 @@ export function formatarRisco(r: ResultadoRisco): string {
 
 /** Linhas `chave=valor` no formato de `$GITHUB_OUTPUT`. */
 export const saidaGithub = (r: ResultadoRisco): string => `classe=${r.classe}\naprovacao_humana=${r.aprovacaoHumana}`;
+
+/** Com `--head` a PR existe: diff vazio é sinal de erro (base sem `--head`, ref errada), nunca classe 0. Falha fechada. */
+export const riscoDiffVazioComHead = (): ResultadoRisco => ({
+  schema: SCHEMA_RISCO,
+  classe: 3,
+  aprovacaoHumana: true,
+  motivos: [{ classe: 3, regra: 'diff-vazio-com-head', detalhe: 'diff vazio com --head: base sem suporte à flag ou ref errada' }],
+});
+
+/** Opções `--x` de `argv` que o CLI não conhece (o CLI sai 1: flag ignorada em silêncio é falha aberta). */
+export const flagsDesconhecidas = (argv: readonly string[], conhecidas: readonly string[]): string[] =>
+  argv.filter((a) => a.startsWith('--') && !conhecidas.includes(a));

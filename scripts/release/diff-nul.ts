@@ -8,7 +8,8 @@ export const arquivosDeNul = (texto: string): string[] => texto.split('\0').filt
 
 /**
  * Pares de `git diff --name-status -z` com `--no-renames`: status e caminho.
- * Rename ou cópia (R/C) ocupa três campos; devolve o caminho novo.
+ * Rename ou cópia (R/C) ocupa três campos; devolve o caminho novo. Saída truncada lança erro (falha fechada): nunca
+ * descarta o resto da lista em silêncio.
  */
 export function mudancasDeNul(texto: string): [string, string][] {
   const partes = texto.split('\0');
@@ -17,10 +18,10 @@ export function mudancasDeNul(texto: string): [string, string][] {
   for (let i = 0; i < partes.length; ) {
     const status = partes[i] ?? '';
     const caminho = partes[i + 1];
-    if (caminho === undefined || caminho === '') break;
+    if (caminho === undefined || caminho === '') throw new Error(`saída de git diff -z malformada: sem caminho depois do status "${status}"`);
     if (status.startsWith('R') || status.startsWith('C')) {
       const novo = partes[i + 2];
-      if (novo === undefined) break;
+      if (novo === undefined || novo === '') throw new Error(`saída de git diff -z malformada: rename/cópia "${status}" sem o caminho novo`);
       saida.push([status, novo]);
       i += 3;
       continue;

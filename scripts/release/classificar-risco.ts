@@ -19,6 +19,8 @@ import path from 'node:path';
 import { detectBase } from '../gate/base';
 import {
   classificarRisco,
+  flagsDesconhecidas,
+  riscoDiffVazioComHead,
   formatarRisco,
   lerRelatorioMigracao,
   type ManifestoLock,
@@ -39,6 +41,12 @@ function git(args: readonly string[]): { ok: boolean; out: string } {
     env: AMBIENTE_OFFLINE,
   });
   return { ok: r.status === 0, out: r.stdout ?? '' };
+}
+
+const DESCONHECIDAS = flagsDesconhecidas(process.argv.slice(2), ['--base', '--head', '--json', '--saida-github', '--migracao']);
+if (DESCONHECIDAS.length > 0) {
+  console.error(`✗ opção desconhecida: ${DESCONHECIDAS.join(', ')}`);
+  process.exit(1);
 }
 
 const flag = (nome: string): boolean => process.argv.includes(nome);
@@ -130,7 +138,10 @@ const pacotesLock = arquivos.includes('package-lock.json')
     )
   : [];
 
-const resultado = classificarRisco({
+const resultado =
+  head && arquivos.length === 0
+    ? riscoDiffVazioComHead()
+    : classificarRisco({
   arquivos,
   migracao: arquivos.some((a) => a.startsWith('drizzle/')) ? relatorioMigracao(base, head) : null,
   pacotesAlterados: [...new Set([...pacotes, ...pacotesLock])],

@@ -72,6 +72,13 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          # Bootstrap (falha fechada): se os scripts da base ainda não conhecem `--head`, a flag seria ignorada e o
+          # diff base...base sairia vazio (classe 0). Nesse caso a classe é 3 e o dono aprova.
+          if ! grep -qF -e "'--head'" scripts/release/classificar-risco.ts scripts/release/check-migracao.ts; then
+            printf 'classe=3\naprovacao_humana=true\n' | tee -a "$GITHUB_OUTPUT"
+            echo "### Classe de risco: 3 (a base ainda não conhece --head; bootstrap fechado)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           npm run --silent check:risco -- --saida-github --base "$BASE_SHA" --head "$HEAD_SHA" | tee -a "$GITHUB_OUTPUT"
           {
             echo "### Classe de risco"

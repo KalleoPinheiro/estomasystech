@@ -18,6 +18,7 @@ import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { detectBase } from '../gate/base';
 import { codigoDeSaida, type EntradaJournal, formatarRelatorio, verificar } from './check-migracao-lib';
+import { flagsDesconhecidas } from './classificar-risco-lib';
 import { arquivosDeNul, mudancasDeNul } from './diff-nul';
 
 const MIGRACAO = /^drizzle\/[^/]+\.sql$/;
@@ -36,6 +37,12 @@ const DIFF = [
 function git(args: readonly string[]): { ok: boolean; out: string } {
   const r = spawnSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return { ok: r.status === 0, out: r.stdout ?? '' };
+}
+
+const DESCONHECIDAS = flagsDesconhecidas(process.argv.slice(2), ['--base', '--head', '--json', '--exigir-aditiva', '--all']);
+if (DESCONHECIDAS.length > 0) {
+  console.error(`✗ opção desconhecida: ${DESCONHECIDAS.join(', ')}`);
+  process.exit(1);
 }
 
 const flag = (nome: string): boolean => process.argv.includes(nome);
