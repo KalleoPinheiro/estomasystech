@@ -172,6 +172,7 @@ describe('gate-pr.yml · job compat-migracao', () => {
     const codigo = (rodar: string, resultado: string): number | null =>
       spawnSync('bash', ['-e', '-o', 'pipefail', '-c', corpo.join('\n')], {
         env: {
+          ...process.env,
           PATH: '/usr/bin:/bin',
           ...base,
           RODAR_COMPAT: rodar,
