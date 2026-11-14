@@ -46,6 +46,7 @@ Depois: v0.9.0 (#729, #557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651)
 - **#764** e **#783** (the-judge por OIDC): `VEREDITO_JUDGE_ATIVO` e a configuração do lado dele.
 - **#746** (decisão do deploy pelo Coolify).
 - **#376** (parecer jurídico).
+- Baixa prioridade, painel do Linear: a automação GitHub↔Linear manda a EST para "Em produção" ao fechar a issue e reabre a issue ao mover a EST para "Na release" (ADR-108 § 5). Em Linear > Settings > Integrations > GitHub, ajustar o mapeamento de estados do fluxo de PR/issue (merge em `release/*` para "Na release", só a tag na `main` para "Em produção") ou desligar o fechamento automático da issue por EST. Até lá vale o passo manual do ADR-108.
 - Clique de classe 3: um por PR no portão, scripts de gate e produção; um por release na 3B-lote (ADR-105).
 
 ## 5. Triagem de 2026-11-14 (ADR-108)
@@ -62,12 +63,7 @@ na release: issue **aberta** + EST "Na release" (fecham no `release:publish`).
   de #541 (mesma EST-84). EST-85 e EST-86 eram duplicatas de EST-8 e EST-9 e foram marcadas como tal.
 - Dependências registradas na EST: #736 a #741 bloqueadas por #735; #751 por #750; #752 por #750 e #751; #750 por #746.
 
-### Decisões que esperam o Kalléo (recomendação entre parênteses)
+### Decididas em 2026-11-14 (coordenação)
 
-- Cifra do cadastro (#730, #735 a #741) em **P1** como está ou **P0**? (P1: já há ordem na v0.8.0 e não há vetor
-  de exposição novo; P0 só se ele entender o dado em claro hoje como risco ativo.)
-- #742 (e-mail de login em claro) segue P2 e v0.8.0 junto da cifra? (sim, depois de #735.)
-- #812 (regra 8 e o #780): a exceção "estabilizar espera de teste com `TESTE-ALTERADO`" vale? (pergunta de produto/processo
-  dele; a #829 não a respondeu.)
-- Corrigir na origem o defeito da integração "Em produção" (automação do Linear)? (sim, quando ele puder; até lá vale o
-  passo do ADR-108 § 5.)
+- Cifra do cadastro (#730, #735 a #741) fica **P1**. #742 fica P2 na v0.8.0, depois da #735.
+- #812 (estabilizar espera de teste) já está respondida em `conventions.md` (PR #829): permitido com `TESTE-ALTERADO:`.

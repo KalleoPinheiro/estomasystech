@@ -49,7 +49,8 @@ não em produção, é **issue aberta + EST "Na release"**.
    mergeia remove as duas labels da issue e da EST.
 5. **Defeito "Em produção" e correção.** Depois de cada merge na release: (a) a issue fecha pelo `Closes #N` e a EST
    vai para "Em produção"; (b) mova a EST para **"Na release"**, o que reabre a issue; (c) confira que a issue
-   ficou aberta, sem `dono:*`. A issue fecha de vez, e a EST vai para "Em produção", no `release:publish`. Fechar
+   ficou aberta, sem `dono:*`. A issue fecha de vez, e a EST vai para "Em produção", no `release:publish`. Issue **já fechada** cuja EST está em "Na release" (estado misto): reabra a issue; se a EST estiver em
+   "Em produção" sem tag publicada, mova-a para "Na release" (isso reabre a issue). Fechar
    issue à mão para "limpar" o quadro é proibido: a integração desfaz o estado certo.
 6. **Triagem.** Prioridade: **P0** risco a dado de saúde, LGPD, segurança ou perda de dado em produção; **P1** bug ou
    valor visível ao cliente da clínica; **P2** qualidade e infra de entrega que bloqueia release; **P3** melhoria e
