@@ -77,10 +77,10 @@ o que não está expressamente na 3A é 3B.
 
 | Mudança | Subclasse | Observação |
 | --- | --- | --- |
-| Workflow de CI (`ci.yml`, `gate-pr.yml` e semelhantes) cujo diff seja **comprovadamente aditivo** pela análise estrutural do YAML (item 2.7): job novo, step novo, chave nova, item novo em `needs` do agregador `Gate do PR` | **3A** | O que existe não é tocado. |
+| Workflow de CI (`ci.yml`, `gate-pr.yml` e semelhantes) cujo diff seja **somente um job novo** (id novo), nas condições do item 2.7 | **3A** | Nenhum job, step ou chave existente é tocado. **Step novo dentro de job existente é 3B-trava** (item 2.7). |
 | Qualquer outra mudança em workflow: remoção, alteração do corpo (`run`, `uses`, `with`, `env`) de job ou step existente, `if:`, `continue-on-error`, `permissions`, `timeout-minutes`, `strategy`/`matrix`, `paths`/`paths-ignore`/filtros, `needs` existente, `uses:` novo fora das ações já fixadas na base | **3B-trava** | |
 | Workflow que declare `environment:`, `secrets.`, `id-token`, `permissions` além de `contents: read`, `pull_request_target`, `workflow_run` ou `self-hosted`; `portao-risco.yml`; `veredito-judge.yml`; deploy, staging, release e backup | **3B-trava** | |
-| `biome.json` e `stryker.config.json`, **lidos como dado, nunca executados**, quando a força efetiva por regra e por arquivo não diminui (nível sobe, máximo desce, nada novo em lista de exceção ou de arquivos ignorados) | **3A**, sujeita a 2.3 e 2.4 | Caso do #814: a regra nova entra como `error` e as exceções em `warn` são mais fortes que a ausência anterior. Se a comparação não for decidível, 3B-trava. |
+| `biome.json` e `stryker.config.json`, **lidos como dado, nunca executados**, quando a **força efetiva por par (regra, arquivo)**, base × head, não diminui para nenhum arquivo já existente (ausente conta como `off`; nível sobe, máximo desce; exceção nova só vale se não deixar nenhum par mais fraco que na base) | **3A**, sujeita a 2.3 e 2.4 | Caso do #814: a regra nova entra como `error` e os 56 arquivos em `warn` ficam mais fortes que a ausência anterior; nenhum par enfraquece, logo é 3A. Se a comparação não for decidível, 3B-trava. |
 | `vitest*.config.mts`, `playwright*.config.ts` (módulos TS executados pelo runner) | **3B-trava** | Executam código do head. |
 | `scripts/check-*`, `scripts/gate-cloud*`, `scripts/docker-smoke.sh`, `package.json > scripts` (qualquer chave) e demais `scripts/release/*` executados pelo CI | **3B-trava** | Lógica executável do portão. **Evolução (#819, fase 2):** cada script ganha um canário próprio em `tests/canarios/` e só então a mudança nele pode virar 3A, com o canário em job isolado (2.4). |
 | Classificador e veredito: `classificar-risco*`, `check-migracao*`, `julgar-pr*`, `check-veredito*`; `release:prepare`, `release:cut`, `release:publish`; tabela `CAMINHOS_SENSIVEIS`; `docs/engineering/classe-de-risco.md`; `.github/CODEOWNERS` | **3B-trava** | Quem escreve o portão não o abre sozinho. |
@@ -93,10 +93,10 @@ o que não está expressamente na 3A é 3B.
 | Redução de limiar (item 2.3) em qualquer arquivo | **3B-trava** | Nunca é 3A. |
 | Docs `.md` | classe 0 (já sem clique) | Exceção: `classe-de-risco.md`, tabela acima. |
 
-**Ganho esperado, sem exagero.** Na primeira fase a 3A é estreita: `biome.json` (como o #814) e acréscimos puros a
-workflow. O #817 mexe no corpo de um step existente do `gate-pr.yml` (acrescenta linhas ao `run` do `impacto`): **continua 3B-trava**. O
-#816 muda `scripts/release/` e `package.json`: **continua 3B-trava**. O alívio grande vem da 3B-lote (clique por
-release) e da fase 2 (canários por script), não da 3A inicial.
+**Ganho esperado, sem maquiar: a fase 1 elimina pouco clique.** A 3A inicial é só `biome.json` (como o #814) e job
+novo de workflow. O #817 mexe no corpo de um step existente do `gate-pr.yml` e o #816 acrescenta step em jobs
+existentes do `ci.yml`, além de `scripts/release/` e `package.json`: **os dois continuam 3B-trava**. O alívio grande
+vem da 3B-lote (um clique por release) e da fase 2 (canários por script), não da 3A inicial.
 
 ### 2. Controles que substituem o clique na 3A
 
@@ -132,14 +132,18 @@ forte.** Na 3A a segurança real é 2.2 a 2.7. **Se qualquer controle não puder
 5. **Migração.** Só `aditiva` com `ok: true` e o job `compat-migracao` (#760) verde. Qualquer outra coisa é 3B-lote.
 6. **Regra 8 e gates intactos.** `check:testes` verde, `Gate do PR` verde (cobertura 100% no núcleo e piso 90%,
    mutação, E2E, integração). Nada é pulado por causa da classe.
-7. **Análise estrutural do YAML contra a base** (lista branca): o diff do workflow é 3A só se, comparando as árvores
-   de base e head, **toda chave e todo valor da base continuam iguais** e o head só acrescenta nós (job, step, chave
-   nova, item novo em `needs` do agregador `Gate do PR`), sem `uses:` fora do conjunto de ações já fixadas por SHA nos
-   workflows da base, sem `environment`, segredo ou permissão novos. Qualquer outra forma (corpo de `run` existente
-   trocado por `echo ok`/`exit 0`, `if: false`, `timeout`, `needs`, `matrix.exclude`, `fail-fast`, `fetch-depth`,
-   flag de limiar na linha de comando, `set +e`, filtros de caminho) é 3B-trava. **Limite conhecido:** um step
-   acrescentado ainda roda código do PR no CI comum (sem segredo, evento `pull_request`) e pode, no pior caso, emitir
-   mensagem enganosa; não consegue desfazer um step existente.
+7. **Análise estrutural do YAML contra a base** (lista branca). O diff do workflow é 3A **somente se for um job novo**
+   (id novo) e o resto do arquivo ficar idêntico ao da base. O job novo precisa: ter `name:` único entre todos os
+   `name:` dos workflows da base e dos checks exigidos (`Gate do PR`, `ci`, `Veredito do the-judge`, `portao-risco`);
+   declarar `permissions: {}` ou `contents: read`; **não** usar `upload-artifact`, `download-artifact`, `cache` nem
+   `outputs` consumidos por job existente; usar só **pares ação@SHA já presentes nos workflows da base** (o par, não só
+   o nome da ação); e não declarar `environment`, segredo, `pull_request_target`, `workflow_run` ou `self-hosted`.
+   **Step novo em job existente é 3B-trava**, porque steps do mesmo job compartilham workspace e ambiente: um step
+   inserido antes do gate pode sobrescrever `scripts/check-*.ts`, `biome.json` ou `node_modules` no disco, ou exportar
+   variável via `$GITHUB_ENV`/`$GITHUB_PATH`, sem alterar nenhum nó existente do YAML. O mesmo vale para item novo em
+   `needs`, `if:`, `timeout`, `matrix`, `fail-fast`, `fetch-depth`, flag de limiar na linha de comando, `set +e` e
+   filtros de caminho. **Limite conhecido:** um job novo ainda roda código do PR no CI comum (evento `pull_request`,
+   sem segredo e sem escrita); não pode alterar job existente, mas pode emitir mensagem enganosa.
 
 Além dos controles, vale a regra de processo do ADR-103: uma thread por domínio, então não há duas mudanças de gate
 em voo ao mesmo tempo.
@@ -226,9 +230,10 @@ passo 3 (ligar) só depois que a #819 mergear.
    vai a `true` no passo 3.
 2. **Environment `aprovacao-classe-3`.** *Settings* → *Environments* → `aprovacao-classe-3`: conferir *Required
    reviewers* = o próprio Kalléo. **Não ligue *Prevent self-review* sem testar antes**: os agentes commitam com o
-   login dele, então a opção pode impedir o próprio Kalléo de aprovar. Para testar, abra um PR descartável em
-   rascunho que toque uma linha de `.github/CODEOWNERS` (3B-trava), com a opção ligada, e veja se o botão de
-   aprovar aparece; feche o PR depois. Na dúvida, mantenha como está hoje. Depois que o `portao-risco.yml` virar
+   login dele, então a opção pode impedir o próprio Kalléo de aprovar. Para testar, abra um PR descartável **pronto para
+   revisão** (rascunho reprova o portão antes de pedir aprovação, então não testa nada) que toque uma linha de
+   `.github/CODEOWNERS` (3B-trava), com a opção ligada, e veja se o botão de aprovar aparece; **feche o PR sem merge**
+   depois. Na dúvida, mantenha como está hoje. Depois que o `portao-risco.yml` virar
    `pull_request_target`, em *Deployment branches and tags* escolher *Selected branches and tags* e acrescentar
    `release/**` e `main` (com `pull_request` a referência era `refs/pull/N/merge` e isso não era possível; confira no
    painel se a opção aparece assim).
@@ -289,6 +294,9 @@ já pedem.
 Nada disso depende de os dois estarem ativos: a passagem é lida do repositório quando o bastão muda de mãos. O que o
 revezamento **não resolve** é o risco 1 (um modelo só por vez): o erro correlato se mantém ao trocar de agente, porque
 agora são modelos diferentes revisando em momentos diferentes, nunca em paralelo.
+
+**Aceitar este ADR inclui o § 9.2** (o agente que entra troca as labels `dono:*` e registra comentário, sem esperar o
+Kalléo), o que **emenda o ADR-103**, que hoje diz que recuperar sem o cedente depende dele.
 
 ## Consequências
 
