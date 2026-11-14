@@ -10,11 +10,8 @@ mergeia; a revisora (the-judge) julga e mergeia.
 
 ## 1. Em voo na v0.7.0
 
-1. **#761, PR #833** (mutação em `scripts/release/*-lib.ts`). Em revisão, rodada 1 com `REQUEST_CHANGES`; a
-   implementadora corrige. Última pendência de código da v0.7.0. Classe 3 (toca `stryker.config.json` e
-   `vitest.mutacao.config.mts`): o clique do Kalléo só depois do APPROVE no head final.
-2. **#834** (esta fila e o ADR-107). Só `.md`.
-3. Em seguida: homologação da staging, marca `homologacao/v0.7.0` e `release:cut` (ADR-071). Depende de 1 e do
+1. **#834** (esta fila e o ADR-107). Só `.md`.
+2. Em seguida: homologação da staging, marca `homologacao/v0.7.0` e `release:cut` (ADR-071). Depende do
    Kalléo na homologação. Release por lote de valor, no máximo quinzenal (ADR-104).
 
 ## 2. Sem esperar o corte
