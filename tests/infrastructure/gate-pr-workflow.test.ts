@@ -127,6 +127,7 @@ function esperado(env: Env): number {
   if (!bate(env.R_INTEGRACAO, env.SO_DOC !== 'true')) return 1;
   if (!bate(env.R_PROD, env.RODAR_E2E === 'true')) return 1;
   if (!bate(env.R_DEV, env.RODAR_E2E === 'true')) return 1;
+  if (!bate(env.R_COMPAT, env.RODAR_COMPAT !== 'false')) return 1;
   return 0;
 }
 
@@ -167,6 +168,8 @@ function matriz(): Array<{ nome: string; env: Env; esperado: number }> {
     R_INTEGRACAO: 'success',
     R_PROD: 'success',
     R_DEV: 'success',
+    RODAR_COMPAT: 'false',
+    R_COMPAT: 'skipped',
   };
   const pulado: Env = {
     R_POLITICA: 'success',

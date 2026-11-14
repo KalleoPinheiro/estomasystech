@@ -20,7 +20,13 @@ raiz="$(git rev-parse --show-toplevel)"
 
 case "$modo" in
   precisa)
-    if git diff --name-only "$base...HEAD" -- 'drizzle/*.sql' | grep -q .; then
+    # Falha fechada: o diff vai para uma variável antes do teste; erro do git (base inexistente, histórico raso)
+    # sai com 1 em vez de virar `precisa=false` e pular o portão.
+    if ! arquivos=$(git diff --name-only "$base...HEAD" -- 'drizzle/*.sql'); then
+      echo "erro: git diff contra $base falhou; rode \`git fetch origin\`" >&2
+      exit 1
+    fi
+    if [ -n "$arquivos" ]; then
       echo "precisa=true"
     else
       echo "precisa=false"

@@ -106,7 +106,9 @@ jobs:
           rodar_mutacao=true
           if [ -z "$mutacao" ]; then rodar_mutacao=false; fi
           # Compatibilidade da migração (#760): só quando o diff toca drizzle/*.sql.
-          rodar_compat=$(bash scripts/release/compat-migracao.sh precisa "$BASE_REF" | cut -d= -f2)
+          # Falha fechada: erro do script ou saída inesperada roda o job (na dúvida, inclui).
+          if saida=$(bash scripts/release/compat-migracao.sh precisa "$BASE_REF"); then rodar_compat=${saida#precisa=}; else rodar_compat=true; fi
+          case "$rodar_compat" in true | false) ;; *) rodar_compat=true ;; esac
           {
             echo "so_doc=$so_doc"
             echo "e2e=$e2e"
@@ -162,7 +164,7 @@ jobs:
   compat-migracao:
     name: Compatibilidade da migração (Postgres 18)
     needs: impacto
-    if: needs.impacto.outputs.rodar_compat == 'true'
+    if: needs.impacto.outputs.rodar_compat != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
@@ -398,5 +400,6 @@ jobs:
           conferir e2e-prod "$R_PROD" "$RODAR_E2E"
           conferir e2e-dev "$R_DEV" "$RODAR_E2E"
           conferir mutacao "${R_MUTACAO:-skipped}" "${RODAR_MUTACAO:-false}"
-          conferir compat-migracao "${R_COMPAT:-skipped}" "${RODAR_COMPAT:-false}"
+          # Falha fechada: só o `false` exato dispensa o job; vazio ou qualquer outro valor exige `success`.
+          conferir compat-migracao "${R_COMPAT:-skipped}" "$([ "$RODAR_COMPAT" = false ] && echo false || echo true)"
           exit $falhou

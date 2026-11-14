@@ -97,7 +97,8 @@ cenário do deploy e do rollback: código antigo sobre esquema novo.
 Como funciona: `scripts/release/compat-migracao.sh precisa <base>` decide se roda; `... rodar <base>` cria um
 worktree da base, troca o `drizzle/` pelo do HEAD, instala as dependências da base e roda
 `vitest.integracao.config.mts` (o global setup migra o banco-modelo com o `drizzle/` trocado). O agregador
-`Gate do PR` reprova se o job devia rodar e não passou.
+`Gate do PR` reprova se o job devia rodar e não passou. A decisão falha fechada: erro do `git diff` (base inexistente, histórico raso)
+sai com 1, e `rodar_compat` vazio ou diferente de `false` exige o job com `success`.
 
 Rodar à mão (exige Postgres descartável; recusa produção como o resto da suíte de integração):
 

@@ -96,13 +96,11 @@ describe('compat-migracao · uso', () => {
 
 describe('gate-pr.yml · job compat-migracao', () => {
   it('Dado o gate, Quando o diff não toca drizzle/*.sql, Então o job só roda com rodar_compat=true e o agregador exige o resultado', () => {
-    expect(gate).toContain("needs.impacto.outputs.rodar_compat == 'true'");
+    expect(gate).toContain("needs.impacto.outputs.rodar_compat != 'false'");
     expect(gate).toContain(
       'bash scripts/release/compat-migracao.sh rodar "$GATE_BASE"',
     );
-    expect(gate).toMatch(
-      /conferir compat-migracao "\$\{R_COMPAT:-skipped\}" "\$\{RODAR_COMPAT:-false\}"/,
-    );
+    expect(gate).toContain(`conferir compat-migracao "\${R_COMPAT:-skipped}"`);
     expect(gate).toMatch(/needs: \[[^\]]*compat-migracao/);
   });
 
@@ -113,5 +111,80 @@ describe('gate-pr.yml · job compat-migracao', () => {
     expect(bloco).toContain('image: postgres:18');
     expect(bloco).toContain('merge_group.base_sha');
     expect(bloco).toContain('fetch-depth: 0');
+  });
+
+  it('Dado o passo sel, Quando o script precisa falha ou devolve lixo, Então rodar_compat cai em true (falha fechada)', () => {
+    expect(gate).not.toMatch(/compat-migracao\.sh precisa[^\n]*\|\s*cut/);
+    const bloco = gate.slice(gate.indexOf('Falha fechada: erro do script'));
+    const linhas = bloco
+      .split('\n')
+      .slice(1, 3)
+      .map((l) => l.trim());
+    for (const [saida, falha, esperado] of [
+      ['precisa=false', false, 'false'],
+      ['precisa=true', false, 'true'],
+      ['', true, 'true'],
+      ['lixo', false, 'true'],
+    ] as const) {
+      const script = [
+        `saida_fake='${saida}'`,
+        `fake() { ${falha ? 'return 1' : 'echo "$saida_fake"'}; }`,
+        linhas[0].replace(
+          /bash scripts\/release\/compat-migracao\.sh precisa "\$BASE_REF"/,
+          'fake',
+        ),
+        linhas[1],
+        'echo "$rodar_compat"',
+      ].join('\n');
+      const r = spawnSync('bash', ['-c', script], { encoding: 'utf8' });
+      expect(r.stdout.trim(), `${saida}/${falha}`).toBe(esperado);
+    }
+  });
+
+  it('Dado uma base inexistente, Quando decide, Então sai com 1 e não imprime precisa=false', () => {
+    const dir = repo({
+      'drizzle/0002_b.sql': 'ALTER TABLE a ADD COLUMN b int;',
+    });
+    const r = rodar(dir, 'precisa', 'origin/nao-existe');
+    expect(r.status).toBe(1);
+    expect(r.stdout).not.toContain('precisa=false');
+  });
+
+  it('Dado o agregador, Quando rodar_compat é vazio ou lixo e o job foi pulado, Então reprova; só o false exato aceita skipped', () => {
+    const linhas = gate.split('\n');
+    const ini = linhas.findIndex((l) => l.includes('name: Conferir'));
+    const run = linhas.findIndex((l, n) => n > ini && l.trim() === 'run: |');
+    const corpo: string[] = [];
+    for (const l of linhas.slice(run + 1)) {
+      if (l.trim() !== '' && !l.startsWith(' '.repeat(10))) break;
+      corpo.push(l.slice(10));
+    }
+    const base = {
+      R_POLITICA: 'success',
+      COMPLETO: 'true',
+      R_IMPACTO: 'success',
+      SO_DOC: 'false',
+      RODAR_E2E: 'false',
+      R_INTEGRACAO: 'success',
+      R_PROD: 'skipped',
+      R_DEV: 'skipped',
+    };
+    const codigo = (rodar: string, resultado: string): number | null =>
+      spawnSync('bash', ['-e', '-o', 'pipefail', '-c', corpo.join('\n')], {
+        env: {
+          PATH: '/usr/bin:/bin',
+          ...base,
+          RODAR_COMPAT: rodar,
+          R_COMPAT: resultado,
+        },
+        encoding: 'utf8',
+      }).status;
+    expect(codigo('false', 'skipped')).toBe(0);
+    expect(codigo('true', 'success')).toBe(0);
+    expect(codigo('true', 'skipped')).toBe(1);
+    expect(codigo('true', 'failure')).toBe(1);
+    expect(codigo('', 'skipped')).toBe(1);
+    expect(codigo('lixo', 'skipped')).toBe(1);
+    expect(codigo('false', 'success')).toBe(1);
   });
 });
