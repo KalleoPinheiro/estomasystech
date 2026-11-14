@@ -42,7 +42,7 @@ não em produção, é **issue aberta + EST "Na release"**.
    reserva** e corrige o que divergir; o remoto vale mais que a memória.
 2. **Toda issue aberta e ainda não entregue tem EST e vice-versa**, com título equivalente. Issue nova nasce com
    label de versão (`vX.Y.Z`), prioridade (`P0`..`P3`) e domínio; a EST nova sai de "Triage" no mesmo dia. Cada issue
-   tem a sua EST (1:1), inclusive espelhos.
+   tem a sua EST (1:1), inclusive espelhos. Para issue existente, vincula-se a EST em vez de criar outra, porque EST nova gera issue espelho.
 3. **Estado da EST pela realidade:** "Planejada/Brief" (triada, pronta, sem dono), "Em andamento" (PR aberto, com
    `dono:<agente>`), "Em revisão (the-judge)" (PR em revisão), "Na release" (PR mergeado em `release/*`),
    "Em produção" só para o que está numa versão publicada (tag na `main`). Mergeado mas **aguardando ativação
@@ -57,7 +57,7 @@ não em produção, é **issue aberta + EST "Na release"**.
    para "limpar" o quadro é proibido: a integração desfaz o estado certo. **Quem fecha:** o agente que conduz a release, como último passo, depois de
    conferir a versão em produção: fecha as issues do lote (label `vX.Y.Z`) e a integração leva as EST para "Em
    produção" (aí o comportamento é o desejado). Nenhum script do `release:*` faz isso hoje (a automação entra na
-   [#835](https://github.com/KalleoPinheiro/estomasystech/issues/835), v0.8.0); o passo consta no fechamento de
+   [#841](https://github.com/KalleoPinheiro/estomasystech/issues/841), v0.8.0); o passo consta no fechamento de
    release em `docs/engineering/producao.md` § 3.1.
 6. **Triagem.** Prioridade: **P0** exposição ativa, incidente ou vetor explorável conhecido em produção
    envolvendo dado de saúde/LGPD, segurança ou perda de dado (aja já); **P1** bug ou valor visível ao cliente da clínica e
