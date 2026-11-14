@@ -61,6 +61,8 @@ const BASE = {
   R_DEV: 'success',
   RODAR_MUTACAO: 'true',
   R_MUTACAO: 'success',
+  RODAR_COMPAT: 'false',
+  R_COMPAT: 'skipped',
 };
 
 describe('Feature: E2E e mutação como check obrigatório do PR no Actions (ADR-098)', () => {
