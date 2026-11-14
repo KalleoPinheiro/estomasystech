@@ -145,12 +145,12 @@ jobs:
       # Posse da issue (ADR-104): dono:claude ou dono:cursor, igual ao agente que escreveu o PR.
       - name: Posse (ADR-104)
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
-        run: npm run check:posse
+        run: npm run check:posse -- --pr "$PR_NUMBER" --head-ref "$HEAD_REF"
         env:
           CHANGESET_BASE: origin/${{ github.base_ref }}
           GH_TOKEN: ${{ github.token }}
           HEAD_REF: ${{ github.head_ref }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Typecheck
         if: needs.escopo.outputs.docs_only != 'true'
@@ -229,12 +229,12 @@ jobs:
       # Posse da issue (ADR-104): dono:claude ou dono:cursor, igual ao agente que escreveu o PR.
       - name: Posse (ADR-104)
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
-        run: npm run check:posse
+        run: npm run check:posse -- --pr "$PR_NUMBER" --head-ref "$HEAD_REF"
         env:
           CHANGESET_BASE: origin/${{ github.base_ref }}
           GH_TOKEN: ${{ github.token }}
           HEAD_REF: ${{ github.head_ref }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Migração aditiva (check:migracao)
         if: github.event_name == 'pull_request'

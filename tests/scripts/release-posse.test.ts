@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type Buscador,
+  dadosDoPr,
+  labelsDaIssue,
+} from '../../scripts/release/posse-api';
+import {
   agenteDaBranch,
   agentesDosCommits,
   avaliarPosse,
   donosDasLabels,
+  issuesDoPr,
   issuesFechadas,
   renderEstado,
 } from '../../scripts/release/posse-lib';
@@ -110,11 +116,12 @@ describe('posse mecânica de issue (ADR-104)', () => {
     expect(r.motivos[0]).toContain('mais de um agente');
   });
 
-  it('Dado PR de integração ou sem agente identificado, Quando avalia, Então não se aplica', () => {
+  it('Dado PR de integração, Quando avalia, Então não se aplica', () => {
     for (const branch of [
       'release/v0.7.0',
       'sync/main-v0.7.0',
       'chore/sync-main-x',
+      'hotfix/judge',
       'dependabot/npm/x',
     ]) {
       expect(
@@ -126,14 +133,18 @@ describe('posse mecânica de issue (ADR-104)', () => {
         }).aplicavel,
       ).toBe(false);
     }
-    expect(
-      avaliarPosse({
-        branch: 'feat/humano',
-        corpo: '',
-        mensagensDosCommits: ['fix: x'],
-        labelsPorIssue: new Map(),
-      }),
-    ).toEqual({ ok: true, aplicavel: false, motivos: [] });
+  });
+
+  it('Dado PR fora da integração sem trailer de agente, Quando avalia, Então reprova pedindo o trailer (falha fechada)', () => {
+    const r = avaliarPosse({
+      branch: 'feat/humano',
+      corpo: 'Closes #1',
+      mensagensDosCommits: ['fix: x'],
+      labelsPorIssue: new Map([[1, ['dono:claude']]]),
+    });
+    expect(r.ok).toBe(false);
+    expect(r.aplicavel).toBe(true);
+    expect(r.motivos[0]).toContain('trailer');
   });
 
   it('Dado issues abertas, Quando gera o estado, Então agrupa por dono e conta as vagas', () => {
@@ -163,5 +174,78 @@ describe('posse mecânica de issue (ADR-104)', () => {
       [],
     );
     expect(acima).toContain('ACIMA DO TETO');
+  });
+});
+
+describe('posse: leituras da API (falha fechada, ADR-104)', () => {
+  const resposta =
+    (status: number, corpo: unknown): Buscador =>
+    async () => ({
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => corpo,
+    });
+
+  it('Dado a API fora do ar (500), Quando lê as labels, Então lança (o check sai com 1)', async () => {
+    await expect(
+      labelsDaIssue(resposta(500, {}), 'o/r', 1, 't'),
+    ).rejects.toThrow('HTTP 500');
+  });
+
+  it('Dado issue inexistente (404) ou token vazio recusado (401), Quando lê, Então lança', async () => {
+    await expect(
+      labelsDaIssue(resposta(404, {}), 'o/r', 1, 't'),
+    ).rejects.toThrow('HTTP 404');
+    await expect(dadosDoPr(resposta(401, {}), 'o/r', 1, '')).rejects.toThrow(
+      'HTTP 401',
+    );
+  });
+
+  it('Dado labels como objetos ou texto, Quando lê, Então devolve os nomes; lista vazia reprova na avaliação', async () => {
+    expect(
+      await labelsDaIssue(
+        resposta(200, { labels: [{ name: 'dono:claude' }, 'v0.7.0'] }),
+        'o/r',
+        1,
+        't',
+      ),
+    ).toEqual(['dono:claude', 'v0.7.0']);
+    const vazia = await labelsDaIssue(
+      resposta(200, { labels: [] }),
+      'o/r',
+      1,
+      't',
+    );
+    const r = avaliarPosse({
+      branch: 'claude/x',
+      corpo: 'Closes #1',
+      mensagensDosCommits: [],
+      labelsPorIssue: new Map([[1, vazia]]),
+    });
+    expect(r.ok).toBe(false);
+  });
+
+  it('Dado PR com corpo nulo, Quando lê, Então devolve corpo vazio e o título', async () => {
+    expect(
+      await dadosDoPr(
+        resposta(200, { body: null, title: 't (#5)' }),
+        'o/r',
+        1,
+        't',
+      ),
+    ).toEqual({ corpo: '', titulo: 't (#5)' });
+  });
+
+  it('Dado PR aberto antes do ADR-104 com (#N) só no título, Quando avalia, Então a issue do título vale', () => {
+    expect(issuesDoPr('sem closes', 'fix(ci): portão (#769)')).toEqual([769]);
+    expect(issuesDoPr('Closes #1', 'x (#1) (#2)')).toEqual([1, 2]);
+    const r = avaliarPosse({
+      branch: 'cursor/x',
+      corpo: '',
+      titulo: 'fix (#769)',
+      mensagensDosCommits: [],
+      labelsPorIssue: new Map([[769, ['dono:cursor']]]),
+    });
+    expect(r).toEqual({ ok: true, aplicavel: true, motivos: [] });
   });
 });

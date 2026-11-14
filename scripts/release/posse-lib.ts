@@ -12,7 +12,7 @@ const FECHA_ISSUE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi;
 const TRAILER_CLAUDE = /^co-authored-by:\s*claude\b/im;
 const TRAILER_CURSOR = /^co-authored-by:\s*cursor agent\b/im;
 /** PR de integração (release, sync da main, dependabot) não nasce de uma issue de um agente. */
-const SEM_POSSE = /^(release\/|sync\/|chore\/sync|dependabot\/)/;
+const SEM_POSSE = /^(release\/|sync\/|chore\/sync|hotfix\/|dependabot\/)/;
 
 export const agenteDaBranch = (branch: string): Agente | null => {
   if (branch.startsWith('claude/')) return 'claude';
@@ -35,12 +35,22 @@ export const issuesFechadas = (corpo: string): number[] => {
   return [...new Set(numeros)];
 };
 
+/** Referência no título, `(#N)`: PR aberto antes do ADR-104 (ex.: #811) ainda não traz `Closes` no corpo. */
+const REFERENCIA_NO_TITULO = /\(#(\d+)\)/g;
+
+/** Issues do PR: as que o corpo fecha e as que o título referencia. */
+export const issuesDoPr = (corpo: string, titulo = ''): number[] => {
+  const doTitulo = [...titulo.matchAll(REFERENCIA_NO_TITULO)].map((m) => Number(m[1]));
+  return [...new Set([...issuesFechadas(corpo), ...doTitulo])];
+};
+
 export const donosDasLabels = (labels: readonly string[]): string[] =>
   labels.filter((l) => l.startsWith(PREFIXO_DONO)).map((l) => l.slice(PREFIXO_DONO.length));
 
 export type EntradaPosse = {
   branch: string;
   corpo: string;
+  titulo?: string;
   mensagensDosCommits: readonly string[];
   /** Labels de cada issue citada, já lidas da API. */
   labelsPorIssue: ReadonlyMap<number, readonly string[]>;
@@ -60,14 +70,16 @@ export function avaliarPosse(e: EntradaPosse): ResultadoPosse {
   const agentes = new Set<Agente>(agentesDosCommits(e.mensagensDosCommits));
   const daBranch = agenteDaBranch(e.branch);
   if (daBranch) agentes.add(daBranch);
-  if (agentes.size === 0) return { ok: true, aplicavel: false, motivos: [] };
+  if (agentes.size === 0) {
+    return { ok: false, aplicavel: true, motivos: ['nenhum agente identificado: os commits do PR precisam do trailer `Co-Authored-By: Claude` ou `Co-authored-by: Cursor Agent` (falha fechada).'] };
+  }
   if (agentes.size > 1) {
     return { ok: false, aplicavel: true, motivos: ['mais de um agente escreveu neste PR (branch e commits). Branch por agente; ninguém empurra na branch do outro.'] };
   }
   const [agente] = [...agentes] as [Agente];
-  const issues = issuesFechadas(e.corpo);
+  const issues = issuesDoPr(e.corpo, e.titulo);
   if (issues.length === 0) {
-    return { ok: false, aplicavel: true, motivos: ['o corpo do PR precisa de `Closes #N` apontando para a issue do trabalho.'] };
+    return { ok: false, aplicavel: true, motivos: ['o corpo do PR precisa de `Closes #N` (ou o título de `(#N)`) apontando para a issue do trabalho.'] };
   }
   const motivos = issues
     .map((n) => motivoDaIssue(n, agente, e.labelsPorIssue.get(n)))

@@ -30,13 +30,19 @@ merge (#733, #734, #777, #767, #799, #808); a espera pelo clique de classe 3 che
 
 1. **Posse por label.** Toda issue em andamento tem **exatamente uma** label `dono:claude` ou `dono:cursor`. É a
    fonte de verdade da posse; o Linear espelha.
-2. **`npm run check:posse` no CI** (`ci.yml`, em PR que não é `release/*`): se o PR foi escrito por um agente (branch
-   `claude/*` ou `cursor/*`, ou trailer `Co-Authored-By: Claude` / `Co-authored-by: Cursor Agent` nos commits próprios
-   do PR), o corpo precisa de `Closes #N` e cada `#N` precisa ter a label `dono:*` igual ao agente. Reprova também
-   quando os dois agentes escrevem no mesmo PR. PR sem agente identificado, `release/*`, `sync/*` e `dependabot/*` não
-   se aplicam. Limite conhecido: o trailer é declarado pelo agente, não autenticado (mesmo limite do ADR-101).
-3. **Branch por agente.** `claude/*` e `cursor/*`; ninguém empurra na branch do outro (o check acima pega o caso em
-   que o outro agente deixa um commit próprio na branch).
+2. **`npm run check:posse` no CI** (`ci.yml`, em PR que não é `release/*`): todo PR fora da integração é de um
+   agente e precisa trazer o trailer dos commits próprios (`Co-Authored-By: Claude` ou `Co-authored-by: Cursor
+   Agent`) ou a branch `claude/*` / `cursor/*`. O corpo precisa de `Closes #N` (o título com `(#N)` também vale, para
+   PR aberto antes deste ADR, como o #811; o fechamento automático por `Closes` continua o recomendado) e cada
+   issue citada precisa ter exatamente uma label `dono:*` igual ao agente. O corpo e o título são lidos ao vivo pela
+   API (não do payload do evento), então corrigir o corpo e rodar o check de novo destrava o PR. **Falha fechada**:
+   reprova sem trailer, com os dois agentes no mesmo PR e quando a API falha. Isentos: `release/*`, `sync/*`,
+   `chore/sync*`, `hotfix/*` e `dependabot/*`. Limite aceito: o trailer é declarado, não autenticado (ADR-101).
+   Consequência da falha fechada: PR manual do Kalléo fora da lista de isentos precisa do trailer de um agente ou
+   de uma exceção decidida por ele.
+3. **Branch por agente.** Branches aceitas: `feat/<slug>` (AGENTS.md), `claude/*` e `cursor/*`. O agente vem do
+   trailer em `feat/*` e também do nome nas outras duas. Ninguém empurra na branch do outro (o check acima pega o
+   caso em que o outro agente deixa um commit próprio na branch).
 4. **Vagas.** O teto de 3 execuções de código somadas (ADR-103) é contado pela label `em-andamento`; o estado mostra
    `n/3` e marca "acima do teto".
 5. **`npm run estado`** gera `reports/estado-release.md` (ignorado pelo git): issues abertas por dono, issues sem dono
@@ -62,8 +68,9 @@ merge (#733, #734, #777, #767, #799, #808); a espera pelo clique de classe 3 che
 
 ## Consequências
 
-- PR de agente sem `Closes #N` ou sem label `dono:*` correspondente passa a falhar no CI. PRs em voo precisam da
-  label na issue antes de atualizar a branch.
+- PR sem trailer, sem referência de issue (`Closes #N` ou `(#N)` no título) ou sem label `dono:*` correspondente passa
+  a falhar no CI. PRs em voo precisam da label na issue antes de atualizar a branch; o #811 precisa de `Closes #769`
+  no corpo para seguir a regra completa.
 - É classe 3 (muda `ci.yml` e `scripts/release/`): precisa do clique do Kalléo no Environment.
 - Autenticidade da autoria continua dependendo do trailer; reforçar exigiria identidades Git separadas, o que o
   Kalléo não autorizou (ADR-103).
