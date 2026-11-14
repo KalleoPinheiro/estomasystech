@@ -1,0 +1,8 @@
+## Sincronia issue, Linear e fila + triagem (#837, ADR-108) (2026-11-14) — EM REVISÃO
+- **Por quê**: o estado vive na issue, na EST e na fila; os agentes se revezam sem se ver. A auditoria achou EST em "Triage" de trabalho mergeado, versão/prioridade ausentes, `dono:*` fora de uso e EST duplicada. A integração GitHub↔Linear também fecha a issue ao ir para "Em produção" e reabre a issue ao ir para "Na release".
+- **O que mudou (fora do repo)**: GitHub e Linear auditados. Labels de versão, prioridade e `pronta` completadas; `dono:*` removido de tudo menos #761 (PR #833); EST-114 e EST-105/106/109/110/111/112/99/103 saíram de "Triage" com prioridade; EST-82 e EST-101 para "Na release"; EST-78 para "Em andamento"; EST-85 e EST-86 marcadas duplicata de EST-8 e EST-9; dependências (#736–#741, #750–#752) registradas na EST.
+- **Rodada 2**: estado misto tratado (issue aberta + EST "Na release"), label `aguarda-operador` para mergeado aguardando ativação (#746, #747, #764, #783), quem fecha a issue (conduz a release, passo 8 do `producao.md` § 3.1), cifra P1, EST-118 devolve o 1:1 do #541 (a integração criou a #840 para ela).
+- **O que mudou (repo)**: ADR-108 (sincronia obrigatória, triagem P0–P3, defeito "Em produção" e correção); `AGENTS.md` (150 linhas), `convivencia-llms.md` e `docs/README.md`; `PROXIMOS-PASSOS.md` com a triagem e as decisões pendentes.
+- **Testes**: só `.md`; `check:docs`; nenhum teste nem `scripts/gate/` alterado.
+- **Fora do repositório (só o Kalléo)**: decisões listadas em `PROXIMOS-PASSOS.md` § 5.
+- **Next step**: the-judge em thread revisora; verificação por máquina na #835 (v0.8.0). **Blockers**: nenhum.

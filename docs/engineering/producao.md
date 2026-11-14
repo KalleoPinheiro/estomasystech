@@ -279,6 +279,7 @@ proposital enquanto as migrações não têm `down`
    depois dele) ou escreva uma migração nova que desfaça a mudança. Decida **antes** do deploy qual
    dos dois vale para o lote.
 7. **Depois:** apague do Coolify variável de contorno que sobrou e registre a versão e o commit no handoff.
+8. **Fechar o lote (ADR-108 § 5):** com a versão conferida em produção, o agente que conduz a release fecha as issues da versão (label `vX.Y.Z`); a integração leva as EST para "Em produção". Remova `aguarda-operador` do que foi ativado. Nenhum script faz isso ainda (#835).
 
 ## 4. Migrações
 
