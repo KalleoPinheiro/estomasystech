@@ -5,7 +5,6 @@ import {
   findReason,
   isConfigFile,
   isGateFile,
-  isSettingFile,
   isTestFile,
   judge,
 } from '../../scripts/gate/test-integrity';
@@ -40,10 +39,6 @@ describe('Regra 8: teste não se edita para resolver problema de desenvolvimento
       expect(isGateFile('.husky/pre-push')).toBe(true);
       expect(isGateFile('.claude/hooks/protect-tests.sh')).toBe(true);
       expect(isGateFile('src/app/page.tsx')).toBe(false);
-      expect(isSettingFile('biome.json')).toBe(true);
-      expect(isSettingFile('stryker.config.json')).toBe(true);
-      expect(isSettingFile('.github/workflows/ci.yml')).toBe(true);
-      expect(isSettingFile('package.json')).toBe(false);
     });
   });
 
@@ -294,153 +289,5 @@ describe('Regra 8: teste não se edita para resolver problema de desenvolvimento
         judge(soft, 'regra de negócio mudou conforme decisão do dono').ok,
       ).toBe(true);
     });
-  });
-});
-
-describe('Regra 8: configurações que afrouxam o gate (#732)', () => {
-  const rules = (file: string, removed: string[], added: string[]) =>
-    analyzeDiff(diffOf(file, removed, added)).map(
-      (f) => `${f.severity}:${f.rule}`,
-    );
-
-  describe('dado o limiar de mutação do Stryker', () => {
-    it('proíbe baixar o limiar break', () => {
-      expect(
-        rules('stryker.config.json', ['  "break": 85'], ['  "break": 70']),
-      ).toEqual(['hard:limiar-de-mutacao-reduzido']);
-    });
-    it('lê o limiar break na linha real do thresholds', () => {
-      expect(
-        rules(
-          'stryker.config.json',
-          ['  "thresholds": { "high": 90, "low": 70, "break": 85 }'],
-          ['  "thresholds": { "high": 90, "low": 70, "break": 80 }'],
-        ),
-      ).toEqual(['hard:limiar-de-mutacao-reduzido']);
-    });
-    it('proíbe aumentar o timeout da mutação', () => {
-      expect(
-        rules(
-          'stryker.config.json',
-          ['  "timeoutMS": 60000,'],
-          ['  "timeoutMS": 90000,'],
-        ),
-      ).toEqual(['hard:retry-ou-timeout-aumentado']);
-    });
-    it('proíbe tirar arquivo da lista mutate ou excluir com "!"', () => {
-      expect(
-        rules('stryker.config.json', ['    "src/domain/**/*.ts",'], []),
-      ).toEqual(['hard:mutacao-escopo-reduzido']);
-      expect(
-        rules('stryker.config.json', [], ['    "!src/domain/billing/**",']),
-      ).toEqual(['hard:mutacao-escopo-reduzido']);
-    });
-    it('aceita ampliar a lista mutate', () => {
-      expect(
-        rules('stryker.config.json', [], ['    "src/lib/**/*.ts",']),
-      ).toEqual([]);
-    });
-  });
-
-  describe('dado o biome.json', () => {
-    it('proíbe rebaixar regra de error para warn ou off', () => {
-      expect(
-        rules(
-          'biome.json',
-          ['  "noExplicitAny": "error"'],
-          ['  "noExplicitAny": "off"'],
-        ),
-      ).toEqual(['hard:regra-de-lint-rebaixada']);
-      expect(
-        rules('biome.json', ['  "level": "error"'], ['  "level": "warn"']),
-      ).toEqual(['hard:regra-de-lint-rebaixada']);
-    });
-    it('pede motivo para regra nova que nasce frouxa e aceita subir para error', () => {
-      expect(rules('biome.json', [], ['  "noFoo": "warn"'])).toEqual([
-        'justifiable:regra-de-lint-nao-estrita',
-      ]);
-      expect(
-        rules('biome.json', ['  "noFoo": "warn"'], ['  "noFoo": "error"']),
-      ).toEqual([]);
-    });
-  });
-
-  describe('dado os configs de Vitest e Playwright', () => {
-    it('trata vitest.integracao, vitest.mutacao e playwright.console como config de teste', () => {
-      for (const f of [
-        'vitest.integracao.config.mts',
-        'vitest.mutacao.config.mts',
-        'vitest.shard.config.mts',
-        'playwright.console.config.ts',
-      ])
-        expect(isConfigFile(f)).toBe(true);
-      expect(
-        rules(
-          'vitest.mutacao.config.mts',
-          ['    testTimeout: 20_000,'],
-          ['    testTimeout: 40_000,'],
-        ),
-      ).toEqual(['hard:retry-ou-timeout-aumentado']);
-      expect(
-        rules(
-          'playwright.console.config.ts',
-          ['  retries: 0,'],
-          ['  retries: 2,'],
-        ),
-      ).toEqual(['hard:retry-ou-timeout-aumentado']);
-    });
-  });
-
-  describe('dado os shards dos workflows', () => {
-    it('proíbe remover shard da matriz ou diminuir o total do --shard', () => {
-      expect(
-        rules(
-          '.github/workflows/ci.yml',
-          ['        shard: [1, 2, 3, 4]'],
-          ['        shard: [1, 2, 3]'],
-        ),
-      ).toEqual(['hard:shard-removido']);
-      expect(
-        rules(
-          '.github/workflows/gate-pr.yml',
-          ['          --shard=1/3'],
-          ['          --shard=1/2'],
-        ),
-      ).toEqual(['hard:shard-removido']);
-      expect(
-        rules('.github/workflows/ci.yml', ['        shard: [1, 2, 3, 4]'], []),
-      ).toEqual(['hard:shard-removido']);
-    });
-    it('aceita aumentar os shards e ignora outros workflows', () => {
-      expect(
-        rules(
-          '.github/workflows/ci.yml',
-          ['        shard: [1, 2, 3, 4]'],
-          ['        shard: [1, 2, 3, 4, 5]'],
-        ),
-      ).toEqual([]);
-      expect(
-        rules('.github/workflows/outro.yml', ['shard: [1, 2]'], []),
-      ).toEqual([]);
-    });
-  });
-
-  it('o hook não bloqueia a edição de biome.json nem de stryker.config.json (só o diff é julgado)', () => {
-    expect(
-      analyzeEdit({
-        filePath: 'biome.json',
-        exists: true,
-        oldString: 'a',
-        newString: 'b',
-      }),
-    ).toEqual([]);
-    expect(
-      analyzeEdit({
-        filePath: 'stryker.config.json',
-        exists: true,
-        oldString: 'a',
-        newString: 'b',
-      }),
-    ).toEqual([]);
   });
 });

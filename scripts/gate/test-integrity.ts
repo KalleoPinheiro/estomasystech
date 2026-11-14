@@ -18,13 +18,15 @@ export interface Finding {
   rule: string;
   severity: Severity;
   line: string;
+  /** `gate`: mudança não proibida em config de lint/gate; pede `GATE-ALTERADO:` (não `TESTE-ALTERADO:`). */
+  kind?: 'gate';
 }
 
 const TEST_FILE = /^(tests|e2e)\/.+\.(ts|tsx)$/;
 const CONFIG_FILE = /^(vitest(\.[a-z]+)?\.config\.mts|playwright(\.[a-z]+)?\.config\.ts)$/;
 /**
  * Configurações que afrouxam o gate mas que o agente também edita no dia a dia (lint, mutação, CI):
- * só o diff é julgado (CI e `pre-push`); o hook não as bloqueia.
+ * `gate-config.ts` compara base e HEAD (CI e `pre-push`); o hook não as bloqueia.
  */
 const GATE_SETTING_FILE = /^(stryker\.config\.json|biome\.json|\.github\/workflows\/(ci|gate-pr)\.yml)$/;
 /** Arquivos que definem o próprio gate: só o dono muda (hook bloqueia o agente). */
@@ -126,78 +128,12 @@ function configFindings(h: Hunk): Finding[] {
 }
 
 
-const BREAK_THRESHOLD = /"break"\s*:\s*(\d+)/;
-const MUTATION_TIMEOUT = /^\s*"timeoutMS"\s*:\s*(\d+)/;
-const MUTATE_ENTRY = /^\s*"(!?[^"]+)"\s*,?\s*$/;
-const LINT_LEVEL = /"(\w+)"\s*:\s*"(error|warn|off)"/;
-const LINT_RANK: Record<string, number> = { error: 2, warn: 1, off: 0 };
-const SHARD_LIST = /^\s*shard\s*:\s*\[([^\]]*)\]/;
-const SHARD_FLAG = /--shard=.*\/(\d+)/;
-
-const first = (lines: string[], re: RegExp, group = 1): number[] =>
-  lines.flatMap((l) => {
-    const m = re.exec(l);
-    return m?.[group] ? [Number(m[group])] : [];
-  });
-const countItems = (list: string): number => list.split(',').filter((x) => x.trim()).length;
-
-function settingFindings(h: Hunk): Finding[] {
-  const out: Finding[] = [];
-  const push = (rule: string, severity: Severity, line: string) =>
-    out.push({ file: h.file, rule, severity, line: line.trim() });
-  if (h.file === 'stryker.config.json') {
-    for (const line of h.added) {
-      const b = BREAK_THRESHOLD.exec(line);
-      if (b && first(h.removed, BREAK_THRESHOLD).some((n) => n > Number(b[1])))
-        push('limiar-de-mutacao-reduzido', 'hard', line);
-      const t = MUTATION_TIMEOUT.exec(line);
-      if (t && first(h.removed, MUTATION_TIMEOUT).some((n) => n < Number(t[1])))
-        push('retry-ou-timeout-aumentado', 'hard', line);
-      const e = MUTATE_ENTRY.exec(line);
-      if (e?.[1]?.startsWith('!') && !h.removed.includes(line))
-        push('mutacao-escopo-reduzido', 'hard', line);
-    }
-    for (const line of h.removed) {
-      const e = MUTATE_ENTRY.exec(line);
-      if (e?.[1] && !e[1].startsWith('!') && /[/*]/.test(e[1]) && !h.added.includes(line))
-        push('mutacao-escopo-reduzido', 'hard', line);
-    }
-  } else if (h.file === 'biome.json') {
-    for (const line of h.added) {
-      const m = LINT_LEVEL.exec(line);
-      if (!m?.[2] || m[2] === 'error') continue;
-      const rank = LINT_RANK[m[2]] ?? 0;
-      const olds = h.removed.flatMap((l) => {
-        const o = LINT_LEVEL.exec(l);
-        return o?.[1] === m[1] && o[2] ? [LINT_RANK[o[2]] ?? 0] : [];
-      });
-      if (olds.some((n) => n > rank)) push('regra-de-lint-rebaixada', 'hard', line);
-      else if (olds.length === 0) push('regra-de-lint-nao-estrita', 'justifiable', line);
-    }
-  } else {
-    for (const line of h.removed) {
-      const list = SHARD_LIST.exec(line);
-      if (list?.[1] !== undefined) {
-        const now = h.added.flatMap((l) => SHARD_LIST.exec(l)?.[1] ?? []);
-        if (now.length === 0 || now.every((n) => countItems(n) < countItems(list[1] ?? '')))
-          push('shard-removido', 'hard', line);
-      }
-      const flag = SHARD_FLAG.exec(line);
-      if (flag?.[1] && !first(h.added, SHARD_FLAG).some((n) => n >= Number(flag[1])))
-        push('shard-removido', 'hard', line);
-    }
-  }
-  return out;
-}
-
 /** Analisa um diff unificado (`git diff <base>...HEAD`) e devolve os achados. */
 export function analyzeDiff(diff: string): Finding[] {
   const findings: Finding[] = [];
   for (const h of parseDiff(diff)) {
     if (isConfigFile(h.file)) {
       findings.push(...configFindings(h));
-    } else if (isSettingFile(h.file)) {
-      findings.push(...settingFindings(h));
     } else if (isTestFile(h.file)) {
       if (h.deleted) {
         findings.push({
@@ -273,10 +209,16 @@ export function analyzeEdit(edit: EditIntent): Finding[] {
 }
 
 const REASON = /^TESTE-ALTERADO:[ \t]*(.{20,})$/m;
+const GATE_REASON = /^GATE-ALTERADO:[ \t]*(.{20,})$/m;
 
 /** Motivo de negócio declarado no corpo do PR, ou `null` se ausente/curto. */
 export function findReason(prBody: string): string | null {
   return REASON.exec(prBody)?.[1]?.trim() ?? null;
+}
+
+/** Motivo de `GATE-ALTERADO:` (config de lint/gate), ou `null` se ausente/curto. */
+export function findGateReason(prBody: string): string | null {
+  return GATE_REASON.exec(prBody)?.[1]?.trim() ?? null;
 }
 
 export interface Verdict {
@@ -284,13 +226,18 @@ export interface Verdict {
   messages: string[];
 }
 
-export function judge(findings: Finding[], reason: string | null): Verdict {
+export function judge(findings: Finding[], reason: string | null, gateReason: string | null = null): Verdict {
   const messages: string[] = [];
   const hard = findings.filter((f) => f.severity === 'hard');
-  const soft = findings.filter((f) => f.severity === 'justifiable');
+  const soft = findings.filter((f) => f.severity === 'justifiable' && f.kind !== 'gate');
+  const gate = findings.filter((f) => f.severity === 'justifiable' && f.kind === 'gate');
   for (const f of hard) messages.push(`PROIBIDO ${f.rule}: ${f.file}: ${f.line}`);
   for (const f of soft) messages.push(`${reason ? 'JUSTIFICADO' : 'SEM MOTIVO'} ${f.rule}: ${f.file}: ${f.line}`);
+  for (const f of gate) messages.push(`${gateReason ? 'JUSTIFICADO' : 'SEM MOTIVO'} ${f.rule}: ${f.file}: ${f.line}`);
   if (soft.length > 0 && !reason)
     messages.push('Declare `TESTE-ALTERADO: <motivo de negócio, 20+ caracteres>` no corpo do PR.');
-  return { ok: hard.length === 0 && (soft.length === 0 || reason !== null), messages };
+  if (gate.length > 0 && !gateReason)
+    messages.push('Declare `GATE-ALTERADO: <motivo, 20+ caracteres>` no corpo do PR (config de lint ou do gate).');
+  const ok = hard.length === 0 && (soft.length === 0 || reason !== null) && (gate.length === 0 || gateReason !== null);
+  return { ok, messages };
 }

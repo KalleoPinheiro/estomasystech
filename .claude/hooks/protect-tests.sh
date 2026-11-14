@@ -7,7 +7,7 @@
 INPUT=$(cat)
 FILE=$(echo "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("file_path","") or "")' 2>/dev/null)
 case "$FILE" in
-  */tests/*|*/e2e/*|*vitest.config.mts|*playwright*.config.ts|*/scripts/gate/*|*/.claude/hooks/*|*/.claude/settings.json|*/.husky/*) ;;
+  */tests/*|*/e2e/*|*vitest*.config.mts|*playwright*.config.ts|*/scripts/gate/*|*/.claude/hooks/*|*/.claude/settings.json|*/.husky/*) ;;
   *) exit 0 ;;
 esac
 echo "$INPUT" | "${ROOT_DIR:-.}/node_modules/.bin/tsx" "${ROOT_DIR:-.}/scripts/gate/protect-tests-hook.ts"
