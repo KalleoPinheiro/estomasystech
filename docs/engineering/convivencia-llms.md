@@ -182,3 +182,10 @@ conferir reservas e só então continuar. Memória antiga não reabre issue nem 
 Fluxo e operação: [homologação](homologacao.md), [produção](producao.md) e
 [governança](../governance.md). Este guia não implanta feat→main nem auto-deploy; divergência de
 workflow/ADR paralisa a ação de risco e vira decisão registrada, nunca remoção silenciosa de portão.
+
+## 8. Posse verificada por CI (ADR-104)
+
+- Antes de abrir o PR, reserve a issue: **uma** label `dono:claude` ou `dono:cursor`; ela é a posse. Corpo do PR: `Closes #N` (o título com `(#N)` também vale para PR aberto antes do ADR-104). O check `npm run check:posse` confere que o dono é o agente do PR (branch e trailers). Dois agentes no mesmo PR reprovam.
+- Em `feat/*` o agente é identificado pelo trailer dos commits; em `claude/*` e `cursor/*`, também pela branch. Ninguém empurra na branch do outro.
+- `npm run estado` gera `reports/estado-release.md` (não versionado): leia ao iniciar a sessão, antes de pedir reserva.
+- Vagas: label `em-andamento`, teto 3 somadas. Cadência: lote de valor homologado, no máximo quinzenal.
