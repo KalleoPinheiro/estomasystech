@@ -182,3 +182,5 @@ conferir reservas e só então continuar. Memória antiga não reabre issue nem 
 Fluxo e operação: [homologação](homologacao.md), [produção](producao.md) e
 [governança](../governance.md). Este guia não implanta feat→main nem auto-deploy; divergência de
 workflow/ADR paralisa a ação de risco e vira decisão registrada, nunca remoção silenciosa de portão.
+
+Revezamento quando os créditos de um agente acabam (passagem de bastão, sem paralelismo): [ADR-105 § 9](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md), proposto, aguardando o aceite do Kalléo.

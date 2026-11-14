@@ -181,8 +181,10 @@ humanos e para revisão por pessoa; **não é o mecanismo de segurança** (seç�
 O [ADR-105](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md) (issue #818) divide a classe 3 em **3A**
 (automática: config de lint/teste/gate e workflows de CI que não enfraquecem o portão) e **3B** (humana: deploy,
 produção, auth, cifra e PII, migração não aditiva, o próprio classificador e a regra 8). A 3A troca o clique por
-controles de máquina (gate rodando da base, não regressão de limiar, canário, `compat-migracao`, duas reviews do
-the-judge em sessões limpas, uma adversarial) e por auditoria por release. A 3B de produto passa a ter um clique por
+controles de máquina (gate rodando da base, não regressão de limiar, canário em job isolado, `compat-migracao`,
+análise estrutural do YAML por lista branca) mais duas reviews do the-judge em sessões limpas, que são processo fraco e
+declarado, e por auditoria por release. Na primeira fase a 3A é estreita (`biome.json` e acréscimos puros a workflow);
+scripts de gate e `package.json > scripts` seguem 3B. O ADR está **proposto**, aguardando o aceite do Kalléo. A 3B de produto passa a ter um clique por
 release, no PR `release → main`; a 3B que mexe no portão mantém o clique por PR.
 
 **Nada disso vale hoje.** Esta página, as seções 1 a 4 e o `check:risco` seguem como estão até a issue
