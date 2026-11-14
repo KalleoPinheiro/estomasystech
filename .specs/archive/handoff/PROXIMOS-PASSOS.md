@@ -42,6 +42,8 @@ Depois: v0.9.0 (#729, #557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651)
 
 ## 4. Espera o Kalléo
 
+Mergeados na release e aguardando ativação (label `aguarda-operador`, ADR-108 § 3): #746, #747, #764, #783.
+
 - **#747** (backup): Etapa 9 no VPS (chave SSH restrita e sudoers mínimo).
 - **#764** e **#783** (the-judge por OIDC): `VEREDITO_JUDGE_ATIVO` e a configuração do lado dele.
 - **#746** (decisão do deploy pelo Coolify).
@@ -51,16 +53,15 @@ Depois: v0.9.0 (#729, #557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651)
 
 ## 5. Triagem de 2026-11-14 (ADR-108)
 
-Prioridade pelo critério do ADR-108 § 6. Toda issue aberta tem EST, versão e prioridade. Estado estável de entregue
+Prioridade pelo critério do ADR-108 § 6. Toda issue aberta e ainda não entregue tem EST, versão e prioridade . Estado estável de entregue
 na release: issue **aberta** + EST "Na release" (fecham no `release:publish`).
 
 - **P1 (LGPD, v0.8.0):** #730, #735 a #741 (#735 é a única `pronta`; #736 a #741 ficam bloqueadas por ela na EST).
 - **P1 (humano):** #376 (jurídico).
 - **P2 (infra de entrega):** #819 (primeira da v0.8.0), #820, #830, #831, #832, #835, #750, #751, #715, #745, #761
-  (em voo), #746, #747, #764, #783 (esperam o Kalléo). **P2 produto:** #777 (feito, na release), #741.
+  (em voo), #746, #747, #764, #783 (esperam o Kalléo). 
 - **P3:** #828, #802, #744, #752, #815 (v0.9.0).
-- Perf (`perf-next`): #557 P2 e #558 P3 em v0.9.0; #615 P2, #559 P2, #541 P2, #560 P3, #651 P3 em v0.10.0. #773 é espelho
-  de #541 (mesma EST-84). EST-85 e EST-86 eram duplicatas de EST-8 e EST-9 e foram marcadas como tal.
+- Perf (`perf-next`): #557 P2 e #558 P3 em v0.9.0; #615 P2, #559 P2, #541 P2, #560 P3, #651 P3 em v0.10.0. #773 espelha a #541 (EST-84 e EST-118, uma EST por issue). EST-85 e EST-86 eram duplicatas de EST-8 e EST-9 e foram marcadas como tal.
 - Dependências registradas na EST: #736 a #741 bloqueadas por #735; #751 por #750; #752 por #750 e #751; #750 por #746.
 
 ### Decididas em 2026-11-14 (coordenação)

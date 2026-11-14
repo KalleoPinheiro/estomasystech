@@ -40,23 +40,31 @@ não em produção, é **issue aberta + EST "Na release"**.
 1. **Sincronia obrigatória.** Todo PR que entrega uma issue e toda troca de agente (ADR-105 § 9) deixam, no mesmo
    ciclo, coerentes: a issue, a EST, as labels e `PROXIMOS-PASSOS.md`. **Quem assume confere os quatro antes de pedir
    reserva** e corrige o que divergir; o remoto vale mais que a memória.
-2. **Toda issue aberta tem EST e vice-versa**, com título equivalente. Issue nova nasce com label de versão
-   (`vX.Y.Z`), prioridade (`P0`..`P3`) e domínio; a EST nova sai de "Triage" no mesmo dia.
+2. **Toda issue aberta e ainda não entregue tem EST e vice-versa**, com título equivalente. Issue nova nasce com
+   label de versão (`vX.Y.Z`), prioridade (`P0`..`P3`) e domínio; a EST nova sai de "Triage" no mesmo dia. Cada issue
+   tem a sua EST (1:1), inclusive espelhos.
 3. **Estado da EST pela realidade:** "Planejada/Brief" (triada, pronta, sem dono), "Em andamento" (PR aberto, com
    `dono:<agente>`), "Em revisão (the-judge)" (PR em revisão), "Na release" (PR mergeado em `release/*`),
-   "Em produção" só para o que está numa versão publicada (tag na `main`).
+   "Em produção" só para o que está numa versão publicada (tag na `main`). Mergeado mas **aguardando ativação
+   externa** (segredo, painel, ato do Kalléo): issue aberta, EST em "Na release" e label `aguarda-operador` na issue
+   e na EST, até a ativação; a fila lista o que falta (seção "Espera o Kalléo"). Ao ativar, remova a label.
 4. **`dono:<agente>` e `em-andamento` só em issue com trabalho em andamento** (PR aberto). Ao mergear, quem
-   mergeia remove as duas labels da issue e da EST.
+   mergeia remove as duas labels da issue e da EST. EST em "Duplicate" também não leva `em-andamento` nem `P*`.
 5. **Defeito "Em produção" e correção.** Depois de cada merge na release: (a) a issue fecha pelo `Closes #N` e a EST
    vai para "Em produção"; (b) mova a EST para **"Na release"**, o que reabre a issue; (c) confira que a issue
-   ficou aberta, sem `dono:*`. A issue fecha de vez, e a EST vai para "Em produção", no `release:publish`. Issue **já fechada** cuja EST está em "Na release" (estado misto): reabra a issue; se a EST estiver em
-   "Em produção" sem tag publicada, mova-a para "Na release" (isso reabre a issue). Fechar
-   issue à mão para "limpar" o quadro é proibido: a integração desfaz o estado certo.
-6. **Triagem.** Prioridade: **P0** risco a dado de saúde, LGPD, segurança ou perda de dado em produção; **P1** bug ou
-   valor visível ao cliente da clínica; **P2** qualidade e infra de entrega que bloqueia release; **P3** melhoria e
-   dívida técnica. Prontidão pela label `pronta`; dependência pela relação "bloqueada por" da EST. Onde o critério não
-   decide (ambiguidade de produto ou clínica), o agente **não escolhe**: lista a pergunta com a recomendação para o
-   Kalléo (regra 5 do `AGENTS.md`).
+   ficou aberta, sem `dono:*`. Issue **já fechada** cuja EST está em "Na release" (estado misto): reabra a issue; se a
+   EST estiver em "Em produção" sem tag publicada, mova-a para "Na release" (isso reabre a issue). Fechar issue à mão
+   para "limpar" o quadro é proibido: a integração desfaz o estado certo. **Quem fecha:** o agente que conduz a release, como último passo, depois de
+   conferir a versão em produção: fecha as issues do lote (label `vX.Y.Z`) e a integração leva as EST para "Em
+   produção" (aí o comportamento é o desejado). Nenhum script do `release:*` faz isso hoje (a automação entra na
+   [#835](https://github.com/KalleoPinheiro/estomasystech/issues/835), v0.8.0); o passo consta no fechamento de
+   release em `docs/engineering/producao.md` § 3.1.
+6. **Triagem.** Prioridade: **P0** exposição ativa, incidente ou vetor explorável conhecido em produção
+   envolvendo dado de saúde/LGPD, segurança ou perda de dado (aja já); **P1** bug ou valor visível ao cliente da clínica e
+   endurecimento sem vetor ativo (como a cifra em repouso do cadastro, defesa em profundidade); **P2** qualidade e infra de
+   entrega que bloqueia release; **P3** melhoria e dívida técnica. Prontidão pela label `pronta`; dependência pela
+   relação "bloqueada por" da EST. Onde o critério não decide (ambiguidade de produto ou clínica), o agente **não
+   escolhe**: lista a pergunta com a recomendação para o Kalléo (regra 5 do `AGENTS.md`).
 7. **Versão:** só entra na `vX.Y.Z` aberta o que já está em voo; o resto vai para a próxima, ordenado pela prioridade.
 
 ## Consequências
