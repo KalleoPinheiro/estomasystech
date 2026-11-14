@@ -27,7 +27,7 @@ const TIMEOUTS: Record<string, Record<string, number>> = {
     'build-prod': 20,
     'e2e-prod': 20,
     'e2e-dev': 20,
-    mutacao: 45,
+    mutacao: 120,
     'gate-pr': 5,
   },
   '.github/workflows/ci.yml': {

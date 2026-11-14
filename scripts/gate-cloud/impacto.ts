@@ -92,13 +92,14 @@ export function impactedSpecs(changed: string[], specs: Spec[]): Impact {
 /**
  * Arquivos que a mutação do gate da nuvem cobre: `src/domain`, `src/application` (ADR-051),
  * `src/lib/server` (ADR-084: acesso e auditoria vivem lá) e o envelope das ações e rotas
- * (`action-result.ts`, `api-response.ts`). Sem `.d.ts` nem `index.ts`.
+ * (`action-result.ts`, `api-response.ts`) e as libs puras de `scripts/release/*-lib.ts` (#761). Sem `.d.ts` nem `index.ts`.
  */
 export function mutationTargetsCloud(changed: string[]): string[] {
   return changed.filter(
     (f) =>
       (/^src\/(domain|application|lib\/server)\/.+\.ts$/.test(f) ||
-        /^src\/lib\/(action-result|api-response)\.ts$/.test(f)) &&
+        /^src\/lib\/(action-result|api-response)\.ts$/.test(f) ||
+        /^scripts\/release\/[^/]+-lib\.ts$/.test(f)) &&
       !f.endsWith('.d.ts') &&
       !/(^|\/)index\.ts$/.test(f),
   );
@@ -152,7 +153,7 @@ function mutationTargetsWithConfig(base: string, changed: string[]): string[] {
   if (changed.includes('stryker.config.json')) {
     const antes = spawnSync('git', ['show', `${base}:stryker.config.json`], { encoding: 'utf8' });
     const padroes = novosPadroesMutate(antes.status === 0 ? antes.stdout : null, readFileSync('stryker.config.json', 'utf8'));
-    const arquivos = spawnSync('git', ['ls-files', 'src'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
+    const arquivos = spawnSync('git', ['ls-files', 'src', 'scripts/release'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean);
     for (const f of alvosDeConfigNova(padroes, arquivos)) alvos.add(f);
   }
   return [...alvos];
