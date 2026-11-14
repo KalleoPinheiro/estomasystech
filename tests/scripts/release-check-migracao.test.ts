@@ -599,3 +599,74 @@ describe('check:migracao · linha de comando', () => {
     expect(r.stderr).toContain('git diff contra nao-existe falhou');
   });
 });
+
+describe('check:migracao · caminho não ASCII com -z', () => {
+  const raiz = path.resolve(import.meta.dirname, '../..');
+  const dir = mkdtempSync(path.join(tmpdir(), 'check-migracao-nul-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  const git = (...args: string[]): string => {
+    const r = spawnSync(
+      'git',
+      [
+        '-C',
+        dir,
+        '-c',
+        'user.name=t',
+        '-c',
+        'user.email=t@t',
+        '-c',
+        'commit.gpgsign=false',
+        ...args,
+      ],
+      { encoding: 'utf8' },
+    );
+    if (r.status !== 0) throw new Error(r.stderr || r.stdout);
+    return r.stdout.trim();
+  };
+  const escrever = (arquivo: string, texto: string): void => {
+    mkdirSync(path.dirname(path.join(dir, arquivo)), { recursive: true });
+    writeFileSync(path.join(dir, arquivo), texto);
+  };
+  const journal = (entries: EntradaJournal[]): string =>
+    JSON.stringify({ version: '7', dialect: 'postgresql', entries });
+  const cli = (...args: string[]) =>
+    spawnSync(
+      path.join(raiz, 'node_modules/.bin/tsx'),
+      [path.join(raiz, 'scripts/release/check-migracao.ts'), ...args],
+      { cwd: dir, encoding: 'utf8' },
+    );
+
+  it('Dado SQL não ASCII só no head, Quando o lint roda no checkout da base, Então classifica o caminho cru', () => {
+    const baseJournal: EntradaJournal[] = [
+      { idx: 0, version: '7', when: 10, tag: '0000_base', breakpoints: true },
+    ];
+    const headJournal: EntradaJournal[] = [
+      ...baseJournal,
+      { idx: 1, version: '7', when: 20, tag: '0001_ação', breakpoints: true },
+    ];
+    git('init', '-q', '-b', 'main');
+    escrever('drizzle/0000_base.sql', 'CREATE TABLE a (id text);\n');
+    escrever('drizzle/meta/_journal.json', journal(baseJournal));
+    git('add', '-A');
+    git('commit', '-q', '-m', 'base');
+    const baseSha = git('rev-parse', 'HEAD');
+    escrever('drizzle/0001_ação.sql', 'ALTER TABLE a ADD COLUMN x text;\n');
+    escrever('drizzle/meta/_journal.json', journal(headJournal));
+    git('add', '-A');
+    git('commit', '-q', '-m', 'head');
+    const headSha = git('rev-parse', 'HEAD');
+    git('checkout', '-q', baseSha);
+
+    const r = cli('--base', baseSha, '--head', headSha, '--json');
+    expect(r.status, r.stderr).toBe(0);
+    const corpo = JSON.parse(r.stdout) as {
+      classificacao: string;
+      migracoes: { arquivo: string }[];
+    };
+    expect(corpo.classificacao).toBe('aditiva');
+    expect(corpo.migracoes.map((m) => m.arquivo)).toContain(
+      'drizzle/0001_ação.sql',
+    );
+  });
+});

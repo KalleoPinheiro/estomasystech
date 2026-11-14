@@ -1,13 +1,13 @@
 name: Portão de risco
 
-# Classe de risco da PR (0 a 3, calculada por script a partir do diff; `docs/engineering/classe-de-risco.md`) e,
-# na classe 3, a aprovação do dono por um Environment protegido (ADR-097, fase 2c; ADR-098). O sinal que um agente
-# não forja é o clique do revisor do Environment `aprovacao-classe-3`: todas as PRs dos agentes saem com o login
-# do dono, então CODEOWNERS e review sozinhos não bastam.
+# Classe de risco da PR (0 a 3; `docs/engineering/classe-de-risco.md`). Na classe 3, a aprovação do dono
+# pelo Environment `aprovacao-classe-3` (ADR-097, ADR-098). O agente não clica.
 #
-# `portao-risco` é o único check a exigir no ruleset (depois que o Environment existir com o dono como revisor;
-# sem revisor o GitHub cria o Environment vazio e a aprovação passa sozinha). Rascunho reprova (fail-closed,
-# ADR-093): o pedido de aprovação só chega ao dono com a PR pronta. Sem `pull_request_target` e sem segredo.
+# O classificador (`scripts/release/classificar-risco*.ts`) e o `check-migracao*.ts` vêm do checkout de
+# `base.sha`, nunca do head. O head entra só como objeto (`--head`, diff `-z`, `git cat-file`): sem
+# checkout dele, sem `npm ci` dele, sem execução. No `pull_request` o YAML ainda é o do merge: uma PR
+# que edita este arquivo pode desligar isso. Fechar exige ruleset (decisão do Kalléo). Sem segredo.
+# `permissions: contents: read`. Rascunho reprova (ADR-093).
 on:
   pull_request:
     branches: ["release/**", main]
@@ -32,8 +32,10 @@ jobs:
       classe: ${{ steps.r.outputs.classe }}
       humana: ${{ steps.r.outputs.aprovacao_humana }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Base confiável
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
           fetch-depth: 0
 
@@ -44,18 +46,47 @@ jobs:
 
       - run: npm ci --ignore-scripts
 
+      - name: Head só como objeto
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          sha() {
+            case "$1" in
+              [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+              *) echo "::error::$2 não é um SHA de 40 hex"; exit 1 ;;
+            esac
+          }
+          sha "$BASE_SHA" base
+          sha "$HEAD_SHA" head
+          case "$PR_NUMBER" in
+            ''|*[!0-9]*) echo "::error::número da PR inválido"; exit 1 ;;
+          esac
+          git cat-file -e "$BASE_SHA^{commit}"
+          git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "refs/pull/${PR_NUMBER}/head"
+          git cat-file -e "$HEAD_SHA^{commit}"
+
       - id: r
         env:
-          GATE_BASE: origin/${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          npm run --silent check:risco -- --saida-github | tee -a "$GITHUB_OUTPUT"
+          # Bootstrap (falha fechada): se os scripts da base ainda não conhecem `--head`, a flag seria ignorada e o
+          # diff base...base sairia vazio (classe 0). Nesse caso a classe é 3 e o dono aprova.
+          if ! grep -qF -e "'--head'" scripts/release/classificar-risco.ts scripts/release/check-migracao.ts; then
+            printf 'classe=3\naprovacao_humana=true\n' | tee -a "$GITHUB_OUTPUT"
+            echo "### Classe de risco: 3 (a base ainda não conhece --head; bootstrap fechado)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm run --silent check:risco -- --saida-github --base "$BASE_SHA" --head "$HEAD_SHA" | tee -a "$GITHUB_OUTPUT"
           {
             echo "### Classe de risco"
-            npm run --silent check:risco
+            npm run --silent check:risco -- --base "$BASE_SHA" --head "$HEAD_SHA"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # Só roda na classe 3 e fica parado até o dono aprovar no Environment; a aprovação vale por execução
-  # (push novo reinicia). O agente não tem como clicar.
+  # (push novo reinicia). O agente não tem como clicar. O SHA registrado é o do head da PR.
   aprovacao-classe-3:
     name: Aprovação do dono (classe 3)
     needs: risco
@@ -64,7 +95,9 @@ jobs:
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
-      - run: echo "dono aprovou a classe 3 para $GITHUB_SHA"
+      - env:
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: echo "dono aprovou a classe 3 para $PR_SHA"
 
   portao-risco:
     name: Portão de risco

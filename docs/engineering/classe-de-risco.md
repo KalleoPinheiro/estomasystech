@@ -19,11 +19,13 @@ npm run check:risco                          # texto, contra a base detectada (a
 npm run check:risco -- --json                # relatório classificar-risco/v1
 npm run check:risco -- --saida-github        # classe=N e aprovacao_humana=true|false ($GITHUB_OUTPUT)
 npm run check:risco -- --base origin/release/v0.6.2
+npm run check:risco -- --base <sha> --head <sha>   # conteúdo do head via git, árvore de trabalho intacta
 npm run check:risco -- --migracao rel.json   # usa um check-migracao/v1 já gerado
 ```
 
 Sai com `0` sempre que consegue classificar: a classe é informação para o deploy e para a aprovação, não reprova
-a PR. Sai com `1` só se o `git diff` falhar.
+a PR. Sai com `1` só se o `git diff` falhar. A lista de caminhos usa `git diff -z` (separador NUL, sem as aspas
+do `core.quotePath`): nome com acento, espaço, aspas ou quebra de linha continua casando com a regra.
 
 | Classe | Critério | Aprovação humana |
 | --- | --- | --- |
@@ -48,7 +50,7 @@ Lista única em `CAMINHOS_SENSIVEIS` (`scripts/release/classificar-risco-lib.ts`
 | `dados-de-producao` | `scripts/backup*.sh`, `scripts/restore*.sh` (backup e restauração) |
 | `imagem-e-deploy` | `Dockerfile`, `deploy/` |
 | `workflow` | `.github/workflows/`, `.github/CODEOWNERS` |
-| `portao` | `scripts/gate/`, `scripts/gate-cloud*`, `scripts/release/`, `scripts/check-*` e `scripts/docker-smoke.sh` (executados pelo `ci.yml`), `.gate/`, `.husky/`, `.claude/hooks/`, `.claude/settings.json`, `vitest*.config.mts`, `stryker.config.json`, `playwright.config.ts`, `biome.json` |
+| `portao` | `scripts/gate/`, `scripts/gate-cloud*`, `scripts/release/`, `scripts/check-*` e `scripts/docker-smoke.sh` (executados pelo `ci.yml`), `.gate/`, `.husky/`, `.claude/hooks/`, `.claude/settings.json`, `vitest*.config.mts`, `stryker.config.json`, `playwright*.config.ts` (`playwright.config.ts`, `playwright.prod.config.ts`, `playwright.console.config.ts` e o mesmo formato), `biome.json` |
 | `portao` (comandos) | mudança em `package.json > scripts` de `check:*`, `test*`, `gate*`, `lint*`, `typecheck*`, `build*` |
 | `dependencia-sensivel` | mudança em `package.json`, ou de runtime (`dev` fora) no `package-lock.json`, de `next`, `drizzle-orm`, `drizzle-kit`, `pg`, `@aws-sdk/client-s3`, `googleapis`, `sharp` ou de pacote com `argon`, `bcrypt`, `jose`, `jsonwebtoken`, `crypto`, `oauth`, `passport`, `auth`, `helmet` no nome |
 
@@ -86,6 +88,27 @@ Quando mais de uma regra casa, vale a primeira da lista (a mais específica): `s
 - **Mudança só em `package-lock.json`** é classe 2; vira 3 se alterar dependência sensível de runtime
   (direta ou transitiva). Decisão do coordenador, 2026-11-08.
 - **"Só comentários"** não é detectável por caminho; um `.ts` com só comentário é classe 1.
+
+### De onde o classificador roda
+
+No evento `pull_request`, o `check:risco` e o `check:migracao` que o portão executa são os do commit
+da **base** da PR (`pull_request.base.sha`), nunca os do head. O head entra só como objeto git
+(`--head <sha>`): o diff usa `-z` (`core.quotePath=false`, `--no-ext-diff`, `--no-textconv`) e o
+conteúdo (`package.json`, lock, SQL, journal) sai de `git cat-file` e `git ls-tree -z`. Não há
+checkout do head, nem `npm ci` dele, nem execução de script da PR. O `npm ci --ignore-scripts` é o
+da base. O subprocesso do lint usa `node_modules/.bin/tsx` com `npm_config_offline=true`.
+
+O YAML de `.github/workflows/portao-risco.yml` que o GitHub dispara nesse evento é o do **merge**.
+Uma PR que edita esse arquivo pode desligar o checkout da base. Isso só se fecha com ruleset (por
+exemplo, "require workflows to pass" apontando para o arquivo numa ref protegida). Essa decisão é do
+Kalléo e esta PR não a aplica.
+
+A mitigação que já existe: editar o workflow é classe 3 e exige o clique do dono no Environment
+`aprovacao-classe-3`.
+
+Sem segredo. `permissions: contents: read`. `persist-credentials: false`. O SHA do head é conferido
+como 40 hex. Se o objeto não está no clone, o fetch é `refs/pull/<número>/head` e o `cat-file`
+seguinte falha fechado (também se o repositório for privado e o checkout não tiver credencial).
 
 ## 2. Veredito do the-judge (`npm run check:veredito`)
 
