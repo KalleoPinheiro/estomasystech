@@ -1,6 +1,6 @@
 # Próximos passos (fila única, ADR-107)
 
-Atualizada em 2026-11-14 12:45 UTC. Leia junto de `reports/estado-release.md` (`npm run estado`) ao assumir. O estado
+Atualizada em 2026-11-14 13:30 UTC (triagem do quadro, ADR-108). Leia junto de `reports/estado-release.md` (`npm run estado`) ao assumir. O estado
 gerado diz o que está aberto agora; esta fila diz a **ordem** e o **porquê**. Se divergirem, o remoto e as issues
 valem, e quem notar corrige esta fila no mesmo PR.
 
@@ -13,7 +13,7 @@ mergeia; a revisora (the-judge) julga e mergeia.
 1. **#761, PR #833** (mutação em `scripts/release/*-lib.ts`). Em revisão, rodada 1 com `REQUEST_CHANGES`; a
    implementadora corrige. Última pendência de código da v0.7.0. Classe 3 (toca `stryker.config.json` e
    `vitest.mutacao.config.mts`): o clique do Kalléo só depois do APPROVE no head final.
-2. **#834** (esta fila e o ADR-107). Só `.md`.
+2. **#837** (ADR-108: sincronia issue, EST e fila; triagem de 2026-11-14). Só `.md`. A #834 (ADR-107) já está na release.
 3. Em seguida: homologação da staging, marca `homologacao/v0.7.0` e `release:cut` (ADR-071). Depende de 1 e do
    Kalléo na homologação. Release por lote de valor, no máximo quinzenal (ADR-104).
 
@@ -47,3 +47,27 @@ Depois: v0.9.0 (#729, #557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651)
 - **#746** (decisão do deploy pelo Coolify).
 - **#376** (parecer jurídico).
 - Clique de classe 3: um por PR no portão, scripts de gate e produção; um por release na 3B-lote (ADR-105).
+
+## 5. Triagem de 2026-11-14 (ADR-108)
+
+Prioridade pelo critério do ADR-108 § 6. Toda issue aberta tem EST, versão e prioridade. Estado estável de entregue
+na release: issue **aberta** + EST "Na release" (fecham no `release:publish`).
+
+- **P1 (LGPD, v0.8.0):** #730, #735 a #741 (#735 é a única `pronta`; #736 a #741 ficam bloqueadas por ela na EST).
+- **P1 (humano):** #376 (jurídico).
+- **P2 (infra de entrega):** #819 (primeira da v0.8.0), #820, #830, #831, #832, #835, #750, #751, #715, #745, #761
+  (em voo), #746, #747, #764, #783 (esperam o Kalléo). **P2 produto:** #777 (feito, na release), #741.
+- **P3:** #828, #802, #744, #752, #815 (v0.9.0).
+- Perf (`perf-next`): #557 P2 e #558 P3 em v0.9.0; #615 P2, #559 P2, #541 P2, #560 P3, #651 P3 em v0.10.0. #773 é espelho
+  de #541 (mesma EST-84). EST-85 e EST-86 eram duplicatas de EST-8 e EST-9 e foram marcadas como tal.
+- Dependências registradas na EST: #736 a #741 bloqueadas por #735; #751 por #750; #752 por #750 e #751; #750 por #746.
+
+### Decisões que esperam o Kalléo (recomendação entre parênteses)
+
+- Cifra do cadastro (#730, #735 a #741) em **P1** como está ou **P0**? (P1: já há ordem na v0.8.0 e não há vetor
+  de exposição novo; P0 só se ele entender o dado em claro hoje como risco ativo.)
+- #742 (e-mail de login em claro) segue P2 e v0.8.0 junto da cifra? (sim, depois de #735.)
+- #812 (regra 8 e o #780): a exceção "estabilizar espera de teste com `TESTE-ALTERADO`" vale? (pergunta de produto/processo
+  dele; a #829 não a respondeu.)
+- Corrigir na origem o defeito da integração "Em produção" (automação do Linear)? (sim, quando ele puder; até lá vale o
+  passo do ADR-108 § 5.)
