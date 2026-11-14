@@ -32,8 +32,8 @@ Arquitetura em camadas `app → application → domain ← infrastructure`:
 | `npm run release:sync` / `release:cut` / `release:publish` | release de produção | fluxo `feat → release/vX.Y.Z → main` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md), `homologacao.md` § 1): `sync` mergeia a `main` na release; `cut` (na release, com a marca `homologacao/vX.Y.Z`) roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo e abre o PR para a `main` ([ADR-071](docs/adr/071-corte-de-release-em-comando-unico.md)); nunca rode o `prepare` e o gate à mão; `publish` (na `main`) tagueia o commit de merge, `--rollback=redeploy\|backup`; deploy da tag (`producao.md` § 3.1) |
 | `npm run check:testes` | automático no `pre-push` e no CI | regra 8: falha se um teste foi enfraquecido |
 | `npm run test:changed [-- <ref>]` | loop local (ex.: `-- origin/main`) | não substitui `test:coverage`; o CI roda a suíte completa |
-| `npm run test:mutacao` | mudou regra em `src/domain/**` ou `src/application/**` | Stryker + Vitest (`stryker.config.json`, `vitest.mutacao.config.mts`); o `gate:local` já roda sozinho nos arquivos alterados de domain/application; rodada completa ~1h20 (mensal no Actions, último dia do mês); `-- --mutate <arquivo>` para um arquivo; relatório em `reports/mutation` ([ADR-047](docs/adr/047-testes-de-mutacao-com-stryker.md), [ADR-051](docs/adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md)) |
-| `npm run test:e2e` | fluxos de UI (loop local) | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados; o E2E **não roda no Actions** |
+| `npm run test:mutacao` | mudou regra em `src/domain/**` ou `src/application/**` | Stryker + Vitest (`stryker.config.json`, `vitest.mutacao.config.mts`); o `gate:local` já roda sozinho nos arquivos alterados de domain/application; no PR roda no Actions só nos arquivos alterados (job `mutacao`); rodada completa ~1h20 (mensal, último dia do mês); `-- --mutate <arquivo>` para um arquivo; relatório em `reports/mutation` ([ADR-047](docs/adr/047-testes-de-mutacao-com-stryker.md), [ADR-051](docs/adr/051-mutacao-por-arquivo-no-gate-local-e-rotina-mensal.md)) |
+| `npm run test:e2e` | fluxos de UI (loop local) | build + Playwright contra `next start` e `next dev` ([ADR-021](docs/adr/021-e2e-contra-build-de-producao.md)); `:prod` e `:dev` separados; o mesmo E2E roda no Actions em todo PR (`gate-pr.yml`, [ADR-098](docs/adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)) |
 | `npm run check:sv` | toca JSX | adoção de `@still-void/ui` |
 | `npm run check:docs` | toca `.md` | links e frontmatter |
 | `npx tsx scripts/check-dynamic-import.ts` | escreve `import()` | reprova `import()` com template literal (`${}`); roda no `ci.yml` e no `gate-cloud.sh` |
@@ -64,7 +64,7 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
 6. **Doc no mesmo PR.** Mudou comportamento de um domínio → atualize `docs/domains/<slug>/`.
    Decisão arquitetural durável → novo ADR. → [`docs/governance.md`](docs/governance.md)
 7. **Merge só com CI verde.** `feat/*` entra na `release/vX.Y.Z` (squash, com `## Homologação`); só `release/*` e `hotfix/*` vão para a `main` (merge commit na release); nunca rebase da `release/*` ([ADR-052](docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md)). O Actions roda tudo, em PR para a release e para a `main`: gate rápido (typecheck, lint,
-   sv, docs, cobertura, build), integração em Postgres 18, E2E (produção e dev) e mutação nos arquivos de regra alterados; não há recibo `E2E-GATE:` ([ADR-098](docs/adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md), que supera o ADR-042). Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
+   sv, docs, cobertura, build), integração em Postgres 18, compatibilidade da migração (`compat-migracao`, se o diff toca `drizzle/*.sql`), E2E (produção e dev) e mutação nos arquivos de regra alterados (exceção: `release/* → main` não repete a mutação, pois cada PR do lote já a passou; `hotfix/*` roda); não há recibo `E2E-GATE:` ([ADR-098](docs/adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md), que supera o ADR-042). Nenhum PR é mergeado (nem dado como pronto) com step vermelho, inclusive quando a falha
    não é do PR: corrija primeiro. Decisões de @KalleoPinheiro, 2026-09-25, 2026-10-19 e 2026-11-08.
 8. **Teste é intocável.** Nunca edite, afrouxe, apague ou desligue teste (`skip`/`only`/`fixme`),
    nem reduza limiar de cobertura, nem aumente `retries`/`timeout`, para resolver problema de
@@ -75,15 +75,15 @@ rollback em § 3.1, fumaça pós-deploy somente leitura em § 9.6. Merge na `mai
 
 ## Branch e PR de agentes (ADR-052)
 
-Todo agente, antes de criar branch, confere estas decisões (o orquestrador as repete no brief; fluxo em transição, [ADR-097](docs/adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):
+Ao assumir: leia `npm run estado` e a fila [`PROXIMOS-PASSOS.md`](.specs/archive/handoff/PROXIMOS-PASSOS.md). Antes de criar branch, confira estas decisões (o orquestrador as repete no brief; [ADR-097](docs/adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):
 
 - **Base sempre a release aberta**, nunca a `main`: `git fetch origin && git switch -c <tipo>/<slug> origin/release/vX.Y.Z`. Ache a release com `git ls-remote --heads origin 'release/*'` (uma por vez).
 - **Nome**: `feat/<slug>` para funcionalidade, `fix/<slug>` para correção, `docs/<slug>` para só documentação. `main` só recebe `release/*` e `hotfix/*`, por merge commit.
 - **PR em squash com base `release/vX.Y.Z`**, com `## Homologação` no corpo (`Seed:` e cenários Dado/Quando/Então, ou `n/a — <motivo>`).
-- **PR para `release/**` nasce em rascunho** e é marcado pronto uma vez (ADR-093). Quem marca pronto é o coordenador, depois de confirmar a cota do Actions. Em rascunho, os checks "Gate do PR" e `ci` ficam vermelhos de propósito: o pipeline pesado só roda quando o PR deixa de ser rascunho. Não marque o PR como pronto para fazer o CI passar.
+- **PR para `release/**` nasce em rascunho** e é marcado pronto uma vez (ADR-093). Quem marca pronto é o coordenador. Em rascunho, os checks "Gate do PR" e `ci` ficam vermelhos de propósito: o pipeline pesado só roda quando o PR deixa de ser rascunho. Não marque o PR como pronto para fazer o CI passar.
 - **the-judge**: só a thread revisora julga e publica a review COMMENT `the-judge/v1 … APPROVE` no head SHA ([ADR-101](docs/adr/101-veredito-do-the-judge-por-status-da-revisora.md)); quem implementou nunca a publica.
 - **Changeset**: PR que toca `src/`, `drizzle/` ou `Dockerfile` leva `npm run changeset`; se nada muda para a clínica, `--empty`. PR só de documentação não precisa de changeset.
-- **Handoff** da issue em `.specs/archive/handoff/<issue>-<slug>.md` (arquivo novo por PR; o `handoff-2026.md` está congelado), na mesma PR ([ADR-102](docs/adr/102-handoff-por-issue-sem-conflito.md)).
+- **Handoff** da issue em `.specs/archive/handoff/<issue>-<slug>.md` (arquivo novo por PR; o `handoff-2026.md` está congelado), na mesma PR ([ADR-102](docs/adr/102-handoff-por-issue-sem-conflito.md)); **atualize também a fila [`PROXIMOS-PASSOS.md`](.specs/archive/handoff/PROXIMOS-PASSOS.md)** ([ADR-107](docs/adr/107-fila-de-proximos-passos-no-handoff.md)).
 - **Validação antes do PR**: `npm run test:changed -- origin/release/vX.Y.Z`, `typecheck`, `lint`, `check:docs` (se tocou `.md`). O E2E e a mutação rodam no Actions; `gate:local` é opcional.
 
 Se a release aberta não estiver clara ou a branch já nasceu da `main`, pergunte ao orquestrador antes de seguir. Detalhe: [`docs/engineering/homologacao.md`](docs/engineering/homologacao.md) § 1.
@@ -144,7 +144,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 | Triagem (labels canônicos) | [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md) |
 | Fluxo de sete estações e labels de fila (`pronta`, `em-andamento`, `bloqueada`) | [ADR-070](docs/adr/070-fluxo-de-sete-estacoes-com-labels-de-fila.md) |
 | **Coordenação (papel, release, gate, autonomia)** e estado da release aberta | [`docs/agents/coordenacao.md`](docs/agents/coordenacao.md), [`docs/agents/estado-v0.4.0.md`](docs/agents/estado-v0.4.0.md) |
-| Orquestração entre LLMs (corpo do PR: `Closes #N`; um `dono:*`; vagas; handoff; revezamento: ADR-105 § 9, aceito) | [Convivência](docs/engineering/convivencia-llms.md), [ADR-104](docs/adr/104-posse-verificada-por-ci-e-cadencia-de-release.md), [ADR-106](docs/adr/106-neutralidade-de-agente-no-registro-de-posse.md) (agentes em `scripts/release/agentes.json`) |
+| Orquestração entre LLMs (corpo do PR: `Closes #N`; um `dono:*`; vagas; handoff; revezamento: ADR-105 § 9, aceito) | [Convivência](docs/engineering/convivencia-llms.md), [ADR-104](docs/adr/104-posse-verificada-por-ci-e-cadencia-de-release.md), [ADR-106](docs/adr/106-neutralidade-de-agente-no-registro-de-posse.md) (agentes em `scripts/release/agentes.json`). **Quem assume lê `npm run estado` e `PROXIMOS-PASSOS.md` antes de pedir reserva** |
 | Glossário e ADRs | [`docs/agents/domain.md`](docs/agents/domain.md) |
 | Planejamento (PRD vs `.specs/`, dois logs de decisão) | [`docs/agents/planning.md`](docs/agents/planning.md) |
 | Corrigir subconjunto de achados de auditoria | [`docs/agents/fix-audit-issues.md`](docs/agents/fix-audit-issues.md) |

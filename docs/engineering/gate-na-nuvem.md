@@ -3,7 +3,7 @@ title: "Gate na nuvem: como rodar numa thread sem o PC"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-14
 ---
 
 # Gate na nuvem
@@ -11,6 +11,15 @@ last_reviewed: 2026-11-03
 **Por PR:** suíte unitária completa com cobertura, mais integração, mutação e E2E só no que o diff altera ou alcança (regras de impacto e fallback no ADR). **Por release:** gate completo na nuvem e Docker/backup no WSL antes do `release:cut`.
 
 **Antes de abrir o PR (ADR-088):** só o perfil `rapido`. A cobertura completa, a integração e o E2E são do `ci.yml` e do `gate-pr.yml` quando o PR deixa de ser rascunho (ADR-093). Em rascunho, "Gate do PR" e `ci` ficam vermelhos de propósito e o pipeline pesado não roda. Rodar a rodada completa na thread antes do `ready_for_review` repete a mesma prova no mesmo SHA.
+
+**Estado em 2026-11-14.** O E2E e a mutação por arquivo alterado rodam no Actions em todo PR, sem recibo
+([ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)); `gate:local` e `gate-cloud.sh` são
+opcionais no loop e o `release:cut` usa o `gate:local` para o selo. O `portao-risco.yml` classifica o diff pela
+base do PR ([ADR-105](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md); a automação da classe 3A
+segue desligada, `CLASSE_3A_AUTOMATICA=false`, até a #819) e o `check:posse` confere o dono da issue
+([ADR-104](../adr/104-posse-verificada-por-ci-e-cadencia-de-release.md),
+[ADR-106](../adr/106-neutralidade-de-agente-no-registro-de-posse.md)); `npm run estado` gera
+`reports/estado-release.md`. O texto abaixo sobre «sem cota» e PC descreve o histórico do ADR-084.
 
 Decisão e motivo: [ADR-084](../adr/084-gate-na-nuvem-incremental-por-pr-e-completo-por-release.md).
 
@@ -71,9 +80,9 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
   `vitest.config.mts`) e `build` rodam juntos; o job `ci` (nome exigido pelo ruleset) só passa se todos passaram.
   Reproduzir um shard: `npx vitest run -c vitest.shard.config.mts --coverage --reporter=blob --shard=1/4`;
   juntar: `npx vitest --merge-reports --coverage` (os blobs ficam em `.vitest-reports/`).
-- **Actions, `gate-pr.yml`** (PR para `release/**`, ADR-093): em rascunho só `politica` e o agregador, que
-  reprova. Com o PR pronto: `impacto`, `integracao`, `build-prod` (um build só, publicado como artefato `build-next`), `e2e-prod` (3 shards que baixam esse build) e `e2e-dev` (papéis, login, console
-  limpo). A mutação incremental saiu do PR e ficou em `mutacao-mensal.yml` (`workflow_dispatch` ou schedule).
+- **Actions, `gate-pr.yml`** (PR para `release/**` e para a `main`, ADR-093 e ADR-098; repositório público, runners padrão sem cota): em rascunho só `politica` e o agregador, que
+  reprova. Com o PR pronto: `impacto`, `integracao`, `compat-migracao` (só se o diff toca `drizzle/*.sql`: o código da base roda a integração sobre o esquema novo, #760), `build-prod` (um build só, publicado como artefato `build-next`), `e2e-prod` (3 shards que baixam esse build) e `e2e-dev` (papéis, login, console
+  limpo). O job `mutacao` roda o Stryker incremental só nos arquivos de regra alterados (ADR-098; `release/* → main` não o repete, o `hotfix/*` sim). A rodada completa fica em `mutacao-mensal.yml` (`workflow_dispatch` ou schedule).
   O job `gate-pr` confere que cada job que devia rodar passou (se `build-prod` falha, `e2e-prod` fica `skipped` e o
   agregador reprova). O `gate:local` roda as travas estáticas listadas no `ci.yml`, incluindo `check:server-first` e
   `check:dynamic-import`, mas não todas: o `check:changeset` roda só no CI.
@@ -89,7 +98,7 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
 
 PR que toca só `.md` de documentação (regra do ADR-053) roda os workflows, mas os jobs pesados são pulados
 quando o PR está pronto: o `escopo` do `ci.yml` pula cobertura, typecheck, lint, sv, server-first e build, e o
-`gate-pr.yml` pula integração e E2E (a mutação não está mais neste workflow, ADR-093). Fica o gate de docs e o
+`gate-pr.yml` pula integração e E2E (e a mutação, ADR-098). Fica o gate de docs e o
 de changeset, e o check exigido (`ci`) fecha verde em poucos minutos. Em rascunho, `ci` e "Gate do PR"
 reprovam de propósito mesmo nesse diff. Não se usa `paths-ignore`, que deixaria o check exigido pendente.
 Qualquer arquivo fora da regra no diff volta ao gate completo.
@@ -113,4 +122,4 @@ Para quando houver organização (só o dono faz):
 3. Checks exigidos: `Typecheck, lint, sv-gate, test:coverage, build` (job `ci`) e, se quiser o E2E no
    bloqueio, `Gate do PR`. O check de integridade dos testes pode seguir exigido: na fila ele é pulado e conta como aprovado.
 4. Fluxo: o autor clica **Merge when ready**; a fila monta `release + PR`, roda `ci` e `gate-pr` nesse SHA e
-   faz o squash. `main` não entra na fila (`release/* → main` segue por merge commit; o Gate do PR roda o E2E nela, sem recibo).
+   faz o squash. `main` não entra na fila (`release/* → main` segue por merge commit; o Gate do PR roda o E2E nela, sem recibo, e não repete a mutação).
