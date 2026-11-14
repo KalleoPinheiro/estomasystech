@@ -15,7 +15,7 @@ last_reviewed: 2026-11-11
 
 - `biome.json` é a única ferramenta de lint + format (issue #107 migrou do ESLint). Rode `npm run lint`
   ou `./node_modules/.bin/biome` — `npx biome` sem versão fixa baixa outro binário e dá falso positivo.
-- Complexidade **cognitiva** ≤ 10 (`complexity/noExcessiveCognitiveComplexity`) — não é a ciclomática do ESLint antigo.
+- Complexidade **cognitiva** ≤ 10 (`complexity/noExcessiveCognitiveComplexity`, `error` em `src/`; desligada em `tests/**`) — não é a ciclomática do ESLint antigo. O passivo anterior à regra (71 funções em 56 arquivos) fica em `warn` por arquivo numa lista de `overrides` do `biome.json`, registrada em [`.specs/passivo-complexidade-cognitiva.md`](../../.specs/passivo-complexidade-cognitiva.md). Ao refatorar um arquivo da lista, tire-o dela no mesmo PR. Não acrescente arquivo à lista nem use `biome-ignore` para passar.
 - Função ≤ 120 linhas (`complexity/noExcessiveLinesPerFunction`); 320 em `.tsx`; desligado em `tests/**`.
 - Não há equivalente ao `max-depth`: aninhamento não é checado pelo linter — mantenha raso.
 - Variável não usada: prefixo `_`.
