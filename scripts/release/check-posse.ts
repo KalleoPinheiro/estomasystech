@@ -1,6 +1,6 @@
 /**
  * `npm run check:posse` (ADR-104): no PR, a issue citada com `Closes #N` (ou `(#N)` no título) precisa ter exatamente
- * uma label `dono:claude` ou `dono:cursor`, igual ao agente que escreveu o PR (branch e trailers). Roda no Actions com
+ * uma label `dono:<agente>` (registro em `agentes.json`, ADR-106), igual ao agente que escreveu o PR (branch e trailers). Roda no Actions com
  * `GH_TOKEN` e `GITHUB_REPOSITORY`, com `--pr <n> --head-ref <branch>`; o corpo e o título vêm da API (um re-run enxerga a edição).
  * Compara com a mesma base do `check:handoff`.
  */

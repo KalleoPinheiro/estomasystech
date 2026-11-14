@@ -185,8 +185,9 @@ workflow/ADR paralisa a ação de risco e vira decisão registrada, nunca remoç
 
 ## 8. Posse verificada por CI (ADR-104)
 
-- Antes de abrir o PR, reserve a issue: **uma** label `dono:claude` ou `dono:cursor`; ela é a posse. Corpo do PR: `Closes #N` (o título com `(#N)` também vale para PR aberto antes do ADR-104). O check `npm run check:posse` confere que o dono é o agente do PR (branch e trailers). Dois agentes no mesmo PR reprovam.
-- Em `feat/*` o agente é identificado pelo trailer dos commits; em `claude/*` e `cursor/*`, também pela branch. Ninguém empurra na branch do outro.
+- Antes de abrir o PR, reserve a issue: **uma** label `dono:<agente>` (`claude`, `codex`; `cursor` é legado); ela é a posse. Corpo do PR: `Closes #N` (o título com `(#N)` também vale para PR aberto antes do ADR-104). O check `npm run check:posse` confere que o dono é o agente do PR (branch e trailers). Dois agentes no mesmo PR reprovam.
+- Em `feat/*` o agente é identificado pelo trailer dos commits; em `<agente>/*` (`claude/*`, `codex/*`), também pela branch. Ninguém empurra na branch do outro.
+- Os agentes vêm do registro [`scripts/release/agentes.json`](../../scripts/release/agentes.json) (ADR-106): acrescentar um é uma linha mais um teste. Nenhum script nomeia fornecedor. O `AGENTS.md` é a fonte única; `.cursor/rules`, `.github/copilot-instructions.md` e similares só apontam para ele.
 - `npm run estado` gera `reports/estado-release.md` (não versionado): leia ao iniciar a sessão, antes de pedir reserva.
 - Vagas: label `em-andamento`, teto 3 somadas. Cadência: lote de valor homologado, no máximo quinzenal.
 
