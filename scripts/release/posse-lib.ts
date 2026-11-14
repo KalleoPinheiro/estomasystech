@@ -1,33 +1,35 @@
 /**
- * Posse mecânica de issue entre os dois agentes (ADR-104, emenda ao ADR-103). Regras puras: o agente que escreveu o
- * PR (branch e trailers dos commits) precisa ser o dono (`dono:claude` ou `dono:cursor`) de cada issue que o PR fecha.
+ * Posse mecânica de issue entre agentes (ADR-104, generalizada pelo ADR-106). Regras puras: o agente que escreveu o
+ * PR (branch e trailers dos commits) precisa ser o dono (`dono:<agente>`) de cada issue que o PR fecha. Os agentes
+ * vêm do registro `agentes.json`; nenhum nome de fornecedor aparece neste arquivo.
  */
+import registroJson from './agentes.json';
 
-export type Agente = 'claude' | 'cursor';
-export const AGENTES: readonly Agente[] = ['claude', 'cursor'];
+export type Agente = string;
+export type RegistroAgente = {
+  nome: string;
+  situacao: 'ativo' | 'legado';
+  prefixoBranch: string;
+  trailer: string;
+};
+export type Registro = readonly RegistroAgente[];
+
+export const REGISTRO: Registro = registroJson.agentes as RegistroAgente[];
+export const AGENTES: readonly Agente[] = REGISTRO.map((a) => a.nome);
 export const PREFIXO_DONO = 'dono:';
 export const VAGAS_GLOBAIS = 3;
 
+const trailerDe = (a: RegistroAgente): RegExp => new RegExp(`^co-authored-by:\\s*${a.trailer}`, 'im');
+
 const FECHA_ISSUE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi;
-const TRAILER_CLAUDE = /^co-authored-by:\s*claude\b/im;
-const TRAILER_CURSOR = /^co-authored-by:\s*cursor agent\b/im;
 /** PR de integração (release, sync da main, dependabot) não nasce de uma issue de um agente. */
 const SEM_POSSE = /^(release\/|sync\/|chore\/sync|hotfix\/|dependabot\/)/;
 
-export const agenteDaBranch = (branch: string): Agente | null => {
-  if (branch.startsWith('claude/')) return 'claude';
-  if (branch.startsWith('cursor/')) return 'cursor';
-  return null;
-};
+export const agenteDaBranch = (branch: string, registro: Registro = REGISTRO): Agente | null =>
+  registro.find((a) => branch.startsWith(a.prefixoBranch))?.nome ?? null;
 
-export const agentesDosCommits = (mensagens: readonly string[]): Agente[] => {
-  const achados = new Set<Agente>();
-  for (const m of mensagens) {
-    if (TRAILER_CLAUDE.test(m)) achados.add('claude');
-    if (TRAILER_CURSOR.test(m)) achados.add('cursor');
-  }
-  return [...achados];
-};
+export const agentesDosCommits = (mensagens: readonly string[], registro: Registro = REGISTRO): Agente[] =>
+  registro.filter((a) => mensagens.some((m) => trailerDe(a).test(m))).map((a) => a.nome);
 
 /** Números das issues que o corpo do PR fecha (`Closes #N`, `Fixes #N`, `Resolves #N`). */
 export const issuesFechadas = (corpo: string): number[] => {
@@ -54,6 +56,8 @@ export type EntradaPosse = {
   mensagensDosCommits: readonly string[];
   /** Labels de cada issue citada, já lidas da API. */
   labelsPorIssue: ReadonlyMap<number, readonly string[]>;
+  /** Registro de agentes; o padrão é o `agentes.json`. */
+  registro?: Registro;
 };
 
 export type ResultadoPosse = { ok: boolean; aplicavel: boolean; motivos: string[] };
@@ -67,11 +71,12 @@ const motivoDaIssue = (issue: number, agente: Agente, labels: readonly string[] 
 
 export function avaliarPosse(e: EntradaPosse): ResultadoPosse {
   if (SEM_POSSE.test(e.branch)) return { ok: true, aplicavel: false, motivos: [] };
-  const agentes = new Set<Agente>(agentesDosCommits(e.mensagensDosCommits));
-  const daBranch = agenteDaBranch(e.branch);
+  const registro = e.registro ?? REGISTRO;
+  const agentes = new Set<Agente>(agentesDosCommits(e.mensagensDosCommits, registro));
+  const daBranch = agenteDaBranch(e.branch, registro);
   if (daBranch) agentes.add(daBranch);
   if (agentes.size === 0) {
-    return { ok: false, aplicavel: true, motivos: ['nenhum agente identificado: os commits do PR precisam do trailer `Co-Authored-By: Claude` ou `Co-authored-by: Cursor Agent` (falha fechada).'] };
+    return { ok: false, aplicavel: true, motivos: [`nenhum agente identificado: os commits do PR precisam do trailer \`Co-authored-by:\` de um agente ativo (${registro.filter((a) => a.situacao === 'ativo').map((a) => a.nome).join(', ')}; ver scripts/release/agentes.json) ou a branch com o prefixo dele (falha fechada).`] };
   }
   if (agentes.size > 1) {
     return { ok: false, aplicavel: true, motivos: ['mais de um agente escreveu neste PR (branch e commits). Branch por agente; ninguém empurra na branch do outro.'] };
@@ -98,12 +103,14 @@ const porDono = (itens: readonly ItemEstado[], dono: string | null): ItemEstado[
   });
 
 /** Estado legível pelos dois agentes (`npm run estado`): quem é dono de quê e quantas vagas estão ocupadas. */
-export function renderEstado(release: string, issues: readonly ItemEstado[], prs: readonly ItemEstado[]): string {
+export function renderEstado(release: string, issues: readonly ItemEstado[], prs: readonly ItemEstado[], registro: Registro = REGISTRO): string {
   const ocupadas = issues.filter((i) => i.labels.includes('em-andamento'));
   const blocos: string[] = [`# Estado da release ${release}`, ''];
   blocos.push(`Vagas de código ocupadas (label \`em-andamento\`): ${ocupadas.length}/${VAGAS_GLOBAIS}${ocupadas.length > VAGAS_GLOBAIS ? ' **ACIMA DO TETO**' : ''}`, '');
-  for (const dono of AGENTES) {
-    blocos.push(`## Issues de ${dono}`, ...porDono(issues, dono).map(linha), '');
+  for (const a of registro) {
+    const doAgente = porDono(issues, a.nome);
+    if (a.situacao === 'legado' && doAgente.length === 0) continue;
+    blocos.push(`## Issues de ${a.nome}`, ...doAgente.map(linha), '');
   }
   blocos.push('## Issues sem dono único (resolver antes de iniciar)', ...porDono(issues, null).map(linha), '');
   blocos.push('## PRs abertos', ...prs.map(linha), '');

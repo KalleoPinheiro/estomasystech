@@ -142,7 +142,7 @@ jobs:
         env:
           CHANGESET_BASE: origin/${{ github.base_ref }}
 
-      # Posse da issue (ADR-104): dono:claude ou dono:cursor, igual ao agente que escreveu o PR.
+      # Posse da issue (ADR-104): dono:<agente> do registro agentes.json, igual ao agente que escreveu o PR.
       - name: Posse (ADR-104)
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
         run: npm run check:posse -- --pr "$PR_NUMBER" --head-ref "$HEAD_REF"
@@ -226,7 +226,7 @@ jobs:
         env:
           CHANGESET_BASE: origin/${{ github.base_ref }}
 
-      # Posse da issue (ADR-104): dono:claude ou dono:cursor, igual ao agente que escreveu o PR.
+      # Posse da issue (ADR-104): dono:<agente> do registro agentes.json, igual ao agente que escreveu o PR.
       - name: Posse (ADR-104)
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
         run: npm run check:posse -- --pr "$PR_NUMBER" --head-ref "$HEAD_REF"

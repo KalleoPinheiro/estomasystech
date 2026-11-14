@@ -11,6 +11,8 @@ import {
   donosDasLabels,
   issuesDoPr,
   issuesFechadas,
+  REGISTRO,
+  type Registro,
   renderEstado,
 } from '../../scripts/release/posse-lib';
 
@@ -247,5 +249,110 @@ describe('posse: leituras da API (falha fechada, ADR-104)', () => {
       labelsPorIssue: new Map([[769, ['dono:cursor']]]),
     });
     expect(r).toEqual({ ok: true, aplicavel: true, motivos: [] });
+  });
+});
+
+describe('registro de agentes neutro (ADR-106)', () => {
+  const CODEX = 'feat: z\n\nCo-authored-by: Codex <codex@openai.com>';
+
+  it('Dado o registro versionado, Quando valida, Então nomes e prefixos são únicos e os regex compilam', () => {
+    const nomes = REGISTRO.map((a) => a.nome);
+    expect(new Set(nomes).size).toBe(nomes.length);
+    expect(new Set(REGISTRO.map((a) => a.prefixoBranch)).size).toBe(
+      nomes.length,
+    );
+    for (const a of REGISTRO) {
+      expect(a.nome).toMatch(/^[a-z][a-z0-9-]*$/);
+      expect(a.prefixoBranch).toBe(`${a.nome}/`);
+      expect(() => new RegExp(a.trailer)).not.toThrow();
+      expect(['ativo', 'legado']).toContain(a.situacao);
+    }
+    expect(
+      REGISTRO.filter((a) => a.situacao === 'ativo').map((a) => a.nome),
+    ).toEqual(['claude', 'codex']);
+    expect(REGISTRO.find((a) => a.nome === 'cursor')?.situacao).toBe('legado');
+  });
+
+  it('Dado PR do segundo agente ativo e issue dono:codex, Quando avalia, Então passa; com dono:claude, reprova', () => {
+    const base = {
+      branch: 'codex/x',
+      corpo: 'Closes #1',
+      mensagensDosCommits: [CODEX],
+    };
+    expect(
+      avaliarPosse({ ...base, labelsPorIssue: new Map([[1, ['dono:codex']]]) })
+        .ok,
+    ).toBe(true);
+    const r = avaliarPosse({
+      ...base,
+      labelsPorIssue: new Map([[1, ['dono:claude']]]),
+    });
+    expect(r.ok).toBe(false);
+    expect(r.motivos[0]).toContain(
+      'dono:claude, mas o PR foi escrito por codex',
+    );
+  });
+
+  it('Dado trailer do segundo agente e do primeiro no mesmo PR, Quando avalia, Então reprova', () => {
+    const r = avaliarPosse({
+      branch: 'feat/x',
+      corpo: 'Closes #1',
+      mensagensDosCommits: [CODEX, CLAUDE],
+      labelsPorIssue: new Map([[1, ['dono:codex']]]),
+    });
+    expect(r.motivos[0]).toContain('mais de um agente');
+  });
+
+  it('Dado PR do legado com issue dono:cursor, Quando avalia, Então ainda passa (PR antigo)', () => {
+    const r = avaliarPosse({
+      branch: 'cursor/x',
+      corpo: 'Closes #1',
+      mensagensDosCommits: [CURSOR],
+      labelsPorIssue: new Map([[1, ['dono:cursor']]]),
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it('Dado agente novo acrescentado ao registro (uma linha), Quando avalia, Então é reconhecido sem tocar no código', () => {
+    const registro: Registro = [
+      ...REGISTRO,
+      {
+        nome: 'novo',
+        situacao: 'ativo',
+        prefixoBranch: 'novo/',
+        trailer: 'novo bot\\b',
+      },
+    ];
+    expect(agenteDaBranch('novo/x', registro)).toBe('novo');
+    expect(
+      agentesDosCommits(['x\n\nCo-authored-by: Novo Bot <n@x>'], registro),
+    ).toEqual(['novo']);
+    const r = avaliarPosse({
+      branch: 'novo/x',
+      corpo: 'Closes #1',
+      mensagensDosCommits: [],
+      labelsPorIssue: new Map([[1, ['dono:novo']]]),
+      registro,
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it('Dado PR sem agente reconhecido, Quando avalia, Então a mensagem lista os agentes ativos (falha fechada)', () => {
+    const r = avaliarPosse({
+      branch: 'feat/x',
+      corpo: 'Closes #1',
+      mensagensDosCommits: [],
+      labelsPorIssue: new Map(),
+    });
+    expect(r.ok).toBe(false);
+    expect(r.motivos[0]).toContain('claude, codex');
+    expect(r.motivos[0]).not.toContain('cursor');
+  });
+
+  it('Dado estado com legado sem issues, Quando renderiza, Então mostra os ativos e omite o legado vazio', () => {
+    const md = renderEstado('v', [], []);
+    expect(md).toContain('## Issues de claude');
+    expect(md).toContain('## Issues de codex');
+    expect(md).not.toContain('## Issues de cursor');
   });
 });
