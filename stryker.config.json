@@ -12,6 +12,7 @@
     "!src/**/*.d.ts",
     "!src/**/index.ts"
   ],
+  "ignorePatterns": [".cursor/skills"],
   "coverageAnalysis": "perTest",
   "vitest": { "configFile": "vitest.mutacao.config.mts", "related": false },
   "reporters": ["clear-text", "progress", "html", "json"],
