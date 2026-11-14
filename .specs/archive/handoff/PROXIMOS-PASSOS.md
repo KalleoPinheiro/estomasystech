@@ -19,10 +19,10 @@ mergeia; a revisora (the-judge) julga e mergeia.
 
 ## 2. Sem esperar o corte
 
-4. **#819** (implementar o ADR-105: classe 3A automática e 3B humana). Vem primeiro porque os pré-requisitos (#816,
-   #817, #821) já entraram e o resto do ADR depende dele; o ganho de cliques vem na 3B-lote e na fase 2 (a fase 1
-   elimina pouco clique, ADR-105), e a própria #819 é 3B e leva um clique. A chave `CLASSE_3A_AUTOMATICA` segue
-   `false` até lá; ligar pede clique do Kalléo. A posição é escolha de coordenação, não de produto.
+4. **#819** (implementar o ADR-105: classe 3A automática e 3B humana). Vem na frente por prioridade do Kalléo
+   (2026-11-14): depender menos dos cliques dele. Pelo ADR-105 a fase 1 elimina pouco clique e a própria #819 leva
+   clique; o ganho vem do lote único por release (3B) nos PRs de cifra e autenticação da v0.8.0, por isso ela entra
+   antes deles. A chave `CLASSE_3A_AUTOMATICA` segue `false` até lá; ligar pede clique do Kalléo.
 
 ## 3. v0.8.0 (ordem sugerida)
 
@@ -36,7 +36,7 @@ mergeia; a revisora (the-judge) julga e mergeia.
 9. Cifra do cadastro: **#735** a **#741** e **#730** (P1, LGPD). Ordem pela numeração; #735 abre (migração 0071), os
    demais dependem dela. Migração não aditiva é classe 3B.
 10. **#744**, **#745**, **#802** (apontamentos menores, CodeQL, check do the-judge): preenchem folga.
-11. **#715** é o guarda-chuva de #750–#752 (não entra à parte). **#742** (e-mail de login em claro, P2, sem versão): decidir a versão junto da cifra (item 9).
+11. **#715** (v0.8.0): guarda-chuva de #750–#752, acompanha o item 8. **#742** (e-mail de login em claro, P2, sem label de versão): fica junto da cifra (item 9) até o Kalléo definir a versão.
 
 Depois: v0.9.0 (#729, #557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651).
 
