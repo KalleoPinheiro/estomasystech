@@ -4,7 +4,7 @@
  * TESTE-ALTERADO consolidado do lote e o corpo do PR `release → main`.
  */
 import { basename, dirname, join } from 'node:path';
-import { findReason } from '../gate/test-integrity';
+import { findGateReason, findReason } from '../gate/test-integrity';
 import { tagFor, type VersionCheck } from './lib';
 
 /**
@@ -85,6 +85,31 @@ export function consolidatedTesteAlterado(prs: readonly PrBody[]): string | null
   return parts.length === 0 ? null : `TESTE-ALTERADO: ${parts.join('; ')}`;
 }
 
+/**
+ * Linha `GATE-ALTERADO:` única para o PR `release → main`, juntando o motivo declarado em cada PR do lote
+ * (config de lint ou do gate alterada, regra 8). `null` quando nenhum PR declarou motivo.
+ */
+export function consolidatedGateAlterado(prs: readonly PrBody[]): string | null {
+  const parts = prs
+    .map((pr) => ({ number: pr.number, reason: findGateReason(pr.body) }))
+    .filter((p): p is { number: number; reason: string } => p.reason !== null)
+    .map((p) => `#${p.number} ${p.reason.replace(/;/g, ',')}`);
+  return parts.length === 0 ? null : `GATE-ALTERADO: ${parts.join('; ')}`;
+}
+
+/** Texto do motivo sem o rótulo (`TESTE-ALTERADO:` ou `GATE-ALTERADO:`); vazio quando não há linha. */
+export function motivoSemRotulo(line: string | null, rotulo: 'TESTE-ALTERADO' | 'GATE-ALTERADO'): string {
+  return (line ?? '').replace(new RegExp(`^${rotulo}:\\s*`), '');
+}
+
+/** Argumentos de `check-test-integrity.ts` com os motivos consolidados do lote. */
+export function integrityArgs(testeAlterado: string | null, gateAlterado: string | null): string[] {
+  return [
+    ...(testeAlterado ? ['--motivo', motivoSemRotulo(testeAlterado, 'TESTE-ALTERADO')] : []),
+    ...(gateAlterado ? ['--motivo-gate', motivoSemRotulo(gateAlterado, 'GATE-ALTERADO')] : []),
+  ];
+}
+
 /** Worktree limpo do gate, ao lado do clone (nunca dentro dele, para o lint e o git não o verem). */
 export const worktreePath = (repoRoot: string, version: string): string =>
   join(dirname(repoRoot), `${basename(repoRoot)}-cut-${tagFor(version)}`);
@@ -94,6 +119,7 @@ export interface ReleasePrInput {
   receipt: string;
   prs: readonly number[];
   testeAlterado: string | null;
+  gateAlterado?: string | null;
 }
 
 /** Corpo do PR `release/vX.Y.Z → main`, no formato do template e com o recibo do gate da release. */
@@ -117,7 +143,7 @@ export function releasePrBody(input: ReleasePrInput): string {
     `Seed: n/a — release; cada PR do lote trouxe o seu cenário e a staging foi aprovada (\`${approvalBranch(input.version)}\`).`,
     'Cenários: n/a — homologados por PR na staging antes do corte.',
     '',
-    input.testeAlterado ?? '',
+    [input.testeAlterado, input.gateAlterado].filter((l): l is string => !!l).join('\n\n'),
   ]
     .join('\n')
     .trimEnd()

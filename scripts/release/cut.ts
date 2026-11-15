@@ -20,8 +20,10 @@ import { join } from 'node:path';
 import { verifyReceipt } from '../gate/receipt';
 import {
   checkPreparedVersion,
+  consolidatedGateAlterado,
   consolidatedTesteAlterado,
   releaseCommitSubject,
+  motivoSemRotulo,
   releasePrBody,
   worktreePath,
 } from './cut-lib';
@@ -33,11 +35,12 @@ import { selarCorte } from './selo';
 const packageVersion = (dir = '.'): string =>
   JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).version as string;
 
-/** O `git push` do `release:prepare` passa pelo `pre-push` (regra 8), que só lê o motivo de `.gate/motivo-teste.txt`. */
-function writeMotivoParaOPush(testeAlterado: string | null): void {
-  if (!testeAlterado) return;
-  mkdirSync('.gate', { recursive: true });
-  writeFileSync('.gate/motivo-teste.txt', testeAlterado.replace(/^TESTE-ALTERADO:\s*/, ''));
+/** Grava os motivos do lote onde o `pre-push` e o gate (regra 8) os leem: `.gate/motivo-teste.txt` e `.gate/motivo-gate.txt`. */
+function writeMotivos(dir: string, testeAlterado: string | null, gateAlterado: string | null): void {
+  if (!testeAlterado && !gateAlterado) return;
+  mkdirSync(join(dir, '.gate'), { recursive: true });
+  if (testeAlterado) writeFileSync(join(dir, '.gate/motivo-teste.txt'), motivoSemRotulo(testeAlterado, 'TESTE-ALTERADO'));
+  if (gateAlterado) writeFileSync(join(dir, '.gate/motivo-gate.txt'), motivoSemRotulo(gateAlterado, 'GATE-ALTERADO'));
 }
 
 function prepare(rollback: string, version: string): void {
@@ -55,11 +58,9 @@ function freshWorktree(version: string): string {
   return dir;
 }
 
-function runGate(dir: string, testeAlterado: string | null): string {
+function runGate(dir: string, testeAlterado: string | null, gateAlterado: string | null): string {
   live('npm', ['ci', '--no-audit', '--no-fund'], { cwd: dir });
-  mkdirSync(join(dir, '.gate'), { recursive: true });
-  if (testeAlterado)
-    writeFileSync(join(dir, '.gate/motivo-teste.txt'), testeAlterado.replace(/^TESTE-ALTERADO:\s*/, ''));
+  writeMotivos(dir, testeAlterado, gateAlterado);
   const env = { ...process.env, GATE_PERFIL: 'release', GATE_BASE: 'origin/main' };
   const gate = spawnSync('npm', ['run', 'gate:local'], { cwd: dir, env, stdio: 'inherit' });
   const receiptFile = join(dir, '.gate/recibo.txt');
@@ -92,11 +93,12 @@ function main(): void {
   const prepared = assertApproved(version);
   const prs = batchPrs();
   const testeAlterado = consolidatedTesteAlterado(prs);
-  checkIntegrity(testeAlterado);
+  const gateAlterado = consolidatedGateAlterado(prs);
+  checkIntegrity(testeAlterado, gateAlterado);
 
   step(prepared ? '2/5 release:prepare já feito neste SHA homologado; segue' : '2/5 release:prepare');
   if (!prepared) {
-    writeMotivoParaOPush(testeAlterado);
+    writeMotivos('.', testeAlterado, gateAlterado);
     prepare(rollback, version);
   }
   const sha = must('git', ['rev-parse', 'HEAD']);
@@ -105,7 +107,7 @@ function main(): void {
   const dir = freshWorktree(version);
 
   step('4/5 Gate da release (uma vez)');
-  const receipt = runGate(dir, testeAlterado);
+  const receipt = runGate(dir, testeAlterado, gateAlterado);
   const check = verifyReceipt(receipt, sha, [], branch);
   if (!check.ok) fail(`recibo inválido: ${check.reason}`);
 
@@ -117,7 +119,7 @@ function main(): void {
     repo: process.env.GITHUB_REPOSITORY ?? '',
   });
   console.log(`${selo.feita ? '✓' : '⚠'} selo ${SELO_NOME}: ${selo.motivo}`);
-  const body = releasePrBody({ version, receipt, prs: prs.map((p) => p.number), testeAlterado });
+  const body = releasePrBody({ version, receipt, prs: prs.map((p) => p.number), testeAlterado, gateAlterado });
   mkdirSync('.gate', { recursive: true });
   const bodyFile = join('.gate', `pr-release-${tagFor(version)}.md`);
   writeFileSync(bodyFile, body);

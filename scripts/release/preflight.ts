@@ -7,7 +7,7 @@
  * `dry_run`, para aqui.
  */
 import { readFileSync } from 'node:fs';
-import { consolidatedTesteAlterado } from './cut-lib';
+import { consolidatedGateAlterado, consolidatedTesteAlterado } from './cut-lib';
 import { assertApproved, assertBranch, batchPrs, checkIntegrity, fail, step } from './cut-pre';
 import { parseRollback, sh } from './lib';
 import { pendenciaDeVersao, pendenciasDoPreflight } from './preflight-lib';
@@ -46,7 +46,8 @@ if (falhas.length > 0) fail(falhas.join('\n✗ '));
 step('Pré-voo 2/4 Pré-condições do corte');
 const { branch, version } = assertBranch();
 const prepared = assertApproved(version);
-checkIntegrity(consolidatedTesteAlterado(batchPrs()));
+const prsDoLote = batchPrs();
+checkIntegrity(consolidatedTesteAlterado(prsDoLote), consolidatedGateAlterado(prsDoLote));
 
 step('Pré-voo 3/4 Versão dos changesets (simulação em cópia descartável)');
 const erroVersao = pendenciaDeVersao(

@@ -10,8 +10,9 @@ mergeia; a revisora (the-judge) julga e mergeia.
 
 ## 1. Em voo na v0.7.0
 
-1. **#837** (ADR-108: sincronia issue, EST e fila; triagem de 2026-11-14). Só `.md`. A #834 (ADR-107) já está na release.
-2. Em seguida: homologação da staging, marca `homologacao/v0.7.0` e `release:cut` (ADR-071). Depende do
+1. **#831** (corte da v0.7.0 bloqueado: o `release:cut` não consolidava o `GATE-ALTERADO:`; promovida da v0.8.0). Depois do merge a ponta da release muda: nova homologação do SHA novo (ADR-071) e retomada do corte.
+2. **#837** (ADR-108: sincronia issue, EST e fila; triagem de 2026-11-14). Só `.md`. A #834 (ADR-107) já está na release.
+- Em seguida: homologação da staging, marca `homologacao/v0.7.0` e `release:cut` (ADR-071). Depende do
    Kalléo na homologação. Release por lote de valor, no máximo quinzenal (ADR-104).
 
 ## 2. Sem esperar o corte
@@ -25,7 +26,7 @@ mergeia; a revisora (the-judge) julga e mergeia.
 
 4. **#830** (hook de `scripts/gate/` falha aberto na nuvem): fecha a brecha da regra 8, então vem antes do que mexe no
    gate.
-5. **#832**, **#831**, **#820**, **#828** (lacunas do gate, consolidação do `GATE-ALTERADO:`, `rodar_mutacao` falha
+5. **#832**, **#820**, **#828** (lacunas do gate, `rodar_mutacao` falha
    aberta, endurecer `staging.yml`): lote do gate; um domínio por vez.
 6. **#839** (piso de mutação por arquivo em `scripts/release`: 8 libs abaixo de 85, v0.8.0, P2). **#835** (check que barra PR sem atualizar esta fila). Depende do ADR-107.
 7. **#750**, **#751**, **#752** (job `producao`, rollback, docs de release): dependem do #746 e do #747, que são do
