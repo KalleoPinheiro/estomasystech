@@ -187,7 +187,11 @@ function AdminRow({
         {admin.email}
       </TableCell>
       <TableCell label="Situação" className="py-2 pr-3">
-        <StatusBadge status={situation.status} label={situation.label} />
+        <StatusBadge
+          status={situation.status}
+          label={situation.label}
+          className="max-w-full whitespace-normal"
+        />
       </TableCell>
       <TableCell label="Ações" className="py-2 text-right">
         <AdminActions admin={admin} canResend={canResend} onAction={onAction} />

@@ -1,7 +1,8 @@
 import { loadBlock } from '@/lib/server/data/load-block';
 import { listPlatformAuditFor } from '@/lib/server/data/platform';
 import { requirePlatformPage } from '@/lib/server/session';
-import { PAGE_SIZE, PlatformAudit } from './platform-audit';
+import { PAGE_SIZE } from './page-size';
+import { PlatformAudit } from './platform-audit';
 
 /**
  * Trilha da plataforma no servidor (#558, ADR-069/074): a 1ª página, sem
