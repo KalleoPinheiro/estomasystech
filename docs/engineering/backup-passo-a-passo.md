@@ -320,7 +320,7 @@ Depois, passe pelo [checklist de segurança](producao.md#54-segurança-do-backup
 
 ## Etapa 9 — Backup disparado pelo CI, antes do deploy 🖥️ + 💻 (ADR-095)
 
-O workflow de release (`release-deploy.yml`, v0.8.0) precisa de um backup confirmado antes de
+O workflow de release (`release-deploy.yml`) precisa de um backup confirmado antes de
 mexer na produção. Para isso o Actions entra no servidor com uma **chave SSH só dele**, que **não
 abre shell**: ela só consegue rodar `ci-backup.sh`, que inicia o mesmo `estomasystech-backup.service`
 do timer e responde uma linha: `BACKUP_OK <timestamp>` ou `BACKUP_FALHOU <motivo>`. O backup
@@ -355,7 +355,8 @@ Faça uma vez (💻 = sua máquina, 🖥️ = servidor):
 5. 💻 Guarde `ci-backup-key` (privada) no cofre e **apague** o arquivo (`shred -u ci-backup-key`).
    Ela vira o secret `VPS_SSH_KEY` do *Environment* `producao` no GitHub, junto de `VPS_KNOWN_HOSTS`
    (saída de `ssh-keyscan -t ed25519 <host>` conferida com a impressão digital do servidor). Isso
-   é feito na v0.8.0, quando o job de produção entrar. Nunca cole a chave em chat ou issue.
+   é feito uma vez, antes do primeiro *Release deploy*. O workflow também lê `VPS_HOST` (o endereço do
+   servidor, o mesmo do `ssh`) e entra como `estoma-ci`. Nunca cole a chave em chat ou issue.
 
 Se o teste do passo 4 falhar, a linha `BACKUP_FALHOU <motivo>` diz o que olhar (`journalctl -u
 estomasystech-backup.service` no servidor). A chave do CI é revogada apagando a linha do

@@ -232,9 +232,9 @@ O deploy é **manual** (botão *Deploy* no Coolify): nada sobe sozinho por um pu
 proposital enquanto as migrações não têm `down`
 ([ADR-039](../adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md)).
 
-> **Aceito, ainda não implementado:** [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md)
-> automatiza tag, backup, deploy e fumaça por um workflow com aprovação humana. A primeira release no fluxo
-> novo é a v0.8.0; até lá (v0.7.0 inclusive) o roteiro abaixo é o único em vigor.
+> **Publicar com um clique ([ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md), #750 a #752, #851):**
+> o workflow *Release deploy* faz backup, tag, deploy e fumaça com **uma única aprovação** do dono (o
+> *Environment* `producao`). O roteiro manual abaixo continua valendo como reserva (ssh e painel do Coolify).
 
 > **Fluxo em transição ([ADR-097](../adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):**
 > o caminho até a produção será enxugado em fases (checks determinísticos, aprovação humana só em risco alto,
@@ -246,12 +246,23 @@ proposital enquanto as migrações não têm `down`
    `npm run release:publish -- --rollback=...` cria a tag `vX.Y.Z` no commit de merge e publica a
    Release (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**. Fluxo completo
    em [`homologacao.md`](homologacao.md) § 1.
-   **Alternativa pelo Actions (ADR-095, `release-deploy.yml`):** depois do merge na `main`, dispare o
-   workflow *Release deploy* **da `main`** com `version` (X.Y.Z) e `rollback`. O job `publicar` confere que o HEAD
-   é o merge de `release/vX.Y.Z` e que `package.json` e o `CHANGELOG.md` trazem a versão, e roda o mesmo
-   `release:publish` com o `RELEASE_CUT_TOKEN` (idempotente). Use `dry_run` para só conferir. O `fumaca` roda a
-   fumaça do § 9.6; depois do deploy manual, redispare com `versao_implantada` para conferir a versão
-   servida. Backup e deploy pelo Actions entram na #752 (v0.8.0); até lá os passos 2 e 3 seguem manuais.
+   **Pelo Actions (ADR-095, `release-deploy.yml`), o caminho normal:** depois do merge do PR `chore(release)` na
+   `main` e da **staging automática verde nesse mesmo SHA** (workflow *Staging*), dispare *Release deploy*
+   **da `main`** com `version` (X.Y.Z) e `rollback`. O job `validar` confere que o HEAD traz a versão em
+   `package.json` e no `CHANGELOG.md` e que a staging validou **este SHA exato** (#851); sem isso para antes de
+   qualquer segredo. Em seguida o run espera o **clique do dono** no *Environment* `producao`; aprovado, o job
+   `producao` confere que a `main` não avançou e, nesta ordem: faz o **backup** no VPS (só segue com
+   `BACKUP_OK`), publica a **tag** e a Release (`release:publish`, idempotente) e **deploya** pela API do
+   Coolify (`POST /api/v1/deploy`, espera `finished` e confere que o commit implantado é o SHA validado). O
+   `fumaca` roda a fumaça do § 9.6 e confere a versão servida. Falha em qualquer passo para ali e **nunca
+   reverte sozinha** (ADR-039): a decisão de rollback é humana (passo 5). `dry_run` só confere (sem backup,
+   tag nem deploy). Segredos do *Environment* `producao`: `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`, `VPS_HOST`,
+   `COOLIFY_URL`, `COOLIFY_TOKEN` (read + deploy) e `COOLIFY_APP_UUID`; `RELEASE_CUT_TOKEN` segue do
+   repositório (rotação: § 6).
+   **Release que leva a cifra (v0.8.0 em diante):** antes do clique, confira no Coolify que
+   `DATA_ENCRYPTION_KEY` e `BLIND_INDEX_PEPPER` estão no runtime (o app não sobe sem elas). Depois do deploy
+   e do backup, `npm run data:reencrypt` pelo dono, repetido até "Nada pendente: tudo na chave atual."
+   (o workflow não converte dados).
 1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde (E2E e mutação rodam no Actions,
    [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)), e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da

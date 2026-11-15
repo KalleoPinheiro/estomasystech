@@ -174,6 +174,24 @@ fumaça nunca dispara rollback; ela avisa e para.
 Cada ticket que muda workflow segue a regra de cota do Actions: `actionlint` e uma correção consolidada,
 sem tentativa e erro. Mexer em `scripts/gate/` continua proibido (regra 8).
 
+## Implementação do clique único (2026-11-15; #750 a #752 e #851)
+
+Entregue em `release-deploy.yml` com estas diferenças em relação ao desenho acima, todas para ter **uma única
+aprovação** e a ordem validar, backup, tag, deploy, fumaça:
+
+- Três jobs: `validar` (sem segredo de produção), `producao` (*Environment* `producao`) e `fumaca`. O antigo
+  `publicar` virou **passo** do `producao`, depois do backup: se o backup falha, não há tag.
+- O `RELEASE_CUT_TOKEN` agora entra no job com *Environment*, mas só no `env` do passo de publicar (nunca no job
+  nem no checkout), e o `npm ci` roda sem nenhum segredo. O risco aceito na decisão 4 continua o mesmo.
+- #851: `validar` exige uma execução verde do workflow *Staging* (push na `main`) para o **SHA do disparo**, e
+  `producao` reconfere que a `main` não avançou durante a espera da aprovação. Como o recurso do Coolify
+  implanta o HEAD (plano A), o deploy só é dado como bom se o commit implantado for esse SHA.
+- Backup em `scripts/release/backup-vps.sh` (só `BACKUP_OK` libera) e deploy em `scripts/release/deploy-coolify.sh`
+  (POST, espera `finished`, confere o commit), ambos testados com ssh e curl falsos.
+- Segredos do *Environment* `producao`: `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`, `VPS_HOST`, `COOLIFY_URL`,
+  `COOLIFY_TOKEN`, `COOLIFY_APP_UUID`. O input `versao_implantada` deixou de existir: a fumaça confere a versão
+  sempre (exceto no `dry_run`). O rollback pelo workflow (ticket 6) segue fora; falha nunca reverte sozinha.
+
 ## Decisões do dono (2026-11-08, @KalleoPinheiro)
 
 1. **Revisor do *Environment* `producao`:** somente o @KalleoPinheiro, com "Prevent self-review"
