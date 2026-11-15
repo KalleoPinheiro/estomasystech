@@ -1,6 +1,7 @@
 ---
 title: "ADR 052 — Fluxo de git com release aberta e main só homologada"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-20

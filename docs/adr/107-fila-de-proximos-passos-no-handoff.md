@@ -1,6 +1,7 @@
 ---
 title: "ADR 107 — Fila de próximos passos versionada, atualizada em todo handoff"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-14

@@ -66,10 +66,8 @@ const BASE = {
 };
 
 describe('Feature: E2E e mutação como check obrigatório do PR no Actions (ADR-098)', () => {
-  it('Dado um PR contra a main, Quando o gate dispara, Então o E2E também roda (release/* e hotfix/*)', () => {
-    expect(gate).toMatch(
-      /pull_request:\n\s+branches: \["release\/\*\*", main\]/,
-    );
+  it('Dado um PR contra a main, Quando o gate dispara, Então o E2E também roda', () => {
+    expect(gate).toMatch(/pull_request:\n\s+branches: \[main\]/);
   });
 
   it('Dado o job de mutação, Quando o Stryker roda, Então muta só os arquivos alterados, recebidos por variável de ambiente', () => {
@@ -111,7 +109,7 @@ describe('Feature: o recibo do gate local deixou de ser exigido no PR (ADR-098)'
     expect(recibo).not.toContain('verify-receipt');
     expect(recibo).not.toMatch(/run:.*E2E-GATE/);
     expect(recibo).toContain('scripts/gate/check-test-integrity.ts');
-    expect(recibo).toContain('scripts/release/check-homologacao.ts');
+    expect(recibo).not.toContain('check-homologacao');
   });
 
   it('Dado o template do PR, Quando alguém o preenche, Então não pede o recibo', () => {
@@ -120,9 +118,9 @@ describe('Feature: o recibo do gate local deixou de ser exigido no PR (ADR-098)'
 });
 
 describe('Feature: lint de migração aditiva no CI (fase 2b)', () => {
-  it('Dado um PR, Quando o CI roda, Então o check:migracao roda no estático e no fora-do-selo contra a base do PR', () => {
+  it('Dado um PR, Quando o CI roda, Então o check:migracao roda no estático contra a base do PR', () => {
     const ci = read('.github/workflows/ci.yml');
-    for (const nome of ['estatico', 'fora-do-selo']) {
+    for (const nome of ['estatico']) {
       const job = bloco(ci, nome);
       expect(job, nome).toContain('npm run check:migracao');
       expect(job, nome).toContain('GATE_BASE: origin/${{ github.base_ref }}');

@@ -6,8 +6,7 @@ name: Release deploy
 # Este workflow NÃO mergeia, NÃO faz push em branch e NÃO faz deploy: o job `producao` (backup + deploy,
 # Environment `producao`) entra na #752 (v0.8.0). Até lá o deploy da tag segue manual (producao.md § 3.1).
 #
-# - `publicar`: confere que o HEAD da `main` é o merge commit da `release/vX.Y.Z` e que `package.json` traz a
-#   versão, e roda o `release:publish` (tag anotada no commit de merge + Release publicada). Idempotente: tag
+# - `publicar`: confere que o HEAD da `main` traz a versão em `package.json` e no CHANGELOG (commit `chore(release)` mergeado por PR normal), e roda o `release:publish` (tag anotada no commit de merge + Release publicada). Idempotente: tag
 #   já no remoto sai sem erro. É o ÚNICO job que usa o RELEASE_CUT_TOKEN (PAT fine-grained, só este repo): a
 #   trava dele é a verificação, não um humano (ADR-095, decisão do dono 4). O GITHUB_TOKEN fica só em leitura.
 # - `fumaca`: `scripts/release/fumaca-producao.sh` contra o domínio público. Só confere a versão publicada
@@ -91,8 +90,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # A trava do job: a tag só aponta para um commit que já está na `main` e é o merge da release.
-      - name: Conferir que a main é o merge da release
+      # A trava do job: a tag só aponta para o HEAD da `main`, que já traz a versão.
+      - name: Conferir que a main traz a versão
         shell: bash
         env:
           DISPARO_SHA: ${{ github.sha }}
@@ -100,15 +99,6 @@ jobs:
           head="$(git rev-parse HEAD)"
           if [ "$head" != "$DISPARO_SHA" ]; then
             echo "::error title=A main avançou::A main mudou depois do disparo ($DISPARO_SHA -> $head). Dispare de novo."
-            exit 1
-          fi
-          parents="$(git rev-list --parents -n 1 HEAD | wc -w)"
-          if [ "$parents" -lt 3 ]; then
-            echo "::error title=HEAD sem merge commit::O HEAD da main não é um merge commit; a release deve entrar por merge commit (ADR-052)."
-            exit 1
-          fi
-          if ! git log -1 --format=%B HEAD | grep -Fq "release/v$VERSION"; then
-            echo "::error title=HEAD não é o merge da release::O merge commit da main não cita release/v$VERSION."
             exit 1
           fi
           pkg="$(node -p "require('./package.json').version")"

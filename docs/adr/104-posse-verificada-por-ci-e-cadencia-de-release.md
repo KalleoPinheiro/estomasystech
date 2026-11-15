@@ -1,6 +1,7 @@
 ---
 title: "ADR 104 — Posse de issue verificada por CI, estado da release e cadência"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-14

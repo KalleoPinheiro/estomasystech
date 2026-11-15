@@ -1,6 +1,7 @@
 ---
 title: "ADR 103 — Orquestração compartilhada entre LLMs com posse única por issue"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-11

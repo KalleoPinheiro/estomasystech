@@ -1,12 +1,10 @@
 name: Integridade dos testes
 
-# Confere, em segundos, que nenhum teste foi enfraquecido (regra 8 do AGENTS.md) e, em PR contra
-# uma release, a seção `## Homologação` (ADR-052). O recibo `E2E-GATE:` do gate local foi
+# Confere, em segundos, que nenhum teste foi enfraquecido (regra 8 do AGENTS.md). Não há seção de homologação por PR: a validação é a staging automática (ADR-109). O recibo `E2E-GATE:` do gate local foi
 # aposentado (ADR-098, que supera o ADR-042): o E2E e a mutação rodam no Actions, em `gate-pr.yml`.
 # O nome do arquivo e o id do job (`recibo-gate`) ficam por compatibilidade com testes e documentos;
 # o check exigido na `main` é o nome do job abaixo.
-# Roda também quando o corpo do PR é editado (`edited`), que é onde o `TESTE-ALTERADO:` e a
-# seção de homologação são escritos.
+# Roda também quando o corpo do PR é editado (`edited`), que é onde o `TESTE-ALTERADO:` é escrito.
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
@@ -51,9 +49,3 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: npx tsx scripts/gate/check-test-integrity.ts "origin/$BASE_REF" --body-file "$RUNNER_TEMP/pr-body.txt"
-
-      - name: Seed e cenários de homologação (ADR-052)
-        if: startsWith(github.base_ref, 'release/')
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: npx tsx scripts/release/check-homologacao.ts --body-file "$RUNNER_TEMP/pr-body.txt" --base "origin/$BASE_REF"

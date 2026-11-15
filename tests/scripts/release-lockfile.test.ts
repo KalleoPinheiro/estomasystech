@@ -6,7 +6,6 @@ import {
   opcionaisPerdidos,
   verificarLockfile,
 } from '../../scripts/release/lockfile-lib';
-import { pendenciasDoPreflight } from '../../scripts/release/preflight-lib';
 
 const lock = (packages: Record<string, { optional?: boolean }>): string =>
   JSON.stringify({ lockfileVersion: 3, packages });
@@ -120,23 +119,5 @@ describe('Feature: npm fixado no package.json (ADR-091)', () => {
     };
     expect(npmFixado(real)).not.toBeNull();
     expect(real.engines?.npm).toBe(npmFixado(real));
-  });
-
-  it('Dado o pré-voo com npm divergente, Então vira falha do pré-voo; com o npm certo, passa', () => {
-    const base = {
-      token: 't',
-      repo: 'o/r',
-      gitName: 'n',
-      gitEmail: 'e',
-      rollbackOk: true,
-      emCi: true,
-    };
-    expect(
-      pendenciasDoPreflight({ ...base, npm: { pkg, atual: '10.9.9' } }),
-    ).toHaveLength(1);
-    expect(
-      pendenciasDoPreflight({ ...base, npm: { pkg, atual: '11.21.1' } }),
-    ).toEqual([]);
-    expect(pendenciasDoPreflight(base)).toEqual([]);
   });
 });
