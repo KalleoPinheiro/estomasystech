@@ -1,5 +1,17 @@
 # estomasystech
 
+## 0.8.0
+
+### Minor Changes
+
+- 62b45f0: O cadastro do paciente (nome, e-mail, telefone e data de nascimento) passa a ficar cifrado no banco, como já ficavam o CPF e o texto do prontuário. Depois que a recifra roda no banco, quem ler o disco ou um backup novo não identifica mais o paciente (backups feitos antes continuam como estavam). A busca por nome continua achando por trecho, sem diferenciar acento ou maiúscula; CPF, telefone e e-mail passam a ser achados pelo valor completo.
+- 3070540: Nome, telefone e e-mail do responsável passam a ficar cifrados no banco. Na busca de responsáveis, o nome continua achado por trecho (sem acento nem caixa), mas telefone e e-mail agora só por valor completo.
+- ec62677: Não é mais possível cadastrar dois pacientes com o mesmo CPF na mesma clínica: a tela avisa «Já existe um paciente com este CPF nesta clínica». Clínicas diferentes podem ter o mesmo CPF. Pacientes antigos com CPF repetido continuam no sistema e achados por nome até a clínica corrigir o cadastro.
+
+### Patch Changes
+
+- 0b93990: Corrige a busca de pacientes que dava «Erro interno do servidor» depois de cadastrar um paciente como primeira ação depois de iniciar o sistema. A busca por nome voltou a funcionar logo após o cadastro.
+
 ## 0.7.0
 
 ### Minor Changes
