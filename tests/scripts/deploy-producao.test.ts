@@ -35,7 +35,7 @@ function falso(nome: string, corpo: string): string {
 
 function rodar(script: string, env: Record<string, string>) {
   const r = spawnSync('bash', [script], {
-    env: { PATH: '/usr/bin:/bin', ...env },
+    env: { PATH: '/usr/bin:/bin', ...env } as unknown as NodeJS.ProcessEnv,
     encoding: 'utf8',
   });
   return { codigo: r.status, saida: `${r.stdout}${r.stderr}` };
