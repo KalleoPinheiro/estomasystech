@@ -4,7 +4,7 @@ import { GetPatient } from '@/application/patients/get-patient';
 import { ListPatients } from '@/application/patients/list-patients';
 import { SetPatientActive } from '@/application/patients/set-patient-active';
 import { UpdatePatient } from '@/application/patients/update-patient';
-import { NotFoundError, ValidationError } from '@/domain/shared/errors';
+import { NotFoundError } from '@/domain/shared/errors';
 import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memory/in-memory-patient-repository';
 
 describe('Feature: Gestão de pacientes', () => {
@@ -127,7 +127,8 @@ describe('Feature: Gestão de pacientes', () => {
       await createMaria();
 
       const result = await new ListPatients(repo).execute({
-        search: '(11) 99999',
+        // TESTE-ALTERADO: telefone passa a ser busca exata pelo índice cego (ADR-096).
+        search: '(11) 99999-0000',
       });
 
       expect(result).toHaveLength(1);

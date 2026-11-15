@@ -11,11 +11,11 @@ export interface PatientsPage {
   nextCursor: string | null;
 }
 
-/** Cursor opaco pela mesma ordenação da query (fullName, id) — issue #75. */
+/** Cursor opaco só com o id do último item: o nome é PII cifrada e não viaja na URL (ADR-096). */
 function nextPatientCursor(page: PatientDto[], limit: number): string | null {
   if (page.length < limit) return null;
   const last = page[page.length - 1];
-  return encodeCursor({ fullName: last.fullName, id: last.id });
+  return encodeCursor({ id: last.id });
 }
 
 /**

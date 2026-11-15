@@ -186,3 +186,21 @@ describe('Feature: Pepper do índice cego no ambiente (falha fechada em produç�
     );
   });
 });
+
+describe('orFallbackOnInvalid', () => {
+  it('devolve o valor, o fallback para ValidationError e propaga o resto', async () => {
+    const { orFallbackOnInvalid } = await import('@/lib/blind-index');
+    const { ValidationError } = await import('@/domain/shared/errors');
+    expect(orFallbackOnInvalid(() => 'ok', null)).toBe('ok');
+    expect(
+      orFallbackOnInvalid(() => {
+        throw new ValidationError('x');
+      }, 'fallback'),
+    ).toBe('fallback');
+    expect(() =>
+      orFallbackOnInvalid(() => {
+        throw new Error('boom');
+      }, null),
+    ).toThrow('boom');
+  });
+});

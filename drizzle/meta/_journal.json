@@ -498,6 +498,13 @@
       "when": 1792771047880,
       "tag": "0070_app-releases",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1794726169110,
+      "tag": "0071_pii-paciente-indice-cego",
+      "breakpoints": true
     }
   ]
 }

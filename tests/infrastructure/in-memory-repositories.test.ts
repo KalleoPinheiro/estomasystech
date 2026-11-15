@@ -1708,8 +1708,10 @@ describe('Feature: Doubles em memória de infraestrutura', () => {
       );
 
       expect(await repo.findAll('mari')).toHaveLength(1);
-      expect(await repo.findAll('example.com')).toHaveLength(1);
-      expect(await repo.findAll('988887777')).toHaveLength(1);
+      // TESTE-ALTERADO: e-mail e telefone só por valor exato (ADR-096).
+      expect(await repo.findAll('maria@example.com')).toHaveLength(1);
+      expect(await repo.findAll('11988887777')).toHaveLength(1);
+      expect(await repo.findAll('example.com')).toHaveLength(0);
       expect(await repo.findAll('inexistente')).toHaveLength(0);
     });
 

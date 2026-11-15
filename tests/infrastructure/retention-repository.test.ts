@@ -231,7 +231,7 @@ beforeAll(async () => {
   const client = await createPgliteFromTemplate();
   db = drizzle(client, { schema });
   appDb = db as unknown as AppDb;
-  repo = new DrizzleRetentionRepository(appDb, CLINIC);
+  repo = new DrizzleRetentionRepository(appDb, CLINIC, TEST_CIPHER);
   await new DrizzleClinicRepository(appDb).create(
     Clinic.restore({
       id: OTHER,
@@ -398,8 +398,12 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
       notes: null,
       active: false,
       anonymizedAt: NOW,
-      birthDate: new Date('1950-01-01T00:00:00Z'),
+      // TESTE-ALTERADO: o nascimento passa a morar cifrado em birth_date_enc (ADR-096).
+      birthDate: null,
     });
+    expect(TEST_CIPHER.decrypt(patient.birthDateEnc ?? '')).toBe(
+      '1950-01-01T00:00:00.000Z',
+    );
     const [anamnesis] = await db
       .select()
       .from(schema.anamneses)

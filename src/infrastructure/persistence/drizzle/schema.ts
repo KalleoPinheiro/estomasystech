@@ -397,7 +397,16 @@ export const patients = pgTable(
     phone: text('phone').notNull(),
     // CPF (11 dígitos) cifrado em repouso (ADR-025, #326); null = não informado.
     cpf: text('cpf'),
+    // Legado: em claro. Desde a cifra do cadastro (ADR-096) o nascimento mora
+    // em `birth_date_enc` e esta coluna só é lida enquanto a recifra não rodou.
     birthDate: timestamp('birth_date', { withTimezone: true, mode: 'date' }),
+    // Nascimento (ISO 8601) cifrado em repouso (ADR-096, #735); null = não informado.
+    birthDateEnc: text('birth_date_enc'),
+    // Índice cego (HMAC com pepper próprio, ADR-096): busca exata por CPF, telefone
+    // e e-mail sem decifrar a empresa. Formato `b1.<keyId>.<hex>`; null = sem valor.
+    cpfHash: text('cpf_hash'),
+    phoneHash: text('phone_hash'),
+    emailHash: text('email_hash'),
     notes: text('notes'),
     referredByPartnerId: text('referred_by_partner_id').references(
       () => partners.id,
@@ -443,6 +452,9 @@ export const patients = pgTable(
       table.phone.op('gin_trgm_ops'),
     ),
     index('idx_patients_clinic').on(table.clinicId),
+    index('idx_patients_cpf_hash').on(table.clinicId, table.cpfHash),
+    index('idx_patients_phone_hash').on(table.clinicId, table.phoneHash),
+    index('idx_patients_email_hash').on(table.clinicId, table.emailHash),
   ],
 );
 

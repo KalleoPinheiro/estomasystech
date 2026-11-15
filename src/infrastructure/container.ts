@@ -69,6 +69,7 @@ import type {
 } from '@/domain/taxonomy/taxonomy-repositories';
 import { googleCalendarOAuthConfigFromEnv } from '@/lib/auth/google-calendar-oauth';
 import type { TenantScope } from '@/lib/auth/tenant-scope';
+import { type BlindIndex, blindIndexFromEnv } from '@/lib/blind-index';
 import { type DataCipher, dataCipherFromEnv } from '@/lib/data-cipher';
 import { logError } from '@/lib/log-error';
 import {
@@ -226,6 +227,7 @@ const globalForServices = globalThis as unknown as {
   >;
   estomasystechS3?: S3Sender;
   estomasystechCipher?: { key: string; cipher: DataCipher };
+  estomasystechBlindIndex?: { key: string; index: BlindIndex };
 };
 
 /**
@@ -247,6 +249,24 @@ export function currentDataCipher(): DataCipher {
     };
   }
   return globalForServices.estomasystechCipher.cipher;
+}
+
+/** Índice cego da PII (ADR-096), um por processo; refeito só se o ambiente mudar. */
+export function currentBlindIndex(): BlindIndex {
+  const env = process.env;
+  const key = [
+    env.NODE_ENV,
+    env.BLIND_INDEX_PEPPER,
+    env.BLIND_INDEX_PEPPER_PREVIOUS,
+    env.AUTH_SECRET,
+  ].join('\u0000');
+  if (globalForServices.estomasystechBlindIndex?.key !== key) {
+    globalForServices.estomasystechBlindIndex = {
+      key,
+      index: blindIndexFromEnv(),
+    };
+  }
+  return globalForServices.estomasystechBlindIndex.index;
 }
 
 async function oauthCalendarGateway(
@@ -407,7 +427,12 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
   );
   return {
     clinics: new DrizzleClinicRepository(db),
-    patients: new DrizzlePatientRepository(db, tenant.clinicId, cipher),
+    patients: new DrizzlePatientRepository(
+      db,
+      tenant.clinicId,
+      cipher,
+      currentBlindIndex,
+    ),
     partners: new DrizzlePartnerRepository(db, tenant.clinicId),
     guardians: new DrizzleGuardianRepository(db, tenant.clinicId),
     professionals: new DrizzleProfessionalRepository(db, tenant.clinicId),
@@ -495,12 +520,17 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     ),
     auditEvents: new DrizzleAuditEventRepository(db, tenant.clinicId),
     reminderLog: new DrizzleReminderLogRepository(db, tenant.clinicId),
-    retention: new DrizzleRetentionRepository(db, tenant.clinicId),
+    retention: new DrizzleRetentionRepository(db, tenant.clinicId, cipher),
     jobRuns: new DrizzleJobRunRepository(db),
     calendar: calendarGatewayFor(db, tenant.clinicId),
     clinicChannels,
     email: emailGatewayFor(clinicChannels, tenant.clinicId),
-    transactions: new DrizzleTransactionManager(db, tenant.clinicId, cipher),
+    transactions: new DrizzleTransactionManager(
+      db,
+      tenant.clinicId,
+      cipher,
+      currentBlindIndex,
+    ),
     clinicProvisioning: new DrizzleClinicProvisioning(db),
   };
 }
