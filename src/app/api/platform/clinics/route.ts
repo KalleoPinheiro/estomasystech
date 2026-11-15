@@ -2,18 +2,14 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { IssueAuthToken } from '@/application/auth/auth-token-flow';
 import { appUrlFromEnv } from '@/application/auth/send-invite';
-import { adminStatusOf } from '@/application/platform/clinic-overview';
 import { CreateClinic } from '@/application/platform/create-clinic';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
-import {
-  toPlatformClinicDto,
-  toPlatformClinicSummaryDto,
-  toUserAccountDto,
-} from '@/lib/dto';
+import { toPlatformClinicDto, toUserAccountDto } from '@/lib/dto';
+import { listPlatformClinics } from '@/lib/server/data/platform';
 
 const createSchema = z.object({
   name: z.string().max(200),
@@ -27,34 +23,14 @@ const createSchema = z.object({
 
 /**
  * Clínicas da plataforma (B4, #214). O catálogo de clínicas não tem empresa
- * (`systemScope`); o estado do admin e o status do canal de e-mail (C4, #267)
- * de cada uma são lidos no escopo dela.
+ * (sessão do super_admin, #558); o estado do admin e o status do canal de
+ * e-mail (C4, #267) de cada uma são lidos no escopo dela.
  */
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { clinics } = await getRepositories(systemScope());
-    const all = await clinics.findAll();
-    const rows = await Promise.all(
-      all.map(async (clinic) => {
-        const { userAccounts, clinicChannels } = await getRepositories(
-          clinicScope(clinic.id),
-        );
-        const [admins, emailStatus] = await Promise.all([
-          userAccounts.findByRole('company_admin'),
-          clinicChannels.findStatus('email'),
-        ]);
-        return toPlatformClinicSummaryDto(
-          clinic,
-          adminStatusOf(admins),
-          emailStatus,
-        );
-      }),
-    );
-    return rows.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  });
+  return handleRequest(() => listPlatformClinics(guard.session));
 }
 
 /**

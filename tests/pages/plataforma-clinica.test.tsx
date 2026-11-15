@@ -8,7 +8,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import PlatformClinicPage from '@/app/plataforma/clinicas/[id]/page';
+import { PlatformClinic as PlatformClinicPage } from '@/app/plataforma/clinicas/[id]/platform-clinic';
 import { formatDateTime } from '@/lib/format';
 import { renderWithToast } from '../support/render-with-toast';
 

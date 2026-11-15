@@ -10,7 +10,7 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import PlatformLayout from '@/app/plataforma/layout';
-import PlatformPage from '@/app/plataforma/page';
+import { PlatformClinics as PlatformPage } from '@/app/plataforma/platform-clinics';
 
 const push = vi.fn();
 const refresh = vi.fn();

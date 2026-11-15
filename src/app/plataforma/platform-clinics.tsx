@@ -1,0 +1,126 @@
+'use client';
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@still-void/ui/react';
+import Link from 'next/link';
+import {
+  EmptyState,
+  ErrorAlert,
+  LoadingIndicator,
+} from '@/components/feedback';
+import { PageHeader } from '@/components/page-header';
+import { StatusBadge } from '@/components/status-badge';
+import type { PlatformClinicSummaryDto } from '@/lib/dto';
+import { useApiQuery } from '@/lib/use-api-query';
+import {
+  ADMIN_STATUS_LABEL,
+  CLINIC_STATUS_LABEL,
+  emailChannelLabel,
+  registrationLabel,
+} from './clinic-labels';
+
+/**
+ * Clínicas da plataforma (B4, #214): situação (B5), cadastro, estado do admin
+ * e status do canal de e-mail (C4, #267) de cada uma. Ilha de cliente: a lista
+ * já chega no HTML (`PrefetchedQueries`, #558) e só vai à API ao atualizar.
+ */
+export function PlatformClinics() {
+  const { data, error, refresh } = useApiQuery<PlatformClinicSummaryDto[]>(
+    '/api/platform/clinics',
+  );
+
+  return (
+    <>
+      <PageHeader
+        title="Plataforma"
+        description="Clínicas cadastradas e o Admin de Empresa de cada uma."
+        actions={
+          <Link
+            href="/plataforma/clinicas/nova"
+            className="font-medium text-accent-ink text-sm hover:underline"
+          >
+            Nova clínica
+          </Link>
+        }
+      />
+      <ClinicsContent data={data} error={error} onRetry={refresh} />
+    </>
+  );
+}
+
+function ClinicsContent({
+  data,
+  error,
+  onRetry,
+}: {
+  data: PlatformClinicSummaryDto[] | null;
+  error: string | null;
+  onRetry: () => void;
+}) {
+  if (error) return <ErrorAlert message={error} onRetry={onRetry} />;
+  if (!data) return <LoadingIndicator />;
+  if (data.length === 0) {
+    return <EmptyState message="Nenhuma clínica cadastrada." />;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <Table stack className="w-full text-left text-sm">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="py-2 pr-3">Nome</TableHead>
+            <TableHead className="py-2 pr-3">CNPJ</TableHead>
+            <TableHead className="py-2 pr-3">Situação</TableHead>
+            <TableHead className="py-2 pr-3">Cadastro</TableHead>
+            <TableHead className="py-2 pr-3">Admin</TableHead>
+            <TableHead className="py-2">E-mail</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((clinic) => (
+            <ClinicRow key={clinic.id} clinic={clinic} />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function ClinicRow({ clinic }: { clinic: PlatformClinicSummaryDto }) {
+  const registration = registrationLabel(clinic.registrationComplete);
+  const admin = ADMIN_STATUS_LABEL[clinic.adminStatus];
+  const situation = CLINIC_STATUS_LABEL[clinic.status];
+  const email = emailChannelLabel(clinic.emailChannel);
+  return (
+    <TableRow>
+      <TableCell label="Nome" className="py-2 pr-3 font-medium">
+        <Link
+          href={`/plataforma/clinicas/${clinic.id}`}
+          className="text-accent-ink hover:underline"
+        >
+          {clinic.name}
+        </Link>
+      </TableCell>
+      <TableCell label="CNPJ" className="py-2 pr-3 text-ink-2">
+        {clinic.cnpj ?? '—'}
+      </TableCell>
+      <TableCell label="Situação" className="py-2 pr-3">
+        <StatusBadge status={situation.status} label={situation.label} />
+      </TableCell>
+      <TableCell label="Cadastro" className="py-2 pr-3">
+        <StatusBadge status={registration.status} label={registration.label} />
+      </TableCell>
+      <TableCell label="Admin" className="py-2 pr-3">
+        <StatusBadge status={admin.status} label={admin.label} />
+      </TableCell>
+      <TableCell label="E-mail" className="py-2">
+        <StatusBadge status={email.status} label={email.label} />
+      </TableCell>
+    </TableRow>
+  );
+}

@@ -4,8 +4,9 @@ import { ManageClinicAdmins } from '@/application/platform/manage-clinic-admins'
 import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { toClinicAdminDto, toUserAccountDto } from '@/lib/dto';
-import { loadPlatformClinic } from '../platform-clinic';
+import { toUserAccountDto } from '@/lib/dto';
+import { listPlatformClinicAdmins } from '@/lib/server/data/platform';
+import { loadPlatformClinic, PlatformNotFoundError } from '../platform-clinic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -20,10 +21,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const { id: clinicId } = await context.params;
   return handleRequest(async () => {
-    const { services } = await loadPlatformClinic(clinicId);
-    return (await new ManageClinicAdmins(services).list()).map(
-      toClinicAdminDto,
-    );
+    const admins = await listPlatformClinicAdmins(clinicId);
+    if (!admins) throw new PlatformNotFoundError('Clínica não encontrada');
+    return admins;
   });
 }
 
