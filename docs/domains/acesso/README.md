@@ -139,6 +139,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 ## Decisões
 
 - [ADR-001](../../adr/001-multi-tenancy.md) — multiempresa por `clinic_id`, RLS adiada
+- [ADR-110](../../adr/110-rls-por-clinica-spike-e-plano-de-rollout.md) — spike do RLS (#729): prova em Postgres real e plano de rollout em etapas
 - [ADR-002](../../adr/002-autorizacao-em-duas-camadas.md) — proxy + handler
 - [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — seis papéis (o sétimo, `guardian`, no ADR-027), vínculo dinâmico do Profissional
 - [ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md) — login nativo; Google só como integração
