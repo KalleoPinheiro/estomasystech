@@ -100,10 +100,8 @@ export async function listPlatformAuditFor(
   );
   return {
     events: events.map((event) =>
-      toPlatformAuditEventDto(
-        event,
-        event.clinicId ? (names.get(event.clinicId) ?? null) : null,
-      ),
+      // Evento sem empresa não está no mapa: o nome é nulo (a chave `''` nunca existe).
+      toPlatformAuditEventDto(event, names.get(event.clinicId ?? '') ?? null),
     ),
     nextCursor: nextAuditCursor(events, query.limit),
   };
