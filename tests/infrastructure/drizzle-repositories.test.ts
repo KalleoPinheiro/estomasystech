@@ -121,7 +121,7 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
       await patientRepo.save(filho);
 
       expect((await patientRepo.findById(semEmail.id))?.email).toBeNull();
-      expect(await patientRepo.findAll('cuidador@')).toHaveLength(2);
+      expect(await patientRepo.findAll('cuidador@example.com')).toHaveLength(2);
     });
 
     it('Dado paciente salvo, Quando buscar por id, Então todos os campos preservados', async () => {
@@ -154,7 +154,9 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
       expect(await patientRepo.findAll('maria@example.com')).toHaveLength(1);
       expect(await patientRepo.findAll('mari')).toHaveLength(1);
       // Busca por telefone digitado com máscara acha o E.164 guardado (#324).
-      expect(await patientRepo.findAll('(11) 99999')).toHaveLength(1);
+      // TESTE-ALTERADO: telefone e e-mail só por valor exato, pelo índice cego (ADR-096).
+      expect(await patientRepo.findAll('(11) 99999-0000')).toHaveLength(1);
+      expect(await patientRepo.findAll('(11) 99999')).toHaveLength(0);
       expect(await patientRepo.findAll('inexistente')).toHaveLength(0);
     });
 

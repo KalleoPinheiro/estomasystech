@@ -1,5 +1,5 @@
 import { UserAccount } from '@/domain/auth/user-account';
-import { getRepositories } from '@/infrastructure/container';
+import { currentDataCipher, getRepositories } from '@/infrastructure/container';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicScope } from '@/lib/auth/tenant-scope';
@@ -43,14 +43,26 @@ export async function linkAllPortalAccounts(): Promise<void> {
   const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
   const { sql } = await import('drizzle-orm');
   const db = await getDb();
-  await db.execute(sql`
-    INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, patient_id, active, created_at)
-    SELECT gen_random_uuid()::text, p.clinic_id, lower(p.email), ${UNSET_PASSWORD_HASH}, 'patient', p.id, true, now()
-    FROM patients p
-    WHERE p.email IS NOT NULL AND NOT EXISTS (
-      SELECT 1 FROM user_accounts ua
-      WHERE ua.clinic_id = p.clinic_id AND ua.email = lower(p.email)
-    )`);
+  // O e-mail do paciente está cifrado no banco (ADR-096): decifra em JS.
+  const cipher = currentDataCipher();
+  const result = await db.execute(
+    sql`SELECT id, clinic_id, email FROM patients WHERE email IS NOT NULL`,
+  );
+  const rows = (
+    result as unknown as {
+      rows: { id: string; clinic_id: string; email: string }[];
+    }
+  ).rows;
+  for (const row of rows) {
+    const email = cipher.decrypt(row.email).toLowerCase();
+    await db.execute(sql`
+      INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, patient_id, active, created_at)
+      SELECT gen_random_uuid()::text, ${row.clinic_id}, ${email}, ${UNSET_PASSWORD_HASH}, 'patient', ${row.id}, true, now()
+      WHERE NOT EXISTS (
+        SELECT 1 FROM user_accounts ua
+        WHERE ua.clinic_id = ${row.clinic_id} AND ua.email = ${email}
+      )`);
+  }
   await db.execute(sql`
     INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, partner_id, active, created_at)
     SELECT gen_random_uuid()::text, pa.clinic_id, lower(pa.email), ${UNSET_PASSWORD_HASH}, 'partner', pa.id, true, now()

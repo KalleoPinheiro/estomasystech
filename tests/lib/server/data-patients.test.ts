@@ -41,9 +41,8 @@ describe('Feature: lista de pacientes lida no servidor (#549)', () => {
     });
 
     expect(page.items.map((p) => p.fullName)).toEqual(['Ana Pag', 'Maria Pag']);
-    expect(decodeCursor(page.nextCursor)).toMatchObject({
-      fullName: 'Maria Pag',
-    });
+    // TESTE-ALTERADO: o cursor não leva mais o nome, que é PII cifrada (ADR-096).
+    expect(decodeCursor(page.nextCursor)).toEqual({ id: expect.any(String) });
 
     const next = await listPatientsPage(session('atendente', CLINIC_A_ID), {
       search: 'Pag',

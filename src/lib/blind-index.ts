@@ -1,5 +1,6 @@
 import { createHash, createHmac, hkdfSync } from 'node:crypto';
 import { normalizeCpf } from '@/domain/shared/cpf';
+import { ValidationError } from '@/domain/shared/errors';
 import { normalizeOptionalEmail } from '@/domain/shared/person-validation';
 import { normalizeBrazilianPhoneOrThrow } from '@/domain/shared/phone';
 import { logger } from '@/lib/observability/logger';
@@ -64,6 +65,20 @@ export function normalizeForBlindIndex(
   if (kind === 'cpf') return normalizeCpf(raw);
   if (kind === 'phone') return normalizeBrazilianPhoneOrThrow(raw);
   return normalizeOptionalEmail(raw);
+}
+
+/**
+ * Valor legado que não normaliza (telefone ou CPF fora do padrão) não tem como
+ * ser indexado nem buscado: devolve o `fallback` em vez de travar a gravação ou a
+ * busca. Qualquer outro erro continua subindo.
+ */
+export function orFallbackOnInvalid<T>(compute: () => T, fallback: T): T {
+  try {
+    return compute();
+  } catch (error) {
+    if (error instanceof ValidationError) return fallback;
+    throw error;
+  }
 }
 
 export interface BlindIndexKeys {

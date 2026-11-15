@@ -1,4 +1,6 @@
 import { getDb } from "@/infrastructure/persistence/drizzle/db";
+import { reencryptPatientIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-patient-identity";
+import { blindIndexFromEnv } from "@/lib/blind-index";
 import { reencryptClinicalData } from "@/infrastructure/persistence/drizzle/reencrypt-clinical-data";
 import { dataCipherFromEnv } from "@/lib/data-cipher";
 
@@ -16,10 +18,19 @@ import { dataCipherFromEnv } from "@/lib/data-cipher";
 async function main(): Promise<void> {
   process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
   // Fora de produção cairia na chave de desenvolvimento: aqui ela é exigida.
+  if (!process.env.BLIND_INDEX_PEPPER?.trim()) {
+    throw new Error("Defina BLIND_INDEX_PEPPER para preencher o índice cego do cadastro");
+  }
   if (!process.env.DATA_ENCRYPTION_KEY) {
     throw new Error("Defina DATA_ENCRYPTION_KEY (a chave atual) para recifrar");
   }
-  const counts = await reencryptClinicalData(await getDb(), dataCipherFromEnv());
+  // Falha antes de qualquer escrita se o pepper for inválido.
+  const blindIndex = blindIndexFromEnv();
+  const db = await getDb();
+  const cipher = dataCipherFromEnv();
+  const counts = await reencryptClinicalData(db, cipher);
+  // Cadastro do paciente (ADR-096): cifra nome, e-mail, telefone e nascimento e preenche o índice cego.
+  counts.patients_identity = await reencryptPatientIdentity(db, cipher, blindIndex);
   let total = 0;
   for (const [table, updated] of Object.entries(counts)) {
     total += updated;

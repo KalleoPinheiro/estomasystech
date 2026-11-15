@@ -2,6 +2,7 @@ import type {
   TransactionManager,
   TransactionScope,
 } from '@/application/ports/transaction-manager';
+import { blindIndexFromEnv } from '@/lib/blind-index';
 import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { DrizzleAppointmentRepository } from './drizzle-appointment-repository';
@@ -42,7 +43,10 @@ import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
 import { DrizzlePartnerRepository } from './drizzle-partner-repository';
 import { DrizzlePartnerShareConsentRepository } from './drizzle-partner-share-consent-repository';
-import { DrizzlePatientRepository } from './drizzle-patient-repository';
+import {
+  type BlindIndexSource,
+  DrizzlePatientRepository,
+} from './drizzle-patient-repository';
 import { DrizzleProducedSessionRepository } from './drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './drizzle-professional-repository';
 import { DrizzleScheduleAvailabilityRepository } from './drizzle-schedule-availability-repository';
@@ -64,6 +68,7 @@ export class DrizzleTransactionManager implements TransactionManager {
     private readonly db: AppDb,
     private readonly clinicId: string | null,
     private readonly cipher: FieldCipher,
+    private readonly blindIndex: BlindIndexSource = blindIndexFromEnv,
   ) {}
 
   run<T>(fn: (repos: TransactionScope) => Promise<T>): Promise<T> {
@@ -79,7 +84,12 @@ export class DrizzleTransactionManager implements TransactionManager {
         sessionPackages: new DrizzleSessionPackageRepository(tx, this.clinicId),
         userAccounts: new DrizzleUserAccountRepository(tx, this.clinicId),
         auditEvents: new DrizzleAuditEventRepository(tx, this.clinicId),
-        patients: new DrizzlePatientRepository(tx, this.clinicId, this.cipher),
+        patients: new DrizzlePatientRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+          this.blindIndex,
+        ),
         scheduleConfig: new DrizzleScheduleConfigRepository(tx, this.clinicId),
         scheduleAvailability: new DrizzleScheduleAvailabilityRepository(
           tx,

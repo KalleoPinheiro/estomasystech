@@ -198,8 +198,11 @@ describe('Feature: Regras de borda do domínio e aplicação', () => {
         phone: '11999990000',
       });
 
-      expect(await repo.findAll('maria@')).toHaveLength(1);
-      expect(await repo.findAll('11999')).toHaveLength(1);
+      // TESTE-ALTERADO: e-mail e telefone só por valor exato, pelo índice cego (ADR-096).
+      expect(await repo.findAll('maria@example.com')).toHaveLength(1);
+      expect(await repo.findAll('11999990000')).toHaveLength(1);
+      expect(await repo.findAll('maria@')).toHaveLength(0);
+      expect(await repo.findAll('11999')).toHaveLength(0);
       expect(await repo.findAll('nao-existe@example.com')).toHaveLength(0);
       expect(await repo.findById('ghost')).toBeNull();
     });

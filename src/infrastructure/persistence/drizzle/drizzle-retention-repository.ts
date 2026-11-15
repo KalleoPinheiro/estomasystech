@@ -26,6 +26,7 @@ import type {
   PendingPhoto,
   RetentionRepository,
 } from '@/domain/retention/retention-repository';
+import { dataCipherFromEnv, type FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import {
   anamneses,
@@ -70,6 +71,20 @@ const ACCOUNT_ROLES = [
 ];
 const RESOLVED_WAITLIST = ['scheduled', 'removed', 'expired'];
 
+/** Nascimento reduzido ao 1º de janeiro do ano, cifrado; null quando não havia data. */
+function birthYearOnly(
+  cipher: FieldCipher,
+  row: { birthDate: Date | null; birthDateEnc: string | null } | undefined,
+): string | null {
+  const birth = row?.birthDateEnc
+    ? new Date(cipher.decrypt(row.birthDateEnc))
+    : (row?.birthDate ?? null);
+  if (birth === null) return null;
+  return cipher.encrypt(
+    new Date(Date.UTC(birth.getUTCFullYear(), 0, 1)).toISOString(),
+  );
+}
+
 export const RETENTION_NEEDS_CLINIC_SCOPE =
   'Retenção do prontuário, da fila e das contas exige escopo de clínica';
 
@@ -82,6 +97,7 @@ export class DrizzleRetentionRepository implements RetentionRepository {
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipher: FieldCipher = dataCipherFromEnv(),
   ) {}
 
   private clinic(): string {
@@ -115,7 +131,11 @@ export class DrizzleRetentionRepository implements RetentionRepository {
     const clinicId = this.clinic();
     return this.db.transaction(async (tx) => {
       const [before] = await tx
-        .select({ guardianId: patients.guardianId })
+        .select({
+          guardianId: patients.guardianId,
+          birthDate: patients.birthDate,
+          birthDateEnc: patients.birthDateEnc,
+        })
         .from(patients)
         .where(and(eq(patients.id, patientId), eq(patients.clinicId, clinicId)))
         .limit(1);
@@ -127,7 +147,13 @@ export class DrizzleRetentionRepository implements RetentionRepository {
           email: anonymizedEmail(patientId),
           phone: '',
           cpf: null,
-          birthDate: sql`date_trunc('year', ${patients.birthDate} at time zone 'UTC') at time zone 'UTC'`,
+          // Só o ano do nascimento sobrevive (ADR-013/017); o nascimento está
+          // cifrado, então decifra, trunca e recifra aqui (ADR-096).
+          birthDate: null,
+          birthDateEnc: birthYearOnly(this.cipher, before),
+          cpfHash: null,
+          phoneHash: null,
+          emailHash: null,
           notes: null,
           active: false,
           anonymizedAt: now,

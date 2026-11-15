@@ -3,6 +3,15 @@ import type {
   PatientPage,
   PatientRepository,
 } from '@/domain/patient/patient-repository';
+import {
+  comparePatientEntries,
+  selectPatientPage,
+} from '@/domain/patient/patient-search';
+import {
+  type BlindIndexKind,
+  normalizeForBlindIndex,
+  orFallbackOnInvalid,
+} from '@/lib/blind-index';
 import { decodeCursor } from '@/lib/pagination';
 
 export class InMemoryPatientRepository implements PatientRepository {
@@ -46,7 +55,7 @@ export class InMemoryPatientRepository implements PatientRepository {
           !p.guardianPortalRevokedAt &&
           !p.majorityReviewedAt,
       )
-      .sort((a, b) => a.fullName.localeCompare(b.fullName));
+      .sort(comparePatientEntries);
   }
 
   async findByGuardian(guardianId: string): Promise<Patient[]> {
@@ -67,36 +76,51 @@ export class InMemoryPatientRepository implements PatientRepository {
     if (page.ids && page.ids.length === 0) {
       return [];
     }
-    const all = [...this.patients.values()].sort(
-      (a, b) =>
-        a.fullName.localeCompare(b.fullName) || a.id.localeCompare(b.id),
-    );
-    const term = search?.toLowerCase();
-    const termDigits = search?.replace(/\D/g, '') ?? '';
-    const byTerm = term
-      ? all.filter(
-          (p) =>
-            p.fullName.toLowerCase().includes(term) ||
-            (p.email ?? '').toLowerCase().includes(term) ||
-            p.phone.includes(term) ||
-            (termDigits.length >= 3 && p.phone.includes(termDigits)),
-        )
-      : all;
-    const filtered = page.ids
-      ? byTerm.filter((p) => page.ids?.includes(p.id))
-      : byTerm;
-    const decoded = decodeCursor<{ fullName: string; id: string }>(page.cursor);
-    // Mesmo comparador do sort acima (localeCompare) — comparação por `>` usaria
-    // ordem UTF-16 e poderia excluir/repetir itens quando os dois divergem
-    // (ex.: acentos), pulando a página seguinte.
-    const afterCursor = decoded
-      ? filtered.filter((p) => {
-          const cmp =
-            p.fullName.localeCompare(decoded.fullName) ||
-            p.id.localeCompare(decoded.id);
-          return cmp > 0;
-        })
-      : filtered;
-    return page.limit != null ? afterCursor.slice(0, page.limit) : afterCursor;
+    const scope = page.ids
+      ? [...this.patients.values()].filter((p) => page.ids?.includes(p.id))
+      : [...this.patients.values()];
+    const term = search?.trim();
+    // Mesmas regras do repositório Drizzle (ADR-096): nome sem acento nem caixa
+    // por trecho; CPF, telefone e e-mail só por valor exato; cursor só com o id.
+    return selectPatientPage(scope, {
+      term,
+      matchedIds: term ? exactValueMatches(scope, term) : undefined,
+      cursorId: decodeCursor<{ id?: string }>(page.cursor)?.id ?? null,
+      limit: page.limit ?? Number.POSITIVE_INFINITY,
+    });
   }
+}
+
+function normalizedOrNull(
+  kind: BlindIndexKind,
+  raw: string | null,
+): string | null {
+  return orFallbackOnInvalid(() => normalizeForBlindIndex(kind, raw), null);
+}
+
+function exactValueMatches(
+  patients: readonly Patient[],
+  term: string,
+): Set<string> {
+  const kinds: BlindIndexKind[] = ['cpf', 'phone', 'email'];
+  const wanted = kinds.map(
+    (kind) => [kind, normalizedOrNull(kind, term)] as const,
+  );
+  const matched = new Set<string>();
+  for (const patient of patients) {
+    const values = {
+      cpf: patient.cpf,
+      phone: patient.phone,
+      email: patient.email,
+    };
+    for (const [kind, normalized] of wanted) {
+      if (
+        normalized !== null &&
+        normalizedOrNull(kind, values[kind]) === normalized
+      ) {
+        matched.add(patient.id);
+      }
+    }
+  }
+  return matched;
 }

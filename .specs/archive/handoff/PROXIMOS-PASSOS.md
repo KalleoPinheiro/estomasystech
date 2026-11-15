@@ -13,8 +13,12 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-1. **Funcionalidade, não processo.** Cifra do cadastro (P1, LGPD): **#735** abre (migração), depois **#736 a #741** e
-   **#730**. Migração não aditiva e cifra são classe 3: um clique do dono por PR.
+1. **Cifra do cadastro (P1, LGPD), em andamento.** PR único das **#735 + #736 + #737** (inseparáveis: cifrar o nome
+   quebra busca, ordem e maioridade): migração `0071` aditiva, nome/e-mail/telefone/nascimento cifrados, busca em
+   memória, cursor sem nome, anonimização e `data:reencrypt` estendido. Faltam, uma por PR: **#738** (CPF único, índice
+   único parcial; só depois do backfill), **#739** (responsável), **#740** (medição com 5 mil), **#741** (validação
+   ponta a ponta) e **#730** (fecha o épico). **Depois do deploy**: backup, `npm run data:reencrypt` pelo dono
+   (exige `BLIND_INDEX_PEPPER`), conferir 0 pendências; a contração (drop de `birth_date`, dos índices GIN) é release seguinte.
 2. **#742** (e-mail de login em claro, P2): junto da cifra.
 3. Apontamentos menores: **#744**, **#745**, **#802**, **#849** (P3), **#715**, **#750 a #752** (job de produção e
    rollback; #746 (spike) e #747 (backup) já estão fechadas). **Próximo passo de entrega:** job de deploy com backup
