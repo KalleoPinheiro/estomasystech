@@ -27,11 +27,9 @@ import {
   type ClosureActor,
   canManageClosure,
 } from '@/domain/scheduling/closure-permission';
-import {
-  formatDateKey,
-  localDateKey,
-} from '@/domain/scheduling/schedule-availability';
+import { formatDateKey } from '@/domain/scheduling/schedule-availability';
 import { apiFetch } from '@/lib/client';
+import { closuresUrl, closuresWindow } from '@/lib/closures-window';
 import type {
   AffectedAppointmentDto,
   ProfessionalOptionDto,
@@ -40,8 +38,6 @@ import type {
 import { formatDateTime } from '@/lib/format';
 import { useStaffIdentity } from '@/lib/staff-access';
 import { useApiQuery } from '@/lib/use-api-query';
-
-const LIST_WINDOW_DAYS = 400;
 
 interface ClosureDraft {
   professionalId: string;
@@ -88,12 +84,9 @@ export function ClosuresSection() {
   // Profissional por um instante — espera em vez de piscar.
   const identityLoading = useStaffIdentity()?.loading ?? false;
   // Janela fixada na montagem (o relógio não pode ser lido em render).
-  const [range] = useState(() => ({
-    from: localDateKey(new Date()),
-    to: localDateKey(new Date(Date.now() + LIST_WINDOW_DAYS * 86_400_000)),
-  }));
+  const [range] = useState(() => closuresWindow(new Date()));
   const { data, error, refresh } = useApiQuery<ScheduleClosureDto[]>(
-    `/api/settings/schedule/closures?from=${range.from}&to=${range.to}`,
+    closuresUrl(range),
   );
   // Lista reduzida (#188): toda a equipe lê, sem comissão.
   const { data: professionals } = useApiQuery<ProfessionalOptionDto[]>(

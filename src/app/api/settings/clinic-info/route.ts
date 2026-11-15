@@ -1,13 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { UpdateClinicInfo } from '@/application/platform/update-clinic-info';
 import { getRepositories } from '@/infrastructure/container';
-import { isPhotoStorageAvailable } from '@/infrastructure/storage/unavailable-photo-storage';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { clinicInfoChangesSchema } from '@/lib/clinic-info-schema';
-import { clinicLogoUrl, toClinicRegistrationDto } from '@/lib/dto';
+import { toClinicRegistrationDto } from '@/lib/dto';
+import { loadClinicSettings } from '@/lib/server/data/settings';
 
 /**
  * Só quem administra a empresa edita os dados cadastrais da clínica (#61). O
@@ -20,26 +20,8 @@ const canEditClinicInfo = (role: string | undefined): boolean =>
 export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
-  const clinicId = writeClinicId(guard.session);
 
-  return handleRequest(async () => {
-    const { clinics, photoStorage } = await getRepositories(
-      clinicScope(clinicId),
-    );
-    const clinic = await clinics.findById(clinicId);
-    if (!clinic) {
-      throw new Error('Clínica não encontrada');
-    }
-    return {
-      info: toClinicRegistrationDto(clinic),
-      // Logo (#427): endereço e se o armazenamento aceita envio.
-      identity: {
-        logoUrl: clinicLogoUrl(clinic.logoKey),
-        theme: clinic.theme,
-        imageUploadAvailable: isPhotoStorageAvailable(photoStorage),
-      },
-    };
-  });
+  return handleRequest(() => loadClinicSettings(guard.session));
 }
 
 export async function PUT(request: NextRequest) {

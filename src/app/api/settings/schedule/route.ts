@@ -1,18 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import {
-  DEFAULT_SCHEDULE_CONFIG,
-  validateScheduleConfig,
-} from '@/domain/scheduling/schedule-config';
+import { validateScheduleConfig } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
 import { fail, handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import {
-  clinicScope,
-  writeClinicId,
-  writeScope,
-} from '@/lib/auth/tenant-scope';
+import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
+import { loadScheduleSettings } from '@/lib/server/data/settings';
 
 const configSchema = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
@@ -47,14 +41,7 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { scheduleConfig } = await getRepositories(writeScope(guard.session));
-    const config = await scheduleConfig.get();
-    return {
-      config: config ?? DEFAULT_SCHEDULE_CONFIG,
-      isDefault: config === null,
-    };
-  });
+  return handleRequest(() => loadScheduleSettings(guard.session));
 }
 
 export async function PUT(request: NextRequest) {

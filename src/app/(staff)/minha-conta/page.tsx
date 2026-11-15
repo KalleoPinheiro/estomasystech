@@ -1,5 +1,3 @@
-'use client';
-
 import { OwnAccountPanel } from '@/components/own-account-panel';
 import { PageHeader } from '@/components/page-header';
 

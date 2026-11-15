@@ -6,21 +6,16 @@ import {
   MINOR_PATIENT_ACCOUNT_MESSAGE,
 } from '@/application/auth/grant-guardian-access';
 import { appUrlFromEnv, sendInvite } from '@/application/auth/send-invite';
-import { visibleAccounts } from '@/domain/auth/account-management';
 import { USER_ROLES } from '@/domain/auth/user-role';
 import { ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { recordAudit, recordAuditNow } from '@/lib/audit';
-import { accountManager } from '@/lib/auth/account-manager';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import {
-  clinicScope,
-  sessionScope,
-  writeClinicId,
-} from '@/lib/auth/tenant-scope';
+import { clinicScope, writeClinicId } from '@/lib/auth/tenant-scope';
 import { toUserAccountDto } from '@/lib/dto';
+import { listAccountsFor } from '@/lib/server/data/settings';
 
 const createSchema = z
   .object({
@@ -48,13 +43,8 @@ export async function GET(request: NextRequest) {
   const guard = requireStaffSession(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { userAccounts } = await getRepositories(sessionScope(guard.session));
-    const accounts = await userAccounts.findAll();
-    // Atendente/Profissional só enxergam patient/partner (#184).
-    const { role } = accountManager(guard.session);
-    return visibleAccounts(role, accounts).map(toUserAccountDto);
-  });
+  // Atendente/Profissional só enxergam patient/partner (#184).
+  return handleRequest(() => listAccountsFor(guard.session));
 }
 
 export async function POST(request: NextRequest) {
