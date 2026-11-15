@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, apiFetch } from './client';
+import { usePrefetched } from './prefetched-queries';
 
 export interface ApiQueryResult<T> {
   data: T | null;
@@ -23,8 +24,23 @@ interface SettledQuery<T> {
 }
 
 export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
-  const [settled, setSettled] = useState<SettledQuery<T> | null>(null);
+  const prefetched = usePrefetched<T>(url);
+  const [settled, setSettled] = useState<SettledQuery<T> | null>(() =>
+    url !== null && prefetched !== undefined
+      ? {
+          url,
+          key: `${url}:0`,
+          data: prefetched,
+          error: null,
+          errorStatus: null,
+        }
+      : null,
+  );
   const [version, setVersion] = useState(0);
+  // Chave já resolvida pelo servidor: a primeira montagem não repete a busca.
+  const prefetchedKey = useRef(
+    url !== null && prefetched !== undefined ? `${url}:0` : null,
+  );
   // Enquanto a chave atual (`url:version`) não coincidir com a da última
   // requisição resolvida, a requisição está pendente — deriva `isLoading` sem
   // precisar de um `setState` síncrono no corpo do efeito (proibido por
@@ -36,6 +52,10 @@ export function useApiQuery<T>(url: string | null): ApiQueryResult<T> {
     if (url == null) {
       return;
     }
+    if (prefetchedKey.current === requestKey) {
+      return;
+    }
+    prefetchedKey.current = null;
     let cancelled = false;
     apiFetch<T>(url)
       .then((result) => {

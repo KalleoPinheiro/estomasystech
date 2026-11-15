@@ -3,6 +3,7 @@ import { handleRequest } from '@/lib/api-response';
 import { recordAuditNow } from '@/lib/audit';
 import { toEmailChannelDto } from '@/lib/dto';
 import { emailChannelInputSchema } from '@/lib/email-channel-schema';
+import { loadEmailChannel } from '@/lib/server/data/settings';
 import { channelContext, requireChannelAdmin } from './guard';
 
 /** Canal de e-mail da clínica da sessão — `{ channel: null }` sem canal (C3). */
@@ -10,11 +11,7 @@ export async function GET(request: NextRequest) {
   const guard = requireChannelAdmin(request);
   if (!guard.ok) return guard.response;
 
-  return handleRequest(async () => {
-    const { manage } = await channelContext(guard.session);
-    const channel = await manage.find();
-    return { channel: channel ? toEmailChannelDto(channel) : null };
-  });
+  return handleRequest(() => loadEmailChannel(guard.session));
 }
 
 /**

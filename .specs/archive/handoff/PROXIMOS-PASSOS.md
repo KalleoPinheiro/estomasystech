@@ -24,7 +24,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 4. **Segurança do VPS (P2):** endurecer o SSH (issue aberta junto deste PR; ação do dono no servidor).
 5. Apontamentos menores: **#744**, **#745**, **#802**, **#820**, **#828**, **#830**, **#832**, **#849** (P3), **#715**.
 6. **RLS (#729):** spike entregue (ADR-110, prova em Postgres real). Falta abrir as issues das etapas 1 a 5 (classe 3) e confirmar com o dono o papel de conexão do banco de produção.
-7. Perf e backlog: v0.9.0 (#557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651).
+7. Perf e backlog: v0.9.0 (#557 entregue em PR; #558, #815) e v0.10.0 (#615, #559, #541, #560, #651).
 
 ## Espera o dono
 
