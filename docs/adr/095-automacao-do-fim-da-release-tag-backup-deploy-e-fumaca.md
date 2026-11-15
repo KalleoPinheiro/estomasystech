@@ -136,7 +136,7 @@ O script `scripts/release/spike-coolify.sh` roda no PC do operador (a nuvem do a
 `COOLIFY_URL`, `COOLIFY_TOKEN` (habilidades deploy e read; sem `read` o script avisa e para em vez de insistir) e
 `COOLIFY_APP_UUID` por variável de ambiente; o token segue ao curl por stdin e a saída é filtrada. Padrão só lê;
 `SPIKE_DEPLOY=1` dispara o deploy do HEAD da `main` e `SPIKE_TAG_SHA` compara o SHA do deployment com o da tag.
-Resultado (plano A ou B) **pendente**: registrar aqui, com a saída colada na #746, quando o dono rodar.
+**Resultado (2026-11-15, dono): plano A.** Coolify 4.6.0; recurso com `git_commit_sha="HEAD"`; o deploy pela API com token só de leitura e deploy funcionou (HTTP 200, 48 s) e o deployment informa o commit, igual ao da tag v0.7.0 (`dfa897a`). Falta o job de deploy com backup antes (#750; #851 trava a tag ao SHA validado pela staging): o Environment `producao` já existe (revisor, só `main`, secret `VPS_SSH_KEY`); faltam `VPS_KNOWN_HOSTS` e `COOLIFY_*`.
 
 ### Fumaça de produção
 
@@ -187,7 +187,7 @@ sem tentativa e erro. Mexer em `scripts/gate/` continua proibido (regra 8).
 4. **Tag:** criada com o `RELEASE_CUT_TOKEN` já existente (PAT fine-grained, só este repositório), não com
    o `GITHUB_TOKEN`. O job `publicar` o referencia, e só ele; segue valendo a rotação de `producao.md` § 6.
 
-Pendente (não é decisão do dono): o spike do Coolify (ticket 1) define o plano A ou B do deploy da tag.
+Spike do Coolify concluído em 2026-11-15: plano A (ver acima).
 
 ## Consequências
 
