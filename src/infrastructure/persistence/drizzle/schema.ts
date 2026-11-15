@@ -453,6 +453,11 @@ export const patients = pgTable(
     ),
     index('idx_patients_clinic').on(table.clinicId),
     index('idx_patients_cpf_hash').on(table.clinicId, table.cpfHash),
+    // CPF repetido na mesma clínica é recusado (#738); outra clínica aceita (o
+    // hash leva a clínica no HMAC). Parcial: sem CPF ou ainda sem backfill não colide.
+    uniqueIndex('uq_patients_clinic_cpf_hash')
+      .on(table.clinicId, table.cpfHash)
+      .where(sql`${table.cpfHash} IS NOT NULL`),
     index('idx_patients_phone_hash').on(table.clinicId, table.phoneHash),
     index('idx_patients_email_hash').on(table.clinicId, table.emailHash),
   ],
