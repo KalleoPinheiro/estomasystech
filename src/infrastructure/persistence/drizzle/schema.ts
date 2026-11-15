@@ -179,7 +179,11 @@ export const userAccounts = pgTable(
     id: text('id').primaryKey(),
     // Nulo somente para o papel de sistema (super_admin — cross-empresa, RBAC-01/ADR-003).
     clinicId: text('clinic_id').references(() => clinics.id),
+    // Cifrado em repouso (#742, ADR-111); o login acha a conta por `emailHash`.
+    // Linha anterior à conversão (`data:reencrypt`) ainda guarda o e-mail em claro.
     email: text('email').notNull(),
+    // Índice cego do e-mail de login (`b1.<keyId>.<hex>`); nulo até a conversão.
+    emailHash: text('email_hash'),
     // Formato scrypt$custo$salt$hash — nunca a senha em claro.
     passwordHash: text('password_hash').notNull(),
     // Um dos 7 valores de UserRole (RBAC-01, ADR-027).
@@ -249,6 +253,15 @@ export const userAccounts = pgTable(
       'ck_user_accounts_system_role_has_no_clinic',
       sql`(${table.role} = 'super_admin') = (${table.clinicId} IS NULL)`,
     ),
+    // E-mail de login único pelo índice cego (#742): o `email` cifrado não é
+    // determinístico, então a unicidade passa para o hash. Os dois índices em
+    // claro acima caem na contração (ADR-111).
+    uniqueIndex('uq_user_accounts_clinic_email_hash')
+      .on(table.clinicId, table.emailHash)
+      .where(sql`${table.emailHash} IS NOT NULL`),
+    uniqueIndex('uq_user_accounts_super_admin_email_hash')
+      .on(table.emailHash)
+      .where(sql`${table.clinicId} IS NULL AND ${table.emailHash} IS NOT NULL`),
     index('idx_user_accounts_clinic').on(table.clinicId),
   ],
 );

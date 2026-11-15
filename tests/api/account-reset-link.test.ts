@@ -194,9 +194,12 @@ describe('Feature: POST /api/accounts/[id]/reset-link', () => {
   });
 
   it('auditoria: grava detail reset-link na clínica e, em produção, nem link nem segredo na trilha ou no log', async () => {
-    const target = await seedAccount(CLINIC_A_ID);
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('DATA_ENCRYPTION_KEY', 'b'.repeat(64));
+    // O e-mail de login é cifrado com índice cego (ADR-111): em produção o pepper é obrigatório,
+    // e a conta é semeada já com as chaves de produção.
+    vi.stubEnv('BLIND_INDEX_PEPPER', 'p'.repeat(64));
+    const target = await seedAccount(CLINIC_A_ID);
     const logged: string[] = [];
     for (const level of ['info', 'warn', 'error', 'log'] as const) {
       vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {

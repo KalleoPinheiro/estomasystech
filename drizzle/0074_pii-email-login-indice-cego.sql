@@ -1,0 +1,3 @@
+ALTER TABLE "user_accounts" ADD COLUMN "email_hash" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_user_accounts_clinic_email_hash" ON "user_accounts" USING btree ("clinic_id","email_hash") WHERE "user_accounts"."email_hash" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_user_accounts_super_admin_email_hash" ON "user_accounts" USING btree ("email_hash") WHERE "user_accounts"."clinic_id" IS NULL AND "user_accounts"."email_hash" IS NOT NULL;

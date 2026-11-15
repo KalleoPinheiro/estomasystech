@@ -1,4 +1,5 @@
 import { createHash, createHmac, hkdfSync } from 'node:crypto';
+import { normalizeAccountEmail } from '@/domain/auth/user-account';
 import { normalizeCpf } from '@/domain/shared/cpf';
 import { isValidationError } from '@/domain/shared/errors';
 import { normalizeOptionalEmail } from '@/domain/shared/person-validation';
@@ -26,7 +27,18 @@ import { logger } from '@/lib/observability/logger';
 const HKDF_INFO = 'estomasystech/blind-index/v1';
 export const MIN_BLIND_INDEX_PEPPER_LENGTH = 32;
 
-export type BlindIndexKind = 'cpf' | 'phone' | 'email';
+/**
+ * `login-email` é o e-mail de login da conta (#742, ADR-111): tipo próprio para
+ * que o hash do e-mail de uma conta nunca bata com o do e-mail de um paciente.
+ */
+export type BlindIndexKind = 'cpf' | 'phone' | 'email' | 'login-email';
+
+/**
+ * "Empresa" do hash do e-mail de login: o login procura a conta antes de saber
+ * a empresa (a mesma pessoa pode ter conta em várias), então o hash dele não
+ * leva `clinicId`. A unicidade por empresa vem do índice `(clinic_id, email_hash)`.
+ */
+export const LOGIN_INDEX_SCOPE = 'login';
 
 interface IndexKey {
   id: string;
@@ -64,6 +76,7 @@ export function normalizeForBlindIndex(
   if (raw === null || raw === undefined || raw.trim() === '') return null;
   if (kind === 'cpf') return normalizeCpf(raw);
   if (kind === 'phone') return normalizeBrazilianPhoneOrThrow(raw);
+  if (kind === 'login-email') return normalizeAccountEmail(raw);
   return normalizeOptionalEmail(raw);
 }
 

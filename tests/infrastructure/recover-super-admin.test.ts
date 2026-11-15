@@ -19,6 +19,7 @@ import {
   UNSET_PASSWORD_HASH,
   verifyPassword,
 } from '@/lib/auth/password';
+import { dataCipherFromEnv } from '@/lib/data-cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const APP_URL = 'https://clinica.exemplo.com.br';
@@ -94,7 +95,8 @@ const superAdmin = async () => {
     .select()
     .from(schema.userAccounts)
     .where(eq(schema.userAccounts.id, SA_ID));
-  return row;
+  // O e-mail de login é cifrado em repouso (ADR-111): as asserções leem o valor legível.
+  return { ...row, email: dataCipherFromEnv().decrypt(row.email) };
 };
 const factorRows = () =>
   db.select().from(schema.userMfa).where(eq(schema.userMfa.accountId, SA_ID));

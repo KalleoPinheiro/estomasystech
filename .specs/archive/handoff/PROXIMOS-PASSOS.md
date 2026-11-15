@@ -20,7 +20,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 1. **Próximo bloco de funcionalidade:** o dono ainda não escolheu. Candidatas: **#855** e **#862** (E2E a frio em
    processo dedicado, P2, a #862 é classe 3).
 2. **Contração da cifra (release seguinte):** drop de `birth_date` e dos índices GIN antigos.
-3. **#742** (e-mail de login em claro, P2).
+3. **#742** (e-mail de login cifrado): em PR (classe 3, migração `0074` aditiva, ADR-111). Depois do deploy, o dono roda `npm run data:reencrypt` (agora também `user_accounts_email`) até «Nada pendente»; a contração (hash `NOT NULL`, fim do ramo em claro, drop dos índices antigos) vai na release seguinte.
 4. **Segurança do VPS (P2):** endurecer o SSH (issue aberta junto deste PR; ação do dono no servidor).
 5. Apontamentos menores: **#744**, **#745**, **#802**, **#820**, **#828**, **#830**, **#832**, **#849** (P3), **#715**.
 6. **Perf e backlog:** v0.9.0 (#557 entregue; #558 entregue em PR; #815) e v0.10.0 (#615, #559, #541, #560, #651).

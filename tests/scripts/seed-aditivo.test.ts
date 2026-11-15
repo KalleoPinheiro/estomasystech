@@ -7,6 +7,7 @@ import { getDb } from '@/infrastructure/persistence/drizzle/db';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
 import { verifyPassword } from '@/lib/auth/password';
 import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
+import { blindIndexFromEnv, LOGIN_INDEX_SCOPE } from '@/lib/blind-index';
 import {
   MAIN_CLINIC_ID,
   NEIGHBOR_CLINIC_ID,
@@ -30,9 +31,17 @@ const NEW_ACCOUNTS = [
 /** Deixa o banco como o seed anterior ao PR #434 o deixava: sem as 8 contas, sem a vizinha e sem o parceiro. */
 async function regressToOldSeed(): Promise<void> {
   const db = await getDb();
-  await db
-    .delete(schema.userAccounts)
-    .where(inArray(schema.userAccounts.email, NEW_ACCOUNTS));
+  // O e-mail de login é cifrado (ADR-111): acha as contas pelo índice cego.
+  await db.delete(schema.userAccounts).where(
+    inArray(
+      schema.userAccounts.emailHash,
+      NEW_ACCOUNTS.map(
+        (email) =>
+          blindIndexFromEnv().hash(LOGIN_INDEX_SCOPE, 'login-email', email) ??
+          '',
+      ),
+    ),
+  );
   // TESTE-ALTERADO: o seed agora indica pacientes pela parceira; o seed antigo não tinha indicação.
   await db
     .update(schema.patients)
