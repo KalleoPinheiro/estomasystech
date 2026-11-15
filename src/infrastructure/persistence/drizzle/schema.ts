@@ -375,12 +375,20 @@ export const guardians = pgTable(
     relationship: text('relationship').notNull(),
     phone: text('phone').notNull(),
     email: text('email'),
+    // Índice cego (ADR-096, #739): busca exata por telefone e e-mail do responsável
+    // sem decifrar a empresa. Formato `b1.<keyId>.<hex>`; null = sem valor.
+    phoneHash: text('phone_hash'),
+    emailHash: text('email_hash'),
     createdAt: timestamp('created_at', {
       withTimezone: true,
       mode: 'date',
     }).notNull(),
   },
-  (table) => [index('idx_guardians_clinic').on(table.clinicId, table.fullName)],
+  (table) => [
+    index('idx_guardians_clinic').on(table.clinicId, table.fullName),
+    index('idx_guardians_phone_hash').on(table.clinicId, table.phoneHash),
+    index('idx_guardians_email_hash').on(table.clinicId, table.emailHash),
+  ],
 );
 
 export const patients = pgTable(

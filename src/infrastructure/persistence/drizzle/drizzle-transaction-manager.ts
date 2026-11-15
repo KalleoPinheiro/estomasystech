@@ -116,7 +116,12 @@ export class DrizzleTransactionManager implements TransactionManager {
           this.clinicId,
         ),
         partners: new DrizzlePartnerRepository(tx, this.clinicId),
-        guardians: new DrizzleGuardianRepository(tx, this.clinicId),
+        guardians: new DrizzleGuardianRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+          this.blindIndex,
+        ),
         professionalPatientLinks: new DrizzleProfessionalPatientLinkRepository(
           tx,
           this.clinicId,

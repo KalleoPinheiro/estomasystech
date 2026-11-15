@@ -434,7 +434,12 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       currentBlindIndex,
     ),
     partners: new DrizzlePartnerRepository(db, tenant.clinicId),
-    guardians: new DrizzleGuardianRepository(db, tenant.clinicId),
+    guardians: new DrizzleGuardianRepository(
+      db,
+      tenant.clinicId,
+      cipher,
+      currentBlindIndex,
+    ),
     professionals: new DrizzleProfessionalRepository(db, tenant.clinicId),
     procedures: new DrizzleProcedureRepository(db, tenant.clinicId),
     procedureKits: new DrizzleProcedureKitRepository(db),

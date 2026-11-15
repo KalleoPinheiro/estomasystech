@@ -8,11 +8,15 @@ import { DrizzleClinicRepository } from '@/infrastructure/persistence/drizzle/dr
 import { DrizzleGuardianRepository } from '@/infrastructure/persistence/drizzle/drizzle-guardian-repository';
 import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
+import { BlindIndex } from '@/lib/blind-index';
 import { TEST_CIPHER } from '../support/cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
 const CLINIC = 'legacy-clinic';
 const OTHER = 'guardian-clinic-b';
+const BLIND = new BlindIndex({
+  current: 'pepper-de-teste-do-indice-cego-0000000001',
+});
 
 const newGuardian = (fullName: string, email: string | null = null) =>
   Guardian.create({
@@ -38,8 +42,8 @@ describe('Feature: Responsável no banco (#329, migração 0059)', () => {
         createdAt: new Date(),
       }),
     );
-    repo = new DrizzleGuardianRepository(appDb, CLINIC);
-    otherRepo = new DrizzleGuardianRepository(appDb, OTHER);
+    repo = new DrizzleGuardianRepository(appDb, CLINIC, TEST_CIPHER, BLIND);
+    otherRepo = new DrizzleGuardianRepository(appDb, OTHER, TEST_CIPHER, BLIND);
   });
 
   it('Dado responsável, Quando salvar duas vezes e ler, Então faz upsert e preserva os campos', async () => {
@@ -66,8 +70,10 @@ describe('Feature: Responsável no banco (#329, migração 0059)', () => {
     expect(await repo.findById(theirs.id)).toBeNull();
     const byName = await repo.findAll('doméstica');
     expect(byName.map((g) => g.id)).toEqual([mine.id]);
-    expect((await repo.findAll('dora@x')).map((g) => g.id)).toEqual([mine.id]);
-    expect((await repo.findAll('+55119999')).length).toBeGreaterThan(0);
+    expect((await repo.findAll('dora@x.com')).map((g) => g.id)).toEqual([
+      mine.id,
+    ]);
+    expect((await repo.findAll('(11) 99999-0000')).length).toBeGreaterThan(0);
     expect((await repo.findAll()).map((g) => g.id)).not.toContain(theirs.id);
     expect((await otherRepo.findAll()).map((g) => g.id)).toEqual([theirs.id]);
   });
@@ -87,7 +93,12 @@ describe('Feature: Responsável no banco (#329, migração 0059)', () => {
   });
 
   it('Dado escopo de sistema, Quando salvar ou excluir, Então recusa; ler vê todas as empresas', async () => {
-    const system = new DrizzleGuardianRepository(appDb, null);
+    const system = new DrizzleGuardianRepository(
+      appDb,
+      null,
+      TEST_CIPHER,
+      BLIND,
+    );
     const guardian = newGuardian('Eva Eventual');
 
     await expect(system.save(guardian)).rejects.toThrow(/somente leitura/);

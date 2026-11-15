@@ -2,7 +2,9 @@ import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
+import { Guardian } from '@/domain/guardian/guardian';
 import { Patient } from '@/domain/patient/patient';
+import { DrizzleGuardianRepository } from '@/infrastructure/persistence/drizzle/drizzle-guardian-repository';
 import { DrizzlePatientRepository } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
 import { BlindIndex } from '@/lib/blind-index';
@@ -87,6 +89,39 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, Postgres real)',
     ]);
     expect((await repo.findAll('helena')).map((p) => p.id)).toEqual([
       patient.id,
+    ]);
+  });
+
+  it('Dado um responsável cadastrado, Quando leio a tabela direto no Postgres, Então nome, telefone e e-mail saem cifrados e a busca por telefone funciona (#739)', async () => {
+    const repo = new DrizzleGuardianRepository(
+      db as never,
+      CLINIC_ID,
+      TEST_CIPHER,
+      new BlindIndex({ current: 'pepper-de-teste-da-integracao-000000001' }),
+    );
+    const guardian = Guardian.create({
+      fullName: 'Rosana Responsável',
+      relationship: 'mae',
+      phone: '11966665555',
+      email: 'rosana@clinica.example',
+    });
+    await repo.save(guardian);
+
+    const raw = await db.execute(
+      sql`SELECT full_name, phone, email FROM guardians WHERE id = ${guardian.id}`,
+    );
+    const row = raw.rows[0] as Record<string, string | null>;
+    for (const column of ['full_name', 'phone', 'email']) {
+      expect(row[column]).toMatch(/^v1\./);
+    }
+    expect(JSON.stringify(row)).not.toMatch(
+      /Rosana|clinica\.example|966665555/,
+    );
+    expect((await repo.findAll('(11) 96666-5555')).map((g) => g.id)).toEqual([
+      guardian.id,
+    ]);
+    expect((await repo.findAll('rosana')).map((g) => g.id)).toEqual([
+      guardian.id,
     ]);
   });
 });
