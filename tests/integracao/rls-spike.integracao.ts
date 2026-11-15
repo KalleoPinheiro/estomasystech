@@ -137,15 +137,23 @@ describe('Feature: RLS por clínica como defesa em profundidade (#729)', () => {
   });
 
   afterAll(async () => {
-    await app.end();
-    await system.end();
-    await admin.end();
-    await adminQuery(
-      baseUrl,
-      `DROP DATABASE IF EXISTS ${quoteIdent(databaseName)} WITH (FORCE)`,
-    );
-    await adminQuery(baseUrl, `DROP ROLE IF EXISTS ${quoteIdent(appRole)}`);
-    await adminQuery(baseUrl, `DROP ROLE IF EXISTS ${quoteIdent(systemRole)}`);
+    // Limpeza tolerante: `beforeAll` pode ter falhado no meio, e cada passo roda mesmo se o anterior falhar.
+    const steps: Array<() => Promise<unknown> | undefined> = [
+      () => app?.end(),
+      () => system?.end(),
+      () => admin?.end(),
+      () =>
+        adminQuery(
+          baseUrl,
+          `DROP DATABASE IF EXISTS ${quoteIdent(databaseName)} WITH (FORCE)`,
+        ),
+      () => adminQuery(baseUrl, `DROP ROLE IF EXISTS ${quoteIdent(appRole)}`),
+      () =>
+        adminQuery(baseUrl, `DROP ROLE IF EXISTS ${quoteIdent(systemRole)}`),
+    ];
+    for (const step of steps) {
+      await Promise.resolve(step()).catch(() => undefined);
+    }
   });
 
   it('Dado o papel da aplicação, Quando consulto sem WHERE de clínica, Então só vejo a clínica da transação', async () => {

@@ -67,8 +67,12 @@ política e habilitar RLS não perde dado e se desfaz sem restaurar backup. As e
   envoltório que abra transação curta com o `set_config` (custo de um `BEGIN`/`COMMIT` extra por requisição).
 - **Desempenho:** o predicado usa `clinic_id`, já indexado em todas as tabelas, e `current_setting` é estável por
   consulta. Medir `EXPLAIN` e latência na staging antes da etapa 4.
-- **Seed, migração e testes:** rodam como dono (ignoram a política). Os testes de integração passam a abrir o
-  papel `app` onde a prova for sobre isolamento; a suíte em PGlite não aplica RLS e segue como está.
+- **Seed, migração e testes:** hoje o dono da tabela ignora a política. Depois do `FORCE ROW LEVEL SECURITY` (etapa 5)
+  **ser dono não basta**: só superusuário ou `BYPASSRLS` ignoram. Por isso seed e migrações de dados rodam com um
+  papel de migração dedicado, com `BYPASSRLS` e usado só pelo `db:migrate`, pelo seed e pelos scripts de
+  conversão (`data:reencrypt`); a etapa 5 só entra depois de provar isso na staging (migração e seed completos com
+  `FORCE` ligado). Os testes de integração passam a abrir o papel `app` onde a prova for sobre isolamento; a suíte em
+  PGlite não aplica RLS e segue como está.
 - **Cron e `systemScope()`:** usam o pool `sistema`; a allowlist de `tests/lib/tenant-scope.test.ts` continua
   sendo a lista de quem pode.
 
