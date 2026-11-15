@@ -25,6 +25,5 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 ## Espera o dono
 
 - Secrets `VPS_KNOWN_HOSTS` e `COOLIFY_*` no Environment `producao`. **#376** (parecer jurídico).
-- Tirar "Veredito do the-judge" do ruleset da `main` (hoje é uma casca que passa, ADR-109) e apagar
-  `veredito-judge.yml`; e **habilitar "Allow auto-merge"** em Settings > General (hoje desligado), para o auto-merge do fluxo novo funcionar.
+- O check "Veredito do the-judge" já saiu do ruleset da `main` e o `veredito-judge.yml` foi apagado (ADR-109). Auto-merge está habilitado no repositório.
 - Baixa prioridade: mapeamento de estados da integração GitHub↔Linear (fechar a issue move a EST sozinha).

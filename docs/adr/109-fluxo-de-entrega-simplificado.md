@@ -28,8 +28,8 @@ clínica. O dono trabalha sozinho e quer incluir qualquer mudança com a certeza
    alterado, integridade dos testes). Passou, o auto-merge (squash) entra.
 3. Só o perigoso pede mais: o "Portão de risco" (classe 3: auth, cifra, escopo de empresa, auditoria, migração não
    aditiva, workflows, portão, deploy e backup) exige o clique do dono, depois da revisão the-judge na sessão.
-   O the-judge deixa de ser portão mecânico; o check "Veredito do the-judge" fica como casca que passa, só porque
-   o ruleset da `main` ainda o exige (o dono pode tirá-lo do ruleset e apagar `veredito-judge.yml`).
+   O the-judge deixa de ser portão mecânico: o check "Veredito do the-judge" saiu do ruleset da `main` (2026-11-15) e o
+   `veredito-judge.yml` foi apagado.
 4. A `staging` é reconstruída a cada entrada na `main` e a validação logada (3 papéis, 360/390/768/1280) roda sozinha.
 5. Publicação de produção pelo dono (tag e fumaça pelo workflow; backup e deploy no Coolify seguem manuais): `release:prepare` numa branch curta, PR `chore(release)` normal, backup, workflow
    "Release deploy" (tag + fumaça) e deploy no Coolify; rollback em `producao.md` § 3.1.
