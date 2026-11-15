@@ -1,5 +1,16 @@
 # estomasystech
 
+## 0.7.0
+
+### Minor Changes
+
+- d284811: Nova variável obrigatória em produção: `BLIND_INDEX_PEPPER` (mínimo 32 caracteres, gere com `openssl rand -hex 32`). É a chave do índice cego que vai permitir buscar o CPF, o telefone e o e-mail do paciente sem deixá-los legíveis no banco. O app passa a recusar subir em produção sem ela; o build não a exige. Configure-a no Coolify (e na Vercel da homologação) e guarde uma cópia no cofre antes do deploy. Esta versão só prepara a chave; nenhum dado é alterado.
+
+### Patch Changes
+
+- 3b9dbbc: Formulários: o envio feito antes de a página terminar de carregar não coloca mais e-mail, nome ou outros dados no endereço da página. Esqueci a senha e os demais formulários do sistema esperam o carregamento antes de responder.
+- c414f6c: Login: o e-mail, a senha e o botão «Entrar» só passam a responder depois que a página termina de carregar. Antes, em conexão lenta, o que se digitava podia sumir ou o envio sair como um GET com a senha no endereço da página.
+
 ## 0.6.2
 
 ### Patch Changes
