@@ -6,28 +6,27 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Estado
 
-- **Produção:** v0.7.0 (main `dfa897a`, tag `v0.7.0`), 25 issues do lote fechadas. #831 e #845 resolvidas.
-- **Não há release aberta.** Fluxo novo (ADR-109): branch curta da `main`, PR para a `main`, CI como revisor,
+- **Produção:** v0.8.0 (commit `e985ec4`), publicada em 2026-11-15 pelo workflow *Release deploy* em um clique
+  (backup `BACKUP_OK`, tag, deploy pela API do Coolify). Cifra completa (#730, #735 a #741, #860) e deploy em um
+  clique (#750 a #752, #851) fechados.
+- **Cadastros convertidos:** `data:reencrypt` regravou 2 linhas em `patients_identity`; a segunda rodada deu
+  «Nada pendente: tudo na chave atual.». Falta só o dono conferir as buscas (nome, CPF, telefone) no app.
+- **Não há release aberta.** Fluxo ADR-109: branch curta da `main`, PR para a `main`, CI como revisor,
   auto-merge, staging automática, produção em um clique do dono.
-- #849 (achado do CodeQL em teste, P3) fica na fila abaixo.
+- Rollback da v0.8.0 = restaurar backup (a migração `0072`, CPF único, não é aditiva).
 
 ## Fila (ordem)
 
-1. **Cifra do cadastro (P1, LGPD): código pronto, falta rodar em produção.** Épico #730 fechado: #735 a #741 e #860
-   estão na `main` e a staging do `0b93990` está verde (migrações `0071` a `0073`, todas aditivas; o #860 era
-   `instanceof ValidationError` entre cópias do módulo no build de produção). A revalidação limpa passou em 8 rodadas.
-   **Depois do próximo deploy** (dono): backup, `npm run data:reencrypt` com `BLIND_INDEX_PEPPER` até a saída dizer
-   «Nada pendente» ([`producao.md`](../../../docs/engineering/producao.md) § 6). A contração (drop de `birth_date` e dos
-   índices GIN) é release seguinte. Pendente à parte: **#862** (E2E de produção a frio em processo dedicado, P2, classe 3).
-2. **#742** (e-mail de login em claro, P2): junto da cifra.
-3. Apontamentos menores: **#744**, **#745**, **#802**, **#849** (P3), **#715**, **#750 a #752** (job de produção e
-   rollback; #746 (spike) e #747 (backup) já estão fechadas). **Entregue em PR (#750 a #752, #851):** `release-deploy.yml` com validação do SHA pela staging, clique único no
-   Environment `producao`, backup, tag, deploy pela API do Coolify e fumaça (ADR-095, `producao.md` § 3.1). Falta só
-   o dono criar os secrets abaixo e disparar o primeiro *Release deploy* (comece por `dry_run`).
-4. Perf e backlog: v0.9.0 (#729, #557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651).
+1. **Próximo bloco de funcionalidade:** o dono ainda não escolheu. Candidatas: **#855** e **#862** (E2E a frio em
+   processo dedicado, P2, a #862 é classe 3).
+2. **Contração da cifra (release seguinte):** drop de `birth_date` e dos índices GIN antigos.
+3. **#742** (e-mail de login em claro, P2).
+4. **Segurança do VPS (P2):** endurecer o SSH (issue aberta junto deste PR; ação do dono no servidor).
+5. Apontamentos menores: **#744**, **#745**, **#802**, **#820**, **#828**, **#830**, **#832**, **#849** (P3), **#715**.
+6. Perf e backlog: v0.9.0 (#729, #557, #558, #815) e v0.10.0 (#615, #559, #541, #560, #651).
 
 ## Espera o dono
 
-- Secrets no Environment `producao`: `VPS_KNOWN_HOSTS`, `VPS_HOST`, `COOLIFY_URL`, `COOLIFY_TOKEN`, `COOLIFY_APP_UUID` (`VPS_SSH_KEY` já existe). **#376** (parecer jurídico).
+- **#376** (parecer jurídico, condição para paciente real). Conferir as buscas após a conversão da v0.8.0.
 - O check "Veredito do the-judge" já saiu do ruleset da `main` e o `veredito-judge.yml` foi apagado (ADR-109). Auto-merge está habilitado no repositório.
 - Baixa prioridade: mapeamento de estados da integração GitHub↔Linear (fechar a issue move a EST sozinha).
