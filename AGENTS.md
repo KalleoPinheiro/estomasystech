@@ -70,7 +70,7 @@ Vale para qualquer agente e para o dono. Uma mudança, uma sessão, um PR. Detal
 1. **Branch curta a partir da `main`** (`feat/<slug>`, `fix/<slug>`, `docs/<slug>`), PR para a `main`, **já pronto**
    (PR em rascunho roda só a política: "Gate do PR" e `ci` ficam vermelhos de propósito). Corpo com `Closes #N`.
 2. **O CI é o revisor.** Typecheck, lint, cobertura, integração, compatibilidade de migração, E2E e mutação nos
-   arquivos de regra alterados. Passou, o merge entra sozinho: habilite o **auto-merge (squash)** no PR. Não há
+   arquivos de regra alterados. Passou, o merge entra sozinho: habilite o **auto-merge (squash)** no PR; se o PR já estiver verde (o GitHub não arma auto-merge nesse caso), o agente mergeia (squash), autorizado pelo dono em 2026-11-15 para PR comum com CI verde (classe 3 e produção seguem com o clique do dono). Não há
    sessão separada de revisão para mudança comum.
 3. **Só o perigoso pede mais.** Classe de risco 3 (`npm run check:risco`: login/auth, cifra, escopo de empresa,
    auditoria, migração não aditiva, workflows, portão de testes, deploy e backup) para no check "Portão de risco"
