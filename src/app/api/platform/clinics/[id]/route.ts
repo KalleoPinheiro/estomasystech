@@ -4,8 +4,9 @@ import { handleRequest } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import { requireStaffSession } from '@/lib/auth/require-session';
 import { clinicInfoChangesSchema } from '@/lib/clinic-info-schema';
-import { toPlatformClinicDetailDto, toPlatformClinicDto } from '@/lib/dto';
-import { loadPlatformClinic } from './platform-clinic';
+import { toPlatformClinicDto } from '@/lib/dto';
+import { loadPlatformClinicDetail } from '@/lib/server/data/platform';
+import { loadPlatformClinic, PlatformNotFoundError } from './platform-clinic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -21,11 +22,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
   return handleRequest(async () => {
-    const { services, clinic } = await loadPlatformClinic(id);
-    return toPlatformClinicDetailDto(
-      clinic,
-      await services.clinicChannels.findStatus('email'),
-    );
+    const detail = await loadPlatformClinicDetail(id);
+    if (!detail) throw new PlatformNotFoundError(CLINIC_NOT_FOUND);
+    return detail;
   });
 }
 

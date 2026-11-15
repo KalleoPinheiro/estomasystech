@@ -9,7 +9,7 @@ import {
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import PlatformAuditPage from '@/app/plataforma/auditoria/page';
+import { PlatformAudit as PlatformAuditPage } from '@/app/plataforma/auditoria/platform-audit';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
