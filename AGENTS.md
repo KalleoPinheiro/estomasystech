@@ -82,7 +82,7 @@ Vale para qualquer agente e para o dono. Uma mudança, uma sessão, um PR. Detal
    `chore(release): vX.Y.Z` pela mesma esteira, backup no VPS, workflow **Release deploy** (tag + fumaça) e deploy
    da tag no Coolify. Volta em minutos: [`producao.md`](docs/engineering/producao.md) § 3.1 (rollback).
 6. **Passagem de bastão: um arquivo.** Quem chega lê [`PROXIMOS-PASSOS.md`](.specs/archive/handoff/PROXIMOS-PASSOS.md);
-   quem sai o atualiza no mesmo PR. `Closes #N` fecha a issue no merge; a integração move a EST sozinha.
+   quem sai o atualiza no mesmo PR. `Closes #N` fecha a issue no merge; a integração move a EST sozinha para "Em produção", mesmo com o código só na `main` ([ADR-108](docs/adr/108-sincronia-obrigatoria-issue-linear-fila.md)).
 
 Sem branch de release, sem `release:cut`, sem marca de homologação, sem labels de posse, sem handoff por issue.
 

@@ -1,5 +1,5 @@
 ---
-title: "ADR 109 — Fluxo de entrega simplificado: main, CI como revisor, staging automática e produção em um clique"
+title: "ADR 109 — Fluxo de entrega simplificado: main, CI como revisor, staging automática e publicação de produção pelo dono"
 status: living
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
@@ -31,7 +31,7 @@ clínica. O dono trabalha sozinho e quer incluir qualquer mudança com a certeza
    O the-judge deixa de ser portão mecânico; o check "Veredito do the-judge" fica como casca que passa, só porque
    o ruleset da `main` ainda o exige (o dono pode tirá-lo do ruleset e apagar `veredito-judge.yml`).
 4. A `staging` é reconstruída a cada entrada na `main` e a validação logada (3 papéis, 360/390/768/1280) roda sozinha.
-5. Produção com um clique: `release:prepare` numa branch curta, PR `chore(release)` normal, backup, workflow
+5. Publicação de produção pelo dono (tag e fumaça pelo workflow; backup e deploy no Coolify seguem manuais): `release:prepare` numa branch curta, PR `chore(release)` normal, backup, workflow
    "Release deploy" (tag + fumaça) e deploy no Coolify; rollback em `producao.md` § 3.1.
 6. Um único arquivo de passagem de bastão: `.specs/archive/handoff/PROXIMOS-PASSOS.md`.
 

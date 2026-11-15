@@ -18,4 +18,5 @@ jobs:
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
-      - run: echo "ok: sem portão mecânico do the-judge (ADR-109); o perigoso passa pelo Portão de risco"
+      - run: |
+          echo "ok - sem portão mecânico do the-judge (ADR-109); o perigoso passa pelo Portão de risco"
