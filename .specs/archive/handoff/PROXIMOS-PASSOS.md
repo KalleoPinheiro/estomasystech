@@ -24,6 +24,5 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 - **#747** (backup disparado pelo CI: Etapa 9 no VPS) e **#746** (spike da API do Coolify, depois do primeiro deploy
   da v0.7.0). **#376** (parecer jurídico).
-- Tirar "Veredito do the-judge" do ruleset da `main` (hoje é uma casca que passa, ADR-109) e apagar
-  `veredito-judge.yml`; opcional: marcar auto-merge como permitido nas configurações do repositório, se ainda não estiver.
+- O check "Veredito do the-judge" já saiu do ruleset da `main` e o `veredito-judge.yml` foi apagado (ADR-109). Auto-merge está habilitado no repositório.
 - Baixa prioridade: mapeamento de estados da integração GitHub↔Linear (fechar a issue move a EST sozinha).
