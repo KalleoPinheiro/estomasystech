@@ -30,8 +30,7 @@ import {
   type CursorPageSeed,
   useCursorPagedQuery,
 } from '@/lib/use-cursor-paged-query';
-
-export const PAGE_SIZE = 100;
+import { PAGE_SIZE } from './page-size';
 
 /** Coluna Clínica: evento sem empresa é da plataforma; clínica que sumiu mostra o id. */
 function clinicLabel(event: PlatformAuditEventDto): string {

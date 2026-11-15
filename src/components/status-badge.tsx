@@ -26,6 +26,8 @@ const FALLBACK_COLOR = 'var(--sv-text-3)';
 interface StatusBadgeProps {
   status: string;
   label: string;
+  /** Ajuste de layout do lugar de uso (ex.: deixar o rótulo quebrar linha). */
+  className?: string;
 }
 
 /**
@@ -39,10 +41,11 @@ interface StatusBadgeProps {
  * segue sendo a escolha certa aqui por dar controle direto de cor por status,
  * não por contornar mais nenhum defeito da lib.
  */
-export function StatusBadge({ status, label }: StatusBadgeProps) {
+export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   return (
     <CategoryPill
       label={label}
+      className={className}
       color={COLOR_BY_STATUS[status] ?? FALLBACK_COLOR}
     />
   );
