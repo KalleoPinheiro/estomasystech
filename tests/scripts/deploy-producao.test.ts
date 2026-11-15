@@ -82,6 +82,35 @@ describe('Feature: backup-vps.sh (#750)', () => {
     }
   });
 
+  it('Dado CRLF nos segredos colados no Windows, Então o ssh recebe chave e known_hosts sem \\r', () => {
+    const saida = path.join(dir, 'copia');
+    const ssh = falso(
+      'ssh',
+      `for a in "$@"; do case "$a" in UserKnownHostsFile=*) kh="\${a#UserKnownHostsFile=}";; esac; done
+kh_file="$kh"; printf '%s' "$(cat "$kh_file")" | od -c | grep -q '\\\\r' && echo "TEM-CR" > ${saida} || echo "SEM-CR" > ${saida}
+echo "BACKUP_OK 2026-11-15T10:00:00Z"`,
+    );
+    const r = rodar(backup, {
+      ...base,
+      VPS_KNOWN_HOSTS: 'host ssh-ed25519 AAAA\r\n',
+      VPS_SSH_KEY: 'linha1\r\nlinha2\r\n',
+      BACKUP_SSH: ssh,
+    });
+    expect(r.codigo).toBe(0);
+    expect(readFileSync(saida, 'utf8').trim()).toBe('SEM-CR');
+  });
+
+  it('Dado falha do ssh com stderr, Então o motivo aparece na saída sem a chave', () => {
+    const ssh = falso(
+      'ssh',
+      'echo "Host key verification failed." >&2; exit 255',
+    );
+    const r = rodar(backup, { ...base, BACKUP_SSH: ssh });
+    expect(r.codigo).toBe(1);
+    expect(r.saida).toContain('ssh: Host key verification failed.');
+    expect(r.saida).not.toContain('CHAVE-SECRETA-FALSA');
+  });
+
   it('Dado host inválido ou segredo ausente, Então reprova sem chamar o ssh', () => {
     const ssh = falso('ssh', 'echo BACKUP_OK x');
     expect(
