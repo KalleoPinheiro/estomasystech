@@ -72,7 +72,11 @@ política e habilitar RLS não perde dado e se desfaz sem restaurar backup. As e
 - **Cron e `systemScope()`:** usam o pool `sistema`; a allowlist de `tests/lib/tenant-scope.test.ts` continua
   sendo a lista de quem pode.
 
-## Pergunta aberta (não bloqueia o spike)
+## Premissa a verificar na etapa 1
 
-Com qual papel a aplicação conecta hoje no Postgres de produção (dono, ou um papel restrito)? Se for o dono ou
-superusuário, a etapa 1 cria os papéis e o dono ajusta a `DATABASE_URL` no Coolify. Nada disto é feito por este PR.
+A aplicação de produção conecta como o usuário `estomasystech` na base `estomasystech`, criado pelo Coolify junto
+com o banco. Muito provavelmente é dono das tabelas e talvez superusuário, o que faz o Postgres ignorar qualquer
+política. **Isto não foi conferido no servidor.** Conferência (sem aspas, para o zsh): abrir o psql com
+`ssh -t vps sudo docker exec -it <container-do-banco> psql -U estomasystech -d estomasystech` e digitar `\du`;
+`Superuser` ou `Bypass RLS` na linha do papel confirmam o risco. A etapa 1 cria um papel de aplicação **não dono e
+sem `BYPASSRLS`** e o dono ajusta a `DATABASE_URL` no Coolify. Nada disto é feito por este PR.
