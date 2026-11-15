@@ -46,6 +46,27 @@ O ADR-069 decidiu que as telas carregam dado em Server Components e escrevem por
 - O contador de triagem da barra inferior do celular (Profissional) saiu do cliente com a migração da Triagem (#549): `loadStaffShell` o conta no servidor (`countLinkedTriageQueue`, escopo R4) e o entrega por props; sem o valor (falha de leitura, tela isolada em teste) a barra busca `/api/photos/triage` como antes.
 - O `layout.tsx` não é fronteira de segurança (não re-renderiza a cada navegação): cada página chama a própria guarda.
 
+## Medição: busca de pacientes com 5 mil cadastros cifrados (#740)
+
+Com o nome cifrado (ADR-096), a busca por nome decifra a empresa em memória. Medido em Postgres 16 real, 5 mil pacientes
+(nome, telefone e CPF cifrados, com índice cego) e 1 mil responsáveis, 20 rodadas após aquecimento, no repositório que
+`GET /api/patients?search=` e o seletor da agenda chamam (`tests/integracao/paciente-busca-5mil.integracao.ts`; o teto
+de 1,5 s só pega regressão grosseira, os números ficam no log do teste):
+
+| Caminho | p95 medido |
+| --- | --- |
+| nome (trecho) | 35 a 48 ms |
+| CPF exato ou telefone exato (índice cego) | 35 a 55 ms |
+| seletor, primeira página (sem termo) | 105 a 114 ms |
+| seletor, próxima página (cursor por id) | 166 a 184 ms |
+| responsáveis (1 mil), nome ou telefone | 10 a 15 ms |
+
+Decisões: o lote de varredura é a empresa inteira por consulta (`id` + nome cifrado), com **teto de 20 mil** pacientes e
+responsáveis, e aviso sem dado pessoal ao passar dele. O custo cresce linear com a empresa: ~10 mil pacientes deve ficar
+na casa de 100 a 400 ms e o teto de 20 mil abaixo de 1 s, dentro do que a recepção tolera. **Índice cego de primeiro nome
+(plano B do ADR-096) não entra**: só se uma clínica passar de ~10 mil pacientes e o p95 medido em produção passar de 500 ms.
+Medição é do repositório (o que muda com a cifra); sessão, `proxy` e rede não entram.
+
 ## Relacionado
 
 [ADR-069](069-dados-no-servidor-e-politica-de-cache.md), [ADR-002](002-autorizacao-em-duas-camadas.md), [ADR-001](001-multi-tenancy.md), [`architecture.md`](../engineering/architecture.md) § Telas no servidor.
