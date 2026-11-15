@@ -1,11 +1,19 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 /**
- * ADR-095, ticket 4 (#749): `release-deploy.yml` publica a tag com o RELEASE_CUT_TOKEN e roda a
- * fumaça. Repositório público: o desenho do disparo e dos segredos é o que se prova aqui.
+ * ADR-095 (#749, #750 a #752 e #851): `release-deploy.yml` valida o SHA (staging), espera o clique do
+ * Environment `producao`, faz backup, tag e deploy e roda a fumaça. Repositório público: o desenho do
+ * disparo, da ordem e dos segredos é o que se prova aqui.
  */
 const root = path.resolve(import.meta.dirname, '../..');
 const source = readFileSync(
@@ -28,9 +36,9 @@ function bloco(name: string): string {
   return rest.slice(0, end === -1 ? undefined : end).join('\n');
 }
 
-/** Corpo do `run: |` do passo cujo nome contém `trecho`, no job `publicar`. */
-function passo(trecho: string): string {
-  const lines = bloco('publicar').split('\n');
+/** Corpo do `run: |` do passo cujo nome contém `trecho`, no job `job`. */
+function passo(job: string, trecho: string): string {
+  const lines = bloco(job).split('\n');
   const nome = lines.findIndex((l) => l.includes(`name: ${trecho}`));
   expect(nome, `passo ${trecho}`).toBeGreaterThanOrEqual(0);
   const runAt = lines.findIndex((l, i) => i > nome && l.trim() === 'run: |');
@@ -78,34 +86,31 @@ describe('Feature: release-deploy.yml (ADR-095, #749)', () => {
 
   it('Dado as permissões, Quando lidas, Então são só de leitura no topo e em cada job', () => {
     expect(source).toMatch(/\npermissions:\n {2}contents: read\n/);
-    for (const job of ['publicar', 'fumaca']) {
+    for (const job of ['validar', 'producao', 'fumaca']) {
       expect(bloco(job)).toMatch(/permissions:\n {6}contents: read/);
       expect(bloco(job)).toMatch(/timeout-minutes: \d+/);
     }
     expect(source).not.toMatch(/contents: write|pull-requests: write|id-token/);
   });
 
-  it('Dado os segredos, Quando procurados, Então só o job publicar usa o RELEASE_CUT_TOKEN, por env e checkout, nunca em run', () => {
+  it('Dado os segredos, Quando procurados, Então só o job producao os usa, por env do passo, nunca em run', () => {
+    expect(bloco('validar')).not.toContain('secrets.');
     expect(bloco('fumaca')).not.toContain('secrets.');
-    expect(
-      source
-        .match(/secrets\.[A-Z_]+/g)
-        ?.every((s) => s === 'secrets.RELEASE_CUT_TOKEN'),
-    ).toBe(true);
-    for (const l of source.split('\n')) {
-      if (l.trim().startsWith('run:')) expect(l).not.toContain('${{');
-    }
-    expect(semComentarios).not.toMatch(/set -x|environment:/);
-  });
-
-  it('Dado o PAT, Quando procurado, Então não está no env do job nem no checkout e só o passo de publicar o usa com o helper do gh', () => {
-    const job = bloco('publicar');
+    const job = bloco('producao');
     const envDoJob = job.slice(
       job.indexOf('    env:'),
       job.indexOf('    steps:'),
     );
     expect(envDoJob).not.toContain('secrets.');
-    expect(envDoJob).not.toContain('GH_TOKEN');
+    for (const l of source.split('\n')) {
+      if (l.trim().startsWith('run:')) expect(l).not.toContain('${{');
+    }
+    expect(semComentarios).not.toMatch(/set -x/);
+    expect(semComentarios.match(/^\s+environment:/gm)).toHaveLength(1);
+  });
+
+  it('Dado o PAT, Quando procurado, Então não está no env do job nem no checkout e só o passo de publicar o usa com o helper do gh', () => {
+    const job = bloco('producao');
     expect(job).toMatch(
       /actions\/checkout[^\n]*\n\s+with:[\s\S]*?persist-credentials: false/,
     );
@@ -116,14 +121,30 @@ describe('Feature: release-deploy.yml (ADR-095, #749)', () => {
     expect(source.match(/secrets\.RELEASE_CUT_TOKEN/g)).toHaveLength(2);
   });
 
-  it('Dado o job de produção, Quando procurado, Então ainda não existe (entra na #752)', () => {
-    expect(source).not.toMatch(/^ {2}producao:/m);
-    expect(source).not.toContain('COOLIFY');
-    expect(source).not.toContain('VPS_SSH_KEY');
+  it('Dado o job de produção, Quando lido, Então exige o Environment producao, depende do validar e pula no dry_run', () => {
+    const job = bloco('producao');
+    expect(job).toContain('needs: validar');
+    expect(job).toContain('environment: producao');
+    expect(job).toContain('if: inputs.dry_run != true');
   });
 
-  it('Dado o job publicar, Quando lido, Então a validação do disparo é o primeiro passo, antes do checkout', () => {
-    const lines = bloco('publicar').split('\n');
+  it('Dado o job de produção, Quando lido, Então a ordem é main sem avanço, backup, tag e deploy', () => {
+    const job = bloco('producao');
+    const ordem = [
+      'Conferir que a main não avançou',
+      'Backup no VPS',
+      'Publicar tag e Release',
+      'Deploy pela API do Coolify',
+    ].map((nome) => job.indexOf(`name: ${nome}`));
+    expect(ordem.every((i) => i >= 0)).toBe(true);
+    expect([...ordem].sort((x, y) => x - y)).toEqual(ordem);
+    expect(job).toMatch(/ESPERADO_SHA: \$\{\{ github\.sha \}\}/);
+    expect(job).toContain('bash scripts/release/backup-vps.sh');
+    expect(job).toContain('bash scripts/release/deploy-coolify.sh');
+  });
+
+  it('Dado o job validar, Quando lido, Então a validação do disparo é o primeiro passo, antes do checkout', () => {
+    const lines = bloco('validar').split('\n');
     const primeiro = lines.findIndex((l) => l.includes('- name:'));
     expect(lines[primeiro]).toContain('Validar o disparo');
     expect(
@@ -131,16 +152,17 @@ describe('Feature: release-deploy.yml (ADR-095, #749)', () => {
     ).toBeGreaterThan(primeiro);
   });
 
-  it('Dado que o job fumaca roda depois do publicar, Então depende dele e não confere versão sem pedir', () => {
-    expect(bloco('fumaca')).toContain('needs: publicar');
-    expect(bloco('fumaca')).toContain(
-      'inputs.versao_implantada && !inputs.dry_run',
+  it('Dado que o job fumaca roda depois, Então depende de validar e producao e só não confere versão no dry_run', () => {
+    expect(bloco('fumaca')).toContain('needs: [validar, producao]');
+    expect(bloco('fumaca')).toMatch(
+      /CONFERIR_VERSAO: \$\{\{ !inputs\.dry_run \}\}/,
     );
+    expect(bloco('fumaca')).toContain("needs.producao.result == 'skipped'");
   });
 });
 
 describe('Feature: validação do disparo (ADR-092)', () => {
-  const validar = passo('Validar o disparo');
+  const validar = passo('validar', 'Validar o disparo');
 
   it.each([
     ['refs/heads/main', '0.8.0', 0],
@@ -156,9 +178,59 @@ describe('Feature: validação do disparo (ADR-092)', () => {
     );
   });
 
-  it('Dado RELEASE_CUT_TOKEN vazio, Quando o passo roda, Então falha; com valor, passa', () => {
-    const exigir = passo('Exigir RELEASE_CUT_TOKEN');
-    expect(codigo(exigir, { GH_TOKEN: '' })).toBe(1);
-    expect(codigo(exigir, { GH_TOKEN: 'x' })).toBe(0);
+  it('Dado um segredo de produção vazio, Quando o passo roda, Então falha; com todos, passa', () => {
+    const exigir = passo('producao', 'Exigir os segredos de produção');
+    const todos = {
+      VPS_SSH_KEY: 'x',
+      VPS_KNOWN_HOSTS: 'x',
+      VPS_HOST: 'x',
+      COOLIFY_URL: 'x',
+      COOLIFY_TOKEN: 'x',
+      COOLIFY_APP_UUID: 'x',
+      GH_TOKEN: 'x',
+    };
+    expect(codigo(exigir, todos)).toBe(0);
+    for (const nome of Object.keys(todos)) {
+      expect(codigo(exigir, { ...todos, [nome]: '' }), nome).toBe(1);
+    }
+  });
+});
+
+describe('Feature: a staging validou o SHA (#851)', () => {
+  const conferir = passo('validar', 'Conferir que a staging validou');
+  let bin: string;
+
+  beforeEach(() => {
+    bin = mkdtempSync(path.join(tmpdir(), 'gh-falso-'));
+  });
+  afterEach(() => rmSync(bin, { recursive: true, force: true }));
+
+  /** `gh` falso: imprime a contagem de execuções verdes que a API devolveria. */
+  function comVerdes(n: string): number {
+    const gh = path.join(bin, 'gh');
+    writeFileSync(gh, `#!/bin/sh\necho ${n}\n`);
+    chmodSync(gh, 0o755);
+    try {
+      execFileSync('bash', ['-e', '-o', 'pipefail', '-c', conferir], {
+        env: {
+          ...process.env,
+          PATH: `${bin}:/usr/bin:/bin`,
+          GH_REPO: 'o/r',
+          SHA: 'a'.repeat(40),
+        },
+        stdio: 'ignore',
+      });
+      return 0;
+    } catch (error) {
+      return (error as { status?: number }).status ?? 1;
+    }
+  }
+
+  it('Dado uma execução verde da staging para o SHA, Então passa', () => {
+    expect(comVerdes('1')).toBe(0);
+  });
+
+  it('Dado nenhuma execução verde da staging para o SHA, Então reprova', () => {
+    expect(comVerdes('0')).toBe(1);
   });
 });
