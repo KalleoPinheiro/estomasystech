@@ -27,29 +27,23 @@ const IDENTITY = '/api/auth/identity';
 const PROFESSIONALS = '/api/professionals';
 
 /**
- * Leitura de cada rota que uma seção de Configurações consulta. `api` é a rota
- * de autorização: o papel sem acesso a ela não tem o dado lido nem entregue
+ * Leitura de cada rota que uma seção de Configurações consulta. A chave é a
+ * URL consultada e `api` (só quando difere da chave) é a rota de autorização: o papel sem acesso a ela não tem o dado lido nem entregue
  * (a tela dele mostra o aviso de acesso negado, sem chamar nada).
  */
-const READS: Record<string, { api: string; read: Read }> = {
-  [CLINIC_INFO]: { api: CLINIC_INFO, read: loadClinicSettings },
-  '/api/settings/schedule': {
-    api: '/api/settings/schedule',
-    read: loadScheduleSettings,
-  },
-  [EMAIL_CHANNEL]: { api: EMAIL_CHANNEL, read: loadEmailChannel },
-  '/api/accounts': { api: '/api/accounts', read: listAccountsFor },
-  [PROFESSIONALS]: { api: PROFESSIONALS, read: listProfessionalsFor },
-  '/api/options/professionals': {
-    api: '/api/options/professionals',
-    read: listProfessionalOptions,
-  },
+const READS: Record<string, { api?: string; read: Read }> = {
+  [CLINIC_INFO]: { read: loadClinicSettings },
+  '/api/settings/schedule': { read: loadScheduleSettings },
+  [EMAIL_CHANNEL]: { read: loadEmailChannel },
+  '/api/accounts': { read: listAccountsFor },
+  [PROFESSIONALS]: { read: listProfessionalsFor },
+  '/api/options/professionals': { read: listProfessionalOptions },
   '/api/settings/calendar-integration': {
     api: '/api/integrations/google-calendar',
     read: loadCalendarStatus,
   },
-  [IDENTITY]: { api: IDENTITY, read: buildSidebarIdentity },
-  '/api/me': { api: '/api/me', read: loadOwnAccountView },
+  [IDENTITY]: { read: buildSidebarIdentity },
+  '/api/me': { read: loadOwnAccountView },
 };
 
 /** O que cada seção consulta ao abrir (as mesmas URLs que o cliente buscava). */
@@ -85,7 +79,7 @@ export async function prefetchSettings(
         );
       }
       const entry = READS[query];
-      if (!canRoleAccess(entry.api, session.role)) return null;
+      if (!canRoleAccess(entry.api ?? query, session.role)) return null;
       return readOne(query, () => entry.read(session));
     }),
   );

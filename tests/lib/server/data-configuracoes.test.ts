@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { UserAccount } from '@/domain/auth/user-account';
+import { DEFAULT_SCHEDULE_CONFIG } from '@/domain/scheduling/schedule-config';
 import { getRepositories } from '@/infrastructure/container';
 import { UnavailablePhotoStorage } from '@/infrastructure/storage/unavailable-photo-storage';
 import { hashPassword } from '@/lib/auth/password';
@@ -242,6 +243,135 @@ describe('Feature: dados de Configurações e Minha conta lidos no servidor (#55
       expect(JSON.stringify(channel)).not.toContain('re_chave_secreta_557');
     } finally {
       await clearEmailChannels();
+    }
+  });
+
+  it('Dado a clínica, Quando lê o cadastro, Então traz o cadastro e a identidade com logo, tema e envio de imagem', async () => {
+    await ensureTestClinics();
+
+    const settings = await loadClinicSettings(session());
+
+    expect(settings.info.name).toBeTruthy();
+    expect(settings.identity).toMatchObject({
+      logoUrl: null,
+      imageUploadAvailable: expect.any(Boolean),
+      theme: { mode: expect.any(String), accent: expect.any(String) },
+    });
+  });
+
+  it('Dado grade nunca salva e depois salva, Quando lê, Então marca o padrão e depois a grade gravada', async () => {
+    await ensureTestClinics();
+    const { scheduleConfig } = await getRepositories(clinicScope(CLINIC_A_ID));
+    const before = await scheduleConfig.get();
+
+    if (before === null) {
+      const standard = await loadScheduleSettings(session());
+      expect(standard).toEqual({
+        config: DEFAULT_SCHEDULE_CONFIG,
+        isDefault: true,
+      });
+    }
+    const saved = { ...DEFAULT_SCHEDULE_CONFIG, startHour: 7, endHour: 19 };
+    await scheduleConfig.save(saved);
+
+    const view = await loadScheduleSettings(session());
+
+    expect(view.isDefault).toBe(false);
+    expect(view.config).toEqual(saved);
+  });
+
+  it('Dado Google configurado ou não e sem conta, Quando lê o status, Então reflete o ambiente e vem desconectado', async () => {
+    await ensureTestClinics();
+    const keep = {
+      id: process.env.GOOGLE_CLIENT_ID,
+      secret: process.env.GOOGLE_CLIENT_SECRET,
+      url: process.env.APP_URL,
+    };
+    try {
+      process.env.GOOGLE_CLIENT_ID = '';
+      expect(await loadCalendarStatus(session())).toEqual({
+        configured: false,
+        connected: false,
+        email: null,
+        connectedAt: null,
+      });
+
+      process.env.GOOGLE_CLIENT_ID = 'id';
+      process.env.GOOGLE_CLIENT_SECRET = 'segredo';
+      process.env.APP_URL = 'https://app.clinica.test';
+      expect(await loadCalendarStatus(session())).toEqual({
+        configured: true,
+        connected: false,
+        email: null,
+        connectedAt: null,
+      });
+    } finally {
+      for (const [name, value] of [
+        ['GOOGLE_CLIENT_ID', keep.id],
+        ['GOOGLE_CLIENT_SECRET', keep.secret],
+        ['APP_URL', keep.url],
+      ] as const) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+  });
+
+  it('Dado o Admin, Quando pré-lê, Então cada URL traz o valor lido e a seção de privacidade e Minha conta consultam o que precisam', async () => {
+    await ensureTestClinics();
+    const now = new Date('2026-11-15T12:00:00Z');
+
+    const dados = await prefetchSettings(session(), 'dados', now);
+    expect(dados['/api/settings/clinic-info']).toMatchObject({
+      info: { name: expect.any(String) },
+    });
+    const feriados = await prefetchSettings(session(), 'feriados', now);
+    expect(feriados[closuresUrl(closuresWindow(now))]).toEqual([]);
+    expect(
+      Object.keys(await prefetchSettings(session(), 'privacidade', now)),
+    ).toEqual(['/api/settings/clinic-info']);
+    expect(
+      await prefetchSettings(
+        session('atendente', 'ninguem@a.test'),
+        'minha-conta',
+      ),
+    ).toEqual({});
+    const { userAccounts } = await getRepositories(clinicScope(CLINIC_A_ID));
+    await userAccounts.save(
+      UserAccount.create({
+        email: 'prefetch-557@a.test',
+        passwordHash: await hashPassword('senha-segura-557'),
+        role: 'atendente',
+        clinicId: CLINIC_A_ID,
+      }),
+    );
+    const own = await prefetchSettings(
+      session('atendente', 'prefetch-557@a.test'),
+      'minha-conta',
+    );
+    expect(own['/api/me']).toMatchObject({ email: 'prefetch-557@a.test' });
+    expect(
+      await prefetchSettings(session('atendente'), 'google-agenda'),
+    ).toEqual({});
+  });
+
+  it('Dado falha de leitura, Quando pré-lê, Então registra qual consulta falhou', async () => {
+    await ensureTestClinics();
+    const logging = await import('@/lib/log-error');
+    const logged = vi.spyOn(logging, 'logError').mockImplementation(() => {});
+    const repositories = await import('@/infrastructure/container');
+    const spy = vi
+      .spyOn(repositories, 'getRepositories')
+      .mockRejectedValue(new Error('banco fora'));
+    try {
+      await prefetchSettings(session(), 'dados');
+      expect(logged).toHaveBeenCalledWith(
+        'Configurações: falha ao ler /api/settings/clinic-info no servidor',
+        expect.any(Error),
+      );
+    } finally {
+      spy.mockRestore();
+      logged.mockRestore();
     }
   });
 
