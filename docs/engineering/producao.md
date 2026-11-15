@@ -292,6 +292,20 @@ proposital enquanto as migrações não têm `down`
 7. **Depois:** apague do Coolify variável de contorno que sobrou e registre a versão e o commit no handoff.
 8. **Fechar o lote (ADR-108 § 5):** com a versão conferida em produção, o agente que conduz a release fecha as issues da versão (label `vX.Y.Z`); a integração leva as EST para "Em produção". Remova `aguarda-operador` do que foi ativado. Nenhum script faz isso ainda (#835).
 
+**Lições do primeiro deploy real (v0.8.0):**
+
+- `VPS_KNOWN_HOSTS` colado com quebra de linha invalida a verificação do host; no servidor o sintoma é uma
+  conexão `[preauth]` sem usuário. Cole a linha sem quebra (o script já remove CRLF e mostra o stderr do ssh).
+- A API do Coolify devolve 403 se *Allowed IPs* estiver restrito, pois os runners do GitHub mudam de IP: deixe vazio.
+- Re-disparar o *Release deploy* com a tag já existente funciona (a publicação da tag é idempotente).
+- `npm run data:reencrypt` não roda de um checkout comum: precisa das variáveis do container do app e de um túnel
+  até o Postgres privado. Passos que funcionaram:
+  1. Liste os containers (`ssh vps sudo docker ps --format {{.Names}}`); o do app muda de nome a cada deploy.
+  2. Leia `DATABASE_URL`, `DATA_ENCRYPTION_KEY` e `BLIND_INDEX_PEPPER` com `ssh vps sudo docker exec <container do app> printenv`, sem gravar em arquivo versionado.
+  3. Abra um túnel `ssh -L <porta local livre>:<IP do container do Postgres>:5432 vps` e aponte o `DATABASE_URL` para a porta local.
+  4. Rode `npm run data:reencrypt` num clone descartável da tag, repetindo até «Nada pendente».
+  Com porta local fixa e a pasta de desenvolvimento deu «password authentication failed»: use porta livre e clone limpo.
+
 ## 4. Migrações
 
 - Padrão em produção: o app migra no boot com advisory lock (`ESTOMASYSTECH_MIGRATE_ON_BOOT` vazio;
