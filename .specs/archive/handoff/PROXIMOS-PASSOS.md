@@ -17,7 +17,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    aditiva, nome/e-mail/telefone/nascimento cifrados, busca em memória, cursor sem nome, anonimização e
    `data:reencrypt` estendido). **#738** (CPF único, migração `0072`) também está na `main`. **#739** (responsável
    cifrado: migração `0073` aditiva, `phone_hash` e `email_hash`, busca no mesmo desenho, `data:reencrypt` cobre
-   `guardians`) também está na `main`. **#740** (medição com 5 mil: p95 abaixo de 200 ms, ADR-074) está em PR. Faltam, uma por PR: **#741** (validação
+   `guardians`) também está na `main`. **#740** (medição com 5 mil: p95 abaixo de 200 ms, ADR-074) também está na `main`. A validação limpa do **#741** achou **#860** (P1: busca dá 500 depois de cadastrar como primeira ação no build de produção; `instanceof ValidationError` entre cópias do módulo), corrigido em PR; depois do merge e da staging, nova validação limpa só desse ponto. Faltam, uma por PR: **#741** (validação
    ponta a ponta) e **#730** (fecha o épico). **Depois do deploy**: backup, `npm run data:reencrypt` pelo dono
    (exige `BLIND_INDEX_PEPPER`), conferir 0 pendências; a contração (drop de `birth_date`, dos índices GIN) é release seguinte.
 2. **#742** (e-mail de login em claro, P2): junto da cifra.

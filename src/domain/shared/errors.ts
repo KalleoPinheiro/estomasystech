@@ -11,6 +11,20 @@ export class ValidationError extends DomainError {
   readonly code = 'VALIDATION_ERROR';
 }
 
+/**
+ * `instanceof ValidationError` falha quando o erro nasce numa cópia do módulo que
+ * não é a deste arquivo: no build de produção o Next gera uma cópia por camada
+ * (Server Action e rota de API), e objetos guardados no processo (como o índice
+ * cego) levam a classe de quem os criou primeiro (#860). O `code` não depende da cópia.
+ */
+export function isValidationError(error: unknown): error is ValidationError {
+  return (
+    error instanceof ValidationError ||
+    (error instanceof Error &&
+      (error as { code?: unknown }).code === 'VALIDATION_ERROR')
+  );
+}
+
 export class InvalidMoneyError extends DomainError {
   readonly code = 'INVALID_MONEY';
 }

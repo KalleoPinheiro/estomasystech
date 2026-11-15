@@ -1,6 +1,6 @@
 import { createHash, createHmac, hkdfSync } from 'node:crypto';
 import { normalizeCpf } from '@/domain/shared/cpf';
-import { ValidationError } from '@/domain/shared/errors';
+import { isValidationError } from '@/domain/shared/errors';
 import { normalizeOptionalEmail } from '@/domain/shared/person-validation';
 import { normalizeBrazilianPhoneOrThrow } from '@/domain/shared/phone';
 import { logger } from '@/lib/observability/logger';
@@ -76,7 +76,7 @@ export function orFallbackOnInvalid<T>(compute: () => T, fallback: T): T {
   try {
     return compute();
   } catch (error) {
-    if (error instanceof ValidationError) return fallback;
+    if (isValidationError(error)) return fallback;
     throw error;
   }
 }
