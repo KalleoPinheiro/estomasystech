@@ -88,6 +88,30 @@ function identityChanges(
 }
 
 /**
+ * Relê a linha com trava e calcula as mudanças dela: uma edição ou anonimização
+ * que ocorreu depois da leitura do lote não é sobrescrita com valor velho.
+ */
+export async function rewriteLocked(
+  db: AppDb,
+  cipher: FieldCipher,
+  blindIndex: BlindIndex,
+  id: string,
+): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(patients)
+      .where(eq(patients.id, id))
+      .for('update');
+    if (!row) return false;
+    const changes = identityChanges(cipher, blindIndex, row);
+    if (Object.keys(changes).length === 0) return false;
+    await tx.update(patients).set(changes).where(eq(patients.id, id));
+    return true;
+  });
+}
+
+/**
  * Backfill da cifra do cadastro (ADR-096, #735; `npm run data:reencrypt`):
  * cifra nome, e-mail e telefone em claro, move o nascimento para a coluna
  * cifrada (zerando a legada), preenche e recalcula o índice cego. Idempotente:
@@ -110,11 +134,7 @@ export async function reencryptPatientIdentity(
       .limit(BATCH_SIZE);
     if (rows.length === 0) return updated;
     for (const row of rows) {
-      const changes = identityChanges(cipher, blindIndex, row);
-      if (Object.keys(changes).length > 0) {
-        await db.update(patients).set(changes).where(eq(patients.id, row.id));
-        updated += 1;
-      }
+      if (await rewriteLocked(db, cipher, blindIndex, row.id)) updated += 1;
     }
     after = rows[rows.length - 1].id;
   }

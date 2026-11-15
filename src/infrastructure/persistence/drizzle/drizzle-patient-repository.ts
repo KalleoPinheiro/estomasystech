@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { Patient } from '@/domain/patient/patient';
 import type {
@@ -256,37 +256,108 @@ export class DrizzlePatientRepository implements PatientRepository {
       fullName: this.cipher.decrypt(row.fullName),
     }));
     const term = search?.trim();
+    const matched = term ? await this.findIdsByExactValue(term) : undefined;
+    if (matched) {
+      // Achado exato fora do teto de varredura ainda entra na seleção.
+      entries.push(
+        ...(await this.entriesBeyondCap(entries, matched, page.ids)),
+      );
+    }
     const selected = selectPatientPage(entries, {
       term,
-      matchedIds: term ? await this.findIdsByExactValue(term) : undefined,
+      matchedIds: matched,
       cursorId: decodeCursor<{ id?: string }>(page.cursor)?.id ?? null,
       limit,
     });
     return this.loadInOrder(selected.map((entry) => entry.id));
   }
 
-  /** CPF, telefone ou e-mail exatos pelo índice cego; termo que não normaliza não acha nada. */
+  private async entriesBeyondCap(
+    scanned: readonly { id: string }[],
+    matched: ReadonlySet<string>,
+    scopeIds: string[] | undefined,
+  ): Promise<{ id: string; fullName: string }[]> {
+    const seen = new Set(scanned.map((entry) => entry.id));
+    const missing = [...matched].filter(
+      (id) => !seen.has(id) && (!scopeIds || scopeIds.includes(id)),
+    );
+    if (missing.length === 0) return [];
+    const rows = await this.db
+      .select({ id: patients.id, fullName: patients.fullName })
+      .from(patients)
+      .where(
+        withTenant(patients, this.clinicId, inArray(patients.id, missing)),
+      );
+    return rows.map((row) => ({
+      id: row.id,
+      fullName: this.cipher.decrypt(row.fullName),
+    }));
+  }
+
+  /**
+   * CPF, telefone ou e-mail exatos pelo índice cego; termo que não normaliza não
+   * acha nada. Linhas ainda sem hash (antes do backfill) são comparadas
+   * decifrando, para o paciente não sumir da busca na janela do deploy.
+   */
   private async findIdsByExactValue(term: string): Promise<Set<string>> {
     const clinicId = this.clinicId;
     if (clinicId === null) return new Set();
-    const kinds: [BlindIndexKind, PgColumn][] = [
-      ['cpf', patients.cpfHash],
-      ['phone', patients.phoneHash],
-      ['email', patients.emailHash],
+    const kinds: [BlindIndexKind, PgColumn, PgColumn][] = [
+      ['cpf', patients.cpfHash, patients.cpf],
+      ['phone', patients.phoneHash, patients.phone],
+      ['email', patients.emailHash, patients.email],
     ];
-    const conditions = kinds.flatMap(([kind, column]) => {
+    const matched = new Set<string>();
+    for (const [kind, hashColumn, valueColumn] of kinds) {
       const candidates = orFallbackOnInvalid(
         () => this.blindIndex.candidates(clinicId, kind, term),
         [],
       );
-      return candidates.length > 0 ? [inArray(column, candidates)] : [];
-    });
-    if (conditions.length === 0) return new Set();
-    const rows = await this.db
+      if (candidates.length === 0) continue;
+      const ids = await this.matchKind(
+        clinicId,
+        kind,
+        hashColumn,
+        valueColumn,
+        candidates,
+      );
+      for (const id of ids) matched.add(id);
+    }
+    return matched;
+  }
+
+  private async matchKind(
+    clinicId: string,
+    kind: BlindIndexKind,
+    hashColumn: PgColumn,
+    valueColumn: PgColumn,
+    candidates: string[],
+  ): Promise<string[]> {
+    const hashed = await this.db
       .select({ id: patients.id })
       .from(patients)
-      .where(withTenant(patients, this.clinicId, or(...conditions)));
-    return new Set(rows.map((row) => row.id));
+      .where(withTenant(patients, clinicId, inArray(hashColumn, candidates)));
+    const legacy = await this.db
+      .select({ id: patients.id, value: valueColumn })
+      .from(patients)
+      .where(
+        withTenant(
+          patients,
+          clinicId,
+          and(isNull(hashColumn), isNotNull(valueColumn)),
+        ),
+      )
+      .limit(PATIENT_SCAN_CAP);
+    const legacyMatches = legacy.filter((row) => {
+      const hash = hashOrNull(
+        this.blindIndex,
+        clinicId,
+        kind,
+        this.cipher.decrypt(String(row.value)),
+      );
+      return hash !== null && candidates.includes(hash);
+    });
+    return [...hashed, ...legacyMatches].map((row) => row.id);
   }
 
   private async loadInOrder(ids: string[]): Promise<Patient[]> {

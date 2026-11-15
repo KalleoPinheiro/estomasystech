@@ -9,7 +9,10 @@ import {
   PATIENT_SCAN_CAP,
 } from '@/infrastructure/persistence/drizzle/drizzle-patient-repository';
 import { DrizzleRetentionRepository } from '@/infrastructure/persistence/drizzle/drizzle-retention-repository';
-import { reencryptPatientIdentity } from '@/infrastructure/persistence/drizzle/reencrypt-patient-identity';
+import {
+  reencryptPatientIdentity,
+  rewriteLocked,
+} from '@/infrastructure/persistence/drizzle/reencrypt-patient-identity';
 import * as schema from '@/infrastructure/persistence/drizzle/schema';
 import { BlindIndex } from '@/lib/blind-index';
 import { DataCipher } from '@/lib/data-cipher';
@@ -231,6 +234,21 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
         TEST_CIPHER,
         BLIND,
       );
+      const late = Patient.create({
+        fullName: 'Zélia Tardia',
+        phone: '11999990009',
+        cpf: CPF,
+      });
+      await other.save(late);
+      await db
+        .update(schema.patients)
+        .set({ id: 'zzz-tardio' })
+        .where(eq(schema.patients.id, late.id));
+      // Achado exato fora do teto de varredura ainda aparece (e respeita o escopo de ids).
+      expect((await other.findAll(CPF)).map((p) => p.id)).toEqual([
+        'zzz-tardio',
+      ]);
+      expect(await other.findAll(CPF, { ids: ['outro'] })).toEqual([]);
       const page = await other.findAll(undefined, { limit: 5 });
       expect(page).toHaveLength(5);
       expect(warn).toHaveBeenCalledWith(
@@ -248,6 +266,26 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
       }
     ).loadInOrder(['fantasma']);
     expect(loaded).toEqual([]);
+  });
+
+  it('Dado linha legada sem hash, Quando buscar por CPF, telefone ou e-mail exatos, Então acha antes do backfill', async () => {
+    await db.insert(schema.patients).values({
+      id: 'sem-hash',
+      clinicId: CLINIC,
+      fullName: TEST_CIPHER.encrypt('Legada Sem Hash'),
+      email: 'legada@x.com',
+      phone: '+5511955554444',
+      cpf: TEST_CIPHER.encrypt(CPF),
+      createdAt: new Date(),
+    });
+    for (const term of [CPF, '(11) 95555-4444', 'LEGADA@x.com']) {
+      expect((await repo.findAll(term)).map((p) => p.id)).toEqual(['sem-hash']);
+    }
+    expect(await repo.findAll('52998224700')).toEqual([]);
+  });
+
+  it('Dado paciente removido entre o lote e a trava, Quando reescrever, Então ignora a linha', async () => {
+    expect(await rewriteLocked(appDb, TEST_CIPHER, BLIND, 'sumiu')).toBe(false);
   });
 
   it('Dado valor legado inválido, Quando indexar, Então fica sem hash em vez de travar o save', async () => {
