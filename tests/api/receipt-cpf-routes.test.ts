@@ -70,6 +70,12 @@ describe('Feature: CPF no recibo para o IRPF (#326, FIN-RN-15)', () => {
     headers?: Record<string, string>,
   ) => {
     seq += 1;
+    if (cpf) {
+      // CPF único por clínica (#738): cada cenário reaproveita o mesmo CPF de
+      // exemplo, então libera o hash dos pacientes de cenários anteriores.
+      const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+      await (await getDb()).execute(sql`update patients set cpf_hash = null`);
+    }
     const response = await patientsRoute.POST(
       jsonRequest(
         '/api/patients',

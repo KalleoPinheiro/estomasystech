@@ -9,6 +9,7 @@ import {
   comparePatientEntries,
   selectPatientPage,
 } from '@/domain/patient/patient-search';
+import { ConflictError } from '@/domain/shared/errors';
 import {
   type BlindIndex,
   type BlindIndexKind,
@@ -16,11 +17,15 @@ import {
   orFallbackOnInvalid,
 } from '@/lib/blind-index';
 import type { FieldCipher } from '@/lib/data-cipher';
+import { isUniqueViolation } from '@/lib/db-errors';
 import { logger } from '@/lib/observability/logger';
 import { decodeCursor } from '@/lib/pagination';
 import { type AppDb, MAX_ROWS } from './db';
 import { patients } from './schema';
 import { withTenant } from './tenant-scope';
+
+/** Índice único parcial `(clinic_id, cpf_hash)` (migração 0072). */
+export const CPF_UNIQUE_INDEX = 'uq_patients_clinic_cpf_hash';
 
 /** O índice cego, ou quem o fornece quando precisar (leitura preguiçosa do ambiente). */
 export type BlindIndexSource = BlindIndex | (() => BlindIndex);
@@ -115,10 +120,21 @@ export class DrizzlePatientRepository implements PatientRepository {
       active: patient.isActive,
       createdAt: patient.createdAt,
     };
-    await this.db
-      .insert(patients)
-      .values(values)
-      .onConflictDoUpdate({ target: patients.id, set: values });
+    try {
+      await this.db
+        .insert(patients)
+        .values(values)
+        .onConflictDoUpdate({ target: patients.id, set: values });
+    } catch (error) {
+      // CPF repetido na mesma clínica (#738): o índice único parcial barra,
+      // inclusive em cadastros simultâneos.
+      if (isUniqueViolation(error, CPF_UNIQUE_INDEX)) {
+        throw new ConflictError(
+          'Já existe um paciente com este CPF nesta clínica',
+        );
+      }
+      throw error;
+    }
   }
 
   async findById(id: string): Promise<Patient | null> {

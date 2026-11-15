@@ -1,8 +1,10 @@
 import { asc, eq, gt } from 'drizzle-orm';
 import type { BlindIndex } from '@/lib/blind-index';
 import type { FieldCipher } from '@/lib/data-cipher';
+import { isUniqueViolation } from '@/lib/db-errors';
+import { logger } from '@/lib/observability/logger';
 import type { AppDb } from './db';
-import { hashOrNull } from './drizzle-patient-repository';
+import { CPF_UNIQUE_INDEX, hashOrNull } from './drizzle-patient-repository';
 import { patients } from './schema';
 
 const BATCH_SIZE = 200;
@@ -106,9 +108,41 @@ export async function rewriteLocked(
     if (!row) return false;
     const changes = identityChanges(cipher, blindIndex, row);
     if (Object.keys(changes).length === 0) return false;
-    await tx.update(patients).set(changes).where(eq(patients.id, id));
-    return true;
+    return applyChanges(tx, id, changes, row.cpfHash);
   });
+}
+
+/**
+ * Grava as mudanças. Se o CPF já pertence a outro paciente da clínica (dado
+ * legado duplicado, #738), o hash do CPF é zerado, o resto é regravado e o
+ * id vai para o log (nunca o CPF): a duplicidade é resolvida pela clínica.
+ */
+async function applyChanges(
+  tx: Pick<AppDb, 'update' | 'transaction'>,
+  id: string,
+  changes: PatientChanges,
+  storedCpfHash: string | null,
+): Promise<boolean> {
+  try {
+    // Ponto de salvamento: o erro de unicidade não aborta a transação inteira.
+    await tx.transaction((sp) =>
+      sp.update(patients).set(changes).where(eq(patients.id, id)),
+    );
+    return true;
+  } catch (error) {
+    if (!isUniqueViolation(error, CPF_UNIQUE_INDEX)) throw error;
+    logger.warn(
+      `[patients] CPF repetido na clínica; paciente ${id} segue sem hash de CPF até a clínica resolver`,
+    );
+    // O hash antigo (outro pepper) também sai: ficaria apontando o CPF de outro paciente.
+    const { cpfHash: _cpfHash, ...rest } = changes;
+    if (storedCpfHash === null && Object.keys(rest).length === 0) return false;
+    await tx
+      .update(patients)
+      .set({ ...rest, cpfHash: null })
+      .where(eq(patients.id, id));
+    return true;
+  }
 }
 
 /**
