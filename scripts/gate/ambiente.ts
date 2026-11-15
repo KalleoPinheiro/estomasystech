@@ -73,12 +73,14 @@ export interface DisposableSecrets {
   POSTGRES_PASSWORD: string;
   AUTH_SECRET: string;
   DATA_ENCRYPTION_KEY: string;
+  BLIND_INDEX_PEPPER: string;
 }
 
 export const disposableSecrets = (random: (bytes: number) => string = (n) => randomBytes(n).toString('hex')): DisposableSecrets => ({
   POSTGRES_PASSWORD: random(16),
   AUTH_SECRET: random(32),
   DATA_ENCRYPTION_KEY: random(32),
+  BLIND_INDEX_PEPPER: random(32),
 });
 
 /**

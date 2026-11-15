@@ -135,6 +135,23 @@ jobs:
         env:
           CHANGESET_BASE: origin/${{ github.base_ref }}
 
+      # Handoff por issue (ADR-102): arquivo novo por PR, sem conflito no merge.
+      - name: Handoff (ADR-102)
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
+        run: npm run check:handoff
+        env:
+          CHANGESET_BASE: origin/${{ github.base_ref }}
+
+      # Posse da issue (ADR-104): dono:<agente> do registro agentes.json, igual ao agente que escreveu o PR.
+      - name: Posse (ADR-104)
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
+        run: npm run check:posse -- --pr "$PR_NUMBER" --head-ref "$HEAD_REF"
+        env:
+          CHANGESET_BASE: origin/${{ github.base_ref }}
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
       - name: Typecheck
         if: needs.escopo.outputs.docs_only != 'true'
         run: npm run typecheck
@@ -201,6 +218,23 @@ jobs:
 
       - name: Dynamic-import gate
         run: npx tsx scripts/check-dynamic-import.ts
+
+      # Também no PR provado: o selo não cobre o handoff por issue (ADR-102).
+      - name: Handoff (ADR-102)
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
+        run: npm run check:handoff
+        env:
+          CHANGESET_BASE: origin/${{ github.base_ref }}
+
+      # Posse da issue (ADR-104): dono:<agente> do registro agentes.json, igual ao agente que escreveu o PR.
+      - name: Posse (ADR-104)
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release/')
+        run: npm run check:posse -- --pr "$PR_NUMBER" --head-ref "$HEAD_REF"
+        env:
+          CHANGESET_BASE: origin/${{ github.base_ref }}
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Migração aditiva (check:migracao)
         if: github.event_name == 'pull_request'

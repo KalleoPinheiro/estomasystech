@@ -4,6 +4,7 @@ import { Button, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { MIN_PASSWORD_LENGTH } from '@/domain/auth/password-policy';
 import { apiFetch } from '@/lib/client';
 
@@ -59,7 +60,7 @@ export function SetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <SafeForm onSubmit={handleSubmit}>
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Nova senha
@@ -92,6 +93,6 @@ export function SetPasswordForm({ token }: { token: string }) {
         {submitting ? 'Salvando…' : 'Definir senha'}
       </Button>
       <RequestNewLink />
-    </form>
+    </SafeForm>
   );
 }

@@ -9,6 +9,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { unwrapAction } from '@/lib/action-result';
 import { isSessionExpiredError } from '@/lib/client';
 import type { EvolutionNoteDto, ProfessionalOptionDto } from '@/lib/dto';
@@ -138,7 +139,7 @@ export function EvolutionsSection({
       </div>
 
       {showForm && (
-        <form
+        <SafeForm
           onSubmit={handleSubmit}
           className="flex flex-col gap-3 rounded-lg border border-accent bg-accent-soft/40 p-4"
         >
@@ -169,7 +170,7 @@ export function EvolutionsSection({
           >
             {saving ? 'Registrando…' : 'Registrar evolução'}
           </Button>
-        </form>
+        </SafeForm>
       )}
 
       {isLoading ? (

@@ -8,6 +8,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { unwrapAction } from '@/lib/action-result';
 import { isSessionExpiredError } from '@/lib/client';
 import type { AnamnesisDto } from '@/lib/dto';
@@ -116,7 +117,7 @@ export function AnamnesisSection({
   if (error) return <ErrorAlert message={error} onRetry={onRetry} />;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {draft.recovered && <DraftRecoveredAlert action="salve" />}
       {formError && <ErrorAlert message={formError} />}
       {FIELDS.map((field) => (
@@ -138,6 +139,6 @@ export function AnamnesisSection({
           {saving ? 'Salvando…' : 'Salvar anamnese'}
         </Button>
       </div>
-    </form>
+    </SafeForm>
   );
 }

@@ -19,6 +19,10 @@
     "rules": {
       "preset": "recommended",
       "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": { "maxAllowedComplexity": 10 }
+        },
         "noExcessiveLinesPerFunction": {
           "level": "error",
           "options": { "maxLines": 120, "skipBlankLines": true }
@@ -87,7 +91,78 @@
       "linter": {
         "rules": {
           "complexity": {
+            "noExcessiveCognitiveComplexity": "off",
             "noExcessiveLinesPerFunction": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/app/(staff)/_hoje/follow-up-row-actions.tsx",
+        "src/app/(staff)/agenda/agenda-screen.tsx",
+        "src/app/(staff)/agenda/appointment-detail.tsx",
+        "src/app/(staff)/agenda/calendar-grid.tsx",
+        "src/app/(staff)/agenda/mobile-month.tsx",
+        "src/app/(staff)/agenda/status-filter.tsx",
+        "src/app/(staff)/agenda/waitlist-panel.tsx",
+        "src/app/(staff)/agenda/week-view.tsx",
+        "src/app/(staff)/auditoria/page.tsx",
+        "src/app/(staff)/configuracoes/accounts-section.tsx",
+        "src/app/(staff)/configuracoes/calendar-integration-section.tsx",
+        "src/app/(staff)/faturamento/invoice-adjust-forms.tsx",
+        "src/app/(staff)/faturamento/invoices-list.tsx",
+        "src/app/(staff)/majority-review-card.tsx",
+        "src/app/(staff)/pacientes/\\[id\\]/care-plans-section.tsx",
+        "src/app/(staff)/pacientes/\\[id\\]/condition-photos.tsx",
+        "src/app/(staff)/pacientes/\\[id\\]/conditions-section.tsx",
+        "src/app/(staff)/pacientes/\\[id\\]/evolutions-section.tsx",
+        "src/app/(staff)/pacientes/\\[id\\]/guardian-panel.tsx",
+        "src/app/(staff)/pacientes/\\[id\\]/patient-record-client.tsx",
+        "src/app/(staff)/pacientes/patient-form.tsx",
+        "src/app/(staff)/pacientes/patients-client.tsx",
+        "src/app/(staff)/parceiros/partners-board.tsx",
+        "src/app/(staff)/profissionais/professional-form.tsx",
+        "src/app/(staff)/profissionais/professionals-board.tsx",
+        "src/app/(staff)/relatorios/revenue-table.tsx",
+        "src/app/api/accounts/route.ts",
+        "src/app/api/appointments/\\[id\\]/route.ts",
+        "src/app/api/patients/\\[id\\]/route.ts",
+        "src/app/api/patients/route.ts",
+        "src/app/api/portal/patient/photos/route.ts",
+        "src/app/documentos/consentimento/\\[patientId\\]/page.tsx",
+        "src/app/documentos/plano-cuidados/\\[carePlanId\\]/page.tsx",
+        "src/app/documentos/relatorio/\\[conditionId\\]/page.tsx",
+        "src/app/plataforma/clinicas/\\[id\\]/clinic-admins-section.tsx",
+        "src/app/portal/consent-card.tsx",
+        "src/app/portal/page.tsx",
+        "src/app/portal/partner-view.tsx",
+        "src/app/portal/patient-view.tsx",
+        "src/application/auth/create-account.ts",
+        "src/application/guardians/majority-review.ts",
+        "src/application/scheduling/waitlist.ts",
+        "src/application/taxonomy/import-taxonomy-catalog.ts",
+        "src/components/identity-image-field.tsx",
+        "src/components/summary-card.tsx",
+        "src/components/triage-photo-list.tsx",
+        "src/domain/billing/commission-payout.ts",
+        "src/domain/clinic/svg-sanitizer.ts",
+        "src/domain/clinical/image-sanitizer.ts",
+        "src/domain/professional/professional.ts",
+        "src/domain/shared/phone.ts",
+        "src/infrastructure/persistence/drizzle/recover-super-admin.ts",
+        "src/lib/auth/session.ts",
+        "src/lib/redact.ts",
+        "src/lib/use-api-query.ts",
+        "src/lib/use-condition-photos.ts"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": {
+              "level": "warn",
+              "options": { "maxAllowedComplexity": 10 }
+            }
           }
         }
       }

@@ -3,7 +3,7 @@ title: "Convenções de código e testes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-01
+last_reviewed: 2026-11-11
 ---
 
 # Convenções de código e testes
@@ -15,11 +15,21 @@ last_reviewed: 2026-11-01
 
 - `biome.json` é a única ferramenta de lint + format (issue #107 migrou do ESLint). Rode `npm run lint`
   ou `./node_modules/.bin/biome` — `npx biome` sem versão fixa baixa outro binário e dá falso positivo.
-- Complexidade **cognitiva** ≤ 10 (`complexity/noExcessiveCognitiveComplexity`) — não é a ciclomática do ESLint antigo.
+- Complexidade **cognitiva** ≤ 10 (`complexity/noExcessiveCognitiveComplexity`, `error` em `src/`; desligada em `tests/**`) — não é a ciclomática do ESLint antigo. O passivo anterior à regra (71 funções em 56 arquivos) fica em `warn` por arquivo numa lista de `overrides` do `biome.json`, registrada em [`.specs/passivo-complexidade-cognitiva.md`](../../.specs/passivo-complexidade-cognitiva.md). Ao refatorar um arquivo da lista, tire-o dela no mesmo PR. Não acrescente arquivo à lista nem use `biome-ignore` para passar.
 - Função ≤ 120 linhas (`complexity/noExcessiveLinesPerFunction`); 320 em `.tsx`; desligado em `tests/**`.
 - Não há equivalente ao `max-depth`: aninhamento não é checado pelo linter — mantenha raso.
 - Variável não usada: prefixo `_`.
 - Supressão só com motivo: `// biome-ignore lint/<categoria>/<regra>: <motivo>`.
+
+## Formulários (`SafeForm`)
+
+Todo `<form>` novo em `src/` usa `SafeForm` (`src/components/safe-form.tsx`).
+
+- `method="post"` é fixo: um `method` vindo de fora não vence. Sem `method`, o envio nativo antes da hidratação é GET e o valor dos campos vai para a URL — histórico do navegador e log de proxy (#777).
+- Os campos ficam num `<fieldset disabled>` com `class="contents"` até `useHydrated()`. O que se digita não se perde, e o envio não sai antes de o React assumir.
+- Dado pessoal (e-mail, senha, prontuário) não aparece na URL nem no log de acesso. O corpo do POST não entra nesse log.
+- Exceção: `src/app/login/login-card.tsx` mantém o `<form method="post">` próprio, com campo somente leitura e botão desabilitado até hidratar (#679).
+- `tests/architecture/form-method.test.ts` reprova `<form>` sem `method` e reprova `method` que não seja `post`. O Biome não tem essa regra sem plugin.
 
 ## UI (`@still-void/ui`)
 
@@ -80,6 +90,8 @@ const route = await import(`@/app/api${path}/route`);
 - Caminho de exceção (entrada inválida, sem permissão, outra clínica, duplicidade, concorrência, falha de integração, estado terminal) vive na matriz `docs/domains/<d>/excecoes.md`, cada linha com o teste que a prova; `tests/bdd/matriz-excecoes.test.ts` falha se o teste citado não existe ([ADR-049](../adr/049-matriz-de-excecoes-por-dominio.md)). Funcionalidade nova com exceção nova atualiza a matriz no mesmo PR.
 - Cobertura 100% em linhas, funções, branches e statements nas camadas de regra (domain, application, infrastructure, lib) e piso de 90% global com a UI medida (ADR-050) — limiar em `vitest.config.mts`, CI roda a suíte completa.
 - **Teste é intocável (regra 8, [ADR-042](../adr/042-e2e-fora-do-actions-gate-local-com-recibo.md), mantida pelo [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)).** Nunca enfraqueça, apague nem desligue teste, reduza limiar de cobertura ou aumente `retries`/`timeout` para ficar verde: corrija o código. Flake é causa a investigar. Mudar teste existente só quando o requisito de negócio mudou, com `TESTE-ALTERADO: <motivo>` no PR. O hook `.claude/hooks/protect-tests.sh`, o `pre-push` e o CI (`npm run check:testes`) barram isso por script.
+  O `check:testes` também compara o conteúdo **estruturado** da base com o do HEAD (#732, `scripts/gate/gate-config.ts`), e não linhas de diff: `vitest*.config.mts` e `playwright*.config.ts` (valor efetivo de limiar, `retries` e `timeout`; limiar que deixa de ser literal falha fechado), `stryker.config.json` (`thresholds.break`, `timeoutMS`, entradas de `mutate`), `biome.json` (JSONC: regra em `error` rebaixada ou removida, `enabled` desligado) e os shards de `ci.yml` e `gate-pr.yml`. São `hard`, sem exceção por motivo: baixar ou remover limiar, subir `retries`/`timeout`, tirar arquivo de `mutate` ou excluir com `!`, diminuir shard, rebaixar ou remover regra em `error`, desligar `enabled`, apagar ou renomear essas configs e config ilegível no HEAD. Acrescentar entrada em `mutate` ou endurecer regra não acusa nada. Regra de lint nova que nasce em `warn`/`off` não é proibida, mas exige `GATE-ALTERADO: <motivo, 20+ caracteres>` no corpo do PR (ou `--motivo-gate`, ou `.gate/motivo-gate.txt` local); `TESTE-ALTERADO:` continua só para teste. O hook `protect-tests.sh` bloqueia a edição do agente em `vitest*.config.mts`, `playwright*.config.ts`, `scripts/gate/`, `.claude/hooks/`, `.claude/settings.json` e `.husky/`; `biome.json`, `stryker.config.json` e os workflows ficam livres no hook e só o `check:testes` os julga.
+  **Estabilizar teste instável (#812).** Alterar teste existente só para estabilizar instabilidade é permitido quando declarado em `TESTE-ALTERADO:` no PR (mais a issue da instabilidade) e sem afrouxar nenhuma asserção, nem reduzir cobertura, nem aumentar `retries`/`timeout`. Mudança de requisito continua exigindo issue.
 - Teste novo descreve comportamento de negócio de uma funcionalidade real (cenário Dado/Quando/Então com os termos do `CONTEXT.md`), inclusive os caminhos de erro e exceção; não espelha a implementação.
 - **Toda feature de tela precisa de cobertura para os papéis que a usam** (#204). Rota nova: teste
   pelo proxy (`tests/proxy.test.ts`) para cada papel que deve passar e cada um que deve levar `403`

@@ -59,6 +59,11 @@ repositório, o clique do dono num Environment, ou um workflow que a PR não con
    reprova. Isentos também os commits da **PR sob conferência** que não têm PR própria: o `chore(release): vX.Y.Z` do
    robô (só se estiver na PR atual) e qualquer commit de PR `hotfix/*` → `main`; commit comum direto na branch da
    release continua reprovando. Assim o limite de tamanho não afeta a release.
+   A isenção de `hotfix/*` depende só do nome da branch (quem escreve no repositório pode nomeá-la), então **o
+   hotfix para a `main` é julgado à mão** (revisão do the-judge em thread nova, como qualquer PR de classe 3), e a
+   `main` só recebe merge do dono. O `chore(release)` hoje é commitado localmente pelo `release:prepare` (autor
+   humano, não `github-actions[bot]`): exigir o robô como autor só cabe depois da tag e do corte automáticos
+   (#750–#752, v0.8.0).
 8. **Custo.** Modelo padrão `claude-sonnet-5-5` (variável `JUDGE_MODEL` troca). Diff acima de 400 000 caracteres
    reprova com mensagem pedindo para dividir a PR.
 9. **Check obrigatório:** `Veredito do the-judge` (`integration_id` 15368). Como `pull_request_target` usa o workflow

@@ -22,3 +22,21 @@ describe('Feature: Guardas de boot (ADR-041)', () => {
     expect(startMockServer).not.toHaveBeenCalled();
   });
 });
+
+describe('Feature: Pepper do índice cego no boot (#734)', () => {
+  it('Dado produção sem BLIND_INDEX_PEPPER, Então o boot recusa', async () => {
+    await expect(
+      startRuntimeGuards({ APP_ENV: 'production', NODE_ENV: 'production' }),
+    ).rejects.toThrow('BLIND_INDEX_PEPPER ausente');
+  });
+
+  it('Dado produção com BLIND_INDEX_PEPPER, Então o boot segue', async () => {
+    await expect(
+      startRuntimeGuards({
+        APP_ENV: 'production',
+        NODE_ENV: 'production',
+        BLIND_INDEX_PEPPER: 'p'.repeat(40),
+      }),
+    ).resolves.toBeUndefined();
+  });
+});

@@ -25,6 +25,7 @@ import {
   LoadingIndicator,
 } from '@/components/feedback';
 import { Modal } from '@/components/modal';
+import { SafeForm } from '@/components/safe-form';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { ProfessionalDto, UserAccountDto } from '@/lib/dto';
@@ -560,7 +561,7 @@ function AccountForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <label className="font-medium text-sm">
         Email *
@@ -637,6 +638,6 @@ function AccountForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Criando…' : 'Criar conta'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

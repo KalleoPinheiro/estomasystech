@@ -3,7 +3,7 @@
  * descartáveis, argumentos do compose e o resumo impresso. Sem I/O, para testar sem Docker.
  * O fluxo que usa isto é `scripts/ambiente/local.ts`.
  */
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { assertNotProductionDatabase, resolveAppEnv } from '../../src/lib/runtime-env';
 
 /** Projeto do compose: volumes próprios, sem colidir com `docker compose up` do dia a dia. */
@@ -81,6 +81,14 @@ export function assertLocalEnvironment(env: Env = process.env): void {
   }
 }
 
+/**
+ * Pepper do índice cego (#734) do ambiente local: derivado da chave de dados descartável, então
+ * é estável entre `up`s sem virar mais um segredo guardado no estado.
+ */
+export function localBlindIndexPepper(secrets: LocalSecrets): string {
+  return createHash('sha256').update(`blind-index:${secrets.dataEncryptionKey}`).digest('hex');
+}
+
 /** Variáveis lidas pelo compose (`docker-compose.yml` + `docker-compose.local.yml`). */
 export function composeEnv(secrets: LocalSecrets, ports: LocalPorts): Record<string, string> {
   return {
@@ -89,6 +97,7 @@ export function composeEnv(secrets: LocalSecrets, ports: LocalPorts): Record<str
     APP_PORT: String(ports.app),
     AUTH_SECRET: secrets.authSecret,
     DATA_ENCRYPTION_KEY: secrets.dataEncryptionKey,
+    BLIND_INDEX_PEPPER: localBlindIndexPepper(secrets),
     APP_URL: `http://localhost:${ports.app}`,
   };
 }

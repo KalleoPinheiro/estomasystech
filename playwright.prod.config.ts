@@ -3,6 +3,7 @@ import base from "./playwright.config";
 import {
   E2E_AUTH_SECRET,
   E2E_BOOTSTRAP_TOKEN,
+  E2E_BLIND_INDEX_PEPPER,
   E2E_DATA_ENCRYPTION_KEY,
   MAIN_BASE_URL,
   ROLE_ACCOUNT_SPECS,
@@ -41,6 +42,8 @@ export default defineConfig({
         AUTH_SECRET: E2E_AUTH_SECRET,
         // Produção exige a chave do dado clínico (#195, ADR-006).
         DATA_ENCRYPTION_KEY: E2E_DATA_ENCRYPTION_KEY,
+        // Produção exige o pepper do índice cego (#734, ADR-096).
+        BLIND_INDEX_PEPPER: E2E_BLIND_INDEX_PEPPER,
         ESTOMASYSTECH_BOOTSTRAP_TOKEN: E2E_BOOTSTRAP_TOKEN,
         APP_URL: MAIN_BASE_URL,
         API_RATE_LIMIT_MAX: "100000",

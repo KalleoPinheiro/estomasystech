@@ -52,7 +52,9 @@ export function monthsFromCivilToday(
  * mais "hoje".
  */
 export async function goToMonth(page: Page, target: YMD): Promise<void> {
-  const label = await page.getByText(/ de \d{4}$/).textContent();
+  // Só o rótulo do conteúdo principal: durante o streaming o React ainda mantém, fora do <main>,
+  // a cópia oculta do fragmento (`<div hidden>`), e o `getByText` solto casava as duas (strict mode, #679).
+  const label = await page.locator("#conteudo-principal").getByText(/ de \d{4}$/).textContent();
   const match = label?.match(/^(\p{L}+) de (\d{4})$/u);
   if (!match) {
     throw new Error(`Rótulo de mês não reconhecido: "${label}"`);

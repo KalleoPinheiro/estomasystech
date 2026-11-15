@@ -4,6 +4,7 @@ import { Button, Input } from '@still-void/ui/react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { apiFetch } from '@/lib/client';
 
 /**
@@ -43,13 +44,14 @@ export function ForgotPasswordForm() {
       {sent ? (
         <p className="text-sm">{NEUTRAL_CONFIRMATION}</p>
       ) : (
-        <form onSubmit={handleSubmit}>
+        <SafeForm onSubmit={handleSubmit}>
           {error && <ErrorAlert message={error} />}
           <label className="font-medium text-sm">
             E-mail
             <Input
               required
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
@@ -64,7 +66,7 @@ export function ForgotPasswordForm() {
           >
             {submitting ? 'Enviando…' : 'Enviar link'}
           </Button>
-        </form>
+        </SafeForm>
       )}
       {/* Clínica sem canal de e-mail não envia o link (C2, #265): o caminho é o admin. */}
       <p className="mt-4 text-ink-3 text-sm">

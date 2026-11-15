@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
 import { IdentityImageField } from '@/components/identity-image-field';
 import { OtpauthQr } from '@/components/otpauth-qr';
+import { SafeForm } from '@/components/safe-form';
 import { MIN_PASSWORD_LENGTH } from '@/domain/auth/password-policy';
 import { apiFetch } from '@/lib/client';
 import { useApiQuery } from '@/lib/use-api-query';
@@ -112,7 +113,7 @@ function PasswordCard() {
 
   return (
     <Card>
-      <form onSubmit={handleSubmit} className="p-4">
+      <SafeForm onSubmit={handleSubmit} className="p-4">
         <h2 className="font-semibold text-base">Trocar a senha</h2>
         <p className="mt-1 mb-4 text-ink-3 text-sm">
           Pelo menos {MIN_PASSWORD_LENGTH} caracteres e nada de senhas comuns.
@@ -167,7 +168,7 @@ function PasswordCard() {
         >
           {submitting ? 'Salvando…' : 'Trocar senha'}
         </Button>
-      </form>
+      </SafeForm>
     </Card>
   );
 }
@@ -276,7 +277,7 @@ function EnableMfa({ onDone }: { onDone: () => void }) {
 
   if (enrollment) {
     return (
-      <form onSubmit={confirm}>
+      <SafeForm onSubmit={confirm}>
         <p className="mt-1 mb-3 text-ink-3 text-sm">
           No app autenticador (Google Authenticator, Authy, 1Password…), leia o
           QR code, adicione a chave abaixo ou abra o link neste aparelho. Depois
@@ -318,12 +319,12 @@ function EnableMfa({ onDone }: { onDone: () => void }) {
         >
           {submitting ? 'Confirmando…' : 'Confirmar'}
         </Button>
-      </form>
+      </SafeForm>
     );
   }
 
   return (
-    <form onSubmit={start}>
+    <SafeForm onSubmit={start}>
       <p className="mt-1 mb-3 text-ink-3 text-sm">
         Desligado. Ligue para pedir um código do celular a cada entrada. Ao
         ligar, as suas outras sessões são encerradas.
@@ -348,6 +349,6 @@ function EnableMfa({ onDone }: { onDone: () => void }) {
       >
         {submitting ? 'Iniciando…' : 'Ligar segundo fator'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

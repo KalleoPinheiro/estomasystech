@@ -1,0 +1,6 @@
+## Handoff por issue em arquivo próprio (#799, ADR-102) (2026-11-09) — EM REVISÃO
+- **Por quê**: toda PR acrescentava no fim do `handoff-2026.md` e conflitava a cada merge na release. `merge=union` não vale: o GitHub não aplica drivers de merge no merge da PR.
+- **O que mudou**: cada PR cria `.specs/archive/handoff/<issue>-<slug>.md`; o `handoff-2026.md` fica congelado. Novos `npm run check:handoff` (falha se a PR toca `src/`, `drizzle/`, `Dockerfile`, workflows ou `scripts/release/` sem handoff novo; editar o congelado só avisa) e `npm run handoff:agregar` (gera `reports/handoff-agregado.md`). `check:handoff` entra no `ci.yml` ao lado do changeset. Referências atualizadas em `AGENTS.md`, `coordenacao.md`, `fix-audit-issues.md` e `rotina-mensal.yml`. ADR-102.
+- **Testes**: novo `tests/scripts/release-handoff.test.ts`; nenhum teste existente alterado. O check mora em `scripts/release/`, não em `scripts/gate/` (não é regra 8). Alterar `ci.yml` é classe 3.
+- **Fora do repositório (só o Kalléo)**: aprovar a classe 3 e mergear. PRs em voo com entrada no `handoff-2026.md` devem mover a entrada para o arquivo novo ao atualizar a branch; o aviso do check vira falha depois que elas entrarem.
+- **Next step**: the-judge em thread nova. **Blockers**: nenhum.

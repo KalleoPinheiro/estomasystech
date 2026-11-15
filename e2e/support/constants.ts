@@ -52,6 +52,8 @@ export const E2E_AUTH_SECRET = secretFromEnv("E2E_AUTH_SECRET", 32);
 export const E2E_BOOTSTRAP_TOKEN = secretFromEnv("E2E_BOOTSTRAP_TOKEN", 18);
 /** Chave do dado clínico do servidor de produção da suíte (#195) — gerada por execução. */
 export const E2E_DATA_ENCRYPTION_KEY = secretFromEnv("E2E_DATA_ENCRYPTION_KEY", 32);
+/** Pepper do índice cego do servidor de produção da suíte (#734) — gerado por execução. */
+export const E2E_BLIND_INDEX_PEPPER = secretFromEnv("E2E_BLIND_INDEX_PEPPER", 32);
 
 /**
  * Conta Super Admin criada pelo bootstrap. É o operador da plataforma (ADR-007):

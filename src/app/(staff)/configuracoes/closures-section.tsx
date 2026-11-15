@@ -22,6 +22,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import {
   type ClosureActor,
   canManageClosure,
@@ -220,7 +221,7 @@ function ClosureForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="font-medium text-sm">
@@ -282,7 +283,7 @@ function ClosureForm({
       >
         {saving ? 'Salvando…' : 'Adicionar bloqueio'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
 

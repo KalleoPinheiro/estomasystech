@@ -4,6 +4,7 @@ import { Button, Checkbox, Input } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert, LoadingIndicator } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { fromTimeInput, toTimeInput } from '@/domain/scheduling/time-of-day';
 import { unwrapAction } from '@/lib/action-result';
 import type { ProfessionalDto, WeeklyWindowDto } from '@/lib/dto';
@@ -116,7 +117,7 @@ function AvailabilityEditor({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <p className="text-ink-3 text-sm">
         Marque os dias em que o profissional atende. Sem nenhum dia marcado, ele
@@ -155,6 +156,6 @@ function AvailabilityEditor({
       <Button type="submit" variant="accent" disabled={saving}>
         {saving ? 'Salvando…' : 'Salvar horários'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

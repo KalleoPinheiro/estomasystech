@@ -3,7 +3,7 @@
  * exatamente as mesmas checagens, em segundos, antes do gate de ~42 min.
  */
 import { spawnSync } from 'node:child_process';
-import { approvalBranch, cutStart, type PrBody, prNumbersFromSubjects } from './cut-lib';
+import { approvalBranch, cutStart, integrityArgs, type PrBody, prNumbersFromSubjects } from './cut-lib';
 import { must, sh, versionFromReleaseBranch } from './lib';
 
 export function fail(message: string): never {
@@ -62,7 +62,6 @@ export function batchPrs(): PrBody[] {
   });
 }
 
-export function checkIntegrity(testeAlterado: string | null): void {
-  const motivo = testeAlterado ? ['--motivo', testeAlterado.replace(/^TESTE-ALTERADO:\s*/, '')] : [];
-  live('npx', ['tsx', 'scripts/gate/check-test-integrity.ts', 'origin/main', ...motivo]);
+export function checkIntegrity(testeAlterado: string | null, gateAlterado: string | null = null): void {
+  live('npx', ['tsx', 'scripts/gate/check-test-integrity.ts', 'origin/main', ...integrityArgs(testeAlterado, gateAlterado)]);
 }

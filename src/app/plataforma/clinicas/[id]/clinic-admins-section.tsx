@@ -22,6 +22,7 @@ import {
   ErrorAlert,
   LoadingIndicator,
 } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import { StatusBadge } from '@/components/status-badge';
 import { apiFetch } from '@/lib/client';
 import type { ClinicAdminDto, PlatformClinicDto } from '@/lib/dto';
@@ -328,7 +329,10 @@ function InviteAdminForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 flex max-w-xl flex-col gap-3">
+    <SafeForm
+      onSubmit={handleSubmit}
+      className="mt-6 flex max-w-xl flex-col gap-3"
+    >
       <h3 className="font-semibold text-base">Convidar Admin de Empresa</h3>
       {suspended ? (
         <p className="text-ink-3 text-sm">
@@ -363,6 +367,6 @@ function InviteAdminForm({
           {saving ? 'Convidando…' : 'Convidar admin'}
         </Button>
       </div>
-    </form>
+    </SafeForm>
   );
 }

@@ -1,0 +1,8 @@
+{
+  "$comentario": "Registro único dos agentes de código (ADR-106). Agente novo = uma linha aqui + um teste em tests/scripts/release-posse.test.ts. `trailer` é um regex (sem barras, sem diferença de caixa) casado depois de `Co-authored-by:`. A label de posse é sempre `dono:<nome>`. `legado` só existe para PRs e issues antigos: não recebe trabalho novo.",
+  "agentes": [
+    { "nome": "claude", "situacao": "ativo", "prefixoBranch": "claude/", "trailer": "claude\\b" },
+    { "nome": "codex", "situacao": "ativo", "prefixoBranch": "codex/", "trailer": "(?:openai\\s+)?codex\\b" },
+    { "nome": "cursor", "situacao": "legado", "prefixoBranch": "cursor/", "trailer": "cursor agent\\b" }
+  ]
+}

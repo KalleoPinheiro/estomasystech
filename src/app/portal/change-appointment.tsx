@@ -10,6 +10,7 @@ import {
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { SafeForm } from '@/components/safe-form';
 import {
   PATIENT_CHANGE_MIN_NOTICE_HOURS,
   patientChangeDeadline,
@@ -135,7 +136,7 @@ function CancelPanel({
   return (
     <Card className="border-danger">
       <CardContent className="p-3">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-2">
           {error && <ErrorAlert message={error} />}
           <label className="font-medium text-sm">
             Motivo (opcional)
@@ -156,7 +157,7 @@ function CancelPanel({
           >
             {saving ? 'Cancelando…' : 'Confirmar cancelamento'}
           </Button>
-        </form>
+        </SafeForm>
       </CardContent>
     </Card>
   );

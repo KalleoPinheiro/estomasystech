@@ -84,6 +84,7 @@ jobs:
           POSTGRES_PASSWORD: build-only
           AUTH_SECRET: build-only
           DATA_ENCRYPTION_KEY: build-only
+          BLIND_INDEX_PEPPER: build-only
           RESEND_API_KEY: build-only
           EMAIL_FROM: build-only
         run: docker compose build

@@ -1,6 +1,6 @@
 {
   "name": "estomasystech",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "private": true,
   "packageManager": "npm@11.21.1",
   "engines": {
@@ -46,6 +46,10 @@
     "gate:local": "tsx scripts/gate/local.ts",
     "changeset": "changeset",
     "check:changeset": "tsx scripts/release/check-changeset.ts",
+    "check:handoff": "tsx scripts/release/check-handoff.ts",
+    "handoff:agregar": "tsx scripts/release/handoff-agregar.ts",
+    "check:posse": "tsx scripts/release/check-posse.ts",
+    "estado": "tsx scripts/release/estado-release.ts",
     "check:migracao": "tsx scripts/release/check-migracao.ts",
     "check:risco": "tsx scripts/release/classificar-risco.ts",
     "check:veredito": "tsx scripts/release/veredito-judge.ts",

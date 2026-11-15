@@ -4,6 +4,7 @@ import { Button, Input, NativeSelect, Textarea } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { PatientPicker } from '@/components/patient-picker';
+import { SafeForm } from '@/components/safe-form';
 import {
   DEFAULT_SCHEDULE_CONFIG,
   describeSchedule,
@@ -135,7 +136,7 @@ export function AppointmentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} variant={errorVariant} />}
       {/* Com erro de regra na tela, a faixa de erro já traz o horário: evita a mensagem em dobro (#478). */}
       {!error && (
@@ -269,7 +270,7 @@ export function AppointmentForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-2">
         {saving ? 'Agendando…' : 'Agendar consulta'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }
 

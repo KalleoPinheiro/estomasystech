@@ -5,6 +5,7 @@ import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { PatientPicker } from '@/components/patient-picker';
+import { SafeForm } from '@/components/safe-form';
 import { unwrapAction } from '@/lib/action-result';
 import { clinicDayEnd } from '@/lib/clinic-calendar';
 import type { ProcedureDto } from '@/lib/dto';
@@ -64,7 +65,7 @@ export function PackageForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
       <PatientPicker
         label="Paciente *"
@@ -133,6 +134,6 @@ export function PackageForm({
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
         {saving ? 'Vendendo…' : 'Vender pacote'}
       </Button>
-    </form>
+    </SafeForm>
   );
 }

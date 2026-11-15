@@ -55,6 +55,6 @@ jobs:
           - [ ] **fail2ban:** `sudo fail2ban-client status sshd` sem ban estranho.
           - [ ] **Firewall local:** `systemctl status fw-estomasystech --no-pager` ativo e sem erro.
           - [ ] **Monitores:** UptimeRobot verde em `/api/health/ready`; sem falha em *Scheduled Tasks → Executions*.
-          - [ ] **Registro:** data, versões e resultado anotados em `.specs/archive/handoff-2026.md`.
+          - [ ] **Registro:** data, versões e resultado anotados em `.specs/archive/handoff/<issue>-<slug>.md`.
           CHECKLIST
           gh issue create --title "$titulo" --body-file corpo.md

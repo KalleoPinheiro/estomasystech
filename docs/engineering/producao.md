@@ -29,7 +29,7 @@ Fonte da verdade do que **está rodando**; o resto do runbook diz como montar e 
 | Versão em produção | `v0.1.0` = commit `1aa5b27` (`docs(producao): avisos por e-mail do GlitchTip pelo Resend`, #399), deploy manual de 2026-10-19 (conferido no *Deployments* do Coolify em 2026-10-24). É a tag-base do lote da v0.2.0 (`release:prepare` lista só as migrações depois dela) e o alvo do *Redeploy* de rollback (§ 3.1) |
 | App | Recurso "Dockerfile" (porta 3000), **deploy manual** (sem deploy automático por push); heap do build no `Dockerfile` ([#383](https://github.com/KalleoPinheiro/estomasystech/pull/383)) |
 | Banco | PostgreSQL 18 (`postgres:18-alpine`) gerenciado pelo Coolify, privado (sem porta pública). Backup **cifrado** (`age`) do banco e das fotos às 02:00 de São Paulo para o R2 na UE (§ 5, desde 2026-10-18). Compose, CI e smoke rodam no mesmo major ([ADR-037](../adr/037-postgres-18-em-producao-e-alinhamento-do-dev.md)); os testes de unidade usam PGlite |
-| Variáveis | 10 só de runtime: `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`, `GLITCHTIP_DSN` (desde 2026-10-19). `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap |
+| Variáveis | 11 só de runtime (a 11ª, `BLIND_INDEX_PEPPER`, entra na v0.7.0, #734): `APP_URL`, `TRUSTED_PROXY_HOPS=1`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `BLIND_INDEX_PEPPER`, `CRON_SECRET`, `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `ALERT_EMAIL_TO`, `GLITCHTIP_DSN` (desde 2026-10-19). `ESTOMASYSTECH_BOOTSTRAP_TOKEN` foi **removido** depois do bootstrap. `BLIND_INDEX_PEPPER` (≥ 32 caracteres, gere com `openssl rand -base64 32`) é obrigatória: sem ela o app não sobe; na rotação o valor antigo vai para `BLIND_INDEX_PEPPER_PREVIOUS` (§ 6) |
 | Fotos | volume do Coolify em `/app/uploads` (uma réplica) |
 | Migrações | aplicadas no boot, com advisory lock; `/api/health/ready` responde `200` ([#384](https://github.com/KalleoPinheiro/estomasystech/pull/384)) |
 | Jobs | Scheduled Tasks do Coolify, não crontab do host (§ 7) |
@@ -114,6 +114,7 @@ Provisionamento, uma vez:
    POSTGRES_PASSWORD=...      # openssl rand -hex 24
    AUTH_SECRET=...            # openssl rand -hex 32
    DATA_ENCRYPTION_KEY=...    # openssl rand -hex 32 — cópia no cofre (§ 6)
+   BLIND_INDEX_PEPPER=...     # openssl rand -hex 32 — só runtime, cópia no cofre (§ 6); sem ela o app não sobe
    CRON_SECRET=...            # openssl rand -hex 24
    ESTOMASYSTECH_BOOTSTRAP_TOKEN=...  # só até o primeiro acesso (§ 8)
    RESEND_API_KEY=...         # canal da plataforma: convite do Super Admin e alertas (§ 9)
@@ -231,9 +232,9 @@ O deploy é **manual** (botão *Deploy* no Coolify): nada sobe sozinho por um pu
 proposital enquanto as migrações não têm `down`
 ([ADR-039](../adr/039-deploy-manual-no-coolify-sem-down-de-migracao.md)).
 
-> **Em planejamento (não vigente):** [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md)
-> propõe automatizar tag, backup, deploy e fumaça por um workflow com aprovação humana. Até ele ser aceito
-> e implementado, o roteiro abaixo é o único em vigor.
+> **Aceito, ainda não implementado:** [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md)
+> automatiza tag, backup, deploy e fumaça por um workflow com aprovação humana. A primeira release no fluxo
+> novo é a v0.8.0; até lá (v0.7.0 inclusive) o roteiro abaixo é o único em vigor.
 
 > **Fluxo em transição ([ADR-097](../adr/097-fluxo-enxuto-ate-a-producao-com-portoes-deterministicos.md)):**
 > o caminho até a produção será enxugado em fases (checks determinísticos, aprovação humana só em risco alto,
@@ -245,6 +246,12 @@ proposital enquanto as migrações não têm `down`
    `npm run release:publish -- --rollback=...` cria a tag `vX.Y.Z` no commit de merge e publica a
    Release (changelog, migrações do lote e rollback declarado). O deploy é **dessa tag**. Fluxo completo
    em [`homologacao.md`](homologacao.md) § 1.
+   **Alternativa pelo Actions (ADR-095, `release-deploy.yml`):** depois do merge na `main`, dispare o
+   workflow *Release deploy* **da `main`** com `version` (X.Y.Z) e `rollback`. O job `publicar` confere que o HEAD
+   é o merge de `release/vX.Y.Z` e que `package.json` e o `CHANGELOG.md` trazem a versão, e roda o mesmo
+   `release:publish` com o `RELEASE_CUT_TOKEN` (idempotente). Use `dry_run` para só conferir. O `fumaca` roda a
+   fumaça do § 9.6; depois do deploy manual, redispare com `versao_implantada` para conferir a versão
+   servida. Backup e deploy pelo Actions entram na #752 (v0.8.0); até lá os passos 2 e 3 seguem manuais.
 1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde (E2E e mutação rodam no Actions,
    [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)), e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da
@@ -272,6 +279,7 @@ proposital enquanto as migrações não têm `down`
    depois dele) ou escreva uma migração nova que desfaça a mudança. Decida **antes** do deploy qual
    dos dois vale para o lote.
 7. **Depois:** apague do Coolify variável de contorno que sobrou e registre a versão e o commit no handoff.
+8. **Fechar o lote (ADR-108 § 5):** com a versão conferida em produção, o agente que conduz a release fecha as issues da versão (label `vX.Y.Z`); a integração leva as EST para "Em produção". Remova `aguarda-operador` do que foi ativado. Nenhum script faz isso ainda (#835).
 
 ## 4. Migrações
 
@@ -337,7 +345,7 @@ Meta decidida: RPO 24 h, RTO 4 h. Desenho: [ADR-040](../adr/040-backup-cifrado-n
 | Destino | `/var/backups/estomasystech/<data UTC>/` no servidor e cópia num **bucket R2 com jurisdição `eu`** (`BACKUP_RCLONE_DEST`) |
 | Retenção | 7 dias no servidor (`BACKUP_KEEP_DAYS`); no R2, **trava de objeto de 30 dias** (nem o token do servidor apaga) e ciclo de vida que apaga com 35 |
 | Falha | e-mail ao operador por `msmtp` no SMTP do Resend (`OnFailure`, [`scripts/backup-alert.sh`](../../scripts/backup-alert.sh)) |
-| Chaves | `DATA_ENCRYPTION_KEY` (e as anteriores) e a chave privada `age` no cofre de segredos, **nunca** dentro do backup |
+| Chaves | `DATA_ENCRYPTION_KEY` e `BLIND_INDEX_PEPPER` (e as anteriores) e a chave privada `age` no cofre de segredos, **nunca** dentro do backup |
 
 O backup nativo do Coolify (03:00, bucket `estomasystech-backups`) **não é cifrado**: desligue o
 envio dele para o S3 depois do primeiro backup cifrado conferido e da primeira restauração de
@@ -584,6 +592,7 @@ controle de versão. Nenhum dos dois entra no backup. Trocar uma variável no Co
 | --- | --- | --- |
 | `AUTH_SECRET` | incidente ou troca de pessoal | derruba **todas** as sessões (todos logam de novo). Não afeta o dado clínico ([ADR-006](../adr/006-chave-de-dados-clinicos.md)); mantenha o valor antigo só se ainda houver dado no formato legado (antes de rodar a recifra) |
 | `DATA_ENCRYPTION_KEY` | anual ou incidente | 1) valor atual → `DATA_ENCRYPTION_KEY_PREVIOUS`; 2) novo valor em `DATA_ENCRYPTION_KEY`; 3) deploy; 4) `npm run data:reencrypt`; 5) quando o script reportar 0 pendências, remova o antigo de `_PREVIOUS`. Guarde a chave antiga no cofre enquanto houver backup (30 dias) cifrado com ela |
+| `BLIND_INDEX_PEPPER` | anual ou incidente | chave do índice cego da PII cifrada ([ADR-096](../adr/096-pii-cifrada-em-repouso-com-indice-cego-e-busca-por-nome-em-memoria.md), `src/lib/blind-index.ts`). **Só runtime**: o build não a exige, e em produção o app recusa subir sem ela (mínimo 32 caracteres). Rotação: 1) valor atual → `BLIND_INDEX_PEPPER_PREVIOUS`; 2) novo valor em `BLIND_INDEX_PEPPER`; 3) deploy (a busca testa o hash atual e os anteriores); 4) reindexar com o `data:reencrypt` estendido (#735 em diante); 5) remover o antigo de `_PREVIOUS`. Perda é recuperável (gera outro e reindexa decifrando o dado), mas a busca por CPF, telefone e e-mail fica fora até lá |
 | Senha do Postgres | incidente | no Coolify a senha é do recurso do banco: troque lá e atualize a `DATABASE_URL` do app, depois *Deploy*. No compose: `ALTER ROLE estomasystech PASSWORD '…'` no `db`, novo valor no `.env`, `docker compose up -d` |
 | Chave `age` do backup | incidente ou troca de operador | gere outra, troque `/etc/estomasystech/backup.pub`; guarde a privada antiga enquanto houver backup (30 dias) cifrado com ela |
 | `ESTOMASYSTECH_BOOTSTRAP_TOKEN` | — | só serve enquanto não existe nenhuma conta; **removido** da produção depois do primeiro acesso (§ 8) |
@@ -967,6 +976,15 @@ do `COMPOSE_FILE`, com `GLITCHTIP_DB_PASSWORD` (`openssl rand -hex 24`) e `GLITC
 O modo `all_in_one` usa cerca de 512 MB a mais.
 
 ### 9.6 Fumaça pós-deploy (somente leitura)
+
+**Automática (ADR-095):** `FUMACA_URL=https://… FUMACA_VERSAO=X.Y.Z scripts/release/fumaca-producao.sh`
+roda a tabela abaixo sem login e sem escrita (liveness, readiness, TLS/HSTS, redirecionamento HTTPS, CSP
+com nonce, cabeçalhos, rotas de job fechadas e versão pública em `GET /api/health/version`, que devolve só
+`{ version }`, sem SHA). Com `FUMACA_SHA_ESPERADO` e `FUMACA_SHA_IMPLANTADO` (lido no Coolify) confere
+também o SHA do deployment. `FUMACA_PESADA=1` liga o passo opcional `fumaca_pesada` (9 logins falhos e rajada
+de 300 requisições), que dispara limite por IP: não entra no automático. Imprime `OK <item>` ou
+`FALHOU <item>: <motivo>`, nunca corpo de resposta, e sai 1 se algo falhou. Os comandos manuais abaixo
+continuam valendo para investigar um item.
 
 Roda depois de todo deploy e em qualquer revisão de produção. Não escreve nada, não usa login nem
 dado de paciente. Substitua `U=https://estomasystech.kalleopinheiro.com.br`.

@@ -1,0 +1,5 @@
+## Neutralidade de agente no registro de posse (#822, ADR-106) (2026-11-14) — EM REVISÃO
+- **O que mudou**: `scripts/release/agentes.json` (claude e codex ativos, cursor legado); `posse-lib.ts`, `check-posse.ts` e `estado` leem o registro, sem nome de fornecedor no código. ADR-106 (emenda aos 103/104; 105 é do PR #821), `convivencia-llms.md` § 8, índice do `docs/README.md`, `AGENTS.md` (150 linhas, seção de ambiente renomeada). `.cursor/rules` e `.github/copilot-instructions.md` já só apontavam para o `AGENTS.md`; nada apagado.
+- **Decisões**: legado continua aceito pelo check (PRs antigos como o #811); só o estado o oculta quando vazio. Trailer do Codex é suposição (`Co-authored-by: Codex` ou `OpenAI Codex`); sem trailer o PR reprova (falha fechada).
+- **Testes**: 7 novos em `tests/scripts/release-posse.test.ts`; nenhum existente alterado. Sem `src/`, `drizzle/` ou `Dockerfile`: sem changeset. Classe 3 (`scripts/release/`, comentário no `ci.yml`): clique do Kalléo.
+- **Pendente do Kalléo/coordenação**: criar a label `dono:codex` no GitHub; confirmar como o Codex assina os commits.

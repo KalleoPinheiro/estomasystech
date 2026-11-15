@@ -3,7 +3,7 @@ title: "Homologação — Vercel, Neon, MSW, faker e fluxo de git"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-03
+last_reviewed: 2026-11-14
 related: [docs/engineering/homologacao-cenarios.md, docs/adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md, docs/adr/041-homologacao-na-vercel-e-branch-staging.md, docs/adr/052-fluxo-de-git-com-release-aberta-e-main-so-homologada.md, docs/engineering/producao.md, docs/engineering/onboarding.md]
 ---
 
@@ -44,11 +44,16 @@ staging ═══ = release aberta (ou = main, sem release) ═══▶   desca
 | `staging` é reconstruída, não consertada | conflito ou migração colidente: reconstrua; nunca resolva em `staging` |
 | Staging aprovada | quem validou cria ou move a marca `homologacao/vX.Y.Z` para o SHA aprovado (`git push --force origin <sha>:refs/heads/homologacao/vX.Y.Z`) ([ADR-071](../adr/071-corte-de-release-em-comando-unico.md)) |
 | Homologar pelo Actions | workflow **Staging** (`workflow_dispatch`), ref = `release/vX.Y.Z`, inputs `release_branch=release/vX.Y.Z` e `homologar` marcado: reconstrói a staging, espera o deploy, roda a validação logada (§ 7) e, só verde, grava `homologacao/vX.Y.Z` ([ADR-099](../adr/099-homologacao-sem-operador-pelo-actions.md)). Segredos: `STAGING_SEED_PASSWORD`, `VERCEL_AUTOMATION_BYPASS_SECRET`, `RELEASE_CUT_TOKEN`. Com mais de uma release aberta, `staging:rebuild -- --release=release/vX.Y.Z` escolhe a base |
-| Cortar a release | `npm run release:cut -- --rollback=redeploy\|backup` **na release**, no WSL: confere a marca e o TESTE-ALTERADO do lote, roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo (sem mutação; Docker e backup obrigatórios) e abre o PR `release → main`; o E2E e a mutação do PR rodam no Actions, sem recibo colado. Nada entra na release depois disso; se o gate falhar por ambiente, rode o mesmo comando de novo (não versiona outra vez) |
+| Cortar a release | `npm run release:cut -- --rollback=redeploy\|backup` **na release**, no WSL: confere a marca, o TESTE-ALTERADO e o GATE-ALTERADO do lote (consolidados dos corpos dos PRs), roda o `release:prepare` primeiro, o gate da release uma vez em worktree limpo (sem mutação; Docker e backup obrigatórios) e abre o PR `release → main`; o E2E e a mutação do PR rodam no Actions, sem recibo colado. Nada entra na release depois disso; se o gate falhar por ambiente, rode o mesmo comando de novo (não versiona outra vez) |
 | Cortar pelo Actions | workflow **Release cut**, disparado da `main` (único caminho) com o input obrigatório `branch=release/vX.Y.Z`; outra ref ou branch fora do padrão falha logo no primeiro step ([ADR-092](../adr/092-emenda-088-disparo-do-corte-e-selo-sem-furos.md)). Rode antes com `dry_run` marcado: só o pré-voo (`npm run release:preflight`: token, identidade git, rollback, pré-condições, versão que os changesets calculam numa cópia descartável contra o nome da release e permissão), em ~1 min e sem escrever nada. O corte real roda a integração Postgres completa antes do `release:prepare` e grava o selo `release-cut/gate` no SHA final ([ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md)). O workflow instala o npm de `packageManager` e o `release:prepare` (e o pré-voo) recusa npm diferente e lockfile que perca dependências opcionais; no WSL rode `npm i -g npm@<versão>` antes ([ADR-091](../adr/091-npm-fixado-e-lockfile-protegido-no-corte.md)) |
 | Entrar na `main` | o PR aberto pelo `release:cut`; merge **commit** (nunca squash nem rebase). Com o selo no head e a mesma árvore, o `ci` e o Docker do PR (e do push na `main` depois do merge) passam sem repetir a prova pesada; sem selo ou com árvore diferente, rodam inteiros |
-| Depois do merge | `npm run release:publish -- --rollback=...` (tag no commit de merge, Release publicada); deploy da tag em `producao.md` § 3.1. A `staging` volta a ser = `main`. Automação desse trecho em planejamento: [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md) |
+| Depois do merge | `npm run release:publish -- --rollback=...` (tag no commit de merge, Release publicada); deploy da tag em `producao.md` § 3.1. A `staging` volta a ser = `main`. Automação desse trecho aceita, a partir da v0.8.0: [ADR-095](../adr/095-automacao-do-fim-da-release-tag-backup-deploy-e-fumaca.md) |
 | Hotfix | `hotfix/*` nasce da `main`, PR direto na `main` (o Gate do PR roda o E2E), `release:prepare`/`release:publish --hotfix`; o `release:sync` leva a correção para a release aberta |
+
+> **Classe 3 (decidido no [ADR-105](../adr/105-classe-3-dividida-em-3a-automatica-e-3b-humana.md), ainda não implementado, #819):**
+> o PR `release → main` passa a trazer o resumo do que é 3B no lote e o resumo das mudanças 3A que passaram sem clique;
+> o clique do Environment `aprovacao-classe-3` vale uma vez por release para a 3B de produto. Até a #819 entrar, vale
+> o fluxo desta seção sem mudança.
 
 Numeração de migração colidente entre features da release: quem mergeia primeiro mantém o número; a
 outra renumera antes do merge. Reconstruir a `staging` expõe a colisão cedo.
@@ -113,7 +118,7 @@ Todas só para `Preview` e `Production` do projeto de homologação (nunca valor
 | `ESTOMASYSTECH_MIGRATE_ON_BOOT` | `false` |
 | `PG_POOL_MAX` | `5` |
 | `PRODUCTION_DB_HOSTS` | host do banco de produção (trava de segurança) |
-| `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `CRON_SECRET` | valores novos, diferentes dos de produção |
+| `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `BLIND_INDEX_PEPPER`, `CRON_SECRET` | valores novos, diferentes dos de produção. `BLIND_INDEX_PEPPER` (≥ 32 caracteres, só runtime, #734) é obrigatória: a staging roda com `NODE_ENV=production` e o app recusa subir sem ela |
 | `STAGING_SEED_PASSWORD` | senha (≥ 10 caracteres) das contas fictícias |
 | `MOCK_INTEGRATIONS` | `true` |
 | `STAGING_DISABLE_MFA` | `true` só em Production (a staging); nunca em Preview. Dispensa o 2FA no login por e-mail e senha ([ADR-054](../adr/054-staging-sem-2fa-e-contas-ficticias-por-cenario.md)); com `APP_ENV` diferente de `staging` o app recusa subir |
@@ -165,7 +170,7 @@ sem apagar nem duplicar. Massa pesada (pacientes, agenda, faturas, avaliações,
 3. **Integração Neon–Vercel** (Marketplace): ligar ao projeto para injetar `DATABASE_URL` e
    `DATABASE_URL_UNPOOLED`. **Deixe desligado** *Create a branch for every preview deployment* (o plano
    grátis do Neon tem limite de branches e só a `staging` é construída, ADR-061).
-4. **Variáveis** da seção 3; gerar `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` e `CRON_SECRET` novos.
+4. **Variáveis** da seção 3; gerar `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `BLIND_INDEX_PEPPER` e `CRON_SECRET` novos.
 5. **Vercel Authentication** nos previews (Settings → Deployment Protection → Standard).
 6. **GitHub**: criar o branch `staging` (`git push origin origin/main:refs/heads/staging`) e proteger
    (sem push direto de humanos, force-push só do rebuild). Para o fluxo do ADR-052: *Allow merge
