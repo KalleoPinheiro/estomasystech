@@ -13,13 +13,12 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-1. **Cifra do cadastro (P1, LGPD), em andamento.** **#735 + #736 + #737** já estão na `main` (PR #854: migração `0071`
-   aditiva, nome/e-mail/telefone/nascimento cifrados, busca em memória, cursor sem nome, anonimização e
-   `data:reencrypt` estendido). **#738** (CPF único, migração `0072`) também está na `main`. **#739** (responsável
-   cifrado: migração `0073` aditiva, `phone_hash` e `email_hash`, busca no mesmo desenho, `data:reencrypt` cobre
-   `guardians`) também está na `main`. **#740** (medição com 5 mil: p95 abaixo de 200 ms, ADR-074) também está na `main`. A validação limpa do **#741** achou **#860** (P1: busca dá 500 depois de cadastrar como primeira ação no build de produção; `instanceof ValidationError` entre cópias do módulo), corrigido em PR; depois do merge e da staging, nova validação limpa só desse ponto. Faltam, uma por PR: **#741** (validação
-   ponta a ponta) e **#730** (fecha o épico). **Depois do deploy**: backup, `npm run data:reencrypt` pelo dono
-   (exige `BLIND_INDEX_PEPPER`), conferir 0 pendências; a contração (drop de `birth_date`, dos índices GIN) é release seguinte.
+1. **Cifra do cadastro (P1, LGPD): código pronto, falta rodar em produção.** Épico #730 fechado: #735 a #741 e #860
+   estão na `main` e a staging do `0b93990` está verde (migrações `0071` a `0073`, todas aditivas; o #860 era
+   `instanceof ValidationError` entre cópias do módulo no build de produção). A revalidação limpa passou em 8 rodadas.
+   **Depois do próximo deploy** (dono): backup, `npm run data:reencrypt` com `BLIND_INDEX_PEPPER` até a saída dizer
+   «Nada pendente» ([`producao.md`](../../../docs/engineering/producao.md) § 6). A contração (drop de `birth_date` e dos
+   índices GIN) é release seguinte. Pendente à parte: **#862** (E2E de produção a frio em processo dedicado, P2, classe 3).
 2. **#742** (e-mail de login em claro, P2): junto da cifra.
 3. Apontamentos menores: **#744**, **#745**, **#802**, **#849** (P3), **#715**, **#750 a #752** (job de produção e
    rollback; #746 (spike) e #747 (backup) já estão fechadas). **Próximo passo de entrega:** job de deploy com backup
