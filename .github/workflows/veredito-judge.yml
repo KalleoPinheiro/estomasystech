@@ -1,144 +1,22 @@
 name: Veredito do the-judge
 
-# O the-judge roda na thread revisora do Claude Code, sem custo de API (ADR-101, que substitui a parte da ADR-100 que
-# chamava a Anthropic). Ao aprovar, a revisora publica na PR uma review COMMENT cuja primeira linha traz
-# `the-judge/v1` e o veredito `APPROVE`. Este workflow só CONFERE essa review no head SHA (`review-judge.ts`). Todas as
-# PRs dos agentes saem com o login do dono, então autor e rótulo não provam nada; só vale a review do SHA exato.
-#
-# `pull_request_target` roda a versão do workflow e dos scripts da BASE (a PR não consegue trocá-los); o código da PR
-# entra só como dado (checkout em `pr/`, nunca executado, sem `npm ci` dele). Alterar este arquivo é classe 3.
-#
-# - Sem chave de API e sem federação: nenhum segredo nem `id-token`; o job só lê as reviews da PR.
-# - PR de fork: reprova (abra a PR de uma branch do repositório).
-# - Push novo muda o SHA: a review antiga não vale, a revisora julga e publica de novo. Depois de publicar a review,
-#   rode de novo este check (re-run) para ele a ler.
-# - Diff que toca workflows, scripts/release, scripts/gate ou drizzle exige TAMBÉM a aprovação humana da classe 3.
-# - PR release→main não chama o modelo: confere que cada PR da release tem o check aprovado (`conferir-release`).
-# - Chave `VEREDITO_JUDGE_ATIVO` (variável do repositório; a PR não a altera): fora de `true` o check passa com aviso,
-#   só para a introdução. A chave sai na v0.8.0 (ADR-100); depois disso o job falha fechado sempre.
+# ADR-109 (simplificação do fluxo): o the-judge deixou de ser portão mecânico. O CI é o revisor de toda mudança
+# comum; o diff perigoso (login, cifra, escopo de empresa, migração não aditiva, portão e deploy) exige o clique do
+# dono no check "Portão de risco" (`portao-risco.yml`) e, antes dele, a revisão do the-judge na própria sessão.
+# Este arquivo existe só para manter o nome do check que o ruleset da `main` ainda exige; quando o dono o tirar do
+# ruleset, o arquivo pode ser apagado.
 on:
-  pull_request_target:
-    branches: ["release/**", main]
+  pull_request:
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
-concurrency:
-  group: veredito-judge-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
-  julgar:
-    name: Julgar a PR
-    # Fork e rascunho nem rodam o job; o job `veredito` abaixo reprova os dois.
-    if: github.event.pull_request.draft != true && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      protegido: ${{ steps.classe.outputs.protegido }}
-    steps:
-      - name: Chave de introdução
-        id: chave
-        env:
-          ATIVO: ${{ vars.VEREDITO_JUDGE_ATIVO }}
-        run: |
-          echo "ativo=$([ "$ATIVO" = true ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          [ "$ATIVO" = true ] || echo "::warning::VEREDITO_JUDGE_ATIVO não é 'true': o veredito do the-judge NÃO está sendo exigido (ADR-101)"
-
-      # Base (confiável): scripts e dependências.
-      - if: steps.chave.outputs.ativo == 'true'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - if: steps.chave.outputs.ativo == 'true'
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: "24"
-          cache: npm
-
-      - if: steps.chave.outputs.ativo == 'true'
-        run: npm ci --ignore-scripts
-
-      # PR release→main: sem modelo; cada PR da release já foi julgada.
-      - name: Conferir os vereditos das PRs da release
-        if: steps.chave.outputs.ativo == 'true' && github.base_ref == 'main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VEREDITO_JUDGE_DESDE: ${{ vars.VEREDITO_JUDGE_DESDE }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: npx tsx scripts/release/conferir-release.ts --base main --head "$HEAD_SHA"
-
-      # Head da PR (não confiável): só para gerar o diff. Nada dele é executado.
-      - if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          path: pr
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Arquivos da PR
-        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
-        env:
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
-          BASE: origin/${{ github.base_ref }}
-        run: |
-          # Lista separada por NUL e sem aspas: nome com acento não escapa da classificação.
-          git -C pr -c core.quotePath=false diff --name-only -z --no-renames --no-ext-diff --no-textconv "$BASE...$PR_SHA" > "$RUNNER_TEMP/pr.arquivos"
-
-      - name: Classe do diff (caminho protegido)
-        id: classe
-        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
-        run: npx tsx scripts/release/julgar-pr.ts --arquivos "$RUNNER_TEMP/pr.arquivos" --classificar
-
-      - name: Conferir a review the-judge do head
-        if: steps.chave.outputs.ativo == 'true' && github.base_ref != 'main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR_NUMERO: ${{ github.event.pull_request.number }}
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
-        run: npx tsx scripts/release/review-judge.ts --repo "$REPO" --pr "$PR_NUMERO" --sha "$PR_SHA"
-
-  # Diff em caminho protegido: o modelo sozinho nunca basta. Fica parado até o dono aprovar no Environment.
-  humana:
-    name: Aprovação do dono (caminho protegido)
-    needs: julgar
-    if: needs.julgar.outputs.protegido == 'true'
-    environment: aprovacao-classe-3
-    runs-on: ubuntu-slim
-    timeout-minutes: 5
-    steps:
-      - env:
-          PR_SHA: ${{ github.event.pull_request.head.sha }}
-        run: echo "dono aprovou o diff em caminho protegido para $PR_SHA"
-
   veredito:
     name: Veredito do the-judge
-    if: always()
-    needs: [julgar, humana]
     runs-on: ubuntu-slim
     timeout-minutes: 5
     steps:
-      - name: Conferir
-        env:
-          DRAFT: ${{ github.event.pull_request.draft }}
-          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
-          R_JULGAR: ${{ needs.julgar.result }}
-          PROTEGIDO: ${{ needs.julgar.outputs.protegido }}
-          R_HUMANA: ${{ needs.humana.result }}
-        run: |
-          if [ "$DRAFT" = true ]; then echo "::error::PR em rascunho: o the-judge roda quando a PR for marcada como pronta (ADR-093)"; exit 1; fi
-          if [ "$FORK" = true ]; then echo "::error::PR de fork não é julgada (custo e segredo); abra a PR de uma branch do repositório"; exit 1; fi
-          [ "$R_JULGAR" = success ] || { echo "::error::julgamento: $R_JULGAR"; exit 1; }
-          if [ "$PROTEGIDO" = true ]; then
-            [ "$R_HUMANA" = success ] || { echo "::error::diff em caminho protegido sem a aprovação do dono ($R_HUMANA)"; exit 1; }
-          else
-            [ "$R_HUMANA" = skipped ] || { echo "::error::aprovação humana rodou sem caminho protegido ($R_HUMANA)"; exit 1; }
-          fi
-          echo "ok: protegido=${PROTEGIDO:-false}"
+      - run: |
+          echo "ok - sem portão mecânico do the-judge (ADR-109); o perigoso passa pelo Portão de risco"

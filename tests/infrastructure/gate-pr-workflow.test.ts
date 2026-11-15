@@ -33,7 +33,6 @@ const TIMEOUTS: Record<string, Record<string, number>> = {
   '.github/workflows/ci.yml': {
     escopo: 10,
     estatico: 10,
-    'fora-do-selo': 10,
     'cobertura-shard': 15,
     cobertura: 15,
     ci: 15,
@@ -393,9 +392,6 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
     expect(job('cobertura-shard', ci)).toContain(
       "needs.escopo.outputs.pesado == 'true'",
     );
-    expect(job('fora-do-selo', ci)).toContain(
-      "needs.escopo.outputs.completo == 'true'",
-    );
   });
 
   it('C7 mutação por arquivo alterado volta ao PR (ADR-098) e a rodada completa fica no workflow_dispatch mensal', () => {
@@ -413,9 +409,7 @@ describe('Gate do PR só quando está pronto (ADR-093)', () => {
     const agents = read('AGENTS.md');
     expect(adr).toContain('title: "ADR 093');
     expect(adr).toContain('status: frozen');
-    expect(agents).toContain('release/**');
-    expect(agents).toContain('nasce em rascunho');
-    expect(agents).toContain('marcado pronto uma vez');
+    expect(agents).toContain('rascunho');
     expect(agents).toContain(
       '"Gate do PR" e `ci` ficam vermelhos de propósito',
     );

@@ -15,7 +15,7 @@ name: Gate do PR
 # por conveniência: o job final `gate-pr` reprova se um job que devia rodar não passou.
 on:
   pull_request:
-    branches: ["release/**", main]
+    branches: [main]
     # ADR-093: rascunho não paga o gate completo; ready_for_review dispara a rodada no mesmo SHA.
     types: [opened, synchronize, reopened, ready_for_review]
   # Merge queue (ADR-087): a fila monta o SHA com os PRs à frente e o gate roda nele.

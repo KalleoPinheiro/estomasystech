@@ -10,7 +10,7 @@ name: Portão de risco
 # `permissions: contents: read`. Rascunho reprova (ADR-093).
 on:
   pull_request:
-    branches: ["release/**", main]
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
   # Merge queue (ADR-087): a aprovação vale por execução da PR; na fila o portão apenas passa.
   merge_group:

@@ -1,6 +1,7 @@
 ---
 title: "ADR 105 — Classe 3 dividida em 3A automática e 3B humana"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-14

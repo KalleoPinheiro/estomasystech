@@ -1,35 +1,18 @@
 name: Staging
 
-# Homologação (ADR-041, fluxo de git do ADR-052). O deploy é a integração Git da Vercel (push na
-# `staging`); este workflow mantém a `staging` e confere a URL publicada. A cada push na `main` (hotfix ou
-# release mergeada) a `staging` é reconstruída = release aberta (ou = main, se não houver). ADR-088: o job que
-# empurrava a `main` na release foi removido, porque o ruleset `release/**` (PR obrigatório) recusa o push do
-# GITHUB_TOKEN (GH013) e o job falhava em todo push; o merge da `main` na release é de quem tem bypass
-# (`npm run release:sync`), e o `release:cut` já exige a `main` dentro da release. Sem cota de Actions, o mesmo
-# fluxo roda local: `npm run staging:rebuild -- --release --push` e `curl` na URL.
+# Staging automática a cada entrada na `main` (ADR-109, que simplifica o ADR-041/052/099). O deploy é a
+# integração Git da Vercel (push na `staging`); este workflow reconstrói a `staging` a partir da `main`, espera o
+# deploy, confere o health e roda a validação logada (3 papéis, 4 larguras: 360, 390, 768 e 1280) sozinha. Sem
+# marca de homologação: a produção é um clique do dono depois de a validação passar.
 on:
   push:
     branches: [main]
   workflow_dispatch:
     inputs:
       branches:
-        description: "Branches extras a mergear na staging (separadas por espaço); vazio = só a base"
+        description: "Branches extras a mergear na staging (separadas por espaço); vazio = só a main"
         required: false
         default: ""
-      release:
-        description: "Base da staging = release aberta (desmarcado: a main)"
-        type: boolean
-        required: false
-        default: true
-      release_branch:
-        description: "release/vX.Y.Z a homologar (vale mesmo com mais de uma release aberta); vazio = a única aberta"
-        required: false
-        default: ""
-      homologar:
-        description: "Depois do deploy: smoke, validação logada e marca homologacao/vX.Y.Z (exige release_branch)"
-        type: boolean
-        required: false
-        default: false
   deployment_status:
 
 concurrency:
@@ -42,13 +25,12 @@ permissions:
 
 jobs:
   rebuild:
-    name: Recriar staging (release aberta ou main, mais branches extras)
+    name: Recriar staging (main mais branches extras)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     outputs:
-      release_sha: ${{ steps.shas.outputs.release_sha }}
       staging_sha: ${{ steps.shas.outputs.staging_sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -60,66 +42,24 @@ jobs:
           git config user.name "KalleoPinheiro"
           git config user.email "15080925+KalleoPinheiro@users.noreply.github.com"
 
-      - name: Validar os inputs da homologação
-        env:
-          RELEASE_BRANCH: ${{ inputs.release_branch }}
-          HOMOLOGAR: ${{ inputs.homologar }}
-          BRANCHES: ${{ inputs.branches }}
-        run: |
-          if [ -n "$RELEASE_BRANCH" ] && ! [[ "$RELEASE_BRANCH" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error title=release_branch inválida::esperado release/vX.Y.Z, veio '${RELEASE_BRANCH}'"
-            exit 1
-          fi
-          if [ "$HOMOLOGAR" = "true" ] && [ -z "$RELEASE_BRANCH" ]; then
-            echo "::error title=homologar sem release::informe release_branch"
-            exit 1
-          fi
-          if [ "$HOMOLOGAR" = "true" ] && [ -n "$BRANCHES" ]; then
-            echo "::error title=homologar com branches extras::a marca atesta a árvore da release; deixe branches vazio"
-            exit 1
-          fi
-
       - name: Reconstruir e publicar
         env:
           BRANCHES: ${{ inputs.branches }}
-          RELEASE_BRANCH: ${{ inputs.release_branch }}
-          # No push na main o input não existe: o padrão é a release aberta.
-          USE_RELEASE: ${{ github.event_name == 'push' || inputs.release }}
         run: |
-          flag=""
-          if [ -n "$RELEASE_BRANCH" ]; then flag="--release=${RELEASE_BRANCH}"
-          elif [ "$USE_RELEASE" = "true" ]; then flag="--release"; fi
           # shellcheck disable=SC2086
-          bash scripts/staging/rebuild.sh $flag --deploy --push $BRANCHES
+          bash scripts/staging/rebuild.sh --deploy --push $BRANCHES
 
-      - name: SHAs da release e da staging publicada
+      - name: SHA da staging publicada
         id: shas
-        env:
-          RELEASE_BRANCH: ${{ inputs.release_branch }}
-        run: |
-          echo "staging_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          if [ -n "$RELEASE_BRANCH" ]; then
-            echo "release_sha=$(git rev-parse "origin/${RELEASE_BRANCH}")" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "staging_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-  # ADR-099 (#765): a homologação sem operador. Depois do push na staging, espera o deploy de Production da Vercel
-  # para o SHA publicado, confere o health e roda a validação logada (scripts/staging/validacao-logada.mjs: 3
-  # papéis, 4 larguras, console, CSP, /api e rolagem). Só com tudo verde grava a marca `homologacao/vX.Y.Z` no
-  # SHA da release, e só se a release não andou desde o rebuild. Falha em qualquer passo = sem marca.
-  # A marca usa o RELEASE_CUT_TOKEN (o GITHUB_TOKEN não cria refs fora do que o ruleset libera).
-  # O checkout não persiste o extraheader: fetch e ls-remote autenticam com helper transitório,
-  # e o push zera http.https://github.com/.extraheader para o PAT da URL autenticar a marca.
-  homologar:
-    name: Homologar a release (deploy, validação logada e marca)
+  validar:
+    name: Validar a staging (deploy, health e validação logada)
     needs: rebuild
-    if: >-
-      github.event_name == 'workflow_dispatch' && inputs.homologar && inputs.release_branch != '' &&
-      (github.ref == 'refs/heads/main' || github.ref == format('refs/heads/{0}', inputs.release_branch))
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      RELEASE_BRANCH: ${{ inputs.release_branch }}
-      RELEASE_SHA: ${{ needs.rebuild.outputs.release_sha }}
       STAGING_SHA: ${{ needs.rebuild.outputs.staging_sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -135,30 +75,12 @@ jobs:
         env:
           SEED: ${{ secrets.STAGING_SEED_PASSWORD }}
           BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          CUT: ${{ secrets.RELEASE_CUT_TOKEN }}
         run: |
           missing=""
           [ -n "$SEED" ] || missing="$missing STAGING_SEED_PASSWORD"
           [ -n "$BYPASS" ] || missing="$missing VERCEL_AUTOMATION_BYPASS_SECRET"
-          [ -n "$CUT" ] || missing="$missing RELEASE_CUT_TOKEN"
           if [ -n "$missing" ]; then
             echo "::error title=Segredo ausente::Crie em Settings > Secrets and variables > Actions:${missing}"
-            exit 1
-          fi
-
-      - name: A staging publicada tem a árvore da release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git -c http.https://github.com/.extraheader= \
-            -c credential.helper= \
-            -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' \
-            fetch --quiet origin "${RELEASE_SHA}" "${STAGING_SHA}"
-          a=$(git rev-parse "${STAGING_SHA}^{tree}")
-          b=$(git rev-parse "${RELEASE_SHA}^{tree}")
-          if [ "$a" != "$b" ]; then
-            echo "::error title=Árvore diferente::a staging (${STAGING_SHA:0:7}) não tem a árvore da release (${RELEASE_SHA:0:7}); não há marca para ela."
             exit 1
           fi
 
@@ -220,25 +142,6 @@ jobs:
           name: validacao-logada
           path: qa-validacao-logada/
           if-no-files-found: ignore
-
-      - name: Gravar a marca de homologação
-        env:
-          GH_TOKEN: ${{ github.token }}
-          CUT_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
-        run: |
-          set -euo pipefail
-          version="${RELEASE_BRANCH#release/}"
-          now=$(git -c http.https://github.com/.extraheader= \
-            -c credential.helper= \
-            -c 'credential.helper=!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f' \
-            ls-remote origin "refs/heads/${RELEASE_BRANCH}" | cut -f1)
-          if [ "$now" != "$RELEASE_SHA" ]; then
-            echo "::error title=A release andou::${RELEASE_BRANCH} está em ${now:0:7}, mas a validação foi do ${RELEASE_SHA:0:7}; rode de novo."
-            exit 1
-          fi
-          [ "$(git rev-parse "${STAGING_SHA}^{tree}")" = "$(git rev-parse "${RELEASE_SHA}^{tree}")" ] || { echo "::error::árvore da staging difere da release"; exit 1; }
-          git -c http.https://github.com/.extraheader= push --force "https://x-access-token:${CUT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${RELEASE_SHA}:refs/heads/homologacao/${version}"
-          echo "homologacao/${version} -> ${RELEASE_SHA}" >> "$GITHUB_STEP_SUMMARY"
 
   smoke:
     name: Fumaça da homologação publicada

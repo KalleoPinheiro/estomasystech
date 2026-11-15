@@ -1,6 +1,7 @@
 ---
 title: "Estado da release v0.4.0 e fila"
-status: living
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [agent, dev, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-10-31

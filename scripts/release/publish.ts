@@ -24,24 +24,16 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function assertOnMain(hotfix: boolean): void {
+function assertOnMain(): void {
   if (must('git', ['status', '--porcelain']) !== '') fail('árvore suja: faça commit ou stash antes.');
   must('git', ['fetch', '-q', '--tags', 'origin', 'main']);
   const onMain =
     must('git', ['rev-parse', '--abbrev-ref', 'HEAD']) === 'main' &&
     must('git', ['rev-parse', 'HEAD']) === must('git', ['rev-parse', 'origin/main']);
   if (!onMain) fail('rode a partir da `main` igual a `origin/main`.');
-  const parents = must('git', ['rev-list', '--parents', '-n', '1', 'HEAD']).split(' ').length - 1;
-  if (parents < 2 && !hotfix) {
-    fail(
-      'o HEAD da main não é um merge commit: a release entrou por squash ou rebase e a tag ficaria fora ' +
-        'do histórico da release (ADR-052). Em PR de `hotfix/*`, use --hotfix.',
-    );
-  }
 }
 
-const hotfix = process.argv.includes('--hotfix');
-assertOnMain(hotfix);
+assertOnMain();
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version as string;
 if (!isSemver(version)) fail(`versão inválida em package.json: ${version}`);
 const tag = tagFor(version);

@@ -9,6 +9,10 @@ related: [docs/engineering/homologacao-cenarios.md, docs/adr/054-staging-sem-2fa
 
 # Homologação
 
+> **Atenção (ADR-109, 2026-11-15):** o fluxo de branch de release, `release:cut` e marca `homologacao/vX.Y.Z` descrito aqui foi
+> substituído: branch curta da `main`, CI como revisor, staging automática a cada entrada na `main` e publicação de produção acionada à mão (tag e fumaça pelo workflow; backup e deploy no Coolify seguem manuais, `producao.md` § 3.1).
+> Vale o `AGENTS.md`; o restante deste guia (seed, cenários, Vercel) segue como referência da staging.
+
 Ambiente público e descartável para ver o lote (release aberta) **antes de entrar na `main`**, só com dados fictícios
 ([ADR-041](../adr/041-homologacao-na-vercel-e-branch-staging.md)). Produção continua na VPS
 ([`producao.md`](producao.md)).

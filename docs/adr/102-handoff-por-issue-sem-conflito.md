@@ -1,6 +1,7 @@
 ---
 title: "ADR 102 — Handoff por issue em arquivo próprio, sem conflito no merge"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-09

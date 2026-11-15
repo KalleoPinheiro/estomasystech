@@ -1,6 +1,7 @@
 ---
 title: "ADR 108 — Sincronia obrigatória entre issue do GitHub, EST do Linear e a fila de próximos passos"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-14

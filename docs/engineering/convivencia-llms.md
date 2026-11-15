@@ -1,6 +1,7 @@
 ---
 title: "Convivência entre orquestradores de LLMs"
-status: living
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [agent, dev, po, ops]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-11
@@ -187,7 +188,7 @@ workflow/ADR paralisa a ação de risco e vira decisão registrada, nunca remoç
 
 - Antes de abrir o PR, reserve a issue: **uma** label `dono:<agente>` (`claude`, `codex`; `cursor` é legado); ela é a posse. Corpo do PR: `Closes #N` (o título com `(#N)` também vale para PR aberto antes do ADR-104). O check `npm run check:posse` confere que o dono é o agente do PR (branch e trailers). Dois agentes no mesmo PR reprovam.
 - Em `feat/*` o agente é identificado pelo trailer dos commits; em `<agente>/*` (`claude/*`, `codex/*`), também pela branch. Ninguém empurra na branch do outro.
-- Os agentes vêm do registro [`scripts/release/agentes.json`](../../scripts/release/agentes.json) (ADR-106): acrescentar um é uma linha mais um teste. Nenhum script nomeia fornecedor. O `AGENTS.md` é a fonte única; `.cursor/rules`, `.github/copilot-instructions.md` e similares só apontam para ele.
+- Os agentes vêm do registro [`scripts/release/agentes.json`](removido pelo ADR-109) (ADR-106): acrescentar um é uma linha mais um teste. Nenhum script nomeia fornecedor. O `AGENTS.md` é a fonte única; `.cursor/rules`, `.github/copilot-instructions.md` e similares só apontam para ele.
 - `npm run estado` gera `reports/estado-release.md` (não versionado): leia ao iniciar a sessão, antes de pedir reserva.
 - A ordem do que vem a seguir mora em [`.specs/archive/handoff/PROXIMOS-PASSOS.md`](../../.specs/archive/handoff/PROXIMOS-PASSOS.md) ([ADR-107](../adr/107-fila-de-proximos-passos-no-handoff.md)): leia junto do estado; todo PR que entrega issue e toda troca de agente a atualizam no mesmo PR. Comentário de issue/PR não substitui.
 - Sincronia ([ADR-108](../adr/108-sincronia-obrigatoria-issue-linear-fila.md)): issue do GitHub, EST do Linear, labels e a fila coerentes em todo PR de entrega e em toda troca de agente; quem assume confere antes de pedir reserva. Depois do merge, mova a EST para "Na release" e mantenha a issue aberta (fechar manda a EST para "Em produção"; mover reabre a issue). Quem fecha é o agente que conduz a release, depois de conferir a versão em produção. Mergeado que espera ativação externa leva a label `aguarda-operador`. `dono:*` e `em-andamento` só com PR aberto.

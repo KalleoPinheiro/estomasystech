@@ -1,6 +1,7 @@
 ---
 title: "ADR 101 — Veredito do the-judge pela review da thread revisora, sem API"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-09

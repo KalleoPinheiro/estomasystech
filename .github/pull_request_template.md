@@ -6,18 +6,7 @@
 
 <!-- Comandos ou passos. O CI roda typecheck, lint, check:sv, check:docs, test:coverage, build, integração, E2E e mutação. -->
 
-<!-- Base do PR (ADR-052): `feat/*` → `release/vX.Y.Z` (squash); `release/*` ou `hotfix/*` → `main` (merge commit para a release). Sem recibo do gate local: o E2E e a mutação rodam no Actions (ADR-098). -->
-
-## Homologação
-
-<!--
-  Obrigatório no PR `feat/* → release/*` que muda `src/`, `drizzle/` ou `Dockerfile` (ADR-052; o CI reprova se faltar).
-  Seed: o que você acrescentou em `scripts/seed/seed.ts` (sucesso e erro), ou `n/a — <motivo>`.
-  Cenários: o roteiro de quem testa na staging, em Dado/Quando/Então (um por linha), ou `Cenários: n/a — <motivo>`.
--->
-Seed:
-Cenários:
-- Dado , Quando , Então
+<!-- Fluxo (ADR-109): branch curta da `main`, PR para a `main` já pronto, auto-merge (squash) com o CI verde. -->
 
 <!-- Só se um teste EXISTENTE mudou porque o requisito de negócio mudou (regra 8); senão apague a linha. -->
 TESTE-ALTERADO:
@@ -42,5 +31,3 @@ TESTE-ALTERADO:
 - [ ] Variável de ambiente nova → `docs/engineering/onboarding.md` § 4 **e** `.env.example`
 - [ ] Mudou `src/`, `drizzle/` ou `Dockerfile` → `.changeset/*.md` (`npm run changeset`; ADR-043)
 - [ ] `npm run check:docs` verde
-- [ ] Cenário novo (sucesso e erro) no seed de homologação `scripts/seed/seed.ts` (ou n/a)
-- [ ] Release: `npm run release:sync` em dia (a `main` já está na release) antes de abrir o PR `release → main`

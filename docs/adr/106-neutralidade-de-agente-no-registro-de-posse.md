@@ -1,6 +1,7 @@
 ---
 title: "ADR 106 — Neutralidade de agente: registro único de agentes para a posse"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-14
@@ -25,7 +26,7 @@ créditos do outro acabam. A regra de convivência não pode depender do nome de
 
 ## Decisão
 
-1. **Registro único e versionado**: [`scripts/release/agentes.json`](../../scripts/release/agentes.json). Cada entrada
+1. **Registro único e versionado**: `scripts/release/agentes.json` (removido pelo ADR-109). Cada entrada
    tem `nome`, `situacao` (`ativo` ou `legado`), `prefixoBranch` (`<nome>/`) e `trailer` (regex do
    `Co-authored-by:`). A label de posse é sempre `dono:<nome>`.
 2. **Agentes**: `claude` e `codex` ativos; `cursor` **legado**, mantido só para PRs e issues antigos (o `check:posse`

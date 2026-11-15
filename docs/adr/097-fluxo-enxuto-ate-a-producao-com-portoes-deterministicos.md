@@ -1,6 +1,7 @@
 ---
 title: "ADR 097 — Fluxo enxuto até a produção: checks determinísticos, portão humano só no risco alto"
-status: frozen
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [dev, ops, agent, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-08

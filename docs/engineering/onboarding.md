@@ -160,11 +160,6 @@ npm run dev                   # http://localhost:3000
 | `GATE_BASE` | não | base do diff de `gate:local`, `check:testes` e `check:changeset` (padrão: a release aberta de que a branch saiu; `release/*`, `hotfix/*` e `main` usam `origin/main`) | [ADR-058](../adr/058-base-do-diff-dos-gates-locais-e-a-release-aberta.md) |
 | `GATE_PERFIL` | não | perfil do `gate:local`: `pr` (padrão fora de `release/*`) ou `release` (sem mutação, Docker e backup obrigatórios); o `release:cut` passa `release` | [ADR-071](../adr/071-corte-de-release-em-comando-unico.md) |
 | `GATE_POSTGRES_PORT` | não | força a porta do Postgres do compose no gate; padrão: a primeira livre a partir de 55432 (o `POSTGRES_PORT` do shell é ignorado) | [ADR-071](../adr/071-corte-de-release-em-comando-unico.md) |
-| `GH_TOKEN` | não | token do `gh` no `release:cut`, no `release:preflight` e no `release-cut.yml` (PAT do dono, `RELEASE_CUT_TOKEN`); no WSL o `gh` logado dispensa | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
-| `GH_REPO` | não | repositório `dono/nome` do `release:preflight` (cai em `GITHUB_REPOSITORY`) | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
-| `GITHUB_REPOSITORY` | não | definida pelo Actions; lida pelo selo do corte e pela prova do corte | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
-| `SELO_TOKEN` | não | `GITHUB_TOKEN` do Actions, passado só pelo `release-cut.yml`: grava o check run `release-cut/gate`; sem ele (corte local) nenhum selo é gravado | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
-| `RELEASE_CUT_ETAPAS_EXTRAS` | não | etapas a mais no selo do corte, separadas por vírgula (o workflow passa `integracao`, que roda antes do `release:prepare`) | [ADR-088](../adr/088-prova-unica-do-corte-e-pre-voo-do-release-cut.md) |
 | `DATABASE_URL_UNPOOLED` | Neon/Vercel | conexão direta usada na migração do build | [homologacao.md](homologacao.md) § 3 |
 | `TZ` | recomendada | fuso do processo Node | `America/Sao_Paulo` na imagem e no compose |
 | `APP_TIMEZONE` | não | fuso das regras: grade da agenda, "amanhã" dos lembretes, horário em e-mails e documentos | padrão `America/Sao_Paulo`; se o processo estiver em outro fuso (ex.: Vercel, sempre UTC), o boot alinha `TZ` a ele |
@@ -188,18 +183,8 @@ npm run dev                   # http://localhost:3000
 | `E2E_AUTH_SECRET` / `E2E_BOOTSTRAP_TOKEN` / `E2E_DATA_ENCRYPTION_KEY` / `E2E_BLIND_INDEX_PEPPER` | não | só para a suíte E2E reaproveitar um `npm run dev` já no ar | ver §5 |
 | `E2E_ADMIN_PASSWORD` / `E2E_CLINIC_ADMIN_PASSWORD` / `E2E_ROLE_PASSWORD` | não | senhas que as contas da suíte E2E definem no convite | geradas a cada execução; defina só para repetir uma execução |
 | `ESTOMASYSTECH_DB_DRIVER` / `ESTOMASYSTECH_PGLITE_TEMPLATE_PATH` | não — não defina | internas das suítes: banco PGlite e snapshot migrado dos testes | definidas por `playwright*.config.ts` e `tests/`; fora do `.env.example` |
-| `ANTHROPIC_FEDERATION_RULE_ID` / `ANTHROPIC_ORGANIZATION_ID` / `ANTHROPIC_SERVICE_ACCOUNT_ID` | não | ids da federação de identidades (WIF) que o job `Veredito do the-judge` usa no lugar de chave de API (variáveis do repositório; não são segredo) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `ANTHROPIC_WORKSPACE_ID` | não | workspace da federação, só se a regra cobrir mais de um (variável do repositório) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `ACTIONS_ID_TOKEN_REQUEST_URL` / `ACTIONS_ID_TOKEN_REQUEST_TOKEN` | não | injetadas pelo runner com `id-token: write`; o script troca o OIDC do job pelo token curto da Anthropic (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `JUDGE_MODEL` | não | modelo do the-judge de Actions (variável do repositório; padrão `claude-sonnet-5-5`) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `VEREDITO_JUDGE_DESDE` | não | data ISO a partir da qual o check de veredito vale na PR release→main (variável do repositório) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `PR_SHA` | não | head da PR, injetado pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `PR_AUTOR` | não | autor da PR, injetado pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `PR_TITULO` | não | título da PR, injetado como dado não confiável pelo job do the-judge (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 | `GITHUB_OUTPUT` | não | arquivo de saídas de step do Actions, onde `julgar-pr` grava `protegido` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 | `VEREDITO_JUDGE_ATIVO` | não | `true` liga a exigência do veredito; fora disso o check passa com aviso (variável do repositório; sai na v0.8.0) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `GITHUB_RUN_ID` | não | id da execução, parte da identidade do revisor `actions/<run_id>/<tentativa>` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
-| `GITHUB_RUN_ATTEMPT` | não | tentativa da execução, parte da identidade do revisor `actions/<run_id>/<tentativa>` (só no Actions) | [ADR-100](../adr/100-veredito-do-the-judge-montado-no-actions.md) |
 
 ## 5. Testes
 

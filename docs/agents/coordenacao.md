@@ -1,6 +1,7 @@
 ---
 title: "Coordenação: papel, regras e processo de release"
-status: living
+status: superseded
+superseded_by: docs/adr/109-fluxo-de-entrega-simplificado.md
 audience: [agent, dev, po]
 owner: "@KalleoPinheiro"
 last_reviewed: 2026-11-11
