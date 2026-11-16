@@ -1,4 +1,4 @@
-import { getDb } from "@/infrastructure/persistence/drizzle/db";
+import { getSystemDb } from "@/infrastructure/persistence/drizzle/db";
 import { reencryptAccountIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-account-identity";
 import { reencryptGuardianIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-guardian-identity";
 import { reencryptPatientIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-patient-identity";
@@ -28,7 +28,8 @@ async function main(): Promise<void> {
   }
   // Falha antes de qualquer escrita se o pepper for inválido.
   const blindIndex = blindIndexFromEnv();
-  const db = await getDb();
+  // Conexão de sistema (BYPASSRLS): a recifra percorre todas as clínicas e o FORCE sujeita o dono à política (#874).
+  const db = await getSystemDb();
   const cipher = dataCipherFromEnv();
   const counts = await reencryptClinicalData(db, cipher);
   // Cadastro do paciente (ADR-096): cifra nome, e-mail, telefone e nascimento e preenche o índice cego.

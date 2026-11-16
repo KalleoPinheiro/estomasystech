@@ -481,7 +481,41 @@ Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comand
 para todos (o pool de sistema cairia no da aplicação e veria zero contas); depois, na staging, entrar com os três papéis e recuperar uma senha.
 
 Rollback, por tabela e sem backup: `ALTER TABLE user_accounts DISABLE ROW LEVEL SECURITY;` (idem `google_accounts` e `audit_events`). **Não** use
-`DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito. Falta para a #874: `FORCE` e o papel de migração (ADR-110).
+`DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito. A etapa 5 (`FORCE`, § 4.7) fecha a série.
+
+### 4.7 RLS etapa 5: políticas nas tabelas sem `clinic_id` e FORCE (#874, ADR-110)
+
+As migrações `0082` (política em `clinics`, `auth_tokens`, `user_mfa`, `mfa_recovery_codes`) e `0083` (`FORCE ROW LEVEL SECURITY` nas 45 tabelas) entram pelo boot-migrate ou por `db:migrate`.
+**Com FORCE o dono da tabela também é filtrado.** Quem ignora a política é só superusuário e `BYPASSRLS`. Por isso a ordem abaixo é obrigatória; fora dela a aplicação pode passar a ver zero linhas.
+
+**Antes (psql do banco, § 4.1 passo 1; um comando por linha, sem aspas):**
+
+1. Com que usuário a aplicação conecta: `select current_user, rolsuper, rolbypassrls from pg_roles where rolname = current_user;` rodado com a `DATABASE_URL` atual. Se `rolsuper` for `t`, o FORCE não muda nada para a aplicação (e não protege nada) até a troca do passo 3.
+2. O usuário do backup (§ 5, o `POSTGRES_USER` do container) precisa ser superusuário ou `BYPASSRLS`: `select rolsuper, rolbypassrls from pg_roles where rolname = <usuario>;` (`rolsuper` ou `rolbypassrls` `t`). Senão o `pg_dump` falha alto depois da `0083`. Não use `--enable-row-security`.
+3. Estados das etapas anteriores prontos (§ 4.1 a 4.6): papel da aplicação e login criados, `DATABASE_SYSTEM_URL` definida e testada, `0080` conferida.
+4. **A `DATABASE_URL` já está no login da aplicação** (§ 4.5 passo 4), com `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`. Só então aplique a `0082` e a `0083`.
+
+**Aplicar:** deploy desta versão (o boot pula a migração, é o esperado) e, em seguida, `npm run db:migrate` com a URL do **dono** (§ 4). Não troque a ordem: migrar com a aplicação ainda no dono comum a deixa cega.
+
+**Depois do deploy:**
+
+1. `select count(*) from pg_policies where policyname = 'clinic_isolation';` dá 45.
+2. `select relname from pg_class where relkind = 'r' and relrowsecurity and not relforcerowsecurity;` não lista nada.
+3. Entrar no app com os três papéis, abrir agenda e ficha, recuperar uma senha e conferir `/api/health/ready` (200).
+4. Rodar um backup de teste (`sudo systemctl start estomasystech-backup.service`) e ver `BACKUP_OK`.
+
+**Scripts de operação** (`data:reencrypt`, `admin:recover`, `db:portal-orphans`, o seed) usam a conexão de sistema: rode com `DATABASE_SYSTEM_URL` definida (o login `estomasystech_sistema`, `BYPASSRLS`). Sem ela caem no pool de `DATABASE_URL`, que com o papel da aplicação ou com o dono sob FORCE enxerga zero linhas (o script termina sem fazer nada, não corrompe). Migração de dado futura, que leia ou grave linhas, também precisa rodar com o papel de sistema.
+
+**Rollback**, instantâneo e sem backup. Desligar o FORCE em todas as tabelas (o dono ou superusuário, no psql):
+
+```sql
+DO $$ DECLARE t text; BEGIN
+  FOR t IN SELECT relname FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relkind = 'r' AND relforcerowsecurity
+  LOOP EXECUTE format('ALTER TABLE %I NO FORCE ROW LEVEL SECURITY', t); END LOOP;
+END $$;
+```
+
+O registro da `0083` permanece (o migrador não a reaplica sozinho); para religar, o mesmo laço com `FORCE`. Para desfazer também a política das quatro tabelas novas: `ALTER TABLE <clinics|auth_tokens|user_mfa|mfa_recovery_codes> DISABLE ROW LEVEL SECURITY;` (não use `DROP POLICY` sozinho). Voltar a `DATABASE_URL` para um superusuário também desfaz o efeito para a aplicação.
 
 ## 5. Backup e restore
 
