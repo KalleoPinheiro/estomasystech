@@ -4,6 +4,12 @@ interface PageHeaderProps {
   description?: React.ReactNode;
   /** Selo ao lado do título (ex.: situação do paciente). */
   badge?: React.ReactNode;
+  /**
+   * Selos largos (ex.: «Cadastro completo» ao lado de um nome longo): no celular (abaixo de `sm`)
+   * o selo fica SEMPRE na linha de baixo do título; a partir de `sm`, ao lado. A regra é de largura
+   * de tela (CSS), nunca de medida de texto ou de fonte, então não salta quando a fonte chega (#884).
+   */
+  stackBadge?: boolean;
   /** Acima do título (ex.: link de voltar). */
   leading?: React.ReactNode;
   /** Ações primárias da tela: abaixo do título no celular, à direita a partir de `sm`. */
@@ -18,6 +24,7 @@ export function PageHeader({
   title,
   description,
   badge,
+  stackBadge = false,
   leading,
   actions,
 }: PageHeaderProps) {
@@ -30,12 +37,27 @@ export function PageHeader({
         {leading && <div className="mb-2">{leading}</div>}
         {/* Sem `flex-wrap` (#559): com o selo livre para trocar de linha, a troca de fonte (a
             largura do texto muda uns pixels) o jogava abaixo do título e de volta, e a tela
-            inteira saltava 36 px (CLS 0,49 na ficha em 390 px). O título quebra dentro dele. */}
-        <div className="flex items-center gap-x-3">
+            inteira saltava 36 px (CLS 0,49 na ficha em 390 px). O título quebra dentro dele. Para selo
+            largo, `stackBadge` o põe abaixo no celular por largura de tela, sem depender da fonte. */}
+        <div
+          className={
+            stackBadge
+              ? 'flex flex-col items-start gap-y-2 sm:flex-row sm:items-center sm:gap-x-3 sm:gap-y-0'
+              : 'flex items-center gap-x-3'
+          }
+        >
           <h1 className="sv-display min-w-0 break-words font-bold text-2xl">
             {title}
           </h1>
-          {badge && <div>{badge}</div>}
+          {badge && (
+            <div
+              className={
+                stackBadge ? 'flex flex-wrap items-center gap-2' : undefined
+              }
+            >
+              {badge}
+            </div>
+          )}
         </div>
         {description && (
           <div className="mt-1 max-w-prose text-ink-3 text-sm">

@@ -37,6 +37,7 @@ export function PlatformClinic() {
         }
         title={data?.name ?? 'Clínica'}
         badge={data ? <ClinicBadges clinic={data} /> : null}
+        stackBadge
       />
       <ClinicContent
         clinic={data}
