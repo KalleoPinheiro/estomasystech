@@ -1,9 +1,11 @@
+import { sql } from 'drizzle-orm';
 import type {
   TransactionManager,
   TransactionScope,
 } from '@/application/ports/transaction-manager';
 import { blindIndexFromEnv } from '@/lib/blind-index';
 import type { FieldCipher } from '@/lib/data-cipher';
+import { CLINIC_SETTING } from './clinic-scoped-pool';
 import type { AppDb } from './db';
 import { DrizzleAppointmentRepository } from './drizzle-appointment-repository';
 import { DrizzleAuditEventRepository } from './drizzle-audit-event-repository';
@@ -58,6 +60,8 @@ import {
 import { DrizzleWaitlistRepository } from './drizzle-waitlist-repository';
 import { DrizzleProfessionalPatientLinkRepository } from './professional-patient-link-repository';
 
+type Tx = Parameters<Parameters<AppDb['transaction']>[0]>[0];
+
 /**
  * Unidade de trabalho sobre `db.transaction` do Drizzle: os repositórios do
  * escopo são reconstruídos sobre o `tx`, então qualquer erro dentro de `fn`
@@ -72,124 +76,125 @@ export class DrizzleTransactionManager implements TransactionManager {
   ) {}
 
   run<T>(fn: (repos: TransactionScope) => Promise<T>): Promise<T> {
-    return this.db.transaction(async (tx) =>
-      fn({
-        appointments: new DrizzleAppointmentRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        invoices: new DrizzleInvoiceRepository(tx, this.clinicId, this.cipher),
-        followUps: new DrizzleFollowUpRepository(tx, this.clinicId),
-        sessionPackages: new DrizzleSessionPackageRepository(tx, this.clinicId),
-        userAccounts: new DrizzleUserAccountRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-          this.blindIndex,
-        ),
-        auditEvents: new DrizzleAuditEventRepository(tx, this.clinicId),
-        patients: new DrizzlePatientRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-          this.blindIndex,
-        ),
-        scheduleConfig: new DrizzleScheduleConfigRepository(tx, this.clinicId),
-        scheduleAvailability: new DrizzleScheduleAvailabilityRepository(
-          tx,
-          this.clinicId,
-        ),
-        conditions: new DrizzleClinicalConditionRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        conditionPhotos: new DrizzleConditionPhotoRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        procedures: new DrizzleProcedureRepository(tx, this.clinicId),
-        professionals: new DrizzleProfessionalRepository(tx, this.clinicId),
-        producedSessions: new DrizzleProducedSessionRepository(
-          tx,
-          this.clinicId,
-        ),
-        commissionPayouts: new DrizzleCommissionPayoutRepository(
-          tx,
-          this.clinicId,
-        ),
-        partners: new DrizzlePartnerRepository(tx, this.clinicId),
-        guardians: new DrizzleGuardianRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-          this.blindIndex,
-        ),
-        professionalPatientLinks: new DrizzleProfessionalPatientLinkRepository(
-          tx,
-          this.clinicId,
-        ),
-        anamneses: new DrizzleAnamnesisRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        evolutions: new DrizzleEvolutionNoteRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        assessments: new DrizzleConditionAssessmentRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        partnerShareConsents: new DrizzlePartnerShareConsentRepository(
-          tx,
-          this.clinicId,
-        ),
-        carePlans: new DrizzleCarePlanRepository(tx, this.clinicId),
-        carePlanDiagnoses: new DrizzleCarePlanDiagnosisRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        carePlanOutcomes: new DrizzleCarePlanOutcomeRepository(
-          tx,
-          this.clinicId,
-        ),
-        carePlanInterventions: new DrizzleCarePlanInterventionRepository(
-          tx,
-          this.clinicId,
-        ),
-        outcomeEvaluations: new DrizzleOutcomeEvaluationRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        interventionRecords: new DrizzleInterventionRecordRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        nursingDiagnoses: new DrizzleNursingDiagnosisRepository(tx),
-        nursingOutcomes: new DrizzleNursingOutcomeRepository(tx),
-        nursingInterventions: new DrizzleNursingInterventionRepository(tx),
-        consentRecords: new DrizzleConsentRecordRepository(tx, this.clinicId),
-        dataSubjectRequests: new DrizzleDataSubjectRequestRepository(
-          tx,
-          this.clinicId,
-          this.cipher,
-        ),
-        clinics: new DrizzleClinicRepository(tx),
-        waitlist: new DrizzleWaitlistRepository(tx, this.clinicId, this.cipher),
-        procedureKits: new DrizzleProcedureKitRepository(tx),
-        supplies: new DrizzleSupplyRepository(tx, this.clinicId),
-        stockMovements: new DrizzleStockMovementRepository(tx, this.clinicId),
-        supplyBatches: new DrizzleSupplyBatchRepository(tx, this.clinicId),
-      }),
-    );
+    return this.db.transaction(async (tx) => {
+      // RLS etapa 2 (ADR-110): a clínica vale só nesta transação (`true` = local), então não vaza
+      // pelo pool. Escopo de sistema (clínica nula) usa o papel BYPASSRLS e não grava nada.
+      if (this.clinicId !== null) {
+        await tx.execute(
+          sql`select set_config(${CLINIC_SETTING}, ${this.clinicId}, true)`,
+        );
+      }
+      return fn(this.repositories(tx));
+    });
+  }
+
+  private repositories(tx: Tx): TransactionScope {
+    return {
+      appointments: new DrizzleAppointmentRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      invoices: new DrizzleInvoiceRepository(tx, this.clinicId, this.cipher),
+      followUps: new DrizzleFollowUpRepository(tx, this.clinicId),
+      sessionPackages: new DrizzleSessionPackageRepository(tx, this.clinicId),
+      userAccounts: new DrizzleUserAccountRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+        this.blindIndex,
+      ),
+      auditEvents: new DrizzleAuditEventRepository(tx, this.clinicId),
+      patients: new DrizzlePatientRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+        this.blindIndex,
+      ),
+      scheduleConfig: new DrizzleScheduleConfigRepository(tx, this.clinicId),
+      scheduleAvailability: new DrizzleScheduleAvailabilityRepository(
+        tx,
+        this.clinicId,
+      ),
+      conditions: new DrizzleClinicalConditionRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      conditionPhotos: new DrizzleConditionPhotoRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      procedures: new DrizzleProcedureRepository(tx, this.clinicId),
+      professionals: new DrizzleProfessionalRepository(tx, this.clinicId),
+      producedSessions: new DrizzleProducedSessionRepository(tx, this.clinicId),
+      commissionPayouts: new DrizzleCommissionPayoutRepository(
+        tx,
+        this.clinicId,
+      ),
+      partners: new DrizzlePartnerRepository(tx, this.clinicId),
+      guardians: new DrizzleGuardianRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+        this.blindIndex,
+      ),
+      professionalPatientLinks: new DrizzleProfessionalPatientLinkRepository(
+        tx,
+        this.clinicId,
+      ),
+      anamneses: new DrizzleAnamnesisRepository(tx, this.clinicId, this.cipher),
+      evolutions: new DrizzleEvolutionNoteRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      assessments: new DrizzleConditionAssessmentRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      partnerShareConsents: new DrizzlePartnerShareConsentRepository(
+        tx,
+        this.clinicId,
+      ),
+      carePlans: new DrizzleCarePlanRepository(tx, this.clinicId),
+      carePlanDiagnoses: new DrizzleCarePlanDiagnosisRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      carePlanOutcomes: new DrizzleCarePlanOutcomeRepository(tx, this.clinicId),
+      carePlanInterventions: new DrizzleCarePlanInterventionRepository(
+        tx,
+        this.clinicId,
+      ),
+      outcomeEvaluations: new DrizzleOutcomeEvaluationRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      interventionRecords: new DrizzleInterventionRecordRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      nursingDiagnoses: new DrizzleNursingDiagnosisRepository(tx),
+      nursingOutcomes: new DrizzleNursingOutcomeRepository(tx),
+      nursingInterventions: new DrizzleNursingInterventionRepository(tx),
+      consentRecords: new DrizzleConsentRecordRepository(tx, this.clinicId),
+      dataSubjectRequests: new DrizzleDataSubjectRequestRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
+      ),
+      clinics: new DrizzleClinicRepository(tx),
+      waitlist: new DrizzleWaitlistRepository(tx, this.clinicId, this.cipher),
+      procedureKits: new DrizzleProcedureKitRepository(tx),
+      supplies: new DrizzleSupplyRepository(tx, this.clinicId),
+      stockMovements: new DrizzleStockMovementRepository(tx, this.clinicId),
+      supplyBatches: new DrizzleSupplyBatchRepository(tx, this.clinicId),
+    };
   }
 }

@@ -12,7 +12,7 @@ related:
 # ADR 110 — Row-Level Security por clínica
 
 - **Data:** 2026-11-15
-- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; nenhuma mudança de comportamento em produção).
+- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 em PR, #871; nenhuma política ligada, nenhuma conexão trocada).
 - **Domínios afetados:** acesso, infraestrutura de persistência.
 
 ## Contexto
@@ -88,7 +88,7 @@ política e habilitar RLS não perde dado e se desfaz sem restaurar backup. As e
   (`CREATE ROLE … LOGIN IN ROLE estomasystech_app` e `\password`). O papel de sistema é um login com `BYPASSRLS`
   (atributo não herdado por membership, e só superusuário o concede), por isso nasce no servidor, não na migração.
 - **Dois pools no código.** `getSystemDb()` lê `DATABASE_SYSTEM_URL` e, sem ela, devolve o próprio `getDb()`.
-  Ainda não tem chamador: a etapa 2 passa o `systemScope()` para ele junto com o `set_config`.
+  A etapa 2 passa o `systemScope()` para ele (ver abaixo).
 - **Prova:** `tests/integracao/rls-papel-aplicacao.integracao.ts` (Postgres real) confere atributos do papel,
   que não é dono, privilégios exatos, recusa de DDL por um login que o herda, tabelas futuras, idempotência e o
   caminho de volta (`DROP OWNED BY`).
@@ -97,6 +97,33 @@ política e habilitar RLS não perde dado e se desfaz sem restaurar backup. As e
   `npm run db:migrate` usando a URL do dono; o papel de migração dedicado da etapa 5 formaliza isso.
 - **Rollback:** nenhuma conexão muda nesta etapa. Para desfazer, `DROP OWNED BY estomasystech_app;` e
   `DROP ROLE estomasystech_app;` (antes, apague os logins que herdam dele).
+
+## Etapa 2 entregue (#871)
+
+Sem migração e sem política: só o contrato de conexão do ADR passa a valer no código.
+
+- **Consulta avulsa.** `scopeDbToClinic` (`clinic-scoped-pool.ts`) devolve um `db` cujo pool abre, por consulta, uma
+  transação curta: `begin; select set_config('app.clinic_id', <id>, true)`, a consulta e `commit`. O valor é local à
+  transação (não vaza entre requisições nem atravessa o PgBouncer em modo transação). Custo: um `begin` (com o
+  `set_config` na mesma ida ao banco) e um `commit` a mais por consulta; medir na staging antes da etapa 4. Erro na
+  consulta faz `rollback`; se o `rollback` também falhar a conexão é descartada, não devolvida ao pool.
+- **`db.transaction` dos repositórios** (travas de fatura, paciente e repasse, MFA, retenção): o cliente do pool
+  grava a clínica logo depois do `begin`, então toda consulta da transação já a enxerga.
+- **`DrizzleTransactionManager.run`** grava `set_config(..., true)` como primeira consulta de toda unidade de
+  trabalho; `getRepositories` lhe entrega o `db` sem o envoltório (um `set_config` só por transação).
+- **Escopo de sistema** (`systemScope()`, ou sessão sem clínica): `getRepositories` usa `getSystemDb()`
+  (`DATABASE_SYSTEM_URL`, `BYPASSRLS`) e **não grava** `app.clinic_id`. Sem a variável, `getSystemDb()` é o próprio
+  `getDb()` e nada muda. `staff-revocation` (leitura da conta por sessão no proxy) segue a mesma regra.
+- **PGlite** (suíte unitária e E2E locais) não aplica RLS: o envoltório devolve o próprio `db`; o
+  `set_config` do gerenciador roda, porque o PGlite o entende.
+- **O que ficou fora, de propósito:** `readiness.ts` (`/api/health/ready`), `app-release-service` e `rate-limit` seguem
+  em `getDb()` sem clínica. O papel da aplicação **não enxerga o esquema `drizzle`**: antes de apontar a
+  `DATABASE_URL` para ele (passo do dono, não desta etapa) a leitura de migrações aplicadas do readiness precisa de
+  outra solução (issue aberta junto deste PR).
+- **Prova:** `tests/integracao/rls-etapa-2-set-config.integracao.ts` (Postgres real, pool de **uma** conexão, o pior
+  caso para vazamento) e `tests/infrastructure/clinic-scoped-pool.test.ts`.
+- **Rollback:** remover o envoltório (`scopeDbToClinic` em `getRepositories` e o `set_config` do gerenciador);
+  sem migração, sem dado a desfazer. Publicar de volta a versão anterior também basta.
 
 ## Premissa a verificar na etapa 1
 

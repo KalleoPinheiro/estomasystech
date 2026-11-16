@@ -85,8 +85,9 @@ import {
   platformEmailGateway,
 } from './email/resend-email-gateway';
 import { SharpImageProcessor } from './images/sharp-image-processor';
+import { scopeDbToClinic } from './persistence/drizzle/clinic-scoped-pool';
 import type { AppDb } from './persistence/drizzle/db';
-import { getDb } from './persistence/drizzle/db';
+import { getDb, getSystemDb } from './persistence/drizzle/db';
 import { DrizzleAppointmentRepository } from './persistence/drizzle/drizzle-appointment-repository';
 import { DrizzleAuditEventRepository } from './persistence/drizzle/drizzle-audit-event-repository';
 import { DrizzleAuthTokenRepository } from './persistence/drizzle/drizzle-auth-token-repository';
@@ -427,7 +428,10 @@ export function buildPhotoStorage(clinicId: string): PhotoStorage {
  * writeScope, clinicScope, systemScope) — objeto literal não compila.
  */
 export async function getRepositories(tenant: TenantScope): Promise<Services> {
-  const db = await getDb();
+  // RLS etapa 2 (ADR-110): escopo de sistema usa o pool BYPASSRLS; escopo de empresa usa o pool da
+  // aplicação, com `app.clinic_id` gravado em toda consulta (`db`) e em toda transação (`rawDb`).
+  const rawDb = tenant.clinicId === null ? await getSystemDb() : await getDb();
+  const db = await scopeDbToClinic(rawDb, tenant.clinicId);
   // Sem chave de dados (produção) ou sem AUTH_SECRET (dev), lança aqui:
   // repositório clínico nunca grava em claro.
   const cipher = currentDataCipher();
@@ -542,7 +546,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     clinicChannels,
     email: emailGatewayFor(clinicChannels, tenant.clinicId),
     transactions: new DrizzleTransactionManager(
-      db,
+      rawDb,
       tenant.clinicId,
       cipher,
       currentBlindIndex,

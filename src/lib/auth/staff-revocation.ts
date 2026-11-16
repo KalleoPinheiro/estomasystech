@@ -40,13 +40,21 @@ async function lookupAccountStatus(
   email: string,
   clinicId: string | null,
 ): Promise<AccountSessionStatus | null> {
-  const [{ getDb }, { DrizzleUserAccountRepository }] = await Promise.all([
+  const [
+    { getDb, getSystemDb },
+    { scopeDbToClinic },
+    { DrizzleUserAccountRepository },
+  ] = await Promise.all([
     import('@/infrastructure/persistence/drizzle/db'),
+    import('@/infrastructure/persistence/drizzle/clinic-scoped-pool'),
     import(
       '@/infrastructure/persistence/drizzle/drizzle-foundation-repositories'
     ),
   ]);
-  const db = await getDb();
+  const db = await scopeDbToClinic(
+    clinicId === null ? await getSystemDb() : await getDb(),
+    clinicId,
+  );
   const accounts = new DrizzleUserAccountRepository(db, clinicId);
   if (clinicId === null) {
     return systemAccountStatus(email, await accounts.findSystemAccount());

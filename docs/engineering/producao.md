@@ -338,6 +338,28 @@ nenhuma conexão**: o app segue com a `DATABASE_URL` de hoje. Conferência e pre
 Rollback: `DROP OWNED BY estomasystech_app;` e `DROP ROLE estomasystech_app;` (apague antes os logins que herdam dele).
 Não exige restaurar backup.
 
+### 4.2 RLS etapa 2: `app.clinic_id` em toda unidade de trabalho (#871, ADR-110)
+
+Sem migração e **sem ação obrigatória no servidor**: com a `DATABASE_URL` de hoje o app só passa a gravar
+`app.clinic_id` em cada transação (ainda não há política que o leia). Efeito visível: cada consulta de uma
+sessão de clínica roda dentro de uma transação curta (um `begin` e um `commit` a mais). Acompanhe a latência
+depois do deploy; se piorar, o rollback é publicar a versão anterior.
+
+Para o escopo de sistema (login, convite, plataforma, cron) usar o pool de sistema, e só quando o dono quiser,
+na ordem (um comando por linha, sem aspas):
+
+1. Conferir o dono das tabelas e se `estomasystech` é superusuário (§ 4.1, passos 1 a 3). Esta etapa vale igual
+   com ele, mas as etapas 3 e 4 só protegem depois de a aplicação trocar de papel.
+2. Criar o papel de sistema, como superusuário: `CREATE ROLE estomasystech_sistema LOGIN BYPASSRLS IN ROLE estomasystech_app;`
+   e `\password estomasystech_sistema` (§ 4.1, passo 5).
+3. No Coolify, definir `DATABASE_SYSTEM_URL=postgres://estomasystech_sistema:<senha>@<host do banco>:5432/estomasystech`
+   (mesmos parâmetros TLS da `DATABASE_URL`) e redeployar. Sem a variável nada muda: o app usa a `DATABASE_URL`.
+4. **Não** trocar a `DATABASE_URL` para o papel da aplicação ainda: o boot-migrate precisa de dono e o
+   `/api/health/ready` lê o esquema `drizzle`, que o papel da aplicação não enxerga (pendência registrada no ADR-110).
+
+Rollback: apagar `DATABASE_SYSTEM_URL` no Coolify e redeployar (o app volta ao pool único); código: publicar a
+versão anterior. `DROP ROLE estomasystech_sistema;` limpa o papel.
+
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
   última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`
   (#303). Por isso **nunca deploye um commit que tenha a 0051 sem a 0050**: se a 0051 rodar antes,
