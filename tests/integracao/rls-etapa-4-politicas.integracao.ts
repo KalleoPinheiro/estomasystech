@@ -235,6 +235,8 @@ describe('Feature: políticas de RLS nas tabelas clínicas e financeiras (#873)'
     const unindexed = await admin.query<{ relname: string }>(
       `SELECT c.relname FROM pg_class c
         WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r' AND c.relrowsecurity
+          AND EXISTS (SELECT 1 FROM pg_attribute col
+                       WHERE col.attrelid = c.oid AND col.attname = 'clinic_id' AND NOT col.attisdropped)
           AND NOT EXISTS (
             SELECT 1 FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[0]
              WHERE i.indrelid = c.oid AND a.attname = 'clinic_id' AND i.indpred IS NULL AND i.indexprs IS NULL)

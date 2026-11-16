@@ -136,6 +136,10 @@ describe('Feature: papel de aplicação do RLS (#870)', () => {
     await admin.query(
       `INSERT INTO clinics (id, name, created_at, created_by) VALUES ('clinic-rls1', 'Clínica RLS1', now(), 'teste')`,
     );
+    // Etapa 5 (#874): `clinics` ganha política pelo id; o login precisa da clínica da sessão para vê-la.
+    await login.query(
+      `SELECT set_config('app.clinic_id', 'clinic-rls1', false)`,
+    );
     const read = await login.query(
       `SELECT id FROM clinics WHERE id = 'clinic-rls1'`,
     );
@@ -156,6 +160,7 @@ describe('Feature: papel de aplicação do RLS (#870)', () => {
       login.query('SELECT * FROM drizzle.__drizzle_migrations'),
     ).rejects.toThrow(/permission denied/);
     await login.query(`DELETE FROM clinics WHERE id = 'clinic-rls1'`);
+    await login.query(`SELECT set_config('app.clinic_id', '', false)`);
   });
 
   it('Dado uma tabela criada depois, Quando o dono a cria, Então o papel já a enxerga (default privileges)', async () => {
