@@ -59,3 +59,8 @@ O PR 2 troca as gravações da ficha de `apiFetch` para Server Actions (`defineA
 2. **R4 na ficha segue 404.** Profissional sem vínculo recebe «não encontrado» nas gravações da ficha, igual às rotas `/api` e igual a recurso de outra empresa: a resposta não revela que existe prontuário (LGPD). Decisão de PO. A guarda por recurso (`authorizeClinicalResource`) cobre condição, plano, resultado e intervenção, com teste por tipo em `tests/lib/server/ficha-authorization.test.ts` e mutação (Stryker) a 100% no arquivo.
 3. **Mensagens de validação.** `describeFailure` passa a falar português (locale `pt` do `zod`, uma vez, para rotas e ações) e tira o `body.` do campo quando o erro vem de `{ id, body }`.
 4. **Sem cast no responsável.** O parentesco do formulário é `GuardianRelationship` de verdade (`asRelationship`), não um `as`.
+
+## Errata (2026-11-16, #615 e #559)
+
+1. **A meta de 215 KB de JS da ficha foi retirada.** Medido no build de produção: 236,9 KB gz, dos quais só 17,8 KB são da ficha; ~148 KB são React e Next e 58 KB são o `@still-void/ui`. Zerar todo o código da ficha deixaria a rota em ~219 KB. A meta vira **«nenhuma rota acima da sua linha de base»**. Números e método em [`performance-front-depois-2026-11.md`](../engineering/performance-front-depois-2026-11.md). Decisão de PO (coordenador), 2026-11-16.
+2. **CLS da ficha em 390 px.** O selo do `PageHeader` não troca mais de linha com o título; CLS de 0,49 para no máximo 0,06.

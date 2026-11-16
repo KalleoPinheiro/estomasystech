@@ -48,4 +48,14 @@ describe('Feature: Cabeçalho de página', () => {
     expect(screen.getByText('Ativo')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Pacientes' })).toBeInTheDocument();
   });
+
+  it('o selo não troca de linha com o título (a troca de fonte não pode fazer a tela saltar)', () => {
+    const { container } = render(
+      <PageHeader title="Paciente Vinculado E2E" badge={<span>Ativo</span>} />,
+    );
+    const linha = screen.getByRole('heading', { level: 1 }).parentElement;
+    expect(linha).not.toBeNull();
+    expect(linha?.className).not.toContain('flex-wrap');
+    expect(container.querySelector('h1')?.className).toContain('min-w-0');
+  });
 });

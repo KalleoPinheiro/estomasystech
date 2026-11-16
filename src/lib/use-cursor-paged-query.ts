@@ -26,8 +26,7 @@ export interface CursorPagedQueryResult<T> {
 
 /**
  * Lista paginada por cursor (issue #75): primeira página via effect (recarrega
- * quando a URL base muda), páginas seguintes anexadas via loadMore(). Mesma
- * interface pública de `usePagedQuery` (offset) — troca é só o import na página.
+ * quando a URL base muda), páginas seguintes anexadas via loadMore().
  * Com `seed`, a 1ª página da URL do `seed` não é buscada: já veio no HTML.
  */
 export function useCursorPagedQuery<T>(
