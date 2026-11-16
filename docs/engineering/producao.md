@@ -326,8 +326,11 @@ nenhuma conexão**: o app segue com a `DATABASE_URL` de hoje. Conferência e pre
 2. `\du` lista os papéis. Confirme que `estomasystech_app` existe e que a linha de `estomasystech` mostra se ele é
    `Superuser` ou `Bypass RLS` (se sim, o Postgres ignora qualquer política: a etapa 3 só protege com o papel novo).
 3. `\dt` lista as tabelas com o dono (esperado: `estomasystech`).
-4. Se o passo 2 não achou `estomasystech_app`, crie: `CREATE ROLE estomasystech_app NOLOGIN;` e rode de novo a
-   migração (ou reaplique o conteúdo de `drizzle/0075_rls-papel-aplicacao.sql`).
+4. Se o passo 2 não achou `estomasystech_app` (a migração avisa com `NOTICE` quando o papel que migra não pode criar
+   papéis), entre como administrador (superusuário ou `CREATEROLE`) e crie: `CREATE ROLE estomasystech_app NOLOGIN;`.
+   A migração já consta como aplicada e **não roda de novo**: reaplique o arquivo `drizzle/0075_rls-papel-aplicacao.sql`
+   direto, com o mesmo papel dono das tabelas que migra o app (assim os privilégios por padrão valem para as tabelas
+   que ele criar depois).
 5. Opcional, só para deixar pronto (as etapas seguintes usam): `CREATE ROLE estomasystech_login LOGIN IN ROLE estomasystech_app;`
    e `\password estomasystech_login`; e, como superusuário, `CREATE ROLE estomasystech_sistema LOGIN BYPASSRLS IN ROLE estomasystech_app;`
    e `\password estomasystech_sistema`. Guarde as senhas no Coolify; não as aponte para o app ainda.

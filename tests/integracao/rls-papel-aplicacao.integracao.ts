@@ -100,7 +100,8 @@ describe('Feature: papel de aplicação do RLS (#870)', () => {
     for (const table of tables) {
       const grants = await scalar(
         `SELECT
-           has_table_privilege($1, $2, 'SELECT, INSERT, UPDATE, DELETE') AS dml,
+           (has_table_privilege($1, $2, 'SELECT') AND has_table_privilege($1, $2, 'INSERT')
+             AND has_table_privilege($1, $2, 'UPDATE') AND has_table_privilege($1, $2, 'DELETE')) AS dml,
            has_table_privilege($1, $2, 'TRUNCATE') AS truncate,
            has_table_privilege($1, $2, 'REFERENCES') AS refs,
            has_table_privilege($1, $2, 'TRIGGER') AS trigger`,
@@ -160,7 +161,8 @@ describe('Feature: papel de aplicação do RLS (#870)', () => {
   it('Dado uma tabela criada depois, Quando o dono a cria, Então o papel já a enxerga (default privileges)', async () => {
     await admin.query('CREATE TABLE rls1_futura (id int PRIMARY KEY)');
     const grants = await scalar(
-      `SELECT has_table_privilege($1, 'public.rls1_futura', 'SELECT, INSERT, UPDATE, DELETE') AS dml`,
+      `SELECT (has_table_privilege($1, 'public.rls1_futura', 'SELECT') AND has_table_privilege($1, 'public.rls1_futura', 'INSERT')
+         AND has_table_privilege($1, 'public.rls1_futura', 'UPDATE') AND has_table_privilege($1, 'public.rls1_futura', 'DELETE')) AS dml`,
       [APP_ROLE],
     );
     expect(grants).toEqual({ dml: true });

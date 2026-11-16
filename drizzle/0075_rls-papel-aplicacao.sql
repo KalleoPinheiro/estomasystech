@@ -9,6 +9,7 @@ BEGIN
   END;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'estomasystech_app') THEN
     GRANT USAGE ON SCHEMA public TO estomasystech_app;
+    REVOKE CREATE ON SCHEMA public FROM PUBLIC;
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO estomasystech_app;
     GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO estomasystech_app;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO estomasystech_app;
