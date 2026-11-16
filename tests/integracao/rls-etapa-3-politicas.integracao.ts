@@ -179,7 +179,9 @@ describe('Feature: políticas de RLS nas tabelas de baixo risco (#872)', () => {
     }
   });
 
-  it('Dado a migração, Quando leio o catálogo, Então só as três tabelas têm RLS ligado, sem FORCE', async () => {
+  it('Dado a migração, Quando leio o catálogo, Então as três tabelas têm RLS ligado e a política clinic_isolation, sem FORCE', async () => {
+    // Filtra pelas três tabelas desta etapa: as etapas seguintes (#873, #874) ligam outras, e a base
+    // roda este arquivo sobre o esquema novo no portão de compatibilidade da migração.
     const rows = await admin.query<{
       relname: string;
       relrowsecurity: boolean;
@@ -187,8 +189,9 @@ describe('Feature: políticas de RLS nas tabelas de baixo risco (#872)', () => {
     }>(
       `SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity
+        WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname = ANY($1)
         ORDER BY c.relname`,
+      [[...TABLES]],
     );
     expect(rows.rows).toEqual([
       {
@@ -203,7 +206,11 @@ describe('Feature: políticas de RLS nas tabelas de baixo risco (#872)', () => {
       },
       { relname: 'supplies', relrowsecurity: true, relforcerowsecurity: false },
     ]);
-    expect(await policies()).toEqual([
+    expect(
+      (await policies()).filter((policy) =>
+        (TABLES as readonly string[]).includes(policy.tablename),
+      ),
+    ).toEqual([
       { tablename: 'partners', policyname: 'clinic_isolation' },
       { tablename: 'schedule_closures', policyname: 'clinic_isolation' },
       { tablename: 'supplies', policyname: 'clinic_isolation' },
@@ -292,11 +299,12 @@ describe('Feature: políticas de RLS nas tabelas de baixo risco (#872)', () => {
     },
   );
 
-  it('Dado as demais tabelas, Quando o papel da aplicação lê patients, Então a etapa 3 não mudou nada nelas', async () => {
-    expect(await inClinic(null, clinicsOf('patients'))).toEqual([
-      CLINIC_A,
-      CLINIC_B,
-    ]);
+  it('Dado o ADR-110, Quando leio o catálogo, Então nenhuma tabela tem FORCE ROW LEVEL SECURITY (é da etapa 5)', async () => {
+    const forced = await admin.query(
+      `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relforcerowsecurity`,
+    );
+    expect(forced.rows).toEqual([]);
   });
 
   it('Dado os repositórios reais com o papel da aplicação, Quando listo com o escopo da A, Então só vejo a A', async () => {
