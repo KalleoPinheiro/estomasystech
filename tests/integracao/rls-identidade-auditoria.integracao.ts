@@ -180,14 +180,13 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
     }
   });
 
-  it('Dado o esquema migrado, Quando leio o catálogo, Então as três tabelas têm RLS e a política clinic_isolation, sem FORCE', async () => {
+  it('Dado o esquema migrado, Quando leio o catálogo, Então as três tabelas têm RLS e a política clinic_isolation', async () => {
     const rows = await admin.query<{
       relname: string;
       relrowsecurity: boolean;
-      relforcerowsecurity: boolean;
       policies: string[];
     }>(
-      `SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity,
+      `SELECT c.relname, c.relrowsecurity,
               (SELECT array_agg(p.policyname::text ORDER BY p.policyname) FROM pg_policies p
                 WHERE p.schemaname = 'public' AND p.tablename = c.relname) AS policies
          FROM pg_class c
@@ -199,7 +198,6 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
       [...TABLES].sort().map((relname) => ({
         relname,
         relrowsecurity: true,
-        relforcerowsecurity: false,
         policies: ['clinic_isolation'],
       })),
     );

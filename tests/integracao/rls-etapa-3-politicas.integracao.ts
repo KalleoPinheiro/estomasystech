@@ -179,32 +179,24 @@ describe('Feature: políticas de RLS nas tabelas de baixo risco (#872)', () => {
     }
   });
 
-  it('Dado a migração, Quando leio o catálogo, Então as três tabelas têm RLS ligado e a política clinic_isolation, sem FORCE', async () => {
+  it('Dado a migração, Quando leio o catálogo, Então as três tabelas têm RLS ligado e a política clinic_isolation', async () => {
     // Filtra pelas três tabelas desta etapa: as etapas seguintes (#873, #874) ligam outras, e a base
     // roda este arquivo sobre o esquema novo no portão de compatibilidade da migração.
+    // FORCE não entra aqui: a etapa 5 (#874) o liga, e este arquivo roda sobre o esquema novo no portão de compatibilidade.
     const rows = await admin.query<{
       relname: string;
       relrowsecurity: boolean;
-      relforcerowsecurity: boolean;
     }>(
-      `SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
+      `SELECT c.relname, c.relrowsecurity
          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname = ANY($1)
         ORDER BY c.relname`,
       [[...TABLES]],
     );
     expect(rows.rows).toEqual([
-      {
-        relname: 'partners',
-        relrowsecurity: true,
-        relforcerowsecurity: false,
-      },
-      {
-        relname: 'schedule_closures',
-        relrowsecurity: true,
-        relforcerowsecurity: false,
-      },
-      { relname: 'supplies', relrowsecurity: true, relforcerowsecurity: false },
+      { relname: 'partners', relrowsecurity: true },
+      { relname: 'schedule_closures', relrowsecurity: true },
+      { relname: 'supplies', relrowsecurity: true },
     ]);
     expect(
       (await policies()).filter((policy) =>
@@ -299,10 +291,13 @@ describe('Feature: políticas de RLS nas tabelas de baixo risco (#872)', () => {
     },
   );
 
-  it('Dado o ADR-110, Quando leio o catálogo, Então nenhuma tabela tem FORCE ROW LEVEL SECURITY (é da etapa 5)', async () => {
+  it('Dado o ADR-110, Quando leio o catálogo, Então FORCE só aparece em tabela com a política clinic_isolation', async () => {
+    // Vale antes e depois da etapa 5 (#874): FORCE sem política negaria tudo até ao dono.
     const forced = await admin.query(
       `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relforcerowsecurity`,
+        WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relforcerowsecurity
+          AND NOT EXISTS (SELECT 1 FROM pg_policies p
+                           WHERE p.schemaname = 'public' AND p.tablename = c.relname AND p.policyname = 'clinic_isolation')`,
     );
     expect(forced.rows).toEqual([]);
   });
