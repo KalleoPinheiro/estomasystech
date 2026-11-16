@@ -59,3 +59,28 @@ describe('Feature: Cabeçalho de página', () => {
     expect(container.querySelector('h1')?.className).toContain('min-w-0');
   });
 });
+
+describe('Feature: Selo largo abaixo do título no celular (#884)', () => {
+  it('com stackBadge o selo desce no celular e fica ao lado a partir de sm, sem flex-wrap', () => {
+    render(
+      <PageHeader
+        title="Clínica Homologação (fictícia)"
+        badge={<span>Cadastro completo</span>}
+        stackBadge
+      />,
+    );
+    const linha = screen.getByRole('heading', { level: 1 }).parentElement;
+    expect(linha?.className).toContain('flex-col');
+    expect(linha?.className).toContain('sm:flex-row');
+    expect(linha?.className).not.toContain('flex-wrap');
+    expect(
+      screen.getByText('Cadastro completo').parentElement?.className,
+    ).toContain('flex-wrap');
+  });
+
+  it('sem stackBadge o selo continua ao lado do título', () => {
+    render(<PageHeader title="Maria" badge={<span>Ativo</span>} />);
+    const linha = screen.getByRole('heading', { level: 1 }).parentElement;
+    expect(linha?.className).not.toContain('flex-col');
+  });
+});
