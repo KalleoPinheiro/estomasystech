@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   attachPoolErrorLogger,
   getDb,
+  getSystemDb,
   warmUpDatabase,
 } from '@/infrastructure/persistence/drizzle/db';
 import { loggedLines } from '../support/log-lines';
@@ -120,5 +121,64 @@ describe('Feature: getDb se recupera de falha na inicialização (#193)', () => 
     process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT = 'false';
     await warmUpDatabase();
     expect(globalForDb.estomasystechDbPromise).toBeUndefined();
+  });
+});
+
+describe('Feature: pool de sistema do RLS (#870, ADR-110)', () => {
+  const saved = {
+    driver: process.env.ESTOMASYSTECH_DB_DRIVER,
+    systemUrl: process.env.DATABASE_SYSTEM_URL,
+  };
+  const systemCache = globalThis as unknown as {
+    estomasystechSystemDbPromise?: Promise<unknown>;
+  };
+
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    systemCache.estomasystechSystemDbPromise = undefined;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    systemCache.estomasystechSystemDbPromise = undefined;
+    process.env.ESTOMASYSTECH_DB_DRIVER = saved.driver;
+    if (saved.systemUrl === undefined) {
+      delete process.env.DATABASE_SYSTEM_URL;
+    } else {
+      process.env.DATABASE_SYSTEM_URL = saved.systemUrl;
+    }
+  });
+
+  it('Dado DATABASE_SYSTEM_URL ausente, Quando peço o pool de sistema, Então é o mesmo pool do app', async () => {
+    delete process.env.DATABASE_SYSTEM_URL;
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+    expect(await getSystemDb()).toBe(await getDb());
+  });
+
+  it('Dado o driver PGlite, Quando peço o pool de sistema, Então segue o pool do app mesmo com a variável', async () => {
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
+    process.env.DATABASE_SYSTEM_URL = 'postgres://x:y@127.0.0.1:1/z';
+    expect(await getSystemDb()).toBe(await getDb());
+  });
+
+  it('Dado DATABASE_SYSTEM_URL no driver postgres, Quando peço o pool de sistema, Então cria um pool próprio e o reaproveita', async () => {
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'postgres';
+    // Pool é preguiçoso: nada conecta aqui.
+    process.env.DATABASE_SYSTEM_URL =
+      'postgres://sistema:x@127.0.0.1:1/estomasystech';
+    const first = await getSystemDb();
+    expect(await getSystemDb()).toBe(first);
+  });
+
+  it('Dado DATABASE_SYSTEM_URL inválida, Quando peço o pool de sistema, Então rejeita e não guarda a falha em cache', async () => {
+    process.env.ESTOMASYSTECH_DB_DRIVER = 'postgres';
+    process.env.DATABASE_SYSTEM_URL = 'isto não é uma url';
+    await expect(getSystemDb()).rejects.toThrow();
+    expect(systemCache.estomasystechSystemDbPromise).toBeUndefined();
+    expect(loggedLines(vi.mocked(console.error))).toContainEqual(
+      expect.objectContaining({
+        msg: 'Banco: falha ao inicializar o pool de sistema',
+      }),
+    );
   });
 });

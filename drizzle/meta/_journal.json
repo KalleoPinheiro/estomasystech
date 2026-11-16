@@ -526,6 +526,13 @@
       "when": 1794776499495,
       "tag": "0074_pii-email-login-indice-cego",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1794780000000,
+      "tag": "0075_rls-papel-aplicacao",
+      "breakpoints": true
     }
   ]
 }
