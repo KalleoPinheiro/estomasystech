@@ -2,7 +2,7 @@
 -- O readiness precisa saber só quais migrações já rodaram; esta função (SECURITY DEFINER, do dono) devolve apenas
 -- os carimbos `created_at`, nada do hash nem do esquema. Aditiva: não muda tabela nem política.
 -- search_path fixo e vazio de esquemas de usuário, para ninguém sequestrar a função por um objeto homônimo.
--- Rollback: DROP FUNCTION public.app__drizzle_migrations(); o readiness volta a ler `drizzle.__drizzle_migrations` só com o dono.
+-- Rollback: DROP FUNCTION public.app__drizzle_migrations(); (o registro da 0080 permanece: para recriar, o dono executa este SQL à mão, que é repetível). Sem a função o readiness dá `pending`.
 CREATE OR REPLACE FUNCTION public.app__drizzle_migrations() RETURNS SETOF bigint
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
   SELECT created_at FROM drizzle.__drizzle_migrations

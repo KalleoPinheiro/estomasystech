@@ -331,6 +331,7 @@ nenhuma conexão**: o app segue com a `DATABASE_URL` de hoje. Conferência e pre
    A migração já consta como aplicada e **não roda de novo**: reaplique o arquivo `drizzle/0075_rls-papel-aplicacao.sql`
    direto, com o mesmo papel dono das tabelas que migra o app (assim os privilégios por padrão valem para as tabelas
    que ele criar depois).
+   Reaplique também `drizzle/0080_rls-leitura-migracoes-aplicadas.sql` com o mesmo papel dono: sem o papel, a `0080` pula o `GRANT EXECUTE` em `public.app__drizzle_migrations()`.
 5. Opcional, só para deixar pronto (as etapas seguintes usam): `CREATE ROLE estomasystech_login LOGIN IN ROLE estomasystech_app;`
    e `\password estomasystech_login`; e, como superusuário, `CREATE ROLE estomasystech_sistema LOGIN BYPASSRLS IN ROLE estomasystech_app;`
    e `\password estomasystech_sistema`. Guarde as senhas no Coolify; não as aponte para o app ainda.
@@ -418,7 +419,8 @@ Ordem para trocar a `DATABASE_URL` para o papel da aplicação, só quando o don
 4. Trocar a `DATABASE_URL` para `estomasystech_login`, redeployar e conferir `/api/health/ready` (200). No log aparece `boot-migrate pulado`; é o esperado.
 
 Se o readiness der 503 depois da troca com `migrations: pending`, falta migrar com a URL do dono (não é defeito do papel). Rollback: voltar a
-`DATABASE_URL` para o dono. `DROP FUNCTION public.app__drizzle_migrations();` desfaz a função (o app sobe; o readiness volta a dar `pending` até reaplicar a `0080`).
+`DATABASE_URL` para o dono. `DROP FUNCTION public.app__drizzle_migrations();` desfaz a função, mas o registro da `0080` permanece e `db:migrate` **não** a
+recria (o readiness fica `pending`): para recriar, o dono executa o SQL da `0080` à mão no psql (é repetível).
 
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
   última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`

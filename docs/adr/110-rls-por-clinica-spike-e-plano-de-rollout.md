@@ -252,8 +252,10 @@ Com a `DATABASE_URL` no `estomasystech_app` (sem dono, sem `BYPASSRLS`), o `/api
   aplicação e `DATABASE_SYSTEM_URL` no de sistema; leitura direta do esquema `drizzle` e `CREATE TABLE` negados (`42501`), boot sem migrar,
   readiness verde, consultas por clínica isoladas (zero linhas sem `app.clinic_id`, sistema vê todas), readiness 503 com migração faltando e
   sem a função. `tests/infrastructure/readiness-papel-restrito.test.ts` cobre a função no PGlite e o `42883`.
-- **Rollback:** `DROP FUNCTION public.app__drizzle_migrations();` (o readiness volta a dar `pending` só com ela ausente; com a função ausente o
-  app ainda sobe, e com a `DATABASE_URL` do dono o boot-migrate recria a função ao reaplicar a 0080). Código: publicar a versão anterior.
+- **Rollback:** `DROP FUNCTION public.app__drizzle_migrations();` desfaz a função, mas **o registro da 0080 permanece**: o migrador só aplica
+  migração com `when` maior que a última registrada, então reiniciar o app (ou `db:migrate`) **não** a recria e o readiness fica `pending`. Para
+  recriar, o dono executa o SQL da `0080` à mão (é repetível: `CREATE OR REPLACE`, `REVOKE` e `GRANT` condicional) ou entra uma migração corretiva
+  nova. Não há leitura direta do esquema `drizzle` como alternativa. Código: publicar a versão anterior.
 - **Para a #874 (FORCE):** o papel de migração é separado da aplicação; ele é quem passa a rodar `db:migrate`. A lista `OUT_OF_SCOPE` de
   `rls-etapa-4-politicas.integracao.ts` (`user_accounts`, `google_accounts`, `audit_events`) continua valendo; o lote de identidade e auditoria deve vir
   **antes** do `FORCE`, porque `FORCE` sujeita o dono também e o login lê essas tabelas sem saber a clínica.
