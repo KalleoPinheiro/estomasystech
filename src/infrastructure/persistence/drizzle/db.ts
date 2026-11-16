@@ -154,9 +154,9 @@ export function getDb(): Promise<AppDb> {
 
 /**
  * Pool de sistema (RLS etapa 1, ADR-110): conexão com um papel `BYPASSRLS`, reservada ao
- * `systemScope()` (cron, login, convite, plataforma). Sem `DATABASE_SYSTEM_URL` (ou no PGlite) é o
+ * escopo de sistema (cron, login, convite, plataforma). Sem `DATABASE_SYSTEM_URL` (ou no PGlite) é o
  * mesmo pool de `getDb()`: nada muda em produção até o dono configurar a variável. Nunca migra.
- * Ainda sem chamador: a etapa 2 liga o `set_config` por clínica e passa o `systemScope()` para cá.
+ * Ainda sem chamador: a etapa 2 liga o `set_config` por clínica e passa o escopo de sistema para cá.
  */
 export function getSystemDb(): Promise<AppDb> {
   if (
