@@ -20,26 +20,49 @@ function queryText(config: QueryArg): string {
  * Cliente de uma transação aberta por `db.transaction`: logo depois do `begin` grava a clínica
  * (`set_config(..., true)` vale só até o fim da transação, então não vaza para a requisição seguinte
  * nem atravessa o PgBouncer em modo transação).
+ *
+ * O drizzle abre o `begin` fora do seu `try/finally`: se gravar a clínica falhar, este cliente desfaz
+ * e se descarta sozinho (uma vez só). O `error` do socket é tratado durante todo o empréstimo, porque
+ * o pool tira o ouvinte de conexão ociosa ao emprestar e um evento sem ouvinte derruba o processo.
  */
 class ClinicScopedClient {
+  private released = false;
+  private broken = false;
+  private readonly onError = (): void => {
+    this.broken = true;
+  };
+
   constructor(
     private readonly client: PoolClient,
     private readonly clinicId: string,
-  ) {}
+  ) {
+    client.on('error', this.onError);
+  }
 
   async query(config: QueryArg, values?: QueryValues): Promise<QueryResult> {
     const run = this.client.query.bind(this.client) as unknown as QueryFn;
     const result = await run(config, values);
     if (/^\s*begin\b/i.test(queryText(config))) {
-      await run(`select set_config('${CLINIC_SETTING}', $1, true)`, [
-        this.clinicId,
-      ]);
+      try {
+        await run(`select set_config('${CLINIC_SETTING}', $1, true)`, [
+          this.clinicId,
+        ]);
+      } catch (error) {
+        await run('rollback').catch(() => {
+          this.broken = true;
+        });
+        this.release(true);
+        throw error;
+      }
     }
     return result;
   }
 
-  release(error?: Error | boolean): void {
-    this.client.release(error);
+  release(discard = false): void {
+    if (this.released) return;
+    this.released = true;
+    this.client.off('error', this.onError);
+    this.client.release(discard || this.broken);
   }
 }
 
@@ -58,6 +81,10 @@ export class ClinicScopedPool {
   async query(config: QueryArg, values?: QueryValues): Promise<QueryResult> {
     const client = await this.pool.connect();
     let broken = false;
+    const onError = (): void => {
+      broken = true;
+    };
+    client.on('error', onError);
     try {
       await client.query(
         `begin; select set_config('${CLINIC_SETTING}', ${client.escapeLiteral(this.clinicId)}, true)`,
@@ -72,6 +99,7 @@ export class ClinicScopedPool {
       });
       throw error;
     } finally {
+      client.off('error', onError);
       client.release(broken);
     }
   }

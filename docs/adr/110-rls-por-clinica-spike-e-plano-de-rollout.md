@@ -122,7 +122,7 @@ Sem migração e sem política: só o contrato de conexão do ADR passa a valer 
   outra solução (issue aberta junto deste PR).
 - **Prova:** `tests/integracao/rls-etapa-2-set-config.integracao.ts` (Postgres real, pool de **uma** conexão, o pior
   caso para vazamento) e `tests/infrastructure/clinic-scoped-pool.test.ts`.
-- **Rollback:** remover o envoltório (`scopeDbToClinic` em `getRepositories` e o `set_config` do gerenciador);
+- **Rollback:** remover o envoltório (`scopeDbToClinic` em `getRepositories` e em `lookupAccountStatus` de `staff-revocation`, e o `set_config` do gerenciador);
   sem migração, sem dado a desfazer. Publicar de volta a versão anterior também basta.
 
 ## Premissa a verificar na etapa 1

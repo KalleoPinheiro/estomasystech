@@ -14,6 +14,8 @@ function fakeClient(
   const client = {
     escapeLiteral: (value: string) => `'${value.replaceAll("'", "''")}'`,
     release: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
     query: vi.fn(async (config: string | { text: string }) => {
       const text = typeof config === 'string' ? config : config.text;
       log.push(text);
@@ -96,7 +98,72 @@ describe('Feature: pool com a clínica gravada (RLS etapa 2, ADR-110)', () => {
     expect(client.query).toHaveBeenNthCalledWith(2, expect.any(String), [
       'clinica-2',
     ]);
-    expect(client.release).toHaveBeenCalledOnce();
+    expect(client.release).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it('Dado erro de socket durante o empréstimo, Então o ouvinte é removido e a conexão é descartada', async () => {
+    const { client, pool } = fakeClient();
+    client.query.mockImplementationOnce(async () => {
+      const [, onError] = client.on.mock.calls[0] as [string, () => void];
+      onError();
+      return { rows: [] };
+    });
+
+    await new ClinicScopedPool(pool as never, 'c').query('select 1');
+
+    expect(client.on).toHaveBeenCalledWith('error', expect.any(Function));
+    expect(client.off).toHaveBeenCalledWith('error', expect.any(Function));
+    expect(client.release).toHaveBeenCalledWith(true);
+  });
+
+  it('Dado falha ao gravar a clínica depois do begin, Então desfaz, descarta uma vez e devolve o erro original', async () => {
+    const { client, log, pool } = fakeClient({ failOn: /set_config/ });
+    const tx = await new ClinicScopedPool(pool as never, 'c').connect();
+
+    await expect(tx.query({ text: 'begin' } as never)).rejects.toThrow('boom');
+    tx.release();
+
+    expect(log).toEqual([
+      'begin',
+      `select set_config('${CLINIC_SETTING}', $1, true)`,
+      'rollback',
+    ]);
+    expect(client.release).toHaveBeenCalledTimes(1);
+    expect(client.release).toHaveBeenCalledWith(true);
+  });
+
+  it('Dado falha na gravação e no rollback, Então o cliente continua sendo descartado', async () => {
+    const { client, pool } = fakeClient({
+      failOn: /set_config/,
+      rollbackFails: true,
+    });
+    const tx = await new ClinicScopedPool(pool as never, 'c').connect();
+
+    await expect(tx.query('begin')).rejects.toThrow('boom');
+
+    expect(client.release).toHaveBeenCalledWith(true);
+  });
+
+  it('Dado erro de socket numa transação do drizzle, Então release descarta o cliente', async () => {
+    const { client, pool } = fakeClient();
+    const tx = await new ClinicScopedPool(pool as never, 'c').connect();
+    const [, onError] = client.on.mock.calls[0] as [string, () => void];
+
+    onError();
+    tx.release();
+    tx.release();
+
+    expect(client.release).toHaveBeenCalledTimes(1);
+    expect(client.release).toHaveBeenCalledWith(true);
+  });
+
+  it('Dado release com erro explícito, Então repassa o erro ao pool', async () => {
+    const { client, pool } = fakeClient();
+    const tx = await new ClinicScopedPool(pool as never, 'c').connect();
+
+    tx.release(true);
+
+    expect(client.release).toHaveBeenCalledWith(true);
   });
 
   it('Dado config sem texto, Então não confunde com begin', async () => {
