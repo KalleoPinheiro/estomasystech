@@ -35,7 +35,7 @@ export function PageHeader({
           <h1 className="sv-display min-w-0 break-words font-bold text-2xl">
             {title}
           </h1>
-          {badge && <div className="min-w-0">{badge}</div>}
+          {badge && <div>{badge}</div>}
         </div>
         {description && (
           <div className="mt-1 max-w-prose text-ink-3 text-sm">

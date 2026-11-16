@@ -56,8 +56,6 @@ describe('Feature: Cabeçalho de página', () => {
     const linha = screen.getByRole('heading', { level: 1 }).parentElement;
     expect(linha).not.toBeNull();
     expect(linha?.className).not.toContain('flex-wrap');
-    const selo = screen.getByText('Ativo').parentElement;
-    expect(selo?.className).toContain('min-w-0');
     expect(container.querySelector('h1')?.className).toContain('min-w-0');
   });
 });

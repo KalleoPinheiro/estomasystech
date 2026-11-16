@@ -16,7 +16,7 @@ related:
 
 ## 1. Ambiente e método
 
-Mesmo da [linha de base](performance-front-linha-de-base-2026-10.md) § 1: `main` @ `55a613e`, `npm run build` + `next start`, PGlite com a semente do E2E, Chromium com CPU 4x e rede de 1,6 Mbps / 150 ms em 360 e 390 px, sem cache HTTP, três rodadas. JS é a soma dos `.js` baixados pela rota, com gzip.
+Mesmo da [linha de base](performance-front-linha-de-base-2026-10.md) § 1. JS e CLS «antes»: `main` @ `55a613e`; CLS «depois»: build da branch do PR com a correção do `PageHeader` (base `55a613e`), `npm run build` + `next start`, PGlite com a semente do E2E, Chromium com CPU 4x e rede de 1,6 Mbps / 150 ms em 360 e 390 px, sem cache HTTP, três rodadas. JS é a soma dos `.js` baixados pela rota, com gzip.
 
 ## 2. JS por rota (administrador de empresa)
 
