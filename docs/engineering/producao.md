@@ -376,7 +376,7 @@ Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comand
 Para a etapa 3 valer de fato (depois, quando o dono quiser trocar de papel), nesta ordem:
 
 1. `DATABASE_SYSTEM_URL` definida no Coolify (§ 4.2 passo 3), senão login, convite, plataforma e cron veem zero linhas nessas tabelas.
-2. Resolver a #889 (o papel da aplicação não enxerga o esquema `drizzle`; o `/api/health/ready` falharia).
+2. #889 resolvida (§ 4.5): a migração `0080` dá ao readiness uma leitura mínima das migrações e o boot-migrate é pulado com aviso com o papel da aplicação.
 3. `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e migrar com `npm run db:migrate` usando a URL do dono.
 4. Só então apontar a `DATABASE_URL` para `estomasystech_login`. Testar primeiro na staging.
 
@@ -398,11 +398,27 @@ Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comand
 2. `select count(*) from procedure_supplies where clinic_id is null;` deve dar 0 (a coluna é `NOT NULL`).
 3. `select relname from pg_class where relkind = 'r' and relrowsecurity and relforcerowsecurity;` não deve listar nada (sem `FORCE`).
 
-Para valer de fato, as mesmas condições da § 4.3 (`DATABASE_SYSTEM_URL`, #889, `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`, só então a
+Para valer de fato, as mesmas condições da § 4.3 (`DATABASE_SYSTEM_URL`, #889 (resolvida, § 4.5), `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`, só então a
 `DATABASE_URL` do papel da aplicação, testando na staging antes). `user_accounts`, `google_accounts` e `audit_events` seguem sem RLS.
 
 Rollback, por tabela e sem backup: `ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY;` (o SQL das migrações lista as tabelas; um
 lote inteiro é o mesmo comando repetido). **Não** use `DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito.
+
+### 4.5 Preparo da etapa 5: readiness e boot-migrate com o papel da aplicação (#889, ADR-110)
+
+A migração `0080` cria a função `public.app__drizzle_migrations()` (só os carimbos das migrações, `EXECUTE` só para `estomasystech_app`) e o
+`getDb()` passa a **pular o boot-migrate com aviso** quando a conexão não tem `CREATE` no banco (papel da aplicação). **Sem ação obrigatória no
+servidor:** com a `DATABASE_URL` do dono nada muda (ele migra no boot e o readiness segue verde).
+
+Ordem para trocar a `DATABASE_URL` para o papel da aplicação, só quando o dono quiser (staging primeiro):
+
+1. Deploy desta versão com a `DATABASE_URL` atual (aplica a `0080`). Confira, no psql do banco (§ 4.1 passo 1): `select count(*) from public.app__drizzle_migrations();` dá o número de migrações.
+2. `DATABASE_SYSTEM_URL` definida (§ 4.2 passo 3) e o login do papel da aplicação criado (§ 4.1 passo 5).
+3. Daí em diante migrar é passo separado, com a URL do **dono**: `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e `npm run db:migrate` (§ 4).
+4. Trocar a `DATABASE_URL` para `estomasystech_login`, redeployar e conferir `/api/health/ready` (200). No log aparece `boot-migrate pulado`; é o esperado.
+
+Se o readiness der 503 depois da troca com `migrations: pending`, falta migrar com a URL do dono (não é defeito do papel). Rollback: voltar a
+`DATABASE_URL` para o dono. `DROP FUNCTION public.app__drizzle_migrations();` desfaz a função (o app sobe; o readiness volta a dar `pending` até reaplicar a `0080`).
 
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
   última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`

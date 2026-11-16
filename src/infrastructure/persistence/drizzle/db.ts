@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { enforceVerifyFull } from '@/lib/database-url';
 import { logError } from '@/lib/log-error';
+import { logger } from '@/lib/observability/logger';
 import { assertNotProductionDatabase } from '@/lib/runtime-env';
 import * as schema from './schema';
 
@@ -98,7 +99,15 @@ async function createPostgresDb(): Promise<AppDb> {
   // Preferir `npm run db:migrate` no deploy; ESTOMASYSTECH_MIGRATE_ON_BOOT=false desliga o boot-migrate.
   if (process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT !== 'false') {
     try {
-      await migrateWithLock(pool, db);
+      if (await canMigrate(pool)) {
+        await migrateWithLock(pool, db);
+      } else {
+        // Papel da aplicação (RLS etapa 5, ADR-110): sem poder de DDL. Migrar é do dono, por `npm run db:migrate`;
+        // o readiness segue verdadeiro (migração pendente = 503).
+        logger.warn(
+          'Banco: a conexão não tem permissão de migrar; boot-migrate pulado (migre com o papel dono)',
+        );
+      }
     } catch (error) {
       // Sem isto cada nova tentativa de getDb deixaria um pool órfão aberto.
       await pool.end().catch(() => undefined);
@@ -106,6 +115,18 @@ async function createPostgresDb(): Promise<AppDb> {
     }
   }
   return db as unknown as AppDb;
+}
+
+/**
+ * Só quem pode criar objetos no banco migra. O papel da aplicação (`estomasystech_app`, sem dono) não
+ * tem `CREATE` no banco: o boot-migrate dele falharia no `CREATE SCHEMA` e derrubaria o app inteiro,
+ * então é pulado com aviso. Nunca concede nada: só lê o privilégio já existente.
+ */
+async function canMigrate(pool: import('pg').Pool): Promise<boolean> {
+  const result = await pool.query<{ can: boolean }>(
+    "SELECT has_database_privilege(current_user, current_database(), 'CREATE') AS can",
+  );
+  return result.rows[0]?.can === true;
 }
 
 async function migrateWithLock(
