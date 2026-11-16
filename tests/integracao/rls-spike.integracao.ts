@@ -118,6 +118,8 @@ describe('Feature: RLS por clínica como defesa em profundidade (#729)', () => {
     for (const table of TABLES) {
       await admin.query(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
       // Sem `app.clinic_id`, current_setting(…, true) devolve NULL: a política falha fechada.
+      // Desde a etapa 3 (#872) a migração 0076 já cria a política em partners e supplies: recria a do spike.
+      await admin.query(`DROP POLICY IF EXISTS tenant_isolation ON ${table}`);
       await admin.query(
         `CREATE POLICY tenant_isolation ON ${table}
            USING (clinic_id = current_setting('app.clinic_id', true))
