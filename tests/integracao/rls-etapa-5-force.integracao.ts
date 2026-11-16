@@ -316,7 +316,7 @@ describe('Feature: FORCE ROW LEVEL SECURITY nas tabelas com política (#874)', (
           CLINIC_A,
         ]),
       ),
-    ).rejects.toThrow(/row-level security|duplicate key/);
+    ).rejects.toThrow(/row-level security/);
   });
 
   it('Dado o dono na clínica A, Quando grava token, fator ou código para a conta da B, Então a política da conta recusa', async () => {
@@ -564,7 +564,19 @@ describe('Feature: fluxos de identidade com FORCE e o dono como conexão da apli
     expect(await reencryptAccountIdentity(systemDb, TEST_CIPHER, BLIND)).toBe(
       0,
     );
-    expect(await listOrphanPortalAccounts(ownerDb)).toEqual([]);
-    await expect(listOrphanPortalAccounts(systemDb)).resolves.toBeDefined();
+    // Uma conta de portal sem vínculo em cada clínica: só a conexão de sistema as lista.
+    const orphanA = account('orfa-a@teste.invalid', CLINIC_A);
+    const orphanB = account('orfa-b@teste.invalid', CLINIC_B);
+    await accounts(systemDb, CLINIC_A).save(orphanA);
+    await accounts(systemDb, CLINIC_B).save(orphanB);
+    await admin.query(
+      `UPDATE user_accounts SET role = 'patient', patient_id = NULL WHERE id = ANY($1)`,
+      [[orphanA.id, orphanB.id]],
+    );
+    expect(await listOrphanPortalAccounts(ownerDb, TEST_CIPHER)).toEqual([]);
+    const listed = await listOrphanPortalAccounts(systemDb, TEST_CIPHER);
+    expect(listed.map((orphan) => orphan.id).sort()).toEqual(
+      [orphanA.id, orphanB.id].sort(),
+    );
   });
 });

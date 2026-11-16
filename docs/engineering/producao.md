@@ -382,7 +382,7 @@ Para a etapa 3 valer de fato (depois, quando o dono quiser trocar de papel), nes
 4. Só então apontar a `DATABASE_URL` para `estomasystech_login`. Testar primeiro na staging.
 
 Rollback, instantâneo e sem backup: `ALTER TABLE supplies DISABLE ROW LEVEL SECURITY;` e o mesmo em `partners` e
-`schedule_closures`. **Não** use `DROP POLICY` sozinho: com o RLS ligado e sem política o Postgres nega tudo ao papel da aplicação; remover a política só vale como limpeza, depois do `DISABLE`. Voltar a `DATABASE_URL` para o dono também desfaz o
+`schedule_closures`. **Não** use `DROP POLICY` sozinho: com o RLS ligado e sem política o Postgres nega tudo ao papel da aplicação; remover a política só vale como limpeza, depois do `DISABLE`. Antes da `0083`, voltar a `DATABASE_URL` para o dono também desfaz o
 efeito sem mexer no banco.
 
 ### 4.4 RLS etapa 4: políticas nas tabelas clínicas e financeiras (#873, ADR-110)
@@ -403,7 +403,7 @@ Para valer de fato, as mesmas condições da § 4.3 (`DATABASE_SYSTEM_URL`, #889
 `DATABASE_URL` do papel da aplicação, testando na staging antes). `user_accounts`, `google_accounts` e `audit_events` entram na § 4.6.
 
 Rollback, por tabela e sem backup: `ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY;` (o SQL das migrações lista as tabelas; um
-lote inteiro é o mesmo comando repetido). **Não** use `DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito.
+lote inteiro é o mesmo comando repetido). **Não** use `DROP POLICY` sozinho. Antes da `0083`, voltar a `DATABASE_URL` para o dono também desfaz o efeito; depois dela o dono também é filtrado e vale `NO FORCE` (§ 4.7).
 
 ### 4.5 Preparo da etapa 5: readiness e boot-migrate com o papel da aplicação (#889, ADR-110)
 
@@ -481,7 +481,7 @@ Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comand
 para todos (o pool de sistema cairia no da aplicação e veria zero contas); depois, na staging, entrar com os três papéis e recuperar uma senha.
 
 Rollback, por tabela e sem backup: `ALTER TABLE user_accounts DISABLE ROW LEVEL SECURITY;` (idem `google_accounts` e `audit_events`). **Não** use
-`DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito. A etapa 5 (`FORCE`, § 4.7) fecha a série.
+`DROP POLICY` sozinho. Antes da `0083`, voltar a `DATABASE_URL` para o dono também desfaz o efeito; depois dela o dono também é filtrado e vale `NO FORCE` (§ 4.7). A etapa 5 (`FORCE`, § 4.7) fecha a série.
 
 ### 4.7 RLS etapa 5: políticas nas tabelas sem `clinic_id` e FORCE (#874, ADR-110)
 
@@ -504,7 +504,7 @@ As migrações `0082` (política em `clinics`, `auth_tokens`, `user_mfa`, `mfa_r
 3. Entrar no app com os três papéis, abrir agenda e ficha, recuperar uma senha e conferir `/api/health/ready` (200).
 4. Rodar um backup de teste (`sudo systemctl start estomasystech-backup.service`) e ver `BACKUP_OK`.
 
-**Scripts de operação** (`data:reencrypt`, `admin:recover`, `db:portal-orphans`, o seed) usam a conexão de sistema: rode com `DATABASE_SYSTEM_URL` definida (o login `estomasystech_sistema`, `BYPASSRLS`). Sem ela caem no pool de `DATABASE_URL`, que com o papel da aplicação ou com o dono sob FORCE enxerga zero linhas (o script termina sem fazer nada, não corrompe). Migração de dado futura, que leia ou grave linhas, também precisa rodar com o papel de sistema.
+**Scripts de operação** (`data:reencrypt`, `admin:recover`, `db:portal-orphans`, o seed) usam a conexão de sistema: rode com `DATABASE_SYSTEM_URL` definida (o login `estomasystech_sistema`, `BYPASSRLS`). Sem ela caem no pool de `DATABASE_URL`, que com o papel da aplicação ou com o dono sob FORCE enxerga zero linhas (o script termina sem fazer nada, não corrompe). Migração de dado futura, que leia ou grave linhas: o papel de sistema não enxerga o esquema `drizzle` e o dono é filtrado; na janela da migração o superusuário roda `ALTER ROLE <dono> BYPASSRLS;` e, ao terminar, `ALTER ROLE <dono> NOBYPASSRLS;`. Sem `GRANT` novo.
 
 **Rollback**, instantâneo e sem backup. Desligar o FORCE em todas as tabelas (o dono ou superusuário, no psql):
 
@@ -515,7 +515,16 @@ DO $$ DECLARE t text; BEGIN
 END $$;
 ```
 
-O registro da `0083` permanece (o migrador não a reaplica sozinho); para religar, o mesmo laço com `FORCE`. Para desfazer também a política das quatro tabelas novas: `ALTER TABLE <clinics|auth_tokens|user_mfa|mfa_recovery_codes> DISABLE ROW LEVEL SECURITY;` (não use `DROP POLICY` sozinho). Voltar a `DATABASE_URL` para um superusuário também desfaz o efeito para a aplicação.
+O registro da `0083` permanece (o migrador não a reaplica sozinho); para religar, **não** reuse o laço (ele só seleciona tabelas já forçadas): use este, que parte das tabelas com a política:
+
+```sql
+DO $$ DECLARE t text; BEGIN
+  FOR t IN SELECT DISTINCT tablename FROM pg_policies WHERE schemaname = 'public' AND policyname = 'clinic_isolation'
+  LOOP EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t); END LOOP;
+END $$;
+```
+
+Ou repita as instruções de `drizzle/0083_rls-force.sql`. Para desfazer também a política das quatro tabelas novas: `ALTER TABLE <clinics|auth_tokens|user_mfa|mfa_recovery_codes> DISABLE ROW LEVEL SECURITY;` (não use `DROP POLICY` sozinho). Voltar a `DATABASE_URL` para um superusuário também desfaz o efeito para a aplicação.
 
 ## 5. Backup e restore
 

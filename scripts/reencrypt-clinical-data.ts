@@ -43,7 +43,12 @@ async function main(): Promise<void> {
     total += updated;
     console.log(`${table}\t${updated} linha(s) regravada(s)`);
   }
-  console.log(total === 0 ? "Nada pendente: tudo na chave atual." : `Total: ${total}. Rode de novo para confirmar 0 pendências.`);
+  if (total === 0 && !process.env.DATABASE_SYSTEM_URL) {
+    // Com FORCE (#874) o dono sem BYPASSRLS enxerga zero linhas: "nada pendente" aqui não prova nada.
+    console.log("Nenhuma linha visível sem DATABASE_SYSTEM_URL: com FORCE o resultado pode estar incompleto. Defina DATABASE_SYSTEM_URL e rode de novo antes de aposentar a chave anterior.");
+  } else {
+    console.log(total === 0 ? "Nada pendente: tudo na chave atual." : `Total: ${total}. Rode de novo para confirmar 0 pendências.`);
+  }
 }
 
 main()
