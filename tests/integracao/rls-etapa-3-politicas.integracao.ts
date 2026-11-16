@@ -18,7 +18,7 @@ import {
 process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 
 /**
- * RLS etapa 3 (#872, ADR-110): a migração 0076 liga a política `tenant_isolation` em `supplies`,
+ * RLS etapa 3 (#872, ADR-110): a migração 0076 liga a política `clinic_isolation` em `supplies`,
  * `partners` e `schedule_closures`. A prova usa o Postgres real: o PGlite roda como superusuário e
  * ignora a política. Os três atores do ADR são exercitados: o dono (como a produção conecta hoje), o
  * papel da aplicação (não dono, sem BYPASSRLS) e o papel de sistema (BYPASSRLS).
@@ -204,9 +204,9 @@ describe('Feature: políticas de RLS nas tabelas de baixo risco (#872)', () => {
       { relname: 'supplies', relrowsecurity: true, relforcerowsecurity: false },
     ]);
     expect(await policies()).toEqual([
-      { tablename: 'partners', policyname: 'tenant_isolation' },
-      { tablename: 'schedule_closures', policyname: 'tenant_isolation' },
-      { tablename: 'supplies', policyname: 'tenant_isolation' },
+      { tablename: 'partners', policyname: 'clinic_isolation' },
+      { tablename: 'schedule_closures', policyname: 'clinic_isolation' },
+      { tablename: 'supplies', policyname: 'clinic_isolation' },
     ]);
   });
 

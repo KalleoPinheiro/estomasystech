@@ -362,14 +362,14 @@ versão anterior. `DROP ROLE estomasystech_sistema;` limpa o papel.
 
 ### 4.3 RLS etapa 3: políticas em `supplies`, `partners` e `schedule_closures` (#872, ADR-110)
 
-A migração `0076` liga a política `tenant_isolation` nas três tabelas e entra pelo boot-migrate, como as outras. **Sem ação
+A migração `0076` liga a política `clinic_isolation` nas três tabelas e entra pelo boot-migrate, como as outras. **Sem ação
 obrigatória no servidor.** Enquanto a `DATABASE_URL` for do dono das tabelas (`estomasystech`), o Postgres ignora a política:
 o app se comporta como antes. A política só passa a filtrar quando a aplicação conectar com `estomasystech_login` (papel
 que herda de `estomasystech_app`), o que **não** é feito por este PR.
 
 Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comando por linha, sem aspas):
 
-1. `\d+ partners` mostra `Policies: POLICY tenant_isolation` (idem `supplies` e `schedule_closures`).
+1. `\d+ partners` mostra `Policies: POLICY clinic_isolation` (idem `supplies` e `schedule_closures`).
 2. `select relname, relrowsecurity, relforcerowsecurity from pg_class where relname in (select tablename from pg_policies);`
    deve listar as três com `relrowsecurity` verdadeiro e `relforcerowsecurity` falso.
 
@@ -381,7 +381,7 @@ Para a etapa 3 valer de fato (depois, quando o dono quiser trocar de papel), nes
 4. Só então apontar a `DATABASE_URL` para `estomasystech_login`. Testar primeiro na staging.
 
 Rollback, instantâneo e sem backup: `ALTER TABLE supplies DISABLE ROW LEVEL SECURITY;` e o mesmo em `partners` e
-`schedule_closures` (ou `DROP POLICY tenant_isolation ON <tabela>;`). Voltar a `DATABASE_URL` para o dono também desfaz o
+`schedule_closures` (ou `DROP POLICY clinic_isolation ON <tabela>;`). Voltar a `DATABASE_URL` para o dono também desfaz o
 efeito sem mexer no banco.
 
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da

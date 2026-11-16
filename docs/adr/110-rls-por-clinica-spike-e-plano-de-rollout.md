@@ -35,7 +35,7 @@ O teste `tests/integracao/rls-spike.integracao.ts` (Postgres real, `npm run test
 
 ## Mapa das tabelas
 
-- **40 tabelas com `clinic_id`** (texto): recebem a política `tenant_isolation`
+- **40 tabelas com `clinic_id`** (texto): recebem a política `tenant_isolation` (nas migrações reais ela se chama `clinic_isolation`, ver etapa 3)
   `USING/WITH CHECK (clinic_id = current_setting('app.clinic_id', true))`.
 - **12 sem `clinic_id`**: `clinics` (política por `id`), `procedure_supplies` (herda do procedimento: política
   com `EXISTS`, ou coluna nova, decidir na etapa 3), `auth_tokens`, `user_mfa`, `mfa_recovery_codes` (ligadas a
@@ -130,7 +130,7 @@ Sem migração e sem política: só o contrato de conexão do ADR passa a valer 
 Primeira política ligada, só em tabelas de baixo risco.
 
 - **Migração `0076_rls-politicas-baixo-risco`:** em `supplies`, `partners` e `schedule_closures`,
-  `ENABLE ROW LEVEL SECURITY` e a política `tenant_isolation` `USING/WITH CHECK (clinic_id = current_setting('app.clinic_id', true))`.
+  `ENABLE ROW LEVEL SECURITY` e a política `clinic_isolation` `USING/WITH CHECK (clinic_id = current_setting('app.clinic_id', true))`.
   Idempotente (`DROP POLICY IF EXISTS` antes do `CREATE POLICY`), sem `FORCE`, sem tocar em dado. O lint `check:migracao`
   falha fechado em RLS (instrução que ele não conhece) e a classifica como não aditiva; na prática é reversível sem backup
   e o código antigo segue funcionando sobre ela (ver a tabela abaixo).
@@ -150,12 +150,15 @@ Primeira política ligada, só em tabelas de baixo risco.
   (`EXISTS` ou coluna nova) é da etapa 4.
 - **Prova:** `tests/integracao/rls-etapa-3-politicas.integracao.ts` (Postgres real, pool de **uma** conexão): catálogo, os três
   atores (aplicação, sistema com `BYPASSRLS`, dono), repositórios reais com o papel da aplicação, `WITH CHECK`, falha fechada,
-  idempotência e o rollback. `rls-spike.integracao.ts` passou a recriar a política do spike (a migração já a cria em
-  `partners` e `supplies`); as asserções não mudaram.
+  idempotência e o rollback.
+- **Por que `clinic_isolation` e não `tenant_isolation`:** o portão de compatibilidade da migração roda a suíte de integração
+  da base sobre o esquema novo, e o `rls-spike.integracao.ts` da base cria `tenant_isolation` em `partners` e `supplies`;
+  com o mesmo nome o `CREATE POLICY` do spike falharia. Nome distinto mantém o spike intacto (as duas políticas têm o mesmo
+  predicado, então o efeito é o mesmo). As etapas 4 e 5 seguem com `clinic_isolation`.
 - **Desempenho:** o predicado usa `clinic_id` (já indexado) e `current_setting` estável por consulta; só vale para o papel
   da aplicação. Medir `EXPLAIN` e latência na staging antes da etapa 4.
 - **Rollback:** `ALTER TABLE supplies DISABLE ROW LEVEL SECURITY;` (idem `partners`, `schedule_closures`), instantâneo e sem
-  perda de dado; `DROP POLICY tenant_isolation ON <tabela>;` remove a política. Não exige restaurar backup.
+  perda de dado; `DROP POLICY clinic_isolation ON <tabela>;` remove a política. Não exige restaurar backup.
 
 ## Premissa a verificar na etapa 1
 
