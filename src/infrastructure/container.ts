@@ -70,7 +70,11 @@ import type {
 import { googleCalendarOAuthConfigFromEnv } from '@/lib/auth/google-calendar-oauth';
 import type { TenantScope } from '@/lib/auth/tenant-scope';
 import { type BlindIndex, blindIndexFromEnv } from '@/lib/blind-index';
-import { type DataCipher, dataCipherFromEnv } from '@/lib/data-cipher';
+import {
+  type DataCipher,
+  dataCipherFromEnv,
+  type FieldCipher,
+} from '@/lib/data-cipher';
 import { logError } from '@/lib/log-error';
 import {
   GoogleCalendarGateway,
@@ -269,6 +273,13 @@ export function currentBlindIndex(): BlindIndex {
   return globalForServices.estomasystechBlindIndex.index;
 }
 
+/** Contas de acesso: e-mail de login cifrado, com índice cego (ADR-111). */
+const accountRepository = (
+  db: AppDb,
+  clinicId: string | null,
+  cipher: FieldCipher,
+) => new DrizzleUserAccountRepository(db, clinicId, cipher, currentBlindIndex);
+
 async function oauthCalendarGateway(
   db: AppDb,
   clinicId: string | null,
@@ -444,7 +455,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     procedures: new DrizzleProcedureRepository(db, tenant.clinicId),
     procedureKits: new DrizzleProcedureKitRepository(db),
     sessionPackages: new DrizzleSessionPackageRepository(db, tenant.clinicId),
-    userAccounts: new DrizzleUserAccountRepository(db, tenant.clinicId),
+    userAccounts: accountRepository(db, tenant.clinicId, cipher),
     authTokens: new DrizzleAuthTokenRepository(db),
     mfa: new DrizzleMfaRepository(db, cipher),
     scheduleConfig: new DrizzleScheduleConfigRepository(db, tenant.clinicId),

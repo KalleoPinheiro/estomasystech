@@ -423,9 +423,12 @@ describe('Feature: Gestão de admins pela plataforma (B4, Journey 4 e 5)', () =>
 
     it('reset-link auditado: trilha da clínica com detail reset-link e, em produção, nem link nem segredo na trilha ou no log', async () => {
       const clinicId = await freshClinic();
-      const admin = await seedAccount(clinicId);
       vi.stubEnv('NODE_ENV', 'production');
       vi.stubEnv('DATA_ENCRYPTION_KEY', 'a'.repeat(64));
+      // O e-mail de login é cifrado com índice cego (ADR-111): em produção o pepper é obrigatório,
+      // e a conta é semeada já com as chaves de produção.
+      vi.stubEnv('BLIND_INDEX_PEPPER', 'p'.repeat(64));
+      const admin = await seedAccount(clinicId);
       const logged: string[] = [];
       for (const level of ['info', 'warn', 'error', 'log'] as const) {
         vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {

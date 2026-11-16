@@ -1,4 +1,5 @@
 import { and, eq, isNull, or } from 'drizzle-orm';
+import { dataCipherFromEnv, type FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { userAccounts } from './schema';
 
@@ -18,6 +19,7 @@ export interface OrphanPortalAccount {
  */
 export async function listOrphanPortalAccounts(
   db: AppDb,
+  cipher: FieldCipher = dataCipherFromEnv(),
 ): Promise<OrphanPortalAccount[]> {
   const rows = await db
     .select({
@@ -34,9 +36,15 @@ export async function listOrphanPortalAccounts(
         and(eq(userAccounts.role, 'partner'), isNull(userAccounts.partnerId)),
       ),
     )
-    .orderBy(userAccounts.clinicId, userAccounts.email);
-  return rows.map((row) => ({
-    ...row,
-    role: row.role as OrphanPortalAccount['role'],
-  }));
+    .orderBy(userAccounts.clinicId, userAccounts.id);
+  // O e-mail é cifrado (ADR-111): a ordem por e-mail dentro da empresa é em memória.
+  const key = (account: OrphanPortalAccount) =>
+    `${account.clinicId}\u0000${account.email}`;
+  return rows
+    .map((row) => ({
+      ...row,
+      email: cipher.decrypt(row.email),
+      role: row.role as OrphanPortalAccount['role'],
+    }))
+    .sort((a, b) => key(a).localeCompare(key(b)));
 }

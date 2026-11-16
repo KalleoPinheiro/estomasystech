@@ -22,6 +22,7 @@ import {
   isSessionRevoked,
 } from '@/lib/auth/staff-revocation';
 import { systemScope } from '@/lib/auth/tenant-scope';
+import { dataCipherFromEnv } from '@/lib/data-cipher';
 
 process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 const AUTH_SECRET = 'segredo-do-teste-de-recuperacao';
@@ -69,7 +70,8 @@ const account = async () => {
     .select()
     .from(userAccounts)
     .where(eq(userAccounts.id, accountId));
-  return row;
+  // O e-mail de login é cifrado em repouso (ADR-111): o cookie leva o valor legível.
+  return { ...row, email: dataCipherFromEnv().decrypt(row.email) };
 };
 
 /** Sessão de super_admin como o `mfa/verify` emite: sem empresa. */

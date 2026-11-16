@@ -519,6 +519,13 @@
       "when": 1794747716704,
       "tag": "0073_pii-responsavel-indice-cego",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1794776499495,
+      "tag": "0074_pii-email-login-indice-cego",
+      "breakpoints": true
     }
   ]
 }

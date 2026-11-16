@@ -262,7 +262,9 @@ proposital enquanto as migrações não têm `down`
    **Release que leva a cifra (v0.8.0 em diante):** antes do clique, confira no Coolify que
    `DATA_ENCRYPTION_KEY` e `BLIND_INDEX_PEPPER` estão no runtime (o app não sobe sem elas). Depois do deploy
    e do backup, `npm run data:reencrypt` pelo dono, repetido até "Nada pendente: tudo na chave atual."
-   (o workflow não converte dados).
+   (o workflow não converte dados). A partir da migração `0074` (e-mail de login cifrado, [ADR-111](../adr/111-email-de-login-cifrado-com-indice-cego-global.md))
+   o mesmo comando também converte `user_accounts_email`; até lá o login segue funcionando pelo e-mail em claro.
+   **Depois dessa conversão, voltar o código a uma versão anterior trava o login:** o rollback é restaurar o backup.
 1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde (E2E e mutação rodam no Actions,
    [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)), e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da

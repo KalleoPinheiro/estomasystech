@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import {
   UserAccount,
   type UserAccountRepository,
@@ -19,7 +19,15 @@ import {
   validateScheduleConfig,
 } from '@/domain/scheduling/schedule-config';
 import { newId } from '@/domain/shared/id';
+import {
+  type BlindIndex,
+  blindIndexFromEnv,
+  LOGIN_INDEX_SCOPE,
+  orFallbackOnInvalid,
+} from '@/lib/blind-index';
+import { dataCipherFromEnv, type FieldCipher } from '@/lib/data-cipher';
 import { type AppDb, MAX_ROWS } from './db';
+import type { BlindIndexSource } from './drizzle-patient-repository';
 import {
   procedureSupplies,
   procedures,
@@ -97,11 +105,78 @@ function toUserRole(value: string): UserRole {
   return value as UserRole;
 }
 
+/** A cifra, ou quem a fornece quando precisar (leitura preguiçosa do ambiente). */
+export type CipherSource = FieldCipher | (() => FieldCipher);
+
+type AccountRow = typeof userAccounts.$inferSelect;
+
+/** Hash do e-mail de login (ADR-111); `null` se o valor não normaliza. */
+export function loginEmailHash(
+  blindIndex: BlindIndex,
+  email: string,
+): string | null {
+  return orFallbackOnInvalid(
+    () => blindIndex.hash(LOGIN_INDEX_SCOPE, 'login-email', email),
+    null,
+  );
+}
+
+/**
+ * Condição do e-mail de login: pelo índice cego (o atual e os peppers da
+ * rotação) ou pelo e-mail em claro de uma linha que a conversão
+ * (`data:reencrypt`) ainda não alcançou. O ramo em claro cai na contração.
+ */
+export function loginEmailCondition(blindIndex: BlindIndex, email: string) {
+  const plain = email.trim().toLowerCase();
+  const hashes = orFallbackOnInvalid(
+    () => blindIndex.candidates(LOGIN_INDEX_SCOPE, 'login-email', plain),
+    [] as string[],
+  );
+  return hashes.length === 0
+    ? eq(userAccounts.email, plain)
+    : or(
+        inArray(userAccounts.emailHash, hashes),
+        eq(userAccounts.email, plain),
+      );
+}
+
+const byEmail = (a: UserAccount, b: UserAccount): number =>
+  a.email < b.email ? -1 : a.email > b.email ? 1 : 0;
+
 export class DrizzleUserAccountRepository implements UserAccountRepository {
+  private resolvedCipher: FieldCipher | undefined;
+
   constructor(
     private readonly db: AppDb,
     private readonly clinicId: string | null,
+    private readonly cipherSource: CipherSource = dataCipherFromEnv,
+    private readonly blindIndexSource: BlindIndexSource = blindIndexFromEnv,
   ) {}
+
+  /** Resolvidos só no uso: quem nunca lê ou grava e-mail não exige as chaves. */
+  private get cipher(): FieldCipher {
+    this.resolvedCipher ??=
+      typeof this.cipherSource === 'function'
+        ? this.cipherSource()
+        : this.cipherSource;
+    return this.resolvedCipher;
+  }
+
+  private get blindIndex(): BlindIndex {
+    return typeof this.blindIndexSource === 'function'
+      ? this.blindIndexSource()
+      : this.blindIndexSource;
+  }
+
+  /** Linha do banco para a conta: o e-mail volta legível (linha em claro passa como está). */
+  private toAccount(row: AccountRow): UserAccount {
+    const { emailHash: _emailHash, ...state } = row;
+    return UserAccount.restore({
+      ...state,
+      email: this.cipher.decrypt(row.email),
+      role: toUserRole(row.role),
+    });
+  }
 
   async save(account: UserAccount): Promise<void> {
     // Repositório escopado grava na própria empresa; repositório de sistema
@@ -111,7 +186,9 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
     const values = {
       id: account.id,
       clinicId: this.clinicId ?? account.clinicId,
-      email: account.email,
+      // E-mail de login cifrado em repouso; o índice cego serve ao login (ADR-111).
+      email: this.cipher.encrypt(account.email),
+      emailHash: loginEmailHash(this.blindIndex, account.email),
       passwordHash: account.passwordHash,
       role: account.role,
       professionalId: account.professionalId,
@@ -147,13 +224,11 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
         withTenant(
           userAccounts,
           this.clinicId,
-          eq(userAccounts.email, email.trim().toLowerCase()),
+          loginEmailCondition(this.blindIndex, email),
         ),
       )
       .limit(1);
-    return rows[0]
-      ? UserAccount.restore({ ...rows[0], role: toUserRole(rows[0].role) })
-      : null;
+    return rows[0] ? this.toAccount(rows[0]) : null;
   }
 
   /** A conta de sistema (o super_admin), achada pelo papel — nunca pelo e-mail. */
@@ -168,9 +243,7 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
         ),
       )
       .limit(1);
-    return rows[0]
-      ? UserAccount.restore({ ...rows[0], role: toUserRole(rows[0].role) })
-      : null;
+    return rows[0] ? this.toAccount(rows[0]) : null;
   }
 
   async findAllByEmail(email: string): Promise<UserAccount[]> {
@@ -181,12 +254,10 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
         withTenant(
           userAccounts,
           this.clinicId,
-          eq(userAccounts.email, email.trim().toLowerCase()),
+          loginEmailCondition(this.blindIndex, email),
         ),
       );
-    return rows.map((row) =>
-      UserAccount.restore({ ...row, role: toUserRole(row.role) }),
-    );
+    return rows.map((row) => this.toAccount(row));
   }
 
   async findById(id: string): Promise<UserAccount | null> {
@@ -195,9 +266,7 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .from(userAccounts)
       .where(withTenant(userAccounts, this.clinicId, eq(userAccounts.id, id)))
       .limit(1);
-    return rows[0]
-      ? UserAccount.restore({ ...rows[0], role: toUserRole(rows[0].role) })
-      : null;
+    return rows[0] ? this.toAccount(rows[0]) : null;
   }
 
   /**
@@ -277,9 +346,7 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .from(userAccounts)
       .where(withTenant(userAccounts, this.clinicId, condition))
       .limit(1);
-    return rows[0]
-      ? UserAccount.restore({ ...rows[0], role: toUserRole(rows[0].role) })
-      : null;
+    return rows[0] ? this.toAccount(rows[0]) : null;
   }
 
   async hasAnyAccount(): Promise<boolean> {
@@ -291,6 +358,7 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
     return rows.length > 0;
   }
 
+  // A ordem por e-mail é em memória: o `email` cifrado não ordena no banco.
   async findByRole(role: UserRole): Promise<UserAccount[]> {
     const rows = await this.db
       .select()
@@ -298,10 +366,8 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .where(
         withTenant(userAccounts, this.clinicId, eq(userAccounts.role, role)),
       )
-      .orderBy(asc(userAccounts.email));
-    return rows.map((row) =>
-      UserAccount.restore({ ...row, role: toUserRole(row.role) }),
-    );
+      .orderBy(asc(userAccounts.id));
+    return rows.map((row) => this.toAccount(row)).sort(byEmail);
   }
 
   async findByRoleForUpdate(role: UserRole): Promise<UserAccount[]> {
@@ -311,11 +377,9 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .where(
         withTenant(userAccounts, this.clinicId, eq(userAccounts.role, role)),
       )
-      .orderBy(asc(userAccounts.email))
+      .orderBy(asc(userAccounts.id))
       .for('update');
-    return rows.map((row) =>
-      UserAccount.restore({ ...row, role: toUserRole(row.role) }),
-    );
+    return rows.map((row) => this.toAccount(row)).sort(byEmail);
   }
 
   async findAll(): Promise<UserAccount[]> {
@@ -323,11 +387,9 @@ export class DrizzleUserAccountRepository implements UserAccountRepository {
       .select()
       .from(userAccounts)
       .where(withTenant(userAccounts, this.clinicId))
-      .orderBy(asc(userAccounts.email))
+      .orderBy(asc(userAccounts.id))
       .limit(MAX_ROWS);
-    return rows.map((row) =>
-      UserAccount.restore({ ...row, role: toUserRole(row.role) }),
-    );
+    return rows.map((row) => this.toAccount(row)).sort(byEmail);
   }
 }
 

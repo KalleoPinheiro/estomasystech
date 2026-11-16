@@ -53,6 +53,8 @@ describe('Feature: convite com a URL pública do ambiente (#467)', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('DATA_ENCRYPTION_KEY', 'ab'.repeat(32));
+    // O e-mail de login é cifrado com índice cego (ADR-111): em produção o pepper é obrigatório.
+    vi.stubEnv('BLIND_INDEX_PEPPER', 'p'.repeat(64));
     vi.stubEnv('APP_URL', '');
     vi.stubEnv('VERCEL', '');
 
@@ -65,6 +67,8 @@ describe('Feature: convite com a URL pública do ambiente (#467)', () => {
   it('Dada a Vercel sem APP_URL, Quando convidar (clínica sem canal), Então devolve o link no domínio da Vercel', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('DATA_ENCRYPTION_KEY', 'ab'.repeat(32));
+    // O e-mail de login é cifrado com índice cego (ADR-111): em produção o pepper é obrigatório.
+    vi.stubEnv('BLIND_INDEX_PEPPER', 'p'.repeat(64));
     vi.stubEnv('APP_URL', '');
     vi.stubEnv('VERCEL', '1');
     vi.stubEnv('VERCEL_PROJECT_PRODUCTION_URL', 'estomasystech.vercel.app');

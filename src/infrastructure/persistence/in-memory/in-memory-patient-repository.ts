@@ -102,7 +102,11 @@ function exactValueMatches(
   patients: readonly Patient[],
   term: string,
 ): Set<string> {
-  const kinds: BlindIndexKind[] = ['cpf', 'phone', 'email'];
+  const kinds: Exclude<BlindIndexKind, 'login-email'>[] = [
+    'cpf',
+    'phone',
+    'email',
+  ];
   const wanted = kinds.map(
     (kind) => [kind, normalizedOrNull(kind, term)] as const,
   );

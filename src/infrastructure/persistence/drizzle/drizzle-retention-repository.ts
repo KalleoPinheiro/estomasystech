@@ -646,6 +646,8 @@ async function anonymizeAccounts(
     .update(userAccounts)
     .set({
       email: sql`'anonimizado+' || ${userAccounts.id} || '@anonimizado.invalid'`,
+      // Sem hash: a conta anonimizada deixa de ser achada pelo login (ADR-111).
+      emailHash: null,
       passwordHash: ANONYMIZED_PASSWORD_HASH,
       active: false,
       sessionVersion: sql`${userAccounts.sessionVersion} + 1`,

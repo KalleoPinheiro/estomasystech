@@ -7,9 +7,15 @@ import { normalizeAccountEmail } from '@/domain/auth/user-account';
 import type { ValidationError } from '@/domain/shared/errors';
 import { recordAuditNow } from '@/lib/audit';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
+import { type BlindIndex, blindIndexFromEnv } from '@/lib/blind-index';
+import { dataCipherFromEnv, type FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { DrizzleAuditEventRepository } from './drizzle-audit-event-repository';
 import { DrizzleAuthTokenRepository } from './drizzle-auth-token-repository';
+import {
+  loginEmailCondition,
+  loginEmailHash,
+} from './drizzle-foundation-repositories';
 import { authTokens, mfaRecoveryCodes, userAccounts, userMfa } from './schema';
 
 /**
@@ -50,7 +56,20 @@ export interface RecoverSuperAdminOptions {
   nowMs?: number;
   /** Ponto de injeção para testes; o padrão grava em `audit_events`. */
   auditEventsFor?: (db: AppDb) => AuditEventRepository;
+  /** O e-mail de login é cifrado em repouso (ADR-111); o padrão vem do ambiente. */
+  cipher?: FieldCipher;
+  blindIndex?: BlindIndex;
 }
+
+interface EmailKeys {
+  cipher: FieldCipher;
+  blindIndex: BlindIndex;
+}
+
+const keysOf = (options: RecoverSuperAdminOptions): EmailKeys => ({
+  cipher: options.cipher ?? dataCipherFromEnv(),
+  blindIndex: options.blindIndex ?? blindIndexFromEnv(),
+});
 
 export interface RecoveryPlan {
   accountId: string;
@@ -85,6 +104,7 @@ async function resolveNewEmail(
   db: AppDb,
   account: SuperAdminRow,
   raw: string | undefined,
+  keys: EmailKeys,
 ): Promise<string | null> {
   if (raw === undefined) return null;
   let email: string;
@@ -94,11 +114,16 @@ async function resolveNewEmail(
     // `normalizeAccountEmail` só falha com ValidationError (e-mail inválido).
     throw new RecoveryPreconditionError((error as ValidationError).message);
   }
-  if (email === account.email) return null;
+  if (email === keys.cipher.decrypt(account.email)) return null;
   const [taken] = await db
     .select({ id: userAccounts.id })
     .from(userAccounts)
-    .where(and(eq(userAccounts.email, email), ne(userAccounts.id, account.id)))
+    .where(
+      and(
+        loginEmailCondition(keys.blindIndex, email),
+        ne(userAccounts.id, account.id),
+      ),
+    )
     .limit(1);
   if (taken) throw new RecoveryPreconditionError(emailInUseMessage(email));
   return email;
@@ -108,6 +133,7 @@ async function buildPlan(
   db: AppDb,
   account: SuperAdminRow,
   rawEmail: string | undefined,
+  keys: EmailKeys,
 ): Promise<RecoveryPlan> {
   const [factor] = await db
     .select({ accountId: userMfa.accountId })
@@ -116,8 +142,8 @@ async function buildPlan(
     .limit(1);
   return {
     accountId: account.id,
-    currentEmail: account.email,
-    newEmail: await resolveNewEmail(db, account, rawEmail),
+    currentEmail: keys.cipher.decrypt(account.email),
+    newEmail: await resolveNewEmail(db, account, rawEmail, keys),
     hadFactor: Boolean(factor),
     wasInactive: !account.active,
   };
@@ -128,6 +154,7 @@ async function applyRecovery(
   account: SuperAdminRow,
   plan: RecoveryPlan,
   options: RecoverSuperAdminOptions,
+  keys: EmailKeys,
 ): Promise<{ link: string; expiresAt: Date }> {
   const nowMs = options.nowMs ?? Date.now();
   const now = new Date(nowMs);
@@ -140,7 +167,13 @@ async function applyRecovery(
   await tx
     .update(userAccounts)
     .set({
-      email: plan.newEmail ?? account.email,
+      // Regrava cifrado e com o índice cego, também quando o e-mail não muda
+      // (uma conta ainda em claro passa a ficar cifrada).
+      email: keys.cipher.encrypt(plan.newEmail ?? plan.currentEmail),
+      emailHash: loginEmailHash(
+        keys.blindIndex,
+        plan.newEmail ?? plan.currentEmail,
+      ),
       passwordHash: UNSET_PASSWORD_HASH,
       active: true,
       sessionVersion: sql`${userAccounts.sessionVersion} + 1`,
@@ -192,10 +225,11 @@ export function recoverSuperAdmin(
   options: RecoverSuperAdminOptions,
 ): Promise<RecoverSuperAdminResult> {
   return db.transaction(async (tx) => {
+    const keys = keysOf(options);
     const account = await lockSuperAdmin(tx);
-    const plan = await buildPlan(tx, account, options.newEmail);
+    const plan = await buildPlan(tx, account, options.newEmail, keys);
     if (!options.confirm) return { applied: false, plan };
-    const issued = await applyRecovery(tx, account, plan, options);
+    const issued = await applyRecovery(tx, account, plan, options, keys);
     return { applied: true, plan, ...issued };
   });
 }
