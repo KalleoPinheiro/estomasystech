@@ -12,7 +12,7 @@ related:
 # ADR 110 — Row-Level Security por clínica
 
 - **Data:** 2026-11-15
-- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 entregue, #871; etapa 3 entregue, #872: política em três tabelas; etapa 4 em PR, #873: política nas demais tabelas clínicas e financeiras, nenhuma conexão trocada).
+- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 entregue, #871; etapa 3 entregue, #872: política em três tabelas; etapa 4 entregue, #873: política nas demais tabelas clínicas e financeiras; lote de identidade e auditoria em PR, #894: política em `user_accounts`, `google_accounts` e `audit_events`; nenhuma conexão trocada).
 - **Domínios afetados:** acesso, infraestrutura de persistência.
 
 ## Contexto
@@ -256,6 +256,38 @@ Com a `DATABASE_URL` no `estomasystech_app` (sem dono, sem `BYPASSRLS`), o `/api
   migração com `when` maior que a última registrada, então reiniciar o app (ou `db:migrate`) **não** a recria e o readiness fica `pending`. Para
   recriar, o dono executa o SQL da `0080` à mão (é repetível: `CREATE OR REPLACE`, `REVOKE` e `GRANT` condicional) ou entra uma migração corretiva
   nova. Não há leitura direta do esquema `drizzle` como alternativa. Código: publicar a versão anterior.
-- **Para a #874 (FORCE):** o papel de migração é separado da aplicação; ele é quem passa a rodar `db:migrate`. A lista `OUT_OF_SCOPE` de
-  `rls-etapa-4-politicas.integracao.ts` (`user_accounts`, `google_accounts`, `audit_events`) continua valendo; o lote de identidade e auditoria deve vir
-  **antes** do `FORCE`, porque `FORCE` sujeita o dono também e o login lê essas tabelas sem saber a clínica.
+- **Para a #874 (FORCE):** o papel de migração é separado da aplicação; ele é quem passa a rodar `db:migrate`. O lote de identidade e auditoria
+  veio **antes** do `FORCE` (seção abaixo, #894), porque `FORCE` sujeita o dono também e o login lê essas tabelas sem saber a clínica.
+
+## Lote de identidade e auditoria entregue (#894)
+
+Migração `0081_rls-identidade-auditoria`: política `clinic_isolation` (mesmo predicado das etapas 3 e 4) em `user_accounts`, `google_accounts` e
+`audit_events`, sem `FORCE`. Total com as etapas anteriores: 41 tabelas. O ADR já prescrevia este lote antes do `FORCE`; a decisão de desenho foi
+só a de **não** criar política especial para linha sem empresa.
+
+- **Linha sem empresa nunca casa.** O `clinic_id` das três é anulável (super_admin, conta de sistema, evento de plataforma, Google de sistema):
+  `NULL = current_setting(...)` não é verdadeiro, então o papel da aplicação não lê nem grava essas linhas (o `WITH CHECK` recusa `clinic_id` nulo) e só o
+  papel de sistema (`BYPASSRLS`) as enxerga. Uma política `OR clinic_id IS NULL` abriria o super_admin e a trilha de plataforma para qualquer clínica.
+- **Mapa de quem lê sem clínica (todos já em `systemScope()`, ou seja, `getSystemDb()`):** login e candidatas por e-mail (`/api/auth/login`),
+  recuperação de senha (`forgot-password`) e definição de senha por convite (`set-password`), `bootstrap` do primeiro super_admin, segundo fator
+  (`mfaContext`: `completeEnrollment` atualiza `user_accounts` por id), trilha de plataforma (`findPlatformTrail`), provisionamento de clínica
+  (`DrizzleClinicProvisioning` sobre o pool de sistema) e auditoria de login pré-sessão (evento com a clínica da conta, gravado pelo sistema).
+  **Nenhum código mudou:** os repositórios já filtravam por clínica (`withTenant`) quando escopados; a política só repete o filtro no banco.
+- **Quem lê com clínica** (`sessionScope`, `writeScope`, `clinicScope`, proxy `lookupAccountStatus`, OAuth do Google com sessão) usa o pool da aplicação
+  com `app.clinic_id` e vê só a própria clínica, como antes.
+- **Sem `DATABASE_SYSTEM_URL`** o sistema cai no pool da aplicação e passa a ver zero linhas nas três tabelas: o login deixa de achar contas. Por isso a
+  variável precisa estar definida **antes** de a aplicação trocar de papel (mesma condição das etapas 3 e 4; `producao.md` § 4.6).
+- **Desempenho** (Postgres 16 local, 20 mil contas e 300 mil eventos em 5 empresas, papel não dono, 200 execuções em `begin; set_config; consulta; commit`;
+  p50 / p95 em ms; dono / aplicação sem RLS / aplicação com RLS): conta por hash de e-mail 0,62 / 1,83, 0,79 / 3,89 e 0,66 / 1,19; conta por id 0,43 / 1,63,
+  0,68 / 2,58 e 0,60 / 1,51; trilha da clínica (50 eventos) 0,47 / 0,91, 0,47 / 0,83 e 0,52 / 1,08. A gravação de evento oscila mais que a diferença
+  entre ligado e desligado (três rodadas alternadas: p50 de 0,9 a 3,3 ms sem RLS e de 1,1 a 1,7 ms com RLS). O **login não paga nada**: roda no papel de
+  sistema, e `BYPASSRLS` não avalia a política. Medido em Postgres local, não na staging.
+- **Prova:** `tests/integracao/rls-identidade-auditoria.integracao.ts` (Postgres real, pool de uma conexão, repositórios reais): catálogo (RLS ligado,
+  sem `FORCE`), isolamento de contas, auditoria e Google entre clínicas, `WITH CHECK`, super_admin invisível à aplicação, convite e troca de senha,
+  segundo fator, unidade de trabalho da clínica, provisionamento, trilha de plataforma, idempotência e rollback. `rls-etapa-4-politicas.integracao.ts`
+  deixou de excluir as três tabelas (`OUT_OF_SCOPE` removida): a prova genérica agora cobre toda tabela com `clinic_id`.
+- **O que a #874 ainda precisa:** `FORCE` nas 41 tabelas e papel de migração com `BYPASSRLS` para `db:migrate`, seed e os scripts do dono
+  (`data:reencrypt`, `recover-super-admin`, `report-portal-orphans`, que abrem `getDb()` sem clínica); política ou decisão para as tabelas sem `clinic_id`
+  (`clinics`, `auth_tokens`, `user_mfa`, `mfa_recovery_codes`); prova na staging com `FORCE` ligado (migração e seed completos).
+- **Rollback**, instantâneo e sem backup, por tabela: `ALTER TABLE user_accounts DISABLE ROW LEVEL SECURITY;` (idem `google_accounts`, `audit_events`).
+  **Não** use `DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito.

@@ -32,8 +32,6 @@ process.env.ESTOMASYSTECH_DB_DRIVER = 'pglite';
 const CLINIC_A = 'clinic-rls4-a';
 const CLINIC_B = 'clinic-rls4-b';
 const APP_GROUP = 'estomasystech_app';
-/** Tabelas com `clinic_id` que NÃO ganham política nesta etapa (identidade e auditoria; ver ADR-110). */
-const OUT_OF_SCOPE = ['audit_events', 'google_accounts', 'user_accounts'];
 const SQL_FILES = [
   '0077_rls-procedure-supplies-clinic',
   '0078_rls-politicas-clinicas',
@@ -117,7 +115,8 @@ describe('Feature: políticas de RLS nas tabelas clínicas e financeiras (#873)'
     }>(
       `SELECT column_name, data_type, udt_name FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = $1
-          AND is_nullable = 'NO' AND column_default IS NULL AND is_generated = 'NEVER'
+          AND ((is_nullable = 'NO' AND column_default IS NULL) OR column_name = 'clinic_id')
+          AND is_generated = 'NEVER'
         ORDER BY ordinal_position`,
       [table],
     );
@@ -167,9 +166,8 @@ describe('Feature: políticas de RLS nas tabelas clínicas e financeiras (#873)'
         [id],
       );
     }
-    covered = (await tablesWithClinicId()).filter(
-      (table) => !OUT_OF_SCOPE.includes(table),
-    );
+    // Identidade e auditoria (user_accounts, google_accounts, audit_events) entraram no lote da #894 e deixaram de ser exceção.
+    covered = await tablesWithClinicId();
     for (const table of covered) {
       for (const clinicId of [CLINIC_A, CLINIC_B]) {
         const row = await rowFor(table, clinicId);
@@ -206,7 +204,7 @@ describe('Feature: políticas de RLS nas tabelas clínicas e financeiras (#873)'
     }
   });
 
-  it('Dado o esquema migrado, Quando leio o catálogo, Então toda tabela com clinic_id (menos as de identidade e auditoria) tem RLS e a política clinic_isolation', async () => {
+  it('Dado o esquema migrado, Quando leio o catálogo, Então toda tabela com clinic_id tem RLS e a política clinic_isolation', async () => {
     // Não afirma o que fica de fora nem FORCE: o portão de compatibilidade roda este arquivo da base sobre o
     // esquema das etapas seguintes (identidade e auditoria, FORCE), que mudam exatamente isso.
     const rows = await admin.query<{

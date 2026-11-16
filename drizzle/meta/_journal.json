@@ -568,6 +568,13 @@
       "when": 1794853200000,
       "tag": "0080_rls-leitura-migracoes-aplicadas",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1794856800000,
+      "tag": "0081_rls-identidade-auditoria",
+      "breakpoints": true
     }
   ]
 }
