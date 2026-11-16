@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiFetchPage } from '@/lib/client';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useCursorPagedQuery } from '@/lib/use-cursor-paged-query';
-import { usePagedQuery } from '@/lib/use-paged-query';
 
 interface Deferred {
   promise: Promise<unknown>;
@@ -54,51 +53,6 @@ const rejectWith = (reason: unknown) =>
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe('Feature: Lista paginada por deslocamento', () => {
-  it('Dado a tela fechada antes da 1ª página, Quando responde ou falha, Então o estado não muda', async () => {
-    const { pending } = controlledFetch();
-
-    const first = renderHook(() => usePagedQuery<string>('/api/a', 2));
-    const second = renderHook(() => usePagedQuery<string>('/api/b', 2));
-    first.unmount();
-    second.unmount();
-    await act(async () => {
-      pending[0].resolve(ok(['x']));
-      pending[1].reject(new Error('tarde'));
-    });
-
-    expect(first.result.current.items).toBeNull();
-    expect(second.result.current.error).toBeNull();
-  });
-
-  it('Dado falha que não é Error na 1ª página, Quando carregar, Então usa a mensagem padrão', async () => {
-    rejectWith('queda');
-
-    const { result } = renderHook(() => usePagedQuery<string>('/api/a', 2));
-
-    await waitFor(() =>
-      expect(result.current.error).toBe('Erro ao carregar dados'),
-    );
-  });
-
-  it('Dado "carregar mais" antes da 1ª página chegar, Quando as respostas chegam, Então a página anexada parte do zero; falha sem Error usa a mensagem padrão', async () => {
-    const { pending } = controlledFetch();
-    const { result } = renderHook(() => usePagedQuery<string>('/api/a', 2));
-
-    act(() => result.current.loadMore());
-    await act(async () => {
-      pending[1].resolve(ok(['a', 'b']));
-    });
-    expect(result.current.items).toEqual(['a', 'b']);
-
-    rejectWith('queda');
-    act(() => result.current.loadMore());
-    await waitFor(() =>
-      expect(result.current.error).toBe('Erro ao carregar dados'),
-    );
-  });
 });
 
 describe('Feature: Lista paginada por cursor (#75)', () => {

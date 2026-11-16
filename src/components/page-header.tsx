@@ -28,9 +28,14 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {leading && <div className="mb-2">{leading}</div>}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="sv-display font-bold text-2xl">{title}</h1>
-          {badge}
+        {/* Sem `flex-wrap` (#559): com o selo livre para trocar de linha, a troca de fonte (a
+            largura do texto muda uns pixels) o jogava abaixo do título e de volta, e a tela
+            inteira saltava 36 px (CLS 0,49 na ficha em 390 px). O título quebra dentro dele. */}
+        <div className="flex items-center gap-x-3">
+          <h1 className="sv-display min-w-0 break-words font-bold text-2xl">
+            {title}
+          </h1>
+          {badge && <div className="min-w-0">{badge}</div>}
         </div>
         {description && (
           <div className="mt-1 max-w-prose text-ink-3 text-sm">
