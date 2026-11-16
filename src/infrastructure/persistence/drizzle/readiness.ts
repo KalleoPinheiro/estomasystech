@@ -43,27 +43,34 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
   return Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
 }
 
-/** SQLSTATE `undefined_table`: o Drizzle embrulha o erro do driver em `cause`. */
-function isUndefinedTable(error: unknown): boolean {
+/**
+ * `undefined_table` (42P01) ou `undefined_function` (42883); o Drizzle embrulha o erro do driver em
+ * `cause`. Qualquer outro código, `42501` (permissão negada) inclusive, segue como falha.
+ */
+function isNeverMigrated(error: unknown): boolean {
   for (let e = error, depth = 0; e && depth < 4; depth++) {
     const err = e as { code?: unknown; cause?: unknown };
-    if (err.code === '42P01') return true;
+    if (err.code === '42P01' || err.code === '42883') return true;
     e = err.cause;
   }
   return false;
 }
 
-/** Banco nunca migrado: a tabela de controle ainda não existe, nada foi aplicado. */
+/**
+ * Migrações aplicadas, lidas pela função `public.app__drizzle_migrations()` (migração 0080, ADR-110): o
+ * papel da aplicação não enxerga o esquema `drizzle`, e a função devolve só os carimbos. Banco nunca
+ * migrado (sem a tabela de controle) ou ainda sem a 0080 (sem a função): nada aplicado, logo pendente.
+ */
 async function appliedMigrations(
   db: Awaited<ReturnType<typeof getDb>>,
 ): Promise<Set<number>> {
   try {
     const result = await db.execute(
-      sql`select created_at from drizzle.__drizzle_migrations`,
+      sql`select created_at from public.app__drizzle_migrations() as t(created_at)`,
     );
     return new Set(rowsOf(result).map((row) => Number(row.created_at)));
   } catch (error) {
-    if (isUndefinedTable(error)) return new Set();
+    if (isNeverMigrated(error)) return new Set();
     throw error;
   }
 }

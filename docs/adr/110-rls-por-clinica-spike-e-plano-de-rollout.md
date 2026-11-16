@@ -119,7 +119,7 @@ Sem migração e sem política: só o contrato de conexão do ADR passa a valer 
 - **O que ficou fora, de propósito:** `readiness.ts` (`/api/health/ready`), `app-release-service` e `rate-limit` seguem
   em `getDb()` sem clínica. O papel da aplicação **não enxerga o esquema `drizzle`**: antes de apontar a
   `DATABASE_URL` para ele (passo do dono, não desta etapa) a leitura de migrações aplicadas do readiness precisa de
-  outra solução (issue aberta junto deste PR).
+  outra solução. Resolvida na #889 (seção "Preparo da etapa 5" abaixo).
 - **Prova:** `tests/integracao/rls-etapa-2-set-config.integracao.ts` (Postgres real, pool de **uma** conexão, o pior
   caso para vazamento) e `tests/infrastructure/clinic-scoped-pool.test.ts`.
 - **Rollback:** remover o envoltório (`scopeDbToClinic` em `getRepositories` e em `lookupAccountStatus` de `staff-revocation`, e o `set_config` do gerenciador);
@@ -227,3 +227,35 @@ política. **Isto não foi conferido no servidor.** Conferência (sem aspas, par
 `ssh -t vps sudo docker exec -it <container-do-banco> psql -U estomasystech -d estomasystech` e digitar `\du`;
 `Superuser` ou `Bypass RLS` na linha do papel confirmam o risco. A etapa 1 cria um papel de aplicação **não dono e
 sem `BYPASSRLS`** e o dono ajusta a `DATABASE_URL` no Coolify. Nada disto é feito por este PR.
+
+## Preparo da etapa 5: readiness e boot-migrate com o papel da aplicação (#889)
+
+Com a `DATABASE_URL` no `estomasystech_app` (sem dono, sem `BYPASSRLS`), o `/api/health/ready` lia
+`drizzle.__drizzle_migrations` e respondia 503 (`42501`, tratado como banco fora do ar), e o boot-migrate falhava no
+`CREATE SCHEMA` e derrubava o `getDb()` inteiro. Decisão, pelo menor privilégio:
+
+- **O papel da aplicação não ganha nada sobre o esquema `drizzle` nem poder de DDL.** Nenhum `GRANT USAGE` no esquema, nenhum `CREATE`.
+- **Readiness por função `SECURITY DEFINER`** (migração `0080`, `public.app__drizzle_migrations()`): devolve só os carimbos
+  `created_at` das migrações aplicadas (nada de hash nem de esquema), com `search_path` fixo, `EXECUTE` revogado de `PUBLIC` e concedido só a
+  `estomasystech_app`. É aditiva e idempotente. O nome contém `__drizzle_migrations` de propósito: os testes existentes do readiness
+  identificam a consulta por esse trecho (regra 8, teste intocável).
+- **Por que não pelo pool de sistema.** O papel `estomasystech_sistema` também não enxerga o esquema `drizzle` (`BYPASSRLS` não dá `USAGE`),
+  então exigiria o mesmo `GRANT`; e um health lido por outro pool poderia ficar verde com o pool que atende o tráfego quebrado.
+  A função roda pela própria conexão da aplicação, então o readiness continua testando o que importa.
+- **Readiness continua verdadeiro.** Migração do diretório sem registro no banco, ou banco sem a função (0080 ainda não aplicada), dá
+  `pending` (503); `42501` e qualquer outro erro seguem como `database: fail`. Não existe caminho que diga `ok` sem ter lido as migrações.
+- **Boot-migrate pulado com aviso quando a conexão não pode migrar.** Antes de migrar, o `getDb()` pergunta
+  `has_database_privilege(current_user, current_database(), 'CREATE')`; sem o privilégio, loga `warn` ("boot-migrate pulado") e segue sem migrar.
+  Falhar derrubaria o app inteiro por algo que é configuração; pular não esconde nada, porque migração pendente aparece no readiness (503).
+  Quem migra é o dono, por `npm run db:migrate`, ou o boot com a `DATABASE_URL` dele.
+- **Prova:** `tests/integracao/rls-etapa-5-readiness-papel-aplicacao.integracao.ts` (Postgres real): app com `DATABASE_URL` no papel da
+  aplicação e `DATABASE_SYSTEM_URL` no de sistema; leitura direta do esquema `drizzle` e `CREATE TABLE` negados (`42501`), boot sem migrar,
+  readiness verde, consultas por clínica isoladas (zero linhas sem `app.clinic_id`, sistema vê todas), readiness 503 com migração faltando e
+  sem a função. `tests/infrastructure/readiness-papel-restrito.test.ts` cobre a função no PGlite e o `42883`.
+- **Rollback:** `DROP FUNCTION public.app__drizzle_migrations();` desfaz a função, mas **o registro da 0080 permanece**: o migrador só aplica
+  migração com `when` maior que a última registrada, então reiniciar o app (ou `db:migrate`) **não** a recria e o readiness fica `pending`. Para
+  recriar, o dono executa o SQL da `0080` à mão (é repetível: `CREATE OR REPLACE`, `REVOKE` e `GRANT` condicional) ou entra uma migração corretiva
+  nova. Não há leitura direta do esquema `drizzle` como alternativa. Código: publicar a versão anterior.
+- **Para a #874 (FORCE):** o papel de migração é separado da aplicação; ele é quem passa a rodar `db:migrate`. A lista `OUT_OF_SCOPE` de
+  `rls-etapa-4-politicas.integracao.ts` (`user_accounts`, `google_accounts`, `audit_events`) continua valendo; o lote de identidade e auditoria deve vir
+  **antes** do `FORCE`, porque `FORCE` sujeita o dono também e o login lê essas tabelas sem saber a clínica.
