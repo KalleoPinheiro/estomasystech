@@ -540,6 +540,27 @@
       "when": 1794790000000,
       "tag": "0076_rls-politicas-baixo-risco",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1794842534114,
+      "tag": "0077_rls-procedure-supplies-clinic",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1794842544114,
+      "tag": "0078_rls-politicas-clinicas",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1794842554114,
+      "tag": "0079_rls-politicas-financeiro",
+      "breakpoints": true
     }
   ]
 }

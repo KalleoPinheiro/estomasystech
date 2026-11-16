@@ -848,6 +848,32 @@ describe('Feature: Persistência PostgreSQL (Drizzle)', () => {
       expect(await procedureKitRepo.getKit(procedure.id)).toEqual([]);
     });
 
+    it('Dado procedimento inexistente, Quando gravar kit com itens, Então recusa sem gravar nada (a empresa do kit vem do procedimento)', async () => {
+      await expect(
+        procedureKitRepo.setKit('procedimento-que-nao-existe', [
+          { supplyId: 'supply-1', quantity: 1 },
+        ]),
+      ).rejects.toThrow(/não encontrado/);
+
+      expect(await db.select().from(schema.procedureSupplies)).toEqual([]);
+    });
+
+    it('Dado kit gravado, Quando leio a linha, Então carrega a empresa do procedimento', async () => {
+      const procedure = Procedure.create({
+        name: 'Com empresa',
+        priceCents: 5000,
+        durationMinutes: 15,
+      });
+      await procedureRepo.save(procedure);
+
+      await procedureKitRepo.setKit(procedure.id, [
+        { supplyId: 'supply-1', quantity: 1 },
+      ]);
+
+      const [row] = await db.select().from(schema.procedureSupplies);
+      expect(row?.clinicId).toBe('legacy-clinic');
+    });
+
     it('Dado kits de múltiplos procedimentos, Quando countByProcedure, Então agrupa a contagem por procedimento (PROC-03)', async () => {
       const withKit = Procedure.create({
         name: 'Com kit',
