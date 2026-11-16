@@ -12,7 +12,7 @@ related:
 # ADR 110 — Row-Level Security por clínica
 
 - **Data:** 2026-11-15
-- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 em PR, #871; nenhuma política ligada, nenhuma conexão trocada).
+- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 entregue, #871; etapa 3 em PR, #872: política em três tabelas, nenhuma conexão trocada).
 - **Domínios afetados:** acesso, infraestrutura de persistência.
 
 ## Contexto
@@ -35,7 +35,7 @@ O teste `tests/integracao/rls-spike.integracao.ts` (Postgres real, `npm run test
 
 ## Mapa das tabelas
 
-- **40 tabelas com `clinic_id`** (texto): recebem a política `tenant_isolation`
+- **40 tabelas com `clinic_id`** (texto): recebem a política `tenant_isolation` (nas migrações reais ela se chama `clinic_isolation`, ver etapa 3)
   `USING/WITH CHECK (clinic_id = current_setting('app.clinic_id', true))`.
 - **12 sem `clinic_id`**: `clinics` (política por `id`), `procedure_supplies` (herda do procedimento: política
   com `EXISTS`, ou coluna nova, decidir na etapa 3), `auth_tokens`, `user_mfa`, `mfa_recovery_codes` (ligadas a
@@ -124,6 +124,41 @@ Sem migração e sem política: só o contrato de conexão do ADR passa a valer 
   caso para vazamento) e `tests/infrastructure/clinic-scoped-pool.test.ts`.
 - **Rollback:** remover o envoltório (`scopeDbToClinic` em `getRepositories` e em `lookupAccountStatus` de `staff-revocation`, e o `set_config` do gerenciador);
   sem migração, sem dado a desfazer. Publicar de volta a versão anterior também basta.
+
+## Etapa 3 entregue (#872)
+
+Primeira política ligada, só em tabelas de baixo risco.
+
+- **Migração `0076_rls-politicas-baixo-risco`:** em `supplies`, `partners` e `schedule_closures`,
+  `ENABLE ROW LEVEL SECURITY` e a política `clinic_isolation` `USING/WITH CHECK (clinic_id = current_setting('app.clinic_id', true))`.
+  Idempotente (`DROP POLICY IF EXISTS` antes do `CREATE POLICY`), sem `FORCE`, sem tocar em dado. O lint `check:migracao`
+  falha fechado em RLS (instrução que ele não conhece) e a classifica como não aditiva; na prática é reversível sem backup
+  e o código antigo segue funcionando sobre ela (ver a tabela abaixo).
+- **Quem é filtrado.** A política vale para o papel da aplicação (`estomasystech_app`: não dono, sem `BYPASSRLS`). O **dono da
+  tabela** e o superusuário **ignoram** a política enquanto não houver `FORCE` (etapa 5): é o que a produção faz hoje,
+  conectada como `estomasystech` (premissa abaixo, ainda não conferida). Nesse caso a etapa 3 **não muda nenhum
+  comportamento**, nem para melhor nem para pior. Com o papel da aplicação, uma consulta sem `app.clinic_id` devolve zero
+  linhas nas três tabelas e o `WITH CHECK` recusa gravar para outra clínica.
+- **Caminhos sem clínica.** Nenhum deles toca as três tabelas: `readiness` (esquema `drizzle`), `app-release-service`
+  (`app_releases`) e `rate-limit` (`rate_limit_windows`) ficam em `getDb()` sem clínica e não são afetados. O escopo de sistema
+  (`systemScope()`) usa `getSystemDb()`: com `DATABASE_SYSTEM_URL` (`BYPASSRLS`) vê todas as clínicas; **sem** a variável ele
+  cai no pool da aplicação e, com o papel novo, passa a ver zero linhas nessas tabelas. Por isso `DATABASE_SYSTEM_URL` precisa
+  estar definida **antes** de trocar a `DATABASE_URL` para o papel da aplicação (producao.md § 4.3).
+- **Scripts do dono** (`seed`, `data:reencrypt`, `report-portal-orphans`) abrem `getDb()` sem clínica e rodam com a URL do
+  dono; com o papel da aplicação eles não leem essas tabelas. Fica para a etapa 5 (papel de migração com `BYPASSRLS`).
+- **`procedure_supplies`** (sem `clinic_id`, herda do procedimento) fica fora desta etapa: segue sem política e a decisão
+  (`EXISTS` ou coluna nova) é da etapa 4.
+- **Prova:** `tests/integracao/rls-etapa-3-politicas.integracao.ts` (Postgres real, pool de **uma** conexão): catálogo, os três
+  atores (aplicação, sistema com `BYPASSRLS`, dono), repositórios reais com o papel da aplicação, `WITH CHECK`, falha fechada,
+  idempotência e o rollback.
+- **Por que `clinic_isolation` e não `tenant_isolation`:** o portão de compatibilidade da migração roda a suíte de integração
+  da base sobre o esquema novo, e o `rls-spike.integracao.ts` da base cria `tenant_isolation` em `partners` e `supplies`;
+  com o mesmo nome o `CREATE POLICY` do spike falharia. Nome distinto mantém o spike intacto (as duas políticas têm o mesmo
+  predicado, então o efeito é o mesmo). As etapas 4 e 5 seguem com `clinic_isolation`.
+- **Desempenho:** o predicado usa `clinic_id` (já indexado) e `current_setting` estável por consulta; só vale para o papel
+  da aplicação. Medir `EXPLAIN` e latência na staging antes da etapa 4.
+- **Rollback:** `ALTER TABLE supplies DISABLE ROW LEVEL SECURITY;` (idem `partners`, `schedule_closures`), instantâneo e sem
+  perda de dado. `DROP POLICY` sozinho **não** serve (RLS ligado sem política nega tudo ao papel da aplicação); só como limpeza depois do `DISABLE`. Não exige restaurar backup.
 
 ## Premissa a verificar na etapa 1
 
