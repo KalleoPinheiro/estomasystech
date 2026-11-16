@@ -158,7 +158,7 @@ Primeira política ligada, só em tabelas de baixo risco.
 - **Desempenho:** o predicado usa `clinic_id` (já indexado) e `current_setting` estável por consulta; só vale para o papel
   da aplicação. Medir `EXPLAIN` e latência na staging antes da etapa 4.
 - **Rollback:** `ALTER TABLE supplies DISABLE ROW LEVEL SECURITY;` (idem `partners`, `schedule_closures`), instantâneo e sem
-  perda de dado; `DROP POLICY clinic_isolation ON <tabela>;` remove a política. Não exige restaurar backup.
+  perda de dado. `DROP POLICY` sozinho **não** serve (RLS ligado sem política nega tudo ao papel da aplicação); só como limpeza depois do `DISABLE`. Não exige restaurar backup.
 
 ## Premissa a verificar na etapa 1
 

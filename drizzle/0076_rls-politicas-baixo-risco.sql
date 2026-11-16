@@ -1,7 +1,7 @@
 -- RLS etapa 3 (#872, ADR-110): política clinic_isolation em supplies, partners e schedule_closures.
 -- Sem FORCE: o dono da tabela e o superusuário seguem ignorando a política (a produção de hoje conecta como dono).
 -- Só o papel da aplicação (não dono, sem BYPASSRLS) é filtrado. Sem app.clinic_id na transação não há linha (falha fechado).
--- Rollback instantâneo, sem backup: ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY; (ou DROP POLICY clinic_isolation ON <tabela>;)
+-- Rollback instantâneo, sem backup: ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY; (só DROP POLICY deixa o RLS ligado sem política: o papel da aplicação passa a ver zero linhas; remover a política é limpeza opcional depois do DISABLE)
 ALTER TABLE "supplies" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 DROP POLICY IF EXISTS "clinic_isolation" ON "supplies";--> statement-breakpoint
 CREATE POLICY "clinic_isolation" ON "supplies" USING ("clinic_id" = current_setting('app.clinic_id', true)) WITH CHECK ("clinic_id" = current_setting('app.clinic_id', true));--> statement-breakpoint

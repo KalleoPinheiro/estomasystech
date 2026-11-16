@@ -381,7 +381,7 @@ Para a etapa 3 valer de fato (depois, quando o dono quiser trocar de papel), nes
 4. Só então apontar a `DATABASE_URL` para `estomasystech_login`. Testar primeiro na staging.
 
 Rollback, instantâneo e sem backup: `ALTER TABLE supplies DISABLE ROW LEVEL SECURITY;` e o mesmo em `partners` e
-`schedule_closures` (ou `DROP POLICY clinic_isolation ON <tabela>;`). Voltar a `DATABASE_URL` para o dono também desfaz o
+`schedule_closures`. **Não** use `DROP POLICY` sozinho: com o RLS ligado e sem política o Postgres nega tudo ao papel da aplicação; remover a política só vale como limpeza, depois do `DISABLE`. Voltar a `DATABASE_URL` para o dono também desfaz o
 efeito sem mexer no banco.
 
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
