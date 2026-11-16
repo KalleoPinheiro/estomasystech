@@ -3,7 +3,7 @@ title: "ADR 110 — Row-Level Security por clínica: resultado do spike e plano 
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-15
+last_reviewed: 2026-11-16
 related:
   - docs/adr/001-multi-tenancy.md
   - docs/engineering/migracoes-aditivas.md
@@ -12,7 +12,7 @@ related:
 # ADR 110 — Row-Level Security por clínica
 
 - **Data:** 2026-11-15
-- **Status:** proposto (spike da #729; nenhuma mudança de comportamento em produção).
+- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; nenhuma mudança de comportamento em produção).
 - **Domínios afetados:** acesso, infraestrutura de persistência.
 
 ## Contexto
@@ -75,6 +75,28 @@ política e habilitar RLS não perde dado e se desfaz sem restaurar backup. As e
   PGlite não aplica RLS e segue como está.
 - **Cron e `systemScope()`:** usam o pool `sistema`; a allowlist de `tests/lib/tenant-scope.test.ts` continua
   sendo a lista de quem pode.
+
+## Etapa 1 entregue (#870)
+
+- **Migração `0075_rls-papel-aplicacao`** (aditiva, idempotente): cria o papel de grupo `estomasystech_app`
+  (`NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION`, não dono de nada) com só
+  `SELECT, INSERT, UPDATE, DELETE` nas tabelas e `USAGE, SELECT, UPDATE` nas sequências do `public`, mais os mesmos
+  privilégios por padrão para tabelas futuras. Sem `TRUNCATE`, `REFERENCES`, `TRIGGER`, DDL nem acesso ao esquema
+  `drizzle`. Se o papel que migra não puder criar papéis, a migração só avisa (`NOTICE`) e segue, para nunca derrubar
+  o deploy; o runbook ([`producao.md`](../engineering/producao.md) § 4.1) diz como criar à mão.
+- **Sem senha no repositório.** O papel de grupo não loga. O dono cria os papéis de login no servidor
+  (`CREATE ROLE … LOGIN IN ROLE estomasystech_app` e `\password`). O papel de sistema é um login com `BYPASSRLS`
+  (atributo não herdado por membership, e só superusuário o concede), por isso nasce no servidor, não na migração.
+- **Dois pools no código.** `getSystemDb()` lê `DATABASE_SYSTEM_URL` e, sem ela, devolve o próprio `getDb()`.
+  Ainda não tem chamador: a etapa 2 passa o `systemScope()` para ele junto com o `set_config`.
+- **Prova:** `tests/integracao/rls-papel-aplicacao.integracao.ts` (Postgres real) confere atributos do papel,
+  que não é dono, privilégios exatos, recusa de DDL por um login que o herda, tabelas futuras, idempotência e o
+  caminho de volta (`DROP OWNED BY`).
+- **Atenção ao trocar a `DATABASE_URL`** (não é desta etapa): o boot-migrate do app precisa de dono. Antes de apontar a
+  `DATABASE_URL` para o papel de aplicação, desligue-o (`ESTOMASYSTECH_MIGRATE_ON_BOOT=false`) e migre com
+  `npm run db:migrate` usando a URL do dono; o papel de migração dedicado da etapa 5 formaliza isso.
+- **Rollback:** nenhuma conexão muda nesta etapa. Para desfazer, `DROP OWNED BY estomasystech_app;` e
+  `DROP ROLE estomasystech_app;` (antes, apague os logins que herdam dele).
 
 ## Premissa a verificar na etapa 1
 

@@ -14,6 +14,7 @@ export const MIGRATIONS_FOLDER = path.join(process.cwd(), 'drizzle');
 
 const globalForDb = globalThis as unknown as {
   estomasystechDbPromise?: Promise<AppDb>;
+  estomasystechSystemDbPromise?: Promise<AppDb>;
 };
 
 async function createPgliteDb(): Promise<AppDb> {
@@ -69,13 +70,13 @@ export function attachPoolErrorLogger(pool: ErrorEmitter): void {
   });
 }
 
-async function createPostgresDb(): Promise<AppDb> {
-  const { drizzle } = await import('drizzle-orm/node-postgres');
+async function createPool(
+  envName: 'DATABASE_URL' | 'DATABASE_SYSTEM_URL',
+): Promise<import('pg').Pool> {
   const { Pool } = await import('pg');
-
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env[envName];
   if (!connectionString) {
-    throw new Error('DATABASE_URL não configurada');
+    throw new Error(`${envName} não configurada`);
   }
   assertNotProductionDatabase(connectionString);
   const pool = new Pool({
@@ -86,6 +87,12 @@ async function createPostgresDb(): Promise<AppDb> {
     statement_timeout: intFromEnv('PG_STATEMENT_TIMEOUT_MS', 15_000),
   });
   attachPoolErrorLogger(pool);
+  return pool;
+}
+
+async function createPostgresDb(): Promise<AppDb> {
+  const { drizzle } = await import('drizzle-orm/node-postgres');
+  const pool = await createPool('DATABASE_URL');
   const db = drizzle(pool, { schema });
 
   // Preferir `npm run db:migrate` no deploy; ESTOMASYSTECH_MIGRATE_ON_BOOT=false desliga o boot-migrate.
@@ -143,6 +150,37 @@ export function getDb(): Promise<AppDb> {
     globalForDb.estomasystechDbPromise = attempt;
   }
   return globalForDb.estomasystechDbPromise;
+}
+
+/**
+ * Pool de sistema (RLS etapa 1, ADR-110): conexão com um papel `BYPASSRLS`, reservada ao
+ * `systemScope()` (cron, login, convite, plataforma). Sem `DATABASE_SYSTEM_URL` (ou no PGlite) é o
+ * mesmo pool de `getDb()`: nada muda em produção até o dono configurar a variável. Nunca migra.
+ * Ainda sem chamador: a etapa 2 liga o `set_config` por clínica e passa o `systemScope()` para cá.
+ */
+export function getSystemDb(): Promise<AppDb> {
+  if (
+    process.env.ESTOMASYSTECH_DB_DRIVER === 'pglite' ||
+    !process.env.DATABASE_SYSTEM_URL
+  ) {
+    return getDb();
+  }
+  if (!globalForDb.estomasystechSystemDbPromise) {
+    const attempt = createPool('DATABASE_SYSTEM_URL')
+      .then(async (pool) => {
+        const { drizzle } = await import('drizzle-orm/node-postgres');
+        return drizzle(pool, { schema }) as unknown as AppDb;
+      })
+      .catch((error: unknown) => {
+        if (globalForDb.estomasystechSystemDbPromise === attempt) {
+          globalForDb.estomasystechSystemDbPromise = undefined;
+        }
+        logError('Banco: falha ao inicializar o pool de sistema', error);
+        throw error;
+      });
+    globalForDb.estomasystechSystemDbPromise = attempt;
+  }
+  return globalForDb.estomasystechSystemDbPromise;
 }
 
 /**

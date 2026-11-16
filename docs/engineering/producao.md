@@ -3,7 +3,7 @@ title: "Runbook de produção"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-19
+last_reviewed: 2026-11-16
 ---
 
 # Runbook de produção
@@ -316,6 +316,25 @@ proposital enquanto as migrações não têm `down`
 - Para migrar como passo separado: `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e rodar
   `npm run db:migrate` de um checkout com `DATABASE_URL` alcançável. No Coolify o banco não tem
   porta pública: use o container descartável do § 3 (a imagem standalone não tem `drizzle-kit`).
+### 4.1 RLS etapa 1: papéis do banco (#870, ADR-110)
+
+A migração `0075` cria o papel de grupo `estomasystech_app` (sem login, sem dono, sem `BYPASSRLS`). **Não muda
+nenhuma conexão**: o app segue com a `DATABASE_URL` de hoje. Conferência e preparo no servidor, um comando por linha
+(sem aspas; senha pelo `\password`, nunca na linha de comando):
+
+1. Abrir o psql do banco: `ssh -t vps sudo docker exec -it <container do banco> psql -U estomasystech -d estomasystech`
+2. `\du` lista os papéis. Confirme que `estomasystech_app` existe e que a linha de `estomasystech` mostra se ele é
+   `Superuser` ou `Bypass RLS` (se sim, o Postgres ignora qualquer política: a etapa 3 só protege com o papel novo).
+3. `\dt` lista as tabelas com o dono (esperado: `estomasystech`).
+4. Se o passo 2 não achou `estomasystech_app`, crie: `CREATE ROLE estomasystech_app NOLOGIN;` e rode de novo a
+   migração (ou reaplique o conteúdo de `drizzle/0075_rls-papel-aplicacao.sql`).
+5. Opcional, só para deixar pronto (as etapas seguintes usam): `CREATE ROLE estomasystech_login LOGIN IN ROLE estomasystech_app;`
+   e `\password estomasystech_login`; e, como superusuário, `CREATE ROLE estomasystech_sistema LOGIN BYPASSRLS IN ROLE estomasystech_app;`
+   e `\password estomasystech_sistema`. Guarde as senhas no Coolify; não as aponte para o app ainda.
+
+Rollback: `DROP OWNED BY estomasystech_app;` e `DROP ROLE estomasystech_app;` (apague antes os logins que herdam dele).
+Não exige restaurar backup.
+
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
   última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`
   (#303). Por isso **nunca deploye um commit que tenha a 0051 sem a 0050**: se a 0051 rodar antes,
