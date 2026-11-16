@@ -503,9 +503,18 @@ export class DrizzleProcedureKitRepository implements ProcedureKitRepository {
         .delete(procedureSupplies)
         .where(eq(procedureSupplies.procedureId, procedureId));
       if (validated.length > 0) {
+        // A empresa do kit é a do procedimento (RLS etapa 4): a chave composta do banco a confere.
+        const [parent] = await tx
+          .select({ clinicId: procedures.clinicId })
+          .from(procedures)
+          .where(eq(procedures.id, procedureId));
+        if (!parent) {
+          throw new Error(`Procedimento ${procedureId} não encontrado.`);
+        }
         await tx.insert(procedureSupplies).values(
           validated.map((item) => ({
             procedureId,
+            clinicId: parent.clinicId,
             supplyId: item.supplyId,
             quantity: item.quantity,
           })),

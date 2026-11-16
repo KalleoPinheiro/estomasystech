@@ -12,7 +12,7 @@ related:
 # ADR 110 — Row-Level Security por clínica
 
 - **Data:** 2026-11-15
-- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 entregue, #871; etapa 3 em PR, #872: política em três tabelas, nenhuma conexão trocada).
+- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 entregue, #871; etapa 3 entregue, #872: política em três tabelas; etapa 4 em PR, #873: política nas demais tabelas clínicas e financeiras, nenhuma conexão trocada).
 - **Domínios afetados:** acesso, infraestrutura de persistência.
 
 ## Contexto
@@ -146,8 +146,7 @@ Primeira política ligada, só em tabelas de baixo risco.
   estar definida **antes** de trocar a `DATABASE_URL` para o papel da aplicação (producao.md § 4.3).
 - **Scripts do dono** (`seed`, `data:reencrypt`, `report-portal-orphans`) abrem `getDb()` sem clínica e rodam com a URL do
   dono; com o papel da aplicação eles não leem essas tabelas. Fica para a etapa 5 (papel de migração com `BYPASSRLS`).
-- **`procedure_supplies`** (sem `clinic_id`, herda do procedimento) fica fora desta etapa: segue sem política e a decisão
-  (`EXISTS` ou coluna nova) é da etapa 4.
+- **`procedure_supplies`** (sem `clinic_id`, herda do procedimento) ficou fora desta etapa; a decisão (coluna nova) foi tomada e entregue na etapa 4.
 - **Prova:** `tests/integracao/rls-etapa-3-politicas.integracao.ts` (Postgres real, pool de **uma** conexão): catálogo, os três
   atores (aplicação, sistema com `BYPASSRLS`, dono), repositórios reais com o papel da aplicação, `WITH CHECK`, falha fechada,
   idempotência e o rollback.
@@ -159,6 +158,66 @@ Primeira política ligada, só em tabelas de baixo risco.
   da aplicação. Medir `EXPLAIN` e latência na staging antes da etapa 4.
 - **Rollback:** `ALTER TABLE supplies DISABLE ROW LEVEL SECURITY;` (idem `partners`, `schedule_closures`), instantâneo e sem
   perda de dado. `DROP POLICY` sozinho **não** serve (RLS ligado sem política nega tudo ao papel da aplicação); só como limpeza depois do `DISABLE`. Não exige restaurar backup.
+
+## Etapa 4 entregue (#873)
+
+Política `clinic_isolation` em 35 tabelas (34 que já tinham `clinic_id` NOT NULL e `procedure_supplies`, que ganha a coluna), em três
+migrações. Total coberto com a etapa 3: 38 tabelas. Nenhuma conexão trocada, nenhum `FORCE`.
+
+- **`0077_rls-procedure-supplies-clinic`** (expandir e contrair numa só migração, tabela pequena): `procedure_supplies` ganha
+  `clinic_id`, preenchido a partir do procedimento, depois `NOT NULL`, índice e chave estrangeira composta
+  `(procedure_id, clinic_id) -> procedures (id, clinic_id)` (para isso `procedures` ganha o índice único `uq_procedures_id_clinic`).
+  Um gatilho `BEFORE INSERT` completa `clinic_id` quando ele vem nulo: a versão anterior do código, que ainda não conhece a coluna,
+  segue gravando kits durante a janela do deploy e o `NOT NULL` não a derruba. O repositório novo grava a coluna de forma explícita.
+  A mesma migração cria o índice `clinic_id` das quatro tabelas que não tinham índice líder nessa coluna
+  (`professional_availability`, `invoice_payments`, `commission_payouts`, `commission_payout_items`).
+- **`0078_rls-politicas-clinicas`** (29 tabelas): profissionais, procedimentos e kit, grade e disponibilidade, lista de espera,
+  responsáveis, pacientes, consultas, anamnese, evolução, condições, avaliações, fotos, consentimentos, pedidos de titular,
+  lotes e movimentos de estoque, retornos, lembretes, plano de cuidado (e seus quatro filhos), vínculos profissional-paciente e
+  canais da empresa. **`0079_rls-politicas-financeiro`** (6 tabelas): pacotes, consumos, faturas, recebimentos, repasses e itens de repasse.
+  Dois lotes para que o rollback de uma área não toque na outra; o SQL de cada tabela é o mesmo da etapa 3 (idempotente).
+- **Decisão: coluna `clinic_id` em `procedure_supplies`, não política com `EXISTS`.** Política por igualdade simples e indexável, do
+  mesmo formato em todas as tabelas, sem subconsulta por linha. A divergência entre a coluna e o procedimento é impossível no banco
+  (chave composta). O custo é uma coluna redundante numa tabela de poucas linhas.
+- **Fora desta etapa, de propósito: `user_accounts`, `google_accounts` e `audit_events`.** O `clinic_id` delas é anulável (conta e
+  evento de sistema, sem empresa) e são lidas por login, convite, recuperação de senha e plataforma antes de a empresa ser conhecida.
+  Elas e as tabelas sem `clinic_id` (`clinics`, `auth_tokens`, `user_mfa`, `mfa_recovery_codes`) formam o lote de identidade e
+  auditoria, que pede um mapeamento caminho a caminho de quem lê sem clínica (login, MFA, `recover-super-admin`); fica para a etapa 5
+  ou um lote próprio antes dela. A taxonomia NANDA/NOC/NIC, `rate_limit_windows`, `job_runs` e `app_releases` seguem sem RLS (globais).
+- **Quem é filtrado, e o que muda em produção:** igual à etapa 3. A política só vale para o papel da aplicação (não dono, sem
+  `BYPASSRLS`); o dono da tabela e o superusuário a ignoram enquanto não houver `FORCE`. Com a produção conectada como dono
+  (premissa ainda não conferida), **esta etapa não muda comportamento**. Quando a aplicação trocar de papel, `DATABASE_SYSTEM_URL`
+  precisa estar definida (login, convite, plataforma e cron leem sem clínica) e a #889 resolvida (readiness).
+- **Prova:** `tests/integracao/rls-etapa-4-politicas.integracao.ts` (Postgres real, pool de uma conexão) lê o catálogo e exige o mesmo
+  comportamento de **toda** tabela com `clinic_id` (uma tabela nova sem política reprova): vê só a própria clínica, zero linhas sem
+  `app.clinic_id`, `WITH CHECK` recusa mover ou inserir para outra clínica, `UPDATE`/`DELETE` sem filtro só afetam a própria,
+  sistema (`BYPASSRLS`) e dono veem tudo, idempotência e rollback (uma tabela e todas). Repositórios reais (profissionais, procedimentos,
+  kit) e o gatilho e a chave composta de `procedure_supplies` também. `rls-etapa-4-backfill.integracao.ts` parte do esquema da etapa 3,
+  grava kits como a versão anterior e aplica as migrações novas por cima.
+- **Compatibilidade da migração (portão do CI).** O portão roda a suíte de integração da base sobre o esquema novo. Dois testes da
+  etapa 3 afirmavam "só três tabelas com RLS" e "`patients` legível pelo papel da aplicação", falsos por desenho depois desta etapa;
+  o PR #891 os tornou independentes da etapa (TESTE-ALTERADO) e entrou antes. Etapas futuras que liguem mais tabelas não repetem o problema.
+- **Desempenho** (Postgres 16 local, papel não dono com `app.clinic_id`, 5 empresas, 100 mil consultas, 25 mil pacientes, 40 mil faturas;
+  p50/p95 em ms, 300 execuções por consulta, cada uma em `begin; set_config; consulta; commit`):
+
+  | Consulta | Dono (hoje) | Papel da aplicação, RLS desligado | Papel da aplicação, RLS ligado |
+  | --- | --- | --- | --- |
+  | agenda, uma semana (336 linhas) | 4,22 / 7,34 | 4,21 / 6,79 | 4,83 / 7,28 |
+  | ficha: paciente por id | 0,28 / 0,63 | 0,31 / 0,61 | 0,26 / 0,43 |
+  | ficha: evoluções do paciente | 0,26 / 0,43 | 0,35 / 0,50 | 0,24 / 0,33 |
+  | ficha: consultas do paciente | 0,25 / 0,52 | 0,37 / 0,48 | 0,33 / 0,94 |
+  | lista de pacientes (5 mil linhas) | 5,66 / 8,91 | 6,07 / 9,89 | 6,18 / 9,82 |
+  | financeiro: lista de faturas (50) | 0,38 / 0,71 | 0,45 / 0,68 | 0,62 / 0,90 |
+  | financeiro: resumo do mês | 2,17 / 3,60 | 2,28 / 3,86 | 2,72 / 4,11 |
+
+  O `EXPLAIN ANALYZE` mostra que o predicado vira um `One-Time Filter` (`current_setting` é estável: avaliado uma vez por consulta)
+  ou um `Index Cond` em `idx_*_clinic`, sem varredura nova e sem subconsulta por linha. A diferença com o RLS ligado está dentro
+  do ruído, no pior caso 0,2 a 0,5 ms em consultas que já custam menos de 3 ms. Consulta **sem** o filtro de clínica na aplicação (a
+  política sozinha) também usa o índice. Medido em Postgres local, não na staging (as threads não a alcançam): repetir lá antes de a
+  aplicação trocar de papel.
+- **Rollback**, instantâneo e sem restaurar backup, por tabela: `ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY;`. Para um lote
+  inteiro, repita o comando nas tabelas da migração. **Não** use `DROP POLICY` sozinho. A coluna, o gatilho e os índices da `0077` são
+  aditivos para o código e podem ficar; voltar a `DATABASE_URL` para o dono também desfaz o efeito sem tocar no banco.
 
 ## Premissa a verificar na etapa 1
 

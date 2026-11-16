@@ -384,6 +384,26 @@ Rollback, instantâneo e sem backup: `ALTER TABLE supplies DISABLE ROW LEVEL SEC
 `schedule_closures`. **Não** use `DROP POLICY` sozinho: com o RLS ligado e sem política o Postgres nega tudo ao papel da aplicação; remover a política só vale como limpeza, depois do `DISABLE`. Voltar a `DATABASE_URL` para o dono também desfaz o
 efeito sem mexer no banco.
 
+### 4.4 RLS etapa 4: políticas nas tabelas clínicas e financeiras (#873, ADR-110)
+
+As migrações `0077` (`procedure_supplies` ganha `clinic_id`, com preenchimento a partir do procedimento), `0078` (29 tabelas
+clínicas e operacionais) e `0079` (6 tabelas financeiras) entram pelo boot-migrate. **Sem ação obrigatória no servidor.** Como
+na etapa 3, enquanto a `DATABASE_URL` for do dono das tabelas a política é ignorada e o app se comporta como antes. A `0077` é
+**não aditiva** para o lint (preenche, `NOT NULL`, chave nova), mas o código anterior segue gravando kits (um gatilho completa a
+coluna), então o rollback da versão não exige restaurar backup.
+
+Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comando por linha, sem aspas):
+
+1. `select count(*) from pg_policies where policyname = 'clinic_isolation';` deve dar 38.
+2. `select count(*) from procedure_supplies where clinic_id is null;` deve dar 0 (a coluna é `NOT NULL`).
+3. `select relname from pg_class where relkind = 'r' and relrowsecurity and relforcerowsecurity;` não deve listar nada (sem `FORCE`).
+
+Para valer de fato, as mesmas condições da § 4.3 (`DATABASE_SYSTEM_URL`, #889, `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`, só então a
+`DATABASE_URL` do papel da aplicação, testando na staging antes). `user_accounts`, `google_accounts` e `audit_events` seguem sem RLS.
+
+Rollback, por tabela e sem backup: `ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY;` (o SQL das migrações lista as tabelas; um
+lote inteiro é o mesmo comando repetido). **Não** use `DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito.
+
 - **Ordem das migrações 0050 e 0051.** O Drizzle só aplica migração com `when` maior que o da
   última aplicada. O `when` da `0051_job-runs` (#306) é maior que o da `0050_data-subject-requests`
   (#303). Por isso **nunca deploye um commit que tenha a 0051 sem a 0050**: se a 0051 rodar antes,

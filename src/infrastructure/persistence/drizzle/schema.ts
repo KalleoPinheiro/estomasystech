@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   pgTable,
@@ -156,6 +157,8 @@ export const procedures = pgTable(
       sql`lower(${table.name})`,
     ),
     index('idx_procedures_clinic').on(table.clinicId),
+    // Alvo da chave estrangeira composta de `procedure_supplies` (RLS etapa 4, ADR-110).
+    uniqueIndex('uq_procedures_id_clinic').on(table.id, table.clinicId),
   ],
 );
 
@@ -165,11 +168,20 @@ export const procedureSupplies = pgTable(
     procedureId: text('procedure_id')
       .notNull()
       .references(() => procedures.id),
+    // Cópia da empresa do procedimento (RLS etapa 4, ADR-110): a política por igualdade simples exige a
+    // coluna na própria tabela. A chave composta abaixo impede que ela divirja do procedimento.
+    clinicId: text('clinic_id').notNull(),
     supplyId: text('supply_id').notNull(),
     quantity: integer('quantity').notNull(),
   },
   (table) => [
     uniqueIndex('uq_procedure_supplies').on(table.procedureId, table.supplyId),
+    index('idx_procedure_supplies_clinic').on(table.clinicId),
+    foreignKey({
+      name: 'fk_procedure_supplies_procedure_clinic',
+      columns: [table.procedureId, table.clinicId],
+      foreignColumns: [procedures.id, procedures.clinicId],
+    }),
   ],
 );
 
@@ -339,6 +351,8 @@ export const professionalAvailability = pgTable(
     index('idx_professional_availability_professional').on(
       table.professionalId,
     ),
+    // Índice da política de RLS (etapa 4, ADR-110): `clinic_id = current_setting(...)` em toda consulta.
+    index('idx_professional_availability_clinic').on(table.clinicId),
   ],
 );
 
@@ -1255,7 +1269,10 @@ export const invoicePayments = pgTable(
     payerName: text('payer_name'),
     payerCpf: text('payer_cpf'),
   },
-  (table) => [index('idx_invoice_payments_invoice').on(table.invoiceId)],
+  (table) => [
+    index('idx_invoice_payments_invoice').on(table.invoiceId),
+    index('idx_invoice_payments_clinic').on(table.clinicId),
+  ],
 );
 
 // Catálogo de taxonomias de enfermagem (NANDA-I/NOC/NIC) — populado por importação
@@ -1599,6 +1616,7 @@ export const commissionPayouts = pgTable(
       .on(table.clinicId, table.professionalId, table.period)
       .where(sql`${table.status} = 'active'`),
     index('idx_commission_payouts_professional').on(table.professionalId),
+    index('idx_commission_payouts_clinic').on(table.clinicId),
   ],
 );
 
@@ -1637,6 +1655,7 @@ export const commissionPayoutItems = pgTable(
       .where(sql`${table.active}`),
     index('idx_commission_payout_items_payout').on(table.payoutId),
     index('idx_commission_payout_items_professional').on(table.professionalId),
+    index('idx_commission_payout_items_clinic').on(table.clinicId),
   ],
 );
 
