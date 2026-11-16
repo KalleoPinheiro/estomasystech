@@ -66,7 +66,7 @@ describe('Feature: preenchimento de clinic_id em procedure_supplies (#873)', () 
       rmSync(folder, { recursive: true, force: true });
   });
 
-  it('Dado kits gravados antes da migração, Quando aplico 0077 a 0079, Então cada linha herda a empresa do procedimento e a coluna fica NOT NULL', async () => {
+  it('Dado kits gravados antes da migração, Quando aplico 0077 a 0079, Então cada linha herda a empresa do procedimento, a coluna fica NOT NULL e a base antiga ainda grava kit', async () => {
     const before = folderUpTo(LAST_BEFORE);
     folders.push(before);
     await migrate(drizzle(pool), { migrationsFolder: before });
@@ -102,9 +102,8 @@ describe('Feature: preenchimento de clinic_id em procedure_supplies (#873)', () 
         WHERE table_name = 'procedure_supplies' AND column_name = 'clinic_id'`,
     );
     expect(column.rows).toEqual([{ is_nullable: 'NO' }]);
-  });
 
-  it('Dado a migração aplicada, Quando a base antiga grava kit sem clinic_id, Então o gatilho completa e o banco aceita', async () => {
+    // A base antiga grava kit sem clinic_id: o gatilho completa e o banco aceita.
     await pool.query(
       `INSERT INTO procedure_supplies (procedure_id, supply_id, quantity) VALUES ('proc-clinica-a', 'insumo-3', 1)`,
     );

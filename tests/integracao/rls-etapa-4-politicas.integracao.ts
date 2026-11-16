@@ -277,11 +277,12 @@ describe('Feature: políticas de RLS nas tabelas clínicas e financeiras (#873)'
         ),
       ).rejects.toThrow(/row-level security/);
       const intruder = await rowFor(table, CLINIC_B);
+      // 42501 = insufficient_privilege: a política recusou, não uma unicidade (a linha da B já existe).
       await expect(
         inClinic(CLINIC_A, (client) =>
           client.query(intruder.sql, intruder.values),
         ),
-      ).rejects.toThrow(/row-level security|already exists|duplicate/);
+      ).rejects.toMatchObject({ code: '42501' });
     }
   });
 
