@@ -400,7 +400,7 @@ Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comand
 3. `select relname from pg_class where relkind = 'r' and relrowsecurity and relforcerowsecurity;` não deve listar nada (sem `FORCE`).
 
 Para valer de fato, as mesmas condições da § 4.3 (`DATABASE_SYSTEM_URL`, #889 (resolvida, § 4.5), `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`, só então a
-`DATABASE_URL` do papel da aplicação, testando na staging antes). `user_accounts`, `google_accounts` e `audit_events` seguem sem RLS.
+`DATABASE_URL` do papel da aplicação, testando na staging antes). `user_accounts`, `google_accounts` e `audit_events` entram na § 4.6.
 
 Rollback, por tabela e sem backup: `ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY;` (o SQL das migrações lista as tabelas; um
 lote inteiro é o mesmo comando repetido). **Não** use `DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito.
@@ -463,6 +463,25 @@ recria (o readiness fica `pending`): para recriar, o dono executa o SQL da `0080
      vincular ao cadastro pelo e-mail ([#196](https://github.com/KalleoPinheiro/estomasystech/issues/196));
      recrie-as em */configuracoes* escolhendo o paciente/parceiro.
   2. `npm run data:reencrypt` — § 6.
+
+### 4.6 RLS, lote de identidade e auditoria: `user_accounts`, `google_accounts` e `audit_events` (#894, ADR-110)
+
+A migração `0081` liga a política `clinic_isolation` nas três tabelas e entra pelo boot-migrate. **Sem ação obrigatória no servidor e sem mudança de
+código**: enquanto a `DATABASE_URL` for do dono das tabelas a política é ignorada e o app se comporta como antes. Linha sem empresa (super_admin, evento de
+plataforma, Google do sistema) só o papel de sistema enxerga; login, convite, recuperação de senha, segundo fator, OAuth sem sessão e a auditoria de login
+já passam pelo pool de sistema (`DATABASE_SYSTEM_URL`).
+
+Conferência opcional depois do deploy (psql do banco, § 4.1 passo 1; um comando por linha, sem aspas):
+
+1. `select count(*) from pg_policies where policyname = 'clinic_isolation';` deve dar 41 (38 das etapas 3 e 4 mais as três).
+2. `select relname from pg_class where relkind = 'r' and relrowsecurity and relforcerowsecurity;` não deve listar nada (sem `FORCE`).
+
+**Vai no próximo deploy:** só a migração `0081` (e, junto, tudo o que já estava na `main`). **Antes de trocar a `DATABASE_URL` para o papel da aplicação**
+(mesmas condições da § 4.3, agora com o login dependendo delas): `DATABASE_SYSTEM_URL` definida e testada, senão o login responde "credenciais inválidas"
+para todos (o pool de sistema cairia no da aplicação e veria zero contas); depois, na staging, entrar com os três papéis e recuperar uma senha.
+
+Rollback, por tabela e sem backup: `ALTER TABLE user_accounts DISABLE ROW LEVEL SECURITY;` (idem `google_accounts` e `audit_events`). **Não** use
+`DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito. Falta para a #874: `FORCE` e o papel de migração (ADR-110).
 
 ## 5. Backup e restore
 
