@@ -1,5 +1,28 @@
 # estomasystech
 
+## 0.9.0
+
+### Minor Changes
+
+- 1980c29: Ficha do paciente: na galeria da condição, a equipe agora escolhe quais duas fotos comparar (por data e hora), vendo lado a lado cada foto com a avaliação TIME mais próxima. O padrão continua sendo a primeira e a última foto; no celular as duas empilham.
+- 3e613d6: Configurações e Minha conta abrem mais rápido no celular: os dados de cada seção já chegam na página, sem esperar uma fila de chamadas e sem a tela pular depois de carregar.
+- 07e54e2: O e-mail usado para entrar no sistema passa a ficar cifrado no banco, como já acontece com os dados dos pacientes: quem lesse uma cópia do banco ou do backup não veria mais os e-mails de login da equipe. Entrar, convidar, recuperar a senha e o segundo fator continuam iguais. Depois da publicação, o dono roda a conversão dos cadastros existentes (`npm run data:reencrypt`).
+- 04133fc: A área da Plataforma abre mais rápido no celular: a lista de clínicas, o detalhe da clínica, a trilha de auditoria e Minha conta do operador já chegam com os dados na página, sem esperar uma fila de chamadas e sem a tela pular depois de carregar.
+
+### Patch Changes
+
+- 9df8b9f: A agenda carrega um pouco menos código na abertura: o formulário e o detalhe da consulta só descem quando o modal abre.
+- 3861bda: A conexão da aplicação com o banco passa a aceitar uma variável própria, `DATABASE_APP_URL`, para o usuário restrito do banco. Serve para quem usa um banco cuja variável `DATABASE_URL` é gerenciada por uma integração e não pode ser editada. Sem a nova variável, nada muda: a aplicação segue usando `DATABASE_URL`.
+- 5e57846: Ficha do paciente no celular: o selo «Ativo» fica sempre ao lado do nome e a tela não salta mais quando as fontes terminam de carregar (em 390 px a tela dava dois saltos de 36 px).
+- 10d7e2a: A trilha de auditoria do login deixa de guardar o e-mail. Quando a entrada identifica uma conta, o evento usa o id dessa conta. Quando o e-mail não identifica uma conta (desconhecido, senha errada ou a mesma senha em mais de uma empresa), o id fica em branco.
+- a0fb3b0: Lista de pacientes: a página passa a ser lida de uma única visão do banco, então uma renomeação feita no mesmo instante por outra pessoa não troca o nome de um paciente na página nem faz o «carregar mais» retomar na posição errada.
+- 55a613e: Trilha da plataforma: a primeira página respeita o limite de 100 eventos e «Carregar mais» só aparece quando há mais. No detalhe da clínica, o selo «Aguardando primeiro acesso» quebra linha em vez de ser cortado em telas estreitas.
+- de1a494: Segunda barreira de isolamento entre clínicas no banco, agora também nos dados de pacientes, prontuário, agenda, estoque e financeiro: o Postgres passa a recusar linha de outra clínica mesmo que a aplicação erre o filtro. Nada muda para quem usa o sistema hoje; a barreira só passa a valer quando o dono trocar o usuário do banco, num passo separado.
+- 0c0e31e: Última etapa do isolamento entre clínicas no banco: o Postgres passa a aplicar a regra de isolamento também ao dono das tabelas e cobre as tabelas de clínicas, tokens de acesso e segundo fator. Atenção ao publicar: a conexão da aplicação precisa já estar no usuário restrito do banco antes desta versão migrar; se ela ainda usar o dono comum, passa a ver zero linhas assim que a migração rodar. A ordem exata está no runbook (§ 4.7). Para quem usa o sistema com a conexão já ajustada, nada muda.
+- a7f2769: Segunda barreira de isolamento entre clínicas no banco, agora também nas contas de acesso, na conexão com o Google Agenda e na trilha de auditoria: o Postgres passa a recusar linha de outra clínica mesmo que a aplicação erre o filtro. Nada muda para quem usa o sistema hoje; a barreira só passa a valer quando o dono trocar o usuário do banco, num passo separado.
+- 93d8185: Preparo para o sistema conectar ao banco com um usuário de menos poder: a checagem de saúde passa a conferir as migrações por uma leitura mínima e o sistema deixa de tentar alterar o banco na subida quando o usuário não tem esse direito. Nada muda para quem usa o sistema hoje.
+- 1e6082a: No detalhe de clínica da Plataforma, em telas estreitas, o título não parte mais a palavra no meio: o selo «Cadastro completo» passa para a linha de baixo do título.
+
 ## 0.8.0
 
 ### Minor Changes
