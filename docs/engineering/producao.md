@@ -526,6 +526,24 @@ END $$;
 
 Ou repita as instruções de `drizzle/0083_rls-force.sql`. Para desfazer também a política das quatro tabelas novas: `ALTER TABLE <clinics|auth_tokens|user_mfa|mfa_recovery_codes> DISABLE ROW LEVEL SECURITY;` (não use `DROP POLICY` sozinho). Voltar a `DATABASE_URL` para um superusuário também desfaz o efeito para a aplicação.
 
+### 4.8 Staging (Neon): papel de sistema e troca da `DATABASE_URL` para um login restrito (#874, ADR-110)
+
+A staging conecta como `neondb_owner`, que tem `BYPASSRLS`: o `FORCE` não filtra esse papel (ADR-110, "Etapa 5 na staging"). Para provar o filtro lá, a aplicação precisa servir com um login restrito e migrar com o dono.
+
+**Como o build já separa os dois** ([`scripts/vercel-build.ts`](../../scripts/vercel-build.ts)): todo passo do build (`drizzle-kit migrate`, seed e `next build`) roda com `DATABASE_URL_UNPOOLED ?? DATABASE_URL` no lugar de `DATABASE_URL`; em execução, a função serverless lê a `DATABASE_URL` como está. Então: `DATABASE_URL_UNPOOLED` = dono (migra), `DATABASE_URL` = login restrito (serve). **Não precisa mudar código.** Ressalvas: (1) a integração Neon injeta as duas variáveis com o dono, e a troca da `DATABASE_URL` é manual na Vercel (confira que a integração não a sobrescreve num redeploy); (2) o seed roda com o dono e, em escopo de clínica, entra por `set_config`; o escopo de sistema vai pela `DATABASE_SYSTEM_URL`.
+
+**Senha: só letras e números.** Símbolo na senha quebra a URL de conexão (foi a causa da falha de 2026-11-17). No Neon o `\password` do psql não é aceito: defina com `ALTER ROLE <login> PASSWORD '<texto>';` (no editor SQL do console do Neon, para as aspas não virarem curvas ao colar).
+
+**Passo a passo** (staging primeiro, um comando por vez; o dono do banco é quem roda):
+
+1. Conferir o estado: `SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname LIKE 'estomasystech%' OR rolname = 'neondb_owner';`
+2. Criar o login restrito, sem `BYPASSRLS`: `CREATE ROLE estomasystech_login LOGIN NOBYPASSRLS IN ROLE estomasystech_app;` e depois `ALTER ROLE estomasystech_login PASSWORD '<letras e números>';`
+3. Na Vercel (projeto da homologação, ambiente Production), guardar a URL atual do dono em `DATABASE_URL_UNPOOLED` (já existe, pela integração) e trocar só o usuário e a senha da `DATABASE_URL` pelos de `estomasystech_login`, mantendo host, banco e parâmetros de SSL.
+4. Conferir `DATABASE_SYSTEM_URL` (login `estomasystech_sistema`, `BYPASSRLS`) e `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`.
+5. Reexecutar o workflow **Staging**. Deve ficar verde: o build migra e semeia com o dono, a aplicação serve com o login restrito.
+6. Provar o filtro: `SELECT current_user;` com a URL nova deve devolver `estomasystech_login`; `SELECT count(*) FROM clinics;` com ela e sem `set_config` deve devolver 0; a validação logada passando prova que a aplicação enxerga só a clínica da sessão.
+7. Rollback: voltar a `DATABASE_URL` para a URL do dono e reexecutar o workflow Staging. Nada no banco precisa ser desfeito.
+
 ## 5. Backup e restore
 
 Guarda do prontuário: Lei 13.787/2018 e LGPD art. 46. **Sem restauração testada, não há backup.**
