@@ -59,6 +59,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`engineering/performance-baseline.md`](engineering/performance-baseline.md) | **baseline de carga** (#222): perfis, método, p50/p95 por rota, orçamento de latência e como reproduzir com `scripts/load/` |
 | [`engineering/performance-front-linha-de-base-2026-10.md`](engineering/performance-front-linha-de-base-2026-10.md) | **linha de base do front** (Next.js): JS por rota, FCP/LCP/CLS e chamadas `/api` em 360/390/768/1280, auditoria de recursos do Next e da hidratação (retrato de 2026-10-24) |
 | [`engineering/performance-front-depois-2026-11.md`](engineering/performance-front-depois-2026-11.md) | retrato de 2026-11 (ficha, lista e agenda): composição do JS, por que a meta de 215 KB saiu e o CLS da ficha |
+| [`engineering/performance-front-medicao-final-2026-11.md`](engineering/performance-front-medicao-final-2026-11.md) | **medição final da frente #541** (2026-11): 28 rotas × 4 larguras, hidratação, LCP, CLS e JS contra a linha de base; a meta de JS não foi atingida em 24 rotas |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
 | [`engineering/api.md`](engineering/api.md) | rotas REST centrais |

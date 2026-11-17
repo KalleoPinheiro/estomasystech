@@ -33,8 +33,9 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    auditoria, cifra ou release).** Label e projeto `v0.10.0`. Ordem:
    1. #559, Web Vitals de campo e medição final (P2, M), em três tickets: #903 (coleta sem PII: **já entregue**,
       ADR-086 e `producao.md` § 9.4.1; falta só ler o log da staging), #904 (bundle, meta nova: nenhuma rota
-      acima da linha de base, errata 3 do ADR-080) e #905 (medição final, `check:server-first` com allowlist
-      vazia; depende de #904).
+      acima da linha de base, errata 3 do ADR-080) e #905 (medição final: **feita**, retrato em
+      `performance-front-medicao-final-2026-11.md`; LCP, CLS e hidratação ok, mas JS acima da base em 24 das 28
+      rotas; falta ler a staging e decidir sobre o JS antes de fechar #559 e #541).
    2. #906, CLS de 0,49 na ficha em 390 px (P2, P).
    3. #907, comparar duas fotos da condição à escolha (P2, M; hoje só primeira × última).
    4. #855, página e linhas do paciente num snapshot (P3, P).
