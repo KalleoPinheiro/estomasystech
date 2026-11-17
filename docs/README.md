@@ -52,6 +52,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`engineering/gate-na-nuvem.md`](engineering/gate-na-nuvem.md) | como rodar o gate numa thread da nuvem (`scripts/gate-cloud.sh`), tempos medidos e armadilhas |
 | [`engineering/homologacao-cenarios.md`](engineering/homologacao-cenarios.md) | **casos de validação** de cada domínio × conta fictícia e dado do seed que os reproduz na staging |
 | [`engineering/producao.md`](engineering/producao.md) | **runbook de produção**: VPS Hetzner + compose + Traefik do Coolify, TLS, backup/restore cifrado, segredos e rotação, migrações, cron, alertas |
+| [`engineering/incidentes/2026-11-17-release-v0-9-1-banco-velho.md`](engineering/incidentes/2026-11-17-release-v0-9-1-banco-velho.md) | **incidente** da v0.9.1: código novo sobre banco da v0.8.0 (postmortem, linha do tempo, correção) |
 | [`engineering/backup-passo-a-passo.md`](engineering/backup-passo-a-passo.md) | **backup cifrado do zero**, para leigo: chave `age`, R2 na UE, scripts, alerta por e-mail, primeiro backup e teste de restauração, com as armadilhas da instalação real |
 | [`engineering/migracoes-aditivas.md`](engineering/migracoes-aditivas.md) | **lint de migração aditiva** (`check:migracao`): o que é aditivo, conferências do journal e formato JSON para o classificador de risco |
 | [`engineering/classe-de-risco.md`](engineering/classe-de-risco.md) | **classe de risco da PR** (`check:risco`, 0 a 3) e **veredito estruturado do the-judge** (`check:veredito`), CODEOWNERS nos portões |
