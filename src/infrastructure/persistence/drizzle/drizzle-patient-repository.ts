@@ -242,10 +242,33 @@ export class DrizzlePatientRepository implements PatientRepository {
       .sort(compareByNameThenId);
   }
 
+  /**
+   * Página de pacientes lida num único snapshot (#855): a seleção (nomes) e as linhas completas saem
+   * da mesma visão do banco, em transação `repeatable read`. Sem isso, uma renomeação confirmada entre
+   * as duas leituras devolveria um paciente cujo nome não foi usado na seleção e o próximo cursor
+   * retomaria na posição errada. A seleção e a ordem não mudam. Já dentro de uma transação, o
+   * `transaction` vira savepoint e vale o isolamento da transação de fora.
+   */
   async findAll(search?: string, page: PatientPage = {}): Promise<Patient[]> {
     if (page.ids && page.ids.length === 0) {
       return [];
     }
+    return this.db.transaction(
+      (tx) =>
+        new DrizzlePatientRepository(
+          tx,
+          this.clinicId,
+          this.cipher,
+          this.blindIndexSource,
+        ).readPage(search, page),
+      { isolationLevel: 'repeatable read' },
+    );
+  }
+
+  private async readPage(
+    search: string | undefined,
+    page: PatientPage,
+  ): Promise<Patient[]> {
     const limit = Math.min(page.limit ?? MAX_ROWS, MAX_ROWS);
     // Nome cifrado: lê só id + nome da empresa, decifra e decide a página em
     // memória (ADR-096); só as linhas da página voltam inteiras do banco.
