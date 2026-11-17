@@ -7,9 +7,11 @@ import {
   NativeSelect,
 } from '@still-void/ui/react';
 import { useMediaQuery, useToast } from '@still-void/ui/react/client';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { useHydrated } from '@/components/app-shell/use-hydrated';
+import { LoadingIndicator } from '@/components/feedback';
 import { Modal } from '@/components/modal';
 import { PageHeader } from '@/components/page-header';
 import type { AppointmentStatus } from '@/domain/scheduling/appointment';
@@ -39,16 +41,26 @@ import {
 } from './agenda-actions';
 import { useAgendaPeriod } from './agenda-period';
 import type { AgendaEntry, AgendaQuery } from './agenda-range';
-import { type ActionExtras, AppointmentDetail } from './appointment-detail';
-import {
-  AppointmentForm,
-  type AppointmentFormValues,
-} from './appointment-form';
+import type { ActionExtras } from './appointment-detail';
+import type { AppointmentFormValues } from './appointment-form';
 import { CalendarGrid } from './calendar-grid';
 import { PeriodNav } from './period-nav';
 import { StatusFilter } from './status-filter';
 import { WaitlistPanel } from './waitlist-panel';
 import { WeekView } from './week-view';
+
+/**
+ * Formulário e detalhe só aparecem dentro de um modal aberto por clique (#904):
+ * o JS deles desce quando o modal abre, não na carga da agenda.
+ */
+const AppointmentForm = dynamic(
+  () => import('./appointment-form').then((m) => m.AppointmentForm),
+  { loading: () => <LoadingIndicator /> },
+);
+const AppointmentDetail = dynamic(
+  () => import('./appointment-detail').then((m) => m.AppointmentDetail),
+  { loading: () => <LoadingIndicator /> },
+);
 
 function ProfessionalFilter({
   professionals,
