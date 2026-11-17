@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import { enforceVerifyFull } from '@/lib/database-url';
+import { appDatabaseEnvName, enforceVerifyFull } from '@/lib/database-url';
 import { logError } from '@/lib/log-error';
 import { logger } from '@/lib/observability/logger';
 import { assertNotProductionDatabase } from '@/lib/runtime-env';
@@ -72,7 +72,7 @@ export function attachPoolErrorLogger(pool: ErrorEmitter): void {
 }
 
 async function createPool(
-  envName: 'DATABASE_URL' | 'DATABASE_SYSTEM_URL',
+  envName: 'DATABASE_URL' | 'DATABASE_APP_URL' | 'DATABASE_SYSTEM_URL',
 ): Promise<import('pg').Pool> {
   const { Pool } = await import('pg');
   const connectionString = process.env[envName];
@@ -93,7 +93,7 @@ async function createPool(
 
 async function createPostgresDb(): Promise<AppDb> {
   const { drizzle } = await import('drizzle-orm/node-postgres');
-  const pool = await createPool('DATABASE_URL');
+  const pool = await createPool(appDatabaseEnvName());
   const db = drizzle(pool, { schema });
 
   // Preferir `npm run db:migrate` no deploy; ESTOMASYSTECH_MIGRATE_ON_BOOT=false desliga o boot-migrate.
@@ -210,13 +210,13 @@ export function getSystemDb(): Promise<AppDb> {
  * do primeiro acesso e o container ficava healthy sem migrar (runbook § 4).
  * Dispara a conexão + migração em segundo plano, sem bloquear a subida: banco
  * fora do ar não derruba o processo (a falha já é logada por `getDb` e a
- * próxima chamada tenta de novo). Sem `DATABASE_URL` ou com
+ * próxima chamada tenta de novo). Sem `DATABASE_URL` (ou `DATABASE_APP_URL`) ou com
  * `ESTOMASYSTECH_MIGRATE_ON_BOOT=false`, não faz nada.
  */
 export function warmUpDatabase(): Promise<void> {
   if (
     process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT === 'false' ||
-    !process.env.DATABASE_URL
+    !process.env[appDatabaseEnvName()]
   ) {
     return Promise.resolve();
   }

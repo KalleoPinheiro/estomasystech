@@ -30,13 +30,29 @@ export function planBuild(env: Readonly<Record<string, string | undefined>>): Bu
   ];
 }
 
-function run(step: BuildStep, env: NodeJS.ProcessEnv): void {
-  const [bin, ...args] = step;
+/**
+ * Ambiente dos passos do build: migrar, semear e buildar usam o dono (`DATABASE_URL_UNPOOLED ?? DATABASE_URL`).
+ * `DATABASE_APP_URL` (login restrito da aplicação, só de runtime, ADR-110) sai do ambiente do build: sem isso
+ * o seed, que abre `getDb()`, passaria a conectar com o login restrito em vez do dono.
+ */
+export function buildStepEnv(
+  env: Readonly<Record<string, string | undefined>>,
+): NodeJS.ProcessEnv {
   const databaseUrl = env.DATABASE_URL_UNPOOLED ?? env.DATABASE_URL;
-  const result = spawnSync(bin, args, {
-    stdio: "inherit",
-    env: { ...env, ...(databaseUrl ? { DATABASE_URL: enforceVerifyFull(databaseUrl) } : {}) },
-  });
+  const { DATABASE_APP_URL: _appUrl, ...rest } = env;
+  // `NODE_ENV` é opcional em tempo de execução; o tipo do Node o exige só por causa do `@types/node`.
+  return {
+    ...rest,
+    ...(databaseUrl ? { DATABASE_URL: enforceVerifyFull(databaseUrl) } : {}),
+  } as NodeJS.ProcessEnv;
+}
+
+export function run(
+  step: BuildStep,
+  env: Readonly<Record<string, string | undefined>>,
+): void {
+  const [bin, ...args] = step;
+  const result = spawnSync(bin, args, { stdio: "inherit", env: buildStepEnv(env) });
   if (result.status !== 0) {
     throw new Error(`Passo falhou: ${step.join(" ")}`);
   }
