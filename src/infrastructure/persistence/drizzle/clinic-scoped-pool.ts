@@ -1,4 +1,9 @@
-import type { Pool, PoolClient, QueryResult } from 'pg';
+import {
+  Pool as NodePool,
+  type Pool,
+  type PoolClient,
+  type QueryResult,
+} from 'pg';
 import type { AppDb } from './db';
 import * as schema from './schema';
 
@@ -21,9 +26,9 @@ function queryText(config: QueryArg): string {
  * (`set_config(..., true)` vale só até o fim da transação, então não vaza para a requisição seguinte
  * nem atravessa o PgBouncer em modo transação).
  *
- * O drizzle abre o `begin` fora do seu `try/finally`: se gravar a clínica falhar, este cliente desfaz
- * e se descarta sozinho (uma vez só). O `error` do socket é tratado durante todo o empréstimo, porque
- * o pool tira o ouvinte de conexão ociosa ao emprestar e um evento sem ouvinte derruba o processo.
+ * O drizzle abre o `begin` fora do seu `try/finally`: se o `begin` ou gravar a clínica falhar, este
+ * cliente se descarta sozinho (uma vez só). O `error` do socket é tratado durante todo o empréstimo,
+ * porque o pool tira o ouvinte de conexão ociosa ao emprestar e um evento sem ouvinte derruba o processo.
  */
 class ClinicScopedClient {
   private released = false;
@@ -41,8 +46,16 @@ class ClinicScopedClient {
 
   async query(config: QueryArg, values?: QueryValues): Promise<QueryResult> {
     const run = this.client.query.bind(this.client) as unknown as QueryFn;
-    const result = await run(config, values);
-    if (/^\s*begin\b/i.test(queryText(config))) {
+    const begin = /^\s*begin\b/i.test(queryText(config));
+    let result: QueryResult;
+    try {
+      result = await run(config, values);
+    } catch (error) {
+      // O `begin` do drizzle fica fora do `try/finally` dele: sem isto a conexão não volta ao pool.
+      if (begin) this.release(true);
+      throw error;
+    }
+    if (begin) {
       try {
         await run(`select set_config('${CLINIC_SETTING}', $1, true)`, [
           this.clinicId,
@@ -69,8 +82,9 @@ class ClinicScopedClient {
 /**
  * Pool que envolve cada consulta avulsa numa transação curta com `app.clinic_id` gravado
  * (RLS etapa 2, ADR-110): o custo é um `BEGIN` com o `set_config` e um `COMMIT` por consulta.
- * O nome da classe termina em `Pool` de propósito: o drizzle usa isso para decidir se abre
- * conexão própria em `db.transaction`.
+ * O drizzle só segura a conexão em `db.transaction` se o cliente for `instanceof Pool` ou se o
+ * nome da classe ainda contiver "Pool". O minify do servidor apaga o nome; a cadeia abaixo
+ * preserva o `instanceof`.
  */
 export class ClinicScopedPool {
   constructor(
@@ -108,6 +122,10 @@ export class ClinicScopedPool {
     return new ClinicScopedClient(await this.pool.connect(), this.clinicId);
   }
 }
+
+// Sem isto, o build de produção minifica o nome e o `begin isolation level …` da listagem de
+// pacientes cai dentro da transação curta de `query`. O Postgres recusa (25001) e a API responde 500.
+Object.setPrototypeOf(ClinicScopedPool.prototype, NodePool.prototype);
 
 function isNodePostgresPool(client: unknown): client is Pool {
   const candidate = client as { connect?: unknown; totalCount?: unknown };
