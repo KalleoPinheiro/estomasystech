@@ -85,15 +85,15 @@ export async function POST(request: NextRequest) {
     parsed.data.password,
   );
   if ('error' in identity) {
-    // Ator anônimo pré-sessão: nunca revela no evento se a conta existe além
-    // do que a própria resposta HTTP já revela (AC-02). A clínica suspensa só
-    // chega aqui com a senha provada, e o evento fica com a conta (B5).
+    // Sem conta identificada os ids ficam vazios (#887): e-mail desconhecido,
+    // senha errada ou credencial ambígua. A clínica suspensa provou a senha,
+    // então o evento fica com o id da conta, na clínica (B5).
     await recordAuditNow(auditEvents, null, {
       action: 'read',
       resourceType: 'session',
-      resourceId: parsed.data.email,
+      resourceId: identity.deniedAccount?.id ?? '',
       detail: identity.auditDetail ?? 'invalid_credentials',
-      actorOverride: deniedActor(identity.deniedAccount, parsed.data.email),
+      actorOverride: deniedActor(identity.deniedAccount),
     });
     return fail(identity.error, identity.status);
   }
@@ -102,12 +102,12 @@ export async function POST(request: NextRequest) {
   await recordAuditNow(auditEvents, null, {
     action: 'read',
     resourceType: 'session',
-    resourceId: identity.subject,
+    resourceId: identity.account.id,
     // Senha aceita não é sessão para quem precisa do segundo fator (ADR-012).
     detail: pending ? 'mfa_required' : null,
     actorOverride: {
       role: identity.role,
-      id: identity.subject,
+      id: identity.account.id,
       clinicId: identity.clinicId,
     },
   });
@@ -142,10 +142,10 @@ export async function POST(request: NextRequest) {
  * Ator do evento de login recusado: anônimo, salvo quando a conta provou a
  * senha e foi barrada pela clínica suspensa — aí o evento é dela, na clínica.
  */
-function deniedActor(account: UserAccount | undefined, email: string) {
+function deniedActor(account: UserAccount | undefined) {
   return account
-    ? { role: account.role, id: account.email, clinicId: account.clinicId }
-    : { role: 'anonymous' as const, id: email, clinicId: null };
+    ? { role: account.role, id: account.id, clinicId: account.clinicId }
+    : { role: 'anonymous' as const, id: '', clinicId: null };
 }
 
 type AuthResult =

@@ -147,8 +147,12 @@ describe('Feature: Trilha de plataforma e trilha da clínica (B6, #210)', () => 
     const attempt = await login(email, 'senha-errada');
     expect(attempt.status).toBe(401);
 
-    const isAttempt = (e: { actorId: string; resourceType: string }) =>
-      e.resourceType === 'session' && e.actorId === email;
+    const isAttempt = (e: {
+      actorId: string;
+      resourceId: string;
+      resourceType: string;
+    }) =>
+      e.resourceType === 'session' && e.actorId === '' && e.resourceId === '';
     expect((await clinicTrail(adminOf(clinicX.id))).filter(isAttempt)).toEqual(
       [],
     );

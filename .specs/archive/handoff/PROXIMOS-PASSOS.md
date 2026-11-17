@@ -17,6 +17,8 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   usuário do backup, conexão de sistema, migração com o dono e `data:reencrypt`.
 - **Cadastros da v0.8.0:** `data:reencrypt` regravou 2 linhas em `patients_identity`; a segunda rodada deu
   «Nada pendente». Falta o dono conferir as buscas (nome, CPF, telefone) no app.
+- **#887:** o login grava o id da conta em `resource_id` e `actor_id`; sem conta identificada, os dois
+  ficam vazios (ADR-112). Eventos antigos não são reescritos.
 - **Não há release aberta.** Fluxo ADR-109: branch curta da `main` (`feat/`, `fix/` ou `docs/`), um PR para a
   `main` por sessão, CI como revisor, squash automático em PR comum com CI verde. Classe 3 espera o clique no
   Environment `aprovacao-classe-3`, com o link do job e só com o CI verde. Staging publica sozinha a cada
@@ -24,12 +26,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-1. **#887 (P2, cifra e auditoria, classe 3 provável).** A trilha grava o e-mail de login em claro em
-   `audit_events.resource_id` (`action = 'read'`, `resource_type = 'session'`): sucesso usa o e-mail da conta,
-   falha usa o que a pessoa digitou (`src/app/api/auth/login/route.ts`). **Parada na decisão do dono:** id da
-   conta, hash cego (`login-email`), e-mail cifrado, ou claro com retenção curta. Não escolher no código.
-   Com o outro agente, junto com o deploy da v0.9.0.
-2. **v0.10.0 (tema: ficha e agenda rápidas e estáveis, com evolução clínica mais legível; sem tocar em auth,
+1. **v0.10.0 (tema: ficha e agenda rápidas e estáveis, com evolução clínica mais legível; sem tocar em auth,
    auditoria, cifra ou release).** Label e projeto `v0.10.0`. Ordem:
    1. #559, Web Vitals de campo e medição final (P2, M), em três tickets: #903 (coleta sem PII: **já entregue**,
       ADR-086 e `producao.md` § 9.4.1; falta só ler o log da staging), #904 (bundle, meta nova: nenhuma rota
@@ -42,20 +39,19 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    5. #896, cenários de RLS independentes da ordem (P3, P).
    6. #560, spike de PPR e CSP por hash (P3, P), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
    Até três threads de código, nunca duas no mesmo domínio.
-3. **Contração da cifra**, na release seguinte ao `data:reencrypt` em produção: drop de `birth_date` e dos
+2. **Contração da cifra**, na release seguinte ao `data:reencrypt` em produção: drop de `birth_date` e dos
    índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do ramo em claro e drop dos índices
    antigos (ADR-111).
-4. **Esteira e CI por último** (candidatas à v0.11.0, nesta ordem: #820, #830, #832, portões que falham abertos,
+3. **Esteira e CI por último** (candidatas à v0.11.0, nesta ordem: #820, #830, #832, portões que falham abertos,
    e #745, CodeQL sem análise do TS): #744, #745, #802, #820, #828, #830, #832, #849, #862. Dívida e desempenho
    fora da v0.10.0: #815 (71 funções de complexidade, G), #883 (pacote cliente do `@still-void/ui`, decidir
    depois de #904), #651 e #650 (precisam de trace), #541 (épico, fecha com a #905).
-5. **Funcionalidade que espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
+4. **Funcionalidade que espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
    (a clínica aceita custo por mensagem?), RM-16 oferta de vaga da lista de espera (prazo da oferta), RM-15
    relatório ao parceiro (cadência e canal), RM-05 pagamento online (PSP) e RM-17 TISS.
 
 ## Espera o dono
 
-- **#887:** como a trilha identifica quem tentou entrar.
 - **Publicar a `main`:** `docs/engineering/producao.md` § 4.5 a 4.7 e, em seguida,
   `npm run data:reencrypt` (também `user_accounts_email`) até «Nada pendente».
 - Conferir as buscas (nome, CPF, telefone) depois da conversão da v0.8.0.

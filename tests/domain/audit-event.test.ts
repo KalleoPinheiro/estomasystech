@@ -84,6 +84,71 @@ describe('Feature: Evento de auditoria de prontuário', () => {
         AuditEvent.create({ ...validProps, resourceId: ' ' }),
       ).toThrow(ValidationError);
     });
+
+    it('Dado login anônimo sem os dois ids, Quando o tipo não é session, Então lança ValidationError', () => {
+      expect(() =>
+        AuditEvent.create({
+          ...validProps,
+          actorRole: 'anonymous',
+          actorId: '',
+          resourceId: '',
+          resourceType: 'patient',
+        }),
+      ).toThrow(ValidationError);
+    });
+
+    it('Dado session com ids vazios e papel que não é anônimo, Quando criar, Então lança ValidationError', () => {
+      expect(() =>
+        AuditEvent.create({
+          ...validProps,
+          actorRole: 'atendente',
+          resourceType: 'session',
+          actorId: '',
+          resourceId: '',
+        }),
+      ).toThrow(ValidationError);
+    });
+
+    it('Dado session anônima com só um id vazio, Quando criar, Então lança ValidationError', () => {
+      expect(() =>
+        AuditEvent.create({
+          ...validProps,
+          actorRole: 'anonymous',
+          resourceType: 'session',
+          actorId: '',
+          resourceId: 'conta-1',
+        }),
+      ).toThrow(ValidationError);
+      expect(() =>
+        AuditEvent.create({
+          ...validProps,
+          actorRole: 'anonymous',
+          resourceType: 'session',
+          actorId: 'conta-1',
+          resourceId: '',
+        }),
+      ).toThrow(ValidationError);
+    });
+  });
+
+  describe('Cenário: login sem conta identificada (#887)', () => {
+    it('Dado session anônima com os dois ids vazios, Quando criar, Então grava ator e recurso vazios', () => {
+      const event = AuditEvent.create({
+        clinicId: null,
+        actorRole: 'anonymous',
+        actorId: '',
+        action: 'read',
+        resourceType: 'session',
+        resourceId: '',
+        detail: 'invalid_credentials',
+      });
+
+      expect(event.actorId).toBe('');
+      expect(event.resourceId).toBe('');
+      expect(event.actorRole).toBe('anonymous');
+      expect(event.clinicId).toBeNull();
+      expect(event.detail).toBe('invalid_credentials');
+    });
   });
 
   describe('Cenário: reconstituir evento da persistência', () => {

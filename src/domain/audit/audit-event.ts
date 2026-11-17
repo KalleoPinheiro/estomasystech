@@ -13,7 +13,10 @@ export interface AuditEventProps {
   clinicId: string | null;
   /** Papel do ator (admin, patient, partner). */
   actorRole: string;
-  /** Identificador do ator na sessão (ex.: email no portal, "staff" no admin). */
+  /**
+   * Identificador do ator. No login, o id da conta; vazio quando a tentativa
+   * não identifica uma conta (#887).
+   */
   actorId: string;
   action: AuditAction;
   /** Tipo do recurso acessado (ex.: "anamnesis", "evolution", "condition"). */
@@ -30,6 +33,27 @@ export interface AuditEventState extends AuditEventProps {
   occurredAt: Date;
 }
 
+/**
+ * Login sem conta (#887): e-mail desconhecido, senha errada ou credencial
+ * ambígua. Os dois ids ficam vazios. Qualquer outro evento exige ator e recurso.
+ */
+function unidentifiedLogin(props: AuditEventProps): boolean {
+  return (
+    props.actorRole === 'anonymous' &&
+    props.resourceType === 'session' &&
+    props.actorId === '' &&
+    props.resourceId === ''
+  );
+}
+
+function hasActor(props: AuditEventProps): boolean {
+  return props.actorId.trim() !== '' || unidentifiedLogin(props);
+}
+
+function hasResource(props: AuditEventProps): boolean {
+  return props.resourceId.trim() !== '' || unidentifiedLogin(props);
+}
+
 /** Evento de auditoria de prontuário — imutável (append-only). */
 export class AuditEvent {
   private constructor(private readonly state: AuditEventState) {}
@@ -38,10 +62,10 @@ export class AuditEvent {
     if (props.clinicId !== null && !props.clinicId.trim()) {
       throw new ValidationError('Empresa da auditoria é obrigatória');
     }
-    if (!props.actorRole.trim() || !props.actorId.trim()) {
+    if (!props.actorRole.trim() || !hasActor(props)) {
       throw new ValidationError('Ator da auditoria é obrigatório');
     }
-    if (!props.resourceType.trim() || !props.resourceId.trim()) {
+    if (!props.resourceType.trim() || !hasResource(props)) {
       throw new ValidationError('Recurso auditado é obrigatório');
     }
     return new AuditEvent({
