@@ -257,8 +257,10 @@ proposital enquanto as migrações não têm `down`
    **migra o banco com o dono** (§ 4.9; se falhar, o job para **antes** do deploy); **deploya** pela API do Coolify
    (`POST /api/v1/deploy`, espera `finished` e confere que o commit implantado é o SHA validado); roda a **fumaça**
    do § 9.6 com a versão; e só com a fumaça verde publica a **tag** e a Release (`release:publish`, idempotente).
-   **Fumaça reprovada depois do deploy reverte a imagem sozinha** para a versão anterior (o banco fica como está) e
-   o run termina vermelho com `ROLLBACK AUTOMÁTICO EXECUTADO`; nada além da imagem é revertido (passos 5 e 6).
+   **Fumaça reprovada depois do deploy tenta reverter a imagem** para a versão anterior (o banco fica como está). Só
+   vale o rollback confirmado: o run termina vermelho com `ROLLBACK AUTOMÁTICO EXECUTADO` quando o Coolify devolveu a
+   imagem e a fumaça confirmou; se o Coolify estiver fora ou a fumaça seguir reprovando, o log traz `Depois do rollback…`
+   ou `Recurso preso no SHA antigo` e a recuperação é manual (passos 5 e 6). Nada além da imagem é revertido.
    Qualquer outra falha para ali. O job `validar` ainda **ensaia a migração** num Postgres descartável (banco da
    tag anterior até esta versão, sem segredo), então `dry_run` também a exercita; `dry_run` não pede aprovação,
    não faz backup, migração, deploy nem tag. Segredos do *Environment* `producao`: `VPS_SSH_KEY`
@@ -280,7 +282,8 @@ proposital enquanto as migrações não têm `down`
    na hora (`sudo systemctl start estomasystech-backup.service`) e confira que terminou sem erro.
    Sem backup do mesmo dia, não deploye migração.
 3. **Deploy:** *Deploy* no recurso do app. Com `ESTOMASYSTECH_MIGRATE_ON_BOOT` vazio o container novo migra no
-   boot (advisory lock); com `false` (a configuração do RLS, § 4.5) **migre antes** pelo dono (§ 4.9), senão o
+   boot (advisory lock); com `false` (a configuração do RLS, § 4.5) **migre antes** pelo dono (`npm run db:migrate` com a URL do dono, § 4;
+   o § 4.9 descreve só o caminho automático do workflow), senão o
    código novo sobe sobre o banco velho (v0.9.1). O `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois. No mesmo boot o app grava a
    versão em `app_releases` ([ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md)); sem
    passo manual.
@@ -564,7 +567,7 @@ nada migrava com o dono. Agora o *Release deploy* migra **antes** de trocar o co
 fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele o workflow para antes do backup):
 
 1. 💻 Gere uma chave **só para migrar** (separada da do backup): `ssh-keygen -t ed25519 -C estomasystech-ci-migrate -f ./ci-migrate-key`
-   (Enter duas vezes na senha, para ficar sem frase). Guarde a privada no cofre e apague o arquivo depois do passo 5.
+   (Enter duas vezes na senha, para ficar sem frase). Guarde a privada no cofre e apague o arquivo só depois do passo 6 (criar o segredo).
 2. 🖥️ No VPS, instale o comando forçado e o sudoers, a partir de um checkout da `main`:
    - `sudo install -d -m 0755 /opt/estomasystech-migrate`
    - `sudo install -m 0755 -o root -g root deploy/migrate/ci-migrate.sh /opt/estomasystech-migrate/ci-migrate.sh`
@@ -599,7 +602,7 @@ fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele
 | --- | --- | --- |
 | Falha em *Exigir a chave de migração* ou *Detectar migrações pendentes* | O preparo acima não foi feito, ou o ssh não entrou | Nada foi alterado em produção. Refaça o preparo e dispare de novo |
 | Falha em *Conferir que o rollback é possível* | Token do Coolify sem `write` | Nada foi alterado. Dê a habilidade e dispare de novo |
-| Falha em *Migrar o banco com o dono* | Uma migração deu erro; a transação desfez tudo | O código antigo segue no ar sobre o esquema antigo. Corrija a migração num PR novo; o backup já existe |
+| Falha em *Migrar o banco com o dono* | Uma migração deu erro, **ou** a resposta do VPS se perdeu depois do commit, **ou** a conferência final falhou | Erro dentro do SQL desfaz a transação; já a falha depois do `COMMIT` (ssh caiu, leitura final) deixa migrações aplicadas sem o deploy. Antes de corrigir ou repetir, rode `bash scripts/release/migrar-producao.sh detectar` (só lê). Com pendências, nada foi gravado: corrija num PR novo. Sem pendências, o esquema novo já está no ar sob o código antigo: siga por PR novo e confira login e busca. O backup já existe |
 | `ROLLBACK AUTOMÁTICO EXECUTADO` | Fumaça reprovou; a imagem voltou, o banco ficou com as migrações novas | Veja o erro da fumaça, corrija e dispare de novo (a migração não repete: já está aplicada). Se o aviso de migração não aditiva aparecer, confira login e busca; se falhar, restaure o backup (§ 3.1, passo 6) |
 | Fumaça ainda reprova depois do rollback | A produção segue quebrada | Ação humana agora: § 3.1 passos 5 e 6 |
 
