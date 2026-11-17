@@ -87,6 +87,9 @@ minificado.
   classifica `0074` a `0083` como não aditivas (falha fechada: criam papel, política, `FORCE`). Nesse caso o
   workflow reverte mesmo assim, avisa na anotação e o dono confere login e busca; se falhar, restaura o
   backup (`producao.md` § 3.1, passo 6).
+- A chave de migração executa SQL arbitrário como dono do banco: quem a controla controla o banco. A mitigação é a mesma
+  da publicação: o segredo vive só no *Environment* `producao` (revisor único, só `main`), o comando forçado aceita
+  quatro verbos e o `restrict` do `authorized_keys` tira shell, túnel e agente. Rotacionar junto da chave de backup (§ 6).
 - `dry_run` agora também ensaia a migração (mais ~3 min) e continua sem segredo, sem aprovação e sem tag.
 - Conversão de dados (`data:reencrypt`) segue fora do workflow.
 - Não prova: login de atendente e profissional, busca de paciente e isolamento entre clínicas em produção
