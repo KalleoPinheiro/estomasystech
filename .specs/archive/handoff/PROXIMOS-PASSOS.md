@@ -28,6 +28,14 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   da listagem rodava dentro de outra transação e o Postgres recusava (25001). O `instanceof Pool` corrige.
   Publicar a v0.9.0 espera este merge e a staging verde; não tageie o SHA que falhou.
 
+- **Publicação da v0.9.x deixou o código novo com o banco velho** (postmortem de 2026-11-17: readiness 503,
+  `42501` e `42703`; as migrações `0074` a `0083` entraram à mão, com hash fora do `drizzle-kit`). O *Release deploy*
+  agora migra com o dono **antes** do deploy, trava se a migração falhar, reverte a imagem se a fumaça reprovar
+  e ensaia a migração sem segredo no `dry_run` (ADR-113, `producao.md` § 4.9). **Antes do próximo disparo o dono
+  faz o preparo único do § 4.9** (chave `VPS_MIGRATE_SSH_KEY`, script no VPS, token do Coolify com `write`). Depois
+  da v0.10.0 em produção, conferir se um `db:migrate` com a URL do dono não acha divergência nas dez migrações
+  aplicadas à mão.
+
 ## Fila (ordem)
 
 1. **v0.10.0 (tema: ficha e agenda rápidas e estáveis, com evolução clínica mais legível; sem tocar em auth,

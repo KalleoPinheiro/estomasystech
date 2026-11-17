@@ -4,16 +4,20 @@ name: Release deploy
 # ("Use workflow from" = main, ADR-092), porque a definição do workflow (que usa o PAT da tag e os segredos
 # de produção) tem de vir da `main` protegida. Este workflow NÃO mergeia e NÃO faz push em branch.
 #
-# Ordem: `validar` (sem segredo de produção) -> clique do dono no Environment `producao` -> `producao` (backup,
-# tag, deploy) -> `fumaca`.
-# - `validar`: disparo na main, versão em package.json e CHANGELOG e (#851) a staging automática já validou este
-#   SHA exato da main (workflow Staging, evento push, concluído com sucesso). Sem isso nada é publicado.
+# Ordem: `validar` (sem segredo de produção; confere o disparo, a staging e ENSAIA a migração num Postgres
+# descartável) -> clique do dono no Environment `producao` -> `producao` -> `fumaca`.
+# - `validar`: disparo na main, versão em package.json e CHANGELOG, a staging automática já validou este SHA exato
+#   (#851) e o ensaio da migração (ADR-113): o mesmo caminho de produção, do banco da versão anterior ao esquema
+#   novo, com os hashes conferidos contra o migrador do drizzle-orm. Sem isso nada é publicado.
 # - `producao` (Environment `producao`: revisor único, só `main`): o clique de aprovação é o único ato humano.
-#   Confere que a main não avançou depois do disparo, faz o backup no VPS (só segue com `BACKUP_OK`), publica
-#   a tag e a Release (`release:publish`, idempotente) e deploya pela API do Coolify, conferindo que o commit
-#   implantado é o SHA validado. Falha em qualquer passo para ali: nunca há rollback automático (ADR-039).
+#   Confere que a main não avançou; confere o canal de migração e que o token do Coolify consegue reverter;
+#   faz o backup no VPS (só segue com `BACKUP_OK`); MIGRA O BANCO COM O DONO antes de trocar o container (se
+#   a migração falha, para ali, sem deploy); deploya pela API do Coolify conferindo o SHA; roda a fumaça com
+#   a versão; se a fumaça reprova, REVERTE a imagem para a versão anterior (banco intocado) e deixa o run
+#   vermelho; só com a fumaça verde publica a tag e a Release (`release:publish`, idempotente).
 # - `fumaca`: `scripts/release/fumaca-producao.sh` contra o domínio público, conferindo a versão publicada.
-# - `dry_run`: só o `validar`; a fumaça roda sem conferir versão. Não toca produção nem cria tag.
+# - `dry_run`: só o `validar` (inclui o ensaio da migração); a fumaça roda sem conferir versão. Não toca produção,
+#   não pede aprovação e não cria tag.
 #
 # Segredo nunca entra em `run:`: vai por `env:` do passo. Nada de `set -x`. Sem `pull_request_target`.
 on:
@@ -42,12 +46,23 @@ permissions:
 
 jobs:
   validar:
-    name: Validar (main, versão e staging)
+    name: Validar (main, versão, staging e ensaio da migração)
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
     permissions:
       contents: read
       actions: read
+    # Banco descartável do ensaio (ADR-113): o dono se chama `estomasystech`, como em produção (superusuário).
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: estomasystech
+          POSTGRES_PASSWORD: ensaio
+          POSTGRES_DB: estomasystech
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U estomasystech" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       VERSION: ${{ inputs.version }}
       GH_REPO: ${{ github.repository }}
@@ -109,6 +124,27 @@ jobs:
           fi
           echo "A staging validou ${SHA}."
 
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Instalar dependências do ensaio
+        run: |
+          npm i -g "npm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
+          npm ci --no-audit --no-fund
+
+      # ADR-113: o postmortem da v0.9.1 (código novo, banco velho). Banco da tag anterior -> migração pelo caminho
+      # real (detectar, simular, aplicar, repetir) -> hashes iguais aos do drizzle-orm. Sem segredo, sem produção.
+      - name: Ensaiar a migração (banco da versão anterior até esta)
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: estomasystech
+          PGPASSWORD: ensaio
+          PGDATABASE: estomasystech
+        run: bash scripts/release/ensaio-migracao.sh
+
   producao:
     name: Produção (backup, tag e deploy)
     needs: validar
@@ -124,11 +160,23 @@ jobs:
       VERSION: ${{ inputs.version }}
       ROLLBACK: ${{ inputs.rollback }}
       GH_REPO: ${{ github.repository }}
+      FUMACA_URL: ${{ vars.PRODUCAO_URL || 'https://estomasystech.kalleopinheiro.com.br' }}
       GIT_AUTHOR_NAME: github-actions[bot]
       GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
       GIT_COMMITTER_NAME: github-actions[bot]
       GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
     steps:
+      # Chave SSH de migração (comando forçado ci-migrate.sh, deploy/migrate/): separada da chave de backup.
+      - name: Exigir a chave de migração
+        shell: bash
+        env:
+          VPS_MIGRATE_SSH_KEY: ${{ secrets.VPS_MIGRATE_SSH_KEY }}
+        run: |
+          if [ -z "$VPS_MIGRATE_SSH_KEY" ]; then
+            echo "::error title=Segredo ausente::Crie VPS_MIGRATE_SSH_KEY no Environment producao (producao.md § 4.9). Sem a migração pelo dono o deploy não é seguro."
+            exit 1
+          fi
+
       - name: Exigir os segredos de produção
         shell: bash
         env:
@@ -180,7 +228,48 @@ jobs:
       - name: Instalar dependências
         run: npm ci --no-audit --no-fund
 
-      # ADR-039: sem backup confirmado, nada é publicado nem deployado.
+      # ADR-113: o que está no ar agora é o alvo do rollback automático (a tag dessa versão). Sem alvo conhecido
+      # não se troca o container. Mesma versão no ar (re-disparo): não há para onde voltar, e redeploy igual é inócuo.
+      - name: Registrar a versão em produção (alvo do rollback)
+        id: anterior
+        shell: bash
+        run: |
+          ver="$(curl -fsS -m 15 "$FUMACA_URL/api/health/version" | jq -r '.version // empty')" || ver=""
+          if ! [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Versão em produção desconhecida::GET /api/health/version não devolveu X.Y.Z. Sem saber o que está no ar não há rollback; confira a produção antes de publicar."
+            exit 1
+          fi
+          if [ "$ver" = "$VERSION" ]; then
+            echo "::warning title=Mesma versão no ar::A produção já está na v$VERSION: re-disparo sem alvo de rollback."
+            echo "sha=" >> "$GITHUB_OUTPUT"
+          else
+            sha="$(git rev-list -n 1 "v$ver" 2> /dev/null || true)"
+            if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error title=Tag anterior ausente::A produção está na v$ver, mas a tag v$ver não existe neste repositório."
+              exit 1
+            fi
+            echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          fi
+          echo "versao=$ver" >> "$GITHUB_OUTPUT"
+          echo "Produção na v$ver; esta publicação leva a v$VERSION."
+
+      # O token do Coolify precisa ESCREVER no recurso para reverter (PATCH com o próprio valor: não muda nada).
+      - name: Conferir que o rollback é possível (Coolify)
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+        run: bash scripts/release/rollback-coolify.sh preflight
+
+      # Só leitura: lista as migrações pendentes e prova o canal SSH de migração antes de qualquer escrita.
+      - name: Detectar migrações pendentes (somente leitura)
+        env:
+          VPS_MIGRATE_SSH_KEY: ${{ secrets.VPS_MIGRATE_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: bash scripts/release/migrar-producao.sh detectar
+
+      # ADR-039: sem backup confirmado, nada é migrado nem deployado.
       - name: Backup no VPS (BACKUP_OK)
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -188,22 +277,80 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: bash scripts/release/backup-vps.sh
 
-      # O PAT existe só neste passo (env do passo, nunca do job) e não fica no .git/config: o git o recebe do
-      # credential helper do gh, que lê o GH_TOKEN.
-      - name: Publicar tag e Release (release:publish)
+      # ADR-113: o banco chega ao esquema novo ANTES do container novo, pelo dono, numa transação só. Falhou,
+      # o job para aqui (o código antigo segue no ar sobre o esquema antigo). Termina conferindo que
+      # `public.app__drizzle_migrations()`, o que o readiness lê, não deixa nada pendente.
+      - name: Migrar o banco com o dono (antes do deploy)
+        id: migrar
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
-        run: |
-          gh auth setup-git
-          npm run release:publish -- --rollback="$ROLLBACK"
+          VPS_MIGRATE_SSH_KEY: ${{ secrets.VPS_MIGRATE_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: bash scripts/release/migrar-producao.sh migrar
 
       - name: Deploy pela API do Coolify (commit conferido)
+        id: deploy
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
           ESPERADO_SHA: ${{ github.sha }}
         run: bash scripts/release/deploy-coolify.sh
+
+      # Fumaça com a versão, ainda dentro do job que tem o poder de reverter. Três tentativas: o proxy leva
+      # alguns segundos para servir o container novo.
+      - name: Fumaça pós-deploy (readiness e versão)
+        id: fumaca_pos
+        shell: bash
+        run: |
+          export FUMACA_VERSAO="$VERSION"
+          for tentativa in 1 2 3; do
+            bash scripts/release/fumaca-producao.sh && exit 0
+            echo "Fumaça reprovou (tentativa $tentativa de 3)."
+            [ "$tentativa" -lt 3 ] && sleep 20
+          done
+          exit 1
+
+      # ADR-113: fumaça reprovada depois do deploy = produção quebrada. Volta a imagem para a versão anterior;
+      # o banco fica como está (migração aditiva). O run termina vermelho de propósito.
+      - name: Rollback automático da imagem (fumaça reprovou)
+        if: ${{ failure() && steps.deploy.outcome == 'success' && steps.fumaca_pos.outcome == 'failure' }}
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+          ROLLBACK_SHA: ${{ steps.anterior.outputs.sha }}
+          VERSAO_ANTERIOR: ${{ steps.anterior.outputs.versao }}
+          NAO_ADITIVAS: ${{ steps.migrar.outputs.nao_aditivas }}
+          VPS_MIGRATE_SSH_KEY: ${{ secrets.VPS_MIGRATE_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        shell: bash
+        run: |
+          echo "::error title=Fumaça reprovou depois do deploy::Revertendo a imagem para a v$VERSAO_ANTERIOR."
+          if [ -z "$ROLLBACK_SHA" ]; then
+            echo "::error title=Sem alvo de rollback::A produção já estava na v$VERSION; reverta à mão (producao.md § 3.1, passos 5 e 6)."
+            exit 1
+          fi
+          if [ -n "${NAO_ADITIVAS:-}" ] && [ "$NAO_ADITIVAS" != nenhuma ]; then
+            echo "::warning title=Migrações não aditivas aplicadas::A imagem antiga roda sobre o esquema novo (${NAO_ADITIVAS}). Confirme login e busca de paciente; se falhar, restaure o backup (producao.md § 3.1, passo 6)."
+          fi
+          bash scripts/release/rollback-coolify.sh rollback
+          # O rodapé mostra a versão mais recente de app_releases: apaga a da versão revertida.
+          bash scripts/release/migrar-producao.sh desfazer-versao "$VERSION" || echo "::warning title=Rodapé::apague a versão $VERSION de app_releases à mão (producao.md § 3.1, passo 5)."
+          unset FUMACA_VERSAO
+          bash scripts/release/fumaca-producao.sh || echo "::error title=Depois do rollback a fumaça ainda reprova::A produção segue quebrada na v$VERSAO_ANTERIOR: ação humana agora (producao.md § 3.1)."
+          echo "::error title=ROLLBACK AUTOMÁTICO EXECUTADO::A v$VERSION NÃO ficou no ar; a produção voltou para a v$VERSAO_ANTERIOR (banco com as migrações novas). A tag não foi criada."
+          exit 1
+
+      # Só com a fumaça verde a versão vira tag e Release (no re-disparo é idempotente). O PAT existe só neste
+      # passo (env do passo, nunca do job) e não fica no .git/config: o git o recebe do credential helper do gh.
+      - name: Publicar tag e Release (release:publish)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_CUT_TOKEN }}
+        run: |
+          gh auth setup-git
+          npm run release:publish -- --rollback="$ROLLBACK"
 
   fumaca:
     name: Fumaça de produção

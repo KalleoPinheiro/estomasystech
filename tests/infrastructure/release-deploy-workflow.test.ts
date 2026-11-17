@@ -128,13 +128,15 @@ describe('Feature: release-deploy.yml (ADR-095, #749)', () => {
     expect(job).toContain('if: inputs.dry_run != true');
   });
 
-  it('Dado o job de produção, Quando lido, Então a ordem é main sem avanço, backup, tag e deploy', () => {
+  it('Dado o job de produção, Quando lido, Então a ordem é main sem avanço, backup, migração, deploy, fumaça e só então a tag', () => {
     const job = bloco('producao');
     const ordem = [
       'Conferir que a main não avançou',
       'Backup no VPS',
-      'Publicar tag e Release',
+      'Migrar o banco com o dono',
       'Deploy pela API do Coolify',
+      'Fumaça pós-deploy',
+      'Publicar tag e Release',
     ].map((nome) => job.indexOf(`name: ${nome}`));
     expect(ordem.every((i) => i >= 0)).toBe(true);
     expect([...ordem].sort((x, y) => x - y)).toEqual(ordem);
@@ -232,5 +234,69 @@ describe('Feature: a staging validou o SHA (#851)', () => {
 
   it('Dado nenhuma execução verde da staging para o SHA, Então reprova', () => {
     expect(comVerdes('0')).toBe(1);
+  });
+});
+
+describe('Feature: o banco nunca fica atrás do código (ADR-113, postmortem da v0.9.1)', () => {
+  const job = bloco('producao');
+  const posicao = (nome: string) => job.indexOf(`name: ${nome}`);
+
+  it('Dado o job de produção, Então migra o banco com o dono depois do backup e ANTES de trocar o container', () => {
+    expect(posicao('Backup no VPS')).toBeLessThan(
+      posicao('Migrar o banco com o dono'),
+    );
+    expect(posicao('Migrar o banco com o dono')).toBeLessThan(
+      posicao('Deploy pela API do Coolify'),
+    );
+    expect(job).toContain('bash scripts/release/migrar-producao.sh migrar');
+  });
+
+  it('Dado o job de produção, Então a chave de migração é exigida e só os passos de migração a usam, por env do passo', () => {
+    expect(job).toContain('name: Exigir a chave de migração');
+    const usos = source.match(/secrets\.VPS_MIGRATE_SSH_KEY/g) ?? [];
+    expect(usos.length).toBeGreaterThanOrEqual(3);
+    expect(bloco('validar')).not.toContain('VPS_MIGRATE_SSH_KEY');
+    expect(bloco('fumaca')).not.toContain('VPS_MIGRATE_SSH_KEY');
+  });
+
+  it('Dado a migração, Então nenhum passo anterior ao deploy escreve no banco além dela: só detecta (leitura) e migra', () => {
+    expect(job).toContain('bash scripts/release/migrar-producao.sh detectar');
+    expect(posicao('Detectar migrações pendentes')).toBeLessThan(
+      posicao('Backup no VPS'),
+    );
+  });
+
+  it('Dado o rollback, Então o preflight do Coolify roda antes de qualquer escrita e o rollback só dispara com deploy ok e fumaça vermelha', () => {
+    expect(posicao('Conferir que o rollback é possível')).toBeLessThan(
+      posicao('Backup no VPS'),
+    );
+    expect(job).toContain('bash scripts/release/rollback-coolify.sh preflight');
+    const passoRollback = job.slice(posicao('Rollback automático da imagem'));
+    expect(passoRollback).toMatch(
+      /if: \$\{\{ failure\(\) && steps\.deploy\.outcome == 'success' && steps\.fumaca_pos\.outcome == 'failure' \}\}/,
+    );
+    expect(passoRollback).toContain('rollback-coolify.sh rollback');
+    // O run termina vermelho: voltar a imagem não transforma a publicação em sucesso.
+    expect(passoRollback).toMatch(/ROLLBACK AUTOMÁTICO EXECUTADO[\s\S]*exit 1/);
+  });
+
+  it('Dado a fumaça pós-deploy, Então confere a versão publicada dentro do job que tem o poder de reverter', () => {
+    const passo = job.slice(posicao('Fumaça pós-deploy'));
+    expect(passo).toContain('FUMACA_VERSAO="$VERSION"');
+    expect(passo).toContain('id: fumaca_pos');
+  });
+
+  it('Dado a tag e a Release, Então só saem depois da fumaça verde (rollback não deixa Release de versão que não está no ar)', () => {
+    expect(posicao('Fumaça pós-deploy')).toBeLessThan(
+      posicao('Publicar tag e Release'),
+    );
+  });
+
+  it('Dado o job validar, Então ensaia a migração sem segredo, contra um Postgres 18 descartável, para dry_run e publicação', () => {
+    const validar = bloco('validar');
+    expect(validar).toContain('image: postgres:18');
+    expect(validar).toContain('bash scripts/release/ensaio-migracao.sh');
+    expect(validar).not.toContain('secrets.');
+    expect(validar).not.toContain('inputs.dry_run');
   });
 });
