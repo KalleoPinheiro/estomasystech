@@ -26,9 +26,9 @@ function queryText(config: QueryArg): string {
  * (`set_config(..., true)` vale só até o fim da transação, então não vaza para a requisição seguinte
  * nem atravessa o PgBouncer em modo transação).
  *
- * O drizzle abre o `begin` fora do seu `try/finally`: se gravar a clínica falhar, este cliente desfaz
- * e se descarta sozinho (uma vez só). O `error` do socket é tratado durante todo o empréstimo, porque
- * o pool tira o ouvinte de conexão ociosa ao emprestar e um evento sem ouvinte derruba o processo.
+ * O drizzle abre o `begin` fora do seu `try/finally`: se o `begin` ou gravar a clínica falhar, este
+ * cliente se descarta sozinho (uma vez só). O `error` do socket é tratado durante todo o empréstimo,
+ * porque o pool tira o ouvinte de conexão ociosa ao emprestar e um evento sem ouvinte derruba o processo.
  */
 class ClinicScopedClient {
   private released = false;
@@ -46,8 +46,16 @@ class ClinicScopedClient {
 
   async query(config: QueryArg, values?: QueryValues): Promise<QueryResult> {
     const run = this.client.query.bind(this.client) as unknown as QueryFn;
-    const result = await run(config, values);
-    if (/^\s*begin\b/i.test(queryText(config))) {
+    const begin = /^\s*begin\b/i.test(queryText(config));
+    let result: QueryResult;
+    try {
+      result = await run(config, values);
+    } catch (error) {
+      // O `begin` do drizzle fica fora do `try/finally` dele: sem isto a conexão não volta ao pool.
+      if (begin) this.release(true);
+      throw error;
+    }
+    if (begin) {
       try {
         await run(`select set_config('${CLINIC_SETTING}', $1, true)`, [
           this.clinicId,

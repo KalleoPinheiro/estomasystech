@@ -118,6 +118,27 @@ describe('Feature: pool com a clínica gravada (RLS etapa 2, ADR-110)', () => {
     expect(client.release).toHaveBeenCalledWith(true);
   });
 
+  it('Dado falha no begin, Então descarta a conexão e devolve o erro original', async () => {
+    const { client, pool } = fakeClient({ failOn: /^\s*begin\b/i });
+    const tx = await new ClinicScopedPool(pool as never, 'c').connect();
+
+    await expect(tx.query('begin')).rejects.toThrow('boom');
+    tx.release();
+
+    expect(client.release).toHaveBeenCalledTimes(1);
+    expect(client.release).toHaveBeenCalledWith(true);
+  });
+
+  it('Dado falha numa consulta que não é begin, Então a conexão continua com o drizzle', async () => {
+    const { client, pool } = fakeClient({ failOn: /^select 1$/ });
+    const tx = await new ClinicScopedPool(pool as never, 'c').connect();
+
+    await expect(tx.query('select 1')).rejects.toThrow('boom');
+
+    expect(client.release).not.toHaveBeenCalled();
+    tx.release();
+  });
+
   it('Dado falha ao gravar a clínica depois do begin, Então desfaz, descarta uma vez e devolve o erro original', async () => {
     const { client, log, pool } = fakeClient({ failOn: /set_config/ });
     const tx = await new ClinicScopedPool(pool as never, 'c').connect();
