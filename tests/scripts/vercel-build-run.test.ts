@@ -14,7 +14,7 @@ describe('Feature: cada passo do build roda com o ambiente do dono (ADR-110)', (
       DATABASE_URL: 'postgres://app:p@pooler.neon.tech/db',
       DATABASE_URL_UNPOOLED: 'postgres://dono:p@direta.neon.tech/db',
       DATABASE_APP_URL: 'postgres://app:p@pooler.neon.tech/db',
-    } as NodeJS.ProcessEnv);
+    });
 
     const [bin, args, options] = spawnSync.mock.calls[0];
     expect(bin).toBe('npx');
@@ -27,7 +27,7 @@ describe('Feature: cada passo do build roda com o ambiente do dono (ADR-110)', (
 
   it('Dado um passo que falha, Quando roda, Então lança', () => {
     spawnSync.mockReturnValue({ status: 1 });
-    expect(() => run(['npm', 'run', 'build'], {} as NodeJS.ProcessEnv)).toThrow(
+    expect(() => run(['npm', 'run', 'build'], {})).toThrow(
       'Passo falhou: npm run build',
     );
   });

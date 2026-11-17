@@ -47,7 +47,10 @@ export function buildStepEnv(
   } as NodeJS.ProcessEnv;
 }
 
-export function run(step: BuildStep, env: NodeJS.ProcessEnv): void {
+export function run(
+  step: BuildStep,
+  env: Readonly<Record<string, string | undefined>>,
+): void {
   const [bin, ...args] = step;
   const result = spawnSync(bin, args, { stdio: "inherit", env: buildStepEnv(env) });
   if (result.status !== 0) {
