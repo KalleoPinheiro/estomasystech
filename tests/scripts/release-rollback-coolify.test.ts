@@ -140,6 +140,7 @@ describe('Feature: rollback-coolify.sh rollback (ADR-113)', () => {
     const r = rodar('rollback', { patch: [500, 200] }, env);
     expect(r.codigo).toBe(1);
     expect(r.chamadas.some((c) => c.includes('/deploy?'))).toBe(false);
+    expect(r.patches.at(-1)).toContain('{"git_commit_sha":"HEAD"}');
   });
 
   it('Dado que não consegue devolver HEAD, Então grita no log para ação humana', () => {

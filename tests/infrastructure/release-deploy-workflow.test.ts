@@ -239,7 +239,11 @@ describe('Feature: a staging validou o SHA (#851)', () => {
 
 describe('Feature: o banco nunca fica atrás do código (ADR-113, postmortem da v0.9.1)', () => {
   const job = bloco('producao');
-  const posicao = (nome: string) => job.indexOf(`name: ${nome}`);
+  const posicao = (nome: string) => {
+    const i = job.indexOf(`name: ${nome}`);
+    expect(i, `passo ${nome}`).toBeGreaterThanOrEqual(0);
+    return i;
+  };
 
   it('Dado o job de produção, Então migra o banco com o dono depois do backup e ANTES de trocar o container', () => {
     expect(posicao('Backup no VPS')).toBeLessThan(

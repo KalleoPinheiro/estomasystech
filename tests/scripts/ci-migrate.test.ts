@@ -169,7 +169,7 @@ describe('Feature: estado do banco', () => {
 });
 
 describe('Feature: aplicar e simular', () => {
-  const sql = 'ALTER TABLE t ADD COLUMN x text;\n';
+  const sql = 'ALTER TABLE t ADD COLUMN x text;\n-- ESTOMASYSTECH-FIM\n';
 
   it('Dado SQL, Quando aplica, Então roda numa transação com lock_timeout e COMMIT', () => {
     const r = rodar({ comando: 'aplicar', stdin: sql });
@@ -197,6 +197,16 @@ describe('Feature: aplicar e simular', () => {
     expect(r.codigo).toBe(1);
     expect(r.ultima).toMatch(/^MIGRACAO_FALHOU psql saiu 3: ERROR:/);
     expect(r.saida).not.toContain('MIGRACAO_OK');
+  });
+
+  it('Dado entrada sem a marca de fim (cortada), Então recusa antes de tocar o banco', () => {
+    const r = rodar({
+      comando: 'aplicar',
+      stdin: 'ALTER TABLE t ADD COLUMN x text;\n',
+    });
+    expect(r.codigo).toBe(1);
+    expect(r.ultima).toMatch(/sem a marca de fim/);
+    expect(r.chamadas).toBe('');
   });
 
   it('Dado stdin vazio ou maior que o limite, Então recusa antes de tocar o banco', () => {

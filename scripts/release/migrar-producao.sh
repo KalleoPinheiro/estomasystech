@@ -82,6 +82,8 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
   } >> "$GITHUB_OUTPUT"
 fi
 [[ "$pendentes" =~ ^[0-9]+$ ]] || erro "plano sem contagem de pendências"
+# Marca de fim exigida pelo ci-migrate.sh: entrada cortada no meio do ssh nunca vira COMMIT parcial.
+printf '%s\n' '-- ESTOMASYSTECH-FIM' >> "$dir/plano.sql"
 
 if [ "$pendentes" -eq 0 ]; then
   echo "Nenhuma migração pendente: o banco já está no esquema desta versão."

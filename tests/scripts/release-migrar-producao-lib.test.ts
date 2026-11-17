@@ -91,11 +91,11 @@ describe('Feature: SQL do plano', () => {
     expect(sql).not.toMatch(/\b(BEGIN|COMMIT|ROLLBACK)\b/i);
   });
 
-  it('Dado uma instrução sem ponto e vírgula e outra vazia, Então termina cada uma com ; e ignora a vazia', () => {
+  it('Dado uma instrução sem ponto e vírgula e outra vazia, Então termina cada uma com ; (em linha própria, sem engolir comentário) e ignora a vazia', () => {
     const sql = montarSql([
       { ...m('0001_a', 1), instrucoes: ['CREATE TABLE a (id int)\n', '  \n'] },
     ]);
-    expect(sql).toContain('CREATE TABLE a (id int);');
+    expect(sql).toContain('CREATE TABLE a (id int)\n;');
     expect(sql).not.toContain(';;');
   });
 

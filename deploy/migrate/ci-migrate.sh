@@ -7,7 +7,8 @@
 # Comandos aceitos (SSH_ORIGINAL_COMMAND), nada além disso:
 #   estado                  lista o que o banco já tem (tabela do Drizzle e função do readiness)
 #   simular                 lê SQL do stdin, roda numa transação e dá ROLLBACK (nada é gravado)
-#   aplicar                 lê SQL do stdin e roda numa transação com COMMIT; qualquer erro desfaz tudo
+#   aplicar                 lê SQL do stdin e roda numa transação com COMMIT; qualquer erro desfaz tudo.
+#                           O SQL tem de terminar na linha `-- ESTOMASYSTECH-FIM`; sem ela a entrada é recusada
 #   desfazer-versao X.Y.Z   apaga a linha de app_releases da versão revertida (rollback automático)
 # Resposta: linhas de dados e UMA linha final, sem segredo:
 #   ESTADO_OK | SIMULACAO_OK | MIGRACAO_OK | VERSAO_DESFEITA X.Y.Z  (saída 0)
@@ -55,10 +56,14 @@ consulta() {
   psql_dono -At -c "$1" 2> "$tmp/erro"
 }
 
+# Marca de fim de entrada: sem ela o SSH pode ter cortado o fluxo no meio e um COMMIT gravaria só parte da migração.
+fim_do_sql="-- ESTOMASYSTECH-FIM"
+
 ler_sql() {
-  head -c "$((max_bytes + 1))" > "$tmp/entrada.sql"
+  head -c "$((max_bytes + 1))" > "$tmp/entrada.sql" || fail "falha ao receber o SQL"
   [ -s "$tmp/entrada.sql" ] || fail "SQL vazio no stdin"
   [ "$(wc -c < "$tmp/entrada.sql")" -le "$max_bytes" ] || fail "SQL maior que $max_bytes bytes"
+  [ "$(tail -n 1 "$tmp/entrada.sql" | tr -d '\r')" = "$fim_do_sql" ] || fail "SQL sem a marca de fim (entrada cortada)"
 }
 
 # executar_transacao FINAL TIMEOUT: BEGIN, lock_timeout, o SQL do stdin e FINAL (COMMIT ou ROLLBACK).

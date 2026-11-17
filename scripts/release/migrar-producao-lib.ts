@@ -76,7 +76,8 @@ export function planejar(journal: readonly MigracaoDoJournal[], estado: EstadoBa
 
 function comPontoEVirgula(instrucao: string): string {
   const texto = instrucao.trim();
-  return texto.endsWith(';') ? texto : `${texto};`;
+  // Em linha própria: instrução que termina em comentário de linha (`-- ...`) não engole o `;`.
+  return texto.endsWith(';') ? texto : `${texto}\n;`;
 }
 
 /**

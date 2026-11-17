@@ -18,8 +18,9 @@ trap 'rm -rf "$tmp"' EXIT
 erro() { echo "::error title=Ensaio da migração::$1"; exit 1; }
 
 # Tag anterior: a maior vX.Y.Z menor que a versão publicada. Sem tag anterior (primeira release) não há o que ensaiar.
-anterior="$(git -C "$raiz" tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' | { grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true; } \
-  | sort -V | awk -v v="$VERSION" 'BEGIN{ORS=""} {if ($0 == v) exit; last=$0} END{print last}')"
+tags="$(git -C "$raiz" tag --list 'v[0-9]*.[0-9]*.[0-9]*')" || erro "não consegui listar as tags do repositório"
+anterior="$({ printf '%s\n' "$tags" | sed 's/^v//' | { grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' || true; }; echo "$VERSION"; } \
+  | sort -V -u | awk -v v="$VERSION" '$0 == v {exit} {last=$0} END {printf "%s", last}')"
 if [ -z "$anterior" ]; then
   echo "Sem tag anterior a $VERSION: nada a ensaiar."
   exit 0
@@ -71,8 +72,9 @@ grep -q 'Nenhuma migração pendente' "$tmp/segunda" || erro "a segunda passada 
 
 DATABASE_URL="$(url ensaio_ref)" "$tsx_bin" "$raiz/scripts/release/ensaio-migrar.ts" "$raiz/drizzle" || erro "o banco de referência não migrou"
 consulta="select hash || ' ' || created_at from drizzle.__drizzle_migrations order by created_at"
-psql_banco -c "$consulta" > "$tmp/plano.txt"
-psql_banco -d ensaio_ref -c "$consulta" > "$tmp/referencia.txt"
+psql_banco -c "$consulta" > "$tmp/plano.txt" || erro "não consegui ler as migrações do banco do plano"
+psql_banco -d ensaio_ref -c "$consulta" > "$tmp/referencia.txt" || erro "não consegui ler as migrações do banco de referência"
+[ -s "$tmp/plano.txt" ] || erro "nenhuma migração gravada para comparar"
 diff -q "$tmp/plano.txt" "$tmp/referencia.txt" > /dev/null || erro "hash ou carimbo gravado pelo plano difere do migrador do drizzle-orm"
 psql_admin -c "DROP DATABASE IF EXISTS ensaio_ref WITH (FORCE)"
 echo "Ensaio ok: simulação sem gravar, migração, segunda passada sem pendência e hashes iguais aos do drizzle-orm."

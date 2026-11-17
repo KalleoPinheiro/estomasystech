@@ -85,8 +85,8 @@ fi
 code="$(api "/api/v1/applications/$COOLIFY_APP_UUID" PATCH "{\"git_commit_sha\":\"$ROLLBACK_SHA\"}")"
 echo "PATCH git_commit_sha=${ROLLBACK_SHA:0:12} -> HTTP $code"
 if [ "$code" != 200 ]; then
-  echo "::error title=Rollback não iniciado::o Coolify recusou fixar o commit anterior (HTTP $code)."
-  original=""
+  # Não-200 não prova que o Coolify recusou (timeout depois de aplicar): `restaurar` devolve HEAD mesmo assim.
+  echo "::error title=Rollback não iniciado::o Coolify não confirmou fixar o commit anterior (HTTP $code)."
   exit 1
 fi
 

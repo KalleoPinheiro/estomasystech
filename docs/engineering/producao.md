@@ -603,8 +603,8 @@ fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele
 | `ROLLBACK AUTOMÁTICO EXECUTADO` | Fumaça reprovou; a imagem voltou, o banco ficou com as migrações novas | Veja o erro da fumaça, corrija e dispare de novo (a migração não repete: já está aplicada). Se o aviso de migração não aditiva aparecer, confira login e busca; se falhar, restaure o backup (§ 3.1, passo 6) |
 | Fumaça ainda reprova depois do rollback | A produção segue quebrada | Ação humana agora: § 3.1 passos 5 e 6 |
 
-**Prova da release.** Primeiro `dry_run` (ensaio + validações); depois a publicação: confira no run que *Detectar* lista as
-pendências, que *Migrar* termina em `SEM_PENDENCIAS` e que a fumaça passa; no fim, login nos três papéis, busca de
+**Prova da release.** Primeiro `dry_run` (ensaio da migração num Postgres descartável + validações; não toca produção nem lê o banco real); depois a publicação: confira no run que *Detectar* lista as
+pendências, que *Migrar* imprime `Migrações aplicadas pelo dono` e a conferência final termina em `SEM_PENDENCIAS` (`MIGRACAO_OK` e `ESTADO_OK` vêm do servidor), e que a fumaça passa; no fim, login nos três papéis, busca de
 paciente e `npm run data:reencrypt` quando a release tocar a cifra.
 
 ## 5. Backup e restore
