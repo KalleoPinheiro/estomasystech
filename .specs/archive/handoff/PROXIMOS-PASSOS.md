@@ -26,14 +26,27 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-1. **P3 de desempenho e dívida de funcionalidade:** #855 (página e linhas do paciente num snapshot), #883
-   (pacote cliente), #815 (complexidade cognitiva). #896 é dívida de teste do RLS (a ordem dos cenários muda o
-   resultado).
+1. **v0.10.0 (tema: ficha e agenda rápidas e estáveis, com evolução clínica mais legível; sem tocar em auth,
+   auditoria, cifra ou release).** Label e projeto `v0.10.0`. Ordem:
+   1. #559, Web Vitals de campo e medição final (P2, M), em três tickets: #903 (coleta sem PII), #904 (bundle,
+      meta nova: nenhuma rota acima da linha de base, errata do ADR-080) e #905 (medição final, `check:server-first`
+      com allowlist vazia; depende de #903 e #904).
+   2. #906, CLS de 0,49 na ficha em 390 px (P2, P).
+   3. #907, comparar duas fotos da condição à escolha (P2, M; hoje só primeira × última).
+   4. #855, página e linhas do paciente num snapshot (P3, P).
+   5. #896, cenários de RLS independentes da ordem (P3, P).
+   6. #560, spike de PPR e CSP por hash (P3, P), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
+   Até três threads de código, nunca duas no mesmo domínio.
 2. **Contração da cifra**, na release seguinte ao `data:reencrypt` em produção: drop de `birth_date` e dos
    índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do ramo em claro e drop dos índices
    antigos (ADR-111).
-3. **Esteira e CI por último.** Sem PR só de processo enquanto houver funcionalidade na frente: #744, #745,
-   #802, #820, #828, #830, #832, #849, #650, #862. Desempenho maior, fora desta sessão: #541, #559, #560, #651.
+3. **Esteira e CI por último** (candidatas à v0.11.0, nesta ordem: #820, #830, #832, portões que falham abertos,
+   e #745, CodeQL sem análise do TS): #744, #745, #802, #820, #828, #830, #832, #849, #862. Dívida e desempenho
+   fora da v0.10.0: #815 (71 funções de complexidade, G), #883 (pacote cliente do `@still-void/ui`, decidir
+   depois de #904), #651 e #650 (precisam de trace), #541 (épico, fecha com a #905).
+4. **Funcionalidade que espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
+   (a clínica aceita custo por mensagem?), RM-16 oferta de vaga da lista de espera (prazo da oferta), RM-15
+   relatório ao parceiro (cadência e canal), RM-05 pagamento online (PSP) e RM-17 TISS.
 
 ## Espera o dono
 
