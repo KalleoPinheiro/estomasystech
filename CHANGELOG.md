@@ -1,5 +1,12 @@
 # estomasystech
 
+## 0.9.1
+
+### Patch Changes
+
+- 243d6d4: A ficha da condição lista as fotos em ordem de data mais depressa, com um índice novo no banco. Nada muda na tela.
+- f4b9bab: A lista de pacientes volta a carregar. No ambiente publicado, abrir Pacientes respondia erro interno.
+
 ## 0.9.0
 
 ### Minor Changes
