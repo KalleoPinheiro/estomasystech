@@ -76,6 +76,10 @@ const event = (
     resourceId,
   });
 
+/**
+ * Cada cenário cria os próprios dados (e-mails e `resourceId` com o prefixo do cenário) e só afirma sobre
+ * eles: nenhum depende de outro ter rodado antes, então `-t` roda qualquer um sozinho (#896).
+ */
 describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)', () => {
   const baseUrl = inject('integrationDatabaseUrl');
   const databaseName = `it_rls894_${process.pid}_${Date.now()}`;
@@ -97,6 +101,17 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
   };
 
   const clinicDb = (clinicId: string) => scopeDbToClinic(appDb, clinicId);
+  // A conta de sistema é única (uq_user_accounts_single_system_account): quem precisar dela a cria
+  // pela primeira vez aqui, em qualquer ordem, e os demais reaproveitam.
+  let systemAccount: Promise<UserAccount> | undefined;
+  const ensureSystemAccount = () => {
+    systemAccount ??= (async () => {
+      const root = account('root@teste.invalid', null, 'super_admin');
+      await (await accountsOf(null)).save(root);
+      return root;
+    })();
+    return systemAccount;
+  };
   const accountsOf = async (clinicId: string | null, db?: AppDb) =>
     new DrizzleUserAccountRepository(
       db ?? (clinicId === null ? systemDb : await clinicDb(clinicId)),
@@ -225,9 +240,12 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
   });
 
   it('Dado a conta da B, Quando a clínica A tenta trocar senha, revogar sessões ou mover a linha, Então nada muda e o WITH CHECK recusa', async () => {
-    const [victim] = await (await accountsOf(null))
-      .findAllByEmail('mesmo@teste.invalid')
-      .then((all) => all.filter((found) => found.clinicId === CLINIC_B));
+    const victim = account('vitima@teste.invalid', CLINIC_B);
+    await (await accountsOf(CLINIC_B)).save(victim);
+    // O UPDATE de mover a linha só passa pelo WITH CHECK se a clínica A tiver linha própria.
+    await (await accountsOf(CLINIC_A)).save(
+      account('atacante@teste.invalid', CLINIC_A),
+    );
     const before = await admin.query(
       `SELECT password_hash, session_version FROM user_accounts WHERE id = $1`,
       [victim.id],
@@ -255,8 +273,7 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
   });
 
   it('Dado o super_admin (sem clínica), Quando o sistema o cria e a aplicação o procura, Então só o sistema o enxerga e a aplicação não o cria', async () => {
-    const root = account('root@teste.invalid', null, 'super_admin');
-    await (await accountsOf(null)).save(root);
+    const root = await ensureSystemAccount();
 
     expect((await (await accountsOf(null)).findSystemAccount())?.id).toBe(
       root.id,
@@ -330,16 +347,19 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
       await clinicDb(CLINIC_B),
       CLINIC_B,
     );
-    const mine = event(CLINIC_A, 'a-1');
-    const theirs = event(CLINIC_B, 'b-1');
+    const mine = event(CLINIC_A, 's7-a-1');
+    const theirs = event(CLINIC_B, 's7-b-1');
     await repoA.save(mine);
     await repoB.save(theirs);
     // Super admin agindo na clínica-alvo: evento sem empresa grava na clínica do escopo.
-    await repoA.save(event(null, 'a-2', 'super_admin'));
+    await repoA.save(event(null, 's7-a-2', 'super_admin'));
 
     expect(
-      (await repoA.findAll()).map((found) => found.resourceId).sort(),
-    ).toEqual(['a-1', 'a-2']);
+      (await repoA.findAll())
+        .map((found) => found.resourceId)
+        .filter((id) => id.startsWith('s7-'))
+        .sort(),
+    ).toEqual(['s7-a-1', 's7-a-2']);
     await expect(repoA.save(theirs)).rejects.toThrow(FOREIGN_CLINIC_EVENT);
     await expect(
       inClinic(CLINIC_A, (client) =>
@@ -355,25 +375,31 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
 
   it('Dado a auditoria pré-sessão, Quando o sistema grava evento sem empresa e de qualquer clínica, Então a trilha de plataforma o lê e a aplicação não', async () => {
     const repo = new DrizzleAuditEventRepository(systemDb, null);
-    await repo.save(event(null, 'login-falho'));
-    await repo.save(event(CLINIC_B, 'login-b', 'company_admin'));
+    const repoA = new DrizzleAuditEventRepository(
+      await clinicDb(CLINIC_A),
+      CLINIC_A,
+    );
+    await repoA.save(event(CLINIC_A, 's8-a-1'));
+    await repoA.save(event(null, 's8-a-2', 'super_admin'));
+    await repo.save(event(null, 's8-login-falho'));
+    await repo.save(event(CLINIC_B, 's8-login-b', 'company_admin'));
 
     const trail = await repo.findPlatformTrail();
     expect(trail.map((found) => found.resourceId)).toEqual(
-      expect.arrayContaining(['login-falho', 'a-2']),
+      expect.arrayContaining(['s8-login-falho', 's8-a-2']),
     );
     expect(
-      (
-        await new DrizzleAuditEventRepository(
-          await clinicDb(CLINIC_A),
-          CLINIC_A,
-        ).findAll()
-      )
+      (await repoA.findAll())
         .map((found) => found.resourceId)
+        .filter((id) => id.startsWith('s8-'))
         .sort(),
-    ).toEqual(['a-1', 'a-2']);
+    ).toEqual(['s8-a-1', 's8-a-2']);
     expect(await inClinic(null, idsOf('audit_events'))).toEqual([]);
-    expect((await repo.findAll()).length).toBeGreaterThanOrEqual(5);
+    expect(
+      (await repo.findAll()).filter((found) =>
+        found.resourceId.startsWith('s8-'),
+      ),
+    ).toHaveLength(4);
   });
 
   it('Dado o OAuth do Google, Quando cada clínica e o sistema conectam contas, Então cada um lê só a sua e a aplicação não vê a do sistema', async () => {
@@ -444,6 +470,22 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
   });
 
   it('Dado uma consulta sem filtro de empresa, Quando a aplicação lê as três tabelas sem app.clinic_id, Então falha fechado e o dono não é filtrado', async () => {
+    await (await accountsOf(CLINIC_A)).save(
+      account('sem-filtro@teste.invalid', CLINIC_A),
+    );
+    await new DrizzleAuditEventRepository(
+      await clinicDb(CLINIC_A),
+      CLINIC_A,
+    ).save(event(CLINIC_A, 's11-a-1'));
+    // Data antiga: não vira a "mais recente" da clínica A no cenário do OAuth.
+    await new DrizzleGoogleAccountRepository(
+      await clinicDb(CLINIC_A),
+      CLINIC_A,
+    ).save({
+      email: 'sem-filtro@gmail.invalid',
+      encryptedRefreshToken: 'token-cifrado',
+      connectedAt: new Date('2020-01-01T00:00:00Z'),
+    });
     for (const table of TABLES) {
       expect(await inClinic(null, idsOf(table))).toEqual([]);
       expect(
@@ -461,6 +503,11 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
   });
 
   it('Dado o SQL da migração, Quando aplico duas vezes, Então é idempotente e o rollback (DISABLE) devolve as linhas ao papel da aplicação', async () => {
+    await new DrizzleAuditEventRepository(
+      await clinicDb(CLINIC_A),
+      CLINIC_A,
+    ).save(event(CLINIC_A, 's12-a-1'));
+    const systemOnly = await ensureSystemAccount();
     for (let round = 0; round < 2; round++) {
       for (const statement of migrationStatements())
         await admin.query(statement);
@@ -473,8 +520,11 @@ describe('Feature: RLS em user_accounts, google_accounts e audit_events (#894)',
     }
     // Sem RLS, o papel da aplicação volta a ver tudo (a aplicação filtra por clínica, como antes).
     expect(
-      (await app.query(`SELECT 1 FROM user_accounts WHERE clinic_id IS NULL`))
-        .rowCount,
+      (
+        await app.query(`SELECT 1 FROM user_accounts WHERE id = $1`, [
+          systemOnly.id,
+        ])
+      ).rowCount,
     ).toBe(1);
     for (const statement of migrationStatements()) await admin.query(statement);
     expect((await app.query(`SELECT 1 FROM user_accounts`)).rowCount).toBe(0);
