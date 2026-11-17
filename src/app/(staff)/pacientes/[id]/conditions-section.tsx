@@ -221,6 +221,7 @@ export function ConditionsSection({
                     <ConditionPhotos
                       conditionId={condition.id}
                       canUpload={condition.status === 'active'}
+                      assessments={conditionAssessments}
                     />
                     {conditionAssessments.length === 0 ? (
                       <EmptyState message="Nenhuma avaliação registrada." />
