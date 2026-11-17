@@ -828,6 +828,10 @@ export const conditionPhotos = pgTable(
   },
   (table) => [
     index('idx_condition_photos_condition').on(table.conditionId),
+    index('idx_condition_photos_condition_created').on(
+      table.conditionId,
+      table.createdAt,
+    ),
     index('idx_condition_photos_triage').on(table.triageStatus),
     index('idx_condition_photos_clinic').on(table.clinicId),
   ],

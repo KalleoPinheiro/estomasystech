@@ -589,6 +589,13 @@
       "when": 1794864000000,
       "tag": "0083_rls-force",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1794951976614,
+      "tag": "0084_indice-fotos-condicao-data",
+      "breakpoints": true
     }
   ]
 }
