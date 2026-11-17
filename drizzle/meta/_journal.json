@@ -575,6 +575,20 @@
       "when": 1794856800000,
       "tag": "0081_rls-identidade-auditoria",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1794860400000,
+      "tag": "0082_rls-tabelas-sem-clinic-id",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1794864000000,
+      "tag": "0083_rls-force",
+      "breakpoints": true
     }
   ]
 }

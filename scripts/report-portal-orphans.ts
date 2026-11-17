@@ -1,4 +1,4 @@
-import { getDb } from "@/infrastructure/persistence/drizzle/db";
+import { getSystemDb } from "@/infrastructure/persistence/drizzle/db";
 import { listOrphanPortalAccounts } from "@/infrastructure/persistence/drizzle/portal-orphans";
 
 /**
@@ -10,7 +10,7 @@ import { listOrphanPortalAccounts } from "@/infrastructure/persistence/drizzle/p
  */
 async function main(): Promise<void> {
   process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
-  const orphans = await listOrphanPortalAccounts(await getDb());
+  const orphans = await listOrphanPortalAccounts(await getSystemDb());
   if (orphans.length === 0) {
     console.log("Nenhuma conta de portal sem vínculo.");
     return;

@@ -13,7 +13,7 @@ import { DEFAULT_SCHEDULE_CONFIG } from "@/domain/scheduling/schedule-config";
 import { Money } from "@/domain/shared/money";
 import { TimeSlot } from "@/domain/shared/time-slot";
 import { getRepositories } from "@/infrastructure/container";
-import { getDb } from "@/infrastructure/persistence/drizzle/db";
+import { getSystemDb } from "@/infrastructure/persistence/drizzle/db";
 import * as schema from "@/infrastructure/persistence/drizzle/schema";
 import { PARTNER_SHARE_CONSENT } from "@/lib/partner-share-consent-text";
 import { clinicScope } from "@/lib/auth/tenant-scope";
@@ -25,13 +25,13 @@ const GAP_MS = 15 * 60_000;
 
 /** Reposiciona a data de criação de uma avaliação (o domínio sempre carimba "agora"). */
 export async function backdateAssessment(id: string, createdAt: Date): Promise<void> {
-  const db = await getDb();
+  const db = await getSystemDb();
   await db.update(schema.conditionAssessments).set({ createdAt }).where(eq(schema.conditionAssessments.id, id));
 }
 
 /** Reposiciona a emissão de uma fatura (o domínio sempre carimba "agora"). */
 export async function backdateInvoice(id: string, issuedAt: Date): Promise<void> {
-  const db = await getDb();
+  const db = await getSystemDb();
   await db.update(schema.invoices).set({ issuedAt }).where(eq(schema.invoices.id, id));
 }
 

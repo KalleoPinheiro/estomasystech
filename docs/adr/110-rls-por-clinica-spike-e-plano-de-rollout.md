@@ -12,7 +12,7 @@ related:
 # ADR 110 — Row-Level Security por clínica
 
 - **Data:** 2026-11-15
-- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 entregue, #871; etapa 3 entregue, #872: política em três tabelas; etapa 4 entregue, #873: política nas demais tabelas clínicas e financeiras; lote de identidade e auditoria em PR, #894: política em `user_accounts`, `google_accounts` e `audit_events`; nenhuma conexão trocada).
+- **Status:** em execução (spike da #729; etapa 1 entregue em 2026-11-16, #870; etapa 2 entregue, #871; etapa 3 entregue, #872: política em três tabelas; etapa 4 entregue, #873: política nas demais tabelas clínicas e financeiras; lote de identidade e auditoria entregue, #894: política em `user_accounts`, `google_accounts` e `audit_events`; etapa 5 em PR, #874: política nas quatro tabelas sem `clinic_id` e `FORCE` nas 45; nenhuma conexão trocada).
 - **Domínios afetados:** acesso, infraestrutura de persistência.
 
 ## Contexto
@@ -217,7 +217,7 @@ migrações. Total coberto com a etapa 3: 38 tabelas. Nenhuma conexão trocada, 
   aplicação trocar de papel.
 - **Rollback**, instantâneo e sem restaurar backup, por tabela: `ALTER TABLE <tabela> DISABLE ROW LEVEL SECURITY;`. Para um lote
   inteiro, repita o comando nas tabelas da migração. **Não** use `DROP POLICY` sozinho. A coluna, o gatilho e os índices da `0077` são
-  aditivos para o código e podem ficar; voltar a `DATABASE_URL` para o dono também desfaz o efeito sem tocar no banco.
+  aditivos para o código e podem ficar; antes da `0083`, voltar a `DATABASE_URL` para o dono também desfaz o efeito; depois dela o dono também é filtrado e vale `NO FORCE` (§ 4.7), sem tocar no banco.
 
 ## Premissa a verificar na etapa 1
 
@@ -290,4 +290,24 @@ só a de **não** criar política especial para linha sem empresa.
   (`data:reencrypt`, `recover-super-admin`, `report-portal-orphans`, que abrem `getDb()` sem clínica); política ou decisão para as tabelas sem `clinic_id`
   (`clinics`, `auth_tokens`, `user_mfa`, `mfa_recovery_codes`); prova na staging com `FORCE` ligado (migração e seed completos).
 - **Rollback**, instantâneo e sem backup, por tabela: `ALTER TABLE user_accounts DISABLE ROW LEVEL SECURITY;` (idem `google_accounts`, `audit_events`).
-  **Não** use `DROP POLICY` sozinho. Voltar a `DATABASE_URL` para o dono também desfaz o efeito.
+  **Não** use `DROP POLICY` sozinho. Antes da `0083`, voltar a `DATABASE_URL` para o dono também desfaz o efeito; depois dela o dono também é filtrado e vale `NO FORCE` (§ 4.7).
+
+## Etapa 5 (#874): tabelas sem `clinic_id` e FORCE (código na `main`; prova na staging pendente)
+
+Duas migrações. Total: 45 tabelas com a política `clinic_isolation` e com `FORCE ROW LEVEL SECURITY`.
+
+- **`0082_rls-tabelas-sem-clinic-id`:** `clinics` filtra pelo próprio id (`id = current_setting('app.clinic_id', true)`).
+  `auth_tokens`, `user_mfa` e `mfa_recovery_codes` herdam da conta: `EXISTS (SELECT 1 FROM user_accounts ua WHERE ua.id = <tabela>.account_id)`.
+  A subconsulta passa pela política de `user_accounts` (0081), então a conta de outra clínica, ou sem clínica (super_admin), não é visível ao papel da
+  aplicação e o token, o fator e os códigos dela também não. Sem coluna nova: a igualdade continua indexável (PK de `user_accounts`). Desfazer: `DISABLE ROW LEVEL SECURITY` por tabela.
+- **`0083_rls-force`:** `ALTER TABLE … FORCE ROW LEVEL SECURITY` nas 45 tabelas (lista explícita, auditável; o teste confere que FORCE e política cobrem as mesmas tabelas).
+  Com FORCE a política vale também para o **dono** da tabela; só superusuário e `BYPASSRLS` a ignoram. Não toca em dado. Rollback por tabela: `NO FORCE ROW LEVEL SECURITY` (`producao.md` § 4.7 traz o laço para todas).
+- **Caminhos antes da sessão** (login, convite, recuperação de senha, segundo fator, plataforma, cron) já rodam em `systemScope()`: `getSystemDb()`, papel com `BYPASSRLS`. Nenhum código de aplicação mudou para as tabelas novas.
+- **Scripts de operação e o papel de migração.** Decisão: **sem terceiro papel.** `seed` (a parte que reposiciona datas), `data:reencrypt`, `admin:recover` e `db:portal-orphans` passam a abrir `getSystemDb()`
+  (`DATABASE_SYSTEM_URL`). Sem a variável, as etapas de `systemScope()` do seed usam o pool de `getDb()`: antes da `0083` nada muda; depois dela, com `DATABASE_URL` sem `BYPASSRLS`, podem falhar em `clinics` e contas, então **defina `DATABASE_SYSTEM_URL` antes da `0083`** (as etapas por clínica não são afetadas). O ADR previa um papel de migração dedicado com `BYPASSRLS`; ele só
+  seria necessário para migração que **leia ou grave linhas**. `db:migrate` segue com o dono: DDL não passa por RLS. Migração de dado futura sob FORCE: o papel de sistema não enxerga o esquema `drizzle` (o migrador precisa dele) e o dono é filtrado. Por isso, nessa janela, o superusuário concede `ALTER ROLE <dono> BYPASSRLS;` e retira com `ALTER ROLE <dono> NOBYPASSRLS;` ao terminar (sem papel novo e sem `GRANT` no esquema `drizzle`). Hoje nenhuma migração pendente lê linhas.
+- **Backup e restauração.** `pg_dump` roda como o usuário do Postgres do Coolify. Com FORCE, usuário que não seja superusuário nem `BYPASSRLS` **falha alto** ("query would be affected by row-level security policy"); não use `--enable-row-security`, que geraria backup vazio sem erro. Conferir antes (`producao.md` § 4.7).
+- **Premissa que decide se FORCE protege algo:** se a produção conecta como superusuário (usuário de bootstrap do Postgres do Coolify), o FORCE não muda nada para ela, e a proteção só existe depois da troca para o papel da aplicação (etapa 1 a 4, `producao.md` § 4.5). Se conecta como dono comum **sem** a troca, a 0083 faz a aplicação ver zero linhas: por isso a ordem do § 4.7 é obrigatória.
+- **Prova:** `tests/integracao/rls-etapa-5-force.integracao.ts` (Postgres real, pool de uma conexão, dono não superusuário): catálogo (FORCE e política nas mesmas 45), sistema e superusuário veem tudo, dono e aplicação veem zero sem clínica e só a própria com ela, `UPDATE`/`DELETE` sem filtro afetam só a própria, `WITH CHECK` recusa linha da outra clínica em toda tabela e token, fator e código de conta alheia, e os fluxos reais com o dono como conexão da aplicação (login, convite e consumo de token, segundo fator, auditoria, recifra e órfãos pelo sistema).
+- **Desempenho.** O predicado de `clinics` é igualdade na PK; o `EXISTS` das três tabelas é uma busca na PK de `user_accounts` por linha candidata (`auth_tokens` entra pela chave única do segredo: uma linha). Não há caminho quente novo: login e token rodam no papel de sistema, que não avalia política.
+- **O que sobra de RLS depois desta etapa:** a troca da `DATABASE_URL` para o papel da aplicação e da `DATABASE_SYSTEM_URL` (passos do dono em `producao.md` § 4.5 e § 4.7, staging primeiro); a validação logada na staging com FORCE; tabelas globais (taxonomia, `rate_limit_windows`, `job_runs`, `app_releases`) seguem sem RLS por desenho; #887 (e-mail em claro na trilha de auditoria) é de cifra, não de RLS.

@@ -142,7 +142,7 @@ Specs de execução: `.specs/features/{autenticacao-nativa,rbac-catalogo-papeis,
 
 - [ADR-001](../../adr/001-multi-tenancy.md) — multiempresa por `clinic_id`, RLS adiada
 - [ADR-111](../../adr/111-email-de-login-cifrado-com-indice-cego-global.md) — e-mail de login cifrado em repouso com índice cego global (#742)
-- [ADR-110](../../adr/110-rls-por-clinica-spike-e-plano-de-rollout.md) — spike do RLS (#729): prova em Postgres real e plano de rollout em etapas; contas, Google e auditoria têm política desde a #894 (linha sem empresa só o papel de sistema enxerga)
+- [ADR-110](../../adr/110-rls-por-clinica-spike-e-plano-de-rollout.md) — spike do RLS (#729): prova em Postgres real e plano de rollout em etapas; contas, Google e auditoria têm política desde a #894 (linha sem empresa só o papel de sistema enxerga); a etapa 5 (#874) liga a política em `clinics`, `auth_tokens`, `user_mfa` e `mfa_recovery_codes` e o FORCE nas 45 tabelas (o dono também é filtrado)
 - [ADR-002](../../adr/002-autorizacao-em-duas-camadas.md) — proxy + handler
 - [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — seis papéis (o sétimo, `guardian`, no ADR-027), vínculo dinâmico do Profissional
 - [ADR-004](../../adr/004-remocao-google-oauth-autenticacao.md) — login nativo; Google só como integração

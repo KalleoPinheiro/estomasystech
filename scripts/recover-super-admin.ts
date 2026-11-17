@@ -1,4 +1,4 @@
-import { getDb } from "@/infrastructure/persistence/drizzle/db";
+import { getSystemDb } from "@/infrastructure/persistence/drizzle/db";
 import { runRecoverSuperAdminCli } from "@/infrastructure/persistence/drizzle/recover-super-admin";
 
 /**
@@ -16,7 +16,7 @@ process.env.ESTOMASYSTECH_MIGRATE_ON_BOOT ??= "false";
 
 runRecoverSuperAdminCli(process.argv.slice(2), {
   env: process.env,
-  openDb: getDb,
+  openDb: getSystemDb,
   out: (line) => console.log(line),
   err: (line) => console.error(line),
 }).then((code) => process.exit(code));

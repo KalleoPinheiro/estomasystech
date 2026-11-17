@@ -1,4 +1,4 @@
-import { getDb } from "@/infrastructure/persistence/drizzle/db";
+import { getSystemDb } from "@/infrastructure/persistence/drizzle/db";
 import { reencryptAccountIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-account-identity";
 import { reencryptGuardianIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-guardian-identity";
 import { reencryptPatientIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-patient-identity";
@@ -28,7 +28,8 @@ async function main(): Promise<void> {
   }
   // Falha antes de qualquer escrita se o pepper for inválido.
   const blindIndex = blindIndexFromEnv();
-  const db = await getDb();
+  // Conexão de sistema (BYPASSRLS): a recifra percorre todas as clínicas e o FORCE sujeita o dono à política (#874).
+  const db = await getSystemDb();
   const cipher = dataCipherFromEnv();
   const counts = await reencryptClinicalData(db, cipher);
   // Cadastro do paciente (ADR-096): cifra nome, e-mail, telefone e nascimento e preenche o índice cego.
@@ -42,7 +43,12 @@ async function main(): Promise<void> {
     total += updated;
     console.log(`${table}\t${updated} linha(s) regravada(s)`);
   }
-  console.log(total === 0 ? "Nada pendente: tudo na chave atual." : `Total: ${total}. Rode de novo para confirmar 0 pendências.`);
+  if (total === 0 && !process.env.DATABASE_SYSTEM_URL) {
+    // Com FORCE (#874) o dono sem BYPASSRLS enxerga zero linhas: "nada pendente" aqui não prova nada.
+    console.log("Nenhuma linha visível sem DATABASE_SYSTEM_URL: com FORCE o resultado pode estar incompleto. Defina DATABASE_SYSTEM_URL e rode de novo antes de aposentar a chave anterior.");
+  } else {
+    console.log(total === 0 ? "Nada pendente: tudo na chave atual." : `Total: ${total}. Rode de novo para confirmar 0 pendências.`);
+  }
 }
 
 main()
