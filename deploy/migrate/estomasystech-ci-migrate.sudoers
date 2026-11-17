@@ -1,0 +1,8 @@
+# Instalar em /etc/sudoers.d/estomasystech-ci-migrate (modo 0440, dono root) com:
+#   sudo visudo -cf deploy/migrate/estomasystech-ci-migrate.sudoers && \
+#   sudo install -m 0440 -o root -g root deploy/migrate/estomasystech-ci-migrate.sudoers /etc/sudoers.d/estomasystech-ci-migrate
+# ADR-113: o usuário do CI só pode rodar o ci-migrate.sh, sem argumentos (o "" final proíbe argumento). O comando
+# pedido ao ssh chega pela variável SSH_ORIGINAL_COMMAND, que o script confere contra uma lista fechada.
+Defaults:estoma-ci env_reset
+Defaults:estoma-ci env_keep += "SSH_ORIGINAL_COMMAND"
+estoma-ci ALL=(root) NOPASSWD: /opt/estomasystech-migrate/ci-migrate.sh ""

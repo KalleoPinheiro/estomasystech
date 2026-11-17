@@ -251,14 +251,22 @@ proposital enquanto as migrações não têm `down`
    **da `main`** com `version` (X.Y.Z) e `rollback`. O job `validar` confere que o HEAD traz a versão em
    `package.json` e no `CHANGELOG.md` e que a staging validou **este SHA exato** (#851); sem isso para antes de
    qualquer segredo. Em seguida o run espera o **clique do dono** no *Environment* `producao`; aprovado, o job
-   `producao` confere que a `main` não avançou e, nesta ordem: faz o **backup** no VPS (só segue com
-   `BACKUP_OK`), publica a **tag** e a Release (`release:publish`, idempotente) e **deploya** pela API do
-   Coolify (`POST /api/v1/deploy`, espera `finished` e confere que o commit implantado é o SHA validado). O
-   `fumaca` roda a fumaça do § 9.6 e confere a versão servida. Falha em qualquer passo para ali e **nunca
-   reverte sozinha** (ADR-039): a decisão de rollback é humana (passo 5). `dry_run` só confere (sem backup,
-   tag nem deploy). Segredos do *Environment* `producao`: `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`, `VPS_HOST`,
-   `COOLIFY_URL`, `COOLIFY_TOKEN` (read + deploy) e `COOLIFY_APP_UUID`; `RELEASE_CUT_TOKEN` segue do
-   repositório (rotação: § 6).
+   `producao` confere que a `main` não avançou e, nesta ordem ([ADR-113](../adr/113-release-deploy-migra-antes-e-reverte-a-imagem.md)):
+   registra a versão que está no ar (alvo do rollback) e prova que o token do Coolify consegue reverter;
+   **detecta** as migrações pendentes (só leitura); faz o **backup** no VPS (só segue com `BACKUP_OK`);
+   **migra o banco com o dono** (§ 4.9; se falhar, o job para **antes** do deploy); **deploya** pela API do Coolify
+   (`POST /api/v1/deploy`, espera `finished` e confere que o commit implantado é o SHA validado); roda a **fumaça**
+   do § 9.6 com a versão; e só com a fumaça verde publica a **tag** e a Release (`release:publish`, idempotente).
+   **Fumaça reprovada depois do deploy tenta reverter a imagem** para a versão anterior (o banco fica como está). Só
+   vale o rollback confirmado: o run termina vermelho com `ROLLBACK AUTOMÁTICO EXECUTADO` quando o Coolify devolveu a
+   imagem e a fumaça confirmou; se o Coolify estiver fora ou a fumaça seguir reprovando, o log traz `Depois do rollback…`
+   ou `Recurso preso no SHA antigo` e a recuperação é manual (passos 5 e 6). Nada além da imagem é revertido.
+   Qualquer outra falha para ali. O job `validar` ainda **ensaia a migração** num Postgres descartável (banco da
+   tag anterior até esta versão, sem segredo), então `dry_run` também a exercita; `dry_run` não pede aprovação,
+   não faz backup, migração, deploy nem tag. Segredos do *Environment* `producao`: `VPS_SSH_KEY`
+   (backup), `VPS_MIGRATE_SSH_KEY` (migração, § 4.9), `VPS_KNOWN_HOSTS`, `VPS_HOST`, `COOLIFY_URL`,
+   `COOLIFY_TOKEN` (**read, write e deploy**) e `COOLIFY_APP_UUID`; `RELEASE_CUT_TOKEN` segue do repositório
+   (rotação: § 6).
    **Release que leva a cifra (v0.8.0 em diante):** antes do clique, confira no Coolify que
    `DATA_ENCRYPTION_KEY` e `BLIND_INDEX_PEPPER` estão no runtime (o app não sobe sem elas). Depois do deploy
    e do backup, `npm run data:reencrypt` pelo dono, repetido até "Nada pendente: tudo na chave atual."
@@ -273,8 +281,10 @@ proposital enquanto as migrações não têm `down`
 2. **Backup:** o timer das 02:00 (§ 5) cobre o dia; antes de um deploy com migração, rode o backup
    na hora (`sudo systemctl start estomasystech-backup.service`) e confira que terminou sem erro.
    Sem backup do mesmo dia, não deploye migração.
-3. **Deploy:** *Deploy* no recurso do app. O container novo migra no boot (advisory lock) e o
-   `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois. No mesmo boot o app grava a
+3. **Deploy:** *Deploy* no recurso do app. Com `ESTOMASYSTECH_MIGRATE_ON_BOOT` vazio o container novo migra no
+   boot (advisory lock); com `false` (a configuração do RLS, § 4.5) **migre antes** pelo dono (`npm run db:migrate` com a URL do dono, § 4;
+   o § 4.9 descreve só o caminho automático do workflow), senão o
+   código novo sobe sobre o banco velho (v0.9.1). O `HEALTHCHECK` passa a `healthy`; o container antigo só sai depois. No mesmo boot o app grava a
    versão em `app_releases` ([ADR-066](../adr/066-versao-do-sistema-registrada-no-banco.md)); sem
    passo manual.
 4. **Verificar:** `curl -fsS https://estomasystech.kalleopinheiro.com.br/api/health/ready` (`200`,
@@ -310,9 +320,11 @@ proposital enquanto as migrações não têm `down`
 
 ## 4. Migrações
 
-- Padrão em produção: o app migra no boot com advisory lock (`ESTOMASYSTECH_MIGRATE_ON_BOOT` vazio;
-  a variável foi removida do Coolify). Uma réplica, então o deploy é: backup, *Deploy* no Coolify
-  (§ 3.1), o container novo migra e sobe. No formato compose: backup e `docker compose up -d --build`.
+- **Release deploy (padrão desde o [ADR-113](../adr/113-release-deploy-migra-antes-e-reverte-a-imagem.md)):** o
+  workflow migra com o dono **antes** do deploy (§ 4.9), qualquer que seja `ESTOMASYSTECH_MIGRATE_ON_BOOT`.
+- Deploy manual com a variável vazia: o app migra no boot com advisory lock. Uma réplica, então o deploy é:
+  backup, *Deploy* no Coolify (§ 3.1), o container novo migra e sobe. No formato compose: backup e
+  `docker compose up -d --build`. Com o app no papel restrito (§ 4.5) isso **não** migra: use o § 4.9.
 - Para migrar como passo separado: `ESTOMASYSTECH_MIGRATE_ON_BOOT=false` e rodar
   `npm run db:migrate` de um checkout com `DATABASE_URL` alcançável. No Coolify o banco não tem
   porta pública: use o container descartável do § 3 (a imagem standalone não tem `drizzle-kit`).
@@ -547,6 +559,56 @@ A staging conecta como `neondb_owner`, que tem `BYPASSRLS`: o `FORCE` não filtr
 7. Rollback: apagar a `DATABASE_APP_URL` na Vercel e reexecutar o workflow Staging (a aplicação volta à `DATABASE_URL`). Nada no banco precisa ser desfeito.
 
 **Comprovado em Postgres 16 local imitando a staging** (dono com `BYPASSRLS` e sem superusuário, `estomasystech_app` já existente, `estomasystech_sistema` com `BYPASSRLS`, login novo sem `BYPASSRLS` em `estomasystech_app`): o `drizzle-kit migrate` e o seed do `vercel-build.ts` passam com o dono; o seed também passa com o login restrito no `getDb()`; `/api/health/ready` responde `database ok, migrations ok` com o login (a função da 0080 basta, o login não lê o esquema `drizzle`); o login não tem `CREATE` no banco nem no esquema `public`; com a aplicação servindo como o login, admin, atendente e profissional entram, a lista de pacientes traz só a clínica da sessão e o paciente da clínica vizinha responde 404.
+
+### 4.9 Migração pelo Release deploy e rollback automático da imagem (ADR-113)
+
+Origem: a publicação da v0.9.1 subiu o código novo com o banco na v0.8.0 (readiness 503, `42501` e `42703`) porque
+nada migrava com o dono. Agora o *Release deploy* migra **antes** de trocar o container e reverte a imagem se a
+fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele o workflow para antes do backup):
+
+1. 💻 Gere uma chave **só para migrar** (separada da do backup): `ssh-keygen -t ed25519 -C estomasystech-ci-migrate -f ./ci-migrate-key`
+   (Enter duas vezes na senha, para ficar sem frase). Guarde a privada no cofre e apague o arquivo só depois do passo 6 (criar o segredo).
+2. 🖥️ No VPS, instale o comando forçado e o sudoers, a partir de um checkout da `main`:
+   - `sudo install -d -m 0755 /opt/estomasystech-migrate`
+   - `sudo install -m 0755 -o root -g root deploy/migrate/ci-migrate.sh /opt/estomasystech-migrate/ci-migrate.sh`
+   - `sudo visudo -cf deploy/migrate/estomasystech-ci-migrate.sudoers`
+   - `sudo install -m 0440 -o root -g root deploy/migrate/estomasystech-ci-migrate.sudoers /etc/sudoers.d/estomasystech-ci-migrate`
+3. 🖥️ Diga ao script qual é o container do Postgres (`sudo docker ps --format {{.Names}}`; é o do banco do app, § 3):
+   crie `/etc/estomasystech/migrate.env` (modo 0600, dono root) com a linha `CI_MIGRATE_DB_CONTAINER=<nome do container>`.
+   `CI_MIGRATE_DB_USER` e `CI_MIGRATE_DB_NAME` valem `estomasystech` por padrão (o dono das tabelas).
+4. 🖥️ Autorize a chave pública, **acrescentando** uma linha ao `authorized_keys` do `estoma-ci` (a da chave de backup
+   continua): `restrict,command="sudo /opt/estomasystech-migrate/ci-migrate.sh" <CHAVE_PUBLICA>`.
+5. 💻 Prove o canal: `ssh -i ./ci-migrate-key -o IdentitiesOnly=yes estoma-ci@<host> estado` imprime linhas `D <número>`
+   (e `F <número>` se a `0080` já está no banco) e termina em `ESTADO_OK`. Qualquer outro comando é recusado.
+6. 💻 GitHub, *Environment* `producao`: crie o segredo `VPS_MIGRATE_SSH_KEY` (a chave privada inteira).
+7. 💻 Coolify: o token de `COOLIFY_TOKEN` precisa das habilidades **read, write e deploy** (write é o que permite
+   reverter). O workflow prova isso antes do backup, sem mudar nada (PATCH com o valor atual).
+
+**O que o workflow faz** (`scripts/release/migrar-producao.sh`, `ci-migrate.sh`, `rollback-coolify.sh`):
+
+- Lê `drizzle.__drizzle_migrations` e `public.app__drizzle_migrations()` como o dono e calcula o que falta com a regra do
+  migrador do Drizzle. O SQL e o par `(hash, created_at)` gravados vêm do `readMigrationFiles` do drizzle-orm: um
+  `db:migrate` posterior concorda com o que foi aplicado.
+- Aplica numa transação só (`BEGIN`, `lock_timeout` de 60 s, `COMMIT`); erro desfaz tudo e **para o job antes do deploy**.
+- Confere de novo: tabela do Drizzle **e** função do readiness têm de cobrir o journal inteiro.
+- Migração antiga ausente (buraco no journal, § 4 "Ordem das migrações") reprova **antes** de escrever.
+- Rollback: `rollback-coolify.sh` fixa o `git_commit_sha` da tag anterior, faz deploy forçado, confere o commit e devolve
+  o recurso a `HEAD` **sempre**. O banco não é tocado. Depois, `desfazer-versao` apaga a versão revertida de `app_releases`.
+  Se o aviso `Recurso preso no SHA antigo` aparecer, volte `Git Commit SHA` para `HEAD` no painel antes do próximo deploy.
+
+**Se der errado:**
+
+| Sintoma no run | O que significa | O que fazer |
+| --- | --- | --- |
+| Falha em *Exigir a chave de migração* ou *Detectar migrações pendentes* | O preparo acima não foi feito, ou o ssh não entrou | Nada foi alterado em produção. Refaça o preparo e dispare de novo |
+| Falha em *Conferir que o rollback é possível* | Token do Coolify sem `write` | Nada foi alterado. Dê a habilidade e dispare de novo |
+| Falha em *Migrar o banco com o dono* | Uma migração deu erro, **ou** a resposta do VPS se perdeu depois do commit, **ou** a conferência final falhou | Erro dentro do SQL desfaz a transação; já a falha depois do `COMMIT` (ssh caiu, leitura final) deixa migrações aplicadas sem o deploy. Antes de corrigir ou repetir, rode `bash scripts/release/migrar-producao.sh detectar` (só lê). Com pendências, nada foi gravado: corrija num PR novo. Sem pendências, o esquema novo já está no ar sob o código antigo: siga por PR novo e confira login e busca. O backup já existe |
+| `ROLLBACK AUTOMÁTICO EXECUTADO` | Fumaça reprovou; a imagem voltou, o banco ficou com as migrações novas | Veja o erro da fumaça, corrija e dispare de novo (a migração não repete: já está aplicada). Se o aviso de migração não aditiva aparecer, confira login e busca; se falhar, restaure o backup (§ 3.1, passo 6) |
+| Fumaça ainda reprova depois do rollback | A produção segue quebrada | Ação humana agora: § 3.1 passos 5 e 6 |
+
+**Prova da release.** Primeiro `dry_run` (ensaio da migração num Postgres descartável + validações; não toca produção nem lê o banco real); depois a publicação: confira no run que *Detectar* lista as
+pendências, que *Migrar* imprime `Migrações aplicadas pelo dono` e a conferência final termina em `SEM_PENDENCIAS` (`MIGRACAO_OK` e `ESTADO_OK` vêm do servidor), e que a fumaça passa; no fim, login nos três papéis, busca de
+paciente e `npm run data:reencrypt` quando a release tocar a cifra.
 
 ## 5. Backup e restore
 
