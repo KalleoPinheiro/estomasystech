@@ -1,3 +1,5 @@
+import { sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { describe, expect, it, vi } from 'vitest';
 import {
   CLINIC_SETTING,
@@ -173,6 +175,29 @@ describe('Feature: pool com a clínica gravada (RLS etapa 2, ADR-110)', () => {
     await tx.query({} as never);
 
     expect(log).toEqual([undefined]);
+  });
+
+  it('Dado o nome da classe minificado, Quando a transação pede repeatable read, Então o begin com isolamento é a primeira consulta da conexão', async () => {
+    const { log, pool } = fakeClient();
+    const scoped = new ClinicScopedPool(pool as never, 'clinica-2');
+    const nome = Object.getOwnPropertyDescriptor(scoped.constructor, 'name');
+    Object.defineProperty(scoped.constructor, 'name', { value: 's' });
+    try {
+      const db = drizzle(scoped as never);
+      await db.transaction(
+        async (tx) => {
+          await tx.execute(sql`select 1`);
+        },
+        { isolationLevel: 'repeatable read' },
+      );
+    } finally {
+      if (nome) Object.defineProperty(scoped.constructor, 'name', nome);
+    }
+
+    expect(log[0]).toBe('begin isolation level repeatable read');
+    expect(log[1]).toBe(`select set_config('${CLINIC_SETTING}', $1, true)`);
+    expect(log).toContain('select 1');
+    expect(log.at(-1)).toBe('commit');
   });
 
   it('Dado escopo de sistema ou driver sem pool (PGlite), Então devolve o próprio db', async () => {

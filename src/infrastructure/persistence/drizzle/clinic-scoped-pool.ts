@@ -1,4 +1,9 @@
-import type { Pool, PoolClient, QueryResult } from 'pg';
+import {
+  Pool as NodePool,
+  type Pool,
+  type PoolClient,
+  type QueryResult,
+} from 'pg';
 import type { AppDb } from './db';
 import * as schema from './schema';
 
@@ -69,8 +74,9 @@ class ClinicScopedClient {
 /**
  * Pool que envolve cada consulta avulsa numa transação curta com `app.clinic_id` gravado
  * (RLS etapa 2, ADR-110): o custo é um `BEGIN` com o `set_config` e um `COMMIT` por consulta.
- * O nome da classe termina em `Pool` de propósito: o drizzle usa isso para decidir se abre
- * conexão própria em `db.transaction`.
+ * O drizzle só segura a conexão em `db.transaction` se o cliente for `instanceof Pool` ou se o
+ * nome da classe ainda contiver "Pool". O minify do servidor apaga o nome; a cadeia abaixo
+ * preserva o `instanceof`.
  */
 export class ClinicScopedPool {
   constructor(
@@ -108,6 +114,10 @@ export class ClinicScopedPool {
     return new ClinicScopedClient(await this.pool.connect(), this.clinicId);
   }
 }
+
+// Sem isto, o build de produção minifica o nome e o `begin isolation level …` da listagem de
+// pacientes cai dentro da transação curta de `query`. O Postgres recusa (25001) e a API responde 500.
+Object.setPrototypeOf(ClinicScopedPool.prototype, NodePool.prototype);
 
 function isNodePostgresPool(client: unknown): client is Pool {
   const candidate = client as { connect?: unknown; totalCount?: unknown };

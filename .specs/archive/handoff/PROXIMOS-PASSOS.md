@@ -23,6 +23,10 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   `main` por sessão, CI como revisor, squash automático em PR comum com CI verde. Classe 3 espera o clique no
   Environment `aprovacao-classe-3`, com o link do job e só com o CI verde. Staging publica sozinha a cada
   merge na `main`. Produção sai pelo workflow *Release deploy*, com o clique no Environment `producao`.
+- **Staging da `main` `7bfccf83` (v0.9.0) falhou** só em `GET /api/patients` (500 nos três papéis; a página em si
+  abria). O minify do servidor apagava o nome de `ClinicScopedPool`, o `BEGIN ISOLATION LEVEL REPEATABLE READ`
+  da listagem rodava dentro de outra transação e o Postgres recusava (25001). O `instanceof Pool` corrige.
+  Publicar a v0.9.0 espera este merge e a staging verde; não tageie o SHA que falhou.
 
 ## Fila (ordem)
 
@@ -35,7 +39,8 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
       rotas; falta ler a staging e decidir sobre o JS antes de fechar #559 e #541).
    2. #906, CLS de 0,49 na ficha em 390 px (P2, P).
    3. #907, comparar duas fotos da condição à escolha (P2, M; hoje só primeira × última).
-   4. #855, página e linhas do paciente num snapshot (P3, P).
+   4. #855, página e linhas do paciente num snapshot — **entregue** (#915). A listagem na staging da v0.9.0
+      respondia 500 até o pool da clínica continuar `instanceof Pool` depois do minify.
    5. #896, cenários de RLS independentes da ordem (P3, P).
    6. #560, spike de PPR e CSP por hash (P3, P), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
    Até três threads de código, nunca duas no mesmo domínio.
