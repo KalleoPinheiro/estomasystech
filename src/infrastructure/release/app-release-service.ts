@@ -1,6 +1,7 @@
 import { CurrentVersionReader } from '@/application/release/current-version';
 import { RecordRelease } from '@/application/release/record-release';
 import { buildAppVersion } from '@/lib/app-version';
+import { appDatabaseEnvName } from '@/lib/database-url';
 import { logError } from '@/lib/log-error';
 import { resolveAppEnv } from '@/lib/runtime-env';
 import { getDb } from '../persistence/drizzle/db';
@@ -46,7 +47,7 @@ export function currentVersionReader(): CurrentVersionReader {
  * o log e o rodapé cai para a versão do build.
  */
 export async function recordCurrentRelease(): Promise<void> {
-  if (!process.env.DATABASE_URL) return;
+  if (!process.env[appDatabaseEnvName()]) return;
   try {
     const db = await getDb();
     await new RecordRelease(new DrizzleAppReleaseRepository(db)).execute({

@@ -318,3 +318,11 @@ A `0083` foi aplicada na staging (Neon) pelo build da Vercel e a validação log
 
 - **O dono da staging ignora RLS.** A aplicação conecta como `neondb_owner`, que tem `BYPASSRLS` (`rolsuper` falso, `rolbypassrls` verdadeiro). O `FORCE` não filtra esse papel. A staging verde prova a migração, a conexão de sistema e o seed; **não prova** o filtro do `FORCE` sobre a aplicação. Essa prova só existe depois da troca da `DATABASE_URL` da staging para um login restrito (`producao.md` § 4.8). Até lá, quem prova o filtro é a suíte de integração em Postgres real.
 - **Senha com símbolo quebra a URL.** O primeiro deploy falhou no seed com `password authentication failed` para `estomasystech_sistema`: a senha tinha símbolo e a URL de conexão não a escapou. Regra: senha de login de aplicação só com letras e números.
+
+### `DATABASE_APP_URL`: o login restrito em variável própria (2026-11-17)
+
+Na Vercel a `DATABASE_URL` da staging é gerenciada pela integração do Neon: o painel não a deixa editar e *Rotate Integration Secrets* a regrava com o dono. Trocar o usuário dela à mão não é um caminho que sobrevive. **Decisão:** a conexão normal de runtime (`getDb`) lê `DATABASE_APP_URL` quando ela está definida e não vazia e, senão, a `DATABASE_URL` (`appDatabaseEnvName` em `src/lib/database-url.ts`). Sem a variável nada muda: produção no Coolify e o ambiente local seguem na `DATABASE_URL`.
+
+- **Fora do escopo da variável:** a migração e o seed do build seguem com `DATABASE_URL_UNPOOLED ?? DATABASE_URL` (o dono), e o ambiente desses passos não recebe a `DATABASE_APP_URL`; a conexão de sistema segue em `DATABASE_SYSTEM_URL`; os scripts de operação não mudam.
+- **Segurança:** a URL escolhida passa pelas mesmas travas de antes (`assertNotProductionDatabase`, `verify-full`). A variável não concede privilégio algum: o login continua só membro de `estomasystech_app`.
+- **Prova:** `tests/integracao/rls-etapa-5-database-app-url.integracao.ts` (Postgres real: definida, ausente e vazia) e a prova local do `producao.md` § 4.8 (migrar com o dono, servir com o login via `DATABASE_APP_URL`, três papéis entram, a clínica vizinha responde 404).
