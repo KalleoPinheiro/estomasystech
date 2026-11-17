@@ -183,7 +183,8 @@ describe('Feature: Segundo fator por papel (#291, ADR-012)', () => {
         .from(auditEvents)
         .where(
           and(
-            eq(auditEvents.actorId, admin.email),
+            eq(auditEvents.actorId, admin.id),
+            eq(auditEvents.resourceId, admin.id),
             eq(auditEvents.detail, 'mfa_enrolled'),
           ),
         );

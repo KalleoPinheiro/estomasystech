@@ -30,11 +30,11 @@ export async function mfaContext(authSecret: string) {
     recordAuditNow(services.auditEvents, null, {
       action: 'read',
       resourceType: 'session',
-      resourceId: account.email,
+      resourceId: account.id,
       detail,
       actorOverride: {
         role: account.role,
-        id: account.email,
+        id: account.id,
         clinicId: account.clinicId,
       },
     });

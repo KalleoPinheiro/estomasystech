@@ -11,12 +11,12 @@ last_reviewed: 2026-09-28
 - **Data:** 2026-09-28
 - **Status:** aceito (decisão do dono do produto na discovery do portal do Super Admin, pergunta 10; issues [#210](https://github.com/KalleoPinheiro/vitta-flow/issues/210) itens 1 e 4 e [#214](https://github.com/KalleoPinheiro/vitta-flow/issues/214))
 - **Domínios afetados:** acesso
-- **Emenda:** [ADR-009](./009-recuperacao-de-emergencia-do-super-admin.md) — o evento da recuperação deixa de cair na clínica legada e passa a ser evento de plataforma, sem mudar o script
+- **Emenda:** [ADR-009](./009-recuperacao-de-emergencia-do-super-admin.md) — o evento da recuperação deixa de cair na clínica legada e passa a ser evento de plataforma, sem mudar o script. [ADR-112](./112-login-na-trilha-pelo-id-da-conta.md) — o login deixa de gravar o e-mail em `resource_id` e `actor_id` (#887)
 
 ## Contexto
 
-`audit_events.clinic_id` era obrigatório. Evento sem empresa — login com falha (o `resourceId` é o
-e-mail digitado), segundo fator e recuperação do Super Admin, importação do catálogo de taxonomia
+`audit_events.clinic_id` era obrigatório. Evento sem empresa — login com falha (o `resourceId` era o
+e-mail digitado; desde o [ADR-112](./112-login-na-trilha-pelo-id-da-conta.md) é o id da conta, ou vazio), segundo fator e recuperação do Super Admin, importação do catálogo de taxonomia
 — caía na `legacy-clinic` (`resolveActor`, `src/lib/audit.ts`). Com várias clínicas, o Admin da
 clínica que ocupa a `legacy-clinic` veria as tentativas de login de todas as outras. Além disso,
 `DrizzleAuditEventRepository` era montado sem empresa: cada chamador precisava lembrar de filtrar

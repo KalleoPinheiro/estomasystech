@@ -255,12 +255,11 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const { userAccounts, auditEvents } = await getRepositories(
         clinicScope('legacy-clinic'),
       );
-      await userAccounts.save(
-        buildUserAccount({
-          email: 'auditoria-ok@clinica.com',
-          passwordHash: await hashPassword('s3nh@auditoria'),
-        }),
-      );
+      const account = buildUserAccount({
+        email: 'auditoria-ok@clinica.com',
+        passwordHash: await hashPassword('s3nh@auditoria'),
+      });
+      await userAccounts.save(account);
 
       const response = await loginRoute.POST(
         jsonRequest(
@@ -275,10 +274,10 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const events = await auditEvents.findAll();
       const loginEvent = events.find(
         (event) =>
-          event.resourceType === 'session' &&
-          event.actorId === 'auditoria-ok@clinica.com',
+          event.resourceType === 'session' && event.actorId === account.id,
       );
       expect(loginEvent).toBeDefined();
+      expect(loginEvent?.resourceId).toBe(account.id);
       expect(loginEvent?.action).toBe('read');
       expect(loginEvent?.actorRole).toBe('company_admin');
       expect(loginEvent?.clinicId).toBe('legacy-clinic');
@@ -300,6 +299,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
           passwordHash: await hashPassword('s3nh@correta'),
         }),
       );
+      const before = new Set(
+        (await auditEvents.findAll()).map((event) => event.id),
+      );
 
       const response = await loginRoute.POST(
         jsonRequest(
@@ -317,10 +319,13 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const events = await auditEvents.findAll();
       const failEvent = events.find(
         (event) =>
+          !before.has(event.id) &&
           event.resourceType === 'session' &&
-          event.actorId === 'auditoria-falha-senha@clinica.com',
+          event.detail === 'invalid_credentials' &&
+          event.actorId === '',
       );
       expect(failEvent).toBeDefined();
+      expect(failEvent?.resourceId).toBe('');
       expect(failEvent?.detail).toBe('invalid_credentials');
       expect(failEvent?.actorRole).toBe('anonymous');
       expect(failEvent?.clinicId).toBeNull();
@@ -333,6 +338,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const { getRepositories } = await import('@/infrastructure/container');
       // Login falho é evento de plataforma (B6): só o escopo de sistema o vê.
       const { auditEvents } = await getRepositories(systemScope());
+      const before = new Set(
+        (await auditEvents.findAll()).map((event) => event.id),
+      );
 
       const response = await loginRoute.POST(
         jsonRequest(
@@ -350,8 +358,11 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const events = await auditEvents.findAll();
       const failEvent = events.find(
         (event) =>
+          !before.has(event.id) &&
           event.resourceType === 'session' &&
-          event.actorId === 'nao-existe-auditoria@clinica.com',
+          event.detail === 'invalid_credentials' &&
+          event.actorId === '' &&
+          event.resourceId === '',
       );
       expect(failEvent).toBeDefined();
       expect(failEvent?.detail).toBe('invalid_credentials');
@@ -366,6 +377,19 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       const { getRepositories } = await import('@/infrastructure/container');
       // Login falho é evento de plataforma (B6): só o escopo de sistema o vê.
       const { auditEvents } = await getRepositories(systemScope());
+      const failedLogins = () =>
+        auditEvents
+          .findAll()
+          .then((events) =>
+            events.filter(
+              (event) =>
+                event.resourceType === 'session' &&
+                event.detail === 'invalid_credentials' &&
+                event.actorId === '' &&
+                event.resourceId === '',
+            ),
+          );
+      const before = (await failedLogins()).length;
 
       const responses: number[] = [];
       for (let attempt = 0; attempt < 6; attempt += 1) {
@@ -384,12 +408,9 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       }
       expect(responses[5]).toBe(429);
 
-      const events = await auditEvents.findAll();
       // As 5 primeiras tentativas (não bloqueadas) geram evento; a 6ª (429) não.
-      const rateLimitEvents = events.filter((event) =>
-        event.actorId.startsWith('rate-limit-audit-'),
-      );
-      expect(rateLimitEvents).toHaveLength(5);
+      // O id fica vazio (#887), então a conta é o acréscimo desta rajada.
+      expect((await failedLogins()).length - before).toBe(5);
     });
 
     it('Dado o mesmo e-mail em duas clínicas com senhas diferentes, Quando POST login com a senha da segunda conta, Então autentica a segunda conta, nunca a primeira (issue #125)', async () => {
@@ -479,8 +500,12 @@ describe('Feature: Rotas de autenticação (login, logout, provedores)', () => {
       expect(body.error).toContain('Email ou senha incorretos');
       const events = await auditEvents.findAll();
       const ambiguousEvent = events.find(
-        (event) => event.resourceType === 'session' && event.actorId === email,
+        (event) =>
+          event.resourceType === 'session' &&
+          event.detail === 'ambiguous_credentials',
       );
+      expect(ambiguousEvent?.actorId).toBe('');
+      expect(ambiguousEvent?.resourceId).toBe('');
       expect(ambiguousEvent?.detail).toBe('ambiguous_credentials');
     });
 
