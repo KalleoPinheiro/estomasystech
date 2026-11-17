@@ -1,33 +1,49 @@
 # Próximos passos (fila única de passagem de bastão, ADR-109)
 
-Atualizada em 2026-11-15. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
+Atualizada em 2026-11-17. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
 PR (tira o que entregou, move o que mudou, acrescenta o que surgiu). Curto, em lista, sem nome de fornecedor.
 O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Estado
 
-- **Produção:** v0.8.0 (commit `e985ec4`), publicada em 2026-11-15 pelo workflow *Release deploy* em um clique
-  (backup `BACKUP_OK`, tag, deploy pela API do Coolify). Cifra completa (#730, #735 a #741, #860) e deploy em um
-  clique (#750 a #752, #851) fechados.
-- **Cadastros convertidos:** `data:reencrypt` regravou 2 linhas em `patients_identity`; a segunda rodada deu
-  «Nada pendente: tudo na chave atual.». Falta só o dono conferir as buscas (nome, CPF, telefone) no app.
-- **Não há release aberta.** Fluxo ADR-109: branch curta da `main`, PR para a `main`, CI como revisor,
-  auto-merge, staging automática, produção em um clique do dono.
-- Rollback da v0.8.0 = restaurar backup (a migração `0072`, CPF único, não é aditiva).
+- **Produção:** v0.8.0 (commit `e985ec4`), publicada em 2026-11-15 pelo workflow *Release deploy* (backup
+  `BACKUP_OK`, tag). Rollback = restaurar backup (a migração `0072`, CPF único, não é aditiva).
+- **`main` à frente da produção.** Isolamento por clínica fechado no código: 45 tabelas com `FORCE ROW LEVEL
+  SECURITY` e o papel `estomasystech_app` (#870 a #874, #889, #894). Login e manutenção usam
+  `DATABASE_SYSTEM_URL` (`BYPASSRLS`). A aplicação usa `DATABASE_APP_URL`, com usuário restrito. E-mail de
+  login cifrado (ADR-111, #742). Essas entregas estão na `main` (Homologação no board EST): ainda não em
+  produção. As issues do GitHub seguem abertas.
+- **A `main` não vai para produção** sem os passos de `docs/engineering/producao.md` § 4.5 a 4.7: papéis,
+  usuário do backup, conexão de sistema, migração com o dono e `data:reencrypt`.
+- **Cadastros da v0.8.0:** `data:reencrypt` regravou 2 linhas em `patients_identity`; a segunda rodada deu
+  «Nada pendente». Falta o dono conferir as buscas (nome, CPF, telefone) no app.
+- **Não há release aberta.** Fluxo ADR-109: branch curta da `main` (`feat/`, `fix/` ou `docs/`), um PR para a
+  `main` por sessão, CI como revisor, squash automático em PR comum com CI verde. Classe 3 espera o clique no
+  Environment `aprovacao-classe-3`, com o link do job e só com o CI verde. Staging publica sozinha a cada
+  merge na `main`. Produção sai pelo workflow *Release deploy*, com o clique no Environment `producao`.
 
 ## Fila (ordem)
 
-1. **Próximo bloco de funcionalidade:** o dono ainda não escolheu. Candidatas: **#855** e **#862** (E2E a frio em
-   processo dedicado, P2, a #862 é classe 3).
-2. **Contração da cifra (release seguinte):** drop de `birth_date` e dos índices GIN antigos.
-3. **#742** (e-mail de login cifrado): em PR (classe 3, migração `0074` aditiva, ADR-111). Depois do deploy, o dono roda `npm run data:reencrypt` (agora também `user_accounts_email`) até «Nada pendente»; a contração (hash `NOT NULL`, fim do ramo em claro, drop dos índices antigos) vai na release seguinte.
-4. **Segurança do VPS (P2):** endurecer o SSH (issue aberta junto deste PR; ação do dono no servidor).
-5. Apontamentos menores: **#744**, **#745**, **#802**, **#820**, **#828**, **#830**, **#832**, **#849** (P3), **#715**.
-6. **Perf e backlog:** v0.9.0 (#557 entregue; #558 entregue em PR; #815) e v0.10.0 (#615, #559, #541, #560, #651).
-7. **RLS (spike #729 entregue, ADR-110), em ordem, classe 3, P1:** #870 (papéis e pools; migração `0075`, conferência do dono em `producao.md` § 4.1), #871 (set_config em toda unidade de trabalho; sem migração, `producao.md` § 4.2), #872 (políticas de baixo risco em `supplies`, `partners` e `schedule_closures`; na `main`, migração `0076`, `producao.md` § 4.3; a política só filtra quando a aplicação trocar de papel, depois da #889), #873 (políticas em 35 tabelas clínicas e financeiras, entre elas `procedure_supplies`, que ganha `clinic_id`; em PR, migrações `0077` a `0079`, `producao.md` § 4.4; fora dela `user_accounts`, `google_accounts` e `audit_events`, que a #874 ou um lote de identidade e auditoria precisa mapear), #889 (readiness e boot-migrate com o papel da aplicação; migração `0080`, `producao.md` § 4.5; em PR), #874 (etapa 5: políticas em `clinics`, `auth_tokens`, `user_mfa`, `mfa_recovery_codes` e FORCE nas 45 tabelas; migrações `0082` e `0083`, ordem obrigatória em `producao.md` § 4.7; scripts de operação na conexão de sistema, sem terceiro papel; sobra a troca de `DATABASE_URL` e `DATABASE_SYSTEM_URL` pelo dono). Depois de #557 e #558. Antes da #870, conferir com que papel a produção conecta.
+1. **#887 (P2, cifra e auditoria, classe 3 provável).** A trilha grava o e-mail de login em claro em
+   `audit_events.resource_id` (`action = 'read'`, `resource_type = 'session'`): sucesso usa o e-mail da conta,
+   falha usa o que a pessoa digitou (`src/app/api/auth/login/route.ts`). **Parada na decisão do dono:** id da
+   conta, hash cego (`login-email`), e-mail cifrado, ou claro com retenção curta. Não escolher no código.
+2. **P3 de desempenho e dívida de funcionalidade**, só depois da #887: #855 (página e linhas do paciente num
+   snapshot), #883 (pacote cliente), #815 (complexidade cognitiva). #896 é dívida de teste do RLS (a ordem dos
+   cenários muda o resultado).
+3. **Contração da cifra**, na release seguinte ao `data:reencrypt` em produção: drop de `birth_date` e dos
+   índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do ramo em claro e drop dos índices
+   antigos (ADR-111).
+4. **Esteira e CI por último.** Sem PR só de processo enquanto houver funcionalidade na frente: #744, #745,
+   #802, #820, #828, #830, #832, #849, #650, #862. Desempenho maior, fora desta sessão: #541, #559, #560, #651.
 
 ## Espera o dono
 
-- **#376** (parecer jurídico, condição para paciente real). Conferir as buscas após a conversão da v0.8.0.
-- O check "Veredito do the-judge" já saiu do ruleset da `main` e o `veredito-judge.yml` foi apagado (ADR-109). Auto-merge está habilitado no repositório.
-- Baixa prioridade: mapeamento de estados da integração GitHub↔Linear (fechar a issue move a EST sozinha).
+- **#887:** como a trilha identifica quem tentou entrar.
+- **Publicar a `main`:** `docs/engineering/producao.md` § 4.5 a 4.7 e, em seguida,
+  `npm run data:reencrypt` (também `user_accounts_email`) até «Nada pendente».
+- Conferir as buscas (nome, CPF, telefone) depois da conversão da v0.8.0.
+- **#376** (parecer jurídico, condição para paciente real) e **#654** (rotina mensal de 2026-11).
+- P1 de segurança vem antes de tela, desempenho ou dívida. Mobile first. Cobertura: piso 90% global e 100% no
+  núcleo. `Closes #N` fecha a issue no merge. Homologação no board EST quer dizer na `main` e ainda não em
+  produção.
