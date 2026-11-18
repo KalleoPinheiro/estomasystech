@@ -610,6 +610,20 @@ fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele
 | `ROLLBACK AUTOMÁTICO EXECUTADO` | Fumaça reprovou; a imagem voltou, o banco ficou com as migrações novas | Veja o erro da fumaça, corrija e dispare de novo (a migração não repete: já está aplicada). Se o aviso de migração não aditiva aparecer, confira login e busca; se falhar, restaure o backup (§ 3.1, passo 6) |
 | Fumaça ainda reprova depois do rollback | A produção segue quebrada | Ação humana agora: § 3.1 passos 5 e 6 |
 
+**Prova do rollback (#925).** O caminho de reversão roda em todo `dry_run` e em toda publicação, no job `validar`
+(passo *Ensaiar o rollback automático*), sem segredo e sem tocar a produção: `scripts/release/ensaio-rollback.sh` sobe um
+simulador do Coolify e do site (`ensaio-coolify.ts`, HTTPS local com certificado descartável) e roda os scripts reais
+(`rollback-coolify.sh`, `deploy-coolify.sh`, `fumaca-producao.sh`, `migrar-producao.sh`) e o **texto exato** do passo
+*Rollback automático da imagem* lido de `release-deploy.yml`. Três cenários: (A) a versão nova sobe quebrada, a fumaça
+reprova de propósito, o passo termina vermelho, o commit implantado volta ao da tag anterior, o recurso volta a `HEAD`,
+`desfazer-versao` é chamado e a fumaça pós-rollback passa; (B) o Coolify falha ao reimplantar o commit anterior e o
+recurso **não** fica preso no SHA antigo; (C) sem alvo de rollback, nada é escrito no Coolify. Para ver verde antes de
+publicar: *Actions > Release deploy > Run workflow* com `dry_run` marcado e olhar o passo. Localmente: `npm ci` e
+`bash scripts/release/ensaio-rollback.sh` (precisa de `curl`, `jq` e `openssl`).
+**Limite:** o Coolify é simulado (o contrato da API que os scripts usam); a troca real de container e o proxy só se
+provam num rollback de verdade. A condição de disparo do passo (`failure()` com deploy ok e fumaça vermelha) continua
+coberta pelo teste de estrutura do workflow.
+
 **Prova da release.** Primeiro `dry_run` (ensaio da migração num Postgres descartável + validações; não toca produção nem lê o banco real); depois a publicação: confira no run que *Detectar* lista as
 pendências, que *Migrar* imprime `Migrações aplicadas pelo dono` e a conferência final termina em `SEM_PENDENCIAS` (`MIGRACAO_OK` e `ESTADO_OK` vêm do servidor), e que a fumaça passa; no fim, login nos três papéis, busca de
 paciente e `npm run data:reencrypt` quando a release tocar a cifra.
