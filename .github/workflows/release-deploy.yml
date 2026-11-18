@@ -230,11 +230,12 @@ jobs:
 
       # ADR-113: o que está no ar agora é o alvo do rollback automático (a tag dessa versão). Sem alvo conhecido
       # não se troca o container. Mesma versão no ar (re-disparo): não há para onde voltar, e redeploy igual é inócuo.
+      # O endpoint responde no envelope da API ({ success, data: { version }, error }): ler `.data.version`.
       - name: Registrar a versão em produção (alvo do rollback)
         id: anterior
         shell: bash
         run: |
-          ver="$(curl -fsS -m 15 "$FUMACA_URL/api/health/version" | jq -r '.version // empty')" || ver=""
+          ver="$(curl -fsS -m 15 "$FUMACA_URL/api/health/version" | jq -r '.data.version // .version // empty')" || ver=""
           if ! [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error title=Versão em produção desconhecida::GET /api/health/version não devolveu X.Y.Z. Sem saber o que está no ar não há rollback; confira a produção antes de publicar."
             exit 1
