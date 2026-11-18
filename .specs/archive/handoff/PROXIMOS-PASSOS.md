@@ -35,11 +35,11 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 1. **v0.11.0 (tema: portões que falham abertos e prova do rollback).** Label e projeto `v0.11.0`.
    Sem P0 nem P1 abertos. Até três threads de código, nunca duas no mesmo domínio:
-   1. #820, o job `impacto` pula a mutação se `impacto.ts --mutacao` falhar (P2, classe 3).
-   2. ~~#830~~ `protect-tests.sh` falha fechado (PR desta entrega; classe 3, regra 8).
-   3. #832, a regra 8 não cobre opções do biome, ignores do Stryker nem `if: false` em shard (P2, classe 3).
-   4. #745, CodeQL sem análise do TS por HTTP 504 (P2; migrar para advanced setup).
-   5. #925, provar a reversão automática do Release deploy com a fumaça reprovando de propósito (P2, classe 3).
+   1. ~~#820~~ o job `impacto` falha fechado (PR #927; na `main`, EST em Homologação).
+   2. ~~#830~~ `protect-tests.sh` falha fechado (PR #931; na `main`, EST em Homologação).
+   3. ~~#832~~ a regra 8 cobre opções do biome, ignores do Stryker e `if` de shard (PR #932; na `main`, EST em Homologação).
+   4. #745, CodeQL do TS (P2). Próxima. Medido em 2026-11-18: o default setup roda verde (só 2 de 182 execuções falharam, ambas em 2026-11-08, HTTP 504 do bundle). Ver `docs/engineering/security-scan.md` § CodeQL.
+   5. #925, próxima: provar a reversão automática do Release deploy com a fumaça reprovando de propósito (P2, classe 3).
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
    ramo em claro e drop dos índices antigos, ADR-111): espera só a decisão do dono na #909 (contas anonimizadas e `email_hash`).
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de

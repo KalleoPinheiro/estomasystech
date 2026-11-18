@@ -3,7 +3,7 @@ title: "Varredura de segurança"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-08
+last_reviewed: 2026-11-18
 related:
   - .specs/features/auditoria-seguranca-dependencias/spec.md
   - .specs/features/ruido-scanners-seguranca/spec.md
@@ -76,3 +76,24 @@ Só dependência de produção e só alta/crítica, para um aviso novo em ferram
 moderado sem correção não travar todos os PRs (regra 7). O corte (`release-cut.yml`) segue com
 `npm ci --no-audit`; o `ci.yml` do PR `release → main` cobre. A lista completa continua sendo a
 rotina mensal: `npm audit` e comparação com a tabela acima.
+
+## CodeQL (#745)
+
+O CodeQL roda em **default setup** (workflow dinâmico `CodeQL`, sem arquivo em `.github/workflows/`), com as
+linguagens `actions`, `javascript-typescript` e `python`, em PR, em push na `main` e semanalmente. O
+`javascript-typescript` analisa o TypeScript de verdade: o job `Analyze (javascript-typescript)` leva ~2m45 e
+não é pulado.
+
+**Medição de 2026-11-18:** 182 execuções desde 2026-11-07; **2 falharam**, as duas em 2026-11-08 (PR #743 e
+push na `main`) com HTTP 504 ao baixar o bundle `codeql-bundle-v2.27.4-javascript-linux64.tar.zst`. Desde então
+todas as execuções (inclusive as dos PRs #927, #931 e #932) passaram. A causa foi o CDN do GitHub, passageira;
+não é o bundle nem o repositório.
+
+**Decisão:** manter o default setup. Migrar para advanced setup (workflow próprio) não se justifica sem nova
+falha: exigiria desligar o default por um admin, duplicaria a análise no intervalo e mudaria o escopo de
+permissões do workflow (classe 3). **Gatilho para reabrir:** duas falhas de download em 30 dias. Aí abra a
+migração: `.github/workflows/codeql.yml` com `github/codeql-action` fixado por SHA, matriz
+`javascript-typescript` e `actions`, `build-mode: none`, e desligue o default no mesmo PR.
+
+CodeQL não é check obrigatório do ruleset: uma falha de download não bloqueia merge, mas deve ser
+reexecutada (Re-run jobs) e conferida no próximo push.
