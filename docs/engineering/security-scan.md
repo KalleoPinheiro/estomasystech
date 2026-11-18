@@ -86,14 +86,14 @@ não é pulado.
 
 **Medição de 2026-11-18:** 182 execuções desde 2026-11-07; **2 falharam**, as duas em 2026-11-08 (PR #743 e
 push na `main`) com HTTP 504 ao baixar o bundle `codeql-bundle-v2.27.4-javascript-linux64.tar.zst`. Desde então
-todas as execuções (inclusive as dos PRs #927, #931 e #932) passaram. A causa foi o CDN do GitHub, passageira;
-não é o bundle nem o repositório.
+todas as execuções (inclusive as dos PRs #927, #931 e #932) passaram. A causa das duas falhas não está confirmada:
+um HTTP 504 não identifica a origem. Se um incidente do GitHub a explicar, cite-o aqui.
 
 **Decisão:** manter o default setup. Migrar para advanced setup (workflow próprio) não se justifica sem nova
 falha: exigiria desligar o default por um admin, duplicaria a análise no intervalo e mudaria o escopo de
 permissões do workflow (classe 3). **Gatilho para reabrir:** duas falhas de download em 30 dias. Aí abra a
 migração: `.github/workflows/codeql.yml` com `github/codeql-action` fixado por SHA, matriz
-`javascript-typescript` e `actions`, `build-mode: none`, e desligue o default no mesmo PR.
+`javascript-typescript`, `python` e `actions`, `build-mode: none` e desligue o default no mesmo PR.
 
 CodeQL não é check obrigatório do ruleset: uma falha de download não bloqueia merge, mas deve ser
 reexecutada (Re-run jobs) e conferida no próximo push.
