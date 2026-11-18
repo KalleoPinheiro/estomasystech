@@ -1,6 +1,6 @@
 # Próximos passos (fila única de passagem de bastão, ADR-109)
 
-Atualizada em 2026-11-17. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
+Atualizada em 2026-11-18. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
 PR (tira o que entregou, move o que mudou, acrescenta o que surgiu). Curto, em lista, sem nome de fornecedor.
 O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
@@ -9,65 +9,51 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 - **Produção:** v0.9.1 (commit `62026276`), publicada em 2026-11-18 pelo *Release deploy* real (run 44217263061): migração `0084`
   aplicada pelo dono antes do deploy, fumaça verde, tag `v0.9.1`, sem rollback. Lista e busca de Pacientes conferidas pelo dono.
   Rollback = redeploy da tag anterior (`0084` só amplia); a `0072` (CPF único) segue não aditiva para voltar abaixo da v0.8.0.
-- **`main` à frente da produção.** Isolamento por clínica fechado no código: 45 tabelas com `FORCE ROW LEVEL
-  SECURITY` e o papel `estomasystech_app` (#870 a #874, #889, #894). Login e manutenção usam
-  `DATABASE_SYSTEM_URL` (`BYPASSRLS`). A aplicação usa `DATABASE_APP_URL`, com usuário restrito. E-mail de
-  login cifrado (ADR-111, #742). Essas entregas estão na `main` (Homologação no board EST): ainda não em
-  produção. As issues do GitHub seguem abertas.
-- **A `main` não vai para produção** sem os passos de `docs/engineering/producao.md` § 4.5 a 4.7: papéis,
-  usuário do backup, conexão de sistema, migração com o dono e `data:reencrypt`.
-- **Cadastros da v0.8.0:** `data:reencrypt` regravou 2 linhas em `patients_identity`; a segunda rodada deu
-  «Nada pendente». Falta o dono conferir as buscas (nome, CPF, telefone) no app.
-- **#887:** o login grava o id da conta em `resource_id` e `actor_id`; sem conta identificada, os dois
-  ficam vazios (ADR-112). Eventos antigos não são reescritos.
+- **A `main` não está à frente da produção em funcionalidade.** Tudo da v0.10.0 já está na v0.9.1: isolamento por clínica
+  (45 tabelas com `FORCE ROW LEVEL SECURITY`, #870 a #874, #889, #894), e-mail de login cifrado (ADR-111, #742), login na
+  trilha pelo id da conta (#887, ADR-112), Web Vitals de campo e medição final (#903 a #905), CLS da ficha (#906),
+  comparação de fotos à escolha (#907), snapshot único em `findAll` (#855), RLS independente da ordem (#896), agenda
+  sob demanda e índice `0084`. Issues e EST dessas entregas estão fechadas e em produção.
+- **Cifra em produção conferida:** o script de integridade de 2026-11-17 provou 84 de 84 carimbos de migração, hashes `0074` a
+  `0083` iguais aos do Drizzle e nenhum dado em claro (incluindo e-mail de login). O `data:reencrypt` já rodou; não há divergência
+  de migração a conferir.
+- **Release deploy** migra com o dono **antes** do deploy, trava se a migração falhar, reverte a imagem se a fumaça reprovar e
+  ensaia a migração no `dry_run` (ADR-113, `producao.md` § 4.9); Auto Deploy do Coolify desligado, o preflight confere. Provado em
+  produção na v0.9.1. **Não provado:** a reversão automática (só em teste) e por que a produção já respondia 0.9.1 antes do
+  redisparo.
 - **Não há release aberta.** Fluxo ADR-109: branch curta da `main` (`feat/`, `fix/` ou `docs/`), um PR para a
   `main` por sessão, CI como revisor, squash automático em PR comum com CI verde. Classe 3 espera o clique no
   Environment `aprovacao-classe-3`, com o link do job e só com o CI verde. Staging publica sozinha a cada
   merge na `main`. Produção sai pelo workflow *Release deploy*, com o clique no Environment `producao`.
-- **Staging da `main` `7bfccf83` (v0.9.0) falhou** só em `GET /api/patients` (500 nos três papéis; a página em si
-  abria). O minify do servidor apagava o nome de `ClinicScopedPool`, o `BEGIN ISOLATION LEVEL REPEATABLE READ`
-  da listagem rodava dentro de outra transação e o Postgres recusava (25001). O `instanceof Pool` corrige.
-  Publicar a v0.9.0 espera este merge e a staging verde; não tageie o SHA que falhou.
-
-- **Incidente da v0.9.x resolvido** (postmortem de 2026-11-17). O *Release deploy* migra com o dono **antes** do deploy, trava se a
-  migração falhar, reverte a imagem se a fumaça reprovar e ensaia a migração no `dry_run` (ADR-113, `producao.md` § 4.9). O preparo
-  do § 4.9 está feito (incluindo Auto Deploy desligado, que o preflight confere). Provado em produção na v0.9.1. Não provado: o
-  rollback automático (só em teste) e por que a produção já respondia 0.9.1 antes do redisparo. Conferir se um `db:migrate` com a
-  URL do dono não acha divergência nas migrações `0074` a `0083` aplicadas à mão.
+- **Aprendizado do incidente 11-17:** o minify do servidor apagava nomes de classe e o `instanceof` entre módulos falhava
+  (#918, agora com teste no gate). Cobertura do shard 3/4 falhou uma vez e passou no rerun: se repetir, abrir issue.
 
 ## Fila (ordem)
 
-1. **v0.10.0 (tema: ficha e agenda rápidas e estáveis, com evolução clínica mais legível; sem tocar em auth,
-   auditoria, cifra ou release).** Label e projeto `v0.10.0`. Ordem:
-   1. #559, Web Vitals de campo e medição final (P2, M), em três tickets: #903 (coleta sem PII: **já entregue**,
-      ADR-086 e `producao.md` § 9.4.1; falta só ler o log da staging), #904 (bundle, meta nova: nenhuma rota
-      acima da linha de base, errata 3 do ADR-080) e #905 (medição final: **feita**, retrato em
-      `performance-front-medicao-final-2026-11.md`; LCP, CLS e hidratação ok, mas JS acima da base em 24 das 28
-      rotas; falta ler a staging e decidir sobre o JS antes de fechar #559 e #541).
-   2. #906, CLS de 0,49 na ficha em 390 px (P2, P).
-   3. #907, comparar duas fotos da condição à escolha (P2, M; hoje só primeira × última).
-   4. #855, página e linhas do paciente num snapshot — **entregue** (#915). A listagem na staging da v0.9.0
-      respondia 500 até o pool da clínica continuar `instanceof Pool` depois do minify.
-   5. #896, cenários de RLS independentes da ordem (P3, P).
-   6. #560, spike de PPR e CSP por hash (P3, P), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
-   Até três threads de código, nunca duas no mesmo domínio.
-2. **Contração da cifra**, na release seguinte ao `data:reencrypt` em produção: drop de `birth_date` e dos
-   índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do ramo em claro e drop dos índices
-   antigos (ADR-111).
-3. **Esteira e CI por último** (candidatas à v0.11.0, nesta ordem: #820, #830, #832, portões que falham abertos,
-   e #745, CodeQL sem análise do TS): #744, #745, #802, #820, #828, #830, #832, #849, #862. Dívida e desempenho
-   fora da v0.10.0: #815 (71 funções de complexidade, G), #883 (pacote cliente do `@still-void/ui`, decidir
-   depois de #904), #651 e #650 (precisam de trace), #541 (épico, fecha com a #905).
+1. **v0.11.0 (tema: portões que falham abertos e prova do rollback; depois peso de JS).** Label e projeto `v0.11.0`.
+   Sem P0 nem P1 abertos. Até três threads de código, nunca duas no mesmo domínio:
+   1. #820, o job `impacto` pula a mutação se `impacto.ts --mutacao` falhar (P2, classe 3).
+   2. #830, `protect-tests.sh` falha aberto sem `ROOT_DIR` ou `tsx` (P2, classe 3, regra 8).
+   3. #832, a regra 8 não cobre opções do biome, ignores do Stryker nem `if: false` em shard (P2, classe 3).
+   4. #745, CodeQL sem análise do TS por HTTP 504 (P2; migrar para advanced setup).
+   5. #925, provar a reversão automática do Release deploy com a fumaça reprovando de propósito (P2, classe 3).
+   6. #914, causa dos 2 a 15 KB gz a mais de JS na casca (P3, diagnóstico); depois #883 (pacote cliente do `@still-void/ui`),
+      só se a causa apontar para a biblioteca. #541 fecha com a decisão.
+   7. #560, spike de PPR e CSP por hash (P3), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
+2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
+   ramo em claro e drop dos índices antigos, ADR-111): espera só a decisão do dono na #909 (contas anonimizadas e `email_hash`).
+3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
+   trace), #862, #849, #828, #802, #744.
 4. **Funcionalidade que espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
    (a clínica aceita custo por mensagem?), RM-16 oferta de vaga da lista de espera (prazo da oferta), RM-15
    relatório ao parceiro (cadência e canal), RM-05 pagamento online (PSP) e RM-17 TISS.
 
 ## Espera o dono
 
-- **Publicar a `main`:** `docs/engineering/producao.md` § 4.5 a 4.7 e, em seguida,
-  `npm run data:reencrypt` (também `user_accounts_email`) até «Nada pendente».
-- Conferir as buscas (nome, CPF, telefone) depois da conversão da v0.8.0.
-- **#376** (parecer jurídico, condição para paciente real) e **#654** (rotina mensal de 2026-11).
+- **#909:** decidir como contas anonimizadas ficam com `email_hash` antes do `NOT NULL`.
+- **#376** (parecer jurídico, condição para paciente real), **#654** (rotina mensal de 2026-11) e EST-16 (credenciais do
+  Google Agenda em produção).
+- Atualizar o Traefik (3.7.15 para 3.7.16) em horário calmo e endurecer o SSH do VPS, conforme combinado.
 - P1 de segurança vem antes de tela, desempenho ou dívida. Mobile first. Cobertura: piso 90% global e 100% no
   núcleo. `Closes #N` fecha a issue no merge. Homologação no board EST quer dizer na `main` e ainda não em
   produção.
