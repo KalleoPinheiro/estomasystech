@@ -30,20 +30,20 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-1. **v0.11.0 (tema: portões que falham abertos e prova do rollback; depois peso de JS).** Label e projeto `v0.11.0`.
+1. **v0.11.0 (tema: portões que falham abertos e prova do rollback).** Label e projeto `v0.11.0`.
    Sem P0 nem P1 abertos. Até três threads de código, nunca duas no mesmo domínio:
    1. #820, o job `impacto` pula a mutação se `impacto.ts --mutacao` falhar (P2, classe 3).
    2. #830, `protect-tests.sh` falha aberto sem `ROOT_DIR` ou `tsx` (P2, classe 3, regra 8).
    3. #832, a regra 8 não cobre opções do biome, ignores do Stryker nem `if: false` em shard (P2, classe 3).
    4. #745, CodeQL sem análise do TS por HTTP 504 (P2; migrar para advanced setup).
    5. #925, provar a reversão automática do Release deploy com a fumaça reprovando de propósito (P2, classe 3).
-   6. #914, causa dos 2 a 15 KB gz a mais de JS na casca (P3, diagnóstico); depois #883 (pacote cliente do `@still-void/ui`),
-      só se a causa apontar para a biblioteca. #541 fecha com a decisão.
-   7. #560, spike de PPR e CSP por hash (P3), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
+   6. #560, spike de PPR e CSP por hash (P3), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
    ramo em claro e drop dos índices antigos, ADR-111): espera só a decisão do dono na #909 (contas anonimizadas e `email_hash`).
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
-   trace), #862, #849, #828, #802, #744.
+   trace), #862, #849, #828, #802, #744. **JS:** a #914 aceitou o delta da casca (+10,6 KB gz na equipe: 404, `error`,
+   `loading`, Web Vitals); o chunk cliente do `@still-void/ui` não cresceu (43,9 KB gz desde outubro), então a #883 não
+   entra na fila. Nota em `docs/engineering/performance-front-js-casca-2026-11.md`. A #541 fecha com essa decisão.
 4. **Funcionalidade que espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
    (a clínica aceita custo por mensagem?), RM-16 oferta de vaga da lista de espera (prazo da oferta), RM-15
    relatório ao parceiro (cadência e canal), RM-05 pagamento online (PSP) e RM-17 TISS.
