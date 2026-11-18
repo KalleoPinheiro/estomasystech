@@ -99,9 +99,17 @@ jobs:
           # Mutação só nos arquivos de regra alterados (ADR-051). No PR `release/* → main` (lote inteiro) ela já
           # rodou em cada PR do lote e roda inteira na rotina mensal: o diff da release não a repete. O `hotfix/*`
           # vai direto à `main` sem lote anterior: a mutação roda nele.
+          # Falha fechada (#820): erro do `impacto.ts --mutacao` ou lista fora do formato (caminhos .ts separados por
+          # vírgula) reprova este job, e o `Gate do PR` reprova junto. Nunca vira "nada a mutar" em silêncio.
           mutacao=""
           if [ "$so_doc" != true ] && { [ "$ALVO" != main ] || [ "${ORIGEM#release/}" = "$ORIGEM" ]; }; then
-            mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao)
+            if ! mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao); then
+              echo "::error::impacto.ts --mutacao falhou: a mutação não pode ser decidida"; exit 1
+            fi
+            # Vazio é legítimo (nenhum arquivo de regra); o resto precisa ser lista de caminhos .ts sem entrada vazia.
+            if [ -n "$mutacao" ] && ! [[ "$mutacao" =~ ^[A-Za-z0-9_./@-]+\.ts(,[A-Za-z0-9_./@-]+\.ts)*$ ]]; then
+              echo "::error::impacto.ts --mutacao devolveu saída inesperada: $mutacao"; exit 1
+            fi
           fi
           rodar_mutacao=true
           if [ -z "$mutacao" ]; then rodar_mutacao=false; fi
@@ -351,7 +359,12 @@ jobs:
       - name: Stryker (só os arquivos alterados)
         env:
           ALVOS: ${{ needs.impacto.outputs.mutacao }}
-        run: npm run test:mutacao -- --incremental --mutate "$ALVOS"
+        run: |
+          # Falha fechada (#820): sem alvo ou sem relatório, a mutação não rodou e o job reprova.
+          [ -n "$ALVOS" ] || { echo "::error::mutação sem alvos"; exit 1; }
+          rm -f reports/mutation/mutation.json
+          npm run test:mutacao -- --incremental --mutate "$ALVOS"
+          [ -s reports/mutation/mutation.json ] || { echo "::error::Stryker não gerou reports/mutation/mutation.json"; exit 1; }
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
@@ -399,7 +412,8 @@ jobs:
           conferir integracao "$R_INTEGRACAO" "$([ "$SO_DOC" = true ] && echo false || echo true)"
           conferir e2e-prod "$R_PROD" "$RODAR_E2E"
           conferir e2e-dev "$R_DEV" "$RODAR_E2E"
-          conferir mutacao "${R_MUTACAO:-skipped}" "${RODAR_MUTACAO:-false}"
+          # Falha fechada (#820): só o `false` exato dispensa a mutação; vazio ou qualquer outro valor exige `success`.
+          conferir mutacao "${R_MUTACAO:-skipped}" "$([ "$RODAR_MUTACAO" = false ] && echo false || echo true)"
           # Falha fechada: só o `false` exato dispensa o job; vazio ou qualquer outro valor exige `success`.
           conferir compat-migracao "${R_COMPAT:-skipped}" "$([ "$RODAR_COMPAT" = false ] && echo false || echo true)"
           exit $falhou

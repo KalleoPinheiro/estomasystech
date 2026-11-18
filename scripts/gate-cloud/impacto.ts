@@ -162,6 +162,10 @@ function mutationTargetsWithConfig(base: string, changed: string[]): string[] {
 function main(): void {
   const base = detectBase();
   const diff = spawnSync('git', ['diff', '--name-only', '--diff-filter=d', `${base}...HEAD`], { encoding: 'utf8' });
+  if (diff.status !== 0) {
+    console.error(`git diff falhou (${diff.status}): ${diff.stderr}`);
+    process.exit(1);
+  }
   const changed = diff.stdout.split('\n').filter(Boolean);
   const specs = readdirSync('e2e')
     .filter((f) => f.endsWith('.spec.ts'))
