@@ -66,7 +66,19 @@ if [ "$code" != 200 ] || [ -z "$original" ]; then
 fi
 [[ "$original" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "git_commit_sha do recurso com formato inesperado"; original=""; exit 1; }
 
+# Auto Deploy ligado faz o push na `main` implantar o código ANTES de o workflow migrar o banco (incidente da v0.9.1).
+# O campo vem como is_auto_deploy_enabled (raiz ou em settings); ausente = a API não informa: avisa, não reprova.
+auto="$(jq -r '[.is_auto_deploy_enabled, .settings.is_auto_deploy_enabled] | map(select(. != null)) | if length == 0 then "ausente" else .[0] | tostring end' "$tmp" 2> /dev/null)"
 if [ "$modo" = preflight ]; then
+  case "$auto" in
+    true)
+      echo "::error title=Auto Deploy ligado no Coolify::cada merge na main implanta o código antes da migração do banco. Desligue Auto Deploy no app (Coolify > Configurações avançadas) e dispare de novo."
+      original=""
+      exit 1
+      ;;
+    false) echo "Auto Deploy desligado no Coolify." ;;
+    *) echo "::warning title=Auto Deploy não conferido::a API do Coolify não informou is_auto_deploy_enabled. Confirme no painel que Auto Deploy está desligado (producao.md § 4.9)." ;;
+  esac
   code="$(api "/api/v1/applications/$COOLIFY_APP_UUID" PATCH "{\"git_commit_sha\":\"$original\"}")"
   echo "PATCH /applications (mesmo valor) -> HTTP $code"
   if [ "$code" != 200 ]; then

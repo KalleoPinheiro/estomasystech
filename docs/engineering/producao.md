@@ -583,6 +583,10 @@ fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele
 6. 💻 GitHub, *Environment* `producao`: crie o segredo `VPS_MIGRATE_SSH_KEY` (a chave privada inteira).
 7. 💻 Coolify: o token de `COOLIFY_TOKEN` precisa das habilidades **read, write e deploy** (write é o que permite
    reverter). O workflow prova isso antes do backup, sem mudar nada (PATCH com o valor atual).
+8. 💻 Coolify: **desligue Auto Deploy** no app (Configurações avançadas). Ligado, todo merge na `main` implanta o código
+   sozinho, antes de qualquer migração: foi como a produção ficou com código novo e banco velho. O preflight lê
+   `is_auto_deploy_enabled` pela API e **reprova** se estiver ligado; se a API não informar o campo, só avisa, e a
+   conferência no painel fica por sua conta. Depois de desligar, publicar só pelo *Release deploy*.
 
 **O que o workflow faz** (`scripts/release/migrar-producao.sh`, `ci-migrate.sh`, `rollback-coolify.sh`):
 
@@ -601,7 +605,7 @@ fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele
 | Sintoma no run | O que significa | O que fazer |
 | --- | --- | --- |
 | Falha em *Exigir a chave de migração* ou *Detectar migrações pendentes* | O preparo acima não foi feito, ou o ssh não entrou | Nada foi alterado em produção. Refaça o preparo e dispare de novo |
-| Falha em *Conferir que o rollback é possível* | Token do Coolify sem `write` | Nada foi alterado. Dê a habilidade e dispare de novo |
+| Falha em *Conferir que o rollback é possível* | Token do Coolify sem `write`, **ou** Auto Deploy ligado no app (a anotação diz qual) | Nada foi alterado. Sem `write`: dê a habilidade ao token. Com Auto Deploy ligado: desligue no app do Coolify (passo 8). Depois dispare de novo |
 | Falha em *Migrar o banco com o dono* | Uma migração deu erro, **ou** a resposta do VPS se perdeu depois do commit, **ou** a conferência final falhou | Erro dentro do SQL desfaz a transação; já a falha depois do `COMMIT` (ssh caiu, leitura final) deixa migrações aplicadas sem o deploy. Antes de corrigir ou repetir, rode `bash scripts/release/migrar-producao.sh detectar` (só lê). Com pendências, nada foi gravado: corrija num PR novo. Sem pendências, o esquema novo já está no ar sob o código antigo: siga por PR novo e confira login e busca. O backup já existe |
 | `ROLLBACK AUTOMÁTICO EXECUTADO` | Fumaça reprovou; a imagem voltou, o banco ficou com as migrações novas | Veja o erro da fumaça, corrija e dispare de novo (a migração não repete: já está aplicada). Se o aviso de migração não aditiva aparecer, confira login e busca; se falhar, restaure o backup (§ 3.1, passo 6) |
 | Fumaça ainda reprova depois do rollback | A produção segue quebrada | Ação humana agora: § 3.1 passos 5 e 6 |

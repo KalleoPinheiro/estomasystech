@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import {
   chmodSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -302,5 +303,34 @@ describe('Feature: o banco nunca fica atrás do código (ADR-113, postmortem da 
     expect(validar).toContain('bash scripts/release/ensaio-migracao.sh');
     expect(validar).not.toContain('secrets.');
     expect(validar).not.toContain('inputs.dry_run');
+  });
+
+  it('Dado o envelope real de GET /api/health/version, Quando registrar a versão em produção, Então lê data.version (regressão da v0.9.1)', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'versao-envelope-'));
+    try {
+      const bin = path.join(dir, 'bin');
+      mkdirSync(bin);
+      writeFileSync(
+        path.join(bin, 'curl'),
+        '#!/bin/bash\necho \'{"success":true,"data":{"version":"0.9.1"},"error":null}\'\n',
+        { mode: 0o755 },
+      );
+      const saida = path.join(dir, 'saida');
+      writeFileSync(saida, '');
+      const script = passo('producao', 'Registrar a versão em produção');
+      execFileSync('bash', ['-e', '-o', 'pipefail', '-c', script], {
+        env: {
+          ...process.env,
+          PATH: `${bin}:/usr/bin:/bin`,
+          FUMACA_URL: 'https://exemplo.invalid',
+          VERSION: '0.9.1',
+          GITHUB_OUTPUT: saida,
+        },
+        stdio: 'ignore',
+      });
+      expect(readFileSync(saida, 'utf8')).toContain('versao=0.9.1');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

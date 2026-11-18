@@ -81,7 +81,7 @@ minificado.
 ## Consequências
 
 - **Setup único do dono** (`producao.md` § 4.9): script e sudoers no VPS, chave SSH `VPS_MIGRATE_SSH_KEY` no
-  *Environment* `producao`, `COOLIFY_TOKEN` com a habilidade **write**. Sem eles o workflow para **antes** do
+  *Environment* `producao`, Auto Deploy do Coolify **desligado** (o preflight reprova se a API disser que está ligado), `COOLIFY_TOKEN` com a habilidade **write**. Sem eles o workflow para **antes** do
   backup, nunca no meio.
 - O rollback da imagem só é seguro se o código antigo funciona sobre o esquema novo. O lint de migração aditiva
   classifica `0074` a `0083` como não aditivas (falha fechada: criam papel, política, `FORCE`). Nesse caso o
