@@ -34,6 +34,8 @@ type Api = {
   deployHttp?: number;
   status?: string;
   commit?: string;
+  /** is_auto_deploy_enabled devolvido pelo GET; omitido = a API não informa. */
+  autoDeploy?: boolean;
 };
 
 function curl(a: Api): string {
@@ -49,7 +51,7 @@ metodo="$(printf '%s' "$cfg" | sed -n 's/^request = "\\(.*\\)"$/\\1/p')"
 corpo="$(printf '%s' "$cfg" | sed -n 's/^data = "\\(.*\\)"$/\\1/p' | tr -d '\\\\')"
 echo "$metodo $url $corpo" >> "${dir}/chamadas"
 case "$metodo $url" in
-  "GET "*"/api/v1/applications/"*) echo '{"git_commit_sha":"${a.atual ?? 'HEAD'}"}' > "$out"; printf ${a.getHttp ?? 200} ;;
+  "GET "*"/api/v1/applications/"*) echo '{"git_commit_sha":"${a.atual ?? 'HEAD'}"${a.autoDeploy === undefined ? '' : `,"is_auto_deploy_enabled":${a.autoDeploy}`}}' > "$out"; printf ${a.getHttp ?? 200} ;;
   "PATCH "*)
     n=$(( $(cat "${dir}/n-patch" 2>/dev/null || echo 0) + 1 )); echo $n > "${dir}/n-patch"
     set -- ${patch}; eval "printf \\\${$n}" ;;
@@ -87,6 +89,25 @@ function rodar(modo: string, a: Api, env: Record<string, string> = {}) {
 }
 
 describe('Feature: rollback-coolify.sh preflight (ADR-113)', () => {
+  it('Dado Auto Deploy ligado no Coolify, Quando o preflight rodar, Então reprova antes de qualquer PATCH', () => {
+    const r = rodar('preflight', { autoDeploy: true });
+    expect(r.codigo).toBe(1);
+    expect(r.saida).toContain('Auto Deploy ligado no Coolify');
+    expect(r.chamadas.some((c) => c.startsWith('PATCH'))).toBe(false);
+  });
+
+  it('Dado Auto Deploy desligado, Quando o preflight rodar, Então segue e prova a escrita', () => {
+    const r = rodar('preflight', { autoDeploy: false });
+    expect(r.codigo).toBe(0);
+    expect(r.saida).toContain('Auto Deploy desligado');
+  });
+
+  it('Dado a API sem o campo, Quando o preflight rodar, Então avisa para conferir no painel e não reprova', () => {
+    const r = rodar('preflight', {});
+    expect(r.codigo).toBe(0);
+    expect(r.saida).toContain('Auto Deploy não conferido');
+  });
+
   it('Dado um token que escreve, Então faz PATCH com o próprio valor e sai 0', () => {
     const r = rodar('preflight', { atual: 'HEAD' });
     expect(r.codigo).toBe(0);

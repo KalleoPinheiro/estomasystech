@@ -583,6 +583,10 @@ fumaça reprovar. **Preparo único do dono, antes do próximo disparo** (sem ele
 6. 💻 GitHub, *Environment* `producao`: crie o segredo `VPS_MIGRATE_SSH_KEY` (a chave privada inteira).
 7. 💻 Coolify: o token de `COOLIFY_TOKEN` precisa das habilidades **read, write e deploy** (write é o que permite
    reverter). O workflow prova isso antes do backup, sem mudar nada (PATCH com o valor atual).
+8. 💻 Coolify: **desligue Auto Deploy** no app (Configurações avançadas). Ligado, todo merge na `main` implanta o código
+   sozinho, antes de qualquer migração: foi como a produção ficou com código novo e banco velho. O preflight lê
+   `is_auto_deploy_enabled` pela API e **reprova** se estiver ligado; se a API não informar o campo, só avisa, e a
+   conferência no painel fica por sua conta. Depois de desligar, publicar só pelo *Release deploy*.
 
 **O que o workflow faz** (`scripts/release/migrar-producao.sh`, `ci-migrate.sh`, `rollback-coolify.sh`):
 
