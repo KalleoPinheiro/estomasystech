@@ -27,6 +27,9 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   merge na `main`. Produção sai pelo workflow *Release deploy*, com o clique no Environment `producao`.
 - **Aprendizado do incidente 11-17:** o minify do servidor apagava nomes de classe e o `instanceof` entre módulos falhava
   (#918, agora com teste no gate). Cobertura do shard 3/4 falhou uma vez e passou no rerun: se repetir, abrir issue.
+- **#560 (PPR e CSP por hash): rejeitado.** Nota em `.specs/spike-ppr-csp-hash-560.md`. Sem flag na `main` e sem ADR
+  novo: a ADR-069 § 4 segue. O build com `cacheComponents` não gera casca; o TTFB da casca da equipe é 24 ms contra
+  LCP 804 ms em 360 px (3%).
 
 ## Fila (ordem)
 
@@ -37,13 +40,13 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    3. #832, a regra 8 não cobre opções do biome, ignores do Stryker nem `if: false` em shard (P2, classe 3).
    4. #745, CodeQL sem análise do TS por HTTP 504 (P2; migrar para advanced setup).
    5. #925, provar a reversão automática do Release deploy com a fumaça reprovando de propósito (P2, classe 3).
-   6. #560, spike de PPR e CSP por hash (P3), só se sobrar capacidade; nota em `.specs/`, sem merge de código.
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
    ramo em claro e drop dos índices antigos, ADR-111): espera só a decisão do dono na #909 (contas anonimizadas e `email_hash`).
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
    trace), #862, #849, #828, #802, #744. **JS:** a #914 aceitou o delta da casca (+10,6 KB gz na equipe: 404, `error`,
    `loading`, Web Vitals); o chunk cliente do `@still-void/ui` não cresceu (43,9 KB gz desde outubro), então a #883 não
    entra na fila. Nota em `docs/engineering/performance-front-js-casca-2026-11.md`. A #541 fecha com essa decisão.
+   #560 está fora: a nota rejeitou o PPR.
 4. **Funcionalidade que espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
    (a clínica aceita custo por mensagem?), RM-16 oferta de vaga da lista de espera (prazo da oferta), RM-15
    relatório ao parceiro (cadência e canal), RM-05 pagamento online (PSP) e RM-17 TISS.
