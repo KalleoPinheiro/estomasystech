@@ -168,6 +168,8 @@ describe('gate-pr.yml · job compat-migracao', () => {
       R_INTEGRACAO: 'success',
       R_PROD: 'skipped',
       R_DEV: 'skipped',
+      RODAR_MUTACAO: 'false',
+      R_MUTACAO: 'skipped',
     };
     const codigo = (rodar: string, resultado: string): number | null =>
       spawnSync('bash', ['-e', '-o', 'pipefail', '-c', corpo.join('\n')], {

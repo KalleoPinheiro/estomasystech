@@ -169,6 +169,8 @@ function matriz(): Array<{ nome: string; env: Env; esperado: number }> {
     R_DEV: 'success',
     RODAR_COMPAT: 'false',
     R_COMPAT: 'skipped',
+    RODAR_MUTACAO: 'false',
+    R_MUTACAO: 'skipped',
   };
   const pulado: Env = {
     R_POLITICA: 'success',
