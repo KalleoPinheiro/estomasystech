@@ -19,8 +19,8 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   de migração a conferir.
 - **Release deploy** migra com o dono **antes** do deploy, trava se a migração falhar, reverte a imagem se a fumaça reprovar e
   ensaia a migração no `dry_run` (ADR-113, `producao.md` § 4.9); Auto Deploy do Coolify desligado, o preflight confere. Provado em
-  produção na v0.9.1. **Não provado:** a reversão automática (só em teste) e por que a produção já respondia 0.9.1 antes do
-  redisparo.
+  produção na v0.9.1. A reversão automática é ensaiada em todo `dry_run` e publicação (#925: `ensaio-rollback.sh` contra simulador do Coolify, `producao.md` § 4.9);
+  só a troca real de container não foi vista. **Não provado:** por que a produção já respondia 0.9.1 antes do redisparo.
 - **Não há release aberta.** Fluxo ADR-109: branch curta da `main` (`feat/`, `fix/` ou `docs/`), um PR para a
   `main` por sessão, CI como revisor, squash automático em PR comum com CI verde. Classe 3 espera o clique no
   Environment `aprovacao-classe-3`, com o link do job e só com o CI verde. Staging publica sozinha a cada
@@ -39,7 +39,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    2. ~~#830~~ `protect-tests.sh` falha fechado (PR #931; na `main`, EST em Homologação).
    3. ~~#832~~ a regra 8 cobre opções do biome, ignores do Stryker e `if` de shard (PR #932; na `main`, EST em Homologação).
    4. #745, CodeQL do TS (P2). Próxima. Medido em 2026-11-18: o default setup roda verde (só 2 de 182 execuções falharam, ambas em 2026-11-08, HTTP 504 do bundle). Ver `docs/engineering/security-scan.md` § CodeQL.
-   5. #925, próxima: provar a reversão automática do Release deploy com a fumaça reprovando de propósito (P2, classe 3).
+   5. ~~#925~~ ensaio do rollback automático no `validar` (classe 3; PR aberto, espera o clique do dono).
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
    ramo em claro e drop dos índices antigos, ADR-111): espera só a decisão do dono na #909 (contas anonimizadas e `email_hash`).
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de

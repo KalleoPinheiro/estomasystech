@@ -16,7 +16,7 @@ name: Release deploy
 #   a versão; se a fumaça reprova, REVERTE a imagem para a versão anterior (banco intocado) e deixa o run
 #   vermelho; só com a fumaça verde publica a tag e a Release (`release:publish`, idempotente).
 # - `fumaca`: `scripts/release/fumaca-producao.sh` contra o domínio público, conferindo a versão publicada.
-# - `dry_run`: só o `validar` (inclui o ensaio da migração); a fumaça roda sem conferir versão. Não toca produção,
+# - `dry_run`: só o `validar` (inclui o ensaio da migração e o ensaio do rollback, #925); a fumaça roda sem conferir versão. Não toca produção,
 #   não pede aprovação e não cria tag.
 #
 # Segredo nunca entra em `run:`: vai por `env:` do passo. Nada de `set -x`. Sem `pull_request_target`.
@@ -144,6 +144,12 @@ jobs:
           PGPASSWORD: ensaio
           PGDATABASE: estomasystech
         run: bash scripts/release/ensaio-migracao.sh
+
+      # ADR-113 (#925): o rollback automático da imagem com a fumaça reprovando de propósito, contra um simulador
+      # local do Coolify. Roda o passo "Rollback automático da imagem" deste arquivo, lido do YAML. Sem segredo,
+      # sem produção; o dry_run é a forma de o dono ver isto verde antes de publicar.
+      - name: Ensaiar o rollback automático (fumaça reprovada de propósito)
+        run: bash scripts/release/ensaio-rollback.sh
 
   producao:
     name: Produção (backup, tag e deploy)

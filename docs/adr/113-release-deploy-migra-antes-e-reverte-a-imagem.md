@@ -62,6 +62,9 @@ minificado.
    `migrar` (nada pendente), e compara `(hash, created_at)` com um banco migrado do zero pelo drizzle-orm.
    Sem isso o disparo não chega à aprovação. O estado real de produção é lido (só leitura) no passo
    "Detectar migrações pendentes" do job `producao`, antes do backup.
+   O mesmo job ensaia o **rollback** (#925): `scripts/release/ensaio-rollback.sh` roda os scripts reais e o texto
+   do passo "Rollback automático da imagem" (lido do YAML) contra um simulador local do Coolify, com a fumaça
+   reprovando de propósito. Limite: o Coolify é simulado; a imagem real e o proxy não entram.
 5. **Teste da classe do #918.** `tests/integracao/bundle-minificado.integracao.ts` empacota e **minifica** o
    código do pool com escopo de clínica (esbuild) e o roda contra Postgres real: sem a correção reproduz o
    `25001`. Roda no gate do PR, antes da staging.
