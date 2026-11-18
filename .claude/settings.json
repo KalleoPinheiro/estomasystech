@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$ROOT_DIR\"/.claude/hooks/protect-tests.sh"
+            "command": "\"${ROOT_DIR:-$CLAUDE_PROJECT_DIR}\"/.claude/hooks/protect-tests.sh"
           }
         ]
       },

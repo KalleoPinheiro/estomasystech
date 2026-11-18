@@ -36,7 +36,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 1. **v0.11.0 (tema: portões que falham abertos e prova do rollback).** Label e projeto `v0.11.0`.
    Sem P0 nem P1 abertos. Até três threads de código, nunca duas no mesmo domínio:
    1. #820, o job `impacto` pula a mutação se `impacto.ts --mutacao` falhar (P2, classe 3).
-   2. #830, `protect-tests.sh` falha aberto sem `ROOT_DIR` ou `tsx` (P2, classe 3, regra 8).
+   2. ~~#830~~ `protect-tests.sh` falha fechado (PR desta entrega; classe 3, regra 8).
    3. #832, a regra 8 não cobre opções do biome, ignores do Stryker nem `if: false` em shard (P2, classe 3).
    4. #745, CodeQL sem análise do TS por HTTP 504 (P2; migrar para advanced setup).
    5. #925, provar a reversão automática do Release deploy com a fumaça reprovando de propósito (P2, classe 3).
