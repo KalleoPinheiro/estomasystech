@@ -6,8 +6,9 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Estado
 
-- **Produção:** v0.8.0 (commit `e985ec4`), publicada em 2026-11-15 pelo workflow *Release deploy* (backup
-  `BACKUP_OK`, tag). Rollback = restaurar backup (a migração `0072`, CPF único, não é aditiva).
+- **Produção:** v0.9.1 (commit `62026276`), publicada em 2026-11-18 pelo *Release deploy* real (run 44217263061): migração `0084`
+  aplicada pelo dono antes do deploy, fumaça verde, tag `v0.9.1`, sem rollback. Lista e busca de Pacientes conferidas pelo dono.
+  Rollback = redeploy da tag anterior (`0084` só amplia); a `0072` (CPF único) segue não aditiva para voltar abaixo da v0.8.0.
 - **`main` à frente da produção.** Isolamento por clínica fechado no código: 45 tabelas com `FORCE ROW LEVEL
   SECURITY` e o papel `estomasystech_app` (#870 a #874, #889, #894). Login e manutenção usam
   `DATABASE_SYSTEM_URL` (`BYPASSRLS`). A aplicação usa `DATABASE_APP_URL`, com usuário restrito. E-mail de
@@ -28,13 +29,11 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   da listagem rodava dentro de outra transação e o Postgres recusava (25001). O `instanceof Pool` corrige.
   Publicar a v0.9.0 espera este merge e a staging verde; não tageie o SHA que falhou.
 
-- **Publicação da v0.9.x deixou o código novo com o banco velho** (postmortem de 2026-11-17: readiness 503,
-  `42501` e `42703`; as migrações `0074` a `0083` entraram à mão, com hash fora do `drizzle-kit`). O *Release deploy*
-  agora migra com o dono **antes** do deploy, trava se a migração falhar, reverte a imagem se a fumaça reprovar
-  e ensaia a migração sem segredo no `dry_run` (ADR-113, `producao.md` § 4.9). **Antes do próximo disparo o dono
-  faz o preparo único do § 4.9** (chave `VPS_MIGRATE_SSH_KEY`, script no VPS, token do Coolify com `write`). Depois
-  da v0.10.0 em produção, conferir se um `db:migrate` com a URL do dono não acha divergência nas dez migrações
-  aplicadas à mão.
+- **Incidente da v0.9.x resolvido** (postmortem de 2026-11-17). O *Release deploy* migra com o dono **antes** do deploy, trava se a
+  migração falhar, reverte a imagem se a fumaça reprovar e ensaia a migração no `dry_run` (ADR-113, `producao.md` § 4.9). O preparo
+  do § 4.9 está feito (incluindo Auto Deploy desligado, que o preflight confere). Provado em produção na v0.9.1. Não provado: o
+  rollback automático (só em teste) e por que a produção já respondia 0.9.1 antes do redisparo. Conferir se um `db:migrate` com a
+  URL do dono não acha divergência nas migrações `0074` a `0083` aplicadas à mão.
 
 ## Fila (ordem)
 
