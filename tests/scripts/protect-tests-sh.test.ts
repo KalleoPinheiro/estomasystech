@@ -48,8 +48,8 @@ function roda(file: string, env: Record<string, string>, command?: string) {
     {
       input: payload(file),
       env: {
-        ...env,
         PATH: process.env.PATH ?? '',
+        ...env,
       } as unknown as NodeJS.ProcessEnv,
       encoding: 'utf8',
     },
@@ -123,12 +123,69 @@ describe('protect-tests.sh falha fechado (regra 8, #830)', () => {
     '/x/e2e/a.spec.ts',
     '/x/.husky/pre-push',
     '/x/.claude/settings.json',
+    '/x/.claude/hooks/protect-tests.sh',
   ])(
     'Dado o caminho %s, Quando não há tsx, Então é tratado como protegido',
     (file) => {
       expect(roda(file, { ROOT_DIR: root }).status).toBe(2);
     },
   );
+
+  it('Dado config aninhada que o analisador não trata como config, Quando não há tsx, Então libera', () => {
+    expect(
+      roda('/x/src/vitest-fixture/example.config.mts', { ROOT_DIR: root })
+        .status,
+    ).toBe(0);
+  });
+
+  it('Dado ROOT_DIR relativo, Quando o hook roda, Então localiza o tsx pelo caminho absoluto', () => {
+    instalaAnalisador(0);
+    const r = spawnSync(
+      'bash',
+      [
+        '-c',
+        `cd "${join(root, '..')}" && "${join(root, '.claude/hooks/protect-tests.sh')}"`,
+      ],
+      {
+        input: payload(PROTEGIDO),
+        env: {
+          ROOT_DIR: root.split('/').pop() ?? '',
+          PATH: process.env.PATH ?? '',
+        } as unknown as NodeJS.ProcessEnv,
+        encoding: 'utf8',
+      },
+    );
+    expect(r.status).toBe(0);
+  });
+
+  describe('leitura da entrada', () => {
+    const falso = (nome: string) => {
+      const bin = join(root, 'fake-bin');
+      mkdirSync(bin, { recursive: true });
+      writeFileSync(join(bin, nome), '#!/bin/sh\nexit 1\n');
+      chmodSync(join(bin, nome), 0o755);
+      return bin;
+    };
+    const comPath = (bin: string) => ({
+      ROOT_DIR: root,
+      PATH: `${bin}:${process.env.PATH ?? ''}`,
+    });
+
+    it('Dado python3 quebrado, Quando o node lê a entrada, Então ainda classifica o caminho protegido', () => {
+      const r = roda(PROTEGIDO, comPath(falso('python3')));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain('analisador de testes não pode rodar');
+    });
+
+    it('Dado python3 e node quebrados, Quando roda, Então bloqueia com o diagnóstico de leitura', () => {
+      const bin = falso('python3');
+      writeFileSync(join(bin, 'node'), '#!/bin/sh\nexit 1\n');
+      chmodSync(join(bin, 'node'), 0o755);
+      const r = roda('/x/src/a.ts', comPath(bin));
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain('não conseguiu ler a entrada');
+    });
+  });
 
   it('Dado caminho comum, Quando não há tsx, Então não paga o analisador e libera', () => {
     expect(roda('/x/src/domain/a.ts', { ROOT_DIR: root }).status).toBe(0);
