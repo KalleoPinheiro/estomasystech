@@ -47,7 +47,10 @@ function roda(file: string, env: Record<string, string>, command?: string) {
     ['-c', command ?? `"${join(root, '.claude/hooks/protect-tests.sh')}"`],
     {
       input: payload(file),
-      env: { PATH: process.env.PATH ?? '', ...env },
+      env: {
+        ...env,
+        PATH: process.env.PATH ?? '',
+      } as unknown as NodeJS.ProcessEnv,
       encoding: 'utf8',
     },
   );
