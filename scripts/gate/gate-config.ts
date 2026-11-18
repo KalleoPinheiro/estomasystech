@@ -145,21 +145,42 @@ function biomeOptionFindings(base: unknown, head: unknown, push: Push): void {
   }
 }
 
-/** `includes` com `!` novo ou entrada positiva removida tira arquivo do lint; `preset: none` desliga o conjunto. */
-function biomeScopeFindings(base: unknown, head: unknown, push: Push): void {
+const sameOrder = (a: string[], b: string[]) => a.length === b.length && a.every((e, i) => e === b[i]);
+
+/** Lista `includes` do HEAD contra a da base: `!` novo, entrada positiva removida ou ordem trocada (a última vence). */
+function includesFindings(path: string, old: string[], after: string[], push: Push): void {
+  const kept = new Set(after);
+  for (const e of after) if (e.startsWith('!') && !old.includes(e)) push('escopo-de-lint-reduzido', 'hard', e);
+  for (const e of old) if (!e.startsWith('!') && !kept.has(e)) push('escopo-de-lint-reduzido', 'hard', e);
+  const sameSet = old.length === after.length && old.every((e) => kept.has(e));
+  if (sameSet && !sameOrder(old, after)) push('escopo-de-lint-reordenado', 'hard', path);
+}
+
+/** `includes` de override que some passa a valer para todos os arquivos (só o `files.includes` ausente alarga o lint). */
+function biomeIncludesFindings(base: unknown, head: unknown, push: Push): void {
   const before = collect(base, '', pickIncludes, new Map());
-  for (const [path, after] of collect(head, '', pickIncludes, new Map())) {
-    const old = before.get(path) ?? [];
-    const kept = new Set(after);
-    for (const e of after) if (e.startsWith('!') && !old.includes(e)) push('escopo-de-lint-reduzido', 'hard', e);
-    for (const e of old) if (!e.startsWith('!') && !kept.has(e)) push('escopo-de-lint-reduzido', 'hard', e);
+  const after = collect(head, '', pickIncludes, new Map());
+  for (const [path, list] of after) includesFindings(path, before.get(path) ?? [], list, push);
+  for (const path of before.keys())
+    if (!after.has(path) && path !== '.files.includes') push('escopo-de-lint-reduzido', 'hard', path);
+}
+
+/** `preset: none` desliga o conjunto; outro valor (ou preset que some) muda as regras ativas e pede `GATE-ALTERADO:`. */
+function biomePresetFindings(base: unknown, head: unknown, push: Push): void {
+  const was = collect(base, '', pickPreset, new Map());
+  const now = collect(head, '', pickPreset, new Map());
+  for (const [path, value] of now) {
+    if (value === 'none' && was.get(path) !== 'none') push('preset-de-lint-desligado', 'hard', path);
+    else if (was.has(path) && value !== was.get(path)) push('preset-de-lint-alterado', 'justifiable', path, true);
   }
-  const presets = collect(base, '', pickPreset, new Map());
-  for (const [path, now] of collect(head, '', pickPreset, new Map())) {
-    const was = presets.get(path);
-    if (now === 'none' && was !== 'none') push('preset-de-lint-desligado', 'hard', path);
-    else if (was !== undefined && now !== was) push('preset-de-lint-alterado', 'justifiable', path, true);
-  }
+  for (const [path, value] of was)
+    if (!now.has(path) && value !== 'recommended' && value !== 'none')
+      push('preset-de-lint-alterado', 'justifiable', path, true);
+}
+
+function biomeScopeFindings(base: unknown, head: unknown, push: Push): void {
+  biomeIncludesFindings(base, head, push);
+  biomePresetFindings(base, head, push);
 }
 
 function biomeFindings(base: unknown, head: unknown, push: Push): void {
@@ -256,32 +277,48 @@ function workflowFindings(base: string, head: string, push: Push): void {
   shardConditionFindings(base, head, push);
 }
 
-const SHARD_JOB = /^ {2}([\w-]*shard[\w-]*):\s*$/;
+const JOB_HEADER = /^ {2}(['"]?)([\w-]+)\1:\s*$/;
 const JOB_OR_KEY = /^ {0,2}\S/;
 const JOB_IF = /^ {4}if:\s*(.*)$/;
-const normalizeCondition = (raw: string) =>
-  raw
-    .trim()
-    .replace(/^\$\{\{\s*|\s*\}\}$/g, '')
-    .replace(/^(['"])(.*)\1$/, '$2')
-    .replace(/\s+/g, ' ')
-    .trim();
+const SHARD_MATRIX = /^ {6,}shard\s*:/;
+const QUOTED = /('[^']*'|"[^"]*")/;
 
-/** `if` no nível do job, por job de shard (nome com `shard`); job sem `if` fica com string vazia. */
+/** Espaço entre tokens colapsa; o de dentro de literal entre aspas é valor e fica como está. */
+const collapseSpaces = (expr: string) =>
+  expr
+    .split(QUOTED)
+    .map((part, i) => (i % 2 === 1 ? part : part.replace(/\s+/g, ' ')))
+    .join('');
+
+/** Aspas do YAML saem primeiro; as da expressão `${{ 'false' }}` (string, sempre verdadeira) ficam. */
+function normalizeCondition(raw: string): string {
+  const yaml = raw.trim().replace(/^(['"])(.*)\1$/, '$2');
+  return collapseSpaces(yaml.replace(/^\$\{\{\s*|\s*\}\}$/g, '')).trim();
+}
+
+/** `if` no nível do job, por job de shard (nome com `shard` ou matriz `shard:`); sem `if` fica vazio. */
 function shardConditions(text: string): Map<string, string> {
   const out = new Map<string, string>();
   let job = '';
+  let isShard = false;
+  let cond = '';
+  const close = () => {
+    if (job && isShard) out.set(job, cond);
+  };
   for (const line of text.split('\n')) {
-    const header = SHARD_JOB.exec(line);
-    if (header) {
-      job = header[1] ?? '';
-      out.set(job, '');
-    } else if (JOB_OR_KEY.test(line)) job = '';
-    else if (job) {
-      const cond = JOB_IF.exec(line);
-      if (cond) out.set(job, normalizeCondition(cond[1] ?? ''));
+    const header = JOB_HEADER.exec(line);
+    if (header || JOB_OR_KEY.test(line)) {
+      close();
+      job = header?.[2] ?? '';
+      isShard = /shard/.test(job);
+      cond = '';
+    } else if (job) {
+      isShard ||= SHARD_MATRIX.test(line);
+      const m = JOB_IF.exec(line);
+      if (m) cond = normalizeCondition(m[1] ?? '');
     }
   }
+  close();
   return out;
 }
 
@@ -290,7 +327,8 @@ function shardConditionFindings(base: string, head: string, push: Push): void {
   const after = shardConditions(head);
   for (const [job, before] of shardConditions(base)) {
     const now = after.get(job);
-    if (now !== undefined && now !== before) push('shard-condicionado', 'hard', `${job}: if ${before || '(nenhum)'} → ${now || '(nenhum)'}`);
+    if (now !== undefined && now !== before)
+      push('shard-condicionado', 'hard', `${job}: if ${before || '(nenhum)'} → ${now || '(nenhum)'}`);
   }
 }
 

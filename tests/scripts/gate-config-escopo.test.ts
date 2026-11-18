@@ -91,11 +91,41 @@ describe('Regra 8: biome.json, limites, escopo e preset (#832)', () => {
       ),
     ).toEqual([]);
     const semIncludes = JSON.stringify({
-      linter: { rules: { preset: 'recommended' } },
+      ...JSON.parse(biome({})),
+      files: {},
     });
-    expect(rules('biome.json', biome({}), semIncludes)).not.toContain(
+    expect(rules('biome.json', biome({}), semIncludes)).toEqual([]);
+  });
+  it('quando includes do override some (passa a valer para todos), é proibido', () => {
+    const override = (includes?: string[]) =>
+      JSON.stringify({
+        overrides: [
+          { ...(includes ? { includes } : {}), linter: { enabled: false } },
+        ],
+      });
+    expect(rules('biome.json', override(['tests/**']), override())).toEqual([
       'hard:escopo-de-lint-reduzido',
-    );
+    ]);
+  });
+  it('quando as mesmas entradas de includes trocam de ordem, é proibido (a última vence)', () => {
+    expect(
+      rules(
+        'biome.json',
+        biome({ includes: ['!src/g/**', 'src/g/ok.ts'] }),
+        biome({ includes: ['src/g/ok.ts', '!src/g/**'] }),
+      ),
+    ).toEqual(['hard:escopo-de-lint-reordenado']);
+  });
+  it('quando o preset some, pede GATE-ALTERADO, salvo se era recommended', () => {
+    const semPreset = (text: string) => {
+      const json = JSON.parse(text);
+      delete json.linter.rules.preset;
+      return JSON.stringify(json);
+    };
+    expect(
+      rules('biome.json', biome({ preset: 'all' }), semPreset(biome({}))),
+    ).toEqual(['justifiable/gate:preset-de-lint-alterado']);
+    expect(rules('biome.json', biome({}), semPreset(biome({})))).toEqual([]);
   });
   it('quando o preset vira "none", é proibido, mesmo se não havia preset antes', () => {
     expect(rules('biome.json', biome({}), biome({ preset: 'none' }))).toEqual([
@@ -208,6 +238,33 @@ describe('Regra 8: job de shard condicionado no ci.yml (#832)', () => {
     expect(
       rules('.github/workflows/ci.yml', ci('"a == b"'), ci("'a == b'")),
     ).toEqual([]);
+  });
+  it('quando a expressão troca false por string "false", ou muda espaço dentro de literal, é proibido', () => {
+    const exp = (e: string) => ci(`$\{{ ${e} }}`);
+    expect(
+      rules('.github/workflows/ci.yml', exp('false'), exp("'false'")),
+    ).toEqual(['hard:shard-condicionado']);
+    expect(
+      rules('.github/workflows/ci.yml', exp("a == 'x y'"), exp("a == 'x  y'")),
+    ).toEqual(['hard:shard-condicionado']);
+  });
+  it('quando o job tem matriz shard com outro nome, ou chave entre aspas, também vale', () => {
+    const job = (key: string, cond: string) =>
+      `jobs:\n  ${key}:\n    if: ${cond}\n    strategy:\n      matrix:\n        shard: [1, 2]\n`;
+    expect(
+      rules(
+        '.github/workflows/ci.yml',
+        job('cobertura', 'a'),
+        job('cobertura', 'false'),
+      ),
+    ).toEqual(['hard:shard-condicionado']);
+    expect(
+      rules(
+        '.github/workflows/ci.yml',
+        job('fatia-shard', 'a'),
+        job('"fatia-shard"', 'false'),
+      ),
+    ).toEqual(['hard:shard-condicionado']);
   });
   it('quando outro job (não shard) muda o if ou o step tem if próprio, não acusa', () => {
     const outro = BASE.replace('    if: true', '    if: false');
