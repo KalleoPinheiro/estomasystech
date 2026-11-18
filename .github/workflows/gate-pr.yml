@@ -106,10 +106,10 @@ jobs:
             if ! mutacao=$(npx tsx scripts/gate-cloud/impacto.ts --mutacao); then
               echo "::error::impacto.ts --mutacao falhou: a mutação não pode ser decidida"; exit 1
             fi
-            case "$mutacao" in
-              "") ;;
-              *[!A-Za-z0-9_./,@-]*) echo "::error::impacto.ts --mutacao devolveu saída inesperada: $mutacao"; exit 1 ;;
-            esac
+            # Vazio é legítimo (nenhum arquivo de regra); o resto precisa ser lista de caminhos .ts sem entrada vazia.
+            if [ -n "$mutacao" ] && ! [[ "$mutacao" =~ ^[A-Za-z0-9_./@-]+\.ts(,[A-Za-z0-9_./@-]+\.ts)*$ ]]; then
+              echo "::error::impacto.ts --mutacao devolveu saída inesperada: $mutacao"; exit 1
+            fi
           fi
           rodar_mutacao=true
           if [ -z "$mutacao" ]; then rodar_mutacao=false; fi

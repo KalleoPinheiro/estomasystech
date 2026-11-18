@@ -143,6 +143,15 @@ describe('#820 mutação do PR falha fechada', () => {
     expect(r.saida).toContain('mutacao=src/domain/a.ts,src/application/b.ts');
   });
 
+  it.each(['NONE', ',,,', 'a.ts,,b.ts', 'src/a.ts,', 'src/a.js'])(
+    'lista malformada %j reprova o passo',
+    (saida) => {
+      const r = rodarSel({ saida });
+      expect(r.codigo).not.toBe(0);
+      expect(r.stderr).toContain('saída inesperada');
+    },
+  );
+
   it('saída vazia legítima (nenhum arquivo de regra) dispensa o job', () => {
     const r = rodarSel({ saida: '' });
     expect(r.codigo).toBe(0);
@@ -167,9 +176,52 @@ describe('#820 mutação do PR falha fechada', () => {
     ).toBe(1);
   });
 
-  it('o job mutacao reprova sem alvo e sem relatório do Stryker', () => {
-    const run = passo('name: Stryker (só os arquivos alterados)');
-    expect(run).toContain('[ -n "$ALVOS" ]');
-    expect(run).toContain('reports/mutation/mutation.json');
+  describe('passo Stryker', () => {
+    function rodarStryker(
+      alvos: string,
+      relatorio: 'nenhum' | 'vazio' | 'ok' | 'velho',
+    ): number {
+      const dir = mkdtempSync(path.join(tmpdir(), 'str820-'));
+      const bin = path.join(dir, 'bin');
+      mkdirSync(bin);
+      mkdirSync(path.join(dir, 'reports/mutation'), { recursive: true });
+      const rel = path.join(dir, 'reports/mutation/mutation.json');
+      if (relatorio === 'velho') writeFileSync(rel, '{"velho":true}');
+      const escreve =
+        relatorio === 'ok'
+          ? `echo '{}' > ${rel}`
+          : relatorio === 'vazio'
+            ? `: > ${rel}`
+            : ':';
+      const npm = path.join(bin, 'npm');
+      writeFileSync(npm, `#!/bin/bash\n${escreve}\n`);
+      chmodSync(npm, 0o755);
+      try {
+        execFileSync(
+          'bash',
+          ['-e', '-c', passo('name: Stryker (só os arquivos alterados)')],
+          {
+            cwd: dir,
+            env: { ...process.env, PATH: `${bin}:/usr/bin:/bin`, ALVOS: alvos },
+            stdio: 'ignore',
+          },
+        );
+        return 0;
+      } catch (error) {
+        return (error as { status?: number }).status ?? 1;
+      }
+    }
+
+    it('sem alvos reprova', () => {
+      expect(rodarStryker('', 'ok')).not.toBe(0);
+    });
+    it('sem relatório, com relatório vazio ou só com o relatório velho reprova', () => {
+      expect(rodarStryker('src/a.ts', 'nenhum')).not.toBe(0);
+      expect(rodarStryker('src/a.ts', 'vazio')).not.toBe(0);
+      expect(rodarStryker('src/a.ts', 'velho')).not.toBe(0);
+    });
+    it('com relatório novo passa', () => {
+      expect(rodarStryker('src/a.ts', 'ok')).toBe(0);
+    });
   });
 });
