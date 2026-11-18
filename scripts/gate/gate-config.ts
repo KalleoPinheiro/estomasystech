@@ -54,6 +54,9 @@ export function parseJsonc(text: string): unknown {
   return JSON.parse(out.replace(/,(\s*[}\]])/g, '$1'));
 }
 
+/** BOM no começo do arquivo (editor do Windows) não é erro de sintaxe: tira antes de ler (#832). */
+const parseConfig = (text: string): unknown => parseJsonc(text.replace(/^\uFEFF/, ''));
+
 const asNumber = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
 const obj = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
@@ -77,6 +80,20 @@ function strykerFindings(base: unknown, head: unknown, push: Push): void {
   for (const e of before) if (!e.startsWith('!') && !after.has(e)) push('mutacao-escopo-reduzido', 'hard', e);
   const had = new Set(before);
   for (const e of after) if (e.startsWith('!') && !had.has(e)) push('mutacao-escopo-reduzido', 'hard', e);
+  strykerExclusions(b, h, push);
+}
+
+/** Entradas de `head` que não estavam em `base`. */
+const addedStrings = (base: unknown, head: unknown): string[] => {
+  const had = new Set(strings(base));
+  return strings(head).filter((e) => !had.has(e));
+};
+
+/** `ignorePatterns` e `mutator.excludedMutations` novos tiram código ou mutantes da mutação (#832). */
+function strykerExclusions(b: Record<string, unknown>, h: Record<string, unknown>, push: Push): void {
+  for (const e of addedStrings(b.ignorePatterns, h.ignorePatterns)) push('mutacao-ignore-adicionado', 'hard', e);
+  for (const e of addedStrings(obj(b.mutator).excludedMutations, obj(h.mutator).excludedMutations))
+    push('mutacao-mutante-excluido', 'hard', e);
 }
 
 const LEVELS = new Set(['error', 'warn', 'off']);
@@ -101,7 +118,53 @@ function lintCounts(node: unknown, path: string, c: LintCounts): LintCounts {
 }
 const emptyCounts = (): LintCounts => ({ error: new Map(), loose: new Map(), on: new Map(), off: new Map() });
 
+/** Valores de interesse por caminho (com índice de array): `pick` devolve `undefined` para seguir descendo. */
+function collect<T>(node: unknown, path: string, pick: (k: string, v: unknown) => T | undefined, out: Map<string, T>) {
+  if (Array.isArray(node)) node.forEach((n, i) => collect(n, `${path}[${i}]`, pick, out));
+  else if (node && typeof node === 'object')
+    for (const [k, v] of Object.entries(node)) {
+      const hit = pick(k, v);
+      if (hit === undefined) collect(v, `${path}.${k}`, pick, out);
+      else out.set(`${path}.${k}`, hit);
+    }
+  return out;
+}
+
+/** Limites numéricos da regra 4 do AGENTS.md (cognitiva e linhas por função): subir afrouxa. */
+const LIMIT_OPTIONS = new Set(['maxAllowedComplexity', 'maxLines']);
+const pickLimit = (k: string, v: unknown) => (LIMIT_OPTIONS.has(k) ? asNumber(v) : undefined);
+const pickIncludes = (k: string, v: unknown) => (k === 'includes' && Array.isArray(v) ? strings(v) : undefined);
+const pickPreset = (k: string, v: unknown) => (k === 'preset' && typeof v === 'string' ? v : undefined);
+
+function biomeOptionFindings(base: unknown, head: unknown, push: Push): void {
+  const after = collect(head, '', pickLimit, new Map());
+  for (const [path, before] of collect(base, '', pickLimit, new Map())) {
+    const now = after.get(path);
+    if (now === undefined) push('limite-de-lint-removido', 'hard', path);
+    else if (now > before) push('limite-de-lint-aumentado', 'hard', `${path}: ${before} → ${now}`);
+  }
+}
+
+/** `includes` com `!` novo ou entrada positiva removida tira arquivo do lint; `preset: none` desliga o conjunto. */
+function biomeScopeFindings(base: unknown, head: unknown, push: Push): void {
+  const before = collect(base, '', pickIncludes, new Map());
+  for (const [path, after] of collect(head, '', pickIncludes, new Map())) {
+    const old = before.get(path) ?? [];
+    const kept = new Set(after);
+    for (const e of after) if (e.startsWith('!') && !old.includes(e)) push('escopo-de-lint-reduzido', 'hard', e);
+    for (const e of old) if (!e.startsWith('!') && !kept.has(e)) push('escopo-de-lint-reduzido', 'hard', e);
+  }
+  const presets = collect(base, '', pickPreset, new Map());
+  for (const [path, now] of collect(head, '', pickPreset, new Map())) {
+    const was = presets.get(path);
+    if (now === 'none' && was !== 'none') push('preset-de-lint-desligado', 'hard', path);
+    else if (was !== undefined && now !== was) push('preset-de-lint-alterado', 'justifiable', path, true);
+  }
+}
+
 function biomeFindings(base: unknown, head: unknown, push: Push): void {
+  biomeOptionFindings(base, head, push);
+  biomeScopeFindings(base, head, push);
   const b = lintCounts(base, '', emptyCounts());
   const h = lintCounts(head, '', emptyCounts());
   for (const [path, n] of b.error)
@@ -190,6 +253,45 @@ function workflowFindings(base: string, head: string, push: Push): void {
     [flags(base), flags(head)],
   ] as const)
     if (bs.some((n, i) => (hs[i] ?? 0) < n)) push('shard-removido', 'hard', `${bs.join(',')} → ${hs.join(',')}`);
+  shardConditionFindings(base, head, push);
+}
+
+const SHARD_JOB = /^ {2}([\w-]*shard[\w-]*):\s*$/;
+const JOB_OR_KEY = /^ {0,2}\S/;
+const JOB_IF = /^ {4}if:\s*(.*)$/;
+const normalizeCondition = (raw: string) =>
+  raw
+    .trim()
+    .replace(/^\$\{\{\s*|\s*\}\}$/g, '')
+    .replace(/^(['"])(.*)\1$/, '$2')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** `if` no nível do job, por job de shard (nome com `shard`); job sem `if` fica com string vazia. */
+function shardConditions(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  let job = '';
+  for (const line of text.split('\n')) {
+    const header = SHARD_JOB.exec(line);
+    if (header) {
+      job = header[1] ?? '';
+      out.set(job, '');
+    } else if (JOB_OR_KEY.test(line)) job = '';
+    else if (job) {
+      const cond = JOB_IF.exec(line);
+      if (cond) out.set(job, normalizeCondition(cond[1] ?? ''));
+    }
+  }
+  return out;
+}
+
+/** `if: false` (ou qualquer troca da condição) num job de shard pula a fatia sem diminuir a matriz (#832). */
+function shardConditionFindings(base: string, head: string, push: Push): void {
+  const after = shardConditions(head);
+  for (const [job, before] of shardConditions(base)) {
+    const now = after.get(job);
+    if (now !== undefined && now !== before) push('shard-condicionado', 'hard', `${job}: if ${before || '(nenhum)'} → ${now || '(nenhum)'}`);
+  }
 }
 
 function compare(pair: ConfigPair, base: string, head: string, push: Push): void {
@@ -197,12 +299,12 @@ function compare(pair: ConfigPair, base: string, head: string, push: Push): void
   if (file === 'stryker.config.json' || file === 'biome.json') {
     let parsedHead: unknown;
     try {
-      parsedHead = parseJsonc(head);
+      parsedHead = parseConfig(head);
     } catch {
       push('config-do-gate-ilegivel', 'hard', file);
       return;
     }
-    const parsedBase = parseJsonc(base);
+    const parsedBase = parseConfig(base);
     if (file === 'biome.json') biomeFindings(parsedBase, parsedHead, push);
     else strykerFindings(parsedBase, parsedHead, push);
   } else if (WORKFLOW.test(file)) workflowFindings(stripComments(base, 'yaml'), stripComments(head, 'yaml'), push);
