@@ -77,7 +77,7 @@ describe('Feature: e-mail de login cifrado em repouso com índice cego (ADR-111,
     clinicId: string | null = CLINIC,
     extra: Partial<typeof schema.userAccounts.$inferInsert> = {},
   ) => {
-    // Banco como era antes da contração (#909): sem a restrição que exige hash em conta ativa.
+    // Estado anterior à conversão (#909): conta ativa sem hash; derruba a restrição, se já existir.
     await db.execute(
       sql`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS ck_user_accounts_email_hash_conta_ativa`,
     );

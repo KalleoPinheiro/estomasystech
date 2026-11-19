@@ -1,5 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -758,7 +764,7 @@ describe('classe de risco · subprocesso offline', () => {
     );
     expect(r.status, String(r.stderr)).toBe(0);
     expect(JSON.parse(String(r.stdout)).classe).toBe(3);
-    const gravado = spawnSync('cat', [marca], { encoding: 'utf8' });
-    expect(gravado.stdout).toBe('true');
+    const gravado = readFileSync(marca, { encoding: 'utf8' });
+    expect(gravado).toBe('true');
   });
 });

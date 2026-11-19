@@ -62,6 +62,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`engineering/performance-front-depois-2026-11.md`](engineering/performance-front-depois-2026-11.md) | retrato de 2026-11 (ficha, lista e agenda): composição do JS, por que a meta de 215 KB saiu e o CLS da ficha |
 | [`engineering/performance-front-medicao-final-2026-11.md`](engineering/performance-front-medicao-final-2026-11.md) | **medição final da frente #541** (2026-11): 28 rotas × 4 larguras, hidratação, LCP, CLS e JS contra a linha de base; a meta de JS não foi atingida em 24 rotas |
 | [`engineering/performance-front-js-casca-2026-11.md`](engineering/performance-front-js-casca-2026-11.md) | **JS da casca** (2026-11, #914): causa dos 2 a 15 KB gz a mais (404, error, loading e Web Vitals); decisão de aceitar |
+| [`engineering/performance-front-fechamento-2026-11.md`](engineering/performance-front-fechamento-2026-11.md) | **fechamento da #541 e da #883** (2026-11): o chunk cliente do `@still-void/ui` segue 43,9 KB gz; a #914 aceitou o delta da casca |
 | [`engineering/architecture.md`](engineering/architecture.md) | camadas, fluxo de requisição, decisões transversais |
 | [`engineering/conventions.md`](engineering/conventions.md) | Biome, UI, escopo de dados, níveis de teste, commits |
 | [`engineering/api.md`](engineering/api.md) | rotas REST centrais |
