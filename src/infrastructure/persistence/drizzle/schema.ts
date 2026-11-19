@@ -275,6 +275,12 @@ export const userAccounts = pgTable(
       .on(table.emailHash)
       .where(sql`${table.clinicId} IS NULL AND ${table.emailHash} IS NOT NULL`),
     index('idx_user_accounts_clinic').on(table.clinicId),
+    // Conta ativa sempre tem o índice cego; só a anonimizada fica sem ele (#909,
+    // ADR-111 emenda): a retenção zera `email_hash` e grava `anonymized_at`.
+    check(
+      'ck_user_accounts_email_hash_conta_ativa',
+      sql`${table.anonymizedAt} IS NOT NULL OR ${table.emailHash} IS NOT NULL`,
+    ),
   ],
 );
 

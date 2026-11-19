@@ -41,8 +41,8 @@ describe('Feature: Fundação em Postgres tolera dados legados e nega escrita ao
   it('Dado conta gravada com papel desconhecido, Quando ler a conta, Então falha explicitamente em vez de assumir um papel', async () => {
     await pg.execute(
       sql.raw(
-        `INSERT INTO user_accounts (id, email, password_hash, role, clinic_id, active, created_at)
-         VALUES ('acc-papel-estranho', 'estranho@clinica.com', 'scrypt$1$s$h', 'xpto', '${CLINIC}', true, now())`,
+        `INSERT INTO user_accounts (id, email, email_hash, password_hash, role, clinic_id, active, created_at)
+         VALUES ('acc-papel-estranho', 'estranho@clinica.com', 'h-estranho', 'scrypt$1$s$h', 'xpto', '${CLINIC}', true, now())`,
       ),
     );
 

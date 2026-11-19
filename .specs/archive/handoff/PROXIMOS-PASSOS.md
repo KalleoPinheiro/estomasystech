@@ -41,7 +41,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    4. #745, CodeQL do TS (P2). Próxima. Medido em 2026-11-18: o default setup roda verde (só 2 de 182 execuções falharam, ambas em 2026-11-08, HTTP 504 do bundle). Ver `docs/engineering/security-scan.md` § CodeQL.
    5. ~~#925~~ ensaio do rollback automático no `validar` (classe 3; PR aberto, espera o clique do dono).
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
-   ramo em claro e drop dos índices antigos, ADR-111): espera só a decisão do dono na #909 (contas anonimizadas e `email_hash`).
+   ramo em claro e drop dos índices antigos, ADR-111): decisão da #909 tomada (anonimizada: `email_hash` NULL; ativa: obrigatório) e a restrição `NOT VALID` entra na `0085`. Falta: `VALIDATE`, fim do ramo em claro e drop dos índices antigos do e-mail.
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
    trace), #862, #849, #828, #802, #744. **JS:** a #914 aceitou o delta da casca (+10,6 KB gz na equipe: 404, `error`,
    `loading`, Web Vitals); o chunk cliente do `@still-void/ui` não cresceu (43,9 KB gz desde outubro), então a #883 não

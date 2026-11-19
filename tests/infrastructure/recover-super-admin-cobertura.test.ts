@@ -19,6 +19,7 @@ const seedSuperAdmin = (active: boolean) =>
     id: 'sa-1',
     clinicId: null,
     email: 'dono@estomasystech.test',
+    emailHash: 'h-sa-1',
     passwordHash: UNSET_PASSWORD_HASH,
     role: 'super_admin',
     active,
