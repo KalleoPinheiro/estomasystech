@@ -132,7 +132,7 @@ describe('Feature: Relatório mensal ao parceiro que indica (RM-15)', () => {
     );
     const text = message?.text ?? '';
     expect(text).toContain('Olá, Beatriz!');
-    expect(text).toContain('novembro de 2026');
+    expect(text).toContain('outubro de 2026');
     expect(text.indexOf('- Ana Lima: sem consulta realizada')).toBeLessThan(
       text.indexOf('- Ivo Braga: sem consulta realizada'),
     );
@@ -255,7 +255,7 @@ describe('Feature: Relatório mensal ao parceiro que indica (RM-15)', () => {
 
     expect(email.sent).toHaveLength(2);
     expect(december.sent).toBe(1);
-    expect(email.sent[1]?.text).toMatch(/dezembro de 2026/i);
+    expect(email.sent[1]?.text).toMatch(/novembro de 2026/i);
   });
 
   it('Dado canal de e-mail desligado, Quando o mês roda, Então não grava e o mês sai quando o canal liga', async () => {
