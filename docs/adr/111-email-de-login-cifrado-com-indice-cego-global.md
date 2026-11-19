@@ -60,9 +60,9 @@ Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-ofe
   o `email` vira o endereço sintético `anonimizado+<id>@anonimizado.invalid` (não é pessoal). Sem valor sentinela por conta:
   nada que ligue a linha ao endereço antigo.
 - **Conta ativa:** `email_hash` é **obrigatório**, garantido pelo banco com `CHECK (anonymized_at IS NOT NULL OR email_hash
-  IS NOT NULL)` (`ck_user_accounts_email_hash_conta_ativa`, migração `0085`). Não usamos `NOT NULL` na coluna porque ele
+  IS NOT NULL)` (`ck_user_accounts_email_hash_conta_ativa`, migração `0086`). Não usamos `NOT NULL` na coluna porque ele
   proibiria a anonimização.
-- **Passos seguros:** a `0085` adiciona a restrição `NOT VALID` (vale para toda escrita nova, não varre a tabela, rollback é
+- **Passos seguros:** a `0086` adiciona a restrição `NOT VALID` (vale para toda escrita nova, não varre a tabela, rollback é
   um `DROP CONSTRAINT`). Falta, em migração própria, o `VALIDATE CONSTRAINT`, depois do fim do ramo em claro, e o `DROP`
   dos dois índices antigos sobre `email`; esses passos seguem na fila da contração.
 - A conta anonimizada continua fora do `data:reencrypt`. Sem hash, o ramo por `email_hash` não a acha; enquanto o ramo em

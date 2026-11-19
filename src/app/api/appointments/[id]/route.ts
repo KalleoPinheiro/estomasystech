@@ -11,6 +11,7 @@ import { CompleteAppointment } from '@/application/appointments/complete-appoint
 import { RescheduleAppointment } from '@/application/appointments/reschedule-appointment';
 import { DispenseProcedureKit } from '@/application/inventory/dispense-procedure-kit';
 import { RegisterStockMovement } from '@/application/inventory/register-stock-movement';
+import { offerCancelledSlot } from '@/application/scheduling/offer-waitlist-slot';
 import { findWaitlistMatches } from '@/application/scheduling/waitlist';
 import { localDateKey } from '@/domain/scheduling/schedule-availability';
 import { cancellationPolicyOf } from '@/domain/scheduling/schedule-config';
@@ -18,9 +19,14 @@ import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { appointmentActionSchema } from '@/lib/appointment-schemas';
 import { requireStaffSession } from '@/lib/auth/require-session';
-import { sessionScope, writeScope } from '@/lib/auth/tenant-scope';
+import {
+  sessionScope,
+  writeClinicId,
+  writeScope,
+} from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { toAppointmentDto } from '@/lib/dto';
+import { logError } from '@/lib/log-error';
 import { authorizeAppointmentAct } from '@/lib/server/appointment-authorization';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -141,13 +147,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     // Horário vago: quem da lista de espera aceita esse dia (a recepção oferece).
     const waitlistMatches =
       body.action === 'cancel'
-        ? (
-            await findWaitlistMatches(
-              services.waitlist,
-              localDateKey(changed.slot.start),
-              changed.professionalId,
-            )
-          ).length
+        ? await offerFreedSlot(services, guard.session, changed)
         : 0;
     return {
       ...toAppointmentDto(changed),
@@ -155,4 +155,28 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       waitlistMatches,
     };
   });
+}
+
+/** Quem aceita o dia e o e-mail da oferta. Falha do e-mail não desfaz o cancelamento. */
+async function offerFreedSlot(
+  services: Awaited<ReturnType<typeof getRepositories>>,
+  session: { clinicId: string | null },
+  changed: {
+    id: string;
+    professionalId: string | null;
+    slot: { start: Date };
+  },
+): Promise<number> {
+  const matches = (
+    await findWaitlistMatches(
+      services.waitlist,
+      localDateKey(changed.slot.start),
+      changed.professionalId,
+    )
+  ).length;
+  await offerCancelledSlot(services, writeClinicId(session), changed.id).catch(
+    (error: unknown) =>
+      logError('Agenda: oferta da lista de espera falhou', error),
+  );
+  return matches;
 }

@@ -25,7 +25,7 @@ function pgErrorOf(error: unknown): { code?: string; message: string } {
   return { code: source.code, message: String(source.message) };
 }
 
-describe('Feature: conta ativa exige o índice cego do e-mail (#909, ADR-111, migração 0085)', () => {
+describe('Feature: conta ativa exige o índice cego do e-mail (#909, ADR-111, migração 0086)', () => {
   let db: Db;
 
   beforeAll(async () => {

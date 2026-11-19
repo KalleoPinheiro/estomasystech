@@ -600,8 +600,15 @@
     {
       "idx": 85,
       "version": "7",
-      "when": 1795050378330,
-      "tag": "0085_email-hash-conta-ativa",
+      "when": 1795053137443,
+      "tag": "0085_oferta-vaga-lista-espera",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1795054748536,
+      "tag": "0086_email-hash-conta-ativa",
       "breakpoints": true
     }
   ]
