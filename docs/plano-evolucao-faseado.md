@@ -53,8 +53,8 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 | id | Item | Objetivo de negócio | status | issue | spec |
 | --- | --- | --- | --- | --- | --- |
 | RM-05 | Pagamento online (Pix/cartão) | receber sem ação manual da recepção | backlog | — | — (decisão pendente: PSP) |
-| RM-15 | Relatório automático para o parceiro | fidelizar quem indica pacientes | backlog | — | — (decisão pendente: cadência e canal) |
-| RM-16 | Oferta de vaga da lista de espera por WhatsApp | ocupar horário cancelado | backlog | — | — (decisão pendente: expiração da oferta) |
+| RM-15 | Relatório automático para o parceiro | fidelizar quem indica pacientes | especificado | — | [ADR-114](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md): mensal, e-mail, sem dado clínico |
+| RM-16 | Oferta de vaga da lista de espera por WhatsApp | ocupar horário cancelado | especificado | — | [ADR-114](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md): oferta de 2 h, por e-mail |
 | RM-17 | TISS / convênios | faturar operadoras | backlog | — | — |
 | RM-14 | Lembretes por WhatsApp com templates da Meta, opt-in por clínica (cadência e escopo por empresa já entregues no RM-19) | lembrete automático no WhatsApp para a clínica que aceitar o custo por mensagem | especificado | — | [`lembretes-whatsapp-templates-cadencia/`](../.specs/features/lembretes-whatsapp-templates-cadencia/) |
 | RM-18 | Row-Level Security no Postgres ([ADR-001](./adr/001-multi-tenancy.md)) | isolamento de empresa também no banco | backlog | — | — |
