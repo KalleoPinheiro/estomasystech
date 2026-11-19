@@ -45,7 +45,7 @@ funcionar sobre o valor cifrado.
    com hash. A conversão dos dados existentes é o `npm run data:reencrypt` estendido (`user_accounts_email`):
    cifra o e-mail em claro, preenche ou recalcula o hash, pula conta anonimizada e e-mail que não normaliza (só o
    id vai para o log), é idempotente e roda mais de uma vez sem dano. Na release seguinte (contração): `email_hash`
-   `NOT NULL`, fim do ramo em claro e `DROP` dos dois índices antigos.
+   `NOT NULL` só para conta ativa (emenda: [ADR-114](./114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md)), fim do ramo em claro e `DROP` dos dois índices antigos.
 6. **Ordem por e-mail e conta anonimizada.** O banco não ordena cifra: `findAll`, `findByRole` e o relatório de
    contas de portal ordenam em memória (a lista de uma clínica é pequena, `MAX_ROWS`). A anonimização da
    retenção zera o `email_hash` (o endereço `anonimizado+<id>@anonimizado.invalid` não é pessoal e fica em claro).
@@ -54,7 +54,7 @@ funcionar sobre o valor cifrado.
 
 ## Emenda (2026-11-19, #909): conta anonimizada e conta ativa
 
-Decisão do dono (regra 5), que fecha a pergunta aberta da contração:
+Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md)), que fecha a pergunta aberta da contração:
 
 - **Conta anonimizada:** `email_hash` fica **vazio (NULL)**. A retenção já grava `email_hash = NULL` junto de `anonymized_at`;
   o `email` vira o endereço sintético `anonimizado+<id>@anonimizado.invalid` (não é pessoal). Sem valor sentinela por conta:

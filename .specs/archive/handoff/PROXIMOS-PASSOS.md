@@ -1,6 +1,6 @@
 # Próximos passos (fila única de passagem de bastão, ADR-109)
 
-Atualizada em 2026-11-18. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
+Atualizada em 2026-11-19. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
 PR (tira o que entregou, move o que mudou, acrescenta o que surgiu). Curto, em lista, sem nome de fornecedor.
 O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
@@ -26,7 +26,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   Environment `aprovacao-classe-3`, com o link do job e só com o CI verde. Staging publica sozinha a cada
   merge na `main`. Produção sai pelo workflow *Release deploy*, com o clique no Environment `producao`.
 - **Aprendizado do incidente 11-17:** o minify do servidor apagava nomes de classe e o `instanceof` entre módulos falhava
-  (#918, agora com teste no gate). Cobertura do shard 3/4 falhou uma vez e passou no rerun: se repetir, abrir issue.
+  (#918, agora com teste no gate). Cobertura: um shard falhou e passou no rerun no #923 (3/4) e no #932 (2/4), #933. O log não dizia qual teste (só `blob`); o job agora loga o teste vermelho e sobe o blob mesmo com falha. Se repetir, ler o log e corrigir o teste de origem (sem retry nem timeout maior).
 - **#560 (PPR e CSP por hash): rejeitado.** Nota em `.specs/spike-ppr-csp-hash-560.md`. Sem flag na `main` e sem ADR
   novo: a ADR-069 § 4 segue. O build com `cacheComponents` não gera casca; o TTFB da casca da equipe é 24 ms contra
   LCP 804 ms em 360 px (3%).
@@ -41,19 +41,18 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    4. #745, CodeQL do TS (P2). Próxima. Medido em 2026-11-18: o default setup roda verde (só 2 de 182 execuções falharam, ambas em 2026-11-08, HTTP 504 do bundle). Ver `docs/engineering/security-scan.md` § CodeQL.
    5. ~~#925~~ ensaio do rollback automático no `validar` (classe 3; PR aberto, espera o clique do dono).
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
-   ramo em claro e drop dos índices antigos, ADR-111): decisão da #909 tomada (anonimizada: `email_hash` NULL; ativa: obrigatório) e a restrição `NOT VALID` entra na `0085`. Falta: `VALIDATE`, fim do ramo em claro e drop dos índices antigos do e-mail.
+   ramo em claro e drop dos índices antigos, ADR-111): decisão da #909 tomada no ADR-114 (anonimizada: `email_hash` NULL; ativa: obrigatório) e a restrição `NOT VALID` entra na `0085` (PR #939). Falta: `VALIDATE`, fim do ramo em claro e drop dos índices antigos do e-mail.
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
-   trace), #862, #849, #828, #802, #744. **JS:** a #914 aceitou o delta da casca (+10,6 KB gz na equipe: 404, `error`,
+   trace), #862, #849 (a #828 entra no PR #937; a #802 e a #744 foram fechadas como obsoletas em 2026-11-19: o código que citavam saiu com o ADR-109). **JS:** a #914 aceitou o delta da casca (+10,6 KB gz na equipe: 404, `error`,
    `loading`, Web Vitals); o chunk cliente do `@still-void/ui` não cresceu (43,9 KB gz desde outubro), então a #883 não
    entra na fila. Nota em `docs/engineering/performance-front-js-casca-2026-11.md`. A #541 fecha com essa decisão.
    #560 está fora: a nota rejeitou o PPR.
-4. **Funcionalidade que espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
-   (a clínica aceita custo por mensagem?), RM-16 oferta de vaga da lista de espera (prazo da oferta), RM-15
-   relatório ao parceiro (cadência e canal), RM-05 pagamento online (PSP) e RM-17 TISS.
+4. **Decididas (ADR-114), prontas para implementar:** RM-16 (oferta de 2 h por e-mail) e RM-15 (relatório mensal por e-mail, sem dado clínico).
+   **Espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
+   (a clínica aceita custo por mensagem?), RM-05 pagamento online (PSP) e RM-17 TISS.
 
 ## Espera o dono
 
-- **#909:** decidir como contas anonimizadas ficam com `email_hash` antes do `NOT NULL`.
 - **#376** (parecer jurídico, condição para paciente real), **#654** (rotina mensal de 2026-11) e EST-16 (credenciais do
   Google Agenda em produção).
 - Atualizar o Traefik (3.7.15 para 3.7.16) em horário calmo e endurecer o SSH do VPS, conforme combinado.

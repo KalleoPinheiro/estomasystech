@@ -190,10 +190,12 @@ jobs:
 
       - name: Testes do shard (com cobertura bruta)
         run: >-
-          npx vitest run -c vitest.shard.config.mts --coverage --reporter=blob
+          npx vitest run -c vitest.shard.config.mts --coverage --reporter=default --reporter=blob
           --shard=${{ matrix.shard }}/4
 
+      # `!cancelled()`: o blob também sobe quando o shard reprova, para o teste vermelho poder ser lido (#933).
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
         with:
           name: vitest-blob-${{ matrix.shard }}
           path: .vitest-reports/

@@ -155,3 +155,8 @@ este ADR decidiu sobre shards, cache e limiares permanece. O que deixa de valer:
   (schedule ou `workflow_dispatch`).
 - Todo job de `ci.yml`, `gate-pr.yml`, `recibo-gate.yml` e `mutacao-mensal.yml` tem `timeout-minutes`.
   Política, agregador sem checkout, escopo, impacto e recibo usam `ubuntu-slim`.
+
+## Errata (2026-11-19, #828)
+
+A errata acima diz que a mutação saiu do `gate-pr.yml`. O [ADR-098](098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)
+a trouxe de volta: o job `mutacao` roda no `gate-pr.yml` só nos arquivos de regra alterados, com `timeout-minutes: 120`.

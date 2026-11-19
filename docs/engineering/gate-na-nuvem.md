@@ -78,8 +78,10 @@ Decisão e motivo: [ADR-087](../adr/087-gate-em-jobs-paralelos-com-shards-e-cach
 
 - **Actions, `ci.yml`**: `estatico`, `cobertura-shard` (4 fatias) + `cobertura` (junção com os limiares de
   `vitest.config.mts`) e `build` rodam juntos; o job `ci` (nome exigido pelo ruleset) só passa se todos passaram.
-  Reproduzir um shard: `npx vitest run -c vitest.shard.config.mts --coverage --reporter=blob --shard=1/4`;
-  juntar: `npx vitest --merge-reports --coverage` (os blobs ficam em `.vitest-reports/`).
+  Reproduzir um shard: `npx vitest run -c vitest.shard.config.mts --coverage --reporter=default --reporter=blob --shard=1/4`;
+  juntar: `npx vitest --merge-reports --coverage` (os blobs ficam em `.vitest-reports/`). O shard usa o reporter
+  `default` junto do `blob` (o log do job mostra o teste vermelho) e o blob sobe mesmo quando o shard reprova
+  (`if: !cancelled()`), para ler a falha intermitente da #933: com só o `blob` o log não trazia o nome do teste.
 - **Actions, `gate-pr.yml`** (PR para `release/**` e para a `main`, ADR-093 e ADR-098; repositório público, runners padrão sem cota): em rascunho só `politica` e o agregador, que
   reprova. Com o PR pronto: `impacto`, `integracao`, `compat-migracao` (só se o diff toca `drizzle/*.sql`: o código da base roda a integração sobre o esquema novo, #760), `build-prod` (um build só, publicado como artefato `build-next`), `e2e-prod` (3 shards que baixam esse build) e `e2e-dev` (papéis, login, console
   limpo). O job `mutacao` roda o Stryker incremental só nos arquivos de regra alterados (ADR-098; `release/* → main` não o repete, o `hotfix/*` sim). A rodada completa fica em `mutacao-mensal.yml` (`workflow_dispatch` ou schedule).
