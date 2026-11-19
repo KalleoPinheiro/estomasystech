@@ -378,6 +378,24 @@ export const waitlistEntries = pgTable(
       mode: 'date',
     }).notNull(),
     resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'date' }),
+    // Oferta em aberto da vaga liberada (RM-16). Nulo = a entrada não segura vaga.
+    // Colunas na tabela que já tem RLS, para a migração ficar aditiva.
+    offerAppointmentId: text('offer_appointment_id').references(
+      () => appointments.id,
+    ),
+    offerExpiresAt: timestamp('offer_expires_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    offerEmailSentAt: timestamp('offer_email_sent_at', {
+      withTimezone: true,
+      mode: 'date',
+    }),
+    // Consultas já oferecidas a esta entrada (a atual inclusive).
+    offeredAppointmentIds: text('offered_appointment_ids')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
   },
   (table) => [
     index('idx_waitlist_entries_clinic_status').on(
@@ -386,6 +404,10 @@ export const waitlistEntries = pgTable(
       table.createdAt,
     ),
     index('idx_waitlist_entries_patient').on(table.patientId),
+    // Uma consulta só é oferecida a uma entrada por vez.
+    uniqueIndex('uq_waitlist_open_offer')
+      .on(table.offerAppointmentId)
+      .where(sql`${table.offerAppointmentId} IS NOT NULL`),
   ],
 );
 

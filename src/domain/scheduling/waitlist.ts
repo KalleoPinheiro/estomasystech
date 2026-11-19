@@ -3,6 +3,7 @@ import {
   ValidationError,
 } from '../shared/errors';
 import { newId } from '../shared/id';
+import type { SlotOffer } from './waitlist-offer';
 
 /** `expired`: o período desejado terminou sem vaga (job de retenção, #311). */
 export const WAITLIST_STATUSES = [
@@ -34,6 +35,10 @@ export interface WaitlistEntryState extends WaitlistEntryProps {
   status: WaitlistStatus;
   createdAt: Date;
   resolvedAt: Date | null;
+  /** Oferta em aberto; nulo quando a entrada não segura vaga nenhuma. */
+  offer: SlotOffer | null;
+  /** Consultas já oferecidas a esta entrada, a atual inclusive. */
+  offeredAppointmentIds: readonly string[];
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -90,6 +95,8 @@ export class WaitlistEntry {
       status: 'waiting',
       createdAt: now,
       resolvedAt: null,
+      offer: null,
+      offeredAppointmentIds: [],
     });
   }
 
@@ -114,6 +121,89 @@ export class WaitlistEntry {
   /** Desistência, vaga resolvida por fora ou período vencido. */
   remove(at = new Date()): WaitlistEntry {
     return this.resolve('removed', at);
+  }
+
+  /**
+   * Segura a vaga desta consulta até `expiresAt`. Uma entrada só segura uma
+   * oferta por vez, e a mesma consulta não é oferecida de novo.
+   */
+  holdOffer(appointmentId: string, expiresAt: Date): WaitlistEntry {
+    if (this.state.status !== 'waiting') {
+      throw new InvalidStatusTransitionError(
+        'Esta entrada já saiu da lista de espera',
+      );
+    }
+    if (this.state.offer) {
+      throw new ValidationError('Esta entrada já tem uma oferta em aberto');
+    }
+    if (this.wasOffered(appointmentId)) {
+      throw new ValidationError('Esta vaga já foi oferecida a esta entrada');
+    }
+    return new WaitlistEntry({
+      ...this.state,
+      offer: { appointmentId, expiresAt, emailSentAt: null },
+      offeredAppointmentIds: [
+        ...this.state.offeredAppointmentIds,
+        appointmentId,
+      ],
+    });
+  }
+
+  /** O e-mail desta oferta saiu. Repetir não muda o horário do primeiro envio. */
+  markOfferEmailSent(at: Date): WaitlistEntry {
+    const offer = this.state.offer;
+    if (!offer) {
+      throw new ValidationError('Não há oferta em aberto');
+    }
+    if (offer.emailSentAt) return this;
+    return new WaitlistEntry({
+      ...this.state,
+      offer: { ...offer, emailSentAt: at },
+    });
+  }
+
+  /** O prazo acabou: solta a vaga e a entrada pode receber outra. */
+  expireOffer(now: Date): WaitlistEntry {
+    const offer = this.state.offer;
+    if (!offer) {
+      throw new ValidationError('Não há oferta em aberto');
+    }
+    if (offer.expiresAt.getTime() > now.getTime()) {
+      throw new ValidationError('A oferta ainda vale');
+    }
+    return new WaitlistEntry({ ...this.state, offer: null });
+  }
+
+  /**
+   * Solta a vaga porque o horário não pode mais ser oferecido (já ocupado de
+   * novo, ou a consulta começou). O histórico de ofertas fica.
+   */
+  withdrawOffer(): WaitlistEntry {
+    if (!this.state.offer) {
+      throw new ValidationError('Não há oferta em aberto');
+    }
+    return new WaitlistEntry({ ...this.state, offer: null });
+  }
+
+  wasOffered(appointmentId: string): boolean {
+    return this.state.offeredAppointmentIds.includes(appointmentId);
+  }
+
+  /** A oferta em aberto ainda vale depois de `now`. Sem oferta, não. */
+  offerExpiresAfter(now: Date): boolean {
+    if (!this.state.offer) return false;
+    return this.state.offer.expiresAt.getTime() > now.getTime();
+  }
+
+  offerEmailWasSent(): boolean {
+    return this.state.offer?.emailSentAt != null;
+  }
+
+  offerExpiresAt(): Date {
+    if (!this.state.offer) {
+      throw new ValidationError('Não há oferta em aberto');
+    }
+    return this.state.offer.expiresAt;
   }
 
   /** Aceita um horário vago neste dia com este profissional? */
@@ -160,6 +250,18 @@ export class WaitlistEntry {
   }
   get resolvedAt(): Date | null {
     return this.state.resolvedAt;
+  }
+  get openOffer(): SlotOffer | null {
+    const offer = this.state.offer;
+    if (!offer) return null;
+    return {
+      appointmentId: offer.appointmentId,
+      expiresAt: new Date(offer.expiresAt),
+      emailSentAt: offer.emailSentAt ? new Date(offer.emailSentAt) : null,
+    };
+  }
+  get offeredAppointmentIds(): readonly string[] {
+    return this.state.offeredAppointmentIds;
   }
 }
 

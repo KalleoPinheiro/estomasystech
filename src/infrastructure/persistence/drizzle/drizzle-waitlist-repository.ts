@@ -31,6 +31,15 @@ const toEntry = (row: LiveRow, cipher: FieldCipher): WaitlistEntry =>
     status: row.status as WaitlistStatus,
     createdAt: row.createdAt,
     resolvedAt: row.resolvedAt,
+    offer:
+      row.offerAppointmentId !== null && row.offerExpiresAt !== null
+        ? {
+            appointmentId: row.offerAppointmentId,
+            expiresAt: row.offerExpiresAt,
+            emailSentAt: row.offerEmailSentAt,
+          }
+        : null,
+    offeredAppointmentIds: row.offeredAppointmentIds,
   });
 
 export class DrizzleWaitlistRepository implements WaitlistRepository {
@@ -46,6 +55,7 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
         'Papel de sistema não pode alterar a lista de espera (somente leitura cross-empresa)',
       );
     }
+    const offer = entry.openOffer;
     const values = {
       id: entry.id,
       clinicId: this.clinicId,
@@ -59,13 +69,24 @@ export class DrizzleWaitlistRepository implements WaitlistRepository {
       status: entry.status,
       createdAt: entry.createdAt,
       resolvedAt: entry.resolvedAt,
+      offerAppointmentId: offer?.appointmentId ?? null,
+      offerExpiresAt: offer?.expiresAt ?? null,
+      offerEmailSentAt: offer?.emailSentAt ?? null,
+      offeredAppointmentIds: [...entry.offeredAppointmentIds],
     };
     await this.db
       .insert(waitlistEntries)
       .values(values)
       .onConflictDoUpdate({
         target: waitlistEntries.id,
-        set: { status: values.status, resolvedAt: values.resolvedAt },
+        set: {
+          status: values.status,
+          resolvedAt: values.resolvedAt,
+          offerAppointmentId: values.offerAppointmentId,
+          offerExpiresAt: values.offerExpiresAt,
+          offerEmailSentAt: values.offerEmailSentAt,
+          offeredAppointmentIds: values.offeredAppointmentIds,
+        },
       });
   }
 

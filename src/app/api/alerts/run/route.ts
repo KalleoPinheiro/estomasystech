@@ -4,12 +4,14 @@ import {
   alertConfigFromEnv,
   EvaluateAlerts,
 } from '@/application/monitoring/evaluate-alerts';
+import { AdvanceWaitlistOffers } from '@/application/scheduling/offer-waitlist-slot';
 import { getRepositories } from '@/infrastructure/container';
 import { platformEmailGateway } from '@/infrastructure/email/resend-email-gateway';
 import { checkReadiness } from '@/infrastructure/persistence/drizzle/readiness';
 import { fail, handleRequest } from '@/lib/api-response';
 import { passwordMatches } from '@/lib/auth/session';
-import { systemScope } from '@/lib/auth/tenant-scope';
+import { clinicScope, systemScope } from '@/lib/auth/tenant-scope';
+import { logError } from '@/lib/log-error';
 import { countSignals } from '@/lib/observability/signals';
 
 /**
@@ -46,9 +48,9 @@ async function runAlerts(provided: string) {
     return fail('Não autorizado', 401);
   }
 
-  return handleRequest(() => {
+  return handleRequest(async () => {
     globalForAlerts.estomasystechAlertsNotified ??= new Map();
-    return new EvaluateAlerts(
+    const summary = await new EvaluateAlerts(
       {
         readiness: () => checkReadiness(),
         // Tabela de plataforma (sem empresa): o escopo de sistema só a lê.
@@ -60,5 +62,27 @@ async function runAlerts(provided: string) {
       alertConfigFromEnv(),
       globalForAlerts.estomasystechAlertsNotified,
     ).execute();
+    // A passagem da oferta (2 h) não espera o lembrete das 8 h: este cron já
+    // roda a cada 5 minutos. Falha aqui não esconde o alerta.
+    await advanceWaitlistOffers();
+    return summary;
   });
+}
+
+/** Expira ofertas vencidas e oferece a vaga ao próximo, empresa a empresa. */
+async function advanceWaitlistOffers(): Promise<void> {
+  try {
+    const { clinics } = await getRepositories(systemScope());
+    const all = await clinics.findAll();
+    await new AdvanceWaitlistOffers(
+      all.map((clinic) => ({
+        id: clinic.id,
+        name: clinic.name,
+        status: clinic.status,
+      })),
+      (clinicId) => getRepositories(clinicScope(clinicId)),
+    ).execute();
+  } catch (error) {
+    logError('Ofertas da lista de espera: falha ao avançar', error);
+  }
 }

@@ -3,7 +3,7 @@ title: "Plano de Evolução Faseado e Roadmap"
 status: living
 audience: [po, stakeholder, dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-11-19
 ---
 
 # Plano de Evolução Faseado — EstomaSysTech
@@ -54,7 +54,6 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 | --- | --- | --- | --- | --- | --- |
 | RM-05 | Pagamento online (Pix/cartão) | receber sem ação manual da recepção | backlog | — | — (decisão pendente: PSP) |
 | RM-15 | Relatório automático para o parceiro | fidelizar quem indica pacientes | especificado | — | [ADR-114](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md): mensal, e-mail, sem dado clínico |
-| RM-16 | Oferta de vaga da lista de espera por WhatsApp | ocupar horário cancelado | especificado | — | [ADR-114](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md): oferta de 2 h, por e-mail |
 | RM-17 | TISS / convênios | faturar operadoras | backlog | — | — |
 | RM-14 | Lembretes por WhatsApp com templates da Meta, opt-in por clínica (cadência e escopo por empresa já entregues no RM-19) | lembrete automático no WhatsApp para a clínica que aceitar o custo por mensagem | especificado | — | [`lembretes-whatsapp-templates-cadencia/`](../.specs/features/lembretes-whatsapp-templates-cadencia/) |
 | RM-18 | Row-Level Security no Postgres ([ADR-001](./adr/001-multi-tenancy.md)) | isolamento de empresa também no banco | backlog | — | — |
@@ -63,6 +62,7 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 
 | id | Item | Objetivo de negócio | status | issue | spec |
 | --- | --- | --- | --- | --- | --- |
+| RM-16 | Oferta de vaga da lista de espera por e-mail (2 h) | ocupar horário cancelado | entregue | — | [ADR-114](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md), [`agenda`](domains/agenda/README.md) (AGE-RN-27), migração aditiva `0085` |
 | RM-01 | Fase 1 — Hardening de segurança | proteger dado de saúde antes de crescer | entregue | — | [`fase-1-hardening-seguranca/`](../.specs/features/fase-1-hardening-seguranca/) |
 | RM-02 | Fase 2 — Consistência transacional e performance | fundação antes de feature | entregue | — | [`fase-2-consistencia-performance/`](../.specs/features/fase-2-consistencia-performance/) |
 | RM-03 | Fase 3 — Compliance e UX clínico | prontuário aderente a COFEN/LGPD | entregue | — | [`fase-3-compliance-ux-clinico/`](../.specs/features/fase-3-compliance-ux-clinico/) |
@@ -173,8 +173,8 @@ Exige escolhas do negócio antes de executar:
   qual PSP (Mercado Pago, Stripe, Asaas) e credenciais.
 - **Relatório automático para o parceiro:** resumo periódico por marco clínico (ex.: queda de
   PUSH ≥ 3) enviado ao indicador. **Decisão pendente:** cadência e canal (email/WhatsApp).
-- **Lista de espera (waitlist):** cancelamento oferece o slot via WhatsApp por ordem de chegada.
-  **Decisão pendente:** regras de expiração da oferta.
+- **Lista de espera (waitlist):** cancelamento oferece a vaga por e-mail, com prazo de 2 horas
+  (ADR-114, AGE-RN-27). WhatsApp continua no RM-14.
 
 ## Fase 6 — Plataforma (parcialmente especificada)
 

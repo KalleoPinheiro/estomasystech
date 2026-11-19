@@ -3,7 +3,7 @@ title: "Agenda — matriz de exceções"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-31
+last_reviewed: 2026-11-19
 domain: agenda
 related: [docs/adr/049-matriz-de-excecoes-por-dominio.md]
 ---
@@ -30,8 +30,10 @@ related: [docs/adr/049-matriz-de-excecoes-por-dominio.md]
 | outra clínica | Mesmo horário em duas empresas não conflita | AGE-RN-02 | `tests/api/appointment-overlap-per-clinic.test.ts` › "C1 mesmo horário sem profissional em duas empresas: ambas 200" |
 | outra clínica | Profissional de outra empresa ao marcar consulta avulsa ou série | AGE-RN-12 | `tests/api/appointment-professional-validation.test.ts` › "Dado profissional de outra empresa, Quando POST /api/appointments/recurring, Então 404 e nada é criado" |
 | outra clínica | Retorno e configuração da grade de outra empresa | AGE-RN-13 | `tests/api/followup-tenant-isolation.test.ts` › "Dada sessão da clínica A, Quando PATCH em retorno da clínica B, Então falha" ; `tests/api/schedule-settings-tenant-isolation.test.ts` › "Dada clínica sem configuração salva, Quando buscar, Então retorna default sem vazar configuração de outra clínica" |
+| outra clínica | Oferta de vaga não chega à fila da outra clínica | AGE-RN-27 | `tests/application/waitlist-offer.test.ts` › "Dada a fila de outra clínica, Quando a vaga é oferecida, Então o e-mail não sai para ela" |
 | duplicidade | Mesmo horário e profissional na mesma empresa | AGE-RN-02 | `tests/api/appointment-overlap-per-clinic.test.ts` › "C2 mesmo horário sem profissional na mesma empresa: 409" |
 | duplicidade | Repetir o pedido na lista de espera não duplica | AGE-RN-08 | `tests/application/waitlist-late-cancel.test.ts` › "Dado pedido válido, Quando adicionar, Então entra na fila; repetir o mesmo pedido não duplica" |
+| duplicidade | Reenviar a oferta da vaga não manda outro e-mail | AGE-RN-27 | `tests/application/waitlist-offer.test.ts` › "Dado a oferta já enviada, Quando oferece de novo, Então o e-mail não sai outra vez" |
 | duplicidade | Concluir de novo não duplica a fatura | AGE-RN-05 | `tests/application/appointments.test.ts` › "Dado consulta já com fatura, Quando concluir de novo após restaurar, Então não duplica fatura" |
 | duplicidade | Paciente cancela de novo uma consulta já cancelada | AGE-RN-07 | `tests/api/portal-cancel-reschedule.test.ts` › "Dado consulta já cancelada pelo paciente, Quando cancelar de novo, Então 200 sem erro (idempotente)" |
 | concorrência | Dois pedidos simultâneos para o mesmo horário | AGE-RN-02 | `tests/api/agenda-excecoes.test.ts` › "Dados dois pedidos simultâneos para o mesmo horário, Quando marcar, Então um é aceito e o outro recebe 409" |

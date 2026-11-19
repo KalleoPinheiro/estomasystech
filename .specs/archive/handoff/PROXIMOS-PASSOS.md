@@ -45,7 +45,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
    trace), #862 (a #828 entra no PR #937; a #802 e a #744 foram fechadas como obsoletas em 2026-11-19: o código que citavam saiu com o ADR-109).
    #560 está fora: a nota rejeitou o PPR.
-4. **Decididas (ADR-114), prontas para implementar:** RM-16 (oferta de 2 h por e-mail) e RM-15 (relatório mensal por e-mail, sem dado clínico).
+4. **Decididas (ADR-114):** RM-16 entregue na `main` (oferta de 2 h por e-mail ao próximo da lista; migração aditiva `0085`). RM-15 (relatório mensal por e-mail, sem dado clínico) segue pronta para implementar.
    **Espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
    (a clínica aceita custo por mensagem?), RM-05 pagamento online (PSP) e RM-17 TISS.
 
