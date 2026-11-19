@@ -85,8 +85,8 @@ describe('Feature: Um único super_admin garantido pelo banco (B1, ADR-007)', ()
       const error = await captureError(() =>
         run(
           db,
-          `INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, active, created_at)
-           VALUES ('sa-2','c1','sa2@x.com','scrypt$x','super_admin',true,now())`,
+          `INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, active, created_at)
+           VALUES ('sa-2','c1','sa2@x.com','h-sa2@x.com','scrypt$x','super_admin',true,now())`,
         ),
       );
 
@@ -101,8 +101,8 @@ describe('Feature: Um único super_admin garantido pelo banco (B1, ADR-007)', ()
       const error = await captureError(() =>
         run(
           db,
-          `INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, active, created_at)
-           VALUES ('ca-1',NULL,'ca@x.com','scrypt$x','company_admin',true,now())`,
+          `INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, active, created_at)
+           VALUES ('ca-1',NULL,'ca@x.com','h-ca@x.com','scrypt$x','company_admin',true,now())`,
         ),
       );
 
@@ -117,9 +117,9 @@ describe('Feature: Um único super_admin garantido pelo banco (B1, ADR-007)', ()
 
       await run(
         db,
-        `INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, active, created_at) VALUES
-          ('sa-1',NULL,'sa@x.com','scrypt$x','super_admin',true,now()),
-          ('ca-1','c1','ca@x.com','scrypt$x','company_admin',true,now())`,
+        `INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, active, created_at) VALUES
+          ('sa-1',NULL,'sa@x.com','h-sa@x.com','scrypt$x','super_admin',true,now()),
+          ('ca-1','c1','ca@x.com','h-ca@x.com','scrypt$x','company_admin',true,now())`,
       );
 
       expect(

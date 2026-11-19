@@ -100,6 +100,7 @@ describe('Feature: Persistência de logo e avatar (#427)', () => {
       id: 'acc-ret-avatar',
       clinicId: CLINIC,
       email: 'ret-avatar@x.com',
+      emailHash: 'h-acc-ret-avatar',
       passwordHash: 'scrypt$1$salt$hash',
       role: 'atendente',
       active: false,

@@ -144,8 +144,8 @@ async function seedFinanceAndAudit(db: Client, clinicId: string, profile: LoadPr
 }
 
 async function seedAccounts(db: Client, clinicId: string): Promise<void> {
-  const insert = `INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, patient_id, created_at)
-                  VALUES ($1, $2, $3, 'scrypt$load$nao-loga$nao-loga', $4, $5, now())`;
+  const insert = `INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, patient_id, created_at)
+                  VALUES ($1, $2, $3, 'load-' || $1, 'scrypt$load$nao-loga$nao-loga', $4, $5, now())`;
   await db.query(insert, [`${clinicId}-admin`, clinicId, LOAD_ADMIN_EMAIL, "company_admin", null]);
   for (let i = 0; i < PORTAL_ACCOUNTS; i++) {
     await db.query(insert, [`${clinicId}-acc-${i}`, clinicId, portalEmail(i), "patient", `${clinicId}-pat-${i}`]);

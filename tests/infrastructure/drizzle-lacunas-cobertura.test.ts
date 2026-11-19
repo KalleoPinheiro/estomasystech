@@ -164,6 +164,7 @@ describe('Feature: Persistência em Postgres tolera dados legados e propaga falh
       id: 'acc-mfa',
       clinicId: CLINIC,
       email: 'mfa@clinica.com',
+      emailHash: 'h-acc-mfa',
       passwordHash: 'scrypt$1$s$h',
       role: 'company_admin',
       active: true,
