@@ -99,6 +99,8 @@ export const partners = pgTable(
     crm: text('crm'),
     specialty: text('specialty'),
     active: boolean('active').notNull().default(true),
+    // Mês AAAA-MM do último relatório enviado (RM-15). Nulo = nenhum.
+    monthlyReportMonth: text('monthly_report_month'),
     createdAt: timestamp('created_at', {
       withTimezone: true,
       mode: 'date',

@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { SendPartnerMonthlyReports } from '@/application/partners/send-monthly-reports';
 import { AlertDataRequestDeadlines } from '@/application/patients/alert-data-request-deadlines';
 import { SendReminders } from '@/application/reminders/send-reminders';
 import { getRepositories } from '@/infrastructure/container';
@@ -57,6 +58,16 @@ async function runReminders(provided: string) {
     const dataRequestDeadlines = await alertDataRequestDeadlines(
       all.filter((clinic) => clinic.status !== 'suspended'),
     );
+    // Relatório mensal ao parceiro (RM-15). A chave é o mês: rodar o job
+    // todo dia não reenvia. Falha aqui não desfaz os lembretes.
+    const partnerReports = await new SendPartnerMonthlyReports(
+      all.map((clinic) => ({
+        id: clinic.id,
+        name: clinic.name,
+        status: clinic.status,
+      })),
+      (clinicId) => getRepositories(clinicScope(clinicId)),
+    ).execute();
     // Alerta "lembretes sem rodar há 26 h" (#212). Falhar aqui não desfaz o
     // envio: o resumo volta igual e o alerta avisa no dia seguinte.
     await jobRuns
@@ -64,7 +75,7 @@ async function runReminders(provided: string) {
       .catch((error: unknown) =>
         logError('Lembretes: falha ao registrar a execução', error),
       );
-    return { ...summary, dataRequestDeadlines };
+    return { ...summary, dataRequestDeadlines, partnerReports };
   });
 }
 
