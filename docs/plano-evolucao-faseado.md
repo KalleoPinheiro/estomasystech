@@ -62,7 +62,7 @@ Nenhum item. A próxima prioridade depende das decisões pendentes listadas em *
 
 | id | Item | Objetivo de negócio | status | issue | spec |
 | --- | --- | --- | --- | --- | --- |
-| RM-16 | Oferta de vaga da lista de espera por e-mail (2 h) | ocupar horário cancelado | entregue | — | [ADR-114](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md), [`agenda`](domains/agenda/README.md) (AGE-RN-27), migração aditiva `0085` |
+| RM-16 | Oferta de vaga da lista de espera por e-mail (2 h) | ocupar horário cancelado | entregue | — | [`oferta-vaga-lista-espera/`](../.specs/features/oferta-vaga-lista-espera/) ([ADR-114](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md), [`agenda`](domains/agenda/README.md) AGE-RN-27, migração aditiva `0085`) |
 | RM-01 | Fase 1 — Hardening de segurança | proteger dado de saúde antes de crescer | entregue | — | [`fase-1-hardening-seguranca/`](../.specs/features/fase-1-hardening-seguranca/) |
 | RM-02 | Fase 2 — Consistência transacional e performance | fundação antes de feature | entregue | — | [`fase-2-consistencia-performance/`](../.specs/features/fase-2-consistencia-performance/) |
 | RM-03 | Fase 3 — Compliance e UX clínico | prontuário aderente a COFEN/LGPD | entregue | — | [`fase-3-compliance-ux-clinico/`](../.specs/features/fase-3-compliance-ux-clinico/) |
