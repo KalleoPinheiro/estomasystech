@@ -43,9 +43,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
    ramo em claro e drop dos índices antigos, ADR-111): decisão da #909 tomada no ADR-114 (`NOT NULL` só para conta ativa); falta implementar (classe 3, clique do dono).
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
-   trace), #862 (a #828 entra no PR #937; a #802 e a #744 foram fechadas como obsoletas em 2026-11-19: o código que citavam saiu com o ADR-109). **JS:** a #914 aceitou o delta da casca (+10,6 KB gz na equipe: 404, `error`,
-   `loading`, Web Vitals); o chunk cliente do `@still-void/ui` não cresceu (43,9 KB gz desde outubro), então a #883 não
-   entra na fila. Nota em `docs/engineering/performance-front-js-casca-2026-11.md`. A #541 fecha com essa decisão.
+   trace), #862 (a #828 entra no PR #937; a #802 e a #744 foram fechadas como obsoletas em 2026-11-19: o código que citavam saiu com o ADR-109).
    #560 está fora: a nota rejeitou o PPR.
 4. **Decididas (ADR-114), prontas para implementar:** RM-16 (oferta de 2 h por e-mail) e RM-15 (relatório mensal por e-mail, sem dado clínico).
    **Espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
