@@ -1,6 +1,6 @@
 # Próximos passos (fila única de passagem de bastão, ADR-109)
 
-Atualizada em 2026-11-18. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
+Atualizada em 2026-11-19. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
 PR (tira o que entregou, move o que mudou, acrescenta o que surgiu). Curto, em lista, sem nome de fornecedor.
 O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
@@ -26,7 +26,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   Environment `aprovacao-classe-3`, com o link do job e só com o CI verde. Staging publica sozinha a cada
   merge na `main`. Produção sai pelo workflow *Release deploy*, com o clique no Environment `producao`.
 - **Aprendizado do incidente 11-17:** o minify do servidor apagava nomes de classe e o `instanceof` entre módulos falhava
-  (#918, agora com teste no gate). Cobertura do shard 3/4 falhou uma vez e passou no rerun: se repetir, abrir issue.
+  (#918, agora com teste no gate). Cobertura: um shard falhou e passou no rerun no #923 (3/4) e no #932 (2/4), #933. O log não dizia qual teste (só `blob`); o job agora loga o teste vermelho e sobe o blob mesmo com falha. Se repetir, ler o log e corrigir o teste de origem (sem retry nem timeout maior).
 - **#560 (PPR e CSP por hash): rejeitado.** Nota em `.specs/spike-ppr-csp-hash-560.md`. Sem flag na `main` e sem ADR
   novo: a ADR-069 § 4 segue. O build com `cacheComponents` não gera casca; o TTFB da casca da equipe é 24 ms contra
   LCP 804 ms em 360 px (3%).
