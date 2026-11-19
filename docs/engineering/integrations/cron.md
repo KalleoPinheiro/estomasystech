@@ -3,7 +3,7 @@ title: "Integração: cron de lembretes"
 status: living
 audience: [dev, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-10-18
+last_reviewed: 2026-11-19
 ---
 
 # Cron de lembretes (`POST /api/reminders/run`)
@@ -68,8 +68,13 @@ sem aviso; cada pedido é avisado uma vez (`deadline_alerted_at`). Sem canal de 
 `skipped` e nada é marcado. O resumo ganha o campo aditivo `dataRequestDeadlines`
 (`{ "alerted": 1, "skipped": 0, "failed": 0 }`, somado de todas as empresas).
 
+Na mesma execução, cada clínica ativa também envia o **relatório mensal ao parceiro** que indica
+pacientes (RM-15, EQP-RN-10): uma vez por parceiro e por empresa no mês (`APP_TIMEZONE`). O resumo
+ganha `partnerReports` (`{ "sent": 1, "skipped": 0, "failed": 0 }`). Sem canal, conta `skipped` e
+não grava o mês. Clínica suspensa fica de fora. O texto não leva dado clínico.
+
 Rodar duas vezes no mesmo dia não duplica: a confirmação é única por (referência, dia) e o recall
-por tentativa. "Amanhã", o dia do registro e a data/hora do e-mail usam `APP_TIMEZONE` (padrão
+por tentativa. O relatório ao parceiro não duplica no mesmo mês. "Amanhã", o dia do registro e a data/hora do e-mail usam `APP_TIMEZONE` (padrão
 `America/Sao_Paulo`); o app alinha o fuso do processo a esse valor na subida (#205, #206 — na
 Vercel `TZ` é reservado e as funções rodam em UTC).
 

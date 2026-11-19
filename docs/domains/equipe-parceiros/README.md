@@ -3,7 +3,7 @@ title: "Domínio: Equipe e parceiros"
 status: living
 audience: [dev, po, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-01
+last_reviewed: 2026-11-19
 domain: equipe-parceiros
 ---
 
@@ -30,6 +30,7 @@ profissional ou parceiro pode ter, opcionalmente, uma conta com o papel correspo
 | EQP-RN-07 | Retenção da conta de parceiro (#311): conta de portal do parceiro desativada há mais de 2 anos é anonimizada como as da equipe (ACE-RN-45) e solta o vínculo com o cadastro, para o convite novo do mesmo parceiro criar uma conta nova. O cadastro do parceiro (nome, e-mail, CRM) é **guardado**, como o do profissional (decisão de 2026-10-17, [ADR-017](../../adr/017-retencao-decisoes-complementares.md)): ele sustenta a indicação, o consentimento do paciente e as comissões, que têm prazo próprio; só a eliminação por pedido do titular o anonimiza | [spec](../../../.specs/features/retencao-restante/spec.md), `src/infrastructure/persistence/drizzle/drizzle-retention-repository.ts` |
 | EQP-RN-09 | Comissão é dado financeiro (#550): só o Admin de Empresa lê e grava o repasse. A tela `/profissionais` e as ações dela usam a matriz de `/api/professionals` (família administrativa), então Atendente e Profissional recebem 403 sem tocar o cadastro; `/parceiros` segue operacional (Admin, Atendente e Profissional). Toda gravação de profissional, horário e parceiro registra o evento de auditoria na **mesma transação** (ADR-075): se a trilha falha, nada é gravado. Vale também para as rotas (#640): `POST` e `PATCH /api/professionals` e `POST` e `PUT /api/partners` gravam com o mesmo `action`/`resourceType`/`detail` das ações (`cadastrado`, `editado`, `desativado`, `reativado`), montados em `team-audit.ts` | `src/app/(staff)/profissionais/professional-actions.ts`, `src/app/(staff)/parceiros/partner-actions.ts`, `src/app/api/{professionals,partners}/**/route.ts`, `src/lib/server/team-audit.ts`, `src/lib/staff-pages.ts` |
 | EQP-RN-08 | Cadastro do profissional é guardado (decisão de 2026-10-12, #311): nome e conselho aparecem na autoria do prontuário, que tem guarda de 20 anos. A retenção anonimiza só a conta de login | [ADR-013](../../adr/013-retencao-por-anonimizacao.md), [ADR-017](../../adr/017-retencao-decisoes-complementares.md) |
+| EQP-RN-10 | Relatório mensal ao parceiro que indica (RM-15, [ADR-114](../../adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md)): na execução do job de lembretes, uma vez por mês no fuso `APP_TIMEZONE`, o e-mail vai ao parceiro **ativo** com ao menos um paciente indicado. A mesma empresa não reenvia naquele mês (`AAAA-MM` em `partners.monthly_report_month`, migração aditiva `0087`); outra empresa é outro envio, mesmo com o mesmo endereço. Clínica suspensa não envia. Sem canal, o mês não fica gravado. Falha de envio solta o mês para a próxima execução. Parceiro inativo ou sem indicação não recebe. **Campos do e-mail:** nome da clínica, primeiro nome do parceiro, mês do envio, e de cada paciente indicado o nome completo e se houve consulta realizada (`completed` com fim nos últimos 24 meses, a janela do [POR-RN-11](../portal/README.md)). **Não entra:** procedimento, data ou horário da consulta, condição, avaliação, escore, foto, anamnese, financeiro, telefone, e-mail, CPF, nascimento, notas, CRM e especialidade do parceiro | `partnerMonthlyReportContent` em `src/domain/partner/monthly-report.ts`, `SendPartnerMonthlyReports` em `src/application/partners/send-monthly-reports.ts` |
 
 ## Funcionalidades
 
@@ -37,6 +38,7 @@ profissional ou parceiro pode ter, opcionalmente, uma conta com o papel correspo
 | --- | --- | --- |
 | Cadastro de profissionais e horário semanal (#550): página no servidor, sem `/api` na carga; cadastro, edição, ativar/desativar e horário são Server Actions com auditoria na mesma transação. A leitura do horário de um profissional é sob demanda, ao abrir «Horários». Ausências ficam em Configurações | entregue | `/profissionais` (`page.tsx`, `professionals-board.tsx`, `professional-form.tsx`, `availability-form.tsx`, `professional-actions.ts`), `src/lib/server/{data/professionals,professional-writes}.ts` |
 | Cadastro de parceiros e indicação (#550): página no servidor, sem `/api` na carga; cadastro, edição e ativar/desativar são Server Actions com auditoria na mesma transação. Os links de e-mail e telefone do contato (`mailto:`, `tel:`) seguem `<a>` por serem navegação para fora do app (exceção ADR-069) | entregue | `/parceiros` (`page.tsx`, `partners-board.tsx`, `partner-form.tsx`, `partner-actions.ts`), `src/lib/server/data/partners.ts` |
+| Relatório mensal por e-mail a quem indica (RM-15), sem dado clínico | entregue | job `POST /api/reminders/run`, EQP-RN-10 |
 
 Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
 
@@ -44,8 +46,8 @@ Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
 
 | Camada | Caminho |
 | --- | --- |
-| domínio | `src/domain/{professional,partner}/` |
-| casos de uso | `src/application/partners/` (inclui o consentimento para o parceiro, também em papel — POR-RN-16) |
+| domínio | `src/domain/{professional,partner}/` (`monthly-report.ts` é o texto do RM-15) |
+| casos de uso | `src/application/partners/` (inclui o consentimento para o parceiro, também em papel — POR-RN-16 — e o envio mensal) |
 | API | `src/app/api/{professionals,partners}/` (as rotas e as ações dividem `src/lib/server/data/` e `src/lib/server/professional-writes.ts`) |
 | UI | `src/app/(staff)/{profissionais,parceiros}/` |
 | testes | `tests/domain/`, `tests/app/equipe-actions.test.ts`, `tests/pages/staff-{profissionais,parceiros}.test.tsx`, `e2e/equipe.spec.ts` |
@@ -54,3 +56,12 @@ Specs de execução: `.specs/features/diretorios-p0-p3-pontuais/`.
 ## Decisões
 
 - [ADR-003](../../adr/003-modelo-de-papeis-multi-empresa.md) — vínculo dinâmico do Profissional com pacientes
+- [ADR-114](../../adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md) — relatório mensal por e-mail, sem dado clínico (RM-15)
+
+## Perguntas abertas
+
+O ADR-114 fixa cadência mensal, canal e-mail e a ausência de dado clínico. Não fixa o recorte fino abaixo; a implementação usa o que o portal já permite ao parceiro sem consentimento (POR-RN-11) e deixa o resto em aberto (regra 5):
+
+1. O "consulta realizada" do e-mail é a janela de 24 meses do portal. O mês do relatório deve contar só as consultas daquele mês?
+2. O envio sai na primeira execução do job diário de lembretes dentro do mês (`APP_TIMEZONE`). Deve ser um dia fixo, ou só o mês anterior já encerrado?
+3. Parceiro inativo não recebe, no mesmo recorte em que não entra no portal. Deve receber o relatório do que já indicou?
