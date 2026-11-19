@@ -170,12 +170,7 @@ export class WaitlistSlotOffers {
   ): Promise<OfferCounts> {
     const day = localDateKey(appointment.slot.start);
     for (const entry of await this.services.waitlist.listWaiting()) {
-      const recipient = await this.candidate(
-        entry,
-        appointment.id,
-        day,
-        appointment.professionalId,
-      );
+      const recipient = await this.candidate(entry, appointment, day);
       if (!recipient) continue;
       const held = entry.holdOffer(appointment.id, deadline);
       await this.services.waitlist.save(held);
@@ -186,12 +181,13 @@ export class WaitlistSlotOffers {
 
   private async candidate(
     entry: WaitlistEntry,
-    appointmentId: string,
+    appointment: Appointment,
     day: string,
-    professionalId: string | null,
   ): Promise<OfferRecipient | null> {
-    if (!entry.accepts(day, professionalId)) return null;
-    if (entry.wasOffered(appointmentId) || entry.openOffer) return null;
+    // AGE-RN-27: o paciente da consulta cancelada não recebe esta vaga.
+    if (entry.patientId === appointment.patientId) return null;
+    if (!entry.accepts(day, appointment.professionalId)) return null;
+    if (entry.wasOffered(appointment.id) || entry.openOffer) return null;
     const patient = await this.services.patients.findById(entry.patientId);
     if (!patient) return null;
     return recipientFor(patient, this.services.guardians);

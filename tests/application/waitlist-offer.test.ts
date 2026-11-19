@@ -128,7 +128,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     box = harness();
   });
 
-  it('Dado consulta cancelada e dois na fila, Quando oferece a vaga, Então o e-mail vai só para o primeiro e vale 2 horas', async () => {
+  it('Dado consulta cancelada e dois na fila, Quando oferece a vaga, Então o e-mail vai para o seguinte e vale 2 horas', async () => {
     const ana = await patient(box.patients, 'Ana Paula');
     const bia = await patient(box.patients, 'Bia Costa');
     const appointment = cancelled(ana.id);
@@ -140,14 +140,14 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
 
     expect(counts.sent).toBe(1);
     expect(box.email.sent.map((message) => message.to)).toEqual([
-      'ana@example.com',
+      'bia@example.com',
     ]);
     expect(box.email.sent[0].text).toContain('20/07/2026 às 12:00');
     expect(box.email.sent[0].text).toContain('20/07/2026 às 08:00');
-    expect(box.email.sent[0].text).toContain('Olá, Ana!');
+    expect(box.email.sent[0].text).toContain('Olá, Bia!');
     expect(box.email.sent[0].text).not.toContain('Curativo');
     const held = (await box.waitlist.listWaiting()).find(
-      (entry) => entry.patientId === ana.id,
+      (entry) => entry.patientId === bia.id,
     );
     expect(held?.openOffer?.expiresAt.toISOString()).toBe(
       '2026-07-20T08:00:00.000Z',
@@ -155,11 +155,35 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     expect(held?.offerEmailWasSent()).toBe(true);
   });
 
+  it('Dado o paciente que cancelou está na fila, Quando a vaga é oferecida, Então ele não recebe e o próximo recebe', async () => {
+    const ana = await patient(box.patients, 'Ana Paula');
+    const bia = await patient(box.patients, 'Bia Costa');
+    const appointment = cancelled(ana.id, START, 'prof-1');
+    await box.appointments.save(appointment);
+    await box.waitlist.save(queued(ana.id, '2026-07-01T00:00:00Z', 'prof-1'));
+    await box.waitlist.save(queued(bia.id, '2026-07-02T00:00:00Z', 'prof-1'));
+
+    await box.offers.offerCancelled(appointment.id, NOW);
+
+    expect(box.email.sent.map((message) => message.to)).toEqual([
+      'bia@example.com',
+    ]);
+    const fila = await box.waitlist.listWaiting();
+    const anaEntry = fila.find((entry) => entry.patientId === ana.id);
+    const biaEntry = fila.find((entry) => entry.patientId === bia.id);
+    expect(anaEntry?.openOffer).toBeNull();
+    expect(anaEntry?.wasOffered(appointment.id)).toBe(false);
+    expect(biaEntry?.openOffer?.appointmentId).toBe(appointment.id);
+    expect(biaEntry?.offerEmailWasSent()).toBe(true);
+  });
+
   it('Dado a oferta já enviada, Quando oferece de novo, Então o e-mail não sai outra vez', async () => {
     const ana = await patient(box.patients, 'Ana Paula');
+    const bia = await patient(box.patients, 'Bia Costa');
     const appointment = cancelled(ana.id);
     await box.appointments.save(appointment);
     await box.waitlist.save(queued(ana.id, '2026-07-01T00:00:00Z'));
+    await box.waitlist.save(queued(bia.id, '2026-07-02T00:00:00Z'));
 
     await box.offers.offerCancelled(appointment.id, NOW);
     const again = await box.offers.offerCancelled(
@@ -168,16 +192,20 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     );
 
     expect(again.sent).toBe(0);
-    expect(box.email.sent).toHaveLength(1);
+    expect(box.email.sent.map((message) => message.to)).toEqual([
+      'bia@example.com',
+    ]);
   });
 
   it('Dado a oferta vencida, Quando o prazo passa, Então expira e o e-mail vai para o próximo', async () => {
     const ana = await patient(box.patients, 'Ana Paula');
     const bia = await patient(box.patients, 'Bia Costa');
+    const caio = await patient(box.patients, 'Caio Dias');
     const appointment = cancelled(ana.id);
     await box.appointments.save(appointment);
     await box.waitlist.save(queued(ana.id, '2026-07-01T00:00:00Z'));
     await box.waitlist.save(queued(bia.id, '2026-07-02T00:00:00Z'));
+    await box.waitlist.save(queued(caio.id, '2026-07-03T00:00:00Z'));
     await box.offers.offerCancelled(appointment.id, NOW);
 
     const early = await box.offers.advance(at('2026-07-20T07:59:00Z'));
@@ -188,20 +216,20 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     expect(passed.expired).toBe(1);
     expect(passed.sent).toBe(1);
     expect(box.email.sent.map((message) => message.to)).toEqual([
-      'ana@example.com',
       'bia@example.com',
+      'caio@example.com',
     ]);
+    const caioEntry = (await box.waitlist.listWaiting()).find(
+      (entry) => entry.patientId === caio.id,
+    );
+    expect(caioEntry?.openOffer?.expiresAt.toISOString()).toBe(
+      '2026-07-20T10:00:00.000Z',
+    );
     const biaEntry = (await box.waitlist.listWaiting()).find(
       (entry) => entry.patientId === bia.id,
     );
-    expect(biaEntry?.openOffer?.expiresAt.toISOString()).toBe(
-      '2026-07-20T10:00:00.000Z',
-    );
-    const anaEntry = (await box.waitlist.listWaiting()).find(
-      (entry) => entry.patientId === ana.id,
-    );
-    expect(anaEntry?.openOffer).toBeNull();
-    expect(anaEntry?.wasOffered(appointment.id)).toBe(true);
+    expect(biaEntry?.openOffer).toBeNull();
+    expect(biaEntry?.wasOffered(appointment.id)).toBe(true);
 
     await box.offers.advance(at('2026-07-20T08:00:00Z'));
     expect(box.email.sent).toHaveLength(2);
@@ -218,7 +246,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
 
     await box.offers.offerCancelled(appointment.id, at('2026-07-20T10:00:00Z'));
     const held = (await box.waitlist.listWaiting()).find(
-      (entry) => entry.patientId === ana.id,
+      (entry) => entry.patientId === bia.id,
     );
     expect(held?.openOffer?.expiresAt.toISOString()).toBe(start.toISOString());
 
@@ -240,7 +268,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     const other = harness();
     const ana = await patient(box.patients, 'Ana Paula');
     const bruno = await patient(other.patients, 'Bruno Lima');
-    const appointment = cancelled(ana.id);
+    const appointment = cancelled('quem-cancelou');
     await box.appointments.save(appointment);
     const anaEntry = queued(ana.id, '2026-07-01T00:00:00Z');
     await box.waitlist.save(anaEntry);
@@ -385,7 +413,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     await box.guardians.save(clara);
     const davi = await patient(box.patients, 'Davi Souza', null, clara.id);
     await box.waitlist.save(queued(davi.id, '2026-06-05T00:00:00Z'));
-    const appointment = cancelled(davi.id);
+    const appointment = cancelled('quem-cancelou');
     await box.appointments.save(appointment);
 
     await box.offers.offerCancelled(appointment.id, NOW);
@@ -406,7 +434,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     const bia = await patient(box.patients, 'Bia Costa');
     await box.waitlist.save(queued(davi.id, '2026-07-01T00:00:00Z'));
     await box.waitlist.save(queued(bia.id, '2026-07-02T00:00:00Z'));
-    const appointment = cancelled(bia.id);
+    const appointment = cancelled('quem-cancelou');
     await box.appointments.save(appointment);
 
     await box.offers.offerCancelled(appointment.id, NOW);
@@ -418,7 +446,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
 
   it('Dado canal desligado, Quando oferece, Então não marca o envio; ao ligar, o e-mail sai uma vez', async () => {
     const ana = await patient(box.patients, 'Ana Paula');
-    const appointment = cancelled(ana.id);
+    const appointment = cancelled('quem-cancelou');
     await box.appointments.save(appointment);
     await box.waitlist.save(queued(ana.id, '2026-07-01T00:00:00Z'));
     box.email.enabled = false;
@@ -443,7 +471,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
 
   it('Dado falha no envio, Quando oferece de novo, Então o e-mail sai uma vez', async () => {
     const ana = await patient(box.patients, 'Ana Paula');
-    const appointment = cancelled(ana.id);
+    const appointment = cancelled('quem-cancelou');
     await box.appointments.save(appointment);
     await box.waitlist.save(queued(ana.id, '2026-07-01T00:00:00Z'));
     box.email.fail = true;
@@ -463,7 +491,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
 
   it('Dado o paciente sumiu antes do reenvio, Quando oferece de novo, Então não envia', async () => {
     const ana = await patient(box.patients, 'Ana Paula');
-    const appointment = cancelled(ana.id);
+    const appointment = cancelled('quem-cancelou');
     await box.appointments.save(appointment);
     await box.waitlist.save(queued(ana.id, '2026-07-01T00:00:00Z'));
     box.email.fail = true;
@@ -500,7 +528,7 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
 
   it('Dado clínica suspensa, ausente ou ativa, Quando o cancelamento dispara a oferta, Então só a ativa envia', async () => {
     const ana = await patient(box.patients, 'Ana Paula');
-    const appointment = cancelled(ana.id);
+    const appointment = cancelled('quem-cancelou');
     await box.appointments.save(appointment);
     await box.waitlist.save(queued(ana.id, '2026-07-01T00:00:00Z'));
     const withClinic = (

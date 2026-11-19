@@ -20,7 +20,9 @@ related:
 
 ## RM-16: oferta de vaga da lista de espera
 
-1. Quando um horário é cancelado, o sistema oferece a vaga ao próximo da lista de espera.
+1. Quando um horário é cancelado, o sistema oferece a vaga ao próximo da lista de espera,
+   exceto o paciente daquela consulta. Se ele estiver na fila do mesmo dia e profissional,
+   a oferta passa ao seguinte (dono, 2026-11-19; regra na AGE-RN-27).
 2. A oferta **vale 2 horas** e expira sozinha, passando ao próximo.
 3. Se faltarem **menos de 2 horas** para a consulta, a oferta expira sozinha no horário da consulta
    (não se oferece vaga que já passou do prazo útil).
