@@ -1,4 +1,8 @@
-import { appTimeZone } from '../shared/time-zone';
+import {
+  appTimeZone,
+  startOfZonedMonth,
+  zonedMonthKey,
+} from '../shared/time-zone';
 
 /** O que o e-mail pode dizer de um paciente indicado (POR-RN-11, sem dado clínico). */
 export interface PartnerReportLine {
@@ -16,7 +20,7 @@ export interface PartnerMonthlyReportInput {
   /** Primeiro nome, na saudação. */
   firstName: string;
   clinicName: string;
-  /** Mês do envio, já no fuso da aplicação (cadência mensal, ADR-114). */
+  /** Mês anterior já fechado, no fuso da aplicação (EQP-RN-10). */
   monthLabel: string;
   patients: readonly PartnerReportLine[];
 }
@@ -31,6 +35,14 @@ export function monthLabelOf(date: Date): string {
     year: 'numeric',
     timeZone: appTimeZone(),
   });
+}
+
+/** Rótulo do mês anterior já fechado. Janeiro cita dezembro do ano anterior. */
+export function closedMonthLabelOf(date: Date): string {
+  const previous = zonedMonthKey(date, -1);
+  const year = Number(previous.slice(0, 4));
+  const month = Number(previous.slice(5, 7));
+  return monthLabelOf(startOfZonedMonth(year, month));
 }
 
 /**
@@ -51,7 +63,7 @@ export function partnerMonthlyReportContent(
   return {
     subject: `Relatório mensal de indicações — ${input.clinicName}`,
     text: [
-      `Olá, ${input.firstName}! Este é o relatório de ${input.monthLabel} da ${input.clinicName}.`,
+      `Olá, ${input.firstName}! Este é o relatório da ${input.clinicName}, referente a ${input.monthLabel}.`,
       'Pacientes que você indicou:',
       ...lines,
       'Este e-mail não inclui evolução clínica. Ela só aparece no portal, com a autorização do paciente.',

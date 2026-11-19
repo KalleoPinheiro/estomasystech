@@ -172,8 +172,8 @@ Exige escolhas do negócio antes de executar:
   `EmailGateway`), fatura pendente gera link/QR no portal e no lembrete. **Decisão pendente:**
   qual PSP (Mercado Pago, Stripe, Asaas) e credenciais.
 - **Relatório automático para o parceiro:** entregue (RM-15, ADR-114, EQP-RN-10). Mensal, por
-  e-mail, sem dado clínico — o marco de PUSH ficou de fora. Perguntas abertas no domínio
-  equipe-parceiros (janela do mês civil, dia fixo, parceiro inativo).
+  e-mail, sem dado clínico — o marco de PUSH ficou de fora. O rótulo é o mês anterior já fechado;
+  a janela segue a de 24 meses e o parceiro inativo não recebe.
 - **Lista de espera (waitlist):** cancelamento oferece a vaga por e-mail, com prazo de 2 horas
   (ADR-114, AGE-RN-27). WhatsApp continua no RM-14.
 

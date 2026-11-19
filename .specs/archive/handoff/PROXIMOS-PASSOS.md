@@ -45,7 +45,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
    trace), #862 (a #828 entra no PR #937; a #802 e a #744 foram fechadas como obsoletas em 2026-11-19: o código que citavam saiu com o ADR-109).
    #560 está fora: a nota rejeitou o PPR.
-4. **Decididas (ADR-114):** RM-16 entregue na `main` (oferta de 2 h por e-mail ao próximo da lista; migração aditiva `0085`). RM-15 entregue (relatório mensal por e-mail a quem indica, sem dado clínico; migração aditiva `0087`, coluna nula em `partners`). Perguntas abertas, sem chute, em `docs/domains/equipe-parceiros`: a janela do "atendido" é a de 24 meses do portal (o mês civil deve filtrar?); o envio sai na primeira execução do job diário dentro do mês (dia fixo ou mês anterior fechado?); parceiro inativo não recebe.
+4. **Decididas (ADR-114):** RM-16 entregue na `main` (oferta de 2 h por e-mail ao próximo da lista; migração aditiva `0085`). RM-15 entregue (relatório mensal por e-mail a quem indica, sem dado clínico; migração aditiva `0087`, coluna nula em `partners`). As três perguntas do relatório são regra (EQP-RN-10, dono em 19/11): janela de 24 meses do portal; envio na primeira execução do mês com rótulo do mês anterior já fechado (janeiro cita dezembro do ano anterior); parceiro inativo não recebe.
    **Espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta
    (a clínica aceita custo por mensagem?), RM-05 pagamento online (PSP) e RM-17 TISS.
 

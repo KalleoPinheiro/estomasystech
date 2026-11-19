@@ -3,7 +3,7 @@ import type { EmailGateway } from '@/application/ports/email-gateway';
 import type { ClinicStatus } from '@/domain/clinic/clinic';
 import { firstNameOf } from '@/domain/messaging/reminder-content';
 import {
-  monthLabelOf,
+  closedMonthLabelOf,
   partnerMonthlyReportContent,
 } from '@/domain/partner/monthly-report';
 import type { Partner } from '@/domain/partner/partner';
@@ -56,9 +56,10 @@ const addCounts = (
 
 /**
  * Relatório mensal ao parceiro que indica pacientes (RM-15, ADR-114).
- * Uma empresa por vez. O mês (`AAAA-MM` no fuso da aplicação) é a chave:
- * a segunda execução no mesmo mês não envia de novo. Clínica suspensa
- * fica de fora. Falha numa empresa não impede as demais.
+ * Uma empresa por vez. O mês (`AAAA-MM` no fuso da aplicação) é a chave
+ * de idempotência: a segunda execução no mesmo mês não envia de novo.
+ * O texto cita o mês anterior já fechado. Clínica suspensa fica de fora.
+ * Falha numa empresa não impede as demais.
  */
 export class SendPartnerMonthlyReports {
   constructor(
@@ -173,7 +174,7 @@ class ClinicPartnerReports {
     const content = partnerMonthlyReportContent({
       firstName: firstNameOf(partner.fullName),
       clinicName: this.clinicName,
-      monthLabel: monthLabelOf(now),
+      monthLabel: closedMonthLabelOf(now),
       patients: patients.map((patient) => ({
         fullName: patient.fullName,
         attended: attended.has(patient.id),
