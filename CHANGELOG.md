@@ -1,5 +1,17 @@
 # estomasystech
 
+## 0.10.0
+
+### Minor Changes
+
+- 10d955e: Agenda: quando uma consulta é cancelada, a vaga é oferecida por e-mail ao próximo da lista de espera. A oferta vale 2 horas (ou até o horário da consulta, se faltar menos que isso) e passa sozinha ao próximo.
+- 899c62b: Parceiros que indicam pacientes passam a receber, uma vez por mês, um e-mail só com o nome de cada indicado e se houve consulta realizada nos últimos 24 meses. O texto não traz dado clínico.
+
+### Patch Changes
+
+- 5aff55d: Agenda: a vaga cancelada não é oferecida ao paciente daquela consulta. Se ele está na lista do mesmo dia e profissional, o e-mail vai para o próximo.
+- 6bc00eb: O e-mail mensal ao parceiro que indica passa a citar o mês anterior já fechado. O envio continua uma vez por mês, na primeira execução do job.
+
 ## 0.9.1
 
 ### Patch Changes
