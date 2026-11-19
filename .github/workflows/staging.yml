@@ -21,6 +21,7 @@ concurrency:
 
 permissions:
   contents: read
+  # why: o job homologar lê deployments e statuses da Vercel pela API do GitHub (zizmor undocumented-permissions).
   deployments: read
 
 jobs:
@@ -91,7 +92,7 @@ jobs:
         run: |
           set -euo pipefail
           for i in $(seq 1 60); do
-            id=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${STAGING_SHA}&per_page=10" --jq '[.[] | select(.environment | startswith("Production"))][0].id // empty')
+            id=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${STAGING_SHA}&per_page=10" --jq '[.[] | select(.environment | startswith("Production"))] | sort_by(.created_at) | last | .id // empty')
             if [ -n "$id" ]; then
               state=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" --jq '.[0].state // "pending"')
               echo "tentativa ${i}: deploy ${id} ${state}"
