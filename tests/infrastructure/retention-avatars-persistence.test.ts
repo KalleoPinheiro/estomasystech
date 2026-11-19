@@ -24,6 +24,7 @@ const account = (
     id,
     clinicId: CLINIC,
     email: `${id}@sweep.test`,
+    emailHash: `h-${id}`,
     passwordHash: 'scrypt$1$salt$hash',
     role: 'atendente',
     active: false,

@@ -554,6 +554,9 @@ describe('Feature: fluxos de identidade com FORCE e o dono como conexão da apli
     await accounts(systemDb, CLINIC_B).save(legacy);
     // Conta no formato legado: e-mail em claro e sem índice cego, como antes da #742.
     await admin.query(
+      'ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS ck_user_accounts_email_hash_conta_ativa',
+    );
+    await admin.query(
       `UPDATE user_accounts SET email = 'legado@teste.invalid', email_hash = NULL WHERE id = $1`,
       [legacy.id],
     );

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserAccount } from '@/domain/auth/user-account';
@@ -77,6 +77,10 @@ describe('Feature: e-mail de login cifrado em repouso com índice cego (ADR-111,
     clinicId: string | null = CLINIC,
     extra: Partial<typeof schema.userAccounts.$inferInsert> = {},
   ) => {
+    // Estado anterior à conversão (#909): conta ativa sem hash; derruba a restrição, se já existir.
+    await db.execute(
+      sql`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS ck_user_accounts_email_hash_conta_ativa`,
+    );
     const id = newId();
     await db.insert(schema.userAccounts).values({
       id,

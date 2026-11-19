@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AppDb } from '@/infrastructure/persistence/drizzle/db';
@@ -84,6 +84,10 @@ describe('Feature: recuperação do super_admin com e-mail de login cifrado (ADR
   });
 
   it('Dado sem troca de e-mail, Quando recuperar, Então regrava cifrado com o hash atual (conta em claro passa a cifrada)', async () => {
+    // Estado anterior à conversão (#909): conta ativa sem hash; derruba a restrição, se já existir.
+    await db.execute(
+      sql`ALTER TABLE user_accounts DROP CONSTRAINT IF EXISTS ck_user_accounts_email_hash_conta_ativa`,
+    );
     await db
       .update(schema.userAccounts)
       .set({ email: 'dono@plataforma.test', emailHash: null })

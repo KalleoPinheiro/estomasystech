@@ -56,16 +56,16 @@ export async function linkAllPortalAccounts(): Promise<void> {
   for (const row of rows) {
     const email = cipher.decrypt(row.email).toLowerCase();
     await db.execute(sql`
-      INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, patient_id, active, created_at)
-      SELECT gen_random_uuid()::text, ${row.clinic_id}, ${email}, ${UNSET_PASSWORD_HASH}, 'patient', ${row.id}, true, now()
+      INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, patient_id, active, created_at)
+      SELECT gen_random_uuid()::text, ${row.clinic_id}, ${email}, 'h-' || gen_random_uuid()::text, ${UNSET_PASSWORD_HASH}, 'patient', ${row.id}, true, now()
       WHERE NOT EXISTS (
         SELECT 1 FROM user_accounts ua
         WHERE ua.clinic_id = ${row.clinic_id} AND ua.email = ${email}
       )`);
   }
   await db.execute(sql`
-    INSERT INTO user_accounts (id, clinic_id, email, password_hash, role, partner_id, active, created_at)
-    SELECT gen_random_uuid()::text, pa.clinic_id, lower(pa.email), ${UNSET_PASSWORD_HASH}, 'partner', pa.id, true, now()
+    INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, partner_id, active, created_at)
+    SELECT gen_random_uuid()::text, pa.clinic_id, lower(pa.email), 'h-' || gen_random_uuid()::text, ${UNSET_PASSWORD_HASH}, 'partner', pa.id, true, now()
     FROM partners pa
     WHERE NOT EXISTS (
       SELECT 1 FROM user_accounts ua
