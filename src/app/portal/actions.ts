@@ -21,6 +21,7 @@ import {
   GUARDIAN_ACCESS_REVOCATION_RESOURCE,
   notifyGuardianOfRevocation,
 } from '@/application/portal/revoke-guardian-access';
+import { offerCancelledSlot } from '@/application/scheduling/offer-waitlist-slot';
 import { ResolveWaitlistEntry } from '@/application/scheduling/waitlist';
 import { ConsentRecord } from '@/domain/consent/consent-record';
 import { ForbiddenError, NotFoundError } from '@/domain/shared/errors';
@@ -39,6 +40,7 @@ import { toDataSubjectRequestDto } from '@/lib/dto';
 import { toPortalAppointmentDto } from '@/lib/dto/appointment';
 import { toWaitlistEntryDto } from '@/lib/dto/waitlist';
 import { controllerSnapshot } from '@/lib/legal-text';
+import { logError } from '@/lib/log-error';
 import { PARTNER_SHARE_CONSENT as PARTNER_CONSENT } from '@/lib/partner-share-consent-text';
 import {
   consentPurposeSchema,
@@ -375,13 +377,20 @@ export const cancelAppointment = afterCommit(
   cancelAppointmentInner,
   async ({ data }) => {
     if (!data.changed) return;
-    const { scope } = await committedScope();
+    const { session, scope } = await committedScope();
     const services = await getRepositories(scope);
     const eventId = (await services.appointments.findById(data.appointment.id))
       ?.googleEventId;
     if (eventId) {
       scheduleCalendarSync(services, (sync) => sync.removed(eventId));
     }
+    await offerCancelledSlot(
+      services,
+      writeClinicId(session),
+      data.appointment.id,
+    ).catch((error: unknown) =>
+      logError('Portal: oferta da lista de espera falhou', error),
+    );
   },
 );
 

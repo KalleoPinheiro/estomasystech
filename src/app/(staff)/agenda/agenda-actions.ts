@@ -16,6 +16,7 @@ import { ScheduleRecurringAppointments } from '@/application/appointments/schedu
 import { DispenseProcedureKit } from '@/application/inventory/dispense-procedure-kit';
 import { RegisterStockMovement } from '@/application/inventory/register-stock-movement';
 import type { TransactionScope } from '@/application/ports/transaction-manager';
+import { offerCancelledSlot } from '@/application/scheduling/offer-waitlist-slot';
 import { findWaitlistMatches } from '@/application/scheduling/waitlist';
 import { localDateKey } from '@/domain/scheduling/schedule-availability';
 import { cancellationPolicyOf } from '@/domain/scheduling/schedule-config';
@@ -31,7 +32,7 @@ import {
 } from '@/lib/appointment-schemas';
 import type { Session } from '@/lib/auth/session';
 import { CLINIC_STAFF_ROLES } from '@/lib/auth/staff-roles';
-import { writeScope } from '@/lib/auth/tenant-scope';
+import { writeClinicId, writeScope } from '@/lib/auth/tenant-scope';
 import { scheduleCalendarSync } from '@/lib/calendar-sync';
 import { type AppointmentDto, toAppointmentDto } from '@/lib/dto';
 import { logError } from '@/lib/log-error';
@@ -392,7 +393,7 @@ async function finishAbsence(
   if (!result.success) return result;
   const { appointment, feeInvoiceId, googleEventId } = result.data;
   let waitlistMatches = 0;
-  await afterCommit(async (services) => {
+  await afterCommit(async (services, session) => {
     if (googleEventId && ACTIONS_REMOVING_EVENT.includes(kind)) {
       scheduleCalendarSync(services, (sync) => sync.removed(googleEventId));
     }
@@ -405,6 +406,13 @@ async function finishAbsence(
           appointment.professionalId,
         )
       ).length;
+      await offerCancelledSlot(
+        services,
+        writeClinicId(session),
+        appointment.id,
+      ).catch((error: unknown) =>
+        logError('Agenda: oferta da lista de espera falhou', error),
+      );
     }
   });
   return {
