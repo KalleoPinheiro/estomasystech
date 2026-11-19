@@ -380,6 +380,26 @@ describe('Feature: Oferta de vaga da lista de espera (RM-16)', () => {
     ]);
   });
 
+  it('Dado outro paciente na fila de outro profissional, Quando oferece, Então ele não recebe e o próximo que aceita recebe', async () => {
+    const ana = await patient(box.patients, 'Ana Paula');
+    const bia = await patient(box.patients, 'Bia Costa');
+    const caio = await patient(box.patients, 'Caio Dias');
+    const appointment = cancelled(ana.id, START, 'prof-2');
+    await box.appointments.save(appointment);
+    await box.waitlist.save(queued(bia.id, '2026-07-01T00:00:00Z', 'prof-1'));
+    await box.waitlist.save(queued(caio.id, '2026-07-02T00:00:00Z', 'prof-2'));
+
+    await box.offers.offerCancelled(appointment.id, NOW);
+
+    expect(box.email.sent.map((message) => message.to)).toEqual([
+      'caio@example.com',
+    ]);
+    const biaEntry = (await box.waitlist.listWaiting()).find(
+      (entry) => entry.patientId === bia.id,
+    );
+    expect(biaEntry?.openOffer).toBeNull();
+  });
+
   it('Dado paciente sem e-mail, inativo, inexistente ou responsável sem e-mail, Quando oferece, Então pula até quem pode receber', async () => {
     const semEmail = await patient(box.patients, 'Sem Email', null);
     const inativo = (

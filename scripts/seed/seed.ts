@@ -573,6 +573,9 @@ async function syncAccountPasswords(password: string): Promise<number> {
     account.email.endsWith("@homologacao.invalid"),
   );
   for (const account of seeded) {
+    // Regrava a conta antes da senha: `save` preenche o índice cego (ADR-111). Conta semeada antes dele
+    // fica sem `email_hash`, e o CHECK da 0086 (#909) reprova o UPDATE da senha numa conta ativa assim.
+    await userAccounts.save(account);
     await userAccounts.updatePasswordHash(account.id, passwordHash);
   }
   return seeded.length;
