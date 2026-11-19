@@ -58,9 +58,10 @@ describe('Feature: conta ativa exige o índice cego do e-mail (#909, ADR-111, mi
   });
 
   it('Dada conta ativa, Quando a retenção zerar o hash sem marcar anonymized_at, Então o banco recusa', async () => {
+    await insertConta(db, 'ativa-para-zerar', 'b1.k.bb', null);
     const error = await db
       .execute(
-        sql`UPDATE user_accounts SET email_hash = NULL WHERE id = 'ativa-com-hash'`,
+        sql`UPDATE user_accounts SET email_hash = NULL WHERE id = 'ativa-para-zerar'`,
       )
       .then(
         () => null,

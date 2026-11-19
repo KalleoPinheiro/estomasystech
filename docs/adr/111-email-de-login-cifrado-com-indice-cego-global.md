@@ -65,7 +65,9 @@ Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-ofe
 - **Passos seguros:** a `0085` adiciona a restrição `NOT VALID` (vale para toda escrita nova, não varre a tabela, rollback é
   um `DROP CONSTRAINT`). Falta, em migração própria, o `VALIDATE CONSTRAINT`, depois do fim do ramo em claro, e o `DROP`
   dos dois índices antigos sobre `email`; esses passos seguem na fila da contração.
-- A conta anonimizada continua fora do `data:reencrypt` e do login (sem hash, ninguém a acha).
+- A conta anonimizada continua fora do `data:reencrypt`. Sem hash, o ramo por `email_hash` não a acha; enquanto o ramo em
+  claro existir, o endereço sintético ainda pode casar na busca, mas a conta tem senha inválida e `active = false`, então o
+  login não autentica.
 
 ## Opções descartadas
 
