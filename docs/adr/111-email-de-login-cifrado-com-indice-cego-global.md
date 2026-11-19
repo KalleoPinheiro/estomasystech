@@ -3,7 +3,7 @@ title: "ADR 111 — E-mail de login cifrado em repouso com índice cego global"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-15
+last_reviewed: 2026-11-19
 related:
   - docs/adr/096-pii-cifrada-em-repouso-com-indice-cego-e-busca-por-nome-em-memoria.md
   - docs/adr/003-modelo-de-papeis-multi-empresa.md
@@ -51,6 +51,23 @@ funcionar sobre o valor cifrado.
    retenção zera o `email_hash` (o endereço `anonimizado+<id>@anonimizado.invalid` não é pessoal e fica em claro).
 7. **Recuperação do super_admin** (`admin:recover`) passa a ler e gravar o e-mail cifrado, com o hash, e a
    checagem de "e-mail em uso" usa o hash.
+
+## Emenda (2026-11-19, #909): conta anonimizada e conta ativa
+
+Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md)), que fecha a pergunta aberta da contração:
+
+- **Conta anonimizada:** `email_hash` fica **vazio (NULL)**. A retenção já grava `email_hash = NULL` junto de `anonymized_at`;
+  o `email` vira o endereço sintético `anonimizado+<id>@anonimizado.invalid` (não é pessoal). Sem valor sentinela por conta:
+  nada que ligue a linha ao endereço antigo.
+- **Conta ativa:** `email_hash` é **obrigatório**, garantido pelo banco com `CHECK (anonymized_at IS NOT NULL OR email_hash
+  IS NOT NULL)` (`ck_user_accounts_email_hash_conta_ativa`, migração `0086`). Não usamos `NOT NULL` na coluna porque ele
+  proibiria a anonimização.
+- **Passos seguros:** a `0086` adiciona a restrição `NOT VALID` (vale para toda escrita nova, não varre a tabela, rollback é
+  um `DROP CONSTRAINT`). Falta, em migração própria, o `VALIDATE CONSTRAINT`, depois do fim do ramo em claro, e o `DROP`
+  dos dois índices antigos sobre `email`; esses passos seguem na fila da contração.
+- A conta anonimizada continua fora do `data:reencrypt`. Sem hash, o ramo por `email_hash` não a acha; enquanto o ramo em
+  claro existir, o endereço sintético ainda pode casar na busca, mas a conta tem senha inválida e `active = false`, então o
+  login não autentica.
 
 ## Opções descartadas
 

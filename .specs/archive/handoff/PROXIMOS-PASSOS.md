@@ -41,7 +41,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    4. #745, CodeQL do TS (P2). Próxima. Medido em 2026-11-18: o default setup roda verde (só 2 de 182 execuções falharam, ambas em 2026-11-08, HTTP 504 do bundle). Ver `docs/engineering/security-scan.md` § CodeQL.
    5. ~~#925~~ ensaio do rollback automático no `validar` (classe 3; PR aberto, espera o clique do dono).
 2. **Contração da cifra** (drop de `birth_date` e dos índices GIN antigos; no e-mail de login, `email_hash` `NOT NULL`, fim do
-   ramo em claro e drop dos índices antigos, ADR-111): decisão da #909 tomada no ADR-114 (`NOT NULL` só para conta ativa); falta implementar (classe 3, clique do dono).
+   ramo em claro e drop dos índices antigos, ADR-111): decisão da #909 tomada no ADR-114 (anonimizada: `email_hash` NULL; ativa: obrigatório) e a restrição `NOT VALID` entra na `0086` (PR #939, classe 3, espera o clique do dono; fixtures já na main pelo PR #942). Falta: `VALIDATE`, fim do ramo em claro e drop dos índices antigos do e-mail.
 3. **Fora da v0.11.0, por falta de urgência ou de insumo:** #815 (71 funções de complexidade, G), #651 e #650 (precisam de
    trace), #862 (a #828 entra no PR #937; a #802 e a #744 foram fechadas como obsoletas em 2026-11-19: o código que citavam saiu com o ADR-109).
    #560 está fora: a nota rejeitou o PPR.
