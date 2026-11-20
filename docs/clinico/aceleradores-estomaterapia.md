@@ -196,7 +196,7 @@ padrões, fundos e peças de rede social e cartão.
 | Pacotes | `SessionPackage`: N sessões de um procedimento, preço, validade, consumo | nome e explicação que a clínica entenda; proposta com frequência e duração |
 | Estoque | insumos, kits por procedimento, baixa | catálogo de coberturas com indicação e troca, semente de insumos |
 
-## 5. Propostas de issue (rascunho, não criadas)
+## 5. Propostas de issue
 
 Prioridade pela regra do projeto: P1 é bug ou valor visível que a clínica já pediu; P2 é
 qualidade e o que destrava o resto; P3 é melhoria. **Decisão de produto fica com o Kalléo**:
@@ -204,20 +204,20 @@ onde há uma, ela está marcada como pergunta.
 
 | # | Título | Problema | Pronto quando | Prio |
 | --- | --- | --- | --- | --- |
-| P1-1 | SAE: a clínica cadastra os diagnósticos que usa | A busca só acha o catálogo global e não aceita diagnóstico digitado; a clínica usa NANDA-I 2024-2026 | admin da clínica cadastra código (5 dígitos, opcional), título, domínio/classe e edição, ou importa CSV; o plano aceita diagnóstico do catálogo da clínica ou digitado à mão (marcado "sem código"); escopo por empresa com `writeScope`; nada da taxonomia entra no repo | P1 |
-| P1-2 | Avaliação de ferida: critérios legíveis na tela | "Tabelas de avaliação pouco claras" | cada campo TIME mostra a legenda do critério (ex.: faixas de exsudato pela saturação, o que é cada tecido); validado em 360 px | P1 |
-| P1-3 | Receituário de enfermagem em PDF | A clínica pediu prescrição em PDF | documento com dados da clínica, enfermeira e COREN, paciente, data e itens prescritos, gerado a partir do plano ou da consulta, baixável em PDF | P1 |
-| P1-4 | "Pacotes" vira "Plano de acompanhamento" | Ninguém entende a aba | aba, botões e documentos usam "Plano de acompanhamento"; uma frase explica saldo, validade e preço por sessão; `CONTEXT.md` atualizado | P1 |
-| P2-5 | Assinatura digital ICP-Brasil nos documentos | Pedido da clínica; COFEN oferece certificado gratuito aos enfermeiros | discovery: assinatura PAdES com certificado da profissional (A1 ou A3/nuvem), sem guardar chave no servidor; ADR; prova de conceito em um documento | P2 |
-| P2-6 | Avaliação de ferida: campos que faltam | Modelo da clínica tem etiologia classificada, várias feridas, pele adjacente, NERDS/STONEES, biofilme, dor no curativo | campos estruturados com códigos estáveis e rótulos em `format.ts`; migração aditiva; relatório mostra a série | P2 |
-| P2-7 | Avaliação de estomia completa | Faltam altura, diâmetro, mucosa, débito, equipamento, adjuvantes, autocuidado, gastrostomia | idem P2-6 para `kind=stoma`; alto débito acima de 1000 ml aparece em destaque | P2 |
-| P2-8 | Termos por procedimento e imagem em 4 finalidades | Hoje só há tratamento e imagem genérica | finalidades `debridement`, `laser` e as 4 de imagem, cada uma aceita ou recusada; testemunha opcional; **texto final depende do #376** (placeholder até lá) | P2 |
-| P2-9 | Escalas Braden e RESVECH 2.0 | O protocolo usa essas escalas como indicador | escore calculado, série histórica no relatório | P2 |
-| P2-10 | Registro do curativo em etapas | O modelo registra limpeza, desbridamento, adjuvante, coberturas, laser (J, nm, pontos) e próxima troca | formulário por etapa ligado ao kit e à baixa de estoque | P2 |
-| P2-11 | Proposta do plano de acompanhamento em PDF | A clínica entrega proposta com frequência, duração, terapias e preço | documento gerado do pacote e do plano; validade configurável; **pergunta:** validade padrão e texto de garantia | P2 |
-| P3-12 | Timbre da clínica nos documentos | Documentos sem a identidade da clínica | cor de destaque e rodapé de contato na Identidade; documentos usam logo, cor e rodapé; fontes livres (as da marca são demo) | P3 |
-| P3-13 | Metas em três níveis com prazo e cuidados para família | Modelo usa metas conferíveis por nível e orientações leigas | meta com prazo e nível; o plano impresso traz os cuidados para paciente e família | P3 |
-| P3-14 | Anamnese estruturada e exames em série | Texto livre não gera alerta nem série | listas de comorbidades, IMC e perda ponderal, ITB, pulsos, sensibilidade; tabela de exames por data | P3 |
+| P1-1 (#954) | SAE: a clínica cadastra os diagnósticos que usa | A busca só acha o catálogo global e não aceita diagnóstico digitado; a clínica usa NANDA-I 2024-2026 | admin da clínica cadastra código (5 dígitos, opcional), título, domínio/classe e edição, ou importa CSV; o plano aceita diagnóstico do catálogo da clínica ou digitado à mão (marcado "sem código"); escopo por empresa com `writeScope`; nada da taxonomia entra no repo | P1 |
+| P1-2 (#955) | Avaliação de ferida: critérios legíveis na tela | "Tabelas de avaliação pouco claras" | cada campo TIME mostra a legenda do critério (ex.: faixas de exsudato pela saturação, o que é cada tecido); validado em 360 px | P1 |
+| P1-3 (#956) | Receituário de enfermagem em PDF | A clínica pediu prescrição em PDF | documento com dados da clínica, enfermeira e COREN, paciente, data e itens prescritos, gerado a partir do plano ou da consulta, baixável em PDF | P1 |
+| P1-4 (#957) | "Pacotes" vira "Plano de acompanhamento" | Ninguém entende a aba | aba, botões e documentos usam "Plano de acompanhamento"; uma frase explica saldo, validade e preço por sessão; `CONTEXT.md` atualizado | P1 |
+| P2-5 (#958) | Assinatura digital ICP-Brasil nos documentos | Pedido da clínica; COFEN oferece certificado gratuito aos enfermeiros | discovery: assinatura PAdES com certificado da profissional (A1 ou A3/nuvem), sem guardar chave no servidor; ADR; prova de conceito em um documento | P2 |
+| P2-6 (#959) | Avaliação de ferida: campos que faltam | Modelo da clínica tem etiologia classificada, várias feridas, pele adjacente, NERDS/STONEES, biofilme, dor no curativo | campos estruturados com códigos estáveis e rótulos em `format.ts`; migração aditiva; relatório mostra a série | P2 |
+| P2-7 (#960) | Avaliação de estomia completa | Faltam altura, diâmetro, mucosa, débito, equipamento, adjuvantes, autocuidado, gastrostomia | idem P2-6 para `kind=stoma`; alto débito acima de 1000 ml aparece em destaque | P2 |
+| P2-8 (#961) | Termos por procedimento e imagem em 4 finalidades | Hoje só há tratamento e imagem genérica | finalidades `debridement`, `laser` e as 4 de imagem, cada uma aceita ou recusada; testemunha opcional; **texto final depende do #376** (placeholder até lá) | P2 |
+| P2-9 (#962) | Escalas Braden e RESVECH 2.0 | O protocolo usa essas escalas como indicador | escore calculado, série histórica no relatório | P2 |
+| P2-10 (#963) | Registro do curativo em etapas | O modelo registra limpeza, desbridamento, adjuvante, coberturas, laser (J, nm, pontos) e próxima troca | formulário por etapa ligado ao kit e à baixa de estoque | P2 |
+| P2-11 (#964) | Proposta do plano de acompanhamento em PDF | A clínica entrega proposta com frequência, duração, terapias e preço | documento gerado do pacote e do plano; validade configurável; **pergunta:** validade padrão e texto de garantia | P2 |
+| P3-12 (#965) | Timbre da clínica nos documentos | Documentos sem a identidade da clínica | cor de destaque e rodapé de contato na Identidade; documentos usam logo, cor e rodapé; fontes livres (as da marca são demo) | P3 |
+| P3-13 (#966) | Metas em três níveis com prazo e cuidados para família | Modelo usa metas conferíveis por nível e orientações leigas | meta com prazo e nível; o plano impresso traz os cuidados para paciente e família | P3 |
+| P3-14 (#967) | Anamnese estruturada e exames em série | Texto livre não gera alerta nem série | listas de comorbidades, IMC e perda ponderal, ITB, pulsos, sensibilidade; tabela de exames por data | P3 |
 
 Fora desta lista, ideias do benchmark (seção 6) para o backlog: encaminhamento multiprofissional
 gerado da avaliação, catálogo de coberturas com indicação e frequência de troca, semente de
