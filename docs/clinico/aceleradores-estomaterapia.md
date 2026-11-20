@@ -15,7 +15,7 @@ last_reviewed: 2026-11-20
 > registro do curativo em etapas, termos por procedimento e documentos timbrados. O sistema já
 > cobre o esqueleto (TIME, DET, PUSH, plano de cuidados PES, documentos imprimíveis, pacotes), mas
 > faltam campos, a clínica não consegue cadastrar os diagnósticos que usa e os documentos não
-> seguem esses modelos. A seção 5 traz 14 propostas de issue já triadas. Nada aqui é requisito
+> seguem esses modelos. A seção 5 traz 15 propostas de issue já triadas. Nada aqui é requisito
 > até o Kalléo decidir (regra 5).
 
 Fontes lidas em 2026-11-20: a página pública do Notion da mentoria (base "Todos os aceleradores")
@@ -53,7 +53,8 @@ clínico e entram só como contexto.
 | Negócio | Gestão financeira, recibo, Business Model Canvas, persona, oferta, script de vendas, cartão digital, apresentação de terapias adjuvantes | vários | só títulos | baixa |
 
 Todos os termos da mentoria abrem com um aviso: são modelos educacionais e precisam de revisão
-por advogado antes do uso. Isso reforça a dependência do jurídico (#376).
+por advogado antes do uso. Por isso o sistema não traz texto pronto: cada cliente cadastra os
+próprios termos, e o conteúdo é responsabilidade dela (decisão 5).
 
 ## 2. O que cada modelo ensina sobre o prontuário
 
@@ -140,7 +141,7 @@ de 30% da área em 4 semanas**, medida semanal e as escalas **PUSH** e **RESVECH
 
 ### 2.5 Termos, declarações e documentos
 
-| Documento | Estrutura e campos (texto final depende do jurídico, #376) |
+| Documento | Estrutura e campos (o texto é cadastrado por cada cliente) |
 | --- | --- |
 | TCLE de desbridamento | paciente (nome, CPF, RG, idade, responsável legal), enfermeira (nome, COREN); objetivo; materiais e se o material é novo ou esterilizado (com data); contraindicações absolutas e relativas; riscos; cuidados depois; plano de tratamento proposto (texto livre); responsabilidades e consentimento revogável; remissão ao termo de imagem; local, data, assinaturas de paciente ou responsável, testemunha e enfermeira |
 | TCLE de laser | igual, mais **equipamento utilizado**, contraindicações próprias (fotossensibilizantes, gestação, câncer em tratamento) e uso de imagem dividido em registro clínico obrigatório e divulgação (autoriza ou não) |
@@ -163,22 +164,38 @@ que é o **kit do procedimento**. A precificação calcula o preço por atendime
 complexidade, tempo, insumos, deslocamento, custo fixo, margem e imposto, e oferece **planos de
 5, 10 ou 15 atendimentos com desconto**. Isso é o que a clínica chama de "pacote".
 
-## 3. Marca da clínica (Drive)
+## 3. Marca da cliente (Drive) e o tipo de cliente
 
-Pasta com 16 subpastas de uma agência de identidade visual: logomarca (AI, PDF, JPG), símbolo
-(monograma), submarca, paleta e tipografia, fontes, timbrado (DOCX, PDF, PNG, AI), marcas d'água,
-padrões, fundos e peças de rede social e cartão.
+**A marca não é do sistema.** A pasta do Drive é a marca pessoal da primeira cliente, uma
+enfermeira estomaterapeuta que atende como profissional registrada e ainda está criando a própria
+identidade visual. Logo, cores e fontes são **configuração por cliente**: cada uma envia a sua na
+tela de Identidade, e nada da marca entra no repo, nem como padrão do sistema.
 
-* **Paleta:** rosé `#D4A4A0`, malva `#A05B62`, nude `#D9C8C1`, caramelo `#B36F30`, marrom
-  `#814C3A` e dourado em gradiente.
-* **Tipografia:** uma script, uma serifada display e uma sans. **Os arquivos de fonte na pasta são
-  versões DEMO**, sem licença de uso comercial: não entram no app nem nos PDFs sem a clínica
-  comprar a licença.
-* **Timbrado:** logo centralizado no topo, faixa vertical malva à esquerda, monograma grande como
-  marca d'água no rodapé e contatos no rodapé.
-* **Como entra no sistema:** a logo já sobe pela tela de Identidade (#430/#427). Falta a cor de
-  destaque e o modelo de timbrado nos documentos (P3-12). Nenhum arquivo da marca foi copiado para
-  o repo, que é público.
+O que a pasta ensina sobre o que o sistema precisa aceitar:
+
+* **Conteúdo:** logomarca, símbolo (monograma), submarca, paleta, tipografia, fontes, timbrado,
+  marcas d'água, padrões e peças de rede social. Ou seja, logo em vários formatos, várias cores e
+  até três fontes (uma script, uma serifada display e uma sans).
+* **Timbrado:** logo no topo, faixa lateral de cor, marca d'água e contatos no rodapé.
+* **Fontes:** a licença é da cliente, não do sistema. Os arquivos da pasta hoje são versões demo,
+  e isso é assunto dela com quem fez a marca. O sistema só precisa aceitar a fonte que ela enviar
+  e cair numa fonte livre quando não houver nenhuma (P3-12).
+* **Hoje:** a logo já sobe pela Identidade (#430/#427). A cor de destaque é uma de quatro opções
+  do design system (`THEME_ACCENTS`), não uma cor livre da marca. Não há fonte nem timbrado por
+  cliente.
+
+**A cliente pode ser uma profissional autônoma, não só uma clínica.** O código hoje supõe
+empresa com CNPJ:
+
+* criar a empresa exige CNPJ (`REQUIRED_ON_CREATE` em `src/domain/clinic/clinic.ts`);
+* emitir documento exige CNPJ, responsável técnico e registro (`isClinicInfoComplete`);
+* o recibo de saúde exige o CNPJ do prestador (`src/domain/billing/receipt.ts`, FIN-RN-15);
+* telas e textos dizem "clínica" e "Dados da clínica".
+
+Os modelos da própria cliente já trazem "CNPJ ou CPF" no rodapé do receituário (seção 2.5). Para
+a autônoma, o timbre e os documentos levam nome, COREN e CPF (ou CNPJ, se ela tiver), e o
+responsável técnico é ela mesma. A proposta P1-15 (#977) cobre isso; a regra fiscal do recibo com CPF
+fica como pergunta aberta.
 
 ## 4. O que já existe e o que falta
 
@@ -211,13 +228,14 @@ onde há uma, ela está marcada como pergunta.
 | P2-5 (#958) | Assinatura digital ICP-Brasil nos documentos | Pedido da clínica; COFEN oferece certificado gratuito aos enfermeiros | discovery: assinatura PAdES com certificado da profissional (A1 ou A3/nuvem), sem guardar chave no servidor; ADR; prova de conceito em um documento | P2 |
 | P2-6 (#959) | Avaliação de ferida: campos que faltam | Modelo da clínica tem etiologia classificada, várias feridas, pele adjacente, NERDS/STONEES, biofilme, dor no curativo | campos estruturados com códigos estáveis e rótulos em `format.ts`; migração aditiva; relatório mostra a série | P2 |
 | P2-7 (#960) | Avaliação de estomia completa | Faltam altura, diâmetro, mucosa, débito, equipamento, adjuvantes, autocuidado, gastrostomia | idem P2-6 para `kind=stoma`; alto débito acima de 1000 ml aparece em destaque | P2 |
-| P2-8 (#961) | Termos por procedimento e imagem em 4 finalidades | Hoje só há tratamento e imagem genérica | finalidades `debridement`, `laser` e as 4 de imagem, cada uma aceita ou recusada; testemunha opcional; **texto final depende do #376** (placeholder até lá) | P2 |
+| P2-8 (#961) | Termos por procedimento, cadastrados pela cliente | Hoje só há tratamento e imagem genérica, e o texto não é da cliente | a cliente cadastra cada modelo de termo (configuração obrigatória): texto, versão, procedimento associado e campos variáveis (paciente, data, profissional, COREN); o atendimento do procedimento exige um termo vigente aceito antes; imagem com as 4 finalidades aceitas ou recusadas; testemunha opcional; o sistema não traz texto pronto | P2 |
 | P2-9 (#962) | Escalas Braden e RESVECH 2.0 | O protocolo usa essas escalas como indicador | escore calculado, série histórica no relatório | P2 |
 | P2-10 (#963) | Registro do curativo em etapas | O modelo registra limpeza, desbridamento, adjuvante, coberturas, laser (J, nm, pontos) e próxima troca | formulário por etapa ligado ao kit e à baixa de estoque | P2 |
 | P2-11 (#964) | Proposta do plano de acompanhamento em PDF | A clínica entrega proposta com frequência, duração, terapias e preço | documento gerado do pacote e do plano; validade configurável; **pergunta:** validade padrão e texto de garantia | P2 |
-| P3-12 (#965) | Timbre da clínica nos documentos | Documentos sem a identidade da clínica | cor de destaque e rodapé de contato na Identidade; documentos usam logo, cor e rodapé; fontes livres (as da marca são demo) | P3 |
+| P3-12 (#965) | Timbre da cliente nos documentos | Documentos sem a identidade de quem emite | identidade visual por cliente (logo, cor da marca, fonte enviada por ela) e rodapé de contato; documentos usam esse timbre; sem fonte enviada, fonte livre; nada da marca de uma cliente entra no repo | P3 |
 | P3-13 (#966) | Metas em três níveis com prazo e cuidados para família | Modelo usa metas conferíveis por nível e orientações leigas | meta com prazo e nível; o plano impresso traz os cuidados para paciente e família | P3 |
 | P3-14 (#967) | Anamnese estruturada e exames em série | Texto livre não gera alerta nem série | listas de comorbidades, IMC e perda ponderal, ITB, pulsos, sensibilidade; tabela de exames por data | P3 |
+| P1-15 (#977) | Cliente autônoma: CPF no lugar de CNPJ | A primeira cliente é enfermeira autônoma; cadastro, documentos e recibo exigem CNPJ | tipo de cliente (autônoma ou clínica) com CPF ou CNPJ validado; documentos com nome, COREN e CPF/CNPJ; responsável técnico é a própria profissional; CPF cifrado; **pergunta:** recibo de saúde com CPF | P1 |
 
 Fora desta lista, ideias do benchmark (seção 6) para o backlog: encaminhamento multiprofissional
 gerado da avaliação, catálogo de coberturas com indicação e frequência de troca, semente de
@@ -258,7 +276,20 @@ Decididas pelo coordenador em 2026-11-20 (reversíveis, registradas aqui):
    profissional a cada documento. Guardar A1 no servidor fica descartado: um vazamento permitiria
    assinar em nome da enfermeira, e dado de saúde vem antes de conveniência.
 
-Pendente do Kalléo (licença e dinheiro):
+4. **Marca por cliente** (Kalléo, 2026-11-20). A identidade visual é da cliente e é configurada
+   por ela; a licença das fontes também é dela. O sistema aceita a fonte enviada ou usa uma fonte
+   livre (P3-12).
 
-4. **Fontes da marca.** Os arquivos são demo, sem licença comercial. Até a clínica comprar a
-   licença, os documentos usam fontes livres (P3-12).
+5. **Termos são configuração da cliente** (Kalléo, 2026-11-20). Consentimentos e textos jurídicos
+   são cadastrados por cada cliente, um a um, como configuração obrigatória; o sistema não traz
+   texto pronto. O sistema guarda modelos por cliente com versão, procedimento associado e campos
+   variáveis, e exige um termo vigente aceito antes do procedimento. Como o conteúdo é da
+   cliente, a P2-8 (#961) não depende do jurídico. O #376 vale só para os termos do próprio
+   sistema (uso da plataforma e privacidade).
+
+Perguntas abertas:
+
+6. **CPF no recibo de saúde.** Para a autônoma sem CNPJ, o recibo sai com o CPF dela como
+   prestadora? A regra fiscal (IRPF) precisa ser confirmada antes da P1-15 mexer no recibo.
+7. **A primeira cliente tem CNPJ?** Se tiver só CPF, ela não consegue ser cadastrada hoje, e a
+   P1-15 vira bloqueio de entrada.
