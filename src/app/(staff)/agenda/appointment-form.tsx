@@ -178,8 +178,10 @@ export function AppointmentForm({
           setValues((prev) => ({ ...prev, professionalId }))
         }
       />
-      <div className="grid grid-cols-3 gap-3">
-        <label className="font-medium text-sm">
+      {/* Data em linha própria, Início e Duração lado a lado: o modal tem
+          ~460px e três colunas cortavam a data e a hora (#969). */}
+      <div className="grid grid-cols-2 gap-3">
+        <label className="col-span-2 font-medium text-sm">
           Data *
           <Input
             required
