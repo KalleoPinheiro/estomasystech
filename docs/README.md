@@ -22,6 +22,7 @@ last_reviewed: 2026-11-11
 | [`product/prd-fase-2.md`](product/prd-fase-2.md) | frozen | PRD da fase 2 |
 | [`product/prd-fase-3.md`](product/prd-fase-3.md) | frozen | PRD da fase 3 |
 | [`product/prd-fase-6.md`](product/prd-fase-6.md) | living | PRD da plataforma (RBAC, multiempresa, auth) |
+| [`clinico/aceleradores-estomaterapia.md`](clinico/aceleradores-estomaterapia.md) | draft | estudo dos modelos clínicos da clínica (avaliação, NANDA/NIC, termos, documentos, marca), benchmark NurseUp e 14 propostas de issue |
 | [`legal/textos-lgpd.md`](legal/textos-lgpd.md) | living | textos LGPD em vigor (aviso de privacidade, TCLE de tratamento, termo de imagem, consentimento do parceiro) e como trocá-los após a revisão jurídica (#216) |
 | [`plano-correcao-achados-auditoria-2026-09.md`](plano-correcao-achados-auditoria-2026-09.md) | frozen | plano dos achados de auditoria #57–#77 |
 
