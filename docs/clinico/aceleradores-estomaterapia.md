@@ -207,7 +207,7 @@ onde há uma, ela está marcada como pergunta.
 | P1-1 | SAE: a clínica cadastra os diagnósticos que usa | A busca só acha o catálogo global e não aceita diagnóstico digitado; a clínica usa NANDA-I 2024-2026 | admin da clínica cadastra código (5 dígitos, opcional), título, domínio/classe e edição, ou importa CSV; o plano aceita diagnóstico do catálogo da clínica ou digitado à mão (marcado "sem código"); escopo por empresa com `writeScope`; nada da taxonomia entra no repo | P1 |
 | P1-2 | Avaliação de ferida: critérios legíveis na tela | "Tabelas de avaliação pouco claras" | cada campo TIME mostra a legenda do critério (ex.: faixas de exsudato pela saturação, o que é cada tecido); validado em 360 px | P1 |
 | P1-3 | Receituário de enfermagem em PDF | A clínica pediu prescrição em PDF | documento com dados da clínica, enfermeira e COREN, paciente, data e itens prescritos, gerado a partir do plano ou da consulta, baixável em PDF | P1 |
-| P1-4 | "Pacotes": nome e explicação que a clínica entenda | Ninguém entende a aba | **pergunta ao Kalléo:** renomear para "Plano de acompanhamento"? a aba explica saldo, validade e preço por sessão em uma frase | P1 |
+| P1-4 | "Pacotes" vira "Plano de acompanhamento" | Ninguém entende a aba | aba, botões e documentos usam "Plano de acompanhamento"; uma frase explica saldo, validade e preço por sessão; `CONTEXT.md` atualizado | P1 |
 | P2-5 | Assinatura digital ICP-Brasil nos documentos | Pedido da clínica; COFEN oferece certificado gratuito aos enfermeiros | discovery: assinatura PAdES com certificado da profissional (A1 ou A3/nuvem), sem guardar chave no servidor; ADR; prova de conceito em um documento | P2 |
 | P2-6 | Avaliação de ferida: campos que faltam | Modelo da clínica tem etiologia classificada, várias feridas, pele adjacente, NERDS/STONEES, biofilme, dor no curativo | campos estruturados com códigos estáveis e rótulos em `format.ts`; migração aditiva; relatório mostra a série | P2 |
 | P2-7 | Avaliação de estomia completa | Faltam altura, diâmetro, mucosa, débito, equipamento, adjuvantes, autocuidado, gastrostomia | idem P2-6 para `kind=stoma`; alto débito acima de 1000 ml aparece em destaque | P2 |
@@ -243,9 +243,22 @@ mentoria, o que explica a semelhança dos modelos. Lido pelo site público.
 Preço público: duas pacientes grátis, depois R$ 79,90 por mês. A área logada (dashboard de
 negócio) não foi vista; o Kalléo ofereceu fazer o login se for preciso.
 
-## Perguntas abertas
+## Decisões e perguntas abertas
 
-1. Renomear "Pacotes" e qual nome (P1-4)?
-2. A clínica quer importar a lista inteira de diagnósticos que usa ou cadastrar um a um?
-3. Certificado da enfermeira: A1 (arquivo) ou A3/nuvem (o do COFEN)? Define o desenho de P2-5.
-4. A clínica vai licenciar as fontes da marca ou usamos alternativas livres?
+Decididas pelo coordenador em 2026-11-20 (reversíveis, registradas aqui):
+
+1. **"Pacotes" passa a se chamar "Plano de acompanhamento"** (P1-4). O nome é o da clínica (proposta
+   de plano de acompanhamento) e a troca é só de rótulo e texto de ajuda; o modelo
+   `SessionPackage` não muda.
+2. **Cadastro de diagnósticos: um a um e por importação CSV, os dois** (P1-1). Um a um resolve o
+   "Outros" do dia a dia; o CSV deixa a clínica trazer a lista que já usa sem que a taxonomia
+   passe pelo repo público. O CSV é da clínica e fica só no banco, no escopo da empresa.
+3. **Assinatura digital: chave privada nunca no servidor** (P2-5). A discovery parte do
+   certificado em nuvem (A3, como o oferecido pelo COFEN), com assinatura remota autorizada pela
+   profissional a cada documento. Guardar A1 no servidor fica descartado: um vazamento permitiria
+   assinar em nome da enfermeira, e dado de saúde vem antes de conveniência.
+
+Pendente do Kalléo (licença e dinheiro):
+
+4. **Fontes da marca.** Os arquivos são demo, sem licença comercial. Até a clínica comprar a
+   licença, os documentos usam fontes livres (P3-12).
