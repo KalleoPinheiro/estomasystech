@@ -104,6 +104,7 @@ export const CIPHERED_TABLES: readonly CipheredTable[] = [
     table: carePlanDiagnoses,
     key: carePlanDiagnoses.id,
     columns: {
+      diagnosisLabel: carePlanDiagnoses.diagnosisLabel,
       relatedFactors: carePlanDiagnoses.relatedFactors,
       definingCharacteristics: carePlanDiagnoses.definingCharacteristics,
     },

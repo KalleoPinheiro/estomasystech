@@ -46,6 +46,7 @@ import { InMemoryPatientRepository } from '@/infrastructure/persistence/in-memor
 import { InMemoryProducedSessionRepository } from '@/infrastructure/persistence/in-memory/in-memory-produced-session-repository';
 import { InMemoryProfessionalRepository } from '@/infrastructure/persistence/in-memory/in-memory-professional-repository';
 import {
+  InMemoryClinicDiagnosisRepository,
   InMemoryNursingDiagnosisRepository,
   InMemoryNursingInterventionRepository,
   InMemoryNursingOutcomeRepository,
@@ -139,6 +140,7 @@ export function inMemoryScope(
     outcomeEvaluations: new InMemoryOutcomeEvaluationRepository(),
     interventionRecords: new InMemoryInterventionRecordRepository(),
     nursingDiagnoses: new InMemoryNursingDiagnosisRepository(),
+    clinicDiagnoses: new InMemoryClinicDiagnosisRepository(),
     nursingOutcomes: new InMemoryNursingOutcomeRepository(),
     nursingInterventions: new InMemoryNursingInterventionRepository(),
     ...parts,

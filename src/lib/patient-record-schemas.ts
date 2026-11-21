@@ -94,8 +94,14 @@ export const openCarePlanSchema = z.object({
   conditionId: z.string().min(1).nullish(),
 });
 
+/**
+ * Origem do diagnóstico (#954): código do catálogo global, item do catálogo da clínica ou título
+ * digitado à mão ("sem código"). Exatamente uma das três.
+ */
 export const diagnosisBodySchema = z.object({
-  diagnosisCode: z.string().min(1).max(20),
+  diagnosisCode: z.string().min(1).max(20).nullish(),
+  clinicDiagnosisId: z.string().min(1).max(100).nullish(),
+  diagnosisLabel: z.string().trim().min(3).max(200).nullish(),
   type: z.enum(CARE_PLAN_DIAGNOSIS_TYPES),
   relatedFactors: z.string().max(2000).nullish(),
   definingCharacteristics: z.string().max(2000).nullish(),
@@ -165,8 +171,39 @@ function validatePromocaoSaudeFields(
 }
 
 /** Espelha as regras PES de `CarePlanDiagnosis` para falhar cedo, com mensagem clara. */
+function validateSindromeFields(body: PesFields, ctx: z.RefinementCtx): void {
+  if (!body.definingCharacteristics?.trim()) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['definingCharacteristics'],
+      message: 'Síndrome exige os diagnósticos do conjunto (evidenciado por)',
+    });
+  }
+}
+
+function validateDiagnosisSource(
+  body: DiagnosisBody,
+  ctx: z.RefinementCtx,
+): void {
+  const sources = [
+    body.diagnosisCode,
+    body.clinicDiagnosisId,
+    body.diagnosisLabel,
+  ].filter(Boolean);
+  if (sources.length !== 1) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['diagnosisCode'],
+      message: 'Escolha um diagnóstico do catálogo ou escreva o diagnóstico',
+    });
+  }
+}
+
 function validatePesFields(body: DiagnosisBody, ctx: z.RefinementCtx): void {
-  if (body.type === 'risco') {
+  validateDiagnosisSource(body, ctx);
+  if (body.type === 'sindrome') {
+    validateSindromeFields(body, ctx);
+  } else if (body.type === 'risco') {
     validateRiscoFields(body, ctx);
   } else if (body.type === 'real') {
     validateRealFields(body, ctx);
