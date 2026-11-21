@@ -51,7 +51,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const [diagnosisCatalog, outcomeCatalog, interventionCatalog] =
       await Promise.all([
         nursingDiagnoses.findByCodes(
-          detail.diagnoses.map((d) => d.diagnosisCode),
+          detail.diagnoses.flatMap((d) =>
+            d.diagnosisCode && !d.diagnosisLabel ? [d.diagnosisCode] : [],
+          ),
         ),
         nursingOutcomes.findByCodes(
           detail.outcomes.map(({ outcome }) => outcome.outcomeCode),

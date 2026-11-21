@@ -5,12 +5,22 @@ export const CARE_PLAN_DIAGNOSIS_TYPES = [
   'real',
   'risco',
   'promocao-saude',
+  'sindrome',
 ] as const;
 export type CarePlanDiagnosisType = (typeof CARE_PLAN_DIAGNOSIS_TYPES)[number];
 
+/** Tamanho máximo do título guardado no plano (catálogo da clínica ou digitado à mão). */
+export const CARE_PLAN_DIAGNOSIS_LABEL_MAX = 200;
+
 export interface CarePlanDiagnosisProps {
   carePlanId: string;
-  diagnosisCode: string;
+  /** Código NANDA-I. Nulo quando o diagnóstico foi digitado à mão ou veio sem código ("sem código"). */
+  diagnosisCode: string | null;
+  /**
+   * Título gravado no próprio plano quando o diagnóstico vem do catálogo da clínica ou é digitado à
+   * mão (#954): o plano não muda se a clínica editar ou desativar o item depois. Nulo no catálogo global.
+   */
+  diagnosisLabel?: string | null;
   type: CarePlanDiagnosisType;
   /** Etiologia — "relacionado a". */
   relatedFactors?: string | null;
@@ -27,7 +37,8 @@ export interface CarePlanDiagnosisState extends CarePlanDiagnosisProps {
  * Diagnóstico de enfermagem prescrito no formato PES (Problema-Etiologia-Sinais/sintomas).
  * Diagnóstico real exige etiologia e evidência; diagnóstico de risco exige etiologia mas
  * rejeita evidência (um risco, por definição, ainda não se manifestou); diagnóstico de
- * promoção da saúde não tem etiologia, mas exige evidência (motivação/desejo expresso).
+ * promoção da saúde não tem etiologia, mas exige evidência (motivação/desejo expresso); síndrome
+ * exige evidência (o conjunto de diagnósticos) e aceita etiologia.
  */
 export class CarePlanDiagnosis {
   private constructor(private readonly state: CarePlanDiagnosisState) {}
@@ -45,7 +56,8 @@ export class CarePlanDiagnosis {
 
     return new CarePlanDiagnosis({
       carePlanId: props.carePlanId,
-      diagnosisCode: props.diagnosisCode.trim(),
+      diagnosisCode: props.diagnosisCode?.trim() || null,
+      diagnosisLabel: CarePlanDiagnosis.normalizeLabel(props.diagnosisLabel),
       type: props.type,
       relatedFactors,
       definingCharacteristics,
@@ -58,9 +70,23 @@ export class CarePlanDiagnosis {
     if (props.carePlanId.trim().length === 0) {
       throw new ValidationError('Plano de cuidados é obrigatório');
     }
-    if (props.diagnosisCode.trim().length === 0) {
+    const hasCode = (props.diagnosisCode?.trim().length ?? 0) > 0;
+    const hasLabel = (props.diagnosisLabel?.trim().length ?? 0) > 0;
+    if (!hasCode && !hasLabel) {
       throw new ValidationError('Diagnóstico é obrigatório');
     }
+  }
+
+  private static normalizeLabel(
+    label: string | null | undefined,
+  ): string | null {
+    const text = label?.trim().replace(/\s+/g, ' ') ?? '';
+    if (text.length > CARE_PLAN_DIAGNOSIS_LABEL_MAX) {
+      throw new ValidationError(
+        `Título do diagnóstico deve ter no máximo ${CARE_PLAN_DIAGNOSIS_LABEL_MAX} caracteres`,
+      );
+    }
+    return text.length > 0 ? text : null;
   }
 
   /** Diagnóstico real exige etiologia e evidência; risco exige etiologia mas rejeita evidência. */
@@ -76,6 +102,8 @@ export class CarePlanDiagnosis {
       CarePlanDiagnosis.validateRisco(relatedFactors, definingCharacteristics);
     } else if (type === 'real') {
       CarePlanDiagnosis.validateReal(relatedFactors, definingCharacteristics);
+    } else if (type === 'sindrome') {
+      CarePlanDiagnosis.validateSindrome(definingCharacteristics);
     } else {
       CarePlanDiagnosis.validatePromocaoSaude(
         relatedFactors,
@@ -118,6 +146,20 @@ export class CarePlanDiagnosis {
     }
   }
 
+  /**
+   * Síndrome (NANDA-I): um conjunto de diagnósticos que aparecem juntos. Exige as características
+   * definidoras (os diagnósticos do conjunto); fatores relacionados são opcionais.
+   */
+  private static validateSindrome(
+    definingCharacteristics: string | null,
+  ): void {
+    if (!definingCharacteristics) {
+      throw new ValidationError(
+        'Síndrome exige características definidoras (os diagnósticos do conjunto)',
+      );
+    }
+  }
+
   /** Promoção da saúde não tem etiologia, mas exige evidência (motivação/desejo expresso). */
   private static validatePromocaoSaude(
     relatedFactors: string | null,
@@ -147,8 +189,12 @@ export class CarePlanDiagnosis {
     return this.state.carePlanId;
   }
 
-  get diagnosisCode(): string {
-    return this.state.diagnosisCode;
+  get diagnosisCode(): string | null {
+    return this.state.diagnosisCode ?? null;
+  }
+
+  get diagnosisLabel(): string | null {
+    return this.state.diagnosisLabel ?? null;
   }
 
   get type(): CarePlanDiagnosisType {

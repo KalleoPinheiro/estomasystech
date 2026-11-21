@@ -624,6 +624,13 @@
       "when": 1795140000000,
       "tag": "0088_cliente-autonoma-cpf",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1795260781736,
+      "tag": "0089_catalogo-diagnosticos-clinica",
+      "breakpoints": true
     }
   ]
 }

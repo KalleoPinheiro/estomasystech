@@ -67,6 +67,7 @@ describe('Feature: índice de Configurações em sub-rotas (#522)', () => {
       'privacidade',
       'horarios',
       'feriados',
+      'diagnosticos',
       'google-agenda',
       'email',
       'contas',

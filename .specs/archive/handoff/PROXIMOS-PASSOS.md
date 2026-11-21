@@ -26,9 +26,9 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-1. **#977** (P1, classe 3): cliente autônoma com CPF no lugar de CNPJ (ADR-115). PR aberto para a `main`; espera o CI verde e
-   o clique do dono no `aprovacao-classe-3`. Depois do merge: cadastrar a primeira cliente pela plataforma como
-   "Profissional autônoma" e, no próximo release, rodar `data:reencrypt` só se a chave girar.
+1. **#954** (P1, classe 3 por RLS e cifra): catálogo de diagnósticos da clínica, CSV, diagnóstico «sem código» e tipo
+   síndrome na SAE (migração 0089, PRO-RN-37). PR #982 aberto; antes dele, o #983 tira o número fixo de 45 tabelas do teste
+   de FORCE. Espera o clique do dono quando o CI estiver verde.
 2. **#950** (classe 3): ensaio do rollback sem anotação falsa. Pronto, espera o clique do dono.
 3. **Contração da cifra** (ADR-111, ADR-114): no e-mail de login, `VALIDATE` da restrição `0086`, fim do ramo em claro e drop dos
    índices antigos; no cadastro, drop de `birth_date` e dos índices GIN antigos. Migração não aditiva: classe 3.

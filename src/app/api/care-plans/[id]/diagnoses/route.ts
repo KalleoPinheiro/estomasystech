@@ -25,22 +25,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
       repos,
     );
     const body = diagnosisSchema.parse(await request.json());
-    const { carePlanDiagnoses, carePlans, nursingDiagnoses, auditEvents } =
-      repos;
+    const {
+      carePlanDiagnoses,
+      carePlans,
+      nursingDiagnoses,
+      clinicDiagnoses,
+      auditEvents,
+    } = repos;
     const diagnosis = await new AddCarePlanDiagnosis(
       carePlanDiagnoses,
       carePlans,
       nursingDiagnoses,
+      clinicDiagnoses,
     ).execute({
       carePlanId: id,
-      diagnosisCode: body.diagnosisCode,
+      diagnosisCode: body.diagnosisCode ?? null,
+      clinicDiagnosisId: body.clinicDiagnosisId ?? null,
+      diagnosisLabel: body.diagnosisLabel ?? null,
       type: body.type,
       relatedFactors: body.relatedFactors ?? null,
       definingCharacteristics: body.definingCharacteristics ?? null,
     });
     const [plan, catalogEntry] = await Promise.all([
       carePlans.findById(id),
-      nursingDiagnoses.findByCode(body.diagnosisCode),
+      diagnosis.diagnosisCode && !diagnosis.diagnosisLabel
+        ? nursingDiagnoses.findByCode(diagnosis.diagnosisCode)
+        : null,
     ]);
     recordAudit(auditEvents, guard.session, {
       action: 'create',
@@ -48,9 +58,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       resourceId: diagnosis.id,
       patientId: plan?.patientId ?? null,
     });
-    return toCarePlanDiagnosisDto(
-      diagnosis,
-      catalogEntry?.label ?? diagnosis.diagnosisCode,
-    );
+    return toCarePlanDiagnosisDto(diagnosis, catalogEntry?.label);
   });
 }

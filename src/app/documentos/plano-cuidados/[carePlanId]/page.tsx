@@ -13,6 +13,7 @@ import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import {
   CARE_PLAN_DIAGNOSIS_TYPE_LABELS,
   CARE_PLAN_STATUS_LABELS,
+  diagnosisCodeLabel,
   formatDate,
   INTERVENTION_PRIORITY_LABELS,
   outcomeStatusLabel,
@@ -109,7 +110,7 @@ export default async function CarePlanDocumentPage({
           {detail.data.diagnoses.map((diagnosis) => (
             <li key={diagnosis.id} className="mb-1">
               <strong>
-                {diagnosis.diagnosisCode} (
+                {diagnosisCodeLabel(diagnosis.diagnosisCode)} (
                 {CARE_PLAN_DIAGNOSIS_TYPE_LABELS[diagnosis.type]}):
               </strong>{' '}
               {pesSentence(diagnosis)}

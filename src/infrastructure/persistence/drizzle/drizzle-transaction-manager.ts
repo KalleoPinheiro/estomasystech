@@ -17,6 +17,7 @@ import {
   DrizzleInterventionRecordRepository,
   DrizzleOutcomeEvaluationRepository,
 } from './drizzle-care-plan-repositories';
+import { DrizzleClinicDiagnosisRepository } from './drizzle-clinic-diagnosis-repository';
 import { DrizzleClinicRepository } from './drizzle-clinic-repository';
 import {
   DrizzleAnamnesisRepository,
@@ -181,6 +182,7 @@ export class DrizzleTransactionManager implements TransactionManager {
         this.cipher,
       ),
       nursingDiagnoses: new DrizzleNursingDiagnosisRepository(tx),
+      clinicDiagnoses: new DrizzleClinicDiagnosisRepository(tx, this.clinicId),
       nursingOutcomes: new DrizzleNursingOutcomeRepository(tx),
       nursingInterventions: new DrizzleNursingInterventionRepository(tx),
       consentRecords: new DrizzleConsentRecordRepository(tx, this.clinicId),

@@ -120,6 +120,7 @@ export class DrizzleCarePlanDiagnosisRepository
     return CarePlanDiagnosis.restore({
       ...row,
       type: row.type as CarePlanDiagnosisType,
+      diagnosisLabel: this.cipher.decryptNullable(row.diagnosisLabel),
       relatedFactors: this.cipher.decryptNullable(row.relatedFactors),
       definingCharacteristics: this.cipher.decryptNullable(
         row.definingCharacteristics,
@@ -136,6 +137,7 @@ export class DrizzleCarePlanDiagnosisRepository
       clinicId: this.clinicId,
       carePlanId: diagnosis.carePlanId,
       diagnosisCode: diagnosis.diagnosisCode,
+      diagnosisLabel: this.cipher.encryptNullable(diagnosis.diagnosisLabel),
       type: diagnosis.type,
       relatedFactors: this.cipher.encryptNullable(diagnosis.relatedFactors),
       definingCharacteristics: this.cipher.encryptNullable(
