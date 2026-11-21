@@ -1,5 +1,17 @@
 # estomasystech
 
+## 0.11.0
+
+### Minor Changes
+
+- a4c6ad4: A profissional autônoma, sem CNPJ, já pode ser cliente: no cadastro pela plataforma escolha "Profissional autônoma (pessoa física)" e informe só o CPF. O CPF fica cifrado, os documentos saem com nome, CPF e COREN dela, e o recibo segue o modelo do Receita Saúde (CPF da profissional, de quem pagou e, se outra pessoa pagou, do paciente atendido). As clínicas com CNPJ continuam como antes.
+- a3af075: A clínica cadastra os diagnósticos de enfermagem que usa (Configurações › Diagnósticos de enfermagem), um a um ou importando a planilha em CSV, com código NANDA-I opcional. No plano de cuidados, a busca mostra primeiro os diagnósticos da clínica, aceita um diagnóstico escrito à mão (marcado «Sem código») e ganha o tipo síndrome.
+
+### Patch Changes
+
+- f4736af: Agenda: ao abrir uma consulta (inclusive pelo link do Google Agenda), o modal "Detalhes da consulta" só aparece com os dados já carregados; enquanto carrega, mostra "Abrindo a consulta".
+- 60bb9f4: Nova consulta: a data passa a ocupar uma linha própria e Início e Duração ficam lado a lado, sem cortar o valor no celular. Os campos de data e hora (como a data de nascimento do paciente) não passam mais da largura da tela no iPhone.
+
 ## 0.10.0
 
 ### Minor Changes
