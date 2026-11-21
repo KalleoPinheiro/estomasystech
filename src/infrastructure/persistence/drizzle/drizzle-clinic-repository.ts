@@ -1,18 +1,53 @@
-import { asc, eq } from 'drizzle-orm';
-import { Clinic, isClinicSuspensionReason } from '@/domain/clinic/clinic';
+import { asc, eq, inArray } from 'drizzle-orm';
+import {
+  Clinic,
+  type ClinicKind,
+  isClinicSuspensionReason,
+} from '@/domain/clinic/clinic';
 import type { ClinicRepository } from '@/domain/clinic/clinic-repository';
+import {
+  type BlindIndex,
+  blindIndexFromEnv,
+  PROVIDER_INDEX_SCOPE,
+} from '@/lib/blind-index';
+import { dataCipherFromEnv, type FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
 import { clinics } from './schema';
 
 type ClinicRow = typeof clinics.$inferSelect;
 
-const toClinic = (row: ClinicRow): Clinic =>
+/** A chave, ou quem a fornece quando precisar (leitura preguiçosa do ambiente). */
+export type CipherSource = FieldCipher | (() => FieldCipher);
+export type ClinicBlindIndexSource = BlindIndex | (() => BlindIndex);
+
+/** Lê a fonte na primeira vez que for pedida e guarda o resultado. */
+function lazy<T extends object>(source: T | (() => T)): () => T {
+  let value: T | undefined;
+  return () => {
+    value ??= typeof source === 'function' ? (source as () => T)() : source;
+    return value;
+  };
+}
+
+/** Índice cego do CPF da autônoma (#977): escopo fixo, para a unicidade entre clientes. */
+export function providerCpfHash(
+  blindIndex: BlindIndex,
+  cpf: string | null,
+): string | null {
+  return blindIndex.hash(PROVIDER_INDEX_SCOPE, 'provider-cpf', cpf);
+}
+
+const toClinic = (row: ClinicRow, cipher: () => FieldCipher): Clinic =>
   Clinic.restore({
     id: row.id,
     name: row.name,
+    // Valor fora da lista vale clínica (`Clinic.restore`).
+    kind: row.kind as ClinicKind,
     createdBy: row.createdBy,
     createdAt: row.createdAt,
     cnpj: row.cnpj,
+    // Só a autônoma tem CPF: a clínica nunca resolve a chave.
+    cpf: row.cpf === null ? null : cipher().decryptNullable(row.cpf),
     address: row.address,
     city: row.city,
     professionalName: row.professionalName,
@@ -35,9 +70,19 @@ const toClinic = (row: ClinicRow): Clinic =>
   });
 
 /** Dados cadastrais gravados por `create` e `update`. */
-const infoColumns = (clinic: Clinic) => ({
+const infoColumns = (
+  clinic: Clinic,
+  cipher: () => FieldCipher,
+  blindIndex: () => BlindIndex,
+) => ({
   name: clinic.name,
   cnpj: clinic.cnpj,
+  ...(clinic.cpf === null
+    ? { cpf: null, cpfHash: null }
+    : {
+        cpf: cipher().encrypt(clinic.cpf),
+        cpfHash: providerCpfHash(blindIndex(), clinic.cpf),
+      }),
   cnpjReviewSince: clinic.cnpjReviewSince,
   address: clinic.address,
   city: clinic.city,
@@ -59,14 +104,31 @@ const statusColumns = (clinic: Clinic) => ({
 });
 
 export class DrizzleClinicRepository implements ClinicRepository {
-  constructor(private readonly db: AppDb) {}
+  private readonly cipher: () => FieldCipher;
+  private readonly blindIndex: () => BlindIndex;
+  private readonly toClinic: (row: ClinicRow) => Clinic;
+
+  /**
+   * Chave e índice cego só são resolvidos quando há CPF a cifrar ou decifrar
+   * (#977): a clínica com CNPJ nunca depende deles.
+   */
+  constructor(
+    private readonly db: AppDb,
+    cipherSource: CipherSource = dataCipherFromEnv,
+    blindIndexSource: ClinicBlindIndexSource = blindIndexFromEnv,
+  ) {
+    this.cipher = lazy(cipherSource);
+    this.blindIndex = lazy(blindIndexSource);
+    this.toClinic = (row) => toClinic(row, this.cipher);
+  }
 
   async create(clinic: Clinic): Promise<void> {
     await this.db.insert(clinics).values({
       id: clinic.id,
+      kind: clinic.kind,
       createdBy: clinic.createdBy,
       createdAt: clinic.createdAt,
-      ...infoColumns(clinic),
+      ...infoColumns(clinic, this.cipher, this.blindIndex),
       ...statusColumns(clinic),
       themeMode: clinic.theme.mode,
       themeAccent: clinic.theme.accent,
@@ -79,7 +141,22 @@ export class DrizzleClinicRepository implements ClinicRepository {
       .from(clinics)
       .where(eq(clinics.cnpj, cnpj))
       .limit(1);
-    return rows[0] ? toClinic(rows[0]) : null;
+    return rows[0] ? this.toClinic(rows[0]) : null;
+  }
+
+  async findByCpf(cpf: string): Promise<Clinic | null> {
+    const candidates = this.blindIndex().candidates(
+      PROVIDER_INDEX_SCOPE,
+      'provider-cpf',
+      cpf,
+    );
+    if (candidates.length === 0) return null;
+    const rows = await this.db
+      .select()
+      .from(clinics)
+      .where(inArray(clinics.cpfHash, candidates))
+      .limit(1);
+    return rows[0] ? this.toClinic(rows[0]) : null;
   }
 
   async findById(id: string): Promise<Clinic | null> {
@@ -88,7 +165,7 @@ export class DrizzleClinicRepository implements ClinicRepository {
       .from(clinics)
       .where(eq(clinics.id, id))
       .limit(1);
-    return rows[0] ? toClinic(rows[0]) : null;
+    return rows[0] ? this.toClinic(rows[0]) : null;
   }
 
   async findAll(): Promise<Clinic[]> {
@@ -96,13 +173,13 @@ export class DrizzleClinicRepository implements ClinicRepository {
       .select()
       .from(clinics)
       .orderBy(asc(clinics.createdAt));
-    return rows.map(toClinic);
+    return rows.map(this.toClinic);
   }
 
   async update(clinic: Clinic): Promise<void> {
     await this.db
       .update(clinics)
-      .set(infoColumns(clinic))
+      .set(infoColumns(clinic, this.cipher, this.blindIndex))
       .where(eq(clinics.id, clinic.id));
   }
 

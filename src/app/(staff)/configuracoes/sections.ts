@@ -37,6 +37,12 @@ export const SETTINGS_SECTIONS = [
     api: null,
   },
   {
+    slug: 'diagnosticos',
+    label: 'Diagnósticos de enfermagem',
+    summary: 'Os diagnósticos que a clínica usa no plano de cuidados.',
+    api: '/api/settings/nursing-diagnoses',
+  },
+  {
     slug: 'google-agenda',
     label: 'Google Agenda',
     summary: 'Sincronização dos agendamentos com o Google.',

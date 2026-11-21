@@ -39,6 +39,7 @@ import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedul
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import type { WaitlistRepository } from '@/domain/scheduling/waitlist';
 import type {
+  ClinicNursingDiagnosisRepository,
   NursingDiagnosisRepository,
   NursingInterventionRepository,
   NursingOutcomeRepository,
@@ -111,6 +112,8 @@ export interface TransactionScope {
   nursingDiagnoses: NursingDiagnosisRepository;
   nursingOutcomes: NursingOutcomeRepository;
   nursingInterventions: NursingInterventionRepository;
+  /** Catálogo de diagnósticos da clínica (#954), no escopo da empresa. */
+  clinicDiagnoses: ClinicNursingDiagnosisRepository;
 }
 
 /**

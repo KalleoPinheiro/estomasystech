@@ -26,6 +26,13 @@ export const clinics = pgTable(
     // Dados cadastrais (issue #61) — usados no cabeçalho/rodapé de documentos
     // clínicos emitidos (issue #62). Nullable: nem toda instalação os preencheu ainda.
     cnpj: text('cnpj'),
+    // Tipo de cliente (#977): `company` (clínica, CNPJ) ou `individual`
+    // (profissional autônoma, só CPF). Fixo depois da criação.
+    kind: text('kind').notNull().default('company'),
+    // CPF da autônoma (#977, ADR-096): cifrado com a `DATA_ENCRYPTION_KEY` e com
+    // índice cego `provider-cpf` de escopo fixo, para a unicidade entre clientes.
+    cpf: text('cpf'),
+    cpfHash: text('cpf_hash'),
     // CNPJ gravado antes da conferência do dígito verificador (#248) e marcado
     // para correção (#355). Nulo = sem pendência; salvar um CNPJ válido limpa.
     cnpjReviewSince: timestamp('cnpj_review_since', {
@@ -83,6 +90,14 @@ export const clinics = pgTable(
     uniqueIndex('uq_clinics_cnpj')
       .on(table.cnpj)
       .where(sql`${table.cnpj} IS NOT NULL`),
+    check(
+      'clinics_kind_check',
+      sql`${table.kind} IN ('company', 'individual')`,
+    ),
+    // Um CPF, um cadastro de autônoma (#977), pelo índice cego: o CPF em claro não existe no banco.
+    uniqueIndex('uq_clinics_cpf_hash')
+      .on(table.cpfHash)
+      .where(sql`${table.cpfHash} IS NOT NULL`),
   ],
 );
 
@@ -1390,6 +1405,35 @@ export const nursingInterventions = pgTable(
   ],
 );
 
+// Catálogo de diagnósticos da própria clínica (#954): cadastro um a um ou CSV, só no banco e no
+// escopo da empresa (RLS clinic_isolation com FORCE). A taxonomia NANDA-I não entra no repositório.
+export const clinicDiagnoses = pgTable(
+  'clinic_nursing_diagnoses',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    code: text('code'),
+    label: text('label').notNull(),
+    domain: text('domain'),
+    class: text('class'),
+    edition: text('edition'),
+    definition: text('definition'),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [
+    index('idx_clinic_nursing_diagnoses_clinic_label').on(
+      table.clinicId,
+      table.label,
+    ),
+  ],
+);
+
 // Ligações sugeridas NANDA→NOC/NIC — priorizam o subset curado na busca, não restringem.
 export const taxonomyLinkages = pgTable(
   'taxonomy_linkages',
@@ -1442,7 +1486,10 @@ export const carePlanDiagnoses = pgTable(
     carePlanId: text('care_plan_id')
       .notNull()
       .references(() => carePlans.id),
-    diagnosisCode: text('diagnosis_code').notNull(),
+    // Nulo no diagnóstico digitado à mão ou do catálogo da clínica sem código (#954).
+    diagnosisCode: text('diagnosis_code'),
+    // Título (cifrado) gravado no plano quando vem do catálogo da clínica ou é digitado à mão (#954).
+    diagnosisLabel: text('diagnosis_label'),
     type: text('type').notNull(),
     // Etiologia ("relacionado a").
     relatedFactors: text('related_factors'),

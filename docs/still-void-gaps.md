@@ -85,6 +85,20 @@ por [e2e/shell-mobile.spec.ts](../e2e/shell-mobile.spec.ts).
 **Correção sugerida na lib (patch).** Subir o tamanho de `.sv-field` para 1rem na mesma media query de
 toque da `3.4.0`.
 
+### `field-date-time-width`
+
+**Lacuna.** `.sv-field` dá `width: 100%` ao campo, mas o campo nativo de data e hora tem largura mínima
+própria. No Safari do iOS ela passa de 100px e o campo ignora a largura do contêiner: invadia o vizinho
+na grade da Nova consulta e passava da tela na data de nascimento (#969, #970).
+
+**Workaround local.** Em [src/app/globals.css](../src/app/globals.css), `.sv-field` de data e hora ganha
+`min-width: 0` e `max-width: 100%`; no iOS (`@supports (-webkit-touch-callout: none)`), sai a aparência
+nativa e o valor alinha à esquerda. A Nova consulta põe a Data em linha própria. Provado por
+[e2e/campos-data-hora-celular.spec.ts](../e2e/campos-data-hora-celular.spec.ts) no Chromium; o iOS real
+não roda no CI.
+
+**Correção sugerida na lib (patch).** Levar as duas regras para `.sv-field` de data e hora.
+
 ### `combobox`
 
 <!-- sv-gap-doc-only -->

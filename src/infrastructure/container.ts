@@ -62,6 +62,7 @@ import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedul
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import type { WaitlistRepository } from '@/domain/scheduling/waitlist';
 import type {
+  ClinicNursingDiagnosisRepository,
   NursingDiagnosisRepository,
   NursingInterventionRepository,
   NursingOutcomeRepository,
@@ -100,6 +101,7 @@ import {
   DrizzleOutcomeEvaluationRepository,
 } from './persistence/drizzle/drizzle-care-plan-repositories';
 import { DrizzleClinicChannelRepository } from './persistence/drizzle/drizzle-clinic-channel-repository';
+import { DrizzleClinicDiagnosisRepository } from './persistence/drizzle/drizzle-clinic-diagnosis-repository';
 import { DrizzleClinicProvisioning } from './persistence/drizzle/drizzle-clinic-provisioning';
 import { DrizzleClinicRepository } from './persistence/drizzle/drizzle-clinic-repository';
 import {
@@ -191,6 +193,8 @@ export interface Services {
   dataSubjectRequests: DataSubjectRequestRepository;
   partnerShareConsents: PartnerShareConsentRepository;
   nursingDiagnoses: NursingDiagnosisRepository;
+  /** Catálogo de diagnósticos da clínica (#954), no escopo da empresa. */
+  clinicDiagnoses: ClinicNursingDiagnosisRepository;
   nursingOutcomes: NursingOutcomeRepository;
   nursingInterventions: NursingInterventionRepository;
   taxonomyLinkages: TaxonomyLinkageRepository;
@@ -423,6 +427,17 @@ export function buildPhotoStorage(clinicId: string): PhotoStorage {
   );
 }
 
+/** Catálogos de enfermagem: os globais (sem empresa) e o da clínica (#954), no escopo dela. */
+function taxonomyRepositories(db: AppDb, clinicId: string | null) {
+  return {
+    nursingDiagnoses: new DrizzleNursingDiagnosisRepository(db),
+    clinicDiagnoses: new DrizzleClinicDiagnosisRepository(db, clinicId),
+    nursingOutcomes: new DrizzleNursingOutcomeRepository(db),
+    nursingInterventions: new DrizzleNursingInterventionRepository(db),
+    taxonomyLinkages: new DrizzleTaxonomyLinkageRepository(db),
+  };
+}
+
 /**
  * O escopo vem só das fábricas de `@/lib/auth/tenant-scope` (sessionScope,
  * writeScope, clinicScope, systemScope) — objeto literal não compila.
@@ -441,7 +456,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     cipher,
   );
   return {
-    clinics: new DrizzleClinicRepository(db),
+    clinics: new DrizzleClinicRepository(db, cipher, currentBlindIndex),
     patients: new DrizzlePatientRepository(
       db,
       tenant.clinicId,
@@ -503,10 +518,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       db,
       tenant.clinicId,
     ),
-    nursingDiagnoses: new DrizzleNursingDiagnosisRepository(db),
-    nursingOutcomes: new DrizzleNursingOutcomeRepository(db),
-    nursingInterventions: new DrizzleNursingInterventionRepository(db),
-    taxonomyLinkages: new DrizzleTaxonomyLinkageRepository(db),
+    ...taxonomyRepositories(db, tenant.clinicId),
     carePlans: new DrizzleCarePlanRepository(db, tenant.clinicId),
     carePlanDiagnoses: new DrizzleCarePlanDiagnosisRepository(
       db,

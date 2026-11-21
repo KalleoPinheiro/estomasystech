@@ -6,6 +6,7 @@ import {
   IssuedFootnote,
 } from '@/components/issue-document';
 import { DocumentActions } from '@/components/print-button';
+import { providerDocument } from '@/domain/clinic/clinic';
 import type { ClinicInfoDto } from '@/lib/dto';
 import type { IssueDocumentInput } from '@/lib/server/document-issuance';
 
@@ -145,6 +146,8 @@ export function DocumentFrame({
 }: DocumentFrameProps) {
   const initial =
     documentNumber && issuedAt ? { documentNumber, issuedAt } : null;
+  // CNPJ da clínica ou CPF da profissional autônoma (#977).
+  const issuerDocument = providerDocument(clinic);
 
   return (
     <IssueDocument request={issue} initial={initial}>
@@ -167,7 +170,15 @@ export function DocumentFrame({
             </div>
           )}
           <h1 className="font-bold text-xl">{clinic.name}</h1>
-          {clinic.cnpj && <p className="text-sm">CNPJ: {clinic.cnpj}</p>}
+          {issuerDocument && (
+            <p className="text-sm">
+              {issuerDocument.label}: {issuerDocument.value}
+            </p>
+          )}
+          {/* Timbre da autônoma (#977): o COREN dela vai junto do CPF. */}
+          {clinic.kind === 'individual' && clinic.professionalRegistry && (
+            <p className="text-sm">{clinic.professionalRegistry}</p>
+          )}
           {clinic.address && <p className="text-sm">{clinic.address}</p>}
         </header>
 

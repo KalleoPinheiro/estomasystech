@@ -160,6 +160,7 @@ export const CARE_PLAN_DIAGNOSIS_TYPE_LABELS: Record<
   real: 'Real',
   risco: 'Risco',
   'promocao-saude': 'Promoção da saúde',
+  sindrome: 'Síndrome',
 };
 
 export const INTERVENTION_PRIORITY_LABELS: Record<
@@ -171,12 +172,23 @@ export const INTERVENTION_PRIORITY_LABELS: Record<
   alta: 'Alta',
 };
 
+/** Código NANDA-I do diagnóstico no plano, ou "Sem código" no digitado à mão (#954). */
+export const diagnosisCodeLabel = (code: string | null): string =>
+  code ?? 'Sem código';
+
 /** Frase PES legível: Problema relacionado a Etiologia, evidenciado por Sinais/sintomas. */
 export function pesSentence(diagnosis: CarePlanDiagnosisDto): string {
   if (diagnosis.type === 'risco') {
-    return `Risco de ${diagnosis.diagnosisLabel} relacionado a ${diagnosis.relatedFactors}`;
+    // Título da clínica já costuma vir como "Risco de …" (#954): não repete o prefixo.
+    const problem = /^risco\b/i.test(diagnosis.diagnosisLabel)
+      ? diagnosis.diagnosisLabel
+      : `Risco de ${diagnosis.diagnosisLabel}`;
+    return `${problem} relacionado a ${diagnosis.relatedFactors}`;
   }
-  if (diagnosis.type === 'promocao-saude') {
+  if (diagnosis.type === 'sindrome' && diagnosis.relatedFactors) {
+    return `${diagnosis.diagnosisLabel} relacionado a ${diagnosis.relatedFactors}, evidenciado por ${diagnosis.definingCharacteristics}`;
+  }
+  if (diagnosis.type === 'promocao-saude' || diagnosis.type === 'sindrome') {
     return `${diagnosis.diagnosisLabel} evidenciado por ${diagnosis.definingCharacteristics}`;
   }
   return `${diagnosis.diagnosisLabel} relacionado a ${diagnosis.relatedFactors}, evidenciado por ${diagnosis.definingCharacteristics}`;

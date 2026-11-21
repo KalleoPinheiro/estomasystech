@@ -8,6 +8,8 @@ import { z } from 'zod';
 export const clinicInfoChangesSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   cnpj: z.string().max(30).nullish(),
+  // CPF da profissional autônoma (#977); o dígito verificador é regra do domínio.
+  cpf: z.string().max(20).nullish(),
   address: z.string().max(300).nullish(),
   city: z.string().max(120).nullish(),
   professionalName: z.string().max(200).nullish(),

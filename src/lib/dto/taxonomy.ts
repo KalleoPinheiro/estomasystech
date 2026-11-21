@@ -1,3 +1,4 @@
+import type { ClinicNursingDiagnosis } from '@/domain/taxonomy/clinic-nursing-diagnosis';
 import type { NursingDiagnosis } from '@/domain/taxonomy/nursing-diagnosis';
 import type { NursingIntervention } from '@/domain/taxonomy/nursing-intervention';
 import type { NursingOutcome } from '@/domain/taxonomy/nursing-outcome';
@@ -59,4 +60,29 @@ export const toNursingInterventionDto = (
   domain: intervention.domain,
   class: intervention.class,
   edition: intervention.edition,
+});
+
+/** Item do catálogo da clínica (#954), para Configurações e para a busca do plano. */
+export interface ClinicNursingDiagnosisDto {
+  id: string;
+  code: string | null;
+  label: string;
+  domain: string | null;
+  class: string | null;
+  edition: string | null;
+  definition: string | null;
+  active: boolean;
+}
+
+export const toClinicNursingDiagnosisDto = (
+  diagnosis: ClinicNursingDiagnosis,
+): ClinicNursingDiagnosisDto => ({
+  id: diagnosis.id,
+  code: diagnosis.code,
+  label: diagnosis.label,
+  domain: diagnosis.domain,
+  class: diagnosis.class,
+  edition: diagnosis.edition,
+  definition: diagnosis.definition,
+  active: diagnosis.isActive,
 });

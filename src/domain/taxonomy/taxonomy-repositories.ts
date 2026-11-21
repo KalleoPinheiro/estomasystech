@@ -1,3 +1,4 @@
+import type { ClinicNursingDiagnosis } from './clinic-nursing-diagnosis';
 import type { NursingDiagnosis } from './nursing-diagnosis';
 import type { NursingIntervention } from './nursing-intervention';
 import type { NursingOutcome } from './nursing-outcome';
@@ -37,4 +38,19 @@ export interface TaxonomyLinkageRepository {
     diagnosisCode: string,
     role?: LinkageRole,
   ): Promise<TaxonomyLinkage[]>;
+}
+
+/** Catálogo de diagnósticos da própria clínica (#954): sempre no escopo da empresa do repositório. */
+export interface ClinicNursingDiagnosisRepository {
+  save(diagnosis: ClinicNursingDiagnosis): Promise<void>;
+  /** Grava várias de uma vez (importação CSV), na mesma transação do chamador. */
+  saveMany(diagnoses: ClinicNursingDiagnosis[]): Promise<void>;
+  findById(id: string): Promise<ClinicNursingDiagnosis | null>;
+  /** Todos, ativos e inativos, por título. */
+  list(): Promise<ClinicNursingDiagnosis[]>;
+  /** Só os ativos, por título ou código. */
+  search(
+    term: string,
+    options?: { limit?: number },
+  ): Promise<ClinicNursingDiagnosis[]>;
 }

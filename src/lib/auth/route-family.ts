@@ -99,6 +99,9 @@ const ADMINISTRATIVE_PREFIXES = [
   '/api/settings/clinic-logo',
   // Tema da clínica (#426): modo padrão e cor, só o Admin de Empresa.
   '/api/settings/clinic-identity',
+  // Catálogo de diagnósticos da clínica (#954): cadastrar, importar CSV e
+  // desativar é do Admin de Empresa. A busca do plano fica em `/api/taxonomy`.
+  '/api/settings/nursing-diagnoses',
   // Conectar a agenda do Google é ato administrativo da empresa, não operação
   // de atendimento — mesma família de /api/settings/clinic-info.
   '/api/integrations',

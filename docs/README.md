@@ -22,6 +22,7 @@ last_reviewed: 2026-11-11
 | [`product/prd-fase-2.md`](product/prd-fase-2.md) | frozen | PRD da fase 2 |
 | [`product/prd-fase-3.md`](product/prd-fase-3.md) | frozen | PRD da fase 3 |
 | [`product/prd-fase-6.md`](product/prd-fase-6.md) | living | PRD da plataforma (RBAC, multiempresa, auth) |
+| [`clinico/aceleradores-estomaterapia.md`](clinico/aceleradores-estomaterapia.md) | draft | estudo dos modelos clínicos da clínica (avaliação, NANDA/NIC, termos, documentos, marca), benchmark NurseUp e 14 propostas de issue |
 | [`legal/textos-lgpd.md`](legal/textos-lgpd.md) | living | textos LGPD em vigor (aviso de privacidade, TCLE de tratamento, termo de imagem, consentimento do parceiro) e como trocá-los após a revisão jurídica (#216) |
 | [`plano-correcao-achados-auditoria-2026-09.md`](plano-correcao-achados-auditoria-2026-09.md) | frozen | plano dos achados de auditoria #57–#77 |
 
@@ -135,6 +136,7 @@ Matriz de casos de exceção por domínio ([ADR-049](adr/049-matriz-de-excecoes-
 | [`adr/111-email-de-login-cifrado-com-indice-cego-global.md`](adr/111-email-de-login-cifrado-com-indice-cego-global.md) | e-mail de login (`user_accounts.email`) cifrado em repouso com índice cego global (sem `clinicId`, porque o login atravessa empresas); migração aditiva `0074`, leitura tolerante a claro e conversão pelo `data:reencrypt` |
 | [`adr/112-login-na-trilha-pelo-id-da-conta.md`](adr/112-login-na-trilha-pelo-id-da-conta.md) | login na trilha pelo id da conta; sem conta identificada, `resource_id` e `actor_id` ficam vazios (#887) |
 | [`adr/113-release-deploy-migra-antes-e-reverte-a-imagem.md`](adr/113-release-deploy-migra-antes-e-reverte-a-imagem.md) | *Release deploy* migra o banco com o dono antes de trocar o container (hash do drizzle-orm, trava e conferência da função do readiness), ensaia a migração sem segredo no `dry_run`, reverte a imagem se a fumaça reprovar e roda o bundle minificado no gate (postmortem da v0.9.1, #918); emenda o ADR-095 |
+| [`adr/115-cliente-autonoma-com-cpf-cifrado.md`](adr/115-cliente-autonoma-com-cpf-cifrado.md) | Cliente profissional autônoma (pessoa física, só CPF): CPF cifrado com índice cego de escopo fixo, documentos com CPF e COREN e recibo no modelo do Receita Saúde (#977) |
 | [`adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md`](adr/114-decisoes-de-produto-oferta-de-vaga-relatorio-parceiro-e-email-hash-anonimizado.md) | Decisões do dono: oferta de vaga de 2 h por e-mail (RM-16), relatório mensal ao parceiro sem dado clínico (RM-15) e `email_hash` `NOT NULL` só para conta ativa (#909); emenda o ADR-111 |
 | [`adr/043-versionamento-com-changesets-e-release-por-tag.md`](adr/043-versionamento-com-changesets-e-release-por-tag.md) | versionamento semântico com Changesets, release por tag e versão visível às clínicas |
 | [`adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md`](adr/044-ambiente-local-completo-e-integracao-em-postgres-real.md) | `ambiente:local` (Postgres 18 + app + seed) e suíte de integração em Postgres real |

@@ -152,6 +152,37 @@ html {
   }
 }
 
+/* sv-gap: field-date-time-width
+   O campo nativo de data e hora tem largura mínima própria. No Safari do iOS ela
+   passa de 100px e ignora o `width: 100%` do `.sv-field`: o campo invade o
+   vizinho na grade da Nova consulta e passa da tela na data de nascimento
+   (#969, #970). `min-width: 0` deixa o campo encolher até o contêiner; no iOS
+   (único com `-webkit-touch-callout`) a aparência nativa sai e o valor alinha
+   à esquerda como nos outros campos. */
+.sv-field:is(
+  [type="date"],
+  [type="time"],
+  [type="datetime-local"],
+  [type="month"]
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+@supports (-webkit-touch-callout: none) {
+  .sv-field:is(
+    [type="date"],
+    [type="time"],
+    [type="datetime-local"],
+    [type="month"]
+  ) {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .sv-field::-webkit-date-and-time-value {
+    text-align: start;
+  }
+}
+
 /* Antes da hidratação (marca em components/hydration-mark.tsx) os botões ainda
    não respondem ao clique: o cursor de espera evita a impressão de botão
    quebrado (#484). */
