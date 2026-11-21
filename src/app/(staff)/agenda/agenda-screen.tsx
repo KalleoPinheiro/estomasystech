@@ -57,9 +57,15 @@ const AppointmentForm = dynamic(
   () => import('./appointment-form').then((m) => m.AppointmentForm),
   { loading: () => <LoadingIndicator /> },
 );
-const AppointmentDetail = dynamic(
-  () => import('./appointment-detail').then((m) => m.AppointmentDetail),
-  { loading: () => <LoadingIndicator /> },
+const AppointmentDetailModal = dynamic(
+  () => import('./appointment-detail').then((m) => m.AppointmentDetailModal),
+  {
+    loading: () => (
+      <Modal title="Abrindo a consulta" onClose={() => undefined}>
+        <LoadingIndicator />
+      </Modal>
+    ),
+  },
 );
 
 function ProfessionalFilter({
@@ -535,14 +541,13 @@ export function AgendaScreen({
       )}
 
       {selected && (
-        <Modal title="Detalhes da consulta" onClose={() => setSelected(null)}>
-          <AppointmentDetail
-            appointment={selected}
-            cancellationPolicy={scheduleConfig.cancellationPolicy}
-            onAction={handleAction}
-            onReschedule={handleReschedule}
-          />
-        </Modal>
+        <AppointmentDetailModal
+          appointment={selected}
+          cancellationPolicy={scheduleConfig.cancellationPolicy}
+          onAction={handleAction}
+          onReschedule={handleReschedule}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
