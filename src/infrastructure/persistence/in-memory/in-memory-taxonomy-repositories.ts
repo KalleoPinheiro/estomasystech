@@ -1,3 +1,4 @@
+import type { ClinicNursingDiagnosis } from '@/domain/taxonomy/clinic-nursing-diagnosis';
 import type { NursingDiagnosis } from '@/domain/taxonomy/nursing-diagnosis';
 import type { NursingIntervention } from '@/domain/taxonomy/nursing-intervention';
 import type { NursingOutcome } from '@/domain/taxonomy/nursing-outcome';
@@ -6,6 +7,7 @@ import type {
   TaxonomyLinkage,
 } from '@/domain/taxonomy/taxonomy-linkage';
 import type {
+  ClinicNursingDiagnosisRepository,
   NursingDiagnosisRepository,
   NursingInterventionRepository,
   NursingOutcomeRepository,
@@ -120,5 +122,43 @@ export class InMemoryTaxonomyLinkageRepository
       (link) =>
         link.diagnosisCode === diagnosisCode && (!role || link.role === role),
     );
+  }
+}
+
+/** Catálogo da clínica em memória (#954): um repositório por empresa, como no Drizzle. */
+export class InMemoryClinicNursingDiagnosisRepository
+  implements ClinicNursingDiagnosisRepository
+{
+  private readonly items = new Map<string, ClinicNursingDiagnosis>();
+
+  async save(diagnosis: ClinicNursingDiagnosis): Promise<void> {
+    this.items.set(diagnosis.id, diagnosis);
+  }
+
+  async saveMany(diagnoses: ClinicNursingDiagnosis[]): Promise<void> {
+    for (const diagnosis of diagnoses) {
+      this.items.set(diagnosis.id, diagnosis);
+    }
+  }
+
+  async findById(id: string): Promise<ClinicNursingDiagnosis | null> {
+    return this.items.get(id) ?? null;
+  }
+
+  async list(): Promise<ClinicNursingDiagnosis[]> {
+    return [...this.items.values()].sort((a, b) =>
+      a.label.localeCompare(b.label, 'pt-BR'),
+    );
+  }
+
+  async search(
+    term: string,
+    options?: { limit?: number },
+  ): Promise<ClinicNursingDiagnosis[]> {
+    return (await this.list())
+      .filter(
+        (item) => item.isActive && matches(term, item.label, item.code ?? ''),
+      )
+      .slice(0, options?.limit ?? DEFAULT_SEARCH_LIMIT);
   }
 }

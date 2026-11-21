@@ -617,6 +617,13 @@
       "when": 1795139537443,
       "tag": "0087_relatorio-mensal-parceiro",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795175504129,
+      "tag": "0088_catalogo-diagnosticos-clinica",
+      "breakpoints": true
     }
   ]
 }

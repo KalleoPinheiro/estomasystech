@@ -62,6 +62,7 @@ import type { ScheduleAvailabilityRepository } from '@/domain/scheduling/schedul
 import type { ScheduleConfigRepository } from '@/domain/scheduling/schedule-config';
 import type { WaitlistRepository } from '@/domain/scheduling/waitlist';
 import type {
+  ClinicNursingDiagnosisRepository,
   NursingDiagnosisRepository,
   NursingInterventionRepository,
   NursingOutcomeRepository,
@@ -135,6 +136,7 @@ import { DrizzlePartnerShareConsentRepository } from './persistence/drizzle/driz
 import { DrizzlePatientRepository } from './persistence/drizzle/drizzle-patient-repository';
 import { DrizzleProducedSessionRepository } from './persistence/drizzle/drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './persistence/drizzle/drizzle-professional-repository';
+import { DrizzleClinicNursingDiagnosisRepository } from './persistence/drizzle/drizzle-clinic-diagnosis-repository';
 import { DrizzleReminderLogRepository } from './persistence/drizzle/drizzle-reminder-log-repository';
 import { DrizzleRetentionRepository } from './persistence/drizzle/drizzle-retention-repository';
 import { DrizzleScheduleAvailabilityRepository } from './persistence/drizzle/drizzle-schedule-availability-repository';
@@ -191,6 +193,8 @@ export interface Services {
   dataSubjectRequests: DataSubjectRequestRepository;
   partnerShareConsents: PartnerShareConsentRepository;
   nursingDiagnoses: NursingDiagnosisRepository;
+  /** Catálogo de diagnósticos da clínica (#954), no escopo da empresa. */
+  clinicNursingDiagnoses: ClinicNursingDiagnosisRepository;
   nursingOutcomes: NursingOutcomeRepository;
   nursingInterventions: NursingInterventionRepository;
   taxonomyLinkages: TaxonomyLinkageRepository;
@@ -504,6 +508,10 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       tenant.clinicId,
     ),
     nursingDiagnoses: new DrizzleNursingDiagnosisRepository(db),
+    clinicNursingDiagnoses: new DrizzleClinicNursingDiagnosisRepository(
+      db,
+      tenant.clinicId,
+    ),
     nursingOutcomes: new DrizzleNursingOutcomeRepository(db),
     nursingInterventions: new DrizzleNursingInterventionRepository(db),
     taxonomyLinkages: new DrizzleTaxonomyLinkageRepository(db),
