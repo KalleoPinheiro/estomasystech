@@ -1,7 +1,33 @@
+import { formatCpf, normalizeCpf } from '../shared/cpf';
 import { ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 import { type ClinicTheme, themeFromStored } from './clinic-identity';
 import { normalizeCnpj } from './cnpj';
+
+/**
+ * Tipo de cliente (#977): `company` é a clínica (pessoa jurídica, CNPJ);
+ * `individual` é a profissional autônoma (pessoa física, só CPF). Escolhido na
+ * criação e fixo depois: trocar de tipo é cadastrar outro cliente.
+ */
+export const CLINIC_KINDS = ['company', 'individual'] as const;
+export type ClinicKind = (typeof CLINIC_KINDS)[number];
+
+export const isClinicKind = (value: unknown): value is ClinicKind =>
+  CLINIC_KINDS.includes(value as ClinicKind);
+
+export const MISSING_CNPJ_MESSAGE = 'CNPJ é obrigatório';
+export const MISSING_CPF_MESSAGE =
+  'CPF é obrigatório para a profissional autônoma';
+export const CNPJ_ON_INDIVIDUAL_MESSAGE =
+  'Profissional autônoma não tem CNPJ: informe só o CPF';
+export const CPF_ON_COMPANY_MESSAGE =
+  'Clínica (pessoa jurídica) usa CNPJ, não CPF';
+
+/** Documento de quem emite (cabeçalho, recibo, termos): CNPJ da clínica ou CPF da autônoma. */
+export interface ProviderDocument {
+  label: 'CNPJ' | 'CPF';
+  value: string;
+}
 
 /**
  * Dados cadastrais (issue #61) — usados em documentos clínicos emitidos (issue
@@ -9,6 +35,8 @@ import { normalizeCnpj } from './cnpj';
  */
 export interface ClinicInfoFields {
   cnpj?: string | null;
+  /** CPF da profissional autônoma (#977): 11 dígitos; cifrado e com índice cego no banco. */
+  cpf?: string | null;
   address?: string | null;
   city?: string | null;
   professionalName?: string | null;
@@ -23,7 +51,10 @@ export interface ClinicInfoFields {
  */
 export interface ClinicProps {
   name: string;
-  cnpj: string;
+  /** Ausente vale `company` (o cadastro anterior à #977). */
+  kind?: ClinicKind;
+  cnpj?: string | null;
+  cpf?: string | null;
   contactPhone: string;
   contactEmail: string;
   professionalName?: string | null;
@@ -65,6 +96,8 @@ export interface ClinicSuspension {
 export interface ClinicState extends ClinicInfoFields {
   id: string;
   name: string;
+  /** Ausente vale `company`. */
+  kind?: ClinicKind;
   createdBy: string;
   createdAt: Date;
   status?: ClinicStatus;
@@ -93,18 +126,43 @@ export interface ClinicState extends ClinicInfoFields {
 export const DPO_NAME_MAX = 200;
 export const DPO_CONTACT_MAX = 200;
 
+/** O que os documentos leem do cadastro; `kind` ausente vale `company`. */
+export type DocumentIssuerInfo = Pick<
+  ClinicInfoFields,
+  'cnpj' | 'professionalName' | 'professionalRegistry'
+> & { kind?: ClinicKind | null; cpf?: string | null };
+
+/** Qual documento identifica quem emite: CPF para a autônoma, CNPJ para a clínica. */
+export const providerDocumentLabel = (
+  kind: ClinicKind | null | undefined,
+): ProviderDocument['label'] => (kind === 'individual' ? 'CPF' : 'CNPJ');
+
+/**
+ * Documento de quem emite (#977), na forma impressa: CNPJ como gravado, CPF
+ * com máscara `000.000.000-00`. `null` quando o do tipo não está preenchido; o
+ * do outro tipo nunca vale.
+ */
+export function providerDocument(
+  info: Pick<DocumentIssuerInfo, 'kind' | 'cnpj' | 'cpf'> | null,
+): ProviderDocument | null {
+  if (info?.kind === 'individual') {
+    const cpf = info.cpf?.trim();
+    return cpf
+      ? { label: 'CPF', value: /^\d{11}$/.test(cpf) ? formatCpf(cpf) : cpf }
+      : null;
+  }
+  const cnpj = info?.cnpj?.trim();
+  return cnpj ? { label: 'CNPJ', value: cnpj } : null;
+}
+
 /**
  * `true` só quando os 3 campos com relevância jurídica direta na assinatura de
  * um documento estão presentes — `address`/`city` continuam opcionais (#62).
+ * O documento é o CNPJ da clínica ou o CPF da autônoma (#977).
  */
-export function isClinicInfoComplete(
-  info: Pick<
-    ClinicInfoFields,
-    'cnpj' | 'professionalName' | 'professionalRegistry'
-  > | null,
-): boolean {
+export function isClinicInfoComplete(info: DocumentIssuerInfo | null): boolean {
   return Boolean(
-    info?.cnpj?.trim() &&
+    providerDocument(info) &&
       info?.professionalName?.trim() &&
       info?.professionalRegistry?.trim(),
   );
@@ -112,13 +170,12 @@ export function isClinicInfoComplete(
 
 /** Quais dados cadastrais faltam para emitir documento (a ordem é a da tela de Configurações). */
 export function missingClinicInfoFields(
-  info: Pick<
-    ClinicInfoFields,
-    'cnpj' | 'professionalName' | 'professionalRegistry'
-  > | null,
+  info: DocumentIssuerInfo | null,
 ): string[] {
   const missing: string[] = [];
-  if (!info?.cnpj?.trim()) missing.push('CNPJ');
+  if (!providerDocument(info)) {
+    missing.push(providerDocumentLabel(info?.kind));
+  }
   if (!info?.professionalName?.trim()) missing.push('responsável técnico');
   if (!info?.professionalRegistry?.trim()) {
     missing.push('registro profissional');
@@ -146,11 +203,13 @@ const FIELD_NORMALIZERS: Partial<
   Record<keyof ClinicInfoFields, (value: string) => string>
 > = {
   cnpj: normalizeCnpj,
+  cpf: normalizeCpf,
   contactEmail: normalizeContactEmail,
 };
 
 const INFO_KEYS = [
   'cnpj',
+  'cpf',
   'address',
   'city',
   'professionalName',
@@ -181,9 +240,11 @@ function resolveInfoFields(
   return resolved;
 }
 
-const REQUIRED_ON_CREATE: readonly [keyof ClinicProps, string][] = [
+const REQUIRED_ON_CREATE: readonly [
+  'name' | 'contactPhone' | 'contactEmail' | 'createdBy',
+  string,
+][] = [
   ['name', 'Nome da clínica é obrigatório'],
-  ['cnpj', 'CNPJ é obrigatório'],
   ['contactPhone', 'Telefone de contato é obrigatório'],
   ['contactEmail', 'E-mail de contato é obrigatório'],
   ['createdBy', 'Criador da clínica é obrigatório'],
@@ -199,6 +260,7 @@ const EMPTY_STATUS = {
 
 const EMPTY_INFO: Required<ClinicInfoFields> = {
   cnpj: null,
+  cpf: null,
   address: null,
   city: null,
   professionalName: null,
@@ -206,6 +268,36 @@ const EMPTY_INFO: Required<ClinicInfoFields> = {
   contactPhone: null,
   contactEmail: null,
 };
+
+/**
+ * O documento do tipo é obrigatório na criação; o do outro tipo é recusado
+ * em qualquer gravação, para a autônoma nunca sair com CNPJ nem a clínica com
+ * CPF (#977).
+ */
+function assertDocumentMatchesKind(
+  kind: ClinicKind,
+  info: Pick<ClinicInfoFields, 'cnpj' | 'cpf'>,
+  requireOwn: boolean,
+): void {
+  const [own, other, missing, mismatch] =
+    kind === 'individual'
+      ? [info.cpf, info.cnpj, MISSING_CPF_MESSAGE, CNPJ_ON_INDIVIDUAL_MESSAGE]
+      : [info.cnpj, info.cpf, MISSING_CNPJ_MESSAGE, CPF_ON_COMPANY_MESSAGE];
+  if (other) throw new ValidationError(mismatch);
+  if (requireOwn && !own) throw new ValidationError(missing);
+}
+
+/**
+ * Na autônoma a responsável técnica é ela mesma (#977): o nome do cadastro
+ * vale como responsável técnico, sem preencher duas vezes.
+ */
+function withOwnTechnicalLead<T extends ClinicInfoFields>(
+  kind: ClinicKind,
+  name: string,
+  info: T,
+): T {
+  return kind === 'individual' ? { ...info, professionalName: name } : info;
+}
 
 /** Empresa/clínica — unidade de isolamento de dados (multi-tenancy). */
 export class Clinic {
@@ -220,14 +312,20 @@ export class Clinic {
         throw new ValidationError(message);
       }
     }
-    const { name, createdBy, ...info } = props;
+    const { name, createdBy, kind = 'company', ...info } = props;
+    if (!isClinicKind(kind)) {
+      throw new ValidationError('Tipo de cliente inválido');
+    }
+    const resolved = resolveInfoFields(EMPTY_INFO, info);
+    assertDocumentMatchesKind(kind, resolved, true);
     return new Clinic({
       id: newId(),
       name: name.trim(),
+      kind,
       createdBy,
       createdAt: new Date(),
       ...EMPTY_STATUS,
-      ...resolveInfoFields(EMPTY_INFO, info),
+      ...withOwnTechnicalLead(kind, name.trim(), resolved),
     });
   }
 
@@ -235,6 +333,7 @@ export class Clinic {
     return new Clinic({
       ...EMPTY_INFO,
       ...state,
+      kind: isClinicKind(state.kind) ? state.kind : 'company',
       status: state.status ?? EMPTY_STATUS.status,
       statusChangedAt: state.statusChangedAt ?? null,
       statusChangedBy: state.statusChangedBy ?? null,
@@ -263,8 +362,26 @@ export class Clinic {
     return this.state.createdAt;
   }
 
+  get kind(): ClinicKind {
+    return this.state.kind === 'individual' ? 'individual' : 'company';
+  }
+
+  get isIndividual(): boolean {
+    return this.kind === 'individual';
+  }
+
   get cnpj(): string | null {
     return this.state.cnpj ?? null;
+  }
+
+  /** CPF da autônoma (#977), 11 dígitos; `null` na clínica. */
+  get cpf(): string | null {
+    return this.state.cpf ?? null;
+  }
+
+  /** CNPJ ou CPF de quem emite, na forma impressa (#977). */
+  get providerDocument(): ProviderDocument | null {
+    return providerDocument(this.state);
   }
 
   get address(): string | null {
@@ -403,10 +520,13 @@ export class Clinic {
     if ('name' in fields && !fields.name?.trim()) {
       throw new ValidationError('Nome da clínica é obrigatório');
     }
+    const name = fields.name?.trim() ? fields.name.trim() : this.state.name;
+    const resolved = resolveInfoFields(this.state, fields);
+    assertDocumentMatchesKind(this.kind, resolved, false);
     return new Clinic({
       ...this.state,
-      name: fields.name?.trim() ? fields.name.trim() : this.state.name,
-      ...resolveInfoFields(this.state, fields),
+      name,
+      ...withOwnTechnicalLead(this.kind, name, resolved),
       // Um CNPJ reenviado passou pela conferência do dígito: a pendência acaba.
       cnpjReviewSince:
         'cnpj' in fields ? null : (this.state.cnpjReviewSince ?? null),
@@ -447,14 +567,14 @@ export class Clinic {
   }
 
   /**
-   * Cadastro que a plataforma exige (B4): nome, CNPJ, telefone e e-mail de
-   * contato. Sem ele, o primeiro admin não é convidado — é o caso da
+   * Cadastro que a plataforma exige (B4): nome, CNPJ (ou o CPF da autônoma,
+   * #977), telefone e e-mail de contato. Sem ele, o primeiro admin não é convidado — é o caso da
    * `legacy-clinic`, que nasceu só com nome.
    */
   isRegistrationComplete(): boolean {
     return Boolean(
       this.state.name.trim() &&
-        this.state.cnpj &&
+        this.providerDocument &&
         this.state.contactPhone &&
         this.state.contactEmail,
     );

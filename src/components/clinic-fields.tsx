@@ -5,7 +5,10 @@ import { Input } from '@still-void/ui/react';
 /** Campos do cadastro da clínica — Configurações e plataforma (B4). */
 export interface ClinicFieldsDraft {
   name: string;
+  /** Profissional autônoma (#977); ausente é clínica. */
+  kind?: 'individual';
   cnpj: string | null;
+  cpf?: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   professionalName: string | null;
@@ -14,7 +17,7 @@ export interface ClinicFieldsDraft {
   city?: string | null;
 }
 
-export type ClinicFieldKey = keyof ClinicFieldsDraft;
+export type ClinicFieldKey = Exclude<keyof ClinicFieldsDraft, 'kind'>;
 
 interface ClinicField {
   key: ClinicFieldKey;
@@ -26,6 +29,7 @@ interface ClinicField {
 const FIELDS: Record<ClinicFieldKey, ClinicField> = {
   name: { key: 'name', label: 'Razão social', placeholder: 'Nome da clínica' },
   cnpj: { key: 'cnpj', label: 'CNPJ', placeholder: '00.000.000/0001-00' },
+  cpf: { key: 'cpf', label: 'CPF', placeholder: '000.000.000-00' },
   contactPhone: {
     key: 'contactPhone',
     label: 'Telefone/WhatsApp de contato',
@@ -64,6 +68,50 @@ export const REQUIRED_CLINIC_FIELDS: readonly ClinicFieldKey[] = [
   'contactEmail',
 ];
 
+/**
+ * Profissional autônoma (#977): CPF no lugar do CNPJ e sem responsável
+ * técnico, que é ela mesma (o nome do cadastro vale como responsável).
+ */
+export const REQUIRED_INDIVIDUAL_FIELDS: readonly ClinicFieldKey[] = [
+  'name',
+  'cpf',
+  'contactPhone',
+  'contactEmail',
+];
+
+export const ALL_INDIVIDUAL_FIELDS: readonly ClinicFieldKey[] = [
+  'name',
+  'cpf',
+  'contactPhone',
+  'contactEmail',
+  'professionalRegistry',
+  'address',
+  'city',
+];
+
+/** Rótulos que mudam na autônoma: o nome é o dela e o registro é o COREN. */
+const INDIVIDUAL_OVERRIDES: Partial<
+  Record<ClinicFieldKey, Partial<ClinicField>>
+> = {
+  name: { label: 'Nome completo', placeholder: 'Nome da profissional' },
+  professionalRegistry: {
+    label: 'Registro no conselho (COREN)',
+    placeholder: 'COREN-SP 000000',
+  },
+  contactEmail: { placeholder: 'contato@exemplo.com.br' },
+};
+
+/** Campos do cadastro conforme o tipo de cliente. */
+export const clinicFieldKeys = (draft: Pick<ClinicFieldsDraft, 'kind'>) =>
+  draft.kind === 'individual' ? ALL_INDIVIDUAL_FIELDS : ALL_CLINIC_FIELDS;
+
+export const requiredClinicFieldKeys = (
+  draft: Pick<ClinicFieldsDraft, 'kind'>,
+) =>
+  draft.kind === 'individual'
+    ? REQUIRED_INDIVIDUAL_FIELDS
+    : REQUIRED_CLINIC_FIELDS;
+
 export const ALL_CLINIC_FIELDS: readonly ClinicFieldKey[] = [
   'name',
   'cnpj',
@@ -92,7 +140,10 @@ export function ClinicFieldsGrid<T extends ClinicFieldsDraft>({
   return (
     <div className="grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
       {keys.map((key) => {
-        const field = FIELDS[key];
+        const field = {
+          ...FIELDS[key],
+          ...(draft.kind === 'individual' ? INDIVIDUAL_OVERRIDES[key] : {}),
+        };
         const isRequired = required.includes(key);
         return (
           <label key={key} className="font-medium text-sm">
