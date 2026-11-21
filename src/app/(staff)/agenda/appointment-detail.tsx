@@ -9,6 +9,7 @@ import {
 } from '@still-void/ui/react';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
+import { Modal } from '@/components/modal';
 import { StatusBadge } from '@/components/status-badge';
 import { WhatsAppReminderButton } from '@/components/whatsapp-reminder-button';
 import {
@@ -321,5 +322,20 @@ export function AppointmentDetail({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * O modal inteiro desce no mesmo pedaço do detalhe (#904): o título só aparece com o conteúdo já pronto, e o link
+ * do Google Agenda não mostra "Detalhes da consulta" sobre um esqueleto que ainda carrega.
+ */
+export function AppointmentDetailModal({
+  onClose,
+  ...props
+}: AppointmentDetailProps & { onClose: () => void }) {
+  return (
+    <Modal title="Detalhes da consulta" onClose={onClose}>
+      <AppointmentDetail {...props} />
+    </Modal>
   );
 }
