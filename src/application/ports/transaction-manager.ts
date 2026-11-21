@@ -113,7 +113,7 @@ export interface TransactionScope {
   nursingOutcomes: NursingOutcomeRepository;
   nursingInterventions: NursingInterventionRepository;
   /** Catálogo de diagnósticos da clínica (#954), no escopo da empresa. */
-  clinicNursingDiagnoses: ClinicNursingDiagnosisRepository;
+  clinicDiagnoses: ClinicNursingDiagnosisRepository;
 }
 
 /**

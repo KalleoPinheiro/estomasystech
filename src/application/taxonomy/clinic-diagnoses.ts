@@ -1,4 +1,9 @@
 import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '@/domain/shared/errors';
+import {
   type ClinicDiagnosisCsvRow,
   parseClinicDiagnosisCsv,
 } from '@/domain/taxonomy/clinic-diagnosis-csv';
@@ -6,11 +11,6 @@ import {
   ClinicNursingDiagnosis,
   type ClinicNursingDiagnosisProps,
 } from '@/domain/taxonomy/clinic-nursing-diagnosis';
-import {
-  ConflictError,
-  NotFoundError,
-  ValidationError,
-} from '@/domain/shared/errors';
 import type { ClinicNursingDiagnosisRepository } from '@/domain/taxonomy/taxonomy-repositories';
 
 /** Lista do catálogo da clínica para a tela de Configurações (ativos e inativos). */
@@ -19,6 +19,18 @@ export class ListClinicDiagnoses {
 
   execute(): Promise<ClinicNursingDiagnosis[]> {
     return this.diagnoses.list();
+  }
+}
+
+/** Busca do plano de cuidados no catálogo da clínica: só itens ativos, por título ou código. */
+export class SearchClinicDiagnoses {
+  constructor(private readonly diagnoses: ClinicNursingDiagnosisRepository) {}
+
+  execute(input: {
+    term: string;
+    limit?: number;
+  }): Promise<ClinicNursingDiagnosis[]> {
+    return this.diagnoses.search(input.term, { limit: input.limit });
   }
 }
 
@@ -101,9 +113,7 @@ export class ImportClinicDiagnoses {
     csv: string;
   }): Promise<ImportClinicDiagnosesResult> {
     const rows = parseClinicDiagnosisCsv(input.csv);
-    const seen = new Set(
-      (await this.diagnoses.list()).map((item) => item.key),
-    );
+    const seen = new Set((await this.diagnoses.list()).map((item) => item.key));
     const result: ImportClinicDiagnosesResult = {
       created: [],
       duplicates: [],

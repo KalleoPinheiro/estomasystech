@@ -2,7 +2,7 @@ import { and, asc, eq, ilike, or } from 'drizzle-orm';
 import { ClinicNursingDiagnosis } from '@/domain/taxonomy/clinic-nursing-diagnosis';
 import type { ClinicNursingDiagnosisRepository } from '@/domain/taxonomy/taxonomy-repositories';
 import type { AppDb } from './db';
-import { clinicNursingDiagnoses } from './schema';
+import { clinicDiagnoses } from './schema';
 import { withTenant } from './tenant-scope';
 
 const DEFAULT_SEARCH_LIMIT = 20;
@@ -14,7 +14,7 @@ const escapeLike = (term: string): string => term.replace(/[\\%_]/g, '\\$&');
  * Catálogo de diagnósticos da clínica (#954). Grava sempre na empresa do repositório (regra 1) e,
  * no banco, a política `clinic_isolation` com FORCE barra o resto.
  */
-export class DrizzleClinicNursingDiagnosisRepository
+export class DrizzleClinicDiagnosisRepository
   implements ClinicNursingDiagnosisRepository
 {
   constructor(
@@ -47,12 +47,16 @@ export class DrizzleClinicNursingDiagnosisRepository
 
   async save(diagnosis: ClinicNursingDiagnosis): Promise<void> {
     const values = this.values(diagnosis);
-    const { id: _id, clinicId: _clinicId, createdAt: _createdAt, ...set } =
-      values;
+    const {
+      id: _id,
+      clinicId: _clinicId,
+      createdAt: _createdAt,
+      ...set
+    } = values;
     await this.db
-      .insert(clinicNursingDiagnoses)
+      .insert(clinicDiagnoses)
       .values(values)
-      .onConflictDoUpdate({ target: clinicNursingDiagnoses.id, set });
+      .onConflictDoUpdate({ target: clinicDiagnoses.id, set });
   }
 
   async saveMany(diagnoses: ClinicNursingDiagnosis[]): Promise<void> {
@@ -60,20 +64,16 @@ export class DrizzleClinicNursingDiagnosisRepository
       return;
     }
     await this.db
-      .insert(clinicNursingDiagnoses)
+      .insert(clinicDiagnoses)
       .values(diagnoses.map((diagnosis) => this.values(diagnosis)));
   }
 
   async findById(id: string): Promise<ClinicNursingDiagnosis | null> {
     const rows = await this.db
       .select()
-      .from(clinicNursingDiagnoses)
+      .from(clinicDiagnoses)
       .where(
-        withTenant(
-          clinicNursingDiagnoses,
-          this.clinicId,
-          eq(clinicNursingDiagnoses.id, id),
-        ),
+        withTenant(clinicDiagnoses, this.clinicId, eq(clinicDiagnoses.id, id)),
       )
       .limit(1);
     return rows[0] ? ClinicNursingDiagnosis.restore(rows[0]) : null;
@@ -82,9 +82,9 @@ export class DrizzleClinicNursingDiagnosisRepository
   async list(): Promise<ClinicNursingDiagnosis[]> {
     const rows = await this.db
       .select()
-      .from(clinicNursingDiagnoses)
-      .where(withTenant(clinicNursingDiagnoses, this.clinicId))
-      .orderBy(asc(clinicNursingDiagnoses.label), asc(clinicNursingDiagnoses.id));
+      .from(clinicDiagnoses)
+      .where(withTenant(clinicDiagnoses, this.clinicId))
+      .orderBy(asc(clinicDiagnoses.label), asc(clinicDiagnoses.id));
     return rows.map((row) => ClinicNursingDiagnosis.restore(row));
   }
 
@@ -95,21 +95,21 @@ export class DrizzleClinicNursingDiagnosisRepository
     const pattern = `%${escapeLike(term)}%`;
     const rows = await this.db
       .select()
-      .from(clinicNursingDiagnoses)
+      .from(clinicDiagnoses)
       .where(
         withTenant(
-          clinicNursingDiagnoses,
+          clinicDiagnoses,
           this.clinicId,
           and(
-            eq(clinicNursingDiagnoses.active, true),
+            eq(clinicDiagnoses.active, true),
             or(
-              ilike(clinicNursingDiagnoses.label, pattern),
-              ilike(clinicNursingDiagnoses.code, pattern),
+              ilike(clinicDiagnoses.label, pattern),
+              ilike(clinicDiagnoses.code, pattern),
             ),
           ),
         ),
       )
-      .orderBy(asc(clinicNursingDiagnoses.label))
+      .orderBy(asc(clinicDiagnoses.label))
       .limit(options?.limit ?? DEFAULT_SEARCH_LIMIT);
     return rows.map((row) => ClinicNursingDiagnosis.restore(row));
   }

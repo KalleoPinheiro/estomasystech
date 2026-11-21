@@ -28,11 +28,7 @@ const HEADERS: Record<string, Field> = {
 };
 
 const normalizeHeader = (value: string): string =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .trim()
-    .toLowerCase();
+  value.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
 
 interface CsvState {
   records: string[][];
@@ -42,7 +38,11 @@ interface CsvState {
 }
 
 /** Dentro de aspas: `""` vira aspas, `"` fecha, o resto (separador e quebra inclusive) é texto. */
-function readQuoted(state: CsvState, char: string, next: string | undefined): number {
+function readQuoted(
+  state: CsvState,
+  char: string,
+  next: string | undefined,
+): number {
   if (char === '"' && next === '"') {
     state.field += '"';
     return 2;

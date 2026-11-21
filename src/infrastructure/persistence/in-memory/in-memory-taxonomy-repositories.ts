@@ -126,7 +126,7 @@ export class InMemoryTaxonomyLinkageRepository
 }
 
 /** Catálogo da clínica em memória (#954): um repositório por empresa, como no Drizzle. */
-export class InMemoryClinicNursingDiagnosisRepository
+export class InMemoryClinicDiagnosisRepository
   implements ClinicNursingDiagnosisRepository
 {
   private readonly items = new Map<string, ClinicNursingDiagnosis>();

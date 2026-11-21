@@ -17,6 +17,7 @@ import {
   DrizzleInterventionRecordRepository,
   DrizzleOutcomeEvaluationRepository,
 } from './drizzle-care-plan-repositories';
+import { DrizzleClinicDiagnosisRepository } from './drizzle-clinic-diagnosis-repository';
 import { DrizzleClinicRepository } from './drizzle-clinic-repository';
 import {
   DrizzleAnamnesisRepository,
@@ -49,7 +50,6 @@ import {
   type BlindIndexSource,
   DrizzlePatientRepository,
 } from './drizzle-patient-repository';
-import { DrizzleClinicNursingDiagnosisRepository } from './drizzle-clinic-diagnosis-repository';
 import { DrizzleProducedSessionRepository } from './drizzle-produced-session-repository';
 import { DrizzleProfessionalRepository } from './drizzle-professional-repository';
 import { DrizzleScheduleAvailabilityRepository } from './drizzle-schedule-availability-repository';
@@ -182,10 +182,7 @@ export class DrizzleTransactionManager implements TransactionManager {
         this.cipher,
       ),
       nursingDiagnoses: new DrizzleNursingDiagnosisRepository(tx),
-      clinicNursingDiagnoses: new DrizzleClinicNursingDiagnosisRepository(
-        tx,
-        this.clinicId,
-      ),
+      clinicDiagnoses: new DrizzleClinicDiagnosisRepository(tx, this.clinicId),
       nursingOutcomes: new DrizzleNursingOutcomeRepository(tx),
       nursingInterventions: new DrizzleNursingInterventionRepository(tx),
       consentRecords: new DrizzleConsentRecordRepository(tx, this.clinicId),

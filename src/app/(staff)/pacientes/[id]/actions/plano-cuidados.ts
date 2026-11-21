@@ -110,21 +110,22 @@ export const addCarePlanDiagnosis = defineAction({
       tx.carePlanDiagnoses,
       tx.carePlans,
       tx.nursingDiagnoses,
+      tx.clinicDiagnoses,
     ).execute({
       carePlanId: input.id,
-      diagnosisCode: body.diagnosisCode,
+      diagnosisCode: body.diagnosisCode ?? null,
+      clinicDiagnosisId: body.clinicDiagnosisId ?? null,
+      diagnosisLabel: body.diagnosisLabel ?? null,
       type: body.type,
       relatedFactors: body.relatedFactors ?? null,
       definingCharacteristics: body.definingCharacteristics ?? null,
     });
-    const catalogEntry = await tx.nursingDiagnoses.findByCode(
-      body.diagnosisCode,
-    );
+    const catalogEntry =
+      diagnosis.diagnosisCode && !diagnosis.diagnosisLabel
+        ? await tx.nursingDiagnoses.findByCode(diagnosis.diagnosisCode)
+        : null;
     return {
-      diagnosis: toCarePlanDiagnosisDto(
-        diagnosis,
-        catalogEntry?.label ?? diagnosis.diagnosisCode,
-      ),
+      diagnosis: toCarePlanDiagnosisDto(diagnosis, catalogEntry?.label),
       patientId: await patientOfPlan(input.id, tx),
     };
   },

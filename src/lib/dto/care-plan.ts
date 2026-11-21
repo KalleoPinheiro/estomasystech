@@ -36,7 +36,8 @@ export const toCarePlanDto = (plan: CarePlan): CarePlanDto => ({
 export interface CarePlanDiagnosisDto {
   id: string;
   carePlanId: string;
-  diagnosisCode: string;
+  /** Nulo no diagnóstico "sem código" (#954). */
+  diagnosisCode: string | null;
   diagnosisLabel: string;
   type: CarePlanDiagnosisType;
   relatedFactors: string | null;
@@ -44,14 +45,24 @@ export interface CarePlanDiagnosisDto {
   createdAt: string;
 }
 
+/** Título no plano (catálogo da clínica ou digitado) vence o do catálogo global; por último, o código. */
+export const carePlanDiagnosisTitle = (
+  diagnosis: CarePlanDiagnosis,
+  catalogLabel?: string | null,
+): string =>
+  diagnosis.diagnosisLabel ??
+  catalogLabel ??
+  diagnosis.diagnosisCode ??
+  'Diagnóstico sem título';
+
 export const toCarePlanDiagnosisDto = (
   diagnosis: CarePlanDiagnosis,
-  diagnosisLabel: string,
+  catalogLabel?: string | null,
 ): CarePlanDiagnosisDto => ({
   id: diagnosis.id,
   carePlanId: diagnosis.carePlanId,
   diagnosisCode: diagnosis.diagnosisCode,
-  diagnosisLabel,
+  diagnosisLabel: carePlanDiagnosisTitle(diagnosis, catalogLabel),
   type: diagnosis.type,
   relatedFactors: diagnosis.relatedFactors,
   definingCharacteristics: diagnosis.definingCharacteristics,
@@ -181,8 +192,9 @@ export const toCarePlanDetailDto = (
   diagnoses: detail.diagnoses.map((diagnosis) =>
     toCarePlanDiagnosisDto(
       diagnosis,
-      catalog.diagnoses.get(diagnosis.diagnosisCode)?.label ??
-        diagnosis.diagnosisCode,
+      diagnosis.diagnosisCode
+        ? catalog.diagnoses.get(diagnosis.diagnosisCode)?.label
+        : null,
     ),
   ),
   outcomes: detail.outcomes.map(({ outcome, evaluations }) =>

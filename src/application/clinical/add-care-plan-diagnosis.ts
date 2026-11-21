@@ -72,7 +72,10 @@ export class AddCarePlanDiagnosis {
       }
       return { diagnosisCode: input.diagnosisCode, diagnosisLabel: null };
     }
-    return { diagnosisCode: null, diagnosisLabel: input.diagnosisLabel ?? null };
+    return {
+      diagnosisCode: null,
+      diagnosisLabel: input.diagnosisLabel ?? null,
+    };
   }
 
   /** Copia código e título para o plano: editar ou desativar o item depois não altera o prontuário. */

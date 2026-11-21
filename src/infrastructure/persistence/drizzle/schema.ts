@@ -1392,7 +1392,7 @@ export const nursingInterventions = pgTable(
 
 // Catálogo de diagnósticos da própria clínica (#954): cadastro um a um ou CSV, só no banco e no
 // escopo da empresa (RLS clinic_isolation com FORCE). A taxonomia NANDA-I não entra no repositório.
-export const clinicNursingDiagnoses = pgTable(
+export const clinicDiagnoses = pgTable(
   'clinic_nursing_diagnoses',
   {
     id: text('id').primaryKey(),

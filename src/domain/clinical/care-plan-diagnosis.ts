@@ -77,7 +77,9 @@ export class CarePlanDiagnosis {
     }
   }
 
-  private static normalizeLabel(label: string | null | undefined): string | null {
+  private static normalizeLabel(
+    label: string | null | undefined,
+  ): string | null {
     const text = label?.trim().replace(/\s+/g, ' ') ?? '';
     if (text.length > CARE_PLAN_DIAGNOSIS_LABEL_MAX) {
       throw new ValidationError(
@@ -148,7 +150,9 @@ export class CarePlanDiagnosis {
    * Síndrome (NANDA-I): um conjunto de diagnósticos que aparecem juntos. Exige as características
    * definidoras (os diagnósticos do conjunto); fatores relacionados são opcionais.
    */
-  private static validateSindrome(definingCharacteristics: string | null): void {
+  private static validateSindrome(
+    definingCharacteristics: string | null,
+  ): void {
     if (!definingCharacteristics) {
       throw new ValidationError(
         'Síndrome exige características definidoras (os diagnósticos do conjunto)',

@@ -25,6 +25,7 @@ import type {
   CarePlanDetailDto,
   CarePlanDto,
   CarePlanOutcomeDto,
+  ClinicNursingDiagnosisDto,
   ConditionDto,
   NursingDiagnosisDto,
   NursingInterventionDto,
@@ -33,6 +34,7 @@ import type {
 import {
   CARE_PLAN_DIAGNOSIS_TYPE_LABELS,
   CARE_PLAN_STATUS_LABELS,
+  diagnosisCodeLabel,
   formatDateTime,
   INTERVENTION_PRIORITY_LABELS,
   outcomeStatusLabel,
@@ -376,7 +378,7 @@ function DiagnosesSection({
           {diagnoses.map((diagnosis) => (
             <li key={diagnosis.id} className="rounded-lg bg-bg p-3 text-sm">
               <span className="mr-2 rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent-ink text-xs">
-                {diagnosis.diagnosisCode} ·{' '}
+                {diagnosisCodeLabel(diagnosis.diagnosisCode)} ·{' '}
                 {CARE_PLAN_DIAGNOSIS_TYPE_LABELS[diagnosis.type]}
               </span>
               <p className="mt-1">{pesSentence(diagnosis)}</p>
@@ -694,6 +696,176 @@ function TaxonomyOptionList<T extends TaxonomyOption>({
   );
 }
 
+/** Opção de diagnóstico na busca do plano (#954): catálogo da clínica primeiro, depois o global. */
+type DiagnosisOption =
+  | { source: 'clinica'; id: string; code: string | null; label: string }
+  | { source: 'global'; id: null; code: string; label: string };
+
+type DiagnosisTypeOption = (typeof DIAGNOSIS_TYPE_OPTIONS)[number];
+const DIAGNOSIS_TYPE_OPTIONS = [
+  'real',
+  'risco',
+  'promocao-saude',
+  'sindrome',
+] as const;
+
+const optionKey = (option: DiagnosisOption): string =>
+  option.source === 'clinica'
+    ? `clinica:${option.id}`
+    : `global:${option.code}`;
+
+const optionText = (option: DiagnosisOption): string =>
+  option.code ? `${option.code} — ${option.label}` : option.label;
+
+/** Junta as duas buscas; item da clínica com o mesmo código esconde o global. A busca da clínica
+ * que falhar não esconde o catálogo global. */
+function useDiagnosisSearch() {
+  const { term, setTerm, results } =
+    useTaxonomySearch<NursingDiagnosisDto>('diagnoses');
+  const query =
+    term.trim().length >= 2
+      ? `/api/taxonomy/clinic-diagnoses?q=${encodeURIComponent(term)}`
+      : null;
+  const { data: clinic } = useApiQuery<ClinicNursingDiagnosisDto[]>(query);
+  const clinicOptions: DiagnosisOption[] = (clinic ?? []).map((item) => ({
+    source: 'clinica',
+    id: item.id,
+    code: item.code,
+    label: item.label,
+  }));
+  const clinicCodes = new Set(clinicOptions.map((item) => item.code));
+  const globalOptions: DiagnosisOption[] = results
+    .filter((item) => !clinicCodes.has(item.code))
+    .map((item) => ({
+      source: 'global',
+      id: null,
+      code: item.code,
+      label: item.label,
+    }));
+  return { term, setTerm, options: [...clinicOptions, ...globalOptions] };
+}
+
+function DiagnosisOptionList({
+  options,
+  onSelect,
+}: {
+  options: DiagnosisOption[];
+  onSelect: (option: DiagnosisOption) => void;
+}) {
+  if (options.length === 0) return null;
+  return (
+    <ul className="max-h-40 overflow-y-auto rounded-lg border border-border">
+      {options.map((option) => (
+        <li key={optionKey(option)}>
+          <Button
+            type="button"
+            onClick={() => onSelect(option)}
+            variant="ghost"
+            className="w-full text-left hover:bg-accent-soft"
+          >
+            {option.code && <span className="font-medium">{option.code}</span>}
+            {option.code && ' — '}
+            {option.label}
+            {option.source === 'clinica' && (
+              <span className="ml-2 text-accent-ink text-xs">da clínica</span>
+            )}
+          </Button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Campos PES conforme o tipo: risco sem evidência, promoção sem etiologia, síndrome com etiologia opcional. */
+function PesInputs({
+  type,
+  relatedFactors,
+  definingCharacteristics,
+  onRelatedFactors,
+  onDefiningCharacteristics,
+}: {
+  type: DiagnosisTypeOption;
+  relatedFactors: string;
+  definingCharacteristics: string;
+  onRelatedFactors: (value: string) => void;
+  onDefiningCharacteristics: (value: string) => void;
+}) {
+  const placeholders: Record<DiagnosisTypeOption, string> = {
+    real: 'Sinais e sintomas observados',
+    risco: '',
+    'promocao-saude': 'Motivação/desejo expresso pelo paciente',
+    sindrome: 'Diagnósticos que formam a síndrome',
+  };
+  return (
+    <>
+      {type !== 'promocao-saude' && (
+        <label className="font-medium text-sm">
+          {type === 'sindrome'
+            ? 'Relacionado a (etiologia, opcional)'
+            : 'Relacionado a (etiologia)'}
+          <Input
+            value={relatedFactors}
+            onChange={(e) => onRelatedFactors(e.target.value)}
+            placeholder="Fator relacionado / de risco"
+            className="mt-1"
+          />
+        </label>
+      )}
+      {type !== 'risco' && (
+        <label className="font-medium text-sm">
+          Evidenciado por (características definidoras)
+          <Input
+            value={definingCharacteristics}
+            onChange={(e) => onDefiningCharacteristics(e.target.value)}
+            placeholder={placeholders[type]}
+            className="mt-1"
+          />
+        </label>
+      )}
+    </>
+  );
+}
+
+function DiagnosisTypeRadios({
+  type,
+  onChange,
+}: {
+  type: DiagnosisTypeOption;
+  onChange: (type: DiagnosisTypeOption) => void;
+}) {
+  return (
+    <RadioGroup
+      legend="Tipo de diagnóstico"
+      legendHidden
+      name="diagnosis-type"
+      orientation="horizontal"
+    >
+      {DIAGNOSIS_TYPE_OPTIONS.map((option) => (
+        <RadioGroupItem
+          key={option}
+          value={option}
+          checked={type === option}
+          onChange={() => onChange(option)}
+        >
+          {CARE_PLAN_DIAGNOSIS_TYPE_LABELS[option]}
+        </RadioGroupItem>
+      ))}
+    </RadioGroup>
+  );
+}
+
+/** O que vai para a ação: item da clínica, código global ou título digitado ("sem código"). */
+function diagnosisSource(
+  selected: DiagnosisOption | null,
+  freeText: string | null,
+) {
+  if (freeText !== null) return { diagnosisLabel: freeText.trim() };
+  if (selected?.source === 'clinica') {
+    return { clinicDiagnosisId: selected.id };
+  }
+  return { diagnosisCode: selected?.code };
+}
+
 function AddDiagnosisForm({
   carePlanId,
   onSaved,
@@ -702,18 +874,20 @@ function AddDiagnosisForm({
   onSaved: () => void;
 }) {
   const { toast } = useToast();
-  const { term, setTerm, results } =
-    useTaxonomySearch<NursingDiagnosisDto>('diagnoses');
-  const [selected, setSelected] = useState<NursingDiagnosisDto | null>(null);
-  const [type, setType] = useState<'real' | 'risco' | 'promocao-saude'>('real');
+  const { term, setTerm, options } = useDiagnosisSearch();
+  const [selected, setSelected] = useState<DiagnosisOption | null>(null);
+  // `null` = busca no catálogo; texto = diagnóstico digitado à mão, sem código (#954).
+  const [freeText, setFreeText] = useState<string | null>(null);
+  const [type, setType] = useState<DiagnosisTypeOption>('real');
   const [relatedFactors, setRelatedFactors] = useState('');
   const [definingCharacteristics, setDefiningCharacteristics] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const ready = selected !== null || freeText !== null;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selected) {
+    if (!ready) {
       setError('Selecione um diagnóstico do catálogo');
       return;
     }
@@ -724,7 +898,7 @@ function AddDiagnosisForm({
         addCarePlanDiagnosis({
           id: carePlanId,
           body: {
-            diagnosisCode: selected.code,
+            ...diagnosisSource(selected, freeText),
             type,
             relatedFactors: relatedFactors || null,
             definingCharacteristics: definingCharacteristics || null,
@@ -745,70 +919,59 @@ function AddDiagnosisForm({
   return (
     <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
       {error && <ErrorAlert message={error} />}
-      <label className="font-medium text-sm">
-        Buscar diagnóstico (NANDA-I)
-        <Input
-          value={searchInputValue(selected, term)}
-          onChange={(e) => {
-            setSelected(null);
-            setTerm(e.target.value);
-          }}
-          placeholder="Ex.: integridade da pele, 00046…"
-          className="mt-1"
-        />
-      </label>
-      {!selected && (
-        <TaxonomyOptionList
-          options={results}
-          linkedHint={null}
-          onSelect={setSelected}
-        />
-      )}
-      {selected && (
+      {freeText === null ? (
         <>
-          <RadioGroup
-            legend="Tipo de diagnóstico"
-            legendHidden
-            name="diagnosis-type"
-            orientation="horizontal"
+          <label className="font-medium text-sm">
+            Buscar diagnóstico (NANDA-I)
+            <Input
+              value={selected ? optionText(selected) : term}
+              onChange={(e) => {
+                setSelected(null);
+                setTerm(e.target.value);
+              }}
+              placeholder="Ex.: integridade da pele, 00046…"
+              className="mt-1"
+            />
+          </label>
+          {!selected && (
+            <DiagnosisOptionList options={options} onSelect={setSelected} />
+          )}
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => {
+              setSelected(null);
+              setFreeText(term);
+            }}
+            className="h-auto self-start p-0 text-accent-ink"
           >
-            {(['real', 'risco', 'promocao-saude'] as const).map((option) => (
-              <RadioGroupItem
-                key={option}
-                value={option}
-                checked={type === option}
-                onChange={() => setType(option)}
-              >
-                {CARE_PLAN_DIAGNOSIS_TYPE_LABELS[option]}
-              </RadioGroupItem>
-            ))}
-          </RadioGroup>
-          {type !== 'promocao-saude' && (
-            <label className="font-medium text-sm">
-              Relacionado a (etiologia)
-              <Input
-                value={relatedFactors}
-                onChange={(e) => setRelatedFactors(e.target.value)}
-                placeholder="Fator relacionado / de risco"
-                className="mt-1"
-              />
-            </label>
-          )}
-          {(type === 'real' || type === 'promocao-saude') && (
-            <label className="font-medium text-sm">
-              Evidenciado por (características definidoras)
-              <Input
-                value={definingCharacteristics}
-                onChange={(e) => setDefiningCharacteristics(e.target.value)}
-                placeholder={
-                  type === 'promocao-saude'
-                    ? 'Motivação/desejo expresso pelo paciente'
-                    : 'Sinais e sintomas observados'
-                }
-                className="mt-1"
-              />
-            </label>
-          )}
+            Não achei: escrever o diagnóstico
+          </Button>
+        </>
+      ) : (
+        <label className="font-medium text-sm">
+          Diagnóstico (sem código)
+          <Input
+            value={freeText}
+            onChange={(e) => setFreeText(e.target.value)}
+            required
+            minLength={3}
+            maxLength={200}
+            placeholder="Escreva o diagnóstico como a clínica usa"
+            className="mt-1"
+          />
+        </label>
+      )}
+      {ready && (
+        <>
+          <DiagnosisTypeRadios type={type} onChange={setType} />
+          <PesInputs
+            type={type}
+            relatedFactors={relatedFactors}
+            definingCharacteristics={definingCharacteristics}
+            onRelatedFactors={setRelatedFactors}
+            onDefiningCharacteristics={setDefiningCharacteristics}
+          />
         </>
       )}
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
