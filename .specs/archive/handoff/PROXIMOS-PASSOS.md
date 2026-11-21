@@ -29,12 +29,14 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 1. **#977** (P1, classe 3): a cliente autônoma com CPF no lugar de CNPJ. **Bloqueia o cadastro da primeira cliente**, uma
    enfermeira autônoma que só tem CPF. O CPF da profissional é cifrado e tem índice cego, como o CPF do paciente. O recibo de
    pessoa física sai com o CPF dela, no modelo do Receita Saúde: o sistema gera os dados do recibo, e não a nota fiscal.
-2. **#950** (classe 3): ensaio do rollback sem anotação falsa. Pronto, espera o clique do dono.
-3. **Contração da cifra** (ADR-111, ADR-114): no e-mail de login, `VALIDATE` da restrição `0086`, fim do ramo em claro e drop dos
+2. **#954** (P1, classe 3 por RLS e cifra): catálogo de diagnósticos da clínica, CSV, diagnóstico «sem código» e tipo
+   síndrome na SAE (migração 0088, PRO-RN-37). PR aberto; espera o clique do dono quando o CI estiver verde.
+3. **#950** (classe 3): ensaio do rollback sem anotação falsa. Pronto, espera o clique do dono.
+4. **Contração da cifra** (ADR-111, ADR-114): no e-mail de login, `VALIDATE` da restrição `0086`, fim do ramo em claro e drop dos
    índices antigos; no cadastro, drop de `birth_date` e dos índices GIN antigos. Migração não aditiva: classe 3.
-4. **Espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta (a clínica aceita custo por mensagem?),
+5. **Espera decisão do dono** (regra 5, não inventar): RM-14 WhatsApp com template da Meta (a clínica aceita custo por mensagem?),
    RM-05 pagamento online (PSP) e RM-17 TISS.
-5. **Abertas sem urgência:** #933 (shard intermitente, só volta se falhar de novo), #815 (71 funções de complexidade, G),
+6. **Abertas sem urgência:** #933 (shard intermitente, só volta se falhar de novo), #815 (71 funções de complexidade, G),
    #651 e #650 (precisam de trace), #862 (E2E de produção a frio).
 
 ## Espera o dono
