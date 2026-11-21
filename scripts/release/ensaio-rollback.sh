@@ -26,6 +26,14 @@ cleanup() {
 }
 trap cleanup EXIT
 erro() { echo "::error title=Ensaio do rollback::$1"; exit 1; }
+# Mostra a saída de um passo ensaiado SEM virar anotação do run: os `::error` do ensaio (versões falsas 0.0.x)
+# apareciam no resumo do Release deploy real como se a produção tivesse sofrido rollback (20/11, v0.10.0).
+mostrar() {
+  local marca="ensaio-$RANDOM$RANDOM"
+  echo "::stop-commands::$marca"
+  cat "$1"
+  echo "::$marca::"
+}
 for b in curl jq openssl; do command -v "$b" > /dev/null || erro "falta $b"; done
 tsx_bin="$raiz/node_modules/.bin/tsx"
 [ -x "$tsx_bin" ] || erro "falta node_modules/.bin/tsx (rode npm ci)"
@@ -98,21 +106,21 @@ rodar_passo() { # rodar_passo ROLLBACK_SHA > saída em $tmp/passo.out; devolve o
 }
 fumaca() { (cd "$raiz" && bash scripts/release/fumaca-producao.sh) > "$tmp/fumaca.out" 2>&1; }
 publicar_novo() {
-  bash "$raiz/scripts/release/deploy-coolify.sh" > "$tmp/deploy.out" 2>&1 || { cat "$tmp/deploy.out"; erro "o deploy da versão nova falhou"; }
+  bash "$raiz/scripts/release/deploy-coolify.sh" > "$tmp/deploy.out" 2>&1 || { mostrar "$tmp/deploy.out"; erro "o deploy da versão nova falhou"; }
 }
 
 echo "== Cenário A: fumaça reprovada de propósito, rollback da imagem =="
-FUMACA_VERSAO="$VERSAO_ANTERIOR" fumaca || { cat "$tmp/fumaca.out"; erro "a produção anterior deveria passar na fumaça"; }
+FUMACA_VERSAO="$VERSAO_ANTERIOR" fumaca || { mostrar "$tmp/fumaca.out"; erro "a produção anterior deveria passar na fumaça"; }
 echo "ok: a versão anterior passa na fumaça"
-bash "$raiz/scripts/release/rollback-coolify.sh" preflight > "$tmp/pre.out" 2>&1 || { cat "$tmp/pre.out"; erro "preflight reprovou"; }
+bash "$raiz/scripts/release/rollback-coolify.sh" preflight > "$tmp/pre.out" 2>&1 || { mostrar "$tmp/pre.out"; erro "preflight reprovou"; }
 ESPERADO_SHA="$SHA_NOVO" publicar_novo
 afirmar "o deploy implantou a versão nova" "$(estado .implantado)" "$SHA_NOVO"
-FUMACA_VERSAO="$VERSAO_NOVA" fumaca && { cat "$tmp/fumaca.out"; erro "a fumaça da versão nova deveria reprovar (é a falha de propósito)"; }
+FUMACA_VERSAO="$VERSAO_NOVA" fumaca && { mostrar "$tmp/fumaca.out"; erro "a fumaça da versão nova deveria reprovar (é a falha de propósito)"; }
 echo "ok: a fumaça reprovou, como planejado ($(grep -c '^FALHOU' "$tmp/fumaca.out") item(ns))"
 
 rodar_passo "$SHA_ANTERIOR"
 codigo=$?
-cat "$tmp/passo.out"
+mostrar "$tmp/passo.out"
 afirmar "o passo termina vermelho (voltar a imagem não é sucesso)" "$codigo" 1
 grep -q 'ROLLBACK AUTOMÁTICO EXECUTADO' "$tmp/passo.out" || erro "faltou a anotação ROLLBACK AUTOMÁTICO EXECUTADO"
 grep -q 'ainda reprova' "$tmp/passo.out" && erro "a fumaça pós-rollback reprovou"
@@ -121,7 +129,7 @@ afirmar "o recurso do Coolify voltou a HEAD" "$(estado .gitCommitSha)" HEAD
 afirmar "sequência de PATCH (preflight, fixar anterior, devolver HEAD)" "$(estado '.patches | join(" ")')" "HEAD $SHA_ANTERIOR HEAD"
 afirmar "o site público serve a versão anterior" "$(curl -fsS "$base/api/health/version" | jq -r .data.version)" "$VERSAO_ANTERIOR"
 afirmar "desfazer-versao chamado com a versão revertida" "$(grep -c "^desfazer-versao $VERSAO_NOVA\$" "$ENSAIO_SSH_LOG")" 1
-FUMACA_VERSAO="$VERSAO_ANTERIOR" fumaca || { cat "$tmp/fumaca.out"; erro "a fumaça depois do rollback reprova"; }
+FUMACA_VERSAO="$VERSAO_ANTERIOR" fumaca || { mostrar "$tmp/fumaca.out"; erro "a fumaça depois do rollback reprova"; }
 echo "ok: a fumaça depois do rollback passa na versão anterior"
 
 echo "== Cenário B: o Coolify falha ao reimplantar o commit anterior =="
@@ -130,7 +138,7 @@ curl -fsS -X POST "$base/__modo/rollback-falha" > /dev/null || erro "não conseg
 rodar_passo "$SHA_ANTERIOR"
 codigo=$?
 afirmar "o passo termina vermelho" "$codigo" 1
-grep -q 'Rollback falhou' "$tmp/passo.out" || { cat "$tmp/passo.out"; erro "faltou a anotação Rollback falhou"; }
+grep -q 'Rollback falhou' "$tmp/passo.out" || { mostrar "$tmp/passo.out"; erro "faltou a anotação Rollback falhou"; }
 afirmar "mesmo com a falha o recurso NÃO fica preso no SHA antigo" "$(estado .gitCommitSha)" HEAD
 curl -fsS -X POST "$base/__modo/normal" > /dev/null
 
