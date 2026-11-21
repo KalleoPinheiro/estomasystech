@@ -194,8 +194,7 @@ empresa com CNPJ:
 
 Os modelos da própria cliente já trazem "CNPJ ou CPF" no rodapé do receituário (seção 2.5). Para
 a autônoma, o timbre e os documentos levam nome, COREN e CPF (ou CNPJ, se ela tiver), e o
-responsável técnico é ela mesma. A proposta P1-15 (#977) cobre isso; a regra fiscal do recibo com CPF
-fica como pergunta aberta.
+responsável técnico é ela mesma. A proposta P1-15 (#977) cobre isso (decisão 6).
 
 ## 4. O que já existe e o que falta
 
@@ -235,7 +234,7 @@ onde há uma, ela está marcada como pergunta.
 | P3-12 (#965) | Timbre da cliente nos documentos | Documentos sem a identidade de quem emite | identidade visual por cliente (logo, cor da marca, fonte enviada por ela) e rodapé de contato; documentos usam esse timbre; sem fonte enviada, fonte livre; nada da marca de uma cliente entra no repo | P3 |
 | P3-13 (#966) | Metas em três níveis com prazo e cuidados para família | Modelo usa metas conferíveis por nível e orientações leigas | meta com prazo e nível; o plano impresso traz os cuidados para paciente e família | P3 |
 | P3-14 (#967) | Anamnese estruturada e exames em série | Texto livre não gera alerta nem série | listas de comorbidades, IMC e perda ponderal, ITB, pulsos, sensibilidade; tabela de exames por data | P3 |
-| P1-15 (#977) | Cliente autônoma: CPF no lugar de CNPJ | A primeira cliente é enfermeira autônoma; cadastro, documentos e recibo exigem CNPJ | tipo de cliente (autônoma ou clínica) com CPF ou CNPJ validado; documentos com nome, COREN e CPF/CNPJ; responsável técnico é a própria profissional; CPF cifrado; **pergunta:** recibo de saúde com CPF | P1 |
+| P1-15 (#977) | Cliente autônoma: CPF no lugar de CNPJ | A primeira cliente é enfermeira autônoma; cadastro, documentos e recibo exigem CNPJ | tipo de cliente (autônoma ou clínica) com CPF ou CNPJ validado; documentos com nome, COREN e CPF/CNPJ; responsável técnico é a própria profissional; recibo de pessoa física com CPF (modelo Receita Saúde); CPF cifrado com índice cego (classe 3) | P1 |
 
 Fora desta lista, ideias do benchmark (seção 6) para o backlog: encaminhamento multiprofissional
 gerado da avaliação, catálogo de coberturas com indicação e frequência de troca, semente de
@@ -287,9 +286,8 @@ Decididas pelo coordenador em 2026-11-20 (reversíveis, registradas aqui):
    cliente, a P2-8 (#961) não depende do jurídico. O #376 vale só para os termos do próprio
    sistema (uso da plataforma e privacidade).
 
-Perguntas abertas:
-
-6. **CPF no recibo de saúde.** Para a autônoma sem CNPJ, o recibo sai com o CPF dela como
-   prestadora? A regra fiscal (IRPF) precisa ser confirmada antes da P1-15 mexer no recibo.
-7. **A primeira cliente tem CNPJ?** Se tiver só CPF, ela não consegue ser cadastrada hoje, e a
-   P1-15 vira bloqueio de entrada.
+6. **Cliente pessoa física** (Kalléo, 2026-11-20). A primeira cliente tem só CPF, então a P1-15 (#977)
+   bloqueia a entrada dela e é a primeira da fila. Para pessoa física, o recibo sai com o CPF da
+   profissional e segue o modelo do Receita Saúde, emitido por ela: o sistema gera os dados do
+   recibo, e não a nota fiscal. O CPF da profissional é dado pessoal, cifrado e com índice cego
+   como o do paciente, o que torna a P1-15 classe de risco 3.
