@@ -1,5 +1,5 @@
 {
-  "id": "09e999a6-943d-44bc-9040-78972aa4b739",
+  "id": "8ee1d99f-7b4c-4c74-bbe5-91b5b2efbe44",
   "prevId": "1ea22194-c75d-4fd0-9be0-b5a20455b83d",
   "version": "7",
   "dialect": "postgresql",
@@ -1636,6 +1636,25 @@
           "primaryKey": false,
           "notNull": false
         },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'company'"
+        },
+        "cpf": {
+          "name": "cpf",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cpf_hash": {
+          "name": "cpf_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "cnpj_review_since": {
           "name": "cnpj_review_since",
           "type": "timestamp with time zone",
@@ -1758,6 +1777,22 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "uq_clinics_cpf_hash": {
+          "name": "uq_clinics_cpf_hash",
+          "columns": [
+            {
+              "expression": "cpf_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"clinics\".\"cpf_hash\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1780,6 +1815,10 @@
         "clinics_status_reason_check": {
           "name": "clinics_status_reason_check",
           "value": "\"clinics\".\"status_reason\" IS NULL OR \"clinics\".\"status_reason\" IN ('non_payment', 'clinic_request', 'security_incident', 'other')"
+        },
+        "clinics_kind_check": {
+          "name": "clinics_kind_check",
+          "value": "\"clinics\".\"kind\" IN ('company', 'individual')"
         }
       },
       "isRLSEnabled": false

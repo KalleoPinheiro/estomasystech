@@ -191,7 +191,7 @@ export class DrizzleTransactionManager implements TransactionManager {
         this.clinicId,
         this.cipher,
       ),
-      clinics: new DrizzleClinicRepository(tx),
+      clinics: new DrizzleClinicRepository(tx, this.cipher),
       waitlist: new DrizzleWaitlistRepository(tx, this.clinicId, this.cipher),
       procedureKits: new DrizzleProcedureKitRepository(tx),
       supplies: new DrizzleSupplyRepository(tx, this.clinicId),

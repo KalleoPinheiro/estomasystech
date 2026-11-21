@@ -456,7 +456,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
     cipher,
   );
   return {
-    clinics: new DrizzleClinicRepository(db),
+    clinics: new DrizzleClinicRepository(db, cipher, currentBlindIndex),
     patients: new DrizzlePatientRepository(
       db,
       tenant.clinicId,

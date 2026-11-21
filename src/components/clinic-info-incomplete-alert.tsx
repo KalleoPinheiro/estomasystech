@@ -14,11 +14,15 @@ export function ClinicInfoIncompleteAlert({
   clinic: ClinicInfoDto;
 }) {
   const missing = missingClinicInfoFields(clinic).join(', ');
+  // Autônoma (#977): o documento é o CPF e o registro é o COREN dela.
+  const subject =
+    clinic.kind === 'individual'
+      ? 'Cadastro sem CPF ou registro no conselho'
+      : 'Clínica sem CNPJ ou responsável técnico';
   return (
     <Alert variant="danger" className="mb-4">
       <AlertDescription>
-        Clínica sem CNPJ ou responsável técnico cadastrados (falta: {missing}).
-        Cadastre em{' '}
+        {subject} cadastrados (falta: {missing}). Cadastre em{' '}
         <Link href="/configuracoes#dados" className="font-medium underline">
           Configurações → Dados cadastrais
         </Link>{' '}

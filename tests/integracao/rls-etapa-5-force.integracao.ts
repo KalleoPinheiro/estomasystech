@@ -211,7 +211,7 @@ describe('Feature: FORCE ROW LEVEL SECURITY nas tabelas com política (#874)', (
     }
   });
 
-  it('Dado o esquema migrado, Quando leio o catálogo, Então FORCE e a política clinic_isolation cobrem as mesmas 45 tabelas, as quatro sem clinic_id incluídas', async () => {
+  it('Dado o esquema migrado, Quando leio o catálogo, Então FORCE e a política clinic_isolation cobrem toda tabela com clinic_id e as quatro sem clinic_id (45 na 0083, nunca menos)', async () => {
     const withPolicy = (
       await admin.query<{ tablename: string }>(
         `SELECT DISTINCT tablename FROM pg_policies WHERE schemaname = 'public' AND policyname = 'clinic_isolation'
@@ -219,8 +219,22 @@ describe('Feature: FORCE ROW LEVEL SECURITY nas tabelas com política (#874)', (
       )
     ).rows.map((row) => row.tablename);
     expect(forced).toEqual(withPolicy);
-    // 0088 (#954): catálogo de diagnósticos da clínica entra com política e FORCE.
-    expect(forced).toHaveLength(46);
+    // Sem número fixo: cada migração que cria tabela com RLS somaria uma e quebraria o portão de compatibilidade
+    // (o código da base roda sobre o esquema novo). A cobertura vem do catálogo: toda tabela com `clinic_id` mais as
+    // quatro sem a coluna, e nunca menos que as 45 da 0083.
+    const withClinicId = (
+      await admin.query<{ table_name: string }>(
+        `SELECT t.table_name FROM information_schema.tables t
+           JOIN information_schema.columns c
+             ON c.table_schema = t.table_schema AND c.table_name = t.table_name
+          WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE' AND c.column_name = 'clinic_id'`,
+      )
+    ).rows.map((row) => row.table_name);
+    const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+    expect([...forced].sort(byName)).toEqual(
+      [...withClinicId, ...NO_CLINIC_ID_TABLES].sort(byName),
+    );
+    expect(forced.length).toBeGreaterThanOrEqual(45);
     expect(forced).toEqual(expect.arrayContaining(NO_CLINIC_ID_TABLES));
     // Tabela com RLS ligado sem FORCE seria uma porta aberta ao dono.
     const unforced = await admin.query(

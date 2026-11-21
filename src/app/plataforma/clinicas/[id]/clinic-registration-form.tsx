@@ -4,9 +4,9 @@ import { Button, Card } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import {
-  ALL_CLINIC_FIELDS,
   ClinicFieldsGrid,
-  REQUIRED_CLINIC_FIELDS,
+  clinicFieldKeys,
+  requiredClinicFieldKeys,
 } from '@/components/clinic-fields';
 import { CnpjReviewAlert, ErrorAlert } from '@/components/feedback';
 import { apiFetch } from '@/lib/client';
@@ -34,6 +34,8 @@ export function ClinicRegistrationForm({
         body: JSON.stringify({
           name: draft.name,
           cnpj: draft.cnpj,
+          // Só a autônoma tem CPF (#977); na clínica fica de fora do corpo.
+          cpf: draft.cpf,
           contactPhone: draft.contactPhone,
           contactEmail: draft.contactEmail,
           professionalName: draft.professionalName,
@@ -55,15 +57,15 @@ export function ClinicRegistrationForm({
     <Card as="section" className="p-5">
       <h2 className="mb-1 font-semibold text-lg">Cadastro</h2>
       <p className="mb-4 text-ink-3 text-sm">
-        Nome, CNPJ, telefone e e-mail de contato são exigidos para convidar o
-        Admin de Empresa.
+        Nome, {clinic.kind === 'individual' ? 'CPF' : 'CNPJ'}, telefone e e-mail
+        de contato são exigidos para convidar o Admin de Empresa.
       </p>
       {error && <ErrorAlert message={error} />}
       <CnpjReviewAlert since={clinic.cnpjReviewSince} />
       <ClinicFieldsGrid
         draft={draft}
-        keys={ALL_CLINIC_FIELDS}
-        required={REQUIRED_CLINIC_FIELDS}
+        keys={clinicFieldKeys(clinic)}
+        required={requiredClinicFieldKeys(clinic)}
         onChange={setDraft}
       />
       <Button

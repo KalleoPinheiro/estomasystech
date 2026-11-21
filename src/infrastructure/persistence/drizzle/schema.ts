@@ -26,6 +26,13 @@ export const clinics = pgTable(
     // Dados cadastrais (issue #61) — usados no cabeçalho/rodapé de documentos
     // clínicos emitidos (issue #62). Nullable: nem toda instalação os preencheu ainda.
     cnpj: text('cnpj'),
+    // Tipo de cliente (#977): `company` (clínica, CNPJ) ou `individual`
+    // (profissional autônoma, só CPF). Fixo depois da criação.
+    kind: text('kind').notNull().default('company'),
+    // CPF da autônoma (#977, ADR-096): cifrado com a `DATA_ENCRYPTION_KEY` e com
+    // índice cego `provider-cpf` de escopo fixo, para a unicidade entre clientes.
+    cpf: text('cpf'),
+    cpfHash: text('cpf_hash'),
     // CNPJ gravado antes da conferência do dígito verificador (#248) e marcado
     // para correção (#355). Nulo = sem pendência; salvar um CNPJ válido limpa.
     cnpjReviewSince: timestamp('cnpj_review_since', {
@@ -83,6 +90,14 @@ export const clinics = pgTable(
     uniqueIndex('uq_clinics_cnpj')
       .on(table.cnpj)
       .where(sql`${table.cnpj} IS NOT NULL`),
+    check(
+      'clinics_kind_check',
+      sql`${table.kind} IN ('company', 'individual')`,
+    ),
+    // Um CPF, um cadastro de autônoma (#977), pelo índice cego: o CPF em claro não existe no banco.
+    uniqueIndex('uq_clinics_cpf_hash')
+      .on(table.cpfHash)
+      .where(sql`${table.cpfHash} IS NOT NULL`),
   ],
 );
 

@@ -107,7 +107,9 @@ function ClinicRow({ clinic }: { clinic: PlatformClinicSummaryDto }) {
         </Link>
       </TableCell>
       <TableCell label="CNPJ" className="py-2 pr-3 text-ink-2">
-        {clinic.cnpj ?? '—'}
+        {(clinic.kind === 'individual'
+          ? clinic.cpfMasked && `CPF ${clinic.cpfMasked}`
+          : clinic.cnpj) || '—'}
       </TableCell>
       <TableCell label="Situação" className="py-2 pr-3">
         <StatusBadge status={situation.status} label={situation.label} />
