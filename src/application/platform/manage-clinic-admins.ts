@@ -139,7 +139,7 @@ export class ManageClinicAdmins {
           })
           .catch((error: unknown) => {
             // Corrida: dois convites do mesmo e-mail passam pela checagem
-            // prévia; `uq_user_accounts_clinic_email` deixa só um gravar.
+            // prévia; `uq_user_accounts_clinic_email_hash` deixa só um gravar.
             throw isUniqueViolation(error)
               ? new ValidationError(DUPLICATE_EMAIL_MESSAGE)
               : error;

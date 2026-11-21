@@ -227,14 +227,12 @@ describe('Feature: e-mail de login cifrado em repouso com índice cego (ADR-111,
     });
   });
 
-  describe('janela até a conversão', () => {
-    it('Dada conta antiga em claro e sem hash, Quando buscar, Então o login ainda acha e lê o e-mail', async () => {
+  describe('depois da contração (ADR-111)', () => {
+    it('Dada conta antiga em claro e sem hash, Quando buscar pelo e-mail, Então o login não acha (só o índice cego vale), mas a leitura por id ainda devolve o e-mail', async () => {
       const id = await legado('antiga@clinica.test');
 
-      expect((await repo.findByEmail('antiga@clinica.test'))?.id).toBe(id);
-      expect(
-        (await system.findAllByEmail('Antiga@clinica.test')).map((a) => a.id),
-      ).toEqual([id]);
+      expect(await repo.findByEmail('antiga@clinica.test')).toBeNull();
+      expect(await system.findAllByEmail('Antiga@clinica.test')).toEqual([]);
       expect((await repo.findById(id))?.email).toBe('antiga@clinica.test');
     });
   });

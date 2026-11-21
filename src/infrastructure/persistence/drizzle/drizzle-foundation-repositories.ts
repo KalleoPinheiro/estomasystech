@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import {
   UserAccount,
   type UserAccountRepository,
@@ -122,22 +122,19 @@ export function loginEmailHash(
 }
 
 /**
- * Condição do e-mail de login: pelo índice cego (o atual e os peppers da
- * rotação) ou pelo e-mail em claro de uma linha que a conversão
- * (`data:reencrypt`) ainda não alcançou. O ramo em claro cai na contração.
+ * Condição do e-mail de login: só pelo índice cego (o atual e os peppers da
+ * rotação). O ramo em claro caiu na contração (ADR-111): toda conta ativa tem
+ * `email_hash` (restrição `ck_user_accounts_email_hash_conta_ativa`
+ * validada). E-mail que não normaliza não tem hash e não acha conta nenhuma.
  */
 export function loginEmailCondition(blindIndex: BlindIndex, email: string) {
-  const plain = email.trim().toLowerCase();
   const hashes = orFallbackOnInvalid(
-    () => blindIndex.candidates(LOGIN_INDEX_SCOPE, 'login-email', plain),
+    () => blindIndex.candidates(LOGIN_INDEX_SCOPE, 'login-email', email),
     [] as string[],
   );
   return hashes.length === 0
-    ? eq(userAccounts.email, plain)
-    : or(
-        inArray(userAccounts.emailHash, hashes),
-        eq(userAccounts.email, plain),
-      );
+    ? sql`false`
+    : inArray(userAccounts.emailHash, hashes);
 }
 
 const byEmail = (a: UserAccount, b: UserAccount): number =>

@@ -208,10 +208,10 @@ export const userAccounts = pgTable(
     id: text('id').primaryKey(),
     // Nulo somente para o papel de sistema (super_admin — cross-empresa, RBAC-01/ADR-003).
     clinicId: text('clinic_id').references(() => clinics.id),
-    // Cifrado em repouso (#742, ADR-111); o login acha a conta por `emailHash`.
-    // Linha anterior à conversão (`data:reencrypt`) ainda guarda o e-mail em claro.
+    // Cifrado em repouso (#742, ADR-111); o login acha a conta só por `emailHash`.
+    // Em claro só o endereço sintético da conta anonimizada (não é pessoal).
     email: text('email').notNull(),
-    // Índice cego do e-mail de login (`b1.<keyId>.<hex>`); nulo até a conversão.
+    // Índice cego do e-mail de login (`b1.<keyId>.<hex>`); nulo só na conta anonimizada.
     emailHash: text('email_hash'),
     // Formato scrypt$custo$salt$hash — nunca a senha em claro.
     passwordHash: text('password_hash').notNull(),
@@ -256,18 +256,6 @@ export const userAccounts = pgTable(
     uniqueIndex('uq_user_accounts_clinic_guardian')
       .on(table.clinicId, table.guardianId)
       .where(sql`${table.guardianId} IS NOT NULL`),
-    // E-mail de login único por empresa, não globalmente (MT-06, ADR-003).
-    uniqueIndex('uq_user_accounts_clinic_email').on(
-      table.clinicId,
-      table.email,
-    ),
-    // Postgres trata NULL como distinto em índice único composto — sem este
-    // índice parcial, duas contas super_admin (clinic_id NULL) poderiam ter
-    // o mesmo email, e o login (findByEmail + LIMIT 1) escolheria uma
-    // identidade de forma ambígua.
-    uniqueIndex('uq_user_accounts_super_admin_email')
-      .on(table.email)
-      .where(sql`${table.clinicId} IS NULL`),
     // No máximo UMA conta com clinic_id nulo pode existir (hoje só o Super
     // Admin de bootstrap nasce assim) — fecha a corrida de dois POST
     // concorrentes em /api/auth/bootstrap numa instalação vazia (issue #51).
@@ -283,8 +271,10 @@ export const userAccounts = pgTable(
       sql`(${table.role} = 'super_admin') = (${table.clinicId} IS NULL)`,
     ),
     // E-mail de login único pelo índice cego (#742): o `email` cifrado não é
-    // determinístico, então a unicidade passa para o hash. Os dois índices em
-    // claro acima caem na contração (ADR-111).
+    // determinístico, então a unicidade é do hash — por empresa (MT-06, ADR-003)
+    // e, no super_admin (clinic_id nulo, que o Postgres trata como distinto),
+    // pelo índice parcial. Os índices sobre o `email` em claro caíram na
+    // contração (ADR-111, migração 0090).
     uniqueIndex('uq_user_accounts_clinic_email_hash')
       .on(table.clinicId, table.emailHash)
       .where(sql`${table.emailHash} IS NOT NULL`),

@@ -18,9 +18,9 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-1. **Contração da cifra** (ADR-111, ADR-114, classe 3, P1 de segurança): no e-mail de login, `VALIDATE` da restrição `0086`,
-   fim do ramo em claro e drop dos índices antigos; no cadastro, drop de `birth_date` e dos índices GIN antigos. Deixar o PR
-   pronto esperando o clique em paralelo às telas.
+1. **Contração da cifra no cadastro** (ADR-096, classe 3): drop de `birth_date` e dos índices GIN antigos do paciente. Sai da
+   contração do e-mail de login (PR desta entrega, migração `0090`) para não colidir com o #972 no mesmo domínio; entra
+   depois dele. A `0090` exige `sem indice cego=0` na verificação de integridade antes do deploy.
 2. **#972** (P2): cadastro rápido de paciente na nova consulta. Em andamento em outra sessão.
 3. **#957** (P1): "Pacotes" passa a se chamar "Plano de acompanhamento" (depois, #964 proposta em PDF).
 4. **#956** (P1): receituário de enfermagem em PDF.

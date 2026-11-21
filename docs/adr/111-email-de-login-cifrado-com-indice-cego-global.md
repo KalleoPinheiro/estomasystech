@@ -3,7 +3,7 @@ title: "ADR 111 — E-mail de login cifrado em repouso com índice cego global"
 status: living
 audience: [dev, ops, agent]
 owner: "@KalleoPinheiro"
-last_reviewed: 2026-11-19
+last_reviewed: 2026-11-21
 related:
   - docs/adr/096-pii-cifrada-em-repouso-com-indice-cego-e-busca-por-nome-em-memoria.md
   - docs/adr/003-modelo-de-papeis-multi-empresa.md
@@ -68,6 +68,17 @@ Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-ofe
 - A conta anonimizada continua fora do `data:reencrypt`. Sem hash, o ramo por `email_hash` não a acha; enquanto o ramo em
   claro existir, o endereço sintético ainda pode casar na busca, mas a conta tem senha inválida e `active = false`, então o
   login não autentica.
+
+## Contração feita (2026-11-21, migração `0090`)
+
+- `loginEmailCondition` procura só por `email_hash` (o atual e os peppers da rotação). Sem hash (e-mail que não
+  normaliza), a condição é `false`. Conta ainda em claro deixa de ser achada no login.
+- A `0090` faz o `VALIDATE CONSTRAINT ck_user_accounts_email_hash_conta_ativa` e o `DROP` de
+  `uq_user_accounts_clinic_email` e `uq_user_accounts_super_admin_email`. A unicidade é só dos índices sobre `email_hash`.
+- Precondição: `sem indice cego=0` na verificação de integridade. Se faltar, o `VALIDATE` falha, a migração volta inteira
+  e o Release deploy para antes de trocar a imagem. Rollback: redeploy da tag anterior (ela já grava cifra e hash e não
+  depende dos índices removidos); o SQL para recriar os índices está no cabeçalho da `0090`.
+- `data:reencrypt` (`user_accounts_email`) continua: segue útil na rotação de chave e de pepper.
 
 ## Opções descartadas
 
