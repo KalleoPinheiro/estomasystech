@@ -3,7 +3,10 @@ import Link from 'next/link';
 import { ClinicInfoIncompleteAlert } from '@/components/clinic-info-incomplete-alert';
 import { DocumentFrame } from '@/components/document-frame';
 import { ErrorAlert } from '@/components/feedback';
-import { CNPJ_UNDER_REVIEW_MESSAGE } from '@/domain/billing/receipt';
+import {
+  CNPJ_UNDER_REVIEW_MESSAGE,
+  type ReceiptParties,
+} from '@/domain/billing/receipt';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import type { InvoiceDto, InvoicePaymentDto } from '@/lib/dto';
 import {
@@ -38,6 +41,27 @@ function ReceiptBlocked({ message }: { message: string }) {
       )}
     </>
   );
+}
+
+/**
+ * Trechos do recibo que dependem do tipo de cliente (#977): a autônoma sai
+ * com CPF e COREN e, se outra pessoa pagou, com o CPF do paciente atendido —
+ * os dados que o Receita Saúde pede. A clínica sai com o CNPJ, como antes.
+ */
+function receiptTexts(
+  parties: ReceiptParties,
+  patientName: string | undefined,
+): { provider: string; patient: string } {
+  const { provider, payerIsPatient, beneficiary } = parties;
+  const registry = provider.registry ? `, ${provider.registry}` : '';
+  const providerText = `${provider.documentLabel ?? 'CNPJ'} ${provider.document}${registry}`;
+  if (payerIsPatient) return { provider: providerText, patient: '' };
+  return {
+    provider: providerText,
+    patient: beneficiary
+      ? ` (paciente atendido: ${beneficiary.name}, CPF ${beneficiary.document})`
+      : ` (paciente: ${patientName})`,
+  };
 }
 
 /** Recebido até este pagamento, inclusive (os pagamentos vêm em ordem de data). */
@@ -123,7 +147,8 @@ export default async function PaymentReceiptPage({
 
   const settles =
     receivedUpTo(invoice.data, payment) >= invoice.data.netAmountCents;
-  const { provider, payer, payerIsPatient } = parties.data;
+  const { provider, payer, beneficiary } = parties.data;
+  const text = receiptTexts(parties.data, invoice.data.patientName);
   return (
     <DocumentFrame
       clinic={clinic.data}
@@ -138,7 +163,7 @@ export default async function PaymentReceiptPage({
       }
     >
       <p className="mb-4">
-        {provider.name} (CNPJ {provider.document}) recebeu de{' '}
+        {provider.name} ({text.provider}) recebeu de{' '}
         <strong>{payer.name}</strong> (CPF {payer.document}) a quantia de{' '}
         <strong>{formatCurrency(payment.amountCents)}</strong>, em{' '}
         <strong>{formatDate(payment.paidAt)}</strong>, via{' '}
@@ -146,9 +171,16 @@ export default async function PaymentReceiptPage({
           {PAYMENT_METHOD_LABELS[payment.method] ?? payment.method}
         </strong>
         , referente a <strong>{invoice.data.description}</strong>
-        {payerIsPatient ? '' : ` (paciente: ${invoice.data.patientName})`}.
+        {text.patient}.
       </p>
       <Summary invoice={invoice.data} payment={payment} />
+      {provider.documentLabel === 'CPF' && (
+        <p className="text-xs">
+          Dados para o recibo do Receita Saúde: CPF da profissional, CPF de quem
+          pagou{beneficiary ? ', CPF do paciente atendido' : ''}, valor e data
+          do pagamento. Este documento não é nota fiscal.
+        </p>
+      )}
     </DocumentFrame>
   );
 }

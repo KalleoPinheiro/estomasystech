@@ -40,7 +40,10 @@ export class ResolveReceipt {
     return resolveReceiptParties({
       clinic: {
         name: clinic.name,
+        kind: clinic.kind,
         cnpj: clinic.cnpj,
+        cpf: clinic.cpf,
+        professionalRegistry: clinic.professionalRegistry,
         cnpjReviewSince: clinic.cnpjReviewSince,
       },
       patient: { fullName: patient.fullName, cpf: patient.cpf },

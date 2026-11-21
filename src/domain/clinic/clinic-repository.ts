@@ -5,6 +5,8 @@ export interface ClinicRepository {
   findById(id: string): Promise<Clinic | null>;
   /** CNPJ na forma canônica (`normalizeCnpj`). */
   findByCnpj(cnpj: string): Promise<Clinic | null>;
+  /** CPF da autônoma, 11 dígitos (#977); procura pelo índice cego. */
+  findByCpf(cpf: string): Promise<Clinic | null>;
   /** Todas as empresas — o cron de lembretes e a plataforma listam (escopo de sistema). */
   findAll(): Promise<Clinic[]>;
   /** Grava só o cadastro — nunca o estado. */

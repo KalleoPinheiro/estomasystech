@@ -12,7 +12,10 @@ export const LEGAL_REVIEW_PENDING = true;
 /** Quem responde pelos dados do paciente: dados da clínica interpolados nos textos. */
 export interface LegalController {
   name: string;
+  /** CNPJ da clínica ou, com `documentLabel: 'CPF'`, o CPF da autônoma (#977). */
   cnpj: string;
+  /** Só na profissional autônoma (#977); ausente é CNPJ. */
+  documentLabel?: 'CPF';
   address: string;
   technicalLead: string;
   dpoName: string;
@@ -36,7 +39,9 @@ const trimmed = (value: string | null | undefined): string =>
  */
 export function controllerFromClinic(clinic: Clinic): LegalController {
   const name = trimmed(clinic.name);
-  const cnpj = trimmed(clinic.cnpj);
+  // CNPJ da clínica ou CPF da autônoma (#977), na forma impressa.
+  const document = clinic.providerDocument;
+  const cnpj = document?.value ?? '';
   const dpoContact =
     trimmed(clinic.dpoContact) ||
     trimmed(clinic.contactEmail) ||
@@ -49,6 +54,7 @@ export function controllerFromClinic(clinic: Clinic): LegalController {
   return {
     name,
     cnpj,
+    ...(document?.label === 'CPF' ? { documentLabel: 'CPF' as const } : {}),
     address:
       [trimmed(clinic.address), trimmed(clinic.city)]
         .filter(Boolean)
@@ -79,6 +85,16 @@ function withoutPlaceholderLabels(
   controller: LegalController,
 ): string {
   let text = template;
+  if (controller.documentLabel === 'CPF') {
+    // Autônoma (#977): troca só o rótulo impresso; o texto-base do aceite (e
+    // o hash dele) continua o mesmo.
+    text = text
+      .replaceAll('CNPJ {{CLINICA_CNPJ}}', 'CPF {{CLINICA_CNPJ}}')
+      .replaceAll(
+        'Clínica: {{CLINICA_NOME}}',
+        'Profissional: {{CLINICA_NOME}}',
+      );
+  }
   if (controller.technicalLead === FALLBACKS.technicalLead) {
     text = text
       .split('\n')
@@ -126,4 +142,4 @@ export function renderLegalText(
 
 /** Evidência do aceite: quem era o controlador e o canal do encarregado quando o paciente leu. */
 export const controllerSnapshot = (controller: LegalController): string =>
-  `${controller.name} · CNPJ ${controller.cnpj} · Encarregado: ${controller.dpoName} (${controller.dpoContact})`;
+  `${controller.name} · ${controller.documentLabel ?? 'CNPJ'} ${controller.cnpj} · Encarregado: ${controller.dpoName} (${controller.dpoContact})`;

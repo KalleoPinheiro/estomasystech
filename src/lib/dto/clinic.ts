@@ -11,6 +11,7 @@ import type {
   ClinicChannelStatus,
   EmailProvider,
 } from '@/domain/clinic/clinic-channel';
+import { maskCpf } from '@/domain/shared/cpf';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicLogoUrl } from './identity';
 
@@ -22,6 +23,12 @@ export interface ClinicInfoDto {
   city: string | null;
   professionalName: string | null;
   professionalRegistry: string | null;
+  /**
+   * Só na profissional autônoma (#977): o tipo e o CPF dela (11 dígitos), que
+   * entram no cabeçalho e no recibo no lugar do CNPJ. Ausentes na clínica.
+   */
+  kind?: 'individual';
+  cpf?: string | null;
   /** Logo no cabeçalho dos documentos (#430); ausente quando a clínica não enviou. */
   logoUrl?: string;
 }
@@ -33,6 +40,9 @@ export const toClinicInfoDto = (clinic: Clinic): ClinicInfoDto => ({
   city: clinic.city,
   professionalName: clinic.professionalName,
   professionalRegistry: clinic.professionalRegistry,
+  ...(clinic.isIndividual
+    ? { kind: 'individual' as const, cpf: clinic.cpf }
+    : {}),
   ...(clinic.logoKey
     ? { logoUrl: clinicLogoUrl(clinic.logoKey) as string }
     : {}),
@@ -126,6 +136,9 @@ export interface PlatformClinicSummaryDto {
   id: string;
   name: string;
   cnpj: string | null;
+  /** Autônoma (#977): o CPF só sai mascarado na lista (`***.***.789-**`). */
+  kind?: 'individual';
+  cpfMasked?: string | null;
   registrationComplete: boolean;
   status: ClinicStatus;
   adminStatus: AdminStatus;
@@ -141,6 +154,12 @@ export const toPlatformClinicSummaryDto = (
   id: clinic.id,
   name: clinic.name,
   cnpj: clinic.cnpj,
+  ...(clinic.isIndividual
+    ? {
+        kind: 'individual' as const,
+        cpfMasked: clinic.cpf ? maskCpf(clinic.cpf) : null,
+      }
+    : {}),
   registrationComplete: clinic.isRegistrationComplete(),
   status: clinic.status,
   adminStatus,
