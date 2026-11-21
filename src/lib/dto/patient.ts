@@ -22,6 +22,8 @@ export interface PatientDto {
   guardian?: GuardianDto | null;
   active: boolean;
   anonymized: boolean;
+  /** Cadastro rápido (#972): falta completar o cadastro e colher o termo. Ausente = completo. */
+  registrationIncomplete?: boolean;
   createdAt: string;
 }
 
@@ -46,6 +48,7 @@ export const toPatientDto = (
   }),
   active: patient.isActive,
   anonymized: patient.isAnonymized,
+  registrationIncomplete: patient.registrationIncomplete,
   createdAt: patient.createdAt.toISOString(),
 });
 

@@ -26,6 +26,10 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
+- **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva).
+  Próximos do dono, nesta ordem: Plano de acompanhamento, receituário e termos por cliente. Novas: #986 (P3) e #987 (P2,
+  espera o dono escolher o termo neutro).
+
 1. **#954** (P1, classe 3 por RLS e cifra): catálogo de diagnósticos da clínica, CSV, diagnóstico «sem código» e tipo
    síndrome na SAE (migração 0089, PRO-RN-37). PR #982 aberto; antes dele, o #983 tira o número fixo de 45 tabelas do teste
    de FORCE. Espera o clique do dono quando o CI estiver verde.

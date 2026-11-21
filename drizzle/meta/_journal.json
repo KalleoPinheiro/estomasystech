@@ -631,6 +631,13 @@
       "when": 1795260781736,
       "tag": "0089_catalogo-diagnosticos-clinica",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1795304524566,
+      "tag": "0090_cadastro-rapido-paciente",
+      "breakpoints": true
     }
   ]
 }
