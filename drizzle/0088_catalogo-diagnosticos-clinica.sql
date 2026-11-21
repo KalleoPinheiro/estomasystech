@@ -22,6 +22,5 @@ ALTER TABLE "care_plan_diagnoses" ADD COLUMN "diagnosis_label" text;--> statemen
 ALTER TABLE "clinic_nursing_diagnoses" ADD CONSTRAINT "clinic_nursing_diagnoses_clinic_id_clinics_id_fk" FOREIGN KEY ("clinic_id") REFERENCES "public"."clinics"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_clinic_nursing_diagnoses_clinic_label" ON "clinic_nursing_diagnoses" USING btree ("clinic_id","label");--> statement-breakpoint
 ALTER TABLE "clinic_nursing_diagnoses" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-DROP POLICY IF EXISTS "clinic_isolation" ON "clinic_nursing_diagnoses";--> statement-breakpoint
 CREATE POLICY "clinic_isolation" ON "clinic_nursing_diagnoses" USING ("clinic_id" = current_setting('app.clinic_id', true)) WITH CHECK ("clinic_id" = current_setting('app.clinic_id', true));--> statement-breakpoint
 ALTER TABLE "clinic_nursing_diagnoses" FORCE ROW LEVEL SECURITY;
