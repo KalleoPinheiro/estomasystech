@@ -89,7 +89,8 @@ function splitRecords(text: string, separator: string): string[][] {
 
 /** Excel em português salva com `;`; outras ferramentas, com `,`. O cabeçalho decide. */
 function detectSeparator(text: string): string {
-  const header = text.split('\n', 1)[0] ?? '';
+  const newline = text.indexOf('\n');
+  const header = newline === -1 ? text : text.slice(0, newline);
   return header.includes(';') ? ';' : ',';
 }
 
@@ -142,10 +143,12 @@ const isBlank = (values: string[]): boolean =>
  * da entidade, linha a linha, para que um erro não derrube o arquivo inteiro.
  */
 export function parseClinicDiagnosisCsv(text: string): ClinicDiagnosisCsvRow[] {
-  const clean = text.replace(/^﻿/, '');
-  const [header, ...body] = splitRecords(clean, detectSeparator(clean));
-  const columns = mapHeader(header ?? []);
-  const rows = body
+  const clean = text.replace(/^\uFEFF/, '');
+  // `splitRecords` devolve ao menos um registro (o cabeçalho, mesmo vazio).
+  const records = splitRecords(clean, detectSeparator(clean));
+  const columns = mapHeader(records[0] as string[]);
+  const rows = records
+    .slice(1)
     .map((values, index) => ({ values, line: index + 2 }))
     .filter(({ values }) => !isBlank(values))
     .map(({ values, line }) => toRow(values, columns, line));

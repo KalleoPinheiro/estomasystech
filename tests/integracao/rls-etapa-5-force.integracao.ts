@@ -219,7 +219,8 @@ describe('Feature: FORCE ROW LEVEL SECURITY nas tabelas com política (#874)', (
       )
     ).rows.map((row) => row.tablename);
     expect(forced).toEqual(withPolicy);
-    expect(forced).toHaveLength(45);
+    // 0088 (#954): catálogo de diagnósticos da clínica entra com política e FORCE.
+    expect(forced).toHaveLength(46);
     expect(forced).toEqual(expect.arrayContaining(NO_CLINIC_ID_TABLES));
     // Tabela com RLS ligado sem FORCE seria uma porta aberta ao dono.
     const unforced = await admin.query(

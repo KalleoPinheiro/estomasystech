@@ -866,7 +866,7 @@ function diagnosisSource(
   return { diagnosisCode: selected?.code };
 }
 
-function AddDiagnosisForm({
+export function AddDiagnosisForm({
   carePlanId,
   onSaved,
 }: {
