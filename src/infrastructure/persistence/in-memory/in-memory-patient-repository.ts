@@ -102,7 +102,7 @@ function exactValueMatches(
   patients: readonly Patient[],
   term: string,
 ): Set<string> {
-  const kinds: Exclude<BlindIndexKind, 'login-email'>[] = [
+  const kinds: Exclude<BlindIndexKind, 'login-email' | 'provider-cpf'>[] = [
     'cpf',
     'phone',
     'email',

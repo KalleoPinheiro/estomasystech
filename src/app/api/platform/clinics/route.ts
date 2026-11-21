@@ -13,7 +13,10 @@ import { listPlatformClinics } from '@/lib/server/data/platform';
 
 const createSchema = z.object({
   name: z.string().max(200),
-  cnpj: z.string().max(30),
+  // Tipo de cliente (#977): ausente vale clínica (CNPJ); `individual` usa só o CPF.
+  kind: z.enum(['company', 'individual']).optional(),
+  cnpj: z.string().max(30).nullish(),
+  cpf: z.string().max(20).nullish(),
   contactPhone: z.string().max(50),
   contactEmail: z.string().max(200),
   adminEmail: z.string().min(3).max(200),

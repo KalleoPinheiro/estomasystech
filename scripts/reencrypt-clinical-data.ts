@@ -1,4 +1,5 @@
 import { getSystemDb } from "@/infrastructure/persistence/drizzle/db";
+import { reencryptClinicIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-clinic-identity";
 import { reencryptAccountIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-account-identity";
 import { reencryptGuardianIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-guardian-identity";
 import { reencryptPatientIdentity } from "@/infrastructure/persistence/drizzle/reencrypt-patient-identity";
@@ -38,6 +39,8 @@ async function main(): Promise<void> {
   counts.guardians_identity = await reencryptGuardianIdentity(db, cipher, blindIndex);
   // E-mail de login da conta (ADR-111, #742): cifra e preenche o índice cego usado no login.
   counts.user_accounts_email = await reencryptAccountIdentity(db, cipher, blindIndex);
+  // CPF da cliente autônoma (#977): cifra e índice cego de escopo fixo.
+  counts.clinics_cpf = await reencryptClinicIdentity(db, cipher, blindIndex);
   let total = 0;
   for (const [table, updated] of Object.entries(counts)) {
     total += updated;

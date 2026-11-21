@@ -31,7 +31,12 @@ export const MIN_BLIND_INDEX_PEPPER_LENGTH = 32;
  * `login-email` é o e-mail de login da conta (#742, ADR-111): tipo próprio para
  * que o hash do e-mail de uma conta nunca bata com o do e-mail de um paciente.
  */
-export type BlindIndexKind = 'cpf' | 'phone' | 'email' | 'login-email';
+export type BlindIndexKind =
+  | 'cpf'
+  | 'phone'
+  | 'email'
+  | 'login-email'
+  | 'provider-cpf';
 
 /**
  * "Empresa" do hash do e-mail de login: o login procura a conta antes de saber
@@ -39,6 +44,14 @@ export type BlindIndexKind = 'cpf' | 'phone' | 'email' | 'login-email';
  * leva `clinicId`. A unicidade por empresa vem do índice `(clinic_id, email_hash)`.
  */
 export const LOGIN_INDEX_SCOPE = 'login';
+
+/**
+ * `provider-cpf` é o CPF da profissional autônoma cliente da plataforma
+ * (#977): tipo próprio, para nunca bater com o CPF de um paciente, e escopo
+ * fixo, porque o CPF identifica o cliente entre todas as empresas (um CPF, um
+ * cadastro, como o CNPJ em `uq_clinics_cnpj`).
+ */
+export const PROVIDER_INDEX_SCOPE = 'platform';
 
 interface IndexKey {
   id: string;
@@ -74,7 +87,7 @@ export function normalizeForBlindIndex(
   raw: string | null | undefined,
 ): string | null {
   if (raw === null || raw === undefined || raw.trim() === '') return null;
-  if (kind === 'cpf') return normalizeCpf(raw);
+  if (kind === 'cpf' || kind === 'provider-cpf') return normalizeCpf(raw);
   if (kind === 'phone') return normalizeBrazilianPhoneOrThrow(raw);
   if (kind === 'login-email') return normalizeAccountEmail(raw);
   return normalizeOptionalEmail(raw);
