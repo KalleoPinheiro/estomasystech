@@ -61,7 +61,11 @@ const PAGE = { width: 595.28, height: 841.89 } as const;
 const MARGIN = 56;
 const CONTENT_WIDTH = PAGE.width - MARGIN * 2;
 const INK = rgb(0, 0, 0);
-const SIGNATURE_BLOCK_HEIGHT = 110;
+/**
+ * Data, espaço para assinar, linha, nome e registro numa só página: 18 + 15,4 +
+ * 44 + 6 + 15,4 + 12,6 = 111,4 pt numa linha cada; a folga cobre nome em duas.
+ */
+const SIGNATURE_BLOCK_HEIGHT = 140;
 
 interface Fonts {
   regular: PDFFont;

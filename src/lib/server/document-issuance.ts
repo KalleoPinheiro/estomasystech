@@ -2,7 +2,7 @@ import 'server-only';
 import { z } from 'zod';
 import { ResolveReceipt } from '@/application/billing/resolve-receipt';
 import { AuditEvent } from '@/domain/audit/audit-event';
-import { ValidationError } from '@/domain/shared/errors';
+import { ForbiddenError, ValidationError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import type { Session } from '@/lib/auth/session';
 import {
@@ -42,6 +42,9 @@ const NUMBER_PREFIX: Record<DocumentType, string> = {
   repasse: 'REP',
   recibo: 'REC',
 };
+
+export const RECEITUARIO_ROLE_MESSAGE =
+  'Receituário é emitido só por Admin ou Profissional';
 
 export const issueDocumentSchema = z.object({
   documentType: z.enum(DOCUMENT_TYPES),
@@ -109,6 +112,11 @@ export async function issueDocumentFor(
     resourceId,
     invoiceId,
   });
+  // Receituário (#956) é ato clínico: o Atendente não emite, nem pela rota
+  // genérica `POST /api/documents/issue` (família operacional).
+  if (documentType === 'receituario' && session.role === 'atendente') {
+    throw new ForbiddenError(RECEITUARIO_ROLE_MESSAGE);
+  }
   const { transactions } = await getRepositories(scope);
 
   return transactions.run(async (tx) => {
