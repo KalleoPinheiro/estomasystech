@@ -1,6 +1,9 @@
 import type { NextRequest } from 'next/server';
+import { getRepositories } from '@/infrastructure/container';
 import { describeFailure, fail } from '@/lib/api-response';
+import { assertClinicalResourceAccessible } from '@/lib/auth/clinical-resource-scope';
 import { requireStaffSession } from '@/lib/auth/require-session';
+import { sessionScope } from '@/lib/auth/tenant-scope';
 import { buildPrescriptionPdfFor } from '@/lib/server/prescription';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -18,6 +21,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   try {
     const { id } = await context.params;
+    // R4 no handler (#186): Profissional sem vínculo com o paciente do plano = 404.
+    await assertClinicalResourceAccessible(
+      guard.session,
+      'carePlan',
+      id,
+      await getRepositories(sessionScope(guard.session)),
+    );
     const pdf = await buildPrescriptionPdfFor(guard.session, id);
     return new Response(new Uint8Array(pdf.bytes), {
       status: 200,
