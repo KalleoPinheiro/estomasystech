@@ -18,6 +18,8 @@ export interface UpdatePatientInput {
   referredByPartnerId?: string | null;
   /** `undefined` mantém; `null` desvincula o responsável (#329). */
   guardianId?: string | null;
+  /** Salvamento do cadastro completo: tira a marca de cadastro rápido (#972). */
+  completeRegistration?: boolean;
 }
 
 export class UpdatePatient {
@@ -34,7 +36,10 @@ export class UpdatePatient {
     }
     await assertValidReferrer(this.partners, input.referredByPartnerId);
     await assertValidGuardian(this.guardians, input.guardianId);
-    const updated = patient.update(input);
+    const changed = patient.update(input);
+    const updated = input.completeRegistration
+      ? changed.completeRegistration()
+      : changed;
     await this.patients.save(updated);
     return updated;
   }

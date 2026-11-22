@@ -1,5 +1,5 @@
 {
-  "id": "ef26336d-e2ee-4cf6-ad0d-01d5bc8f856c",
+  "id": "cb28deab-7ac4-49c3-8362-e9073468392b",
   "prevId": "8ee1d99f-7b4c-4c74-bbe5-91b5b2efbe44",
   "version": "7",
   "dialect": "postgresql",
@@ -4982,6 +4982,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "registration_incomplete": {
+          "name": "registration_incomplete",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "active": {
           "name": "active",
           "type": "boolean",
@@ -7012,6 +7019,43 @@
           ],
           "isUnique": true,
           "where": "\"user_accounts\".\"guardian_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_user_accounts_clinic_email": {
+          "name": "uq_user_accounts_clinic_email",
+          "columns": [
+            {
+              "expression": "clinic_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_user_accounts_super_admin_email": {
+          "name": "uq_user_accounts_super_admin_email",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"user_accounts\".\"clinic_id\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}

@@ -71,7 +71,7 @@ export async function linkAllPortalAccounts(): Promise<void> {
   ];
   for (const row of records) {
     // Conta como a aplicação grava (ADR-111): e-mail cifrado e índice cego real,
-    // para o login achar a conta só pelo hash depois da contração (0090).
+    // para o login achar a conta só pelo hash depois da contração (0091).
     const email = cipher.decrypt(row.email).toLowerCase();
     const emailHash = loginEmailHash(blindIndex, email);
     if (emailHash === null) continue;

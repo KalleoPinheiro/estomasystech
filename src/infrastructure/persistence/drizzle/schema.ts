@@ -274,7 +274,7 @@ export const userAccounts = pgTable(
     // determinístico, então a unicidade é do hash — por empresa (MT-06, ADR-003)
     // e, no super_admin (clinic_id nulo, que o Postgres trata como distinto),
     // pelo índice parcial. Os índices sobre o `email` em claro caíram na
-    // contração (ADR-111, migração 0090).
+    // contração (ADR-111, migração 0091).
     uniqueIndex('uq_user_accounts_clinic_email_hash')
       .on(table.clinicId, table.emailHash)
       .where(sql`${table.emailHash} IS NOT NULL`),
@@ -492,6 +492,10 @@ export const patients = pgTable(
       withTimezone: true,
       mode: 'date',
     }),
+    // Cadastro rápido da nova consulta (#972): falta completar o cadastro e colher o termo.
+    registrationIncomplete: boolean('registration_incomplete')
+      .notNull()
+      .default(false),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', {
       withTimezone: true,

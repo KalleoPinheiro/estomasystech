@@ -12,7 +12,7 @@ const insertConta = (db: Db, id: string, email: string, emailHash: string) =>
         VALUES (${id}, 'c1', ${email}, ${emailHash}, 'scrypt$x', 'atendente', true, now())`,
   );
 
-describe('Feature: contração do e-mail de login (ADR-111, migração 0090)', () => {
+describe('Feature: contração do e-mail de login (ADR-111, migração 0091)', () => {
   let db: Db;
 
   beforeAll(async () => {

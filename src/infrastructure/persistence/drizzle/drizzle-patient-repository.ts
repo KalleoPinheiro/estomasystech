@@ -59,6 +59,7 @@ const toPatient = (row: PatientRow, cipher: FieldCipher): Patient =>
     guardianId: row.guardianId,
     guardianPortalRevokedAt: row.guardianPortalRevokedAt,
     majorityReviewedAt: row.majorityReviewedAt,
+    registrationIncomplete: row.registrationIncomplete,
     active: row.active,
     createdAt: row.createdAt,
     anonymizedAt: row.anonymizedAt,
@@ -117,6 +118,7 @@ export class DrizzlePatientRepository implements PatientRepository {
       guardianId: patient.guardianId,
       guardianPortalRevokedAt: patient.guardianPortalRevokedAt,
       majorityReviewedAt: patient.majorityReviewedAt,
+      registrationIncomplete: patient.registrationIncomplete,
       active: patient.isActive,
       createdAt: patient.createdAt,
     };

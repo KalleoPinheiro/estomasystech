@@ -1,5 +1,5 @@
 import { maskCpf, normalizeOptionalCpf } from '../shared/cpf';
-import { ConflictError } from '../shared/errors';
+import { ConflictError, ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 import {
   normalizeOptionalEmail,
@@ -43,7 +43,23 @@ export interface PatientState extends PatientProps {
    * responsável (ex.: curatela) em vez de transferir (#372, ADR-032).
    */
   majorityReviewedAt?: Date | null;
+  /**
+   * Cadastro rápido feito na nova consulta (#972): só nome, celular e
+   * nascimento. Fica pendente até a equipe salvar o cadastro completo, e o
+   * termo de consentimento é colhido no 1º atendimento.
+   */
+  registrationIncomplete?: boolean;
 }
+
+/** Campos mínimos do cadastro rápido na nova consulta (#972). */
+export interface QuickPatientProps {
+  fullName: string;
+  phone: string;
+  birthDate: Date | null;
+}
+
+export const QUICK_REGISTRATION_BIRTH_DATE_REQUIRED =
+  'Informe a data de nascimento do paciente.';
 
 export const ANONYMIZED_PATIENT_REACTIVATION =
   'Paciente anonimizado não pode ser reativado. Cadastre a pessoa novamente.';
@@ -57,6 +73,20 @@ export class Patient {
       id: newId(),
       active: true,
       createdAt: new Date(),
+    });
+  }
+
+  /** Cadastro rápido (#972): nasce marcado como incompleto. */
+  static createQuick(props: QuickPatientProps): Patient {
+    if (!props.birthDate) {
+      throw new ValidationError(QUICK_REGISTRATION_BIRTH_DATE_REQUIRED);
+    }
+    return new Patient({
+      ...Patient.validate(props),
+      id: newId(),
+      active: true,
+      createdAt: new Date(),
+      registrationIncomplete: true,
     });
   }
 
@@ -123,6 +153,11 @@ export class Patient {
         majorityReviewedAt: null,
       }),
     });
+  }
+
+  /** A equipe salvou o cadastro completo: some o aviso de cadastro rápido (#972). */
+  completeRegistration(): Patient {
+    return new Patient({ ...this.state, registrationIncomplete: false });
   }
 
   /** A clínica mantém o acesso com o responsável depois dos 18 anos (ADR-032). */
@@ -208,6 +243,10 @@ export class Patient {
 
   get majorityReviewedAt(): Date | null {
     return this.state.majorityReviewedAt ?? null;
+  }
+
+  get registrationIncomplete(): boolean {
+    return this.state.registrationIncomplete ?? false;
   }
 
   get isActive(): boolean {
