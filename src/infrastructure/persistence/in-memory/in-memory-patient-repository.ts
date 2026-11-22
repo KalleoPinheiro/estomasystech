@@ -8,6 +8,10 @@ import {
   selectPatientPage,
 } from '@/domain/patient/patient-search';
 import {
+  type DuplicateCandidate,
+  matchesNameAndBirthDate,
+} from '@/domain/patient/possible-duplicates';
+import {
   type BlindIndexKind,
   normalizeForBlindIndex,
   orFallbackOnInvalid,
@@ -88,6 +92,19 @@ export class InMemoryPatientRepository implements PatientRepository {
       cursorId: decodeCursor<{ id?: string }>(page.cursor)?.id ?? null,
       limit: page.limit ?? Number.POSITIVE_INFINITY,
     });
+  }
+
+  async findPossibleDuplicates(
+    candidate: DuplicateCandidate,
+  ): Promise<Patient[]> {
+    const phone = normalizedOrNull('phone', candidate.phone);
+    return [...this.patients.values()]
+      .filter(
+        (p) =>
+          (phone !== null && normalizedOrNull('phone', p.phone) === phone) ||
+          matchesNameAndBirthDate(candidate, p),
+      )
+      .sort(comparePatientEntries);
   }
 }
 

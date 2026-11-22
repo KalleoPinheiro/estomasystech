@@ -174,6 +174,8 @@ export class RowLockingTransactionManager implements TransactionManager {
       findAdultsAwaitingMajorityReview: (ids, cutoff) =>
         base.findAdultsAwaitingMajorityReview(ids, cutoff),
       findAll: (search, page) => base.findAll(search, page),
+      findPossibleDuplicates: (candidate) =>
+        base.findPossibleDuplicates(candidate),
       findClinicIdById: (id) => base.findClinicIdById(id),
       findByIdForUpdate: async (id) => {
         const previous = this.tails.get(id) ?? Promise.resolve();

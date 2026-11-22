@@ -1,6 +1,6 @@
 # Próximos passos (fila única de passagem de bastão, ADR-109)
 
-Atualizada em 2026-11-21. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
+Atualizada em 2026-11-22. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
 PR (tira o que entregou, move o que mudou, acrescenta o que surgiu). Curto, em lista, sem nome de fornecedor.
 O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
@@ -18,9 +18,10 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-- **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva) e #957
-  ("Pacotes" virou "Plano de acompanhamento", só rótulo e texto; o modelo `SessionPackage` e `?aba=pacotes` não mudam).
-  #956 receituário em PDF (PRO-RN-39, sem migração; dependência nova `pdf-lib`). Pergunta aberta ao dono: corpo livre
+- **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva), #957
+  ("Pacotes" virou "Plano de acompanhamento", só rótulo e texto; o modelo `SessionPackage` e `?aba=pacotes` não mudam) e #992
+  (aviso de paciente repetido e nascimento no futuro recusado, PRO-RN-39, sem migração).
+  #956 receituário em PDF (PRO-RN-40, sem migração; dependência nova `pdf-lib`). Pergunta aberta ao dono: corpo livre
   além das intervenções do plano e envio do PDF ao paciente (portal ou e-mail).
 
 1. **Contração da cifra** (ADR-111, ADR-114, classe 3, P1 de segurança): no e-mail de login, `VALIDATE` da restrição `0086`,

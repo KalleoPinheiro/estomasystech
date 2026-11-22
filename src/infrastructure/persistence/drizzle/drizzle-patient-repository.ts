@@ -7,8 +7,13 @@ import type {
 } from '@/domain/patient/patient-repository';
 import {
   comparePatientEntries,
+  normalizeSearchText,
   selectPatientPage,
 } from '@/domain/patient/patient-search';
+import {
+  type DuplicateCandidate,
+  matchesNameAndBirthDate,
+} from '@/domain/patient/possible-duplicates';
 import { ConflictError } from '@/domain/shared/errors';
 import {
   type BlindIndex,
@@ -40,7 +45,10 @@ type PatientRow = typeof patients.$inferSelect;
 export const PATIENT_SCAN_CAP = 20_000;
 
 /** Nascimento: coluna cifrada (ADR-096); a coluna legada em claro só vale até a recifra. */
-function readBirthDate(row: PatientRow, cipher: FieldCipher): Date | null {
+function readBirthDate(
+  row: Pick<PatientRow, 'birthDate' | 'birthDateEnc'>,
+  cipher: FieldCipher,
+): Date | null {
   if (row.birthDateEnc) return new Date(cipher.decrypt(row.birthDateEnc));
   return row.birthDate;
 }
@@ -399,6 +407,64 @@ export class DrizzlePatientRepository implements PatientRepository {
       return hash !== null && candidates.includes(hash);
     });
     return [...hashed, ...legacyMatches].map((row) => row.id);
+  }
+
+  /**
+   * Possíveis repetidos (#992), sem dado em claro fora da empresa: o celular
+   * casa pelo índice cego (como a busca exata) e o nome com o nascimento são
+   * decifrados em memória só desta empresa (ADR-096). Nada vai para o log.
+   */
+  async findPossibleDuplicates(
+    candidate: DuplicateCandidate,
+  ): Promise<Patient[]> {
+    const clinicId = this.clinicId;
+    if (clinicId === null) return [];
+    const ids = new Set(await this.idsByPhone(clinicId, candidate.phone));
+    for (const id of await this.idsByNameAndBirthDate(candidate)) ids.add(id);
+    const found = await this.findByIds([...ids]);
+    return found.sort(compareByNameThenId);
+  }
+
+  private async idsByPhone(clinicId: string, phone: string): Promise<string[]> {
+    const candidates = orFallbackOnInvalid(
+      () => this.blindIndex.candidates(clinicId, 'phone', phone),
+      [],
+    );
+    if (candidates.length === 0) return [];
+    return this.matchKind(
+      clinicId,
+      'phone',
+      patients.phoneHash,
+      patients.phone,
+      candidates,
+    );
+  }
+
+  private async idsByNameAndBirthDate(
+    candidate: DuplicateCandidate,
+  ): Promise<string[]> {
+    if (candidate.birthDate === null) return [];
+    const wanted = normalizeSearchText(candidate.fullName);
+    const rows = await this.db
+      .select({
+        id: patients.id,
+        fullName: patients.fullName,
+        birthDate: patients.birthDate,
+        birthDateEnc: patients.birthDateEnc,
+      })
+      .from(patients)
+      .where(withTenant(patients, this.clinicId))
+      .limit(PATIENT_SCAN_CAP);
+    return rows
+      .map((row) => ({ row, fullName: this.cipher.decrypt(row.fullName) }))
+      .filter(({ fullName }) => normalizeSearchText(fullName) === wanted)
+      .filter(({ row, fullName }) =>
+        matchesNameAndBirthDate(candidate, {
+          fullName,
+          birthDate: readBirthDate(row, this.cipher),
+        }),
+      )
+      .map(({ row }) => row.id);
   }
 
   private async loadInOrder(ids: string[]): Promise<Patient[]> {
