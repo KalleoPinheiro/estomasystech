@@ -12,10 +12,10 @@ domain: financeiro
 ## Resumo
 
 Faturas (geradas pela consulta concluída ou avulsas), pagamentos parciais, desconto, recibo,
-pacotes de sessões, comissão do profissional e o fechamento mensal de repasses. Valores sempre
+planos de acompanhamento (pacote pré-pago de sessões), comissão do profissional e o fechamento mensal de repasses. Valores sempre
 em centavos inteiros.
 
-**Termos ([`CONTEXT.md`](../../../CONTEXT.md) § Business Rules):** `Invoice`, `Invoice payment`, `Commission`, `Commission payout`, `Session package`.
+**Termos ([`CONTEXT.md`](../../../CONTEXT.md) § Business Rules):** `Invoice`, `Invoice payment`, `Commission`, `Commission payout`, `Session package` (na tela, **Plano de acompanhamento**, #957).
 
 ## Regras de negócio
 
@@ -45,7 +45,7 @@ em centavos inteiros.
 | --- | --- | --- |
 | Faturas: filtro, fatura avulsa, receber (Pix, dinheiro, cartões, convênio, transferência), cancelar | entregue | `/faturamento` |
 | Pagamento parcial, desconto e recibo `REC-…` (com CPF do pagador e CNPJ da empresa, FIN-RN-15) | entregue | `/faturamento`, `/documentos/recibo/…` |
-| Pacotes de sessões | entregue | `/faturamento` |
+| Plano de acompanhamento (antes "Pacotes"; #957): venda em `/faturamento`, saldo e validade na aba da ficha | entregue | `/faturamento`, `/pacientes/:id?aba=pacotes` |
 | Repasses: fechamento, cancelamento, comprovante `REP-…`, extrato do profissional | entregue | `/repasses`, `/documentos/repasse/…` |
 | Monetização (PSP, cobrança recorrente) | backlog | [roadmap](../../plano-evolucao-faseado.md) — Fase 5 |
 

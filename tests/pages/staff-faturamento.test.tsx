@@ -188,7 +188,7 @@ const PACKAGE_FORM = {
 
 /** Preenche o modal de venda de pacote com o paciente, o procedimento e o preço. */
 const fillPackage = async (sessions?: string) => {
-  fireEvent.click(screen.getByText('Vender pacote'));
+  fireEvent.click(screen.getByText('Vender plano de acompanhamento'));
   await pickPatient('Maria Souza');
   fireEvent.change(screen.getByLabelText(/Procedimento/), {
     target: { value: 'proc-1' },
@@ -205,7 +205,9 @@ const fillPackage = async (sessions?: string) => {
 
 const submitPackage = () =>
   fireEvent.click(
-    screen.getByText('Vender pacote', { selector: 'button[type=submit]' }),
+    screen.getByText('Vender plano de acompanhamento', {
+      selector: 'button[type=submit]',
+    }),
   );
 
 /** Preenche o modal de nova fatura: paciente, descrição e valor. */
@@ -652,7 +654,9 @@ describe('Feature: Faturamento', () => {
       submitPackage();
 
       await waitFor(() => {
-        expect(screen.getByText('Pacote vendido')).toBeInTheDocument();
+        expect(
+          screen.getByText('Plano de acompanhamento vendido'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -663,11 +667,11 @@ describe('Feature: Faturamento', () => {
       await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('Vender pacote'));
+      fireEvent.click(screen.getByText('Vender plano de acompanhamento'));
 
       expect(
         await screen.findByText(
-          'Cadastre procedimentos no catálogo para vender pacotes.',
+          'Cadastre procedimentos no catálogo para vender planos de acompanhamento.',
         ),
       ).toBeInTheDocument();
     });
@@ -676,7 +680,7 @@ describe('Feature: Faturamento', () => {
       mockBillingData({ procedures: [procedureFixture] });
       patientsFetch([patientFixture]);
       billing.sellPackage.mockResolvedValue(
-        actionError('Erro ao vender pacote'),
+        actionError('Erro ao vender plano de acompanhamento'),
       );
 
       await renderBilling();
@@ -686,7 +690,7 @@ describe('Feature: Faturamento', () => {
       submitPackage();
 
       expect(
-        await screen.findByText('Erro ao vender pacote'),
+        await screen.findByText('Erro ao vender plano de acompanhamento'),
       ).toBeInTheDocument();
     });
 
@@ -739,15 +743,15 @@ describe('Feature: Faturamento', () => {
       await renderBilling();
       await screen.findByText('Nenhuma fatura encontrada.');
 
-      fireEvent.click(screen.getByText('Vender pacote'));
+      fireEvent.click(screen.getByText('Vender plano de acompanhamento'));
       expect(
-        await screen.findByText('Vender pacote de sessões'),
+        await screen.findByText('Novo plano de acompanhamento'),
       ).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
 
       expect(
-        screen.queryByText('Vender pacote de sessões'),
+        screen.queryByText('Novo plano de acompanhamento'),
       ).not.toBeInTheDocument();
       expect(billing.sellPackage).not.toHaveBeenCalled();
     });

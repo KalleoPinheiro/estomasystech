@@ -146,7 +146,7 @@ export default async function PayoutReceiptPage({
           {payout.rule ? formatCommissionRule(payout.rule) : 'não registrada'}
         </strong>
         {payout.rule?.kind === 'percentage'
-          ? ' (sessões de pacote valem o preço efetivo pago por sessão)'
+          ? ' (sessões de plano de acompanhamento valem o preço efetivo pago por sessão)'
           : ''}
         .
       </p>

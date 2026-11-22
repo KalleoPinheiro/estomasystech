@@ -129,7 +129,7 @@ describe('Feature: Relatório com repasse apurado, liberado e a liberar (banco r
       >
     ).data;
     const packageInvoice = invoices.find((i) =>
-      i.description.startsWith('Pacote:'),
+      i.description.startsWith('Plano de acompanhamento:'),
     );
     expect(invoices).toHaveLength(1);
     await patch('/invoices', packageInvoice?.id as string, {

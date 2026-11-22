@@ -564,8 +564,8 @@ test.describe("telas com defeito específico", () => {
     const active = await page.getByRole("tab", { name: "Anamnese" }).boundingBox();
     expect(active!.x).toBeGreaterThanOrEqual(0);
     expect(active!.x + active!.width).toBeLessThanOrEqual(MOBILE.width);
-    await page.getByRole("tab", { name: "Pacotes" }).click();
-    const tab = await page.getByRole("tab", { name: "Pacotes" }).boundingBox();
+    await page.getByRole("tab", { name: "Plano de acompanhamento" }).click();
+    const tab = await page.getByRole("tab", { name: "Plano de acompanhamento" }).boundingBox();
     expect(tab!.x).toBeGreaterThanOrEqual(0);
     expect(tab!.x + tab!.width).toBeLessThanOrEqual(MOBILE.width);
   });
