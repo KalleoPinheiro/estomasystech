@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { createPatient, unique } from "./support/api";
 import { literal, rx } from "./support/regexp";
 import { shown } from "./support/patient-name";
+import { confirmIfPossibleDuplicate } from "./support/possible-duplicate";
 
 test.describe("pacientes", () => {
   test("cria um paciente pela UI", async ({ page }) => {
@@ -29,6 +30,11 @@ test.describe("pacientes", () => {
       }
       await page.getByLabel("Telefone *").fill("11977776666");
       await page.getByRole("button", { name: "Salvar" }).click();
+      // Familiares dividem o celular: o aviso de repetido aparece e a equipe cadastra mesmo assim (#992).
+      if (index > 0) {
+        await expect(page.getByText("Este paciente pode já estar cadastrado.")).toBeVisible();
+      }
+      await confirmIfPossibleDuplicate(page, page.getByRole("cell", { name: shown(name) }));
       await expect(page.getByRole("cell", { name: shown(name) })).toBeVisible();
     }
   });
@@ -66,6 +72,8 @@ test.describe("pacientes", () => {
 
     await page.getByLabel("Telefone *").fill("(011) 97777-6666");
     await page.getByRole("button", { name: "Salvar" }).click();
+    // Outro teste já usou este celular: o aviso de repetido (#992) pode aparecer.
+    await confirmIfPossibleDuplicate(page, page.getByRole("row", { name: literal(shown(name)) }));
     await expect(page.getByRole("heading", { name: "Novo paciente" })).not.toBeVisible();
     await expect(page.getByRole("row", { name: literal(shown(name)) })).toContainText("(11) 97777-6666");
   });
