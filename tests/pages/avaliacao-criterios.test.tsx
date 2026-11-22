@@ -119,7 +119,7 @@ describe('Feature: critérios legíveis na avaliação de ferida (#955)', () => 
     fireEvent.change(screen.getByLabelText('Esfacelo (%)'), {
       target: { value: '40' },
     });
-    expect(screen.getByText('Soma: 100%')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Soma: 100%');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 

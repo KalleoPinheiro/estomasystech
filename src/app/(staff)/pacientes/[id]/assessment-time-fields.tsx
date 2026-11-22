@@ -180,6 +180,7 @@ function TissuePercentTotal({ values }: { values: TimeFormValues }) {
   if (total > TISSUE_PERCENT_MAX) {
     return (
       <p
+        key="acima"
         role="alert"
         className="mt-3 rounded bg-warning-soft px-3 py-2 text-sm text-warning"
       >
@@ -188,7 +189,11 @@ function TissuePercentTotal({ values }: { values: TimeFormValues }) {
       </p>
     );
   }
-  return <p className="mt-3 text-ink-3 text-sm">Soma: {total}%</p>;
+  return (
+    <p key="soma" role="status" className="mt-3 text-ink-3 text-sm">
+      Soma: {total}%
+    </p>
+  );
 }
 
 interface TimeFieldsProps {
