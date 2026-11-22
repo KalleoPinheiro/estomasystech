@@ -11,6 +11,7 @@ import {
   NOME_JOB_APROVACAO,
   saidaReaproveitamento,
   shaValido,
+  trechosDoDiff,
 } from '../../scripts/release/reaproveitar-aprovacao-lib';
 
 const classe3 = (motivos: ResultadoRisco['motivos']): ResultadoRisco => ({
@@ -297,6 +298,67 @@ describe('reaproveitar aprovação de classe 3 · bordas (ADR-117)', () => {
     expect(localAmbiguo(hunk('@@ -1,2 +1,3 @@', [' a', ' b']), base)).toBe(
       false,
     );
+  });
+
+  it('Dado linha removida que começa com "-- " e outro hunk com contexto repetido, Quando confere, Então o corpo do hunk não vira cabeçalho e o lugar é ambíguo', () => {
+    const diff = [
+      'diff --git a/x.sql b/x.sql',
+      '--- a/x.sql',
+      '+++ b/x.sql',
+      '@@ -1,2 +1,1 @@',
+      '--- /dev/null',
+      ' unica',
+      '@@ -10,2 +9,3 @@',
+      ' a',
+      ' b',
+      '+novo',
+    ].join('\n');
+    const base = '-- /dev/null\nunica\na\nb\nx\na\nb\n';
+    expect(trechosDoDiff(diff)).toEqual([
+      { arquivo: 'x.sql', antes: ['-- /dev/null', 'unica'] },
+      { arquivo: 'x.sql', antes: ['a', 'b'] },
+    ]);
+    expect(
+      localAmbiguo(diff, (arquivo) => (arquivo === 'x.sql' ? base : null)),
+    ).toBe(true);
+  });
+
+  it('Dado cabeçalho de hunk fora do formato ou aviso de fim de linha, Quando lê, Então o trecho fica vazio (ambíguo) ou o aviso é ignorado', () => {
+    expect(localAmbiguo(hunk('@@ quebrado @@', [' a']), () => 'a\n')).toBe(
+      true,
+    );
+    const semFimDeLinha = hunk('@@ -1,1 +1,1 @@', [
+      '-a',
+      '\\ No newline at end of file',
+    ]);
+    expect(trechosDoDiff(semFimDeLinha)).toEqual([
+      { arquivo: 'x.ts', antes: ['a'] },
+    ]);
+  });
+
+  it('Dado linha adicionada antes do contexto ou contagem explícita no cabeçalho, Quando lê, Então só o lado antes entra e o hunk termina na contagem', () => {
+    const cab = ['diff --git a/x.ts b/x.ts', '--- a/x.ts', '+++ b/x.ts'];
+    expect(
+      trechosDoDiff([...cab, '@@ -1,1 +1,2 @@', '+novo', ' a'].join('\n')),
+    ).toEqual([{ arquivo: 'x.ts', antes: ['a'] }]);
+    expect(
+      trechosDoDiff([...cab, '@@ -1 +1 @@', '-a', '+b'].join('\n')),
+    ).toEqual([{ arquivo: 'x.ts', antes: ['a'] }]);
+    const tres = [
+      ...cab,
+      '@@ -1,3 +1,3 @@',
+      ' a',
+      '--- b',
+      ' c',
+      '+d',
+      '@@ -9,1 +9,1 @@',
+      '-e',
+      '+f',
+    ];
+    expect(trechosDoDiff(tres.join('\n'))).toEqual([
+      { arquivo: 'x.ts', antes: ['a', '-- b', 'c'] },
+      { arquivo: 'x.ts', antes: ['e'] },
+    ]);
   });
 
   it('Dado arquivo binário depois de um texto, Quando confere, Então os dados do binário não entram no hunk anterior', () => {

@@ -104,13 +104,33 @@ interface Trecho {
   antes: string[];
 }
 
-/** Lado "antes" (contexto e linhas removidas) de cada hunk do diff unificado, por arquivo; arquivo novo fica de fora. */
+const CABECALHO_HUNK = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/;
+
+/** Linhas que o hunk ainda tem de cada lado; `null` se o cabeçalho não for reconhecido (o trecho fica vazio e é ambíguo). */
+function contagemDoHunk(linha: string): [number, number] | null {
+  const m = CABECALHO_HUNK.exec(linha);
+  return m ? [Number(m[1] ?? 1), Number(m[2] ?? 1)] : null;
+}
+
+/**
+ * Lado "antes" (contexto e linhas removidas) de cada hunk do diff unificado, por arquivo; arquivo novo fica de fora.
+ * O corpo do hunk é lido pela contagem do cabeçalho: uma linha removida que começa com `-- ` vira `--- ` no diff e
+ * não pode ser lida como cabeçalho de arquivo.
+ */
 export function trechosDoDiff(diff: string): Trecho[] {
   const trechos: Trecho[] = [];
   let arquivo: string | null = null;
   let atual: Trecho | null = null;
+  let antes = 0;
+  let depois = 0;
   for (const linha of diff.split('\n')) {
-    if (linha.startsWith('diff --git ')) {
+    if (antes + depois > 0) {
+      const marca = linha[0];
+      if (marca === '\\') continue;
+      if (marca !== '+') antes--;
+      if (marca !== '-') depois--;
+      if (marca !== '+') atual?.antes.push(linha.slice(1));
+    } else if (linha.startsWith('diff --git ')) {
       arquivo = null;
       atual = null;
     } else if (linha.startsWith('--- ')) {
@@ -118,8 +138,7 @@ export function trechosDoDiff(diff: string): Trecho[] {
     } else if (linha.startsWith('@@')) {
       atual = arquivo ? { arquivo, antes: [] } : null;
       if (atual) trechos.push(atual);
-    } else if (atual && (linha.startsWith(' ') || linha.startsWith('-'))) {
-      atual.antes.push(linha.slice(1));
+      [antes, depois] = contagemDoHunk(linha) ?? [0, 0];
     }
   }
   return trechos;
