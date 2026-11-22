@@ -187,7 +187,9 @@ jobs:
 
 - O job `aprovacao-classe-3` só roda na classe 3 e **fica parado até o dono aprovar** no Environment; o agente não
   tem como clicar, e o aprovador não pode ser quem disparou se "Prevent self-review" estiver ligado.
-- A aprovação vale por execução (push novo reinicia). O ruleset da `main` exige o check `portao-risco`.
+- A aprovação vale pelo **conteúdo de classe 3**, não pela execução ([ADR-117](../adr/117-aprovacao-de-classe-3-pelo-conteudo.md)):
+  push que não muda os arquivos que explicam a classe 3 (motivos + `git patch-id`) reaproveita a aprovação já dada
+  nesta PR; conteúdo sensível novo pede clique novo. O ruleset da `main` exige o check `portao-risco`.
 - O workflow que define isso e o próprio Environment ficam em caminhos de classe 3 (`.github/workflows/`), então
   mudá-los também exige o dono. Isto fecha o ciclo "quem escreve o portão não o abre sozinho".
 - Passo do dono no painel: criar o Environment `aprovacao-classe-3` com ele como revisor. O repositório é público

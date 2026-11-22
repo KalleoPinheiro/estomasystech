@@ -69,12 +69,14 @@ Vale para qualquer agente e para o dono. Uma mudança, uma sessão, um PR. Detal
 
 1. **Branch curta a partir da `main`** (`feat/<slug>`, `fix/<slug>`, `docs/<slug>`), PR para a `main`, **já pronto**
    (PR em rascunho roda só a política: "Gate do PR" e `ci` ficam vermelhos de propósito). Corpo com `Closes #N`.
+   Atualize o PR com `npm run pr:push -- <N>`: recusa branch errada e confere que o head do PR mudou.
 2. **O CI é o revisor.** Typecheck, lint, cobertura, integração, compatibilidade de migração, E2E e mutação nos
    arquivos de regra alterados. Passou, o merge entra sozinho: habilite o **auto-merge (squash)** no PR; se o PR já estiver verde (o GitHub não arma auto-merge nesse caso), o agente mergeia (squash), autorizado pelo dono em 2026-11-15 para PR comum com CI verde (classe 3 e produção seguem com o clique do dono). Não há
    sessão separada de revisão para mudança comum.
 3. **Só o perigoso pede mais.** Classe de risco 3 (`npm run check:risco`: login/auth, cifra, escopo de empresa,
    auditoria, migração não aditiva, workflows, portão de testes, deploy e backup) para no check "Portão de risco"
-   até o dono clicar no Environment `aprovacao-classe-3`. Nesses PRs, rode também a revisão the-judge na própria
+   até o dono clicar no Environment `aprovacao-classe-3`. O clique vale pelo conteúdo sensível: merge da `main` que não
+   mexe nele não pede outro ([ADR-117](docs/adr/117-aprovacao-de-classe-3-pelo-conteudo.md)). Nesses PRs, rode também a revisão the-judge na própria
    sessão antes de pedir o clique. Peça o clique só com o CI verde no head final, com o link do job.
 4. **Staging automática.** Cada entrada na `main` reconstrói a `staging` e roda a validação logada (3 papéis,
    larguras 360, 390, 768 e 1280) sozinha (`staging.yml`).
