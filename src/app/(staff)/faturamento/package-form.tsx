@@ -54,12 +54,16 @@ export function PackageForm({
         }),
       );
       toast({
-        description: 'Pacote vendido',
+        description: 'Plano de acompanhamento vendido',
         variant: 'success',
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao vender pacote');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Erro ao vender plano de acompanhamento',
+      );
       setSaving(false);
     }
   };
@@ -89,7 +93,8 @@ export function PackageForm({
         </NativeSelect>
         {activeProcedures.length === 0 && (
           <span className="mt-1 block font-normal text-warning text-xs">
-            Cadastre procedimentos no catálogo para vender pacotes.
+            Cadastre procedimentos no catálogo para vender planos de
+            acompanhamento.
           </span>
         )}
       </label>
@@ -128,11 +133,11 @@ export function PackageForm({
           className="mt-1"
         />
         <span className="mt-1 block font-normal text-ink-3 text-xs">
-          Opcional — sem data, o pacote não expira.
+          Opcional — sem data, o plano não expira.
         </span>
       </label>
       <Button type="submit" disabled={saving} variant="accent" className="mt-1">
-        {saving ? 'Vendendo…' : 'Vender pacote'}
+        {saving ? 'Vendendo…' : 'Vender plano de acompanhamento'}
       </Button>
     </SafeForm>
   );

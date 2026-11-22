@@ -59,7 +59,7 @@ export class SellSessionPackage {
             patientId: pkg.patientId,
             appointmentId: null,
             sessionPackageId: pkg.id,
-            description: `Pacote: ${procedure.name} (${pkg.totalSessions} sessões)`,
+            description: `Plano de acompanhamento: ${procedure.name} (${pkg.totalSessions} sessões)`,
             amount: Money.fromCents(pkg.priceCents),
           })
         : null;

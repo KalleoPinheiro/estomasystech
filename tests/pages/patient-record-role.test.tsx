@@ -101,7 +101,9 @@ describe('Feature: ficha do paciente por papel (#199)', () => {
       expect(screen.getByRole('tab', { name: 'Anamnese' })).toBeInTheDocument(),
     );
     expect(screen.getAllByRole('tab')).toHaveLength(5);
-    expect(screen.getByRole('tab', { name: 'Pacotes' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('tab', { name: 'Plano de acompanhamento' }),
+    ).toBeInTheDocument();
   });
 
   it('admin vê as cinco abas', async () => {

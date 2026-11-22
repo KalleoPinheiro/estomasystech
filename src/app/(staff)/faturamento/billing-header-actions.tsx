@@ -51,7 +51,7 @@ export function BillingHeaderActions({
         variant="outline"
         className="text-accent-ink hover:bg-accent-soft"
       >
-        Vender pacote
+        Vender plano de acompanhamento
       </Button>
       <Button type="button" onClick={() => setCreating(true)} variant="accent">
         + Nova fatura
@@ -59,7 +59,7 @@ export function BillingHeaderActions({
 
       {sellingPackage && (
         <Modal
-          title="Vender pacote de sessões"
+          title="Novo plano de acompanhamento"
           onClose={() => setSellingPackage(false)}
         >
           <PackageForm

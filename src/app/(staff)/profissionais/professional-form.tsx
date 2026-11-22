@@ -115,8 +115,8 @@ export function ProfessionalForm({
             className="mt-1"
           />
           <span className="mt-1 block font-normal text-ink-3 text-xs">
-            Percentual sobre o valor de cada sessão realizada (sessão de pacote
-            vale o preço do pacote dividido pelas sessões).
+            Percentual sobre o valor de cada sessão realizada (sessão de plano
+            de acompanhamento vale o preço do plano dividido pelas sessões).
           </span>
         </label>
       ) : (
