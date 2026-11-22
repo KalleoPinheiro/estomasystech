@@ -1,4 +1,5 @@
 import 'server-only';
+import type { Clinic } from '@/domain/clinic/clinic';
 import { NotFoundError } from '@/domain/shared/errors';
 import { getRepositories } from '@/infrastructure/container';
 import type { Session } from '@/lib/auth/session';
@@ -18,7 +19,11 @@ export async function getClinicInfoFor(
 ): Promise<ClinicInfoDto> {
   const clinicId = writeClinicId(session);
   const { clinics } = await getRepositories(clinicScope(clinicId));
-  const clinic = await clinics.findById(clinicId);
+  return clinicInfoFrom(await clinics.findById(clinicId));
+}
+
+/** Cabeçalho a partir da clínica já lida (a emissão do receituário lê na transação, #998). */
+export function clinicInfoFrom(clinic: Clinic | null): ClinicInfoDto {
   if (!clinic) {
     return {
       name: DEFAULT_NAME,
