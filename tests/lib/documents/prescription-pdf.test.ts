@@ -1,5 +1,5 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { PDFDocument, PDFPage, StandardFonts } from 'pdf-lib';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   type PrescriptionDocument,
   prescriptionIssuer,
@@ -120,6 +120,47 @@ describe('Feature: desenho do receituário em PDF (#956)', () => {
       registry: null,
       address: null,
     });
+  });
+
+  it('Dada data e nome que quebram em duas linhas, Quando a lista empurra a assinatura para o fim da folha, Então data, nome e registro ficam na mesma página', async () => {
+    const longCity =
+      'São José dos Campos e Região Metropolitana do Vale do Paraíba e Litoral Norte do Estado';
+    const longName =
+      'Enfermeira Estomaterapeuta Responsável Técnica Maria Aparecida dos Santos Albuquerque Ferreira';
+    const drawn: Array<{ page: PDFPage; text: string }> = [];
+    const spy = vi
+      .spyOn(PDFPage.prototype, 'drawText')
+      .mockImplementation(function (this: PDFPage, text: string) {
+        drawn.push({ page: this, text });
+      });
+    try {
+      for (let count = 1; count <= 40; count += 1) {
+        drawn.length = 0;
+        await renderPrescriptionPdf({
+          ...base,
+          city: longCity,
+          signer: { name: longName, registry: 'COREN-SP 654321' },
+          items: Array.from({ length: count }, (_, i) => ({
+            label: `Intervenção ${i + 1}`,
+            frequency: 'diária',
+          })),
+        });
+        const pageOf = (text: string) =>
+          drawn.find((entry) => entry.text === text)?.page;
+        const registryPage = pageOf('COREN-SP 654321');
+        const datePage = drawn.find((entry) =>
+          entry.text.startsWith('São José'),
+        )?.page;
+        const namePage = drawn.find((entry) =>
+          entry.text.startsWith('Enfermeira'),
+        )?.page;
+        expect(registryPage).toBeDefined();
+        expect(namePage).toBe(registryPage);
+        expect(datePage).toBe(registryPage);
+      }
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('Dado texto vazio, Quando quebra, Então não gera linha', () => {

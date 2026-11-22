@@ -61,11 +61,8 @@ const PAGE = { width: 595.28, height: 841.89 } as const;
 const MARGIN = 56;
 const CONTENT_WIDTH = PAGE.width - MARGIN * 2;
 const INK = rgb(0, 0, 0);
-/**
- * Data, espaço para assinar, linha, nome e registro numa só página: 18 + 15,4 +
- * 44 + 6 + 15,4 + 12,6 = 111,4 pt numa linha cada; a folga cobre nome em duas.
- */
-const SIGNATURE_BLOCK_HEIGHT = 140;
+/** Espaços fixos do bloco de assinatura: antes da data, para assinar e da linha. */
+const SIGNATURE_GAPS = 18 + 44 + 6;
 
 interface Fonts {
   regular: PDFFont;
@@ -158,7 +155,7 @@ class PageWriter {
     this.y = PAGE.height - MARGIN;
   }
 
-  text(value: string, style: TextStyle): void {
+  private layout(value: string, style: TextStyle) {
     const font = style.bold ? this.fonts.bold : this.fonts.regular;
     const indent = style.indent ?? 0;
     const lineHeight = style.size * 1.4;
@@ -168,6 +165,17 @@ class PageWriter {
       style.size,
       CONTENT_WIDTH - indent,
     );
+    return { font, indent, lineHeight, lines };
+  }
+
+  /** Altura que o texto ocupa depois de quebrado em linhas. */
+  measure(value: string, style: TextStyle): number {
+    const { lineHeight, lines } = this.layout(value, style);
+    return lines.length * lineHeight;
+  }
+
+  text(value: string, style: TextStyle): void {
+    const { font, indent, lineHeight, lines } = this.layout(value, style);
     for (const line of lines) {
       this.ensureSpace(lineHeight);
       this.y -= lineHeight;
@@ -240,17 +248,26 @@ function drawItems(writer: PageWriter, items: PrescriptionItem[]) {
   });
 }
 
+const DATE_STYLE: TextStyle = { size: 11 };
+const SIGNER_STYLE: TextStyle = { size: 11, align: 'center' };
+const REGISTRY_STYLE: TextStyle = { size: 9, align: 'center' };
+
+/** Data, linha, nome e registro ficam juntos: a reserva mede as linhas quebradas. */
 function drawSignature(writer: PageWriter, doc: PrescriptionDocument) {
-  writer.ensureSpace(SIGNATURE_BLOCK_HEIGHT);
-  writer.gap(18);
   const dateLine = doc.city ? `${doc.city}, ${doc.issuedOn}` : doc.issuedOn;
-  writer.text(dateLine, { size: 11 });
+  const registry = doc.signer.registry ?? '';
+  writer.ensureSpace(
+    SIGNATURE_GAPS +
+      writer.measure(dateLine, DATE_STYLE) +
+      writer.measure(doc.signer.name, SIGNER_STYLE) +
+      writer.measure(registry, REGISTRY_STYLE),
+  );
+  writer.gap(18);
+  writer.text(dateLine, DATE_STYLE);
   writer.gap(44);
   writer.rule(220);
-  writer.text(doc.signer.name, { size: 11, align: 'center' });
-  if (doc.signer.registry) {
-    writer.text(doc.signer.registry, { size: 9, align: 'center' });
-  }
+  writer.text(doc.signer.name, SIGNER_STYLE);
+  writer.text(registry, REGISTRY_STYLE);
 }
 
 export async function renderPrescriptionPdf(
