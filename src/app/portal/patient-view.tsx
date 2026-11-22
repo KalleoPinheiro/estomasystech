@@ -20,6 +20,7 @@ import type {
   InvoiceDto,
   PartnerShareConsentDto,
   PortalAppointmentDto,
+  PrescriptionSummaryDto,
   WaitlistEntryDto,
 } from '@/lib/dto';
 import {
@@ -40,6 +41,7 @@ import {
 } from './consent-card';
 import { DataRights } from './data-rights';
 import { PartnerConsentSection } from './partner-consent-card';
+import { MyPrescriptions } from './prescriptions';
 import { PrivacyNoticeCard } from './privacy-notice-card';
 import { ScheduleReturn } from './schedule-return';
 import { usePortalRefresh } from './use-portal-refresh';
@@ -56,6 +58,8 @@ export interface PatientPortalViewData {
   consent: ConsentStatusDto | null;
   imageConsent: ConsentStatusDto | null;
   waitlist: WaitlistEntryDto[];
+  /** Receituários emitidos (#956, ADR-116); ausente = nenhum. */
+  prescriptions?: PrescriptionSummaryDto[];
   dataRequests: DataSubjectRequestDto[] | null;
   partnerConsent: PartnerShareConsentDto | null;
 }
@@ -69,6 +73,7 @@ export function PatientPortalView({
   consent,
   imageConsent,
   waitlist,
+  prescriptions = [],
   dataRequests,
   partnerConsent,
   nowMs,
@@ -256,6 +261,8 @@ export function PatientPortalView({
           </div>
         )}
       </Section>
+
+      <MyPrescriptions prescriptions={prescriptions} />
 
       <Section title="Histórico de consultas">
         {past.length === 0 ? (

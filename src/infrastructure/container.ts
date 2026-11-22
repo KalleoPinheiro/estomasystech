@@ -39,6 +39,7 @@ import type {
   ConditionPhotoRepository,
   EvolutionNoteRepository,
   InterventionRecordRepository,
+  NursingPrescriptionRepository,
   OutcomeEvaluationRepository,
 } from '@/domain/clinical/clinical-repositories';
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
@@ -131,6 +132,7 @@ import {
 import { DrizzleInvoiceRepository } from './persistence/drizzle/drizzle-invoice-repository';
 import { DrizzleJobRunRepository } from './persistence/drizzle/drizzle-job-run-repository';
 import { DrizzleMfaRepository } from './persistence/drizzle/drizzle-mfa-repository';
+import { DrizzleNursingPrescriptionRepository } from './persistence/drizzle/drizzle-nursing-prescription-repository';
 import { DrizzleSessionPackageRepository } from './persistence/drizzle/drizzle-package-repository';
 import { DrizzlePartnerRepository } from './persistence/drizzle/drizzle-partner-repository';
 import { DrizzlePartnerShareConsentRepository } from './persistence/drizzle/drizzle-partner-share-consent-repository';
@@ -202,6 +204,7 @@ export interface Services {
   carePlanDiagnoses: CarePlanDiagnosisRepository;
   carePlanOutcomes: CarePlanOutcomeRepository;
   carePlanInterventions: CarePlanInterventionRepository;
+  nursingPrescriptions: NursingPrescriptionRepository;
   outcomeEvaluations: OutcomeEvaluationRepository;
   interventionRecords: InterventionRecordRepository;
   photoStorage: PhotoStorage;
@@ -438,6 +441,42 @@ function taxonomyRepositories(db: AppDb, clinicId: string | null) {
   };
 }
 
+/** Plano de cuidados (SAE) e o receituário emitido dele. */
+function carePlanRepositories(
+  db: AppDb,
+  clinicId: string | null,
+  cipher: FieldCipher,
+) {
+  return {
+    carePlans: new DrizzleCarePlanRepository(db, clinicId),
+    carePlanDiagnoses: new DrizzleCarePlanDiagnosisRepository(
+      db,
+      clinicId,
+      cipher,
+    ),
+    carePlanOutcomes: new DrizzleCarePlanOutcomeRepository(db, clinicId),
+    carePlanInterventions: new DrizzleCarePlanInterventionRepository(
+      db,
+      clinicId,
+    ),
+    nursingPrescriptions: new DrizzleNursingPrescriptionRepository(
+      db,
+      clinicId,
+      cipher,
+    ),
+    outcomeEvaluations: new DrizzleOutcomeEvaluationRepository(
+      db,
+      clinicId,
+      cipher,
+    ),
+    interventionRecords: new DrizzleInterventionRecordRepository(
+      db,
+      clinicId,
+      cipher,
+    ),
+  };
+}
+
 /**
  * O escopo vem só das fábricas de `@/lib/auth/tenant-scope` (sessionScope,
  * writeScope, clinicScope, systemScope) — objeto literal não compila.
@@ -519,27 +558,7 @@ export async function getRepositories(tenant: TenantScope): Promise<Services> {
       tenant.clinicId,
     ),
     ...taxonomyRepositories(db, tenant.clinicId),
-    carePlans: new DrizzleCarePlanRepository(db, tenant.clinicId),
-    carePlanDiagnoses: new DrizzleCarePlanDiagnosisRepository(
-      db,
-      tenant.clinicId,
-      cipher,
-    ),
-    carePlanOutcomes: new DrizzleCarePlanOutcomeRepository(db, tenant.clinicId),
-    carePlanInterventions: new DrizzleCarePlanInterventionRepository(
-      db,
-      tenant.clinicId,
-    ),
-    outcomeEvaluations: new DrizzleOutcomeEvaluationRepository(
-      db,
-      tenant.clinicId,
-      cipher,
-    ),
-    interventionRecords: new DrizzleInterventionRecordRepository(
-      db,
-      tenant.clinicId,
-      cipher,
-    ),
+    ...carePlanRepositories(db, tenant.clinicId, cipher),
     photoStorage: buildPhotoStorage(tenant.clinicId ?? LEGACY_CLINIC_ID),
     imageProcessor: new SharpImageProcessor(),
     supplies: new DrizzleSupplyRepository(db, tenant.clinicId),

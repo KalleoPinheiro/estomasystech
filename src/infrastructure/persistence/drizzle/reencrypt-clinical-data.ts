@@ -1,4 +1,4 @@
-import { asc, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { FieldCipher } from '@/lib/data-cipher';
 import type { AppDb } from './db';
@@ -13,6 +13,7 @@ import {
   evolutionNotes,
   interventionRecords,
   invoicePayments,
+  nursingPrescriptions,
   outcomeEvaluations,
   patients,
   waitlistEntries,
@@ -122,6 +123,12 @@ export const CIPHERED_TABLES: readonly CipheredTable[] = [
     columns: { notes: interventionRecords.notes },
   },
   {
+    name: 'nursing_prescriptions',
+    table: nursingPrescriptions,
+    key: nursingPrescriptions.id,
+    columns: { content: nursingPrescriptions.content },
+  },
+  {
     name: 'invoice_payments',
     table: invoicePayments,
     key: invoicePayments.id,
@@ -172,11 +179,21 @@ async function reencryptTable(
     for (const row of rows) {
       const changes = pendingChanges(cipher, row, names);
       if (Object.keys(changes).length > 0) {
-        await db
+        // Só regrava se o valor ainda é o lido: o que a retenção apagou no
+        // meio do caminho não volta, e a linha não conta como regravada.
+        const written = await db
           .update(target.table)
           .set(changes)
-          .where(eq(target.key, row.key as string));
-        updated += 1;
+          .where(
+            and(
+              eq(target.key, row.key as string),
+              ...Object.keys(changes).map((name) =>
+                eq(target.columns[name], row[name] as string),
+              ),
+            ),
+          )
+          .returning({ key: target.key });
+        updated += written.length;
       }
     }
     after = rows[rows.length - 1].key as string;

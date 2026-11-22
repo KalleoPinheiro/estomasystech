@@ -18,6 +18,7 @@ import type {
   ConditionPhotoRepository,
   EvolutionNoteRepository,
   InterventionRecordRepository,
+  NursingPrescriptionRepository,
   OutcomeEvaluationRepository,
 } from '@/domain/clinical/clinical-repositories';
 import type { ProfessionalPatientLinkRepository } from '@/domain/clinical/professional-patient-link';
@@ -107,6 +108,7 @@ export interface TransactionScope {
   carePlanDiagnoses: CarePlanDiagnosisRepository;
   carePlanOutcomes: CarePlanOutcomeRepository;
   carePlanInterventions: CarePlanInterventionRepository;
+  nursingPrescriptions: NursingPrescriptionRepository;
   outcomeEvaluations: OutcomeEvaluationRepository;
   interventionRecords: InterventionRecordRepository;
   nursingDiagnoses: NursingDiagnosisRepository;

@@ -50,6 +50,7 @@ import {
   recordCarePlanIntervention,
   resolveCarePlan,
 } from './actions/plano-cuidados';
+import { PrescriptionsSection } from './prescriptions-section';
 
 interface CarePlansSectionProps {
   patientId: string;
@@ -278,15 +279,9 @@ function CarePlanPanel({
         onRecorded={refresh}
       />
 
-      {/* Receituário (#956): PDF gerado no servidor com os itens prescritos. */}
+      {/* Receituário (#956, ADR-116): emitido do plano, conteúdo congelado. */}
       {detail.interventions.length > 0 && (
-        <a
-          href={`/api/care-plans/${planId}/receituario`}
-          download
-          className="self-start font-medium text-accent-ink text-sm hover:underline"
-        >
-          Baixar receituário (PDF)
-        </a>
+        <PrescriptionsSection planId={planId} />
       )}
 
       {isActive && (

@@ -43,6 +43,7 @@ import {
   PARTNER_SHARE_CONSENT_TEXT,
 } from '@/lib/partner-share-consent-text';
 import { loadBlock } from '@/lib/server/data/load-block';
+import { listPortalPrescriptions } from '@/lib/server/portal-prescriptions';
 import { waitlistWithNames } from '@/lib/waitlist-names';
 
 /**
@@ -299,12 +300,15 @@ export async function loadPartnerShareConsent(
  * adulto não vê esses blocos), então nem são lidos para ele.
  */
 export async function loadPatientPortalView(session: PatientPortalSession) {
-  const [data, consent, imageConsent, waitlist] = await Promise.all([
-    loadPatientPortal(session),
-    loadBlock(() => loadConsentStatus(session, 'treatment')),
-    loadBlock(() => loadConsentStatus(session, 'image')),
-    loadBlock(() => loadMyWaitlist(session)),
-  ]);
+  const [data, consent, imageConsent, waitlist, prescriptions] =
+    await Promise.all([
+      loadPatientPortal(session),
+      loadBlock(() => loadConsentStatus(session, 'treatment')),
+      loadBlock(() => loadConsentStatus(session, 'image')),
+      loadBlock(() => loadMyWaitlist(session)),
+      // Receituários emitidos (#956, ADR-116): entrega só pelo portal.
+      loadBlock(() => listPortalPrescriptions(session)),
+    ]);
   const canDecide = !data.actingFor || consent.data?.canSign === true;
   const [dataRequests, partnerConsent] = canDecide
     ? await Promise.all([
@@ -317,6 +321,7 @@ export async function loadPatientPortalView(session: PatientPortalSession) {
     consent: consent.data,
     imageConsent: imageConsent.data,
     waitlist: waitlist.data ?? [],
+    prescriptions: prescriptions.data ?? [],
     dataRequests: dataRequests?.data ?? null,
     partnerConsent: partnerConsent?.data ?? null,
   };

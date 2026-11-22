@@ -213,3 +213,10 @@ export const toCarePlanDetailDto = (
     ),
   ),
 });
+
+/** Receituário emitido (#956, ADR-116): só o que a lista mostra. */
+export interface PrescriptionSummaryDto {
+  id: string;
+  documentNumber: string;
+  issuedAt: string;
+}
