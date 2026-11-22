@@ -147,6 +147,7 @@ export function AppointmentForm({
       )}
       <PatientPicker
         label="Paciente *"
+        allowQuickCreate
         value={values.patientId}
         onChange={(patientId) => setValues((prev) => ({ ...prev, patientId }))}
       />

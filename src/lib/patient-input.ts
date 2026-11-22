@@ -11,4 +11,6 @@ export const createPatientSchema = z.object({
   notes: z.string().max(5000).nullish(),
   referredByPartnerId: z.string().max(100).nullish(),
   guardianId: z.string().max(100).nullish(),
+  // Cadastro rápido da nova consulta (#972): nome, celular e nascimento.
+  quickRegistration: z.boolean().optional(),
 });

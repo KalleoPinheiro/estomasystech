@@ -15,6 +15,11 @@ export interface CreatePatientInput {
   notes?: string | null;
   referredByPartnerId?: string | null;
   guardianId?: string | null;
+  /**
+   * Cadastro rápido da nova consulta (#972): só nome, celular e nascimento
+   * (obrigatório). O paciente fica com o cadastro incompleto.
+   */
+  quickRegistration?: boolean;
 }
 
 export class CreatePatient {
@@ -25,10 +30,21 @@ export class CreatePatient {
   ) {}
 
   async execute(input: CreatePatientInput): Promise<Patient> {
-    await assertValidReferrer(this.partners, input.referredByPartnerId);
-    await assertValidGuardian(this.guardians, input.guardianId);
-    const patient = Patient.create(input);
+    const patient = input.quickRegistration
+      ? Patient.createQuick({
+          fullName: input.fullName,
+          phone: input.phone,
+          birthDate: input.birthDate ?? null,
+        })
+      : await this.createFull(input);
     await this.patients.save(patient);
     return patient;
+  }
+
+  /** Indicação e responsável só valem no cadastro completo: o rápido os ignora (#972). */
+  private async createFull(input: CreatePatientInput): Promise<Patient> {
+    await assertValidReferrer(this.partners, input.referredByPartnerId);
+    await assertValidGuardian(this.guardians, input.guardianId);
+    return Patient.create(input);
   }
 }

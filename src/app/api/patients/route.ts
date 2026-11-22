@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       notes: body.notes ?? null,
       referredByPartnerId: body.referredByPartnerId ?? null,
       guardianId: body.guardianId ?? null,
+      quickRegistration: body.quickRegistration,
     });
     // Profissional que cadastra um paciente ganha acesso imediato a ele,
     // mesmo antes de qualquer agendamento (RBAC-17/18).

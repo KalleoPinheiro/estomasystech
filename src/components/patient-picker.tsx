@@ -4,6 +4,7 @@ import { Button, Input } from '@still-void/ui/react';
 import { useEffect, useId, useState } from 'react';
 import type { PatientDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
+import { QuickPatientForm } from './quick-patient-form';
 
 const SEARCH_DEBOUNCE_MS = 250;
 const MIN_SEARCH_LENGTH = 2;
@@ -23,6 +24,11 @@ interface PatientPickerProps {
    * o seletor abre com ele, sem ler a ficha por `/api`.
    */
   selectedName?: string | null;
+  /**
+   * Oferece "Cadastrar paciente" sem sair da tela (nova consulta, #972): o
+   * paciente criado já fica selecionado.
+   */
+  allowQuickCreate?: boolean;
 }
 
 function useDebounced(value: string): string {
@@ -127,11 +133,19 @@ export function PatientPicker({
   label = 'Paciente',
   includeInactive = false,
   selectedName = null,
+  allowQuickCreate = false,
 }: PatientPickerProps) {
   const inputId = useId();
   const [term, setTerm] = useState('');
   const [picked, setPicked] = useState<PatientDto | null>(null);
+  const [creating, setCreating] = useState(false);
   const debounced = useDebounced(term.trim());
+  const pick = (patient: PatientDto) => {
+    setTerm('');
+    setCreating(false);
+    setPicked(patient);
+    onChange(patient.id, patient);
+  };
 
   if (value) {
     return (
@@ -141,6 +155,19 @@ export function PatientPicker({
           patientId={value}
           knownName={picked?.id === value ? picked.fullName : selectedName}
           onClear={() => onChange('')}
+        />
+      </div>
+    );
+  }
+
+  if (creating) {
+    return (
+      <div className="font-medium text-sm">
+        {label}
+        <QuickPatientForm
+          initialName={term.trim()}
+          onCreated={pick}
+          onCancel={() => setCreating(false)}
         />
       </div>
     );
@@ -161,12 +188,19 @@ export function PatientPicker({
       <SearchResults
         term={debounced}
         includeInactive={includeInactive}
-        onPick={(patient) => {
-          setTerm('');
-          setPicked(patient);
-          onChange(patient.id, patient);
-        }}
+        onPick={pick}
       />
+      {allowQuickCreate ? (
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="mt-1 px-0"
+          onClick={() => setCreating(true)}
+        >
+          Não encontrou? Cadastrar paciente
+        </Button>
+      ) : null}
     </div>
   );
 }

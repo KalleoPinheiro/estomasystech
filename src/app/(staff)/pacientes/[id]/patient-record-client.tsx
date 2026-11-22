@@ -50,6 +50,7 @@ import { AnamnesisSection } from './anamnesis-section';
 import { GuardianPanel } from './guardian-panel';
 import { type PackageDto, PackagesSection } from './packages-section';
 import { PartnerConsentPanel } from './partner-consent-panel';
+import { QuickRegistrationBanner } from './quick-registration-banner';
 
 /**
  * Abas pesadas carregadas só quando abertas (#615): a ficha abre em Anamnese e
@@ -379,6 +380,7 @@ export function PatientRecordClient(props: PatientRecordClientProps) {
   return (
     <div>
       <PatientHeader patient={patient} canExport={canExport} />
+      <QuickRegistrationBanner patient={patient} />
       <AllergyBanner allergies={anamnesis?.allergies} />
       <GuardianPanel patient={patient} onChanged={refresh} />
       {can('/api/patients/_/partner-consent') && (

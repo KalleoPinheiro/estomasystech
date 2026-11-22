@@ -502,6 +502,10 @@ export const patients = pgTable(
       withTimezone: true,
       mode: 'date',
     }),
+    // Cadastro rápido da nova consulta (#972): falta completar o cadastro e colher o termo.
+    registrationIncomplete: boolean('registration_incomplete')
+      .notNull()
+      .default(false),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', {
       withTimezone: true,
