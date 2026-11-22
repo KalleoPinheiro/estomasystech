@@ -29,13 +29,16 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   deploy que a leva:** verificação de integridade com `sem indice cego=0` na linha `cifra_email_login`; senão `data:reencrypt`.
   Rollback = redeploy da tag anterior (ADR-111, "Contração feita").
 
-1. **Contração da cifra no cadastro** (ADR-096, classe 3): drop de `birth_date` e dos índices GIN antigos do paciente.
-2. **#955** (P1): critérios da avaliação de ferida legíveis na tela.
-3. **#964**: proposta do Plano de acompanhamento em PDF.
-4. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
+- **Na `main`, fora da produção:** #955 critérios legíveis na avaliação de ferida (PRO-RN-41, só texto, sem migração).
+
+1. **Contração da cifra no cadastro** (ADR-096, classe 3): drop de `birth_date` e dos índices GIN antigos do paciente. Ainda
+   sem issue. Em duas releases para o rollback por redeploy seguir valendo: primeiro o código para de ler e gravar
+   `birth_date` (e a verificação de integridade conta nascimento em claro), só na release seguinte o `DROP COLUMN`.
+2. **#964**: proposta do Plano de acompanhamento em PDF.
+3. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
    #973, #971 (telas). #961 espera a #376. #968 precisa de print e depende do EST-16. #974 e #975 precisam de print.
-5. **Espera decisão do dono** (regra 5): RM-14 WhatsApp com template da Meta, RM-05 pagamento online (PSP) e RM-17 TISS.
-6. **Abertas sem urgência:** #952 (E2E de série semanal reprova às sextas, P2), #933 (shard intermitente), #815, #651, #650, #862.
+4. **Espera decisão do dono** (regra 5): RM-14 WhatsApp com template da Meta, RM-05 pagamento online (PSP) e RM-17 TISS.
+5. **Abertas sem urgência:** #952 (E2E de série semanal reprova às sextas, P2), #933 (shard intermitente), #815, #651, #650, #862.
 
 ## Espera o dono
 
