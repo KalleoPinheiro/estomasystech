@@ -1,5 +1,10 @@
 import { UserAccount } from '@/domain/auth/user-account';
-import { currentDataCipher, getRepositories } from '@/infrastructure/container';
+import {
+  currentBlindIndex,
+  currentDataCipher,
+  getRepositories,
+} from '@/infrastructure/container';
+import { loginEmailHash } from '@/infrastructure/persistence/drizzle/drizzle-foundation-repositories';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import { UNSET_PASSWORD_HASH } from '@/lib/auth/password';
 import { clinicScope } from '@/lib/auth/tenant-scope';
@@ -45,32 +50,40 @@ export async function linkAllPortalAccounts(): Promise<void> {
   const db = await getDb();
   // O e-mail do paciente está cifrado no banco (ADR-096): decifra em JS.
   const cipher = currentDataCipher();
-  const result = await db.execute(
-    sql`SELECT id, clinic_id, email FROM patients WHERE email IS NOT NULL`,
-  );
-  const rows = (
-    result as unknown as {
-      rows: { id: string; clinic_id: string; email: string }[];
-    }
-  ).rows;
-  for (const row of rows) {
+  const blindIndex = currentBlindIndex();
+  const select = async (query: ReturnType<typeof sql>) =>
+    (
+      (await db.execute(query)) as unknown as {
+        rows: { id: string; clinic_id: string; email: string }[];
+      }
+    ).rows;
+  const records = [
+    ...(
+      await select(
+        sql`SELECT id, clinic_id, email FROM patients WHERE email IS NOT NULL`,
+      )
+    ).map((row) => ({ ...row, role: 'patient' as const })),
+    ...(
+      await select(
+        sql`SELECT id, clinic_id, email FROM partners WHERE email IS NOT NULL`,
+      )
+    ).map((row) => ({ ...row, role: 'partner' as const })),
+  ];
+  for (const row of records) {
+    // Conta como a aplicação grava (ADR-111): e-mail cifrado e índice cego real,
+    // para o login achar a conta só pelo hash depois da contração (0090).
     const email = cipher.decrypt(row.email).toLowerCase();
+    const emailHash = loginEmailHash(blindIndex, email);
+    if (emailHash === null) continue;
     await db.execute(sql`
-      INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, patient_id, active, created_at)
-      SELECT gen_random_uuid()::text, ${row.clinic_id}, ${email}, 'h-' || gen_random_uuid()::text, ${UNSET_PASSWORD_HASH}, 'patient', ${row.id}, true, now()
+      INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, patient_id, partner_id, active, created_at)
+      SELECT gen_random_uuid()::text, ${row.clinic_id}, ${cipher.encrypt(email)}, ${emailHash}, ${UNSET_PASSWORD_HASH}, ${row.role},
+        ${row.role === 'patient' ? row.id : null}, ${row.role === 'partner' ? row.id : null}, true, now()
       WHERE NOT EXISTS (
         SELECT 1 FROM user_accounts ua
-        WHERE ua.clinic_id = ${row.clinic_id} AND ua.email = ${email}
+        WHERE ua.clinic_id = ${row.clinic_id} AND ua.email_hash = ${emailHash}
       )`);
   }
-  await db.execute(sql`
-    INSERT INTO user_accounts (id, clinic_id, email, email_hash, password_hash, role, partner_id, active, created_at)
-    SELECT gen_random_uuid()::text, pa.clinic_id, lower(pa.email), 'h-' || gen_random_uuid()::text, ${UNSET_PASSWORD_HASH}, 'partner', pa.id, true, now()
-    FROM partners pa
-    WHERE NOT EXISTS (
-      SELECT 1 FROM user_accounts ua
-      WHERE ua.clinic_id = pa.clinic_id AND ua.email = lower(pa.email)
-    )`);
 }
 
 let recordCounter = 0;

@@ -75,8 +75,9 @@ Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-ofe
   normaliza), a condição é `false`. Conta ainda em claro deixa de ser achada no login.
 - A `0090` faz o `VALIDATE CONSTRAINT ck_user_accounts_email_hash_conta_ativa` e o `DROP` de
   `uq_user_accounts_clinic_email` e `uq_user_accounts_super_admin_email`. A unicidade é só dos índices sobre `email_hash`.
-- Precondição: `sem indice cego=0` na verificação de integridade. Se faltar, o `VALIDATE` falha, a migração volta inteira
-  e o Release deploy para antes de trocar a imagem. Rollback: redeploy da tag anterior (ela já grava cifra e hash e não
+- Precondição: `sem indice cego=0` na verificação de integridade. Conta ativa sem hash deixa de entrar no login (falha
+  fechada); se houver alguma, a `0090` não valida a restrição (segue `NOT VALID`, já imposta a toda escrita desde a `0086`)
+  e avisa com `WARNING`: rodar `data:reencrypt` e validar à mão (SQL no cabeçalho da `0090`). Rollback: redeploy da tag anterior (ela já grava cifra e hash e não
   depende dos índices removidos); o SQL para recriar os índices está no cabeçalho da `0090`.
 - `data:reencrypt` (`user_accounts_email`) continua: segue útil na rotação de chave e de pepper.
 

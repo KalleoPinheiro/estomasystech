@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { AuditEventRepository } from '@/domain/audit/audit-event-repository';
 import { hashAuthTokenSecret, RESET_TTL_MS } from '@/domain/auth/auth-token';
 import type { AppDb } from '@/infrastructure/persistence/drizzle/db';
+import { loginEmailHash } from '@/infrastructure/persistence/drizzle/drizzle-foundation-repositories';
 import { LEGACY_CLINIC_ID } from '@/infrastructure/persistence/drizzle/legacy-clinic';
 import {
   DB_CONNECTION_FAILED_MESSAGE,
@@ -19,6 +20,7 @@ import {
   UNSET_PASSWORD_HASH,
   verifyPassword,
 } from '@/lib/auth/password';
+import { blindIndexFromEnv } from '@/lib/blind-index';
 import { dataCipherFromEnv } from '@/lib/data-cipher';
 import { createPgliteFromTemplate } from '../support/pglite-template';
 
@@ -47,7 +49,8 @@ async function seed(options: { active?: boolean } = {}): Promise<void> {
       id: 'admin-clinica',
       clinicId: LEGACY_CLINIC_ID,
       email: 'admin@clinica.test',
-      emailHash: 'h-admin-clinica',
+      // Hash real (ADR-111): depois da contração o "e-mail em uso" só casa pelo índice cego.
+      emailHash: loginEmailHash(blindIndexFromEnv(), 'admin@clinica.test'),
       passwordHash: UNSET_PASSWORD_HASH,
       role: 'company_admin',
       active: true,
