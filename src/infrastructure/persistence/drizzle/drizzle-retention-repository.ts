@@ -49,6 +49,7 @@ import {
   invoicePayments,
   invoices,
   mfaRecoveryCodes,
+  nursingPrescriptions,
   outcomeEvaluations,
   partnerShareConsents,
   patients,
@@ -525,6 +526,16 @@ async function clearCarePlanText(tx: Tx, clinicId: string, patientId: string) {
           .select({ id: carePlanInterventions.id })
           .from(carePlanInterventions)
           .where(inArray(carePlanInterventions.carePlanId, plans)),
+      ),
+    );
+  // Receituário emitido (ADR-116): o número e a data ficam, o conteúdo sai.
+  await tx
+    .update(nursingPrescriptions)
+    .set({ content: null })
+    .where(
+      and(
+        eq(nursingPrescriptions.clinicId, clinicId),
+        eq(nursingPrescriptions.patientId, patientId),
       ),
     );
 }

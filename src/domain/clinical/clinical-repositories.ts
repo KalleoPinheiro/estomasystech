@@ -8,6 +8,7 @@ import type { ConditionAssessment } from './condition-assessment';
 import type { ConditionPhoto } from './condition-photo';
 import type { EvolutionNote } from './evolution-note';
 import type { InterventionRecord } from './intervention-record';
+import type { NursingPrescription } from './nursing-prescription';
 import type { OutcomeEvaluation } from './outcome-evaluation';
 
 export interface AnamnesisRepository {
@@ -77,6 +78,14 @@ export interface CarePlanInterventionRepository {
   findById(id: string): Promise<CarePlanIntervention | null>;
   findByCarePlanId(carePlanId: string): Promise<CarePlanIntervention[]>;
   findByCarePlanIds(carePlanIds: string[]): Promise<CarePlanIntervention[]>;
+}
+
+/** Receituário emitido (#956, ADR-116): só se grava uma vez, nunca se altera. */
+export interface NursingPrescriptionRepository {
+  save(prescription: NursingPrescription): Promise<void>;
+  findById(id: string): Promise<NursingPrescription | null>;
+  /** Do mais novo para o mais antigo. */
+  findByCarePlanId(carePlanId: string): Promise<NursingPrescription[]>;
 }
 
 export interface OutcomeEvaluationRepository {

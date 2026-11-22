@@ -14,6 +14,7 @@ import {
   InMemoryCarePlanOutcomeRepository,
   InMemoryCarePlanRepository,
   InMemoryInterventionRecordRepository,
+  InMemoryNursingPrescriptionRepository,
   InMemoryOutcomeEvaluationRepository,
 } from '@/infrastructure/persistence/in-memory/in-memory-care-plan-repositories';
 import {
@@ -137,6 +138,7 @@ export function inMemoryScope(
     carePlanDiagnoses: new InMemoryCarePlanDiagnosisRepository(),
     carePlanOutcomes: new InMemoryCarePlanOutcomeRepository(),
     carePlanInterventions: new InMemoryCarePlanInterventionRepository(),
+    nursingPrescriptions: new InMemoryNursingPrescriptionRepository(),
     outcomeEvaluations: new InMemoryOutcomeEvaluationRepository(),
     interventionRecords: new InMemoryInterventionRecordRepository(),
     nursingDiagnoses: new InMemoryNursingDiagnosisRepository(),

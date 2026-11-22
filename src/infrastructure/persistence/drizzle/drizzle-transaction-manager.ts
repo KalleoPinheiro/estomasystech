@@ -43,6 +43,7 @@ import {
   DrizzleSupplyRepository,
 } from './drizzle-inventory-repositories';
 import { DrizzleInvoiceRepository } from './drizzle-invoice-repository';
+import { DrizzleNursingPrescriptionRepository } from './drizzle-nursing-prescription-repository';
 import { DrizzleSessionPackageRepository } from './drizzle-package-repository';
 import { DrizzlePartnerRepository } from './drizzle-partner-repository';
 import { DrizzlePartnerShareConsentRepository } from './drizzle-partner-share-consent-repository';
@@ -170,6 +171,11 @@ export class DrizzleTransactionManager implements TransactionManager {
       carePlanInterventions: new DrizzleCarePlanInterventionRepository(
         tx,
         this.clinicId,
+      ),
+      nursingPrescriptions: new DrizzleNursingPrescriptionRepository(
+        tx,
+        this.clinicId,
+        this.cipher,
       ),
       outcomeEvaluations: new DrizzleOutcomeEvaluationRepository(
         tx,

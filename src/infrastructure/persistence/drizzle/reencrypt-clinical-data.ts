@@ -13,6 +13,7 @@ import {
   evolutionNotes,
   interventionRecords,
   invoicePayments,
+  nursingPrescriptions,
   outcomeEvaluations,
   patients,
   waitlistEntries,
@@ -120,6 +121,12 @@ export const CIPHERED_TABLES: readonly CipheredTable[] = [
     table: interventionRecords,
     key: interventionRecords.id,
     columns: { notes: interventionRecords.notes },
+  },
+  {
+    name: 'nursing_prescriptions',
+    table: nursingPrescriptions,
+    key: nursingPrescriptions.id,
+    columns: { content: nursingPrescriptions.content },
   },
   {
     name: 'invoice_payments',

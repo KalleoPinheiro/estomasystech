@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Invoice } from '@/domain/billing/invoice';
-import { ForbiddenError, NotFoundError } from '@/domain/shared/errors';
+import { NotFoundError } from '@/domain/shared/errors';
 import { Money } from '@/domain/shared/money';
 import { getRepositories } from '@/infrastructure/container';
 import type { Session } from '@/lib/auth/session';
@@ -65,46 +65,34 @@ describe('Feature: limites da emissão de documento', () => {
     await expect(attempt).rejects.toMatchObject({ entity: 'Pagamento' });
   });
 
-  it('Dado receituário emitido, Quando lê a trilha, Então o evento de emissão diz que é emissão de documento', async () => {
+  it('Dado plano de cuidados emitido, Quando lê a trilha, Então o evento de emissão diz que é emissão de documento', async () => {
     const resourceId = await seedDocumentResource(
       'plano-cuidados',
       CLINIC_A_ID,
     );
 
     const issuance = await issueDocumentFor(session, {
-      documentType: 'receituario',
+      documentType: 'plano-cuidados',
       resourceId,
     });
 
     const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
     const [event] = await auditEvents.findAll({
-      resourceType: 'receituario',
+      resourceType: 'plano-cuidados',
       resourceId,
     });
-    expect(issuance.documentNumber).toMatch(/^RCT-[0-9A-F]{8}$/);
+    expect(issuance.documentNumber).toMatch(/^PLAN-[0-9A-F]{8}$/);
     expect(event?.action).toBe('create');
     expect(event?.detail).toBe('emissão de documento');
   });
 
-  it('Dado Atendente, Quando emite o receituário pela regra única, Então 403 e nada é gravado', async () => {
-    const resourceId = await seedDocumentResource(
-      'plano-cuidados',
-      CLINIC_A_ID,
-    );
+  it('Dado o receituário, Quando pedem pela regra única de emissão, Então o tipo é recusado (emissão própria, ADR-116)', () => {
+    const parsed = issueDocumentSchema.safeParse({
+      documentType: 'receituario',
+      resourceId: 'plano-1',
+    });
 
-    const attempt = issueDocumentFor(
-      { ...session, role: 'atendente' },
-      { documentType: 'receituario', resourceId },
-    );
-
-    await expect(attempt).rejects.toBeInstanceOf(ForbiddenError);
-    await expect(attempt).rejects.toThrow(
-      'Receituário é emitido só por Admin ou Profissional',
-    );
-    const { auditEvents } = await getRepositories(clinicScope(CLINIC_A_ID));
-    expect(
-      await auditEvents.findAll({ resourceType: 'receituario', resourceId }),
-    ).toHaveLength(0);
+    expect(parsed.success).toBe(false);
   });
 
   it('Dado Atendente, Quando emite outro documento, Então a regra do receituário não o barra', async () => {

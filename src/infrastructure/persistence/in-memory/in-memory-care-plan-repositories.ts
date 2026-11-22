@@ -8,9 +8,11 @@ import type {
   CarePlanOutcomeRepository,
   CarePlanRepository,
   InterventionRecordRepository,
+  NursingPrescriptionRepository,
   OutcomeEvaluationRepository,
 } from '@/domain/clinical/clinical-repositories';
 import type { InterventionRecord } from '@/domain/clinical/intervention-record';
+import type { NursingPrescription } from '@/domain/clinical/nursing-prescription';
 import type { OutcomeEvaluation } from '@/domain/clinical/outcome-evaluation';
 
 export class InMemoryCarePlanRepository implements CarePlanRepository {
@@ -210,6 +212,30 @@ export class InMemoryInterventionRecordRepository
         (a, b) =>
           b.performedAt.getTime() - a.performedAt.getTime() ||
           a.id.localeCompare(b.id),
+      );
+  }
+}
+
+export class InMemoryNursingPrescriptionRepository
+  implements NursingPrescriptionRepository
+{
+  private readonly items = new Map<string, NursingPrescription>();
+
+  async save(prescription: NursingPrescription): Promise<void> {
+    this.items.set(prescription.id, prescription);
+  }
+
+  async findById(id: string): Promise<NursingPrescription | null> {
+    return this.items.get(id) ?? null;
+  }
+
+  async findByCarePlanId(carePlanId: string): Promise<NursingPrescription[]> {
+    return [...this.items.values()]
+      .filter((item) => item.carePlanId === carePlanId)
+      .sort(
+        (a, b) =>
+          b.issuedAt.getTime() - a.issuedAt.getTime() ||
+          b.id.localeCompare(a.id),
       );
   }
 }

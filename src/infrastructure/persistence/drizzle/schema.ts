@@ -1557,6 +1557,40 @@ export const carePlanInterventions = pgTable(
   ],
 );
 
+// Receituário de enfermagem emitido (#956, ADR-116): conteúdo congelado na emissão, cifrado
+// como um JSON só. `content` nulo = anonimizado pela retenção (o número e a data ficam).
+export const nursingPrescriptions = pgTable(
+  'nursing_prescriptions',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    carePlanId: text('care_plan_id')
+      .notNull()
+      .references(() => carePlans.id),
+    patientId: text('patient_id')
+      .notNull()
+      .references(() => patients.id),
+    issuedBy: text('issued_by').notNull(),
+    content: text('content'),
+    issuedAt: timestamp('issued_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [
+    index('idx_nursing_prescriptions_plan').on(
+      table.carePlanId,
+      table.issuedAt,
+    ),
+    index('idx_nursing_prescriptions_patient').on(
+      table.clinicId,
+      table.patientId,
+    ),
+  ],
+);
+
 // Reavaliação de resultado NOC — append-only (integridade de prontuário).
 export const outcomeEvaluations = pgTable(
   'outcome_evaluations',

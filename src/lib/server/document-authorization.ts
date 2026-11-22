@@ -40,9 +40,6 @@ const OWNER_RESOLVERS: Record<DocumentType, OwnerResolver> = {
     patientOwner((await repos.patients.findById(resourceId))?.id),
   'plano-cuidados': async (repos, { resourceId }) =>
     patientOwner((await repos.carePlans.findById(resourceId))?.patientId),
-  // Receituário (#956): sai do plano de cuidados, como o plano impresso.
-  receituario: async (repos, { resourceId }) =>
-    patientOwner((await repos.carePlans.findById(resourceId))?.patientId),
   relatorio: async (repos, { resourceId }) =>
     patientOwner((await repos.conditions.findById(resourceId))?.patientId),
   // `invoiceId` ausente já foi barrado em `authorizeDocumentIssuance`.
@@ -60,7 +57,6 @@ const ENTITY_LABEL: Record<DocumentType, string> = {
   atestado: 'Consulta',
   consentimento: 'Paciente',
   'plano-cuidados': 'Plano de cuidados',
-  receituario: 'Plano de cuidados',
   relatorio: 'Condição',
   recibo: 'Fatura',
   repasse: 'Repasse',

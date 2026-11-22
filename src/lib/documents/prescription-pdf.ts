@@ -6,40 +6,33 @@ import {
   StandardFonts,
 } from 'pdf-lib';
 import { providerDocument } from '@/domain/clinic/clinic';
+import type {
+  PrescriptionContent,
+  PrescriptionItemContent,
+} from '@/domain/clinical/nursing-prescription';
 import type { ClinicInfoDto } from '@/lib/dto';
 
 /**
  * Receituário de enfermagem em PDF de verdade (#956), gerado no servidor sem
  * depender do "Salvar como PDF" do navegador. Este módulo só desenha: recebe o
  * documento já montado (`PrescriptionDocument`) e devolve os bytes. Quem decide
- * o que entra (escopo da empresa, R4, emissão auditada) é
+ * o que entra (escopo da empresa, R4, emissão auditada e congelada) é
  * `src/lib/server/prescription.ts`.
  *
  * Fonte padrão do PDF (Helvetica, WinAnsi): cobre o português inteiro. Caractere
  * fora dela (emoji, símbolo raro) vira `?` em vez de derrubar a geração.
  */
 
-export interface PrescriptionItem {
-  label: string;
-  frequency: string;
-}
+export type PrescriptionItem = PrescriptionItemContent;
 
-export interface PrescriptionDocument {
-  issuer: {
-    name: string;
-    /** CNPJ da clínica ou CPF da autônoma (#977), já na forma impressa. */
-    document: { label: string; value: string } | null;
-    /** COREN no timbre da autônoma (#977); `null` na clínica. */
-    registry: string | null;
-    address: string | null;
-  };
-  patientName: string;
-  items: PrescriptionItem[];
+/** Conteúdo congelado na emissão (ADR-116), mais número e data impressos. */
+export interface PrescriptionDocument
+  extends Omit<PrescriptionContent, 'freeText'> {
+  /** Observações da prescritora; sem elas, a seção não sai. */
+  freeText?: string | null;
   /** Data da emissão persistida (ADR-082), já formatada (dd/mm/aaaa). */
   issuedOn: string;
-  city: string | null;
   documentNumber: string;
-  signer: { name: string; registry: string | null };
 }
 
 /**
@@ -248,6 +241,17 @@ function drawItems(writer: PageWriter, items: PrescriptionItem[]) {
   });
 }
 
+/** Observações da prescritora, além das intervenções do plano (ADR-116). */
+function drawFreeText(writer: PageWriter, freeText?: string | null) {
+  if (!freeText) return;
+  writer.gap(4);
+  writer.text('Observações', { size: 11, bold: true });
+  for (const paragraph of freeText.split(/\n+/)) {
+    writer.text(paragraph, { size: 11 });
+  }
+  writer.gap(6);
+}
+
 const DATE_STYLE: TextStyle = { size: 11 };
 const SIGNER_STYLE: TextStyle = { size: 11, align: 'center' };
 const REGISTRY_STYLE: TextStyle = { size: 9, align: 'center' };
@@ -296,6 +300,7 @@ export async function renderPrescriptionPdf(
   writer.text('Prescrição de enfermagem', { size: 11, bold: true });
   writer.gap(4);
   drawItems(writer, doc.items);
+  drawFreeText(writer, doc.freeText);
   drawSignature(writer, doc);
   writer.footnote(
     `Documento nº ${doc.documentNumber}, emitido em ${doc.issuedOn}.`,
