@@ -235,6 +235,11 @@ Fixed catalog of seven; a Clinic's Admin de Empresa cannot invent new roles or p
 - Stock movement price frozen at time of ledger entry.
 - Supplies have cost; procedures have revenue.
 
+**Follow-up plan — "Plano de acompanhamento"** (`src/domain/billing/package.ts`, model `SessionPackage`, #957)
+
+- A fixed number of sessions of one procedure sold for one price (the clinic's pricing sheet uses 5, 10 or 15), usually presented in a proposal. The screens, messages and the sale invoice ("Plano de acompanhamento: <procedimento> (N sessões)") say **Plano de acompanhamento**; never "Pacote". Code and tables keep `SessionPackage` / `session_packages`.
+- **Balance** (saldo) = sessions still unused; **validity** (validade) = optional last day to use them; each session is worth the plan price divided by its sessions (FIN-RN-06). Invoices sold before the rename keep the old "Pacote: …" description.
+
 **Invoice payments and discount** (`src/domain/billing/invoice.ts`, `invoice_payments`)
 
 - An invoice can be paid in **several payments** (partial payments), each immutable with amount, method and date. It stays `pending` until the payments reach the **net amount**; then it becomes `paid`, with the date and method of the settling payment. "Receber" with the full balance keeps the historic one-click flow.

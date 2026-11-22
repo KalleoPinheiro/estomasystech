@@ -145,15 +145,15 @@ test.describe("faturamento", () => {
     const procedure = await createProcedure(request, { name: `Procedimento Pacote ${unique()}` });
 
     await page.goto("/faturamento");
-    await page.getByRole("button", { name: "Vender pacote" }).click();
+    await page.getByRole("button", { name: "Vender plano de acompanhamento" }).click();
     await pickPatient(page, patient.fullName);
     await page.getByLabel("Procedimento *").selectOption({ label: procedure.name });
     await page.getByLabel("Sessões *").fill("5");
     await page.getByLabel("Preço total (R$) *").fill("500");
     // Dois botões com o mesmo texto na página (o que abre o modal e o de submit) — o
     // de submit é o último no DOM, dentro do modal.
-    await page.getByRole("button", { name: "Vender pacote", exact: true }).last().click();
-    await expect(page.getByRole("heading", { name: "Vender pacote de sessões" })).not.toBeVisible();
+    await page.getByRole("button", { name: "Vender plano de acompanhamento", exact: true }).last().click();
+    await expect(page.getByRole("heading", { name: "Novo plano de acompanhamento" })).not.toBeVisible();
 
     const [pkg] = await getPackagesByPatient(request, patient.id);
     expect(pkg.remainingSessions).toBe(5);
@@ -174,7 +174,7 @@ test.describe("faturamento", () => {
     expect(pkgAfter.usedSessions).toBe(1);
 
     // A sessão do pacote não deve ter gerado uma nova fatura pendente separada.
-    // A venda do pacote emite fatura própria ("Pacote: <procedimento> (N sessões)"),
+    // A venda do pacote emite fatura própria ("Plano de acompanhamento: <procedimento> (N sessões)"),
     // então casar o nome do paciente com o do procedimento pega as duas — a
     // distinção é a célula de descrição: a fatura da consulta usa o nome do
     // procedimento puro.
@@ -185,7 +185,7 @@ test.describe("faturamento", () => {
     });
     const packageSaleInvoice = pendingRowsForPatient.filter({
       has: page.getByRole("cell", {
-        name: `Pacote: ${procedure.name} (5 sessões)`,
+        name: `Plano de acompanhamento: ${procedure.name} (5 sessões)`,
         exact: true,
       }),
     });

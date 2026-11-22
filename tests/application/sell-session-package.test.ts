@@ -71,7 +71,9 @@ describe('Feature: Venda de pacote de sessões (SellSessionPackage)', () => {
     expect(stored.map((p) => p.id)).toEqual([result.package.id]);
     expect(invoices).toHaveLength(1);
     expect(invoices[0].amount.cents).toBe(100000);
-    expect(invoices[0].description).toBe('Pacote: Curativo (10 sessões)');
+    expect(invoices[0].description).toBe(
+      'Plano de acompanhamento: Curativo (10 sessões)',
+    );
     expect(result.procedureName).toBe('Curativo');
   });
 

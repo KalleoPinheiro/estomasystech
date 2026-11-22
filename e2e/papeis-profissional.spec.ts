@@ -36,9 +36,9 @@ test.describe("profissional", () => {
     await expect(page.getByRole("heading", { name: linkedPatientName })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Anamnese/ })).toBeVisible();
     // Pacotes: o Profissional vê o saldo, sem preço (AD-027, #296).
-    await page.getByRole("tab", { name: "Pacotes" }).click();
+    await page.getByRole("tab", { name: "Plano de acompanhamento" }).click();
     // Contra o `next dev` em máquina lenta a API de pacotes responde depois dos 10 s padrão (#308).
-    await expect(page.getByText("Nenhum pacote de sessões para este paciente.")).toBeVisible({
+    await expect(page.getByText("Nenhum plano de acompanhamento para este paciente.")).toBeVisible({
       timeout: 30_000,
     });
     expect(failures.list()).toEqual([]);

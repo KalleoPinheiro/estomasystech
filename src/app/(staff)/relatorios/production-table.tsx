@@ -123,8 +123,8 @@ export function ProductionTable({ rows }: { rows: ProfessionalProduction[] }) {
           <p className="mt-3 text-ink-2 text-xs">
             Repasse apurado sobre as sessões do mês. Liberado: fatura paga,
             cortesia ou atraso acima de 60 dias. A liberar: aguardando
-            pagamento. Sessão de pacote vale o preço do pacote dividido pelas
-            sessões; fatura cancelada não gera repasse.
+            pagamento. Sessão de plano de acompanhamento vale o preço do plano
+            dividido pelas sessões; fatura cancelada não gera repasse.
           </p>
         </>
       )}
