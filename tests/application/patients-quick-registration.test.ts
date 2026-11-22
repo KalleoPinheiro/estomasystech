@@ -33,6 +33,22 @@ describe('Feature: cadastro rápido na nova consulta (#972)', () => {
     expect(toPatientDto(patient).registrationIncomplete).toBe(true);
   });
 
+  it('Dado indicação inexistente no cadastro rápido, Então ignora a indicação e cadastra', async () => {
+    const partners = {
+      findById: async () => null,
+    } as unknown as ConstructorParameters<typeof CreatePatient>[1];
+    const patient = await new CreatePatient(repo, partners).execute({
+      fullName: 'Ana Rápida',
+      phone: '11988887777',
+      birthDate: new Date('1970-01-02'),
+      referredByPartnerId: 'parceiro-que-nao-existe',
+      quickRegistration: true,
+    });
+
+    expect(patient.referredByPartnerId).toBeNull();
+    expect(patient.registrationIncomplete).toBe(true);
+  });
+
   it('Dado cadastro rápido sem nascimento, Então recusa e nada é gravado', async () => {
     await expect(createQuick(null)).rejects.toThrow(ValidationError);
     expect(await repo.findAll()).toHaveLength(0);

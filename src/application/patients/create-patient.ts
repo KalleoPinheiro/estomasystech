@@ -30,16 +30,21 @@ export class CreatePatient {
   ) {}
 
   async execute(input: CreatePatientInput): Promise<Patient> {
-    await assertValidReferrer(this.partners, input.referredByPartnerId);
-    await assertValidGuardian(this.guardians, input.guardianId);
     const patient = input.quickRegistration
       ? Patient.createQuick({
           fullName: input.fullName,
           phone: input.phone,
           birthDate: input.birthDate ?? null,
         })
-      : Patient.create(input);
+      : await this.createFull(input);
     await this.patients.save(patient);
     return patient;
+  }
+
+  /** Indicação e responsável só valem no cadastro completo: o rápido os ignora (#972). */
+  private async createFull(input: CreatePatientInput): Promise<Patient> {
+    await assertValidReferrer(this.partners, input.referredByPartnerId);
+    await assertValidGuardian(this.guardians, input.guardianId);
+    return Patient.create(input);
   }
 }

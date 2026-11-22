@@ -74,8 +74,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
           ? undefined
           : body.referredByPartnerId,
       guardianId: body.guardianId,
-      // PUT é o salvamento do formulário completo: encerra o cadastro rápido (#972).
-      completeRegistration: true,
+      // O formulário completo sempre envia o nome; só vincular responsável não
+      // encerra o cadastro rápido (#972).
+      completeRegistration: body.fullName !== undefined,
     });
     if (body.guardianId !== undefined) {
       recordAudit(auditEvents, guard.session, {

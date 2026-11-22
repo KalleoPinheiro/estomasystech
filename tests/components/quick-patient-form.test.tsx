@@ -154,6 +154,58 @@ describe('Cadastro rápido no seletor de paciente (#972)', () => {
     expect(screen.getByTestId('value')).toHaveTextContent('');
   });
 
+  it('Enter num campo cadastra em vez de enviar o formulário de fora', async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, init?: RequestInit) =>
+        init?.method === 'POST'
+          ? ok({ id: 'p-enter', fullName: 'Ana', active: true })
+          : ok([]),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const outerSubmit = vi.fn((e: { preventDefault: () => void }) =>
+      e.preventDefault(),
+    );
+    render(
+      <form onSubmit={outerSubmit}>
+        <Harness />
+      </form>,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Não encontrou? Cadastrar paciente' }),
+    );
+    fill('Nome completo *', 'Ana');
+    fill('Celular *', '11988887777');
+    fill('Data de nascimento *', '1960-04-12');
+    const enter = fireEvent.keyDown(screen.getByLabelText('Celular *'), {
+      key: 'Enter',
+    });
+
+    expect(enter).toBe(false);
+    await waitFor(() =>
+      expect(screen.getByTestId('value')).toHaveTextContent('p-enter'),
+    );
+    expect(outerSubmit).not.toHaveBeenCalled();
+  });
+
+  it('outras teclas não disparam o cadastro', () => {
+    const fetchMock = vi.fn(async () => ok([]));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<Harness />);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Não encontrou? Cadastrar paciente' }),
+    );
+    expect(
+      fireEvent.keyDown(screen.getByLabelText('Celular *'), { key: 'a' }),
+    ).toBe(true);
+    expect(
+      fireEvent.keyDown(
+        screen.getByRole('button', { name: 'Cadastrar e selecionar' }),
+        { key: 'Enter' },
+      ),
+    ).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('cancelar volta para a busca', () => {
     vi.stubGlobal(
       'fetch',

@@ -78,7 +78,16 @@ export function QuickPatientForm({
   };
 
   return (
+    // Enter num campo cadastra o paciente em vez de enviar a consulta: o
+    // formulário de fora submeteria com o paciente ainda vazio.
     <fieldset
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' || !(e.target instanceof HTMLInputElement)) {
+          return;
+        }
+        e.preventDefault();
+        void save();
+      }}
       aria-label="Cadastro rápido de paciente"
       className="mt-1 grid gap-3 rounded-lg border border-border p-3"
     >

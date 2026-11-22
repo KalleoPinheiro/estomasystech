@@ -13,7 +13,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   parceiro, sem dado clínico), #909 (`email_hash` obrigatório na conta ativa, NULL só na anonimizada) e toda a esteira que
   estava planejada como "v0.11.0" (#820, #830, #832, #745, #925, #828, #914, #883). **Não existe v0.11.0 pendente:** era só
   nome de planejamento; o projeto do board foi cancelado e a label saiu das issues.
-- **A `main` está igual à produção** (nenhum commit depois de `402c41e6`).
+- **A `main` está à frente da produção** com o #972 (cadastro rápido); o resto da `main` já foi na v0.11.0.
 - **Release deploy** migra com o dono **antes** do deploy, trava se a migração falhar, reverte a imagem se a fumaça reprovar e
   ensaia o rollback no `validar` de todo `dry_run` e publicação (ADR-113, `producao.md` § 4.9). Resíduo: o ensaio imprime
   `::error` das versões falsas 0.0.2/0.0.1 e o resumo do run mostra "rollback executado" sem ter havido; a correção é o
