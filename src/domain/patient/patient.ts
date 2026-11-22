@@ -10,6 +10,7 @@ import {
   normalizeBrazilianPhoneOrThrow,
 } from '../shared/phone';
 import { isMinorOn } from './majority';
+import { FUTURE_BIRTH_DATE, isFutureBirthDate } from './possible-duplicates';
 
 export interface PatientProps {
   fullName: string;
@@ -64,6 +65,17 @@ export const QUICK_REGISTRATION_BIRTH_DATE_REQUIRED =
 export const ANONYMIZED_PATIENT_REACTIVATION =
   'Paciente anonimizado não pode ser reativado. Cadastre a pessoa novamente.';
 
+/** O nascimento mudou nesta edição: só então ele é conferido de novo (#992). */
+function changesBirthDate(
+  changes: Partial<PatientProps>,
+  current: Date | null | undefined,
+): boolean {
+  if (changes.birthDate === undefined) return false;
+  return (
+    (changes.birthDate?.getTime() ?? null) !== (current?.getTime() ?? null)
+  );
+}
+
 export class Patient {
   private constructor(private readonly state: PatientState) {}
 
@@ -97,8 +109,17 @@ export class Patient {
   private static validate(
     props: PatientProps,
     normalizePhone = true,
+    checkBirthDate = true,
   ): PatientProps {
     const contact = validateNameAndPhone(props);
+    // Nascimento legado no futuro segue gravado enquanto ninguém o altera (#992).
+    if (
+      checkBirthDate &&
+      props.birthDate &&
+      isFutureBirthDate(props.birthDate)
+    ) {
+      throw new ValidationError(FUTURE_BIRTH_DATE);
+    }
     return {
       fullName: contact.fullName,
       email: normalizeOptionalEmail(props.email),
@@ -120,6 +141,7 @@ export class Patient {
     const phoneChanged =
       incomingPhone !== undefined && incomingPhone.trim() !== this.state.phone;
     const nextPhone = phoneChanged ? incomingPhone : this.state.phone;
+    const birthDateChanged = changesBirthDate(changes, this.state.birthDate);
     const validated = Patient.validate(
       {
         fullName: changes.fullName ?? this.state.fullName,
@@ -141,6 +163,7 @@ export class Patient {
             : this.state.guardianId,
       },
       phoneChanged,
+      birthDateChanged,
     );
     // Trocar ou desvincular o responsável é ato da equipe e zera a revogação:
     // o vínculo novo nasce sem ela (ADR-028).

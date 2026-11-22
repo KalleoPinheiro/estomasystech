@@ -1,4 +1,5 @@
 import type { Patient } from './patient';
+import type { DuplicateCandidate } from './possible-duplicates';
 
 export interface PatientPage {
   limit?: number;
@@ -32,6 +33,11 @@ export interface PatientRepository {
     birthCutoff: Date,
   ): Promise<Patient[]>;
   findAll(search?: string, page?: PatientPage): Promise<Patient[]>;
+  /**
+   * Possíveis repetidos da empresa (#992): mesmo celular (índice cego) ou mesmo
+   * nome normalizado com a mesma data de nascimento, na ordem da listagem.
+   */
+  findPossibleDuplicates(candidate: DuplicateCandidate): Promise<Patient[]>;
   /** Empresa dona do registro — usado pelo acesso cross-empresa do papel de sistema para auditar. */
   findClinicIdById(id: string): Promise<string | null>;
 }
