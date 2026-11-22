@@ -21,7 +21,8 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 - **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva), #957
   ("Pacotes" virou "Plano de acompanhamento", só rótulo e texto; o modelo `SessionPackage` e `?aba=pacotes` não mudam) e #992
   (aviso de paciente repetido e nascimento no futuro recusado, PRO-RN-39, sem migração).
-  #956 receituário em PDF (PRO-RN-40, sem migração; dependência nova `pdf-lib`). Pergunta aberta ao dono: corpo livre
+  #956 receituário em PDF (PRO-RN-40, sem migração; dependência nova `pdf-lib`), com a emissão concorrente corrigida (#998:
+  conteúdo lido depois da trava do plano). Pergunta aberta ao dono: corpo livre
   além das intervenções do plano e envio do PDF ao paciente (portal ou e-mail).
 
 - **Na `main`, fora da produção (cifra):** contração do e-mail de login (PR #990, migração `0091`, não aditiva). **Antes do

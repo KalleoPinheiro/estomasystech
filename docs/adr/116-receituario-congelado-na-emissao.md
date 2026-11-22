@@ -33,7 +33,8 @@ plano. Um documento clínico entregue ao paciente não pode mudar depois com o m
 2. **Número por emissão.** O número é `RCT-` e os 8 primeiros caracteres do id do receituário. Se o plano, o
    timbre, a prescritora ou as observações mudarem, a próxima emissão é outro receituário, com outro número.
    Emitir de novo sem nada mudar devolve o último emitido (clique duplo não gera número novo). A trava
-   consultiva por plano (ADR-082) impede duas emissões simultâneas.
+   consultiva por plano (ADR-082) impede duas emissões simultâneas, e o conteúdo é lido pela própria
+   transação depois dela (#998): quem esperou a trava congela o plano como está, nunca o de antes.
 3. **Observações.** Texto livre opcional da prescritora, até 2000 caracteres, impresso depois das
    intervenções. Em branco, a seção não sai.
 4. **Cifra.** O conteúdo é dado de saúde: um JSON cifrado numa coluna só (`content`), com a
