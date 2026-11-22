@@ -1,5 +1,22 @@
 # estomasystech
 
+## 0.12.0
+
+### Minor Changes
+
+- 447c1b2: Antes de cadastrar um paciente, no cadastro rápido da nova consulta e no cadastro completo, o sistema avisa quando já existe alguém com o mesmo celular, ou com o mesmo nome e a mesma data de nascimento. A equipe escolhe usar o paciente já cadastrado ou cadastrar mesmo assim. A data de nascimento não pode mais ser no futuro.
+- 7379c2d: Nova consulta: quando a busca não acha o paciente, dá para cadastrá-lo ali mesmo só com nome, celular e data de nascimento, e ele já fica selecionado. A ficha mostra o aviso de cadastro rápido até a equipe completar o cadastro, lembrando de colher o termo de consentimento no 1º atendimento.
+- 25f8f32: Receituário de enfermagem: agora tem um campo de observações além das intervenções do plano, e o conteúdo fica congelado na emissão. Baixar de novo traz exatamente o que foi emitido; se o plano mudar, a próxima emissão sai com outro número. Os receituários emitidos aparecem listados no plano de cuidados. No portal, o paciente vê a seção "Meus receituários" e baixa cada receituário emitido para ele.
+- 7d3f62f: Plano de cuidados: novo botão "Emitir receituário (PDF)". O receituário de enfermagem sai em PDF de verdade, sem precisar do "Salvar como PDF" do navegador, com o timbre de quem emite (CNPJ da clínica ou CPF e COREN da profissional autônoma), o paciente, as intervenções prescritas com a frequência, a data e a assinatura de quem prescreveu.
+
+### Patch Changes
+
+- ed4c381: Segurança: o login acha a conta só pelo índice cego do e-mail (`email_hash`), nunca pelo e-mail em claro. Saíram a busca pelo e-mail em claro e os
+  índices antigos sobre ele, e o banco passa a conferir que toda conta ativa tem o índice cego. Antes de publicar, a
+  verificação de integridade precisa mostrar `sem indice cego=0`.
+- cf1eb62: "Pacotes" agora se chama "Plano de acompanhamento": a aba da ficha do paciente, o botão e a janela de venda no Faturamento, as mensagens e a descrição da fatura da venda. A aba traz uma frase que explica o saldo de sessões, a validade e o preço por sessão. Nada muda no funcionamento.
+- 6c4fdd0: Duas emissões quase simultâneas do receituário, com o plano de cuidados alterado no meio, não geram mais um receituário com o plano de segundos antes nem um número a mais: a emissão sempre congela o plano como ele está.
+
 ## 0.11.0
 
 ### Minor Changes
