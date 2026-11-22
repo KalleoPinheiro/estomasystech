@@ -22,7 +22,7 @@ export interface PatientDto {
   guardian?: GuardianDto | null;
   active: boolean;
   anonymized: boolean;
-  /** Cadastro rápido (#972): falta completar o cadastro e colher o termo. Ausente = completo. */
+  /** Cadastro rápido (#972): falta completar o cadastro e colher o termo. Ausente = cadastro completo. */
   registrationIncomplete?: boolean;
   createdAt: string;
 }
@@ -48,7 +48,8 @@ export const toPatientDto = (
   }),
   active: patient.isActive,
   anonymized: patient.isAnonymized,
-  registrationIncomplete: patient.registrationIncomplete,
+  // Só sai quando é verdade: o DTO do cadastro completo fica igual ao de antes (#972).
+  ...(patient.registrationIncomplete && { registrationIncomplete: true }),
   createdAt: patient.createdAt.toISOString(),
 });
 

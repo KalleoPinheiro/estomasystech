@@ -80,6 +80,6 @@ describe('Feature: cadastro rápido pela API (#972, PRO-RN-38)', () => {
       phone: '11988887777',
       email: 'ana@example.com',
     });
-    expect(updated.data.registrationIncomplete).toBe(false);
+    expect(updated.data.registrationIncomplete).toBeUndefined();
   });
 });
