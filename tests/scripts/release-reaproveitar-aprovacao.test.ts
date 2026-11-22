@@ -1,10 +1,6 @@
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
 import type { ResultadoRisco } from '../../scripts/release/classificar-risco-lib';
-import { impressaoDoHead } from '../../scripts/release/reaproveitar-aprovacao-git';
 import {
   AMBIENTE_APROVACAO,
   aprovadaPeloDono,
@@ -14,6 +10,7 @@ import {
   localAmbiguo,
   NOME_JOB_APROVACAO,
   saidaReaproveitamento,
+  shaValido,
 } from '../../scripts/release/reaproveitar-aprovacao-lib';
 
 const classe3 = (motivos: ResultadoRisco['motivos']): ResultadoRisco => ({
@@ -186,127 +183,130 @@ describe('reaproveitar aprovação de classe 3 · histórico do Actions (ADR-117
   });
 });
 
-describe('reaproveitar aprovação de classe 3 · git de verdade (ADR-117)', () => {
-  const dir = mkdtempSync(path.join(tmpdir(), 'reaproveitar-'));
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
-  const git = (...args: string[]) => {
-    const r = spawnSync(
-      'git',
-      [
-        '-c',
-        'user.email=t@t',
-        '-c',
-        'user.name=t',
-        '-c',
-        'commit.gpgsign=false',
-        ...args,
-      ],
-      { cwd: dir, encoding: 'utf8' },
-    );
-    if (r.status !== 0) throw new Error(r.stderr);
-    return r.stdout.trim();
-  };
-  const escrever = (arquivo: string, texto: string) => {
-    mkdirSync(path.dirname(path.join(dir, arquivo)), { recursive: true });
-    writeFileSync(path.join(dir, arquivo), texto);
-  };
-  const commit = (msg: string) => {
-    git('add', '-A');
-    git('commit', '-q', '-m', msg);
-    return git('rev-parse', 'HEAD');
-  };
+describe('reaproveitar aprovação de classe 3 · bordas (ADR-117)', () => {
+  const hex = 'a'.repeat(40);
+  const hunk = (cabecalho: string, linhas: string[]) =>
+    [
+      'diff --git a/x.ts b/x.ts',
+      '--- a/x.ts',
+      '+++ b/x.ts',
+      cabecalho,
+      ...linhas,
+      '+novo',
+    ].join('\n');
 
-  const linhas = Array.from(
-    { length: 10 },
-    (_, i) => `export const l${i} = ${i};`,
-  );
-  const sensivel = (...l: string[]) => `${l.join('\n')}\n`;
-
-  git('init', '-q', '-b', 'main');
-  escrever('src/lib/auth/session.ts', sensivel(...linhas));
-  escrever('docs/fila.md', 'linha base\n');
-  commit('base');
-  git('checkout', '-q', '-b', 'pr');
-  escrever(
-    'src/lib/auth/session.ts',
-    sensivel(...linhas, 'export const novo = 1;'),
-  );
-  escrever('docs/fila.md', 'linha do PR\n');
-  const aprovado = commit('pr');
-  git('checkout', '-q', 'main');
-  // A main mexe no topo do arquivo sensível (longe do trecho da PR) e na fila (conflito com a PR).
-  escrever(
-    'src/lib/auth/session.ts',
-    sensivel('// cabeçalho da main', ...linhas),
-  );
-  escrever('docs/fila.md', 'linha da main\n');
-  const main = commit('main andou');
-  git('checkout', '-q', 'pr');
-  spawnSync('git', ['merge', '-q', 'main'], { cwd: dir });
-  escrever(
-    'src/lib/auth/session.ts',
-    sensivel('// cabeçalho da main', ...linhas, 'export const novo = 1;'),
-  );
-  escrever('docs/fila.md', 'linha do PR e da main\n');
-  const atualizado = commit('merge da main com conflito na fila');
-
-  it('Dado merge da main que desloca o arquivo sensível e resolve conflito fora da classe 3, Quando compara, Então a impressão é a mesma', () => {
-    const antes = impressaoDoHead(main, aprovado, dir);
-    expect(antes).toMatch(/^[0-9a-f]{64}$/);
-    expect(impressaoDoHead(main, atualizado, dir)).toBe(antes);
+  it('Dado o workflow do portão, Quando lê, Então o job e o Environment têm os nomes que a lib procura', () => {
+    const yml = readFileSync('.github/workflows/portao-risco.yml', 'utf8');
+    expect(NOME_JOB_APROVACAO).toBe('Aprovação do dono (classe 3)');
+    expect(AMBIENTE_APROVACAO).toBe('aprovacao-classe-3');
+    expect(yml).toContain(`name: ${NOME_JOB_APROVACAO}`);
+    expect(yml).toContain(`environment: ${AMBIENTE_APROVACAO}`);
   });
 
-  it('Dado o mesmo trecho sensível em outro lugar do arquivo, Quando compara, Então a impressão muda (o contexto conta)', () => {
-    git('checkout', '-q', '-b', 'outro-lugar', main);
-    escrever(
-      'src/lib/auth/session.ts',
-      sensivel('// cabeçalho da main', 'export const novo = 1;', ...linhas),
-    );
-    const outroLugar = commit('mesmo trecho no topo');
-    expect(impressaoDoHead(main, outroLugar, dir)).not.toBe(
-      impressaoDoHead(main, aprovado, dir),
-    );
+  it('Dado SHA com caractere antes ou depois, Quando valida, Então recusa', () => {
+    expect(shaValido(hex)).toBe(true);
+    expect(shaValido(`x${hex}`)).toBe(false);
+    expect(shaValido(`${hex}x`)).toBe(false);
   });
 
-  it('Dado mudança no arquivo sensível depois da aprovação, Quando compara, Então a impressão muda', () => {
-    git('checkout', '-q', 'pr');
-    escrever(
+  it('Dado só motivo que não é de dependência, Quando monta, Então o lockfile não entra', () => {
+    expect(arquivosDaImpressao(classe3([auth]))).toEqual([
       'src/lib/auth/session.ts',
-      sensivel('// cabeçalho da main', ...linhas, 'export const novo = 2;'),
-    );
-    const mudou = commit('mexeu no sensível');
-    expect(impressaoDoHead(main, mudou, dir)).not.toBe(
-      impressaoDoHead(main, aprovado, dir),
-    );
+    ]);
   });
 
-  it('Dado o arquivo sensível com o mesmo contexto em dois lugares, Quando calcula, Então não há impressão (o lugar seria ambíguo)', () => {
-    git('checkout', '-q', '-b', 'repetido', main);
-    escrever(
-      'src/lib/auth/session.ts',
-      sensivel('// cabeçalho da main', ...linhas, ...linhas),
-    );
-    const base2 = commit('contexto repetido');
-    git('checkout', '-q', '-b', 'repetido-pr');
-    escrever(
-      'src/lib/auth/session.ts',
-      sensivel(
-        '// cabeçalho da main',
-        ...linhas.slice(0, 5),
-        'export const novo = 1;',
-        ...linhas.slice(5),
-        ...linhas,
+  it('Dado patch-id com espaço antes ou motivos em outra ordem, Quando calcula, Então a impressão é a mesma', () => {
+    const outro = {
+      ...auth,
+      regra: 'cifra',
+      arquivo: 'src/lib/crypto.ts',
+      detalhe: 'cifra',
+    };
+    const ref = impressao(classe3([auth, outro]), PATCH);
+    expect(ref).not.toBeNull();
+    expect(impressao(classe3([auth, outro]), `\n  ${PATCH}`)).toBe(ref);
+    expect(impressao(classe3([outro, auth]), PATCH)).toBe(ref);
+  });
+
+  it('Dado job de aprovação que não terminou com sucesso, Quando confere, Então não reaproveita mesmo com registro', () => {
+    const registro = [
+      { state: 'approved', environments: [{ name: AMBIENTE_APROVACAO }] },
+    ];
+    expect(
+      aprovadaPeloDono(
+        [{ name: NOME_JOB_APROVACAO, conclusion: 'failure' }],
+        registro,
       ),
-    );
-    const pr2 = commit('edição num dos dois lugares');
-    expect(impressaoDoHead(base2, pr2, dir)).toBeNull();
+    ).toBe(false);
+    expect(
+      aprovadaPeloDono([{ name: 'outro', conclusion: 'success' }], registro),
+    ).toBe(false);
   });
 
-  it('Dado head sem classe 3 ou ref inexistente, Quando calcula, Então não há impressão', () => {
-    git('checkout', '-q', '-b', 'so-docs', main);
-    escrever('docs/fila.md', 'só doc\n');
-    const soDocs = commit('só docs');
-    expect(impressaoDoHead(main, soDocs, dir)).toBeNull();
-    expect(impressaoDoHead(main, 'f'.repeat(40), dir)).toBeNull();
+  it('Dado origem sem reaproveitamento ou fora do formato https, Quando formata, Então não põe a origem', () => {
+    const r = { motivo: 'x', origem: 'https://github.com/x/y/actions/runs/1' };
+    expect(saidaReaproveitamento({ ...r, reaproveitada: false })).toBe(
+      'reaproveitada=false',
+    );
+    expect(
+      saidaReaproveitamento({
+        ...r,
+        reaproveitada: true,
+        origem: 'javascript:https://x',
+      }),
+    ).toBe('reaproveitada=true');
+    expect(
+      saidaReaproveitamento({
+        ...r,
+        reaproveitada: true,
+        origem: 'https://x y',
+      }),
+    ).toBe('reaproveitada=true');
+  });
+
+  it('Dado cabeçalho de hunk com nome de função, Quando confere, Então o hunk entra na comparação', () => {
+    expect(
+      localAmbiguo(
+        hunk('@@ -1,2 +1,3 @@ function f()', [' a', ' b']),
+        () => 'a\nb\nx\na\nb\n',
+      ),
+    ).toBe(true);
+  });
+
+  it('Dado linha removida que distingue o lugar, Quando confere, Então ela conta no lado antes', () => {
+    expect(
+      localAmbiguo(
+        hunk('@@ -1,2 +1,2 @@', [' a', '-velho']),
+        () => 'a\nvelho\nz\na\nnovo\n',
+      ),
+    ).toBe(false);
+  });
+
+  it('Dado trecho no fim do arquivo ou só parecido em outro lugar, Quando confere, Então o lugar é único', () => {
+    expect(
+      localAmbiguo(hunk('@@ -2,2 +2,3 @@', [' a', ' b']), () => 'x\na\nb'),
+    ).toBe(false);
+    expect(
+      localAmbiguo(hunk('@@ -3,2 +3,3 @@', [' a', ' b']), () => 'a\nc\na\nb\n'),
+    ).toBe(false);
+  });
+
+  it('Dado o nome do arquivo no diff, Quando confere, Então busca a base pelo mesmo caminho', () => {
+    const base = (arquivo: string) =>
+      arquivo === 'x.ts' ? 'a\nb\n' : 'a\nb\na\nb\n';
+    expect(localAmbiguo(hunk('@@ -1,2 +1,3 @@', [' a', ' b']), base)).toBe(
+      false,
+    );
+  });
+
+  it('Dado arquivo binário depois de um texto, Quando confere, Então os dados do binário não entram no hunk anterior', () => {
+    const diff = [
+      hunk('@@ -1,2 +1,3 @@', [' a', ' b']),
+      'diff --git a/i.png b/i.png',
+      'GIT binary patch',
+      'literal 3',
+      '-a',
+    ].join('\n');
+    expect(localAmbiguo(diff, () => 'a\nb\n-a\n')).toBe(false);
   });
 });
