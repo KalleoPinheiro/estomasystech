@@ -1,4 +1,5 @@
 import 'server-only';
+import type { TransactionScope } from '@/application/ports/transaction-manager';
 import { AuditEvent } from '@/domain/audit/audit-event';
 import { isClinicInfoComplete } from '@/domain/clinic/clinic';
 import {
@@ -29,10 +30,8 @@ import type {
   PrescriptionSummaryDto,
 } from '@/lib/dto';
 import { formatDate } from '@/lib/format';
-import { getCarePlanDetailFor } from './data/care-plan';
-import { getClinicInfoFor } from './data/clinic-info';
-import { getPrescribingProfessionalFor } from './data/documents';
-import { getPatientRecord } from './data/patient-record';
+import { carePlanDetailFrom, getCarePlanDetailFor } from './data/care-plan';
+import { clinicInfoFrom } from './data/clinic-info';
 
 /**
  * Receituário de enfermagem (#956, ADR-116). Emitir grava o conteúdo impresso
@@ -81,13 +80,13 @@ function assertPrintable(
 }
 
 async function signerFor(
-  session: Session,
+  tx: TransactionScope,
   clinic: ClinicInfoDto,
   professionalId: string | null,
 ): Promise<PrescriptionContent['signer']> {
   // Assina quem prescreveu o plano; sem ele, o responsável técnico (#94, DOC-11).
   const professional = professionalId
-    ? await getPrescribingProfessionalFor(session, professionalId)
+    ? await tx.professionals.findById(professionalId)
     : null;
   if (professional) {
     return { name: professional.fullName, registry: professional.registry };
@@ -98,25 +97,34 @@ async function signerFor(
   };
 }
 
-/** Monta, do plano como está agora, o que vai ser impresso. */
+/**
+ * Monta, do plano como está agora, o que vai ser impresso. Lê tudo pela
+ * transação e só depois da trava do plano: duas emissões concorrentes nunca
+ * congelam um plano lido antes da outra gravar (#998).
+ */
 async function currentContent(
-  session: Session,
+  tx: TransactionScope,
+  clinicId: string,
   carePlanId: string,
   freeText: string | null,
 ): Promise<{ patientId: string; content: PrescriptionContent }> {
-  const detail = await getCarePlanDetailFor(session, carePlanId);
-  const clinic = await getClinicInfoFor(session);
+  const detail = await carePlanDetailFrom(tx, carePlanId);
+  const clinic = clinicInfoFrom(await tx.clinics.findById(clinicId));
   assertPrintable(clinic, detail);
-  const [patient, signer] = await Promise.all([
-    getPatientRecord(session, detail.plan.patientId),
-    signerFor(session, clinic, detail.plan.professionalId),
-  ]);
+  const patientId = detail.plan.patientId;
+  // Trava a linha do paciente: a anonimização da retenção espera ou já
+  // passou. Anonimizado no meio do caminho não grava o nome.
+  const holder = await tx.patients.findByIdForUpdate(patientId);
+  if (holder?.isAnonymized !== false) {
+    throw new NotFoundError('Paciente', patientId);
+  }
+  const signer = await signerFor(tx, clinic, detail.plan.professionalId);
   return {
-    patientId: detail.plan.patientId,
+    patientId,
     content: {
       issuer: prescriptionIssuer(clinic),
       city: clinic.city,
-      patientName: patient.fullName,
+      patientName: holder.fullName,
       items: detail.interventions.map((intervention) => ({
         label: intervention.interventionLabel,
         frequency: intervention.frequency,
@@ -140,21 +148,19 @@ export async function issuePrescriptionFor(
   if (session.role === 'atendente') {
     throw new ForbiddenError(RECEITUARIO_ROLE_MESSAGE);
   }
-  const { patientId, content } = await currentContent(
-    session,
-    carePlanId,
-    freeText,
-  );
+  // Fora da transação só o portão: R4 do Profissional e a leitura auditada do
+  // plano (404 cedo). O conteúdo é lido de novo dentro, depois da trava.
+  await getCarePlanDetailFor(session, carePlanId);
   const clinicId = writeClinicId(session);
   const { transactions } = await getRepositories(writeScope(session));
   return transactions.run(async (tx) => {
     await tx.auditEvents.lockResource(RESOURCE_TYPE, carePlanId);
-    // Trava a linha do paciente: a anonimização da retenção espera ou já
-    // passou. Anonimizado no meio do caminho não grava o nome lido antes.
-    const holder = await tx.patients.findByIdForUpdate(patientId);
-    if (holder?.isAnonymized !== false) {
-      throw new NotFoundError('Paciente', patientId);
-    }
+    const { patientId, content } = await currentContent(
+      tx,
+      clinicId,
+      carePlanId,
+      freeText,
+    );
     const [latest] = await tx.nursingPrescriptions.findByCarePlanId(carePlanId);
     if (latest?.hasSameContent(content)) return toPrescriptionSummary(latest);
 
