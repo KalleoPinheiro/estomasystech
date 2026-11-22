@@ -137,6 +137,10 @@ describe('Feature: persistência do receituário emitido (#956, ADR-116)', () =>
     );
 
     expect(listed.map((item) => item.id)).toEqual([newer.id, older.id]);
+    const byPatient = await repo.findByPatientId(patientId);
+    expect(byPatient.map((item) => item.id)).toEqual([newer.id, older.id]);
+    expect(await repo.findByPatientId('outro-paciente')).toEqual([]);
+    expect(await other.findByPatientId(patientId)).toEqual([]);
     expect(await other.findByCarePlanId(planId)).toEqual([]);
     expect(await other.findById(newer.id)).toBeNull();
   });
@@ -191,6 +195,15 @@ describe('Feature: persistência do receituário emitido (#956, ADR-116)', () =>
     const tie = [older.id, tieA.id].sort().reverse();
     expect(listed.map((item) => item.id)).toEqual([newer.id, ...tie]);
     expect(await repo.findById(newer.id)).toBe(newer);
+    const otherPatient = prescriptionFor('plano-3', 'pac-2');
+    await repo.save(otherPatient);
+    const latest = [newer.id, elsewhere.id].sort().reverse();
+    expect(
+      (await repo.findByPatientId('pac-1')).map((item) => item.id),
+    ).toEqual([...latest, ...tie]);
+    expect(
+      (await repo.findByPatientId('pac-2')).map((item) => item.id),
+    ).toEqual([otherPatient.id]);
     expect(await repo.findById('nada')).toBeNull();
   });
 });

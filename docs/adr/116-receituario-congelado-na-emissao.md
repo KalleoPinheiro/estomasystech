@@ -49,4 +49,4 @@ plano. Um documento clínico entregue ao paciente não pode mudar depois com o m
 
 - Migração `0092` aditiva (tabela nova). O código anterior não a lê.
 - Receituários emitidos antes desta versão (só na staging; não chegaram à produção) não aparecem na lista.
-- A entrega ao paciente pelo portal lê desta tabela (próximo PR); e-mail fica fora.
+- **Entrega ao paciente só pelo portal:** a seção "Meus receituários" lista os emitidos para o titular da sessão (o anonimizado não aparece) e baixa o PDF do conteúdo gravado; cada download é auditado (`read`). E-mail fica fora.

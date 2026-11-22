@@ -87,4 +87,21 @@ export class DrizzleNursingPrescriptionRepository
       );
     return rows.map((row) => this.toEntity(row));
   }
+  async findByPatientId(patientId: string): Promise<NursingPrescription[]> {
+    const rows = await this.db
+      .select()
+      .from(nursingPrescriptions)
+      .where(
+        withTenant(
+          nursingPrescriptions,
+          this.clinicId,
+          eq(nursingPrescriptions.patientId, patientId),
+        ),
+      )
+      .orderBy(
+        desc(nursingPrescriptions.issuedAt),
+        desc(nursingPrescriptions.id),
+      );
+    return rows.map((row) => this.toEntity(row));
+  }
 }

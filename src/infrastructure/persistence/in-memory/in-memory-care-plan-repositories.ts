@@ -230,8 +230,18 @@ export class InMemoryNursingPrescriptionRepository
   }
 
   async findByCarePlanId(carePlanId: string): Promise<NursingPrescription[]> {
+    return this.newestFirst((item) => item.carePlanId === carePlanId);
+  }
+
+  async findByPatientId(patientId: string): Promise<NursingPrescription[]> {
+    return this.newestFirst((item) => item.patientId === patientId);
+  }
+
+  private newestFirst(
+    keep: (item: NursingPrescription) => boolean,
+  ): NursingPrescription[] {
     return [...this.items.values()]
-      .filter((item) => item.carePlanId === carePlanId)
+      .filter(keep)
       .sort(
         (a, b) =>
           b.issuedAt.getTime() - a.issuedAt.getTime() ||

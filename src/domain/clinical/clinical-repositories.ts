@@ -86,6 +86,8 @@ export interface NursingPrescriptionRepository {
   findById(id: string): Promise<NursingPrescription | null>;
   /** Do mais novo para o mais antigo. */
   findByCarePlanId(carePlanId: string): Promise<NursingPrescription[]>;
+  /** Todos os do paciente (portal), do mais novo para o mais antigo. */
+  findByPatientId(patientId: string): Promise<NursingPrescription[]>;
 }
 
 export interface OutcomeEvaluationRepository {

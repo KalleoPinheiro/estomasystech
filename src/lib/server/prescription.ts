@@ -60,7 +60,7 @@ export interface PrescriptionPdf {
   fileName: string;
 }
 
-const toSummary = (
+export const toPrescriptionSummary = (
   prescription: NursingPrescription,
 ): PrescriptionSummaryDto => ({
   id: prescription.id,
@@ -150,7 +150,7 @@ export async function issuePrescriptionFor(
   return transactions.run(async (tx) => {
     await tx.auditEvents.lockResource(RESOURCE_TYPE, carePlanId);
     const [latest] = await tx.nursingPrescriptions.findByCarePlanId(carePlanId);
-    if (latest?.hasSameContent(content)) return toSummary(latest);
+    if (latest?.hasSameContent(content)) return toPrescriptionSummary(latest);
 
     const prescription = NursingPrescription.create({
       carePlanId,
@@ -171,7 +171,7 @@ export async function issuePrescriptionFor(
         detail: 'emissão de documento',
       }),
     );
-    return toSummary(prescription);
+    return toPrescriptionSummary(prescription);
   });
 }
 
@@ -193,7 +193,7 @@ export async function listPrescriptionsFor(
   }
   const prescriptions =
     await repos.nursingPrescriptions.findByCarePlanId(carePlanId);
-  return prescriptions.map(toSummary);
+  return prescriptions.map(toPrescriptionSummary);
 }
 
 /** PDF de um receituário emitido, desenhado do conteúdo gravado na emissão. */
@@ -217,8 +217,16 @@ export async function renderPrescriptionFor(
   if (!prescription.content) {
     throw new ValidationError(ANONYMIZED_PRESCRIPTION_MESSAGE);
   }
+  return prescriptionPdf(prescription.content, prescription);
+}
+
+/** Desenha o PDF do conteúdo gravado na emissão: nunca do plano atual. */
+export async function prescriptionPdf(
+  content: PrescriptionContent,
+  prescription: NursingPrescription,
+): Promise<PrescriptionPdf> {
   const bytes = await renderPrescriptionPdf({
-    ...prescription.content,
+    ...content,
     issuedOn: formatDate(prescription.issuedAt.toISOString()),
     documentNumber: prescription.documentNumber,
   });
