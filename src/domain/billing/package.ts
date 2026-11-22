@@ -25,7 +25,9 @@ export class SessionPackage {
 
   static create(props: SessionPackageProps): SessionPackage {
     if (!props.patientId.trim() || !props.procedureId.trim()) {
-      throw new ValidationError('Pacote exige paciente e procedimento');
+      throw new ValidationError(
+        'Plano de acompanhamento exige paciente e procedimento',
+      );
     }
     if (
       !Number.isInteger(props.totalSessions) ||
@@ -33,11 +35,13 @@ export class SessionPackage {
       props.totalSessions > MAX_SESSIONS
     ) {
       throw new ValidationError(
-        `Pacote deve ter de 1 a ${MAX_SESSIONS} sessões`,
+        `Plano de acompanhamento deve ter de 1 a ${MAX_SESSIONS} sessões`,
       );
     }
     if (!Number.isInteger(props.priceCents) || props.priceCents < 0) {
-      throw new ValidationError('Preço do pacote não pode ser negativo');
+      throw new ValidationError(
+        'Preço do plano de acompanhamento não pode ser negativo',
+      );
     }
     return new SessionPackage({
       ...props,
@@ -55,7 +59,7 @@ export class SessionPackage {
 
   consumeSession(): SessionPackage {
     if (!this.hasBalance) {
-      throw new ValidationError('Pacote sem saldo de sessões');
+      throw new ValidationError('Plano de acompanhamento sem saldo de sessões');
     }
     return new SessionPackage({
       ...this.state,

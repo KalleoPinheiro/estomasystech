@@ -133,7 +133,7 @@ for (const viewport of VIEWPORTS) {
       await noHorizontalOverflow(page);
 
       // A última aba (Pacotes) está ativa e rolada para a vista; ainda há aba escondida à esquerda.
-      const pacotes = tabs.getByRole("tab", { name: /Pacotes/ });
+      const pacotes = tabs.getByRole("tab", { name: /Plano de acompanhamento/ });
       await expect(pacotes).toBeInViewport({ ratio: 0.99 });
       const hint = await tabs.evaluate((el) => ({
         scrolls: el.scrollWidth > el.clientWidth,

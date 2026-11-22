@@ -89,7 +89,11 @@ const TABS = [
     label: 'Plano de Cuidados (SAE)',
     api: '/api/care-plans',
   },
-  { key: 'pacotes', label: 'Pacotes', api: '/api/patients/_/packages' },
+  {
+    key: 'pacotes',
+    label: 'Plano de acompanhamento',
+    api: '/api/patients/_/packages',
+  },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];

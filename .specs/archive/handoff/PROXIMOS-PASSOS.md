@@ -18,14 +18,15 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-- **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva).
+- **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva) e #957
+  ("Pacotes" virou "Plano de acompanhamento", só rótulo e texto; o modelo `SessionPackage` e `?aba=pacotes` não mudam).
 
 1. **Contração da cifra** (ADR-111, ADR-114, classe 3, P1 de segurança): no e-mail de login, `VALIDATE` da restrição `0086`,
    fim do ramo em claro e drop dos índices antigos; no cadastro, drop de `birth_date` e dos índices GIN antigos. Deixar o PR
    pronto esperando o clique em paralelo às telas.
-2. **#957** (P1): "Pacotes" passa a se chamar "Plano de acompanhamento" (depois, #964 proposta em PDF).
-3. **#956** (P1): receituário de enfermagem em PDF.
-4. **#955** (P1): critérios da avaliação de ferida legíveis na tela.
+2. **#956** (P1): receituário de enfermagem em PDF.
+3. **#955** (P1): critérios da avaliação de ferida legíveis na tela.
+4. **#964**: proposta do Plano de acompanhamento em PDF.
 5. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
    #973, #971 (telas). #961 espera a #376. #968 precisa de print e depende do EST-16. #974 e #975 precisam de print.
 6. **Espera decisão do dono** (regra 5): RM-14 WhatsApp com template da Meta, RM-05 pagamento online (PSP) e RM-17 TISS.

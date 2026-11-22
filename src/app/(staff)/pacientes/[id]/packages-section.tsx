@@ -18,11 +18,15 @@ export interface PackageDto {
   createdAt: string;
 }
 
+/** Uma frase que explica o conceito na própria aba (#957). */
+const EXPLICACAO =
+  'Plano de acompanhamento é um número fechado de sessões vendido por um preço único. O saldo mostra quantas sessões ainda restam, a validade diz até quando podem ser usadas e cada sessão vale o preço do plano dividido pelo número de sessões.';
+
 const isExpired = (pkg: PackageDto): boolean =>
   pkg.expiresAt !== null && new Date(pkg.expiresAt).getTime() <= Date.now();
 
 /**
- * Pacotes pré-pagos do paciente: saldo e validade à vista da equipe (COMP3-10).
+ * Planos de acompanhamento do paciente (pacote pré-pago de sessões, #957): saldo e validade à vista da equipe (COMP3-10).
  * O servidor já escolheu a leitura certa por papel: o Profissional lê o saldo
  * sem preço (AD-027, #296); o Admin segue com o valor.
  */
@@ -33,14 +37,22 @@ export function PackagesSection({
 }) {
   if (block?.error) return <ErrorAlert message={block.error} />;
   const packages = block?.data ?? [];
-  if (packages.length === 0) {
-    return (
-      <p className="text-ink-3 text-sm">
-        Nenhum pacote de sessões para este paciente.
-      </p>
-    );
-  }
 
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-ink-2 text-sm">{EXPLICACAO}</p>
+      {packages.length === 0 ? (
+        <p className="text-ink-3 text-sm">
+          Nenhum plano de acompanhamento para este paciente.
+        </p>
+      ) : (
+        <PackageList packages={packages} />
+      )}
+    </div>
+  );
+}
+
+function PackageList({ packages }: { packages: PackageDto[] }) {
   return (
     <ul className="flex flex-col gap-3">
       {packages.map((pkg) => (

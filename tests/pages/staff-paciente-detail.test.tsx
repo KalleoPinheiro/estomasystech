@@ -498,7 +498,9 @@ describe('Feature: PatientRecordPage', () => {
       await renderDetail();
       await screen.findByText('Maria Souza');
 
-      expect(screen.getByText('Pacotes')).toHaveClass('ml-auto');
+      expect(screen.getByText('Plano de acompanhamento')).toHaveClass(
+        'ml-auto',
+      );
     });
   });
 
@@ -589,7 +591,9 @@ describe('Feature: PatientRecordPage', () => {
       await renderDetail();
       await screen.findByText('Maria Souza');
 
-      fireEvent.mouseDown(await screen.findByRole('tab', { name: 'Pacotes' }));
+      fireEvent.mouseDown(
+        await screen.findByRole('tab', { name: 'Plano de acompanhamento' }),
+      );
 
       expect(await screen.findByText('Curativo')).toBeInTheDocument();
       expect(screen.getByText('6 de 10 sessões restantes')).toBeInTheDocument();
@@ -604,7 +608,7 @@ describe('Feature: PatientRecordPage', () => {
       await renderDetail();
 
       expect(
-        await screen.findByRole('tab', { name: 'Pacotes' }),
+        await screen.findByRole('tab', { name: 'Plano de acompanhamento' }),
       ).toBeInTheDocument();
     });
   });
@@ -2451,7 +2455,7 @@ describe('Feature: Pacotes no prontuário (COMP3-10)', () => {
     await renderDetail();
     await screen.findByText('Maria Souza');
 
-    fireEvent.mouseDown(screen.getByText('Pacotes'));
+    fireEvent.mouseDown(screen.getByText('Plano de acompanhamento'));
 
     expect(await screen.findByText('Curativo especial')).toBeInTheDocument();
     expect(screen.getByText('7 de 10 sessões restantes')).toBeInTheDocument();
@@ -2480,7 +2484,7 @@ describe('Feature: Pacotes no prontuário (COMP3-10)', () => {
     await renderDetail();
     await screen.findByText('Maria Souza');
 
-    fireEvent.mouseDown(screen.getByText('Pacotes'));
+    fireEvent.mouseDown(screen.getByText('Plano de acompanhamento'));
 
     const expired = await screen.findByText(/Expirado em 01\/01\/2020/);
     expect(expired).toHaveClass('text-danger');
@@ -2491,10 +2495,29 @@ describe('Feature: Pacotes no prontuário (COMP3-10)', () => {
     await renderDetail();
     await screen.findByText('Maria Souza');
 
-    fireEvent.mouseDown(screen.getByText('Pacotes'));
+    fireEvent.mouseDown(screen.getByText('Plano de acompanhamento'));
 
     expect(
-      await screen.findByText('Nenhum pacote de sessões para este paciente.'),
+      await screen.findByText(
+        'Nenhum plano de acompanhamento para este paciente.',
+      ),
     ).toBeInTheDocument();
+  });
+
+  it('Dada a aba Plano de acompanhamento, Quando abrir, Então uma frase explica saldo, validade e preço por sessão (#957)', async () => {
+    mockFetch(buildRouter());
+    await renderDetail();
+    await screen.findByText('Maria Souza');
+
+    fireEvent.mouseDown(screen.getByText('Plano de acompanhamento'));
+
+    const frase = await screen.findByText(/número fechado de sessões/);
+    expect(frase).toHaveTextContent(
+      'saldo mostra quantas sessões ainda restam',
+    );
+    expect(frase).toHaveTextContent('validade diz até quando podem ser usadas');
+    expect(frase).toHaveTextContent(
+      'preço do plano dividido pelo número de sessões',
+    );
   });
 });
