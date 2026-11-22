@@ -73,12 +73,18 @@ Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-ofe
 
 - `loginEmailCondition` procura só por `email_hash` (o atual e os peppers da rotação). Sem hash (e-mail que não
   normaliza), a condição é `false`. Conta ainda em claro deixa de ser achada no login.
-- A `0091` faz o `VALIDATE CONSTRAINT ck_user_accounts_email_hash_conta_ativa` e o `DROP` de
+- A `0091` faz o `VALIDATE CONSTRAINT ck_user_accounts_email_hash_conta_ativa` (só se nenhuma conta ativa estiver sem
+  hash; a `0086` já impõe a regra a toda escrita nova) e o `DROP` de
   `uq_user_accounts_clinic_email` e `uq_user_accounts_super_admin_email`. A unicidade é só dos índices sobre `email_hash`.
 - Precondição: `sem indice cego=0` na verificação de integridade. Conta ativa sem hash deixa de entrar no login (falha
   fechada); se houver alguma, a `0091` não valida a restrição (segue `NOT VALID`, já imposta a toda escrita desde a `0086`)
-  e avisa com `WARNING`: rodar `data:reencrypt` e validar à mão (SQL no cabeçalho da `0091`). Rollback: redeploy da tag anterior (ela já grava cifra e hash e não
-  depende dos índices removidos); o SQL para recriar os índices está no cabeçalho da `0091`.
+  e avisa com `WARNING`: rodar `data:reencrypt` e validar à mão (SQL no cabeçalho da `0091`).
+- **Conta que o `data:reencrypt` pula** (e-mail que não normaliza; o log mostra só o id): repetir o comando não resolve.
+  Se a contagem seguir acima de zero, **não aprove o deploy**: a conta precisa de um e-mail válido antes. Não há rotina
+  pronta para isso; é decisão do dono, caso a caso, pelo id do log.
+- **Rollback:** a `v0.11.0` (e qualquer versão desde a `0074`) acha a conta pelo hash e grava cifra e hash, então roda
+  sobre o esquema da `0091`: basta o redeploy da tag, sem backup. Restaurar o backup só vale para voltar a uma versão
+  anterior à `0074`, que procura o e-mail em claro. O SQL para recriar os índices está no cabeçalho da `0091`.
 - `data:reencrypt` (`user_accounts_email`) continua: segue útil na rotação de chave e de pepper.
 
 ## Opções descartadas
@@ -91,7 +97,7 @@ Decisão do dono (regra 5, registrada no [ADR-114](./114-decisoes-de-produto-ofe
 ## Consequências
 
 - Dump, backup ou disco do banco deixam de revelar o e-mail de login; só o hash (inútil sem o pepper) e a cifra.
-- **Rollback de código depois da conversão trava o login** (a versão antiga procura o e-mail em claro). Antes de
+- **Rollback para versão anterior à `0074` depois da conversão trava o login** (ela procura o e-mail em claro). Antes de
   rodar `data:reencrypt` em produção o dono já tem o backup do deploy; reverter depois da conversão = restaurar
   o backup (`producao.md` § 3.1, passo 5).
 - Perder o pepper não perde o e-mail (a cifra tem o valor), mas o login fica fora até reindexar com

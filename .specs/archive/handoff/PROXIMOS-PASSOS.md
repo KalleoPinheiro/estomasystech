@@ -24,9 +24,11 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
   #956 receituário em PDF (PRO-RN-40, sem migração; dependência nova `pdf-lib`). Pergunta aberta ao dono: corpo livre
   além das intervenções do plano e envio do PDF ao paciente (portal ou e-mail).
 
-1. **Contração da cifra** (ADR-111, ADR-114, classe 3, P1 de segurança): no e-mail de login, `VALIDATE` da restrição `0086`,
-   fim do ramo em claro e drop dos índices antigos; no cadastro, drop de `birth_date` e dos índices GIN antigos. Deixar o PR
-   pronto esperando o clique em paralelo às telas.
+- **Na `main`, fora da produção (cifra):** contração do e-mail de login (PR #990, migração `0091`, não aditiva). **Antes do
+  deploy que a leva:** verificação de integridade com `sem indice cego=0` na linha `cifra_email_login`; senão `data:reencrypt`.
+  Rollback = redeploy da tag anterior (ADR-111, "Contração feita").
+
+1. **Contração da cifra no cadastro** (ADR-096, classe 3): drop de `birth_date` e dos índices GIN antigos do paciente.
 2. **#955** (P1): critérios da avaliação de ferida legíveis na tela.
 3. **#964**: proposta do Plano de acompanhamento em PDF.
 4. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
