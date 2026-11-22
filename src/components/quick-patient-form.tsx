@@ -30,7 +30,7 @@ function validate(values: QuickValues): string | null {
 
 /**
  * Cadastro rápido na nova consulta (#972): nome, celular e nascimento, sem sair
- * da tela. Não é um `<form>` porque vive dentro do formulário da consulta (HTML
+ * da tela. Não é um formulário próprio porque vive dentro do da consulta (HTML
  * não aninha formulários). O paciente nasce com o cadastro incompleto e o termo
  * de consentimento fica para o 1º atendimento.
  */
