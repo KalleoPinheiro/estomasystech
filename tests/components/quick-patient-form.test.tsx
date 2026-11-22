@@ -82,8 +82,10 @@ describe('Cadastro rápido no seletor de paciente (#972)', () => {
     expect(
       document.querySelector('[data-patient-picker-selected]'),
     ).toHaveTextContent('Ana Rápida');
+    // Antes do cadastro há a conferência de repetidos (#992), também POST.
     const post = fetchMock.mock.calls.find(
-      ([, init]) => init?.method === 'POST',
+      ([input, init]) =>
+        init?.method === 'POST' && String(input) === '/api/patients',
     );
     expect(String(post?.[0])).toBe('/api/patients');
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({

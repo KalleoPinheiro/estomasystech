@@ -14,3 +14,10 @@ export const createPatientSchema = z.object({
   // Cadastro rápido da nova consulta (#972): nome, celular e nascimento.
   quickRegistration: z.boolean().optional(),
 });
+
+/** Conferência de paciente repetido antes do cadastro (#992). */
+export const duplicateCheckSchema = z.object({
+  fullName: z.string().max(200),
+  phone: z.string().max(50),
+  birthDate: z.iso.date().nullish(),
+});
