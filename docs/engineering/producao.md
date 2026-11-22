@@ -273,7 +273,11 @@ proposital enquanto as migrações não têm `down`
    (o workflow não converte dados). A partir da migração `0074` (e-mail de login cifrado, [ADR-111](../adr/111-email-de-login-cifrado-com-indice-cego-global.md))
    o mesmo comando também converte `user_accounts_email`. Desde a `0091` (contração) o login acha a conta só pelo índice
    cego: a release que leva a `0091` exige `sem indice cego=0` na verificação de integridade antes do clique (conta sem
-   hash não entra; se houver, `data:reencrypt` e validar à mão, SQL no cabeçalho da `0091`). Se a contagem não zerar
+   hash não entra; se houver, `data:reencrypt` e validar à mão, SQL no cabeçalho da `0091`). A contagem, só leitura,
+   no `psql` do banco de produção com um usuário que enxerga todas as contas (o dono; o RLS esconde linhas dos outros):
+   `SELECT count(*) FILTER (WHERE email NOT LIKE 'v1.%') AS nao_cifrados, count(*) FILTER (WHERE email_hash IS NULL)
+   AS sem_indice_cego FROM user_accounts WHERE anonymized_at IS NULL;` Esperado: `0` e `0` (é a linha
+   `cifra_email_login` do script de verificação de integridade do dono). Se a contagem não zerar
    porque o `data:reencrypt` pulou a conta (e-mail que não normaliza, só o id no log), **não aprove o deploy** e trate a
    conta antes (ADR-111, "Contração feita").
    **Depois dessa conversão, voltar o código a uma versão anterior à `0074` trava o login:** aí o rollback é restaurar o
