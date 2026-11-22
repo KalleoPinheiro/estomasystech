@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { CarePlan } from '@/domain/clinical/care-plan';
 import { NursingPrescription } from '@/domain/clinical/nursing-prescription';
 import { getRepositories } from '@/infrastructure/container';
@@ -121,8 +121,15 @@ describe('Feature: receituário no portal do paciente (#956, ADR-116)', () => {
       `attachment; filename="receituario-${prescription.documentNumber}.pdf"`,
     );
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
-    await new Promise((resolve) => setTimeout(resolve, 20));
     const { auditEvents } = await getRepositories(clinicScope(CLINIC));
+    // A trilha grava depois da resposta (`after`): espera com teto, sem sono fixo.
+    await vi.waitFor(async () => {
+      const events = await auditEvents.findAll({
+        resourceType: 'receituario',
+        resourceId: prescription.id,
+      });
+      expect(events.some((event) => event.action === 'read')).toBe(true);
+    });
     const reads = (
       await auditEvents.findAll({
         resourceType: 'receituario',

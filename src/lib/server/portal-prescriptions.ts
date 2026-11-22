@@ -13,8 +13,8 @@ import {
 } from './prescription';
 
 /**
- * Receituário no portal (#956, ADR-116): o paciente (ou o responsável pelo
- * menor) vê e baixa os receituários emitidos para ele, exatamente como
+ * Receituário no portal (#956, ADR-116): o paciente (ou o responsável que o
+ * representa, POR-RN-21) vê e baixa os receituários emitidos para ele, exatamente como
  * emitidos. Só pelo portal, sem e-mail. O anonimizado pela retenção não aparece.
  */
 

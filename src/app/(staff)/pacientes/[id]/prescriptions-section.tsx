@@ -22,7 +22,11 @@ const downloadUrl = (planId: string, prescriptionId: string) =>
  */
 export function PrescriptionsSection({ planId }: { planId: string }) {
   const { toast } = useToast();
-  const { data: issued, refresh } = useApiQuery<PrescriptionSummaryDto[]>(
+  const {
+    data: issued,
+    error: listError,
+    refresh,
+  } = useApiQuery<PrescriptionSummaryDto[]>(
     `/api/care-plans/${planId}/receituarios`,
   );
   const [freeText, setFreeText] = useState('');
@@ -32,15 +36,17 @@ export function PrescriptionsSection({ planId }: { planId: string }) {
   const issue = async () => {
     setSaving(true);
     setError(null);
+    const submitted = freeText;
     try {
       const prescription = await apiFetch<PrescriptionSummaryDto>(
         `/api/care-plans/${planId}/receituarios`,
         {
           method: 'POST',
-          body: JSON.stringify({ freeText: freeText.trim() || null }),
+          body: JSON.stringify({ freeText: submitted.trim() || null }),
         },
       );
-      setFreeText('');
+      // O que foi digitado durante o envio não foi emitido: fica no campo.
+      setFreeText((current) => (current === submitted ? '' : current));
       refresh();
       toast({
         description: `Receituário ${prescription.documentNumber} emitido`,
@@ -87,6 +93,7 @@ export function PrescriptionsSection({ planId }: { planId: string }) {
       >
         {saving ? 'Emitindo…' : 'Emitir receituário (PDF)'}
       </Button>
+      {listError && <ErrorAlert message={listError} onRetry={refresh} />}
       {issued && issued.length > 0 && (
         <ul className="flex flex-col gap-1 text-sm">
           {issued.map((prescription) => (

@@ -149,6 +149,12 @@ export async function issuePrescriptionFor(
   const { transactions } = await getRepositories(writeScope(session));
   return transactions.run(async (tx) => {
     await tx.auditEvents.lockResource(RESOURCE_TYPE, carePlanId);
+    // Trava a linha do paciente: a anonimização da retenção espera ou já
+    // passou. Anonimizado no meio do caminho não grava o nome lido antes.
+    const holder = await tx.patients.findByIdForUpdate(patientId);
+    if (holder?.isAnonymized !== false) {
+      throw new NotFoundError('Paciente', patientId);
+    }
     const [latest] = await tx.nursingPrescriptions.findByCarePlanId(carePlanId);
     if (latest?.hasSameContent(content)) return toPrescriptionSummary(latest);
 

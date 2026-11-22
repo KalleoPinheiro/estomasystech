@@ -351,4 +351,19 @@ describe('Feature: receituário emitido e congelado (#956, ADR-116)', () => {
     );
     expect(rendered).toHaveLength(0);
   });
+  it('Dado paciente anonimizado pela retenção durante a emissão, Quando grava, Então recusa com 404 e não guarda o nome', async () => {
+    const { planId, patientId } = await seedPlan(CLINIC);
+    const { getDb } = await import('@/infrastructure/persistence/drizzle/db');
+    const { sql } = await import('drizzle-orm');
+    const db = await getDb();
+    await db.execute(
+      sql`UPDATE patients SET anonymized_at = now() WHERE id = ${patientId}`,
+    );
+
+    await expect(
+      lib.issuePrescriptionFor(sessionOf(CLINIC), planId, null),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    const { nursingPrescriptions } = await getRepositories(clinicScope(CLINIC));
+    expect(await nursingPrescriptions.findByCarePlanId(planId)).toHaveLength(0);
+  });
 });
