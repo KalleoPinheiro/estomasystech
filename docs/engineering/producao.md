@@ -273,8 +273,11 @@ proposital enquanto as migrações não têm `down`
    (o workflow não converte dados). A partir da migração `0074` (e-mail de login cifrado, [ADR-111](../adr/111-email-de-login-cifrado-com-indice-cego-global.md))
    o mesmo comando também converte `user_accounts_email`. Desde a `0091` (contração) o login acha a conta só pelo índice
    cego: a release que leva a `0091` exige `sem indice cego=0` na verificação de integridade antes do clique (conta sem
-   hash não entra; se houver, `data:reencrypt` e validar à mão, SQL no cabeçalho da `0091`).
-   **Depois dessa conversão, voltar o código a uma versão anterior trava o login:** o rollback é restaurar o backup.
+   hash não entra; se houver, `data:reencrypt` e validar à mão, SQL no cabeçalho da `0091`). Se a contagem não zerar
+   porque o `data:reencrypt` pulou a conta (e-mail que não normaliza, só o id no log), **não aprove o deploy** e trate a
+   conta antes (ADR-111, "Contração feita").
+   **Depois dessa conversão, voltar o código a uma versão anterior à `0074` trava o login:** aí o rollback é restaurar o
+   backup. Da `v0.11.0` em diante o redeploy da tag basta, com ou sem a `0091`.
 1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde (E2E e mutação rodam no Actions,
    [ADR-098](../adr/098-e2e-e-mutacao-de-volta-ao-actions-sem-recibo.md)), e o
    `.specs/archive/handoff-2026.md` do lote escrito. Anote a versão em produção (aparece no rodapé da
