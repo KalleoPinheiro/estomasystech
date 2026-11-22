@@ -9,7 +9,8 @@ import path from 'node:path';
 import type { ResultadoRisco } from './classificar-risco-lib';
 import { arquivosDaImpressao, impressao } from './reaproveitar-aprovacao-lib';
 
-const RAIZ = path.resolve(import.meta.dirname, '../..');
+/** Raiz do checkout da base: o CLI roda dela (o tsx desta versão compila para CJS, sem `import.meta`). */
+const RAIZ = process.cwd();
 const TSX = path.join(RAIZ, 'node_modules', '.bin', 'tsx');
 const CLASSIFICADOR = path.join(RAIZ, 'scripts', 'release', 'classificar-risco.ts');
 const AMBIENTE = { ...process.env, npm_config_offline: 'true' };

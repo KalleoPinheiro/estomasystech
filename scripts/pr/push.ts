@@ -30,11 +30,15 @@ if (recusa) sair(recusa);
 const push = spawnSync('git', ['push', '-u', 'origin', `HEAD:refs/heads/${branch}`], { stdio: 'inherit' });
 if (push.status !== 0) sair('git push falhou');
 
-let depois = headDoPr();
-for (let i = 0; i < 10 && depois !== headLocal; i++) {
-  await new Promise((r) => setTimeout(r, 3000));
-  depois = headDoPr();
+async function conferirDepois(): Promise<void> {
+  let depois = headDoPr();
+  for (let i = 0; i < 10 && depois !== headLocal; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    depois = headDoPr();
+  }
+  const erro = erroDepoisDoPush(pr, branch, headLocal, depois);
+  if (erro) sair(erro);
+  console.log(`✓ PR #${pr} agora aponta para ${headLocal.slice(0, 7)} (${branch})`);
 }
-const erro = erroDepoisDoPush(pr, branch, headLocal, depois);
-if (erro) sair(erro);
-console.log(`✓ PR #${pr} agora aponta para ${headLocal.slice(0, 7)} (${branch})`);
+
+void conferirDepois();

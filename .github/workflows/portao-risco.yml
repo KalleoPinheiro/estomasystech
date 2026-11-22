@@ -101,13 +101,14 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ github.token }}
+          TOKEN: ${{ github.token }}
+          API_URL: ${{ github.api_url }}
         run: |
           if [ ! -f scripts/release/reaproveitar-aprovacao.ts ]; then
             echo "reaproveitada=false" | tee -a "$GITHUB_OUTPUT"; exit 0
           fi
-          saida=$(node_modules/.bin/tsx scripts/release/reaproveitar-aprovacao.ts --base "$BASE_SHA" --head "$HEAD_SHA" \
-            --pr "$PR_NUMBER" --repo "$REPO" --branch "$HEAD_REF") || saida="reaproveitada=false"
+          saida=$(printf '%s' "$TOKEN" | node_modules/.bin/tsx scripts/release/reaproveitar-aprovacao.ts --base "$BASE_SHA" \
+            --head "$HEAD_SHA" --pr "$PR_NUMBER" --repo "$REPO" --branch "$HEAD_REF" --api "$API_URL") || saida="reaproveitada=false"
           printf '%s\n' "$saida" | grep -E '^(reaproveitada=(true|false)|aprovacao_origem=https://[^ ]+)$' | tee -a "$GITHUB_OUTPUT"
           if printf '%s\n' "$saida" | grep -qx 'reaproveitada=true'; then
             echo "Aprovação de classe 3 reaproveitada (mesmo conteúdo sensível): $(printf '%s\n' "$saida" | sed -n 's/^aprovacao_origem=//p')" >> "$GITHUB_STEP_SUMMARY"

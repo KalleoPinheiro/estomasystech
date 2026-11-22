@@ -73,6 +73,8 @@ Vale para qualquer agente e para o dono. Uma mudança, uma sessão, um PR. Detal
 2. **O CI é o revisor.** Typecheck, lint, cobertura, integração, compatibilidade de migração, E2E e mutação nos
    arquivos de regra alterados. Passou, o merge entra sozinho: habilite o **auto-merge (squash)** no PR; se o PR já estiver verde (o GitHub não arma auto-merge nesse caso), o agente mergeia (squash), autorizado pelo dono em 2026-11-15 para PR comum com CI verde (classe 3 e produção seguem com o clique do dono). Não há
    sessão separada de revisão para mudança comum.
+   Conversa de bot (CodeRabbit, Copilot) não trava o merge, mas **todo comentário é avaliado** antes de encerrar a
+   sessão: confira no código; o procedente vira correção no próprio PR ou issue aberta e feita logo na sequência.
 3. **Só o perigoso pede mais.** Classe de risco 3 (`npm run check:risco`: login/auth, cifra, escopo de empresa,
    auditoria, migração não aditiva, workflows, portão de testes, deploy e backup) para no check "Portão de risco"
    até o dono clicar no Environment `aprovacao-classe-3`. O clique vale pelo conteúdo sensível: merge da `main` que não

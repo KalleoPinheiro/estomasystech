@@ -1,5 +1,5 @@
 /**
- * `tsx scripts/release/reaproveitar-aprovacao.ts --base <sha> --head <sha> --pr <n> --repo <dono/nome> --branch <ref>`
+ * `printf %s "$TOKEN" | tsx scripts/release/reaproveitar-aprovacao.ts --base <sha> --head <sha> --pr <n> --repo <dono/nome> --branch <ref> --api <url>`
  *
  * Roda no job `risco` do `portao-risco.yml`, vindo do checkout da base, só quando a classe é 3 (ADR-117).
  * Procura uma execução anterior do portão nesta PR que o dono aprovou no Environment `aprovacao-classe-3` e cujo
@@ -7,10 +7,11 @@
  * execução aprovada; o job de aprovação é pulado. Não achou, ou qualquer erro: `reaproveitada=false` e o dono
  * clica como antes. Sai sempre com 0: a ausência de reaproveitamento é o caminho seguro, não uma falha.
  *
- * Lê a API com o `GITHUB_TOKEN` do job (`actions: read`). Nada do head é executado: o head entra só como objeto
- * de git, igual ao classificador.
+ * Lê a API com o token do job (`actions: read`), recebido pela entrada padrão; `--api` é a URL da API do runner.
+ * Nada do head é executado: o head entra só como objeto de git, igual ao classificador.
  */
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import {
   type Aprovacao,
   aprovadaPeloDono,
@@ -34,8 +35,17 @@ const head = opcao('--head');
 const pr = Number(opcao('--pr'));
 const repo = opcao('--repo');
 const branch = opcao('--branch');
-const api = process.env.GITHUB_API_URL || 'https://api.github.com';
-const token = process.env.GITHUB_TOKEN ?? '';
+const api = opcao('--api') || 'https://api.github.com';
+
+/** O token chega pela entrada padrão, nunca por argumento (não aparece na lista de processos). */
+function lerToken(): string {
+  try {
+    return readFileSync(0, 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
+const token = lerToken();
 
 async function ler<T>(caminho: string): Promise<T> {
   const r = await fetch(`${api}/repos/${repo}${caminho}`, {
@@ -67,7 +77,7 @@ async function aprovadas(): Promise<Execucao[]> {
 }
 
 async function decidir(): Promise<Reaproveitamento> {
-  if (!shaValido(base) || !shaValido(head) || !Number.isInteger(pr) || pr <= 0 || !/^[\w.-]+\/[\w.-]+$/.test(repo) || !branch) {
+  if (!shaValido(base) || !shaValido(head) || !Number.isInteger(pr) || pr <= 0 || !/^[\w.-]+\/[\w.-]+$/.test(repo) || !branch || !/^https:\/\/[\w.-]+(\/[\w.-]+)*$/.test(api)) {
     return { reaproveitada: false, motivo: 'argumentos inválidos' };
   }
   const atual = impressaoDoHead(base, head);
@@ -80,9 +90,14 @@ async function decidir(): Promise<Reaproveitamento> {
   return { reaproveitada: false, motivo: 'nenhuma aprovação anterior com o mesmo conteúdo de classe 3' };
 }
 
-const resultado = await decidir().catch((erro: unknown) => ({
-  reaproveitada: false,
-  motivo: `falha ao consultar aprovações anteriores: ${erro instanceof Error ? erro.message : String(erro)}`,
-}));
-console.error(`reaproveitamento: ${resultado.motivo}`);
-console.log(saidaReaproveitamento(resultado));
+decidir()
+  .catch(
+    (erro: unknown): Reaproveitamento => ({
+      reaproveitada: false,
+      motivo: `falha ao consultar aprovações anteriores: ${erro instanceof Error ? erro.message : String(erro)}`,
+    }),
+  )
+  .then((resultado) => {
+    console.error(`reaproveitamento: ${resultado.motivo}`);
+    console.log(saidaReaproveitamento(resultado));
+  });
