@@ -159,6 +159,9 @@ investigação, nunca como portão.
 
 ## 3. Como a classe 3 exige o dono (mecanismo proposto)
 
+> Desenho original (#757). O workflow em vigor é `.github/workflows/portao-risco.yml`: o job de aprovação também é
+> pulado quando a aprovação é reaproveitada pelo conteúdo ([ADR-117](../adr/117-aprovacao-de-classe-3-pelo-conteudo.md)).
+
 Todas as PRs dos agentes saem com o login do dono, então **CODEOWNERS não garante nada sozinho**: o GitHub não
 deixa o autor aprovar a própria PR, e um agente poderia mexer em qualquer arquivo. O sinal que o agente não
 consegue forjar é a **aprovação de um Environment protegido com o dono como revisor**, o mesmo mecanismo do

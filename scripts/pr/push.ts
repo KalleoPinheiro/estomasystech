@@ -27,7 +27,7 @@ const descende = antes !== null && git(['merge-base', '--is-ancestor', antes, he
 const recusa = recusaAntesDoPush({ branch, headLocal, headDoPr: antes, descende });
 if (recusa) sair(recusa);
 
-const push = spawnSync('git', ['push', '-u', 'origin', `HEAD:refs/heads/${branch}`], { stdio: 'inherit' });
+const push = spawnSync('git', ['push', 'origin', `${headLocal}:refs/heads/${branch}`], { stdio: 'inherit' });
 if (push.status !== 0) sair('git push falhou');
 
 async function conferirDepois(): Promise<void> {
@@ -41,4 +41,4 @@ async function conferirDepois(): Promise<void> {
   console.log(`✓ PR #${pr} agora aponta para ${headLocal.slice(0, 7)} (${branch})`);
 }
 
-void conferirDepois();
+conferirDepois().catch((erro: unknown) => sair(String(erro)));

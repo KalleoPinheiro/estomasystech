@@ -63,6 +63,8 @@ push que foi para outra branch; quem vê é quem empurra.
 - O patch-id ignora só número de linha; contexto e espaço em branco contam. Mesmo trecho em outro lugar do
   arquivo, ou qualquer byte diferente nos arquivos sensíveis, dá impressão nova e clique novo. Arquivo sensível
   novo no diff muda os motivos e também pede clique.
+- O patch-id não tem número de linha: se o contexto de algum trecho se repete no arquivo da base, o lugar seria
+  ambíguo, então não há impressão e o dono clica.
 - O que muda sem clique são arquivos de classe 0 a 2, que numa PR própria também entrariam sem clique.
 - Sem registro de aprovação do Environment não há reaproveitamento: um workflow alterado que crie um job com o
   mesmo nome sem Environment não basta.

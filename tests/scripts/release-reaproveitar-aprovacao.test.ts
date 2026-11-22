@@ -11,6 +11,7 @@ import {
   arquivosDaImpressao,
   execucaoDaPr,
   impressao,
+  localAmbiguo,
   NOME_JOB_APROVACAO,
   saidaReaproveitamento,
 } from '../../scripts/release/reaproveitar-aprovacao-lib';
@@ -77,6 +78,26 @@ describe('reaproveitar aprovação de classe 3 · impressão (ADR-117)', () => {
   it('Dado patch-id vazio ou malformado, Quando calcula, Então não há impressão', () => {
     expect(impressao(classe3([auth]), '')).toBeNull();
     expect(impressao(classe3([auth]), 'nao-e-sha')).toBeNull();
+  });
+});
+
+describe('reaproveitar aprovação de classe 3 · lugar único do trecho (ADR-117)', () => {
+  const diff = (antes: string[]) =>
+    ['diff --git a/x.ts b/x.ts', '--- a/x.ts', '+++ b/x.ts', '@@ -1,2 +1,3 @@', ...antes.map((l) => ` ${l}`), '+novo'].join('\n');
+
+  it('Dado contexto que aparece uma vez na base, Quando confere, Então o lugar é único', () => {
+    expect(localAmbiguo(diff(['a', 'b']), () => 'a\nb\nc\n')).toBe(false);
+  });
+
+  it('Dado contexto repetido, arquivo ausente na base ou hunk sem contexto, Quando confere, Então é ambíguo (falha fechada)', () => {
+    expect(localAmbiguo(diff(['a', 'b']), () => 'a\nb\nx\na\nb\n')).toBe(true);
+    expect(localAmbiguo(diff(['a', 'b']), () => null)).toBe(true);
+    expect(localAmbiguo(diff([]), () => 'a\n')).toBe(true);
+  });
+
+  it('Dado arquivo novo, Quando confere, Então não há o que comparar e não é ambíguo', () => {
+    const novo = ['diff --git a/n.ts b/n.ts', 'new file mode 100644', '--- /dev/null', '+++ b/n.ts', '@@ -0,0 +1 @@', '+x'].join('\n');
+    expect(localAmbiguo(novo, () => null)).toBe(false);
   });
 });
 
@@ -243,6 +264,16 @@ describe('reaproveitar aprovação de classe 3 · git de verdade (ADR-117)', () 
     expect(impressaoDoHead(main, mudou, dir)).not.toBe(
       impressaoDoHead(main, aprovado, dir),
     );
+  });
+
+  it('Dado o arquivo sensível com o mesmo contexto em dois lugares, Quando calcula, Então não há impressão (o lugar seria ambíguo)', () => {
+    git('checkout', '-q', '-b', 'repetido', main);
+    escrever('src/lib/auth/session.ts', sensivel('// cabeçalho da main', ...linhas, ...linhas));
+    const base2 = commit('contexto repetido');
+    git('checkout', '-q', '-b', 'repetido-pr');
+    escrever('src/lib/auth/session.ts', sensivel('// cabeçalho da main', ...linhas.slice(0, 5), 'export const novo = 1;', ...linhas.slice(5), ...linhas));
+    const pr2 = commit('edição num dos dois lugares');
+    expect(impressaoDoHead(base2, pr2, dir)).toBeNull();
   });
 
   it('Dado head sem classe 3 ou ref inexistente, Quando calcula, Então não há impressão', () => {

@@ -98,3 +98,50 @@ export function saidaReaproveitamento(r: Reaproveitamento): string {
   if (r.reaproveitada && r.origem && /^https:\/\/[^\s]+$/.test(r.origem)) linhas.push(`aprovacao_origem=${r.origem}`);
   return linhas.join('\n');
 }
+
+interface Trecho {
+  arquivo: string;
+  antes: string[];
+}
+
+/** Lado "antes" (contexto e linhas removidas) de cada hunk do diff unificado, por arquivo; arquivo novo fica de fora. */
+export function trechosDoDiff(diff: string): Trecho[] {
+  const trechos: Trecho[] = [];
+  let arquivo: string | null = null;
+  let atual: Trecho | null = null;
+  for (const linha of diff.split('\n')) {
+    if (linha.startsWith('diff --git ')) {
+      arquivo = null;
+      atual = null;
+    } else if (linha.startsWith('--- ')) {
+      arquivo = linha === '--- /dev/null' ? null : linha.replace(/^--- a\//, '');
+    } else if (linha.startsWith('@@')) {
+      atual = arquivo ? { arquivo, antes: [] } : null;
+      if (atual) trechos.push(atual);
+    } else if (atual && (linha.startsWith(' ') || linha.startsWith('-'))) {
+      atual.antes.push(linha.slice(1));
+    }
+  }
+  return trechos;
+}
+
+function ocorrencias(linhas: readonly string[], bloco: readonly string[]): number {
+  let n = 0;
+  for (let i = 0; i + bloco.length <= linhas.length; i++) {
+    if (bloco.every((l, j) => linhas[i + j] === l)) n++;
+  }
+  return n;
+}
+
+/**
+ * O patch-id ignora o número de linha. Se o lado "antes" de um hunk aparece mais de uma vez no arquivo da base, o
+ * mesmo patch caberia em outro lugar e a impressão não distingue os dois: sem reaproveitamento (falha fechada).
+ * `conteudoBase` devolve o arquivo no merge-base, ou `null` se não existir.
+ */
+export function localAmbiguo(diff: string, conteudoBase: (arquivo: string) => string | null): boolean {
+  return trechosDoDiff(diff).some((t) => {
+    const base = conteudoBase(t.arquivo);
+    if (base === null || t.antes.length === 0) return true;
+    return ocorrencias(base.split('\n'), t.antes) !== 1;
+  });
+}

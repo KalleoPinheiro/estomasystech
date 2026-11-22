@@ -2,12 +2,13 @@
  * Impressão do conteúdo de classe 3 de um head (ADR-117). Roda o classificador da base sobre o head como objeto
  * (`--head`, sem checkout) e tira o `git patch-id --verbatim` do diff `base...head` restrito aos arquivos que
  * explicam a classe. `--verbatim` não ignora espaço em branco; o patch-id ignora só número de linha, então um
- * merge da `main` que desloca o arquivo não muda a impressão.
+ * merge da `main` que desloca o arquivo não muda a impressão. Como o número de linha some, um hunk cujo contexto se
+ * repete no arquivo da base não tem lugar único: aí não há impressão e o dono clica.
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import type { ResultadoRisco } from './classificar-risco-lib';
-import { arquivosDaImpressao, impressao } from './reaproveitar-aprovacao-lib';
+import { arquivosDaImpressao, impressao, localAmbiguo } from './reaproveitar-aprovacao-lib';
 
 /** Raiz do checkout da base: o CLI roda dela (o tsx desta versão compila para CJS, sem `import.meta`). */
 const RAIZ = process.cwd();
@@ -38,6 +39,12 @@ function patchId(base: string, head: string, arquivos: readonly string[], cwd: s
     { cwd, encoding: 'utf8', maxBuffer: BUFFER, env: AMBIENTE },
   );
   if (diff.status !== 0 || diff.stdout === '') return '';
+  const mergeBase = spawnSync('git', ['merge-base', base, head], { cwd, encoding: 'utf8' }).stdout.trim();
+  const conteudoBase = (arquivo: string): string | null => {
+    const r = spawnSync('git', ['cat-file', 'blob', `${mergeBase}:${arquivo}`], { cwd, encoding: 'utf8', maxBuffer: BUFFER });
+    return r.status === 0 ? r.stdout : null;
+  };
+  if (!mergeBase || localAmbiguo(diff.stdout, conteudoBase)) return '';
   const id = spawnSync('git', ['patch-id', '--verbatim'], { cwd, input: diff.stdout, encoding: 'utf8', maxBuffer: BUFFER });
   return id.status === 0 ? id.stdout : '';
 }
