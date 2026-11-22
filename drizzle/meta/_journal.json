@@ -638,6 +638,13 @@
       "when": 1795304524566,
       "tag": "0090_cadastro-rapido-paciente",
       "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1795308136887,
+      "tag": "0091_contracao-email-login",
+      "breakpoints": true
     }
   ]
 }
