@@ -296,6 +296,7 @@ export function PatientsClient({ initialPage, partners }: PatientsClientProps) {
             initial={editing === 'new' ? undefined : editing}
             partners={partners}
             onSubmit={handleSubmit}
+            existingPatientHref={(patient) => `/pacientes/${patient.id}`}
           />
         </Modal>
       )}

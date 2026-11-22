@@ -4,8 +4,9 @@ import { CreatePatient } from '@/application/patients/create-patient';
 import { assertCanManageGuardians } from '@/lib/auth/guardian-access';
 import { CLINIC_STAFF_ROLES } from '@/lib/auth/staff-roles';
 import { toPatientDto } from '@/lib/dto';
-import { createPatientSchema } from '@/lib/patient-input';
+import { createPatientSchema, duplicateCheckSchema } from '@/lib/patient-input';
 import { defineAction } from '@/lib/server/define-action';
+import { findPossibleDuplicatesFor } from '@/lib/server/patient-duplicates';
 import { canRoleAccess } from '@/lib/staff-pages';
 
 /**
@@ -58,4 +59,16 @@ export const createPatient = defineAction({
     resourceId: result.id,
     patientId: result.id,
   }),
+});
+
+/**
+ * Possíveis repetidos antes do cadastro completo (#992): mesmo celular, ou
+ * mesmo nome e nascimento. Leitura: sem auditoria e sem reler a tela.
+ */
+export const findPossibleDuplicatePatients = defineAction({
+  access: { kind: 'staff', roles: PATIENT_ROLES },
+  input: duplicateCheckSchema,
+  refresh: false,
+  handler: ({ input, session }) => findPossibleDuplicatesFor(session, input),
+  audit: false,
 });

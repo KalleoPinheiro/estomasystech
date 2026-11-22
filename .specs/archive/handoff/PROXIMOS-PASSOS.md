@@ -1,6 +1,6 @@
 # Próximos passos (fila única de passagem de bastão, ADR-109)
 
-Atualizada em 2026-11-21. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
+Atualizada em 2026-11-22. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
 PR (tira o que entregou, move o que mudou, acrescenta o que surgiu). Curto, em lista, sem nome de fornecedor.
 O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
@@ -18,18 +18,21 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 ## Fila (ordem)
 
-- **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva) e #957
-  ("Pacotes" virou "Plano de acompanhamento", só rótulo e texto; o modelo `SessionPackage` e `?aba=pacotes` não mudam).
+- **Na `main`, fora da produção:** #972 cadastro rápido na nova consulta (PRO-RN-38, migração `0090` só aditiva), #957
+  ("Pacotes" virou "Plano de acompanhamento", só rótulo e texto; o modelo `SessionPackage` e `?aba=pacotes` não mudam) e #992
+  (aviso de paciente repetido e nascimento no futuro recusado, PRO-RN-39, sem migração).
+  #956 receituário em PDF (PRO-RN-40, sem migração; dependência nova `pdf-lib`). Pergunta aberta ao dono: corpo livre
+  além das intervenções do plano e envio do PDF ao paciente (portal ou e-mail).
 
-1. **Contração da cifra no cadastro** (ADR-096, classe 3): drop de `birth_date` e dos índices GIN antigos do paciente. A do
-   e-mail de login saiu no PR #990 (migração `0091`), que exige `sem indice cego=0` na verificação de integridade antes do deploy.
-2. **#956** (P1): receituário de enfermagem em PDF.
-3. **#955** (P1): critérios da avaliação de ferida legíveis na tela.
-4. **#964**: proposta do Plano de acompanhamento em PDF.
-5. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
+1. **Contração da cifra** (ADR-111, ADR-114, classe 3, P1 de segurança): no e-mail de login, `VALIDATE` da restrição `0086`,
+   fim do ramo em claro e drop dos índices antigos; no cadastro, drop de `birth_date` e dos índices GIN antigos. Deixar o PR
+   pronto esperando o clique em paralelo às telas.
+2. **#955** (P1): critérios da avaliação de ferida legíveis na tela.
+3. **#964**: proposta do Plano de acompanhamento em PDF.
+4. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
    #973, #971 (telas). #961 espera a #376. #968 precisa de print e depende do EST-16. #974 e #975 precisam de print.
-6. **Espera decisão do dono** (regra 5): RM-14 WhatsApp com template da Meta, RM-05 pagamento online (PSP) e RM-17 TISS.
-7. **Abertas sem urgência:** #952 (E2E de série semanal reprova às sextas, P2), #933 (shard intermitente), #815, #651, #650, #862.
+5. **Espera decisão do dono** (regra 5): RM-14 WhatsApp com template da Meta, RM-05 pagamento online (PSP) e RM-17 TISS.
+6. **Abertas sem urgência:** #952 (E2E de série semanal reprova às sextas, P2), #933 (shard intermitente), #815, #651, #650, #862.
 
 ## Espera o dono
 

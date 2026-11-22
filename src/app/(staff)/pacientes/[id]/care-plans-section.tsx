@@ -278,6 +278,17 @@ function CarePlanPanel({
         onRecorded={refresh}
       />
 
+      {/* Receituário (#956): PDF gerado no servidor com os itens prescritos. */}
+      {detail.interventions.length > 0 && (
+        <a
+          href={`/api/care-plans/${planId}/receituario`}
+          download
+          className="self-start font-medium text-accent-ink text-sm hover:underline"
+        >
+          Baixar receituário (PDF)
+        </a>
+      )}
+
       {isActive && (
         <ConfirmAction
           trigger={
