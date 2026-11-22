@@ -28,9 +28,14 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.draft != true
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # `actions: read` só para ler o histórico de aprovações desta PR (ADR-117).
+    permissions:
+      contents: read
+      actions: read
     outputs:
       classe: ${{ steps.r.outputs.classe }}
       humana: ${{ steps.r.outputs.aprovacao_humana }}
+      reaproveitada: ${{ steps.reuso.outputs.reaproveitada }}
     steps:
       - name: Base confiável
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -85,12 +90,36 @@ jobs:
             npm run --silent check:risco -- --base "$BASE_SHA" --head "$HEAD_SHA"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Só roda na classe 3 e fica parado até o dono aprovar no Environment; a aprovação vale por execução
-  # (push novo reinicia). O agente não tem como clicar. O SHA registrado é o do head da PR.
+      # ADR-117: a aprovação do dono vale para o conteúdo de classe 3, não para o SHA. Se uma execução anterior
+      # desta PR foi aprovada no Environment e o conteúdo sensível é o mesmo (motivos + patch-id), não pede outro
+      # clique. Script da base; sem ele (bootstrap) ou com qualquer erro, `reaproveitada=false` e o dono clica.
+      - id: reuso
+        if: steps.r.outputs.aprovacao_humana == 'true'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
+          TOKEN: ${{ github.token }}
+          API_URL: ${{ github.api_url }}
+        run: |
+          if [ ! -f scripts/release/reaproveitar-aprovacao.ts ]; then
+            echo "reaproveitada=false" | tee -a "$GITHUB_OUTPUT"; exit 0
+          fi
+          saida=$(printf '%s' "$TOKEN" | node_modules/.bin/tsx scripts/release/reaproveitar-aprovacao.ts --base "$BASE_SHA" \
+            --head "$HEAD_SHA" --pr "$PR_NUMBER" --repo "$REPO" --branch "$HEAD_REF" --api "$API_URL") || saida="reaproveitada=false"
+          printf '%s\n' "$saida" | grep -E '^(reaproveitada=(true|false)|aprovacao_origem=https://[^ ]+)$' | tee -a "$GITHUB_OUTPUT"
+          if printf '%s\n' "$saida" | grep -qx 'reaproveitada=true'; then
+            echo "Aprovação de classe 3 reaproveitada (mesmo conteúdo sensível): $(printf '%s\n' "$saida" | sed -n 's/^aprovacao_origem=//p')" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Só roda na classe 3 e fica parado até o dono aprovar no Environment. Push novo reinicia, mas se o conteúdo
+  # de classe 3 for o mesmo de uma execução já aprovada desta PR, o job é pulado (ADR-117). O agente não clica.
   aprovacao-classe-3:
     name: Aprovação do dono (classe 3)
     needs: risco
-    if: needs.risco.outputs.humana == 'true'
+    if: needs.risco.outputs.humana == 'true' && needs.risco.outputs.reaproveitada != 'true'
     environment: aprovacao-classe-3
     runs-on: ubuntu-slim
     timeout-minutes: 5
@@ -112,6 +141,7 @@ jobs:
           DRAFT: ${{ github.event.pull_request.draft }}
           R_RISCO: ${{ needs.risco.result }}
           HUMANA: ${{ needs.risco.outputs.humana }}
+          REAPROVEITADA: ${{ needs.risco.outputs.reaproveitada }}
           R_APROVACAO: ${{ needs.aprovacao-classe-3.result }}
         run: |
           if [ "$EVENTO" = merge_group ]; then echo "fila: a aprovação já foi dada na PR"; exit 0; fi
@@ -120,7 +150,10 @@ jobs:
           fi
           [ "$R_RISCO" = success ] || { echo "::error::classe de risco: $R_RISCO"; exit 1; }
           case "$HUMANA" in true|false) ;; *) echo "::error::aprovacao_humana ausente ou inválida: '$HUMANA'"; exit 1 ;; esac
-          if [ "$HUMANA" = true ]; then
+          if [ "$HUMANA" = true ] && [ "$REAPROVEITADA" = true ]; then
+            [ "$R_APROVACAO" = skipped ] || { echo "::error::aprovação reaproveitada, mas o job rodou ($R_APROVACAO)"; exit 1; }
+            echo "ok: classe 3 com aprovação do dono reaproveitada (mesmo conteúdo sensível, ADR-117)"; exit 0
+          elif [ "$HUMANA" = true ]; then
             [ "$R_APROVACAO" = success ] || { echo "::error::classe 3 sem a aprovação do dono ($R_APROVACAO)"; exit 1; }
           else
             [ "$R_APROVACAO" = skipped ] || { echo "::error::aprovação rodou sem classe 3 ($R_APROVACAO)"; exit 1; }

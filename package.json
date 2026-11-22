@@ -49,7 +49,8 @@
     "check:migracao": "tsx scripts/release/check-migracao.ts",
     "check:risco": "tsx scripts/release/classificar-risco.ts",
     "release:prepare": "tsx scripts/release/prepare.ts",
-    "release:publish": "tsx scripts/release/publish.ts"
+    "release:publish": "tsx scripts/release/publish.ts",
+    "pr:push": "tsx scripts/pr/push.ts"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": "biome check --no-errors-on-unmatched --write"

@@ -30,6 +30,8 @@ export default defineConfig({
       "tests/scripts/release-classificar-risco.test.ts",
       "tests/scripts/release-portao-falha-fechada.test.ts",
       "tests/scripts/release-lockfile.test.ts",
+      // ADR-117: só os testes puros da lib; o de git (release-reaproveitar-aprovacao-git) sobe tsx e fica fora.
+      "tests/scripts/release-reaproveitar-aprovacao.test.ts",
     ],
     coverage: { enabled: false },
   },
