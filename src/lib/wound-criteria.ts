@@ -29,7 +29,7 @@ export const INFECTION_LEVEL_CRITERIA: Record<string, string> = {
   inflammation:
     'Eritema, calor e edema discretos, esperados na cicatrização, sem outros sinais.',
   local:
-    'Sinais no leito e até 2 cm da borda: exsudato aumentado, odor, granulação friável, dor nova, cicatrização estagnada.',
+    'Sinais no leito e até 2 cm da borda: eritema, calor, edema, secreção purulenta, odor, dor nova ou maior, granulação friável, cicatrização estagnada.',
   spreading:
     'Sinais além de 2 cm da borda: eritema em expansão, linfangite, crepitação ou deiscência.',
   systemic:
@@ -76,4 +76,21 @@ export function tissuePercentTotal(values: readonly string[]): number | null {
     return null;
   }
   return informed.reduce((sum, value) => sum + value, 0);
+}
+
+/** Trecho da recusa do servidor quando a soma dos percentuais de tecido passa de 100% (`wound-time.ts`). */
+const TISSUE_SUM_ERROR_FRAGMENT = 'soma dos percentuais de tecido';
+
+/**
+ * A recusa da soma acima de 100% já não vale: o erro é dela e a soma atual voltou a até 100%.
+ * Esconde a faixa de erro sem esperar um novo envio; outros erros continuam na tela.
+ */
+export function isStaleTissueSumError(
+  error: string | null,
+  percents: readonly string[],
+): boolean {
+  if (!error?.toLowerCase().includes(TISSUE_SUM_ERROR_FRAGMENT)) {
+    return false;
+  }
+  return (tissuePercentTotal(percents) ?? 0) <= TISSUE_PERCENT_MAX;
 }

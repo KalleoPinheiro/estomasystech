@@ -11,6 +11,7 @@ import {
   EXUDATE_CRITERIA,
   EXUDATE_TYPE_CRITERIA,
   INFECTION_LEVEL_CRITERIA,
+  isStaleTissueSumError,
   TISSUE_TYPE_CRITERIA,
   tissuePercentTotal,
   WOUND_EDGE_CRITERIA,
@@ -67,5 +68,36 @@ describe('Feature: soma dos percentuais de tecido (#955)', () => {
   it('Dado texto que não é número, Então ele fica fora da soma', () => {
     expect(tissuePercentTotal(['abc', '30'])).toBe(30);
     expect(tissuePercentTotal(['abc'])).toBeNull();
+  });
+});
+
+describe('Feature: recusa da soma acima de 100% some quando a soma volta a valer', () => {
+  const erro = 'A soma dos percentuais de tecido não pode passar de 100%';
+
+  it('Dado a recusa da soma e a soma corrigida para 100%, Então o erro já não vale', () => {
+    expect(isStaleTissueSumError(erro, ['60', '40', '', ''])).toBe(true);
+  });
+
+  it('Dado a recusa da soma e os percentuais apagados, Então o erro já não vale', () => {
+    expect(isStaleTissueSumError(erro, ['', '', '', ''])).toBe(true);
+  });
+
+  it('Dado a recusa da soma e a soma ainda acima de 100%, Então o erro segue', () => {
+    expect(isStaleTissueSumError(erro, ['70', '50', '', ''])).toBe(false);
+  });
+
+  it('Dado outro erro ou nenhum, Então nada é escondido', () => {
+    expect(isStaleTissueSumError('Nível de infecção inválido: x', ['10'])).toBe(
+      false,
+    );
+    expect(isStaleTissueSumError(null, ['10'])).toBe(false);
+  });
+});
+
+describe('Feature: legenda da infecção local pelos sinais evidentes do IWII 2022', () => {
+  it('Dado infecção local, Então a legenda cita eritema, calor, edema e secreção purulenta', () => {
+    for (const sinal of ['eritema', 'calor', 'edema', 'secreção purulenta']) {
+      expect(INFECTION_LEVEL_CRITERIA.local).toContain(sinal);
+    }
   });
 });

@@ -42,6 +42,7 @@ import type {
   AssessmentBody,
   ConditionBody,
 } from '@/lib/patient-record-schemas';
+import { isStaleTissueSumError } from '@/lib/wound-criteria';
 import { timeSummary, tissueProfile } from '@/lib/wound-time-summary';
 import {
   addConditionAssessment,
@@ -52,6 +53,7 @@ import {
   EMPTY_TIME_VALUES,
   TimeFields,
   type TimeFormValues,
+  tissuePercents,
   toTimePayload,
   WoundBaseFields,
 } from './assessment-time-fields';
@@ -706,7 +708,9 @@ function AssessmentForm({
       className="flex min-h-0 flex-1 flex-col gap-3"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        {error && <ErrorAlert message={error} />}
+        {error && !isStaleTissueSumError(error, tissuePercents(values)) && (
+          <ErrorAlert message={error} />
+        )}
         {isWound && (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

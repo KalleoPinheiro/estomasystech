@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithToast } from '@/../tests/support/render-with-toast';
 import { ConditionsSection } from '@/app/(staff)/pacientes/[id]/conditions-section';
@@ -37,16 +43,28 @@ const wound: ConditionDto = {
   createdAt: '2026-01-01T00:00:00.000Z',
 };
 
-function openAssessmentForm() {
+const SUM_ERROR = 'A soma dos percentuais de tecido não pode passar de 100%';
+
+/** Lista vazia nas leituras; o POST da avaliação recusa com a mensagem do domínio. */
+function stubFetch() {
   vi.stubGlobal(
     'fetch',
-    vi.fn(
-      async () =>
-        new Response(JSON.stringify({ success: true, data: [], error: null }), {
-          status: 200,
-        }),
+    vi.fn(async (_url: string, init?: RequestInit) =>
+      init?.method === 'POST'
+        ? new Response(
+            JSON.stringify({ success: false, data: null, error: SUM_ERROR }),
+            { status: 400 },
+          )
+        : new Response(
+            JSON.stringify({ success: true, data: [], error: null }),
+            { status: 200 },
+          ),
     ),
   );
+}
+
+function openAssessmentForm() {
+  stubFetch();
   renderWithToast(
     <ConditionsSection
       patientId="pac-1"
@@ -134,5 +152,47 @@ describe('Feature: critérios legíveis na avaliação de ferida (#955)', () => 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Soma: 120%. Passa de 100%: ajuste os percentuais antes de registrar.',
     );
+  });
+});
+
+describe('Feature: ajustes da validação limpa do #955', () => {
+  it('Dado aviso de coerência da infecção, Então a lista mantém a semântica dentro da região de status', () => {
+    openAssessmentForm();
+    fireEvent.change(screen.getByLabelText('Nível'), {
+      target: { value: 'local' },
+    });
+    fireEvent.click(screen.getByText('Febre'));
+
+    const status = screen.getByRole('status');
+    expect(status.tagName).toBe('DIV');
+    const list = within(status).getByRole('list');
+    expect(list).not.toHaveAttribute('role');
+    expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0);
+  });
+
+  it('Dado a recusa da soma acima de 100%, Quando corrigir para 100%, Então a faixa de erro some', async () => {
+    openAssessmentForm();
+    fireEvent.change(screen.getByLabelText('Granulação (%)'), {
+      target: { value: '70' },
+    });
+    fireEvent.change(screen.getByLabelText('Necrose (%)'), {
+      target: { value: '50' },
+    });
+    fireEvent.click(screen.getByText('Registrar avaliação'));
+    expect(await screen.findByText(SUM_ERROR)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Necrose (%)'), {
+      target: { value: '40' },
+    });
+    expect(screen.getByText(/^Soma: 110%/)).toBeInTheDocument();
+    expect(screen.getByText(SUM_ERROR)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Necrose (%)'), {
+      target: { value: '30' },
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(SUM_ERROR)).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Soma: 100%');
   });
 });

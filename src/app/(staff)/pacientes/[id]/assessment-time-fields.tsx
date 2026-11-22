@@ -59,6 +59,10 @@ export const toTimePayload = (values: TimeFormValues) => ({
   necroticPct: toNumberOrNull(values.necroticPct),
 });
 
+/** Percentuais de tecido do formulário, na ordem dos campos. */
+export const tissuePercents = (values: TimeFormValues): string[] =>
+  TISSUE_PERCENT_FIELDS.map(({ key }) => values[key]);
+
 const TISSUE_PERCENT_FIELDS = [
   { key: 'granulationPct', label: 'Granulação (%)' },
   { key: 'epithelialPct', label: 'Epitelização (%)' },
@@ -171,9 +175,7 @@ export function WoundBaseFields({
 
 /** Soma dos percentuais de tecido, com aviso quando passa de 100% (o registro recusa). */
 function TissuePercentTotal({ values }: { values: TimeFormValues }) {
-  const total = tissuePercentTotal(
-    TISSUE_PERCENT_FIELDS.map(({ key }) => values[key]),
-  );
+  const total = tissuePercentTotal(tissuePercents(values));
   if (total === null) {
     return null;
   }
@@ -270,14 +272,14 @@ export function TimeFields({ values, onChange }: TimeFieldsProps) {
           ))}
         </div>
         {warnings.length > 0 && (
-          <ul
-            role="status"
-            className="mt-3 list-disc rounded bg-warning-soft py-2 pr-3 pl-7 text-sm text-warning"
-          >
-            {warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
+          // O papel fica no invólucro: na própria <ul> ele apaga a semântica de lista (axe `listitem`).
+          <div role="status">
+            <ul className="mt-3 list-disc rounded bg-warning-soft py-2 pr-3 pl-7 text-sm text-warning">
+              {warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
         )}
       </fieldset>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
