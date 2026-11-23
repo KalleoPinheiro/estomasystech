@@ -9,6 +9,7 @@ import {
   parseSupplyCategory,
   SUPPLY_CATEGORIES,
   SUPPLY_CATEGORY_LABELS,
+  type SupplyCategory,
 } from '@/domain/inventory/supply';
 import { unwrapAction } from '@/lib/action-result';
 import type { SupplyDto } from '@/lib/dto';
@@ -33,6 +34,15 @@ const toSupplyFormValues = (initial?: SupplyDto): SupplyFormValues => ({
   active: initial?.active ?? true,
 });
 
+/** Só envia a categoria quando ela muda: cadastro sem categoria e edição que não a toca ficam como antes. */
+const categoryChange = (
+  values: SupplyFormValues,
+  initial?: SupplyDto,
+): { category?: SupplyCategory | null } => {
+  const category = parseSupplyCategory(values.category);
+  return category === (initial?.category ?? null) ? {} : { category };
+};
+
 const saveSupply = async (
   values: SupplyFormValues,
   initial?: SupplyDto,
@@ -42,7 +52,7 @@ const saveSupply = async (
     unit: values.unit,
     minQty: Number(values.minQty),
     priceCents: Math.round(Number(values.price) * 100),
-    category: parseSupplyCategory(values.category),
+    ...categoryChange(values, initial),
   };
   if (initial) {
     await unwrapAction(
