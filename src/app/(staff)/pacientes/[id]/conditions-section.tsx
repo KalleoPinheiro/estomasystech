@@ -42,6 +42,7 @@ import type {
   AssessmentBody,
   ConditionBody,
 } from '@/lib/patient-record-schemas';
+import { isStaleTissueSumError } from '@/lib/wound-criteria';
 import { timeSummary, tissueProfile } from '@/lib/wound-time-summary';
 import {
   addConditionAssessment,
@@ -52,7 +53,9 @@ import {
   EMPTY_TIME_VALUES,
   TimeFields,
   type TimeFormValues,
+  tissuePercents,
   toTimePayload,
+  WoundBaseFields,
 } from './assessment-time-fields';
 import { ConditionPhotos } from './condition-photos';
 
@@ -705,7 +708,9 @@ function AssessmentForm({
       className="flex min-h-0 flex-1 flex-col gap-3"
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        {error && <ErrorAlert message={error} />}
+        {error && !isStaleTissueSumError(error, tissuePercents(values)) && (
+          <ErrorAlert message={error} />
+        )}
         {isWound && (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -740,39 +745,12 @@ function AssessmentForm({
                 />
               </label>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="font-medium text-sm">
-                Tecido predominante
-                <NativeSelect
-                  value={values.tissueType}
-                  onChange={(e) => set('tissueType')(e.target.value)}
-                  className="mt-1"
-                >
-                  <option value="">—</option>
-                  {/* Valores canônicos do PUSH 3.0 — texto livre legado permanece no histórico. */}
-                  <option value="closed">Fechado (0)</option>
-                  <option value="epithelial">Epitelização (1)</option>
-                  <option value="granulation">Granulação (2)</option>
-                  <option value="slough">Esfacelo (3)</option>
-                  <option value="necrotic">Necrose (4)</option>
-                </NativeSelect>
-              </label>
-              <label className="font-medium text-sm">
-                Exsudato
-                <NativeSelect
-                  value={values.exudate}
-                  onChange={(e) => set('exudate')(e.target.value)}
-                  className="mt-1"
-                >
-                  <option value="">—</option>
-                  {Object.entries(EXUDATE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </label>
-            </div>
+            <WoundBaseFields
+              tissueType={values.tissueType}
+              exudate={values.exudate}
+              onTissueType={set('tissueType')}
+              onExudate={set('exudate')}
+            />
             <TimeFields values={values} onChange={setTime} />
             <label className="font-medium text-sm">
               Pele perilesional
