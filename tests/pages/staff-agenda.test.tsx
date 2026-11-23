@@ -945,6 +945,19 @@ describe('Feature: Página de agenda', () => {
   });
 });
 
+describe('Feature: atalho Novo agendamento da tela Hoje (#973)', () => {
+  it('Dado ?nova=1 na URL, Quando a página carrega, Então abre a nova consulta vazia', async () => {
+    mockAgendaFetch();
+    await renderAgenda('/agenda?nova=1');
+
+    await waitFor(() => {
+      expect(screen.getByText('Nova consulta')).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText(/Procedimento \*/)).toHaveValue('');
+    expect(document.querySelector('[data-patient-picker-selected]')).toBeNull();
+  });
+});
+
 describe('Feature: Formulário de nova consulta', () => {
   describe('Cenário: submissão válida', () => {
     it('Dado dados preenchidos, Quando submeter, Então chama onSubmit com os valores do formulário', async () => {

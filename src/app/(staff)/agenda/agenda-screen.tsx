@@ -260,7 +260,7 @@ export function AgendaScreen({
     }
   }, [compact, period]);
   const [creatingFor, setCreatingFor] = useState<Date | null>(() =>
-    entry.recall ? clinicDayCell() : null,
+    entry.recall || entry.create ? clinicDayCell() : null,
   );
   const [selected, setSelected] = useState<AppointmentDto | null>(() =>
     linkedAppointment(appointments, entry),
