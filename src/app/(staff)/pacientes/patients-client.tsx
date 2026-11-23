@@ -93,47 +93,54 @@ function PatientsTable({
                 />
               </TableCell>
               <TableCell label="Ações" className="px-4 py-3 text-right">
-                <Link
-                  href={`/pacientes/${patient.id}`}
-                  className="mr-2 font-semibold text-accent-ink hover:underline"
+                {/* Um só filho: no modo empilhado (< 40rem) a célula põe cada filho numa linha da
+                    2ª coluna; agrupadas, as ações ficam lado a lado e alinhadas (#971). */}
+                <div
+                  data-testid="patient-row-actions"
+                  className="flex flex-wrap items-center justify-start gap-2 sm:justify-end"
                 >
-                  Prontuário
-                </Link>
-                <Button
-                  type="button"
-                  onClick={() => onEdit(patient)}
-                  variant="ghost"
-                  size="sm"
-                >
-                  Editar
-                </Button>
-                {patient.active ? (
-                  <ConfirmAction
-                    trigger={
-                      <Button type="button" variant="ghost" size="sm">
-                        Desativar
-                      </Button>
-                    }
-                    title="Desativar paciente?"
-                    description="O paciente para de aparecer nos fluxos ativos."
-                    confirmLabel="Confirmar"
-                    variant="danger"
-                    onConfirm={() => onToggleActive(patient)}
-                  />
-                ) : patient.anonymized ? (
-                  <span className="text-ink-3 text-xs">
-                    Anonimizado: para voltar, cadastre a pessoa novamente.
-                  </span>
-                ) : (
+                  <Link
+                    href={`/pacientes/${patient.id}`}
+                    className="font-semibold text-accent-ink hover:underline"
+                  >
+                    Prontuário
+                  </Link>
                   <Button
                     type="button"
-                    onClick={() => onToggleActive(patient)}
+                    onClick={() => onEdit(patient)}
                     variant="ghost"
                     size="sm"
                   >
-                    Reativar
+                    Editar
                   </Button>
-                )}
+                  {patient.active ? (
+                    <ConfirmAction
+                      trigger={
+                        <Button type="button" variant="ghost" size="sm">
+                          Desativar
+                        </Button>
+                      }
+                      title="Desativar paciente?"
+                      description="O paciente para de aparecer nos fluxos ativos."
+                      confirmLabel="Confirmar"
+                      variant="danger"
+                      onConfirm={() => onToggleActive(patient)}
+                    />
+                  ) : patient.anonymized ? (
+                    <span className="text-ink-3 text-xs">
+                      Anonimizado: para voltar, cadastre a pessoa novamente.
+                    </span>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={() => onToggleActive(patient)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      Reativar
+                    </Button>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
