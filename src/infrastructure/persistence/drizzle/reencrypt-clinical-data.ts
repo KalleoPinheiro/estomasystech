@@ -10,6 +10,7 @@ import {
   conditionAssessments,
   conditionPhotos,
   dataSubjectRequests,
+  dressingRecords,
   evolutionNotes,
   interventionRecords,
   invoicePayments,
@@ -121,6 +122,12 @@ export const CIPHERED_TABLES: readonly CipheredTable[] = [
     table: interventionRecords,
     key: interventionRecords.id,
     columns: { notes: interventionRecords.notes },
+  },
+  {
+    name: 'dressing_records',
+    table: dressingRecords,
+    key: dressingRecords.id,
+    columns: { content: dressingRecords.content },
   },
   {
     name: 'nursing_prescriptions',
