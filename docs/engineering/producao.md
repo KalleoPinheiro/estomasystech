@@ -282,7 +282,9 @@ proposital enquanto as migrações não têm `down`
    conta antes (ADR-111, "Contração feita").
    **Release que leva a 1ª etapa da contração do nascimento (ADR-096, "Contração do nascimento"):** o código deixa
    de ler `birth_date` em claro. Antes do clique, a mesma conferência de integridade precisa dar `nascimento=0` na
-   linha `cifra_paciente` (`SELECT count(*) FROM patients WHERE birth_date IS NOT NULL;` esperado `0`). Se não der,
+   linha `cifra_paciente` (`SELECT count(*) FROM patients WHERE birth_date IS NOT NULL;` esperado `0`). A tabela tem RLS
+   com `FORCE`: o `0` só vale com um papel que a atravessa (o script do dono confere `super=t` ou `bypassrls=t`; à mão,
+   `SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;` antes). Se não der,
    rode `npm run data:reencrypt` com a versão em produção (ela ainda converte o nascimento) e confira de novo; com
    pendência, **não aprove o deploy**, porque o nascimento dessas linhas sumiria da ficha.
    **Depois dessa conversão, voltar o código a uma versão anterior à `0074` trava o login:** aí o rollback é restaurar o
