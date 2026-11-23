@@ -467,9 +467,9 @@ export const patients = pgTable(
     phone: text('phone').notNull(),
     // CPF (11 dígitos) cifrado em repouso (ADR-025, #326); null = não informado.
     cpf: text('cpf'),
-    // Legado: em claro. Desde a cifra do cadastro (ADR-096) o nascimento mora
-    // em `birth_date_enc` e esta coluna só é lida enquanto a recifra não rodou.
-    birthDate: timestamp('birth_date', { withTimezone: true, mode: 'date' }),
+    // A coluna legada `birth_date` (em claro) segue no banco até o DROP da
+    // release seguinte (contração do ADR-096), mas o código não a lê nem grava:
+    // fora do schema, nenhum `select()` a nomeia e o rollback por redeploy vale.
     // Nascimento (ISO 8601) cifrado em repouso (ADR-096, #735); null = não informado.
     birthDateEnc: text('birth_date_enc'),
     // Índice cego (HMAC com pepper próprio, ADR-096): busca exata por CPF, telefone

@@ -50,7 +50,8 @@ async function insertPatient(clinicId: string, createdAt = OLD) {
     fullName: `Maria ${id}`,
     email: `${id}@x.com`,
     phone: '11999990000',
-    birthDate: new Date('1950-07-15T00:00:00Z'),
+    // TESTE-ALTERADO: o código não grava mais `birth_date` em claro (contração do ADR-096).
+    birthDateEnc: TEST_CIPHER.encrypt('1950-07-15T00:00:00.000Z'),
     notes: 'observação com nome',
     createdAt,
   });
@@ -399,8 +400,6 @@ describe('Feature: Retenção do prontuário — 20 anos após a última ativida
       notes: null,
       active: false,
       anonymizedAt: NOW,
-      // TESTE-ALTERADO: o nascimento passa a morar cifrado em birth_date_enc (ADR-096).
-      birthDate: null,
     });
     expect(TEST_CIPHER.decrypt(patient.birthDateEnc ?? '')).toBe(
       '1950-01-01T00:00:00.000Z',
@@ -1239,11 +1238,12 @@ describe('Feature: Retenção restante (#311)', () => {
     // Antes de anonimizar o paciente, nada está pendente.
     expect(await repo.findPendingCalendarEvents(10)).toEqual([]);
     expect(await repo.anonymizePatient(patientId, NOW, CUTOFF_20)).toBe(1);
-    await new DrizzleRetentionRepository(appDb, OTHER).anonymizePatient(
-      otherPatient,
-      NOW,
-      CUTOFF_20,
-    );
+    // TESTE-ALTERADO: o nascimento da fixture agora é cifrado com TEST_CIPHER (contração do ADR-096).
+    await new DrizzleRetentionRepository(
+      appDb,
+      OTHER,
+      TEST_CIPHER,
+    ).anonymizePatient(otherPatient, NOW, CUTOFF_20);
 
     expect(await repo.findPendingCalendarEvents(10)).toEqual([
       { appointmentId: withEvent, googleEventId: 'g-own' },

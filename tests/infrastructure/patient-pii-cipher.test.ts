@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Patient } from '@/domain/patient/patient';
@@ -57,6 +57,18 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
       await db.select().from(schema.patients).where(eq(schema.patients.id, id))
     )[0];
 
+  // A coluna legada `birth_date` saiu do schema do código (contração do ADR-096), mas segue no banco até o DROP.
+  const legacyBirth = async (id: string) =>
+    (
+      await db.execute<{ birth_date: Date | null }>(
+        sql`SELECT birth_date FROM patients WHERE id = ${id}`,
+      )
+    ).rows[0]?.birth_date ?? null;
+  const setLegacyBirth = (id: string, iso: string) =>
+    db.execute(
+      sql`UPDATE patients SET birth_date = ${iso}::timestamptz WHERE id = ${id}`,
+    );
+
   const joao = () =>
     Patient.create({
       fullName: 'João da Silva',
@@ -83,7 +95,7 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
     expect(JSON.stringify(row)).not.toMatch(
       /Jo[ãa]o|example\.com|11999990000|52998224725|1980/,
     );
-    expect(row.birthDate).toBeNull();
+    expect(await legacyBirth(patient.id)).toBeNull();
     expect(row.cpfHash).toMatch(/^b1\./);
     expect(row.phoneHash).toMatch(/^b1\./);
     expect(row.emailHash).toMatch(/^b1\./);
@@ -113,20 +125,21 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
     expect((await repo.findById(patient.id))?.birthDate).toBeNull();
   });
 
-  it('Dado linha legada em claro, Quando ler, Então a leitura tolera o claro (janela até a recifra)', async () => {
+  // TESTE-ALTERADO: contração do ADR-096; o nascimento em claro (`birth_date`) não é mais lido.
+  it('Dado linha legada em claro, Quando ler, Então tolera o texto em claro e ignora o nascimento da coluna legada', async () => {
     await db.insert(schema.patients).values({
       id: 'legado',
       clinicId: CLINIC,
       fullName: 'Maria Legada',
       email: 'maria@legado.com',
       phone: '+5511988887777',
-      birthDate: new Date('1970-01-02T00:00:00Z'),
       createdAt: new Date(),
     });
+    await setLegacyBirth('legado', '1970-01-02T00:00:00Z');
 
     const patient = await repo.findById('legado');
     expect(patient?.fullName).toBe('Maria Legada');
-    expect(patient?.birthDate).toEqual(new Date('1970-01-02T00:00:00Z'));
+    expect(patient?.birthDate).toBeNull();
   });
 
   describe('busca em memória e índice cego', () => {
@@ -371,8 +384,9 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
       ).toBe(1);
 
       const row = await rawRow(patient.id);
+      // TESTE-ALTERADO: `birth_date` saiu do schema do código (contração do ADR-096).
+      expect(await legacyBirth(patient.id)).toBeNull();
       expect(row).toMatchObject({
-        birthDate: null,
         cpfHash: null,
         phoneHash: null,
         emailHash: null,
@@ -383,7 +397,8 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
       );
     });
 
-    it('sem nascimento informado, segue sem nascimento; legado em claro também vira só o ano cifrado', async () => {
+    // TESTE-ALTERADO: contração do ADR-096; o nascimento só existe cifrado, e é ele que vira só o ano.
+    it('sem nascimento informado, segue sem nascimento; nascimento cifrado vira só o ano cifrado', async () => {
       const retention = new DrizzleRetentionRepository(
         appDb,
         CLINIC,
@@ -404,7 +419,7 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
           fullName: 'y',
           phone: '1',
           createdAt: old,
-          birthDate: new Date('1975-06-15T00:00:00Z'),
+          birthDateEnc: TEST_CIPHER.encrypt('1975-06-15T00:00:00.000Z'),
         },
       ]);
       const cutoff = new Date('2010-01-01T00:00:00Z');
@@ -413,7 +428,6 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
 
       expect((await rawRow('sem')).birthDateEnc).toBeNull();
       const leg = await rawRow('leg');
-      expect(leg.birthDate).toBeNull();
       expect(TEST_CIPHER.decrypt(leg.birthDateEnc ?? '')).toBe(
         '1975-01-01T00:00:00.000Z',
       );
@@ -421,7 +435,8 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
   });
 
   describe('backfill (data:reencrypt): cifra o legado, preenche o índice e é idempotente', () => {
-    it('cifra nome, e-mail, telefone e nascimento em claro e calcula os hashes', async () => {
+    // TESTE-ALTERADO: contração do ADR-096; o reencrypt não converte mais o nascimento em claro.
+    it('cifra nome, e-mail e telefone em claro, calcula os hashes e não toca na coluna legada do nascimento', async () => {
       await db.insert(schema.patients).values({
         id: 'bf',
         clinicId: CLINIC,
@@ -429,28 +444,25 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
         email: 'rita@x.com',
         phone: '+5511977776666',
         cpf: TEST_CIPHER.encrypt(CPF),
-        birthDate: new Date('1990-05-05T00:00:00Z'),
         createdAt: new Date(),
       });
+      await setLegacyBirth('bf', '1990-05-05T00:00:00Z');
 
       expect(await reencryptPatientIdentity(appDb, TEST_CIPHER, BLIND)).toBe(1);
 
       const row = await rawRow('bf');
       expect(
-        [row.fullName, row.email, row.phone, row.birthDateEnc].every((v) =>
-          v?.startsWith('v1.'),
-        ),
+        [row.fullName, row.email, row.phone].every((v) => v?.startsWith('v1.')),
       ).toBe(true);
-      expect(row.birthDate).toBeNull();
+      expect(row.birthDateEnc).toBeNull();
       expect(row.cpfHash).toBe(BLIND.hash(CLINIC, 'cpf', CPF));
       expect(row.emailHash).toBe(BLIND.hash(CLINIC, 'email', 'rita@x.com'));
-      expect((await repo.findById('bf'))?.birthDate).toEqual(
-        new Date('1990-05-05T00:00:00Z'),
-      );
+      expect((await repo.findById('bf'))?.birthDate).toBeNull();
       expect(await reencryptPatientIdentity(appDb, TEST_CIPHER, BLIND)).toBe(0);
     });
 
-    it('zera a coluna legada quando o nascimento cifrado já existe, recifra chave antiga e recalcula pepper antigo', async () => {
+    // TESTE-ALTERADO: contração do ADR-096; a coluna legada do nascimento não é mais zerada pelo reencrypt.
+    it('recifra chave antiga, inclusive do nascimento, e recalcula pepper antigo', async () => {
       const oldCipher = new DataCipher({
         current: 'chave-antiga-de-pii-00000000000000000001',
       });
@@ -471,7 +483,6 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
         fullName: oldCipher.encrypt('Rot Ação'),
         email: null,
         phone: oldCipher.encrypt('+5511966665555'),
-        birthDate: new Date('1960-01-01T00:00:00Z'),
         birthDateEnc: oldCipher.encrypt('1960-01-01T00:00:00.000Z'),
         phoneHash: oldBlind.hash(CLINIC, 'phone', '+5511966665555'),
         createdAt: new Date(),
@@ -480,7 +491,6 @@ describe('Feature: PII do paciente cifrada em repouso (ADR-096, #735/#736/#737)'
       expect(await reencryptPatientIdentity(appDb, rotated, newBlind)).toBe(1);
 
       const row = await rawRow('rot');
-      expect(row.birthDate).toBeNull();
       expect(rotated.isCurrent(row.fullName)).toBe(true);
       expect(rotated.isCurrent(row.birthDateEnc ?? '')).toBe(true);
       expect(newBlind.isCurrent(row.phoneHash ?? '')).toBe(true);

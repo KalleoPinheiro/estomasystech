@@ -53,7 +53,7 @@ async function seedPlan() {
     fullName: 'Maria Sigilosa',
     email: `${patientId}@x.com`,
     phone: '11999990000',
-    birthDate: new Date('1950-07-15T00:00:00Z'),
+    // TESTE-ALTERADO: o código não grava mais `birth_date` em claro (contração do ADR-096).
     createdAt: OLD,
   });
   const planId = nextId('plan');

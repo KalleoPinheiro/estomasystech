@@ -163,6 +163,15 @@ anonimização · #738 CPF duplicado bloqueia · #739 responsável · #740 medi�
 #742 e-mail de login (backlog). Pendências do Kalléo: criar o valor de produção do pepper no cofre e configurar a
 variável na Vercel `staging` e no Coolify; aplicar a migração em produção com backup antes.
 
+## Contração do nascimento (1ª etapa, 2026-11-23)
+
+Em duas releases, para o rollback por redeploy seguir valendo (ADR-113): nesta, o código para de ler e gravar
+`birth_date` e a coluna sai do schema do Drizzle (nenhum `select()` a nomeia); o `data:reencrypt` deixa de converter o
+nascimento em claro e só acompanha a chave em `birth_date_enc`. Pré-condição do deploy: `nascimento=0` na verificação
+de integridade (`producao.md` § 3); se houver pendência, `data:reencrypt` com a versão anterior antes. Na release
+seguinte, migração não aditiva com o `DROP COLUMN birth_date` e o drop dos quatro índices de nome (`pg_trgm` x3 e
+`idx_patients_full_name`), classe 3.
+
 ## Relacionado
 
 - [ADR-006](006-chave-de-dados-clinicos.md) — chave e formato da cifra; estendido na lista de campos.
