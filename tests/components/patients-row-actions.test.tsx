@@ -47,7 +47,9 @@ describe('Lista de pacientes: ações da linha agrupadas (#971)', () => {
     // No modo empilhado do Table (< 40rem) cada filho da célula vira uma linha; um só filho mantém as ações juntas.
     expect(group.parentElement?.children).toHaveLength(1);
     expect(group.className).toMatch(/\bflex\b/);
-    expect(group.className).toMatch(/\bflex-wrap\b/);
+    // Uma linha só (#1009): o grupo não quebra e, empilhado, ocupa a linha inteira da célula.
+    expect(group.className).toMatch(/\bflex-nowrap\b/);
+    expect(group.className).toMatch(/\bcol-span-full\b/);
     const scope = within(group);
     expect(scope.getByRole('link', { name: 'Prontuário' })).toBeTruthy();
     expect(scope.getByRole('button', { name: 'Editar' })).toBeTruthy();

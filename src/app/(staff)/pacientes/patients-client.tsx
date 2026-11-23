@@ -75,7 +75,10 @@ function PatientsTable({
                 {abbreviatePatientName(patient.fullName)}
               </TableCell>
               <TableCell label="Contato" className="px-4 py-3 text-ink-2">
-                {patient.email && <div>{patient.email}</div>}
+                {/* O e-mail quebra em qualquer ponto: inteiro, ele alarga a tabela além de 768 px (#1009). */}
+                {patient.email && (
+                  <div className="break-all">{patient.email}</div>
+                )}
                 <div className="text-ink-3 text-xs">
                   <PatientPhone
                     phone={patient.phone}
@@ -94,10 +97,13 @@ function PatientsTable({
               </TableCell>
               <TableCell label="Ações" className="px-4 py-3 text-right">
                 {/* Um só filho: no modo empilhado (< 40rem) a célula põe cada filho numa linha da
-                    2ª coluna; agrupadas, as ações ficam lado a lado e alinhadas (#971). */}
+                    2ª coluna; agrupadas, as ações ficam lado a lado e alinhadas (#971). A 2ª coluna
+                    tem ~180 px no celular, menos que as três ações: o grupo ocupa a linha inteira
+                    (col-span-full) e não quebra; na tabela, nowrap dá à coluna a largura das três
+                    (#1009). */}
                 <div
                   data-testid="patient-row-actions"
-                  className="flex flex-wrap items-center justify-start gap-2 sm:justify-end"
+                  className="col-span-full flex flex-nowrap items-center justify-start gap-2 whitespace-nowrap sm:justify-end"
                 >
                   <Link
                     href={`/pacientes/${patient.id}`}
@@ -127,7 +133,7 @@ function PatientsTable({
                       onConfirm={() => onToggleActive(patient)}
                     />
                   ) : patient.anonymized ? (
-                    <span className="text-ink-3 text-xs">
+                    <span className="whitespace-normal text-ink-3 text-xs">
                       Anonimizado: para voltar, cadastre a pessoa novamente.
                     </span>
                   ) : (
