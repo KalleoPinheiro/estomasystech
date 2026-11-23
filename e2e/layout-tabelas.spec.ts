@@ -300,7 +300,10 @@ for (const member of TABLE_SET) {
         const bottom = Math.max(...rects.map((r) => r.bottom));
         // O rótulo (::before) fica no fluxo: se quebrar linha, aumenta a célula.
         const labelOutOfFlow = getComputedStyle(td, "::before").position === "absolute";
-        return left < box.left + box.width * 0.3 || bottom > box.bottom + 1 || labelOutOfFlow;
+        // Exceção única (#1009): as ações da lista de Pacientes ocupam uma linha própria,
+        // abaixo do rótulo, para caberem lado a lado no celular. Nenhuma outra célula.
+        const ownRow = td.querySelector('[data-testid="patient-row-actions"]') !== null;
+        return (!ownRow && left < box.left + box.width * 0.3) || bottom > box.bottom + 1 || labelOutOfFlow;
       }).length;
       return { theadHeight, badLabels, offscreen, overlapped, cells: cells.length };
     }, PHONE.width);

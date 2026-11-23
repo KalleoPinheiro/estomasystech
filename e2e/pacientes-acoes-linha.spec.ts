@@ -34,6 +34,11 @@ async function expectOneLineInView(page: Page, name: string, toggle: string, wid
   }
 
   const groupBox = await boxOf(group);
+  if (width < 640) {
+    // Empilhada: as ações ficam numa linha própria, abaixo do rótulo "Ações", nunca por cima dele.
+    const cellBox = await boxOf(group.locator("xpath=.."));
+    expect(groupBox.y, `ações sobre o rótulo em ${width}px`).toBeGreaterThan(cellBox.y + 20);
+  }
   expect(groupBox.x, `ações começam fora da tela em ${width}px`).toBeGreaterThanOrEqual(0);
   expect(groupBox.x + groupBox.width, `ações passam da tela em ${width}px`).toBeLessThanOrEqual(width);
 
