@@ -26,11 +26,18 @@ import {
   type MovementType,
   StockMovement,
 } from '@/domain/inventory/stock-movement';
-import { Supply } from '@/domain/inventory/supply';
+import { parseSupplyCategory, Supply } from '@/domain/inventory/supply';
 import { SupplyBatch } from '@/domain/inventory/supply-batch';
 import { type AppDb, MAX_ROWS } from './db';
 import { followUps, stockMovements, supplies, supplyBatches } from './schema';
 import { withTenant } from './tenant-scope';
+
+function toSupply(row: typeof supplies.$inferSelect): Supply {
+  return Supply.restore({
+    ...row,
+    category: parseSupplyCategory(row.category),
+  });
+}
 
 export class DrizzleSupplyRepository implements SupplyRepository {
   constructor(
@@ -51,6 +58,7 @@ export class DrizzleSupplyRepository implements SupplyRepository {
       unit: supply.unit,
       minQty: supply.minQty,
       priceCents: supply.priceCents,
+      category: supply.category,
       stockQty: supply.stockQty,
       active: supply.isActive,
       createdAt: supply.createdAt,
@@ -71,7 +79,7 @@ export class DrizzleSupplyRepository implements SupplyRepository {
       .from(supplies)
       .where(withTenant(supplies, this.clinicId, eq(supplies.id, id)))
       .limit(1);
-    return rows[0] ? Supply.restore(rows[0]) : null;
+    return rows[0] ? toSupply(rows[0]) : null;
   }
 
   async adjustStock(id: string, delta: number): Promise<Supply | null> {
@@ -91,7 +99,7 @@ export class DrizzleSupplyRepository implements SupplyRepository {
         ),
       )
       .returning();
-    return rows[0] ? Supply.restore(rows[0]) : null;
+    return rows[0] ? toSupply(rows[0]) : null;
   }
 
   async findAll(): Promise<Supply[]> {
@@ -101,7 +109,7 @@ export class DrizzleSupplyRepository implements SupplyRepository {
       .where(withTenant(supplies, this.clinicId))
       .orderBy(asc(supplies.name))
       .limit(MAX_ROWS);
-    return rows.map((row) => Supply.restore(row));
+    return rows.map(toSupply);
   }
 }
 

@@ -1,5 +1,5 @@
 import type { StockMovement } from '@/domain/inventory/stock-movement';
-import type { Supply } from '@/domain/inventory/supply';
+import type { Supply, SupplyCategory } from '@/domain/inventory/supply';
 
 export interface SupplyDto {
   id: string;
@@ -7,6 +7,8 @@ export interface SupplyDto {
   unit: string;
   minQty: number;
   priceCents: number;
+  /** Ausente ou null: sem categoria. */
+  category?: SupplyCategory | null;
   stockQty: number;
   isLowStock: boolean;
   /** Zero é mais grave que "baixo" — severidade visual escala (MAT-01/02). */
@@ -20,6 +22,7 @@ export const toSupplyDto = (supply: Supply): SupplyDto => ({
   unit: supply.unit,
   minQty: supply.minQty,
   priceCents: supply.priceCents,
+  category: supply.category,
   stockQty: supply.stockQty,
   isLowStock: supply.isLowStock,
   isOutOfStock: supply.isOutOfStock,

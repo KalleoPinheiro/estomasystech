@@ -149,6 +149,27 @@ describe('Feature: ações de Materiais (#556)', () => {
       expect((await (await repos()).supplies.findAll()).length).toBe(before);
     });
 
+    it('Dado categoria, Quando cadastra e depois limpa, Então grava a categoria e a recusa fora da lista (#963 D2)', async () => {
+      signIn('company_admin');
+      const { createSupply, updateSupply } = await actions();
+
+      const created = await createSupply({
+        ...NEW_SUPPLY,
+        category: 'cobertura',
+      });
+      expect(created.data).toMatchObject({ category: 'cobertura' });
+      const id = (created.data as { id: string }).id;
+
+      const invalid = await updateSupply({
+        id,
+        category: 'curativo' as unknown as 'outro',
+      });
+      expect(invalid.success).toBe(false);
+
+      const cleared = await updateSupply({ id, category: null });
+      expect(cleared.data).toMatchObject({ id, category: null });
+    });
+
     it('Dado insumo cadastrado, Quando o Admin o desativa, Então fica inativo e a trilha registra a edição', async () => {
       const supply = await seedSupply();
       const { updateSupply } = await actions();

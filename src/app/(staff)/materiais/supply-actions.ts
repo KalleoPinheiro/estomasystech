@@ -5,6 +5,7 @@ import { CreateSupply } from '@/application/inventory/create-supply';
 import { RegisterStockMovement } from '@/application/inventory/register-stock-movement';
 import { UpdateSupply } from '@/application/inventory/update-supply';
 import { MOVEMENT_TYPES } from '@/domain/inventory/stock-movement';
+import { SUPPLY_CATEGORIES } from '@/domain/inventory/supply';
 import { toSupplyDto } from '@/lib/dto';
 import { defineAction } from '@/lib/server/define-action';
 import { rolesWithAccessTo } from '@/lib/staff-pages';
@@ -23,6 +24,7 @@ const supplyFields = {
   unit: z.string().min(1).max(20),
   minQty: z.number().int().nonnegative().max(1_000_000),
   priceCents: z.number().int().nonnegative().max(1_000_000_000),
+  category: z.enum(SUPPLY_CATEGORIES).nullable().optional(),
 };
 
 /** Cadastra um insumo. */

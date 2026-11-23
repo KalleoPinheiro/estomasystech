@@ -652,6 +652,13 @@
       "when": 1795329802441,
       "tag": "0092_receituario-emitido",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1795443504012,
+      "tag": "0093_insumo-categoria",
+      "breakpoints": true
     }
   ]
 }

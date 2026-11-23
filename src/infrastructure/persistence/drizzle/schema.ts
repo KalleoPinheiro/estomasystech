@@ -1025,6 +1025,8 @@ export const supplies = pgTable(
     unit: text('unit').notNull(),
     minQty: integer('min_qty').notNull(),
     priceCents: integer('price_cents').notNull(),
+    // Categoria do insumo (#963 D2): cobertura, solucao, protecao, outro; null = sem categoria.
+    category: text('category'),
     stockQty: integer('stock_qty').notNull().default(0),
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', {
