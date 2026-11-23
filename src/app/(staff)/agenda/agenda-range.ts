@@ -165,7 +165,12 @@ export interface AgendaQuery {
 export interface AgendaEntry {
   recall: { followUpId: string; patientId: string; procedure: string } | null;
   consultation: { id: string; startsAt: string } | null;
+  /** `?nova=1` (atalho da tela Hoje, #973): abre a nova consulta; ausente = não abre. */
+  create?: true;
 }
+
+/** Agenda com a nova consulta aberta (#973). */
+export const NEW_APPOINTMENT_HREF = '/agenda?nova=1';
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -198,7 +203,6 @@ export function parseAgendaQuery(params: SearchParams): {
     consultationId && !Number.isNaN(startsAt.getTime())
       ? { id: consultationId, startsAt: startsAt.toISOString() }
       : null;
-  const followUpId = first(params.followUpId);
   const anchor =
     parseDayKey(first(params.dia)) ??
     clinicDayCell(consultation ? new Date(consultation.startsAt) : new Date());
@@ -211,14 +215,20 @@ export function parseAgendaQuery(params: SearchParams): {
     },
     entry: {
       consultation,
-      recall: followUpId
-        ? {
-            followUpId,
-            patientId: first(params.patientId) ?? '',
-            procedure: first(params.procedure) ?? '',
-          }
-        : null,
+      recall: parseRecall(params),
+      ...(first(params.nova) === '1' ? { create: true as const } : {}),
     },
+  };
+}
+
+/** Recall de 1 clique (`?followUpId=&patientId=&procedure=`); sem `followUpId`, não há recall. */
+function parseRecall(params: SearchParams): AgendaEntry['recall'] {
+  const followUpId = first(params.followUpId);
+  if (!followUpId) return null;
+  return {
+    followUpId,
+    patientId: first(params.patientId) ?? '',
+    procedure: first(params.procedure) ?? '',
   };
 }
 

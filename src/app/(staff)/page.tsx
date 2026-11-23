@@ -9,6 +9,7 @@ import { FollowUpsCard } from './_hoje/follow-ups-card';
 import { KpiGrid } from './_hoje/kpi-grid';
 import { LowStockCard } from './_hoje/low-stock-card';
 import { MajorityCard } from './_hoje/majority-card';
+import { NewAppointmentButton } from './_hoje/new-appointment-button';
 import { PendingClosureCard } from './_hoje/pending-closure';
 import { TodayAppointmentsCard } from './_hoje/today-appointments';
 import { TriageCard } from './_hoje/triage-card';
@@ -33,12 +34,15 @@ export default async function DashboardPage(props?: {
   // Aviso de maioridade (#372): só quem gerencia responsáveis decide.
   const showMajority = GUARDIAN_MANAGER_ROLES.includes(session.role);
   const showAllFollowUps = (await props?.searchParams)?.retornos === 'todos';
+  // Atalho da nova consulta (#973): só para quem pode usar a agenda (mesma matriz da API).
+  const canSchedule = canRoleAccess('/api/appointments', session.role);
 
   return (
     <div>
       <PageHeader
         title="Hoje"
         description={formatDate(new Date().toISOString())}
+        actions={canSchedule ? <NewAppointmentButton /> : undefined}
       />
 
       {/* Uma só fronteira: KPIs, grid e pendências chegam no mesmo flush. Com

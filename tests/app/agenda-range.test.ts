@@ -85,6 +85,14 @@ describe('Feature: período da agenda lido da URL (#551)', () => {
       }
     });
 
+    it('Dado ?nova=1 (atalho da tela Hoje, #973), Então a entrada pede a nova consulta; outro valor não pede', () => {
+      expect(parseAgendaQuery({ nova: '1' }).entry.create).toBe(true);
+      expect(parseAgendaQuery({ nova: '0' }).entry).not.toHaveProperty(
+        'create',
+      );
+      expect(parseAgendaQuery({}).entry).not.toHaveProperty('create');
+    });
+
     it('Dados visão, dia, status e profissional válidos, Então vêm do recorte da URL', () => {
       const { query } = parseAgendaQuery({
         visao: 'semana',

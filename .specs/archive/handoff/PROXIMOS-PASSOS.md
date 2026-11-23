@@ -37,7 +37,7 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
    **2ª etapa, na release seguinte:** migração com o `DROP COLUMN birth_date` e o drop dos índices GIN antigos do nome.
 2. **#964**: proposta do Plano de acompanhamento em PDF.
 3. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
-   #973 (tela inicial; #971 em PR). #961 espera a #376. #968 precisa de print e depende do EST-16. #974 e #975 precisam de print.
+   #973 e #971 em PR (telas). #961 espera a #376. #968 precisa de print e depende do EST-16. #974 e #975 precisam de print.
 4. **Espera decisão do dono** (regra 5): RM-14 WhatsApp com template da Meta, RM-05 pagamento online (PSP) e RM-17 TISS.
 5. **Abertas sem urgência:** #952 (E2E de série semanal reprova às sextas, P2), #933 (shard intermitente), #815, #651, #650, #862.
 
