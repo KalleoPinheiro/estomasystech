@@ -75,12 +75,10 @@ const RESOLVED_WAITLIST = ['scheduled', 'removed', 'expired'];
 /** Nascimento reduzido ao 1º de janeiro do ano, cifrado; null quando não havia data. */
 function birthYearOnly(
   cipher: FieldCipher,
-  row: { birthDate: Date | null; birthDateEnc: string | null } | undefined,
+  row: { birthDateEnc: string | null } | undefined,
 ): string | null {
-  const birth = row?.birthDateEnc
-    ? new Date(cipher.decrypt(row.birthDateEnc))
-    : (row?.birthDate ?? null);
-  if (birth === null) return null;
+  if (!row?.birthDateEnc) return null;
+  const birth = new Date(cipher.decrypt(row.birthDateEnc));
   return cipher.encrypt(
     new Date(Date.UTC(birth.getUTCFullYear(), 0, 1)).toISOString(),
   );
@@ -134,7 +132,6 @@ export class DrizzleRetentionRepository implements RetentionRepository {
       const [before] = await tx
         .select({
           guardianId: patients.guardianId,
-          birthDate: patients.birthDate,
           birthDateEnc: patients.birthDateEnc,
         })
         .from(patients)
@@ -150,7 +147,6 @@ export class DrizzleRetentionRepository implements RetentionRepository {
           cpf: null,
           // Só o ano do nascimento sobrevive (ADR-013/017); o nascimento está
           // cifrado, então decifra, trunca e recifra aqui (ADR-096).
-          birthDate: null,
           birthDateEnc: birthYearOnly(this.cipher, before),
           cpfHash: null,
           phoneHash: null,

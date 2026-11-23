@@ -1,6 +1,6 @@
 # Próximos passos (fila única de passagem de bastão, ADR-109)
 
-Atualizada em 2026-11-22. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
+Atualizada em 2026-11-23. É o **único** arquivo de passagem de bastão: quem chega lê, quem sai atualiza no mesmo
 PR (tira o que entregou, move o que mudou, acrescenta o que surgiu). Curto, em lista, sem nome de fornecedor.
 O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
@@ -31,9 +31,10 @@ O remoto e as issues valem se divergirem; quem notar corrige aqui.
 
 - **Na `main`, fora da produção:** #955 critérios legíveis na avaliação de ferida (PRO-RN-41, só texto, sem migração).
 
-1. **Contração da cifra no cadastro** (ADR-096, classe 3): drop de `birth_date` e dos índices GIN antigos do paciente. Ainda
-   sem issue. Em duas releases para o rollback por redeploy seguir valendo: primeiro o código para de ler e gravar
-   `birth_date` (e a verificação de integridade conta nascimento em claro), só na release seguinte o `DROP COLUMN`.
+1. **Contração da cifra no cadastro** (ADR-096, classe 3, #1005). **1ª etapa em PR:** o código para de ler e gravar
+   `birth_date` (saiu do schema do Drizzle) e o `data:reencrypt` não converte mais o nascimento em claro. Antes do
+   deploy que a leva: `nascimento=0` na linha `cifra_paciente` da verificação de integridade (`producao.md` § 3).
+   **2ª etapa, na release seguinte:** migração com o `DROP COLUMN birth_date` e o drop dos índices GIN antigos do nome.
 2. **#964**: proposta do Plano de acompanhamento em PDF.
 3. **Depois:** #986 e #987 (autônoma que abre CNPJ, termo neutro), #959, #960, #962, #963 (avaliação, escalas e curativo),
    #973, #971 (telas). #961 espera a #376. #968 precisa de print e depende do EST-16. #974 e #975 precisam de print.

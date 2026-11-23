@@ -44,13 +44,12 @@ type PatientRow = typeof patients.$inferSelect;
  */
 export const PATIENT_SCAN_CAP = 20_000;
 
-/** Nascimento: coluna cifrada (ADR-096); a coluna legada em claro só vale até a recifra. */
+/** Nascimento: só a coluna cifrada (ADR-096); a legada em claro não é mais lida. */
 function readBirthDate(
-  row: Pick<PatientRow, 'birthDate' | 'birthDateEnc'>,
+  row: Pick<PatientRow, 'birthDateEnc'>,
   cipher: FieldCipher,
 ): Date | null {
-  if (row.birthDateEnc) return new Date(cipher.decrypt(row.birthDateEnc));
-  return row.birthDate;
+  return row.birthDateEnc ? new Date(cipher.decrypt(row.birthDateEnc)) : null;
 }
 
 const toPatient = (row: PatientRow, cipher: FieldCipher): Patient =>
@@ -109,12 +108,11 @@ export class DrizzlePatientRepository implements PatientRepository {
     const values = {
       id: patient.id,
       clinicId,
-      // PII cifrada em repouso (ADR-096); o nascimento sai da coluna em claro.
+      // PII cifrada em repouso (ADR-096).
       fullName: this.cipher.encrypt(patient.fullName),
       email: this.cipher.encryptNullable(patient.email),
       phone: this.cipher.encrypt(patient.phone),
       cpf: this.cipher.encryptNullable(patient.cpf),
-      birthDate: null,
       birthDateEnc: this.cipher.encryptNullable(
         patient.birthDate?.toISOString() ?? null,
       ),
@@ -449,7 +447,6 @@ export class DrizzlePatientRepository implements PatientRepository {
       .select({
         id: patients.id,
         fullName: patients.fullName,
-        birthDate: patients.birthDate,
         birthDateEnc: patients.birthDateEnc,
       })
       .from(patients)

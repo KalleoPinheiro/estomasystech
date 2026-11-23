@@ -29,19 +29,10 @@ function textChanges(cipher: FieldCipher, row: PatientRow): PatientChanges {
   return changes;
 }
 
-/** Nascimento: da coluna em claro (legado) para a cifrada, que também acompanha a chave atual. */
+/** Nascimento cifrado: acompanha a chave atual (a coluna em claro não é mais lida, ADR-096). */
 function birthChanges(cipher: FieldCipher, row: PatientRow): PatientChanges {
-  if (row.birthDate !== null && !row.birthDateEnc) {
-    return {
-      birthDateEnc: cipher.encrypt(row.birthDate.toISOString()),
-      birthDate: null,
-    };
-  }
-  const changes: PatientChanges = {};
-  if (row.birthDate !== null) changes.birthDate = null;
   const birth = sealed(cipher, row.birthDateEnc);
-  if (birth !== null) changes.birthDateEnc = birth;
-  return changes;
+  return birth === null ? {} : { birthDateEnc: birth };
 }
 
 /** Índice cego: preenche o que falta e recalcula o que não está no pepper atual. */

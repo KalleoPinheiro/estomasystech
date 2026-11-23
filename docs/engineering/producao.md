@@ -280,6 +280,11 @@ proposital enquanto as migrações não têm `down`
    `cifra_email_login` do script de verificação de integridade do dono). Se a contagem não zerar
    porque o `data:reencrypt` pulou a conta (e-mail que não normaliza, só o id no log), **não aprove o deploy** e trate a
    conta antes (ADR-111, "Contração feita").
+   **Release que leva a 1ª etapa da contração do nascimento (ADR-096, "Contração do nascimento"):** o código deixa
+   de ler `birth_date` em claro. Antes do clique, a mesma conferência de integridade precisa dar `nascimento=0` na
+   linha `cifra_paciente` (`SELECT count(*) FROM patients WHERE birth_date IS NOT NULL;` esperado `0`). Se não der,
+   rode `npm run data:reencrypt` com a versão em produção (ela ainda converte o nascimento) e confira de novo; com
+   pendência, **não aprove o deploy**, porque o nascimento dessas linhas sumiria da ficha.
    **Depois dessa conversão, voltar o código a uma versão anterior à `0074` trava o login:** aí o rollback é restaurar o
    backup. Da `v0.11.0` em diante o redeploy da tag basta, com ou sem a `0091`.
 1. **Antes:** a tag `vX.Y.Z` criada, a `main` com o CI verde (E2E e mutação rodam no Actions,
