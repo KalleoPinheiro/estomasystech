@@ -26,12 +26,14 @@ entrada e saída e o consumo automático por kit de procedimento.
 | EST-RN-04 | Alerta de estoque baixo quando quantidade ≤ mínimo | `src/application/inventory/get-supply-insights.ts` |
 | EST-RN-05 | Kit do procedimento baixa os insumos ao ser dispensado | `src/application/inventory/dispense-procedure-kit.ts`, `src/domain/catalog/procedure-kit.ts` |
 | EST-RN-06 | Saldo muda só por movimentação atômica (`adjustStock`); editar o cadastro do insumo nunca regrava o saldo, então não desfaz baixa concorrente (#192) | `DrizzleSupplyRepository.save` |
+| EST-RN-07 | Insumo tem categoria opcional: cobertura, solução, proteção ou outro (sem categoria = vazio). Valor desconhecido lido do banco vira sem categoria. Serve para o registro do curativo separar cobertura de solução (#963, decisão D2 do Kalléo em 2026-11-23) | `src/domain/inventory/supply.ts` |
 
 ## Funcionalidades
 
 | Funcionalidade | Estado | Onde |
 | --- | --- | --- |
 | Catálogo de insumos, mínimo e preço | entregue | `/materiais` |
+| Categoria do insumo (cobertura, solução, proteção, outro) | entregue | `/materiais`, formulário do insumo |
 | Entradas, saídas e histórico | entregue | `/materiais` |
 | Lotes e validade | entregue | `/materiais` |
 | Alerta de estoque baixo | entregue | `/materiais`, dashboard |

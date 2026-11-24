@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { UpdateSupply } from '@/application/inventory/update-supply';
+import { SUPPLY_CATEGORIES } from '@/domain/inventory/supply';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -12,6 +13,7 @@ const updateSchema = z.object({
   unit: z.string().min(1).max(20).optional(),
   minQty: z.number().int().nonnegative().max(1_000_000).optional(),
   priceCents: z.number().int().nonnegative().max(1_000_000_000).optional(),
+  category: z.enum(SUPPLY_CATEGORIES).nullable().optional(),
   active: z.boolean().optional(),
 });
 

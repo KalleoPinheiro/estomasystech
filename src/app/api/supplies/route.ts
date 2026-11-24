@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { CreateSupply } from '@/application/inventory/create-supply';
+import { SUPPLY_CATEGORIES } from '@/domain/inventory/supply';
 import { getRepositories } from '@/infrastructure/container';
 import { handleRequest } from '@/lib/api-response';
 import { requireStaffSession } from '@/lib/auth/require-session';
@@ -13,6 +14,7 @@ const supplySchema = z.object({
   unit: z.string().min(1).max(20),
   minQty: z.number().int().nonnegative().max(1_000_000),
   priceCents: z.number().int().nonnegative().max(1_000_000_000),
+  category: z.enum(SUPPLY_CATEGORIES).nullable().optional(),
 });
 
 export async function GET(request: NextRequest) {

@@ -1,11 +1,39 @@
 import { InsufficientStockError, ValidationError } from '../shared/errors';
 import { newId } from '../shared/id';
 
+/** Categoria do insumo (D2 do #963): separa cobertura de solução no registro do curativo. */
+export const SUPPLY_CATEGORIES = [
+  'cobertura',
+  'solucao',
+  'protecao',
+  'outro',
+] as const;
+
+export type SupplyCategory = (typeof SUPPLY_CATEGORIES)[number];
+
+export const SUPPLY_CATEGORY_LABELS: Record<SupplyCategory, string> = {
+  cobertura: 'Cobertura',
+  solucao: 'Solução',
+  protecao: 'Proteção',
+  outro: 'Outro',
+};
+
+export const SUPPLY_CATEGORY_INVALID_MESSAGE = 'Categoria do insumo inválida';
+
+/** Valor vindo do banco: categoria conhecida ou null (sem categoria). */
+export function parseSupplyCategory(
+  value: string | null,
+): SupplyCategory | null {
+  return SUPPLY_CATEGORIES.find((category) => category === value) ?? null;
+}
+
 export interface SupplyProps {
   name: string;
   unit: string;
   minQty: number;
   priceCents: number;
+  /** `null` ou ausente: sem categoria. */
+  category?: SupplyCategory | null;
 }
 
 export interface SupplyState extends SupplyProps {
@@ -49,7 +77,17 @@ export class Supply {
         'Preço deve ser inteiro não-negativo em centavos',
       );
     }
-    return { name, unit, minQty: props.minQty, priceCents: props.priceCents };
+    const category = props.category ?? null;
+    if (category !== null && !SUPPLY_CATEGORIES.includes(category)) {
+      throw new ValidationError(SUPPLY_CATEGORY_INVALID_MESSAGE);
+    }
+    return {
+      name,
+      unit,
+      minQty: props.minQty,
+      priceCents: props.priceCents,
+      category,
+    };
   }
 
   private static assertPositiveQty(quantity: number): void {
@@ -66,6 +104,9 @@ export class Supply {
       unit: changes.unit ?? this.state.unit,
       minQty: changes.minQty ?? this.state.minQty,
       priceCents: changes.priceCents ?? this.state.priceCents,
+      // `null` limpa a categoria; ausente mantém a atual.
+      category:
+        changes.category === undefined ? this.state.category : changes.category,
     });
     return new Supply({ ...this.state, ...validated });
   }
@@ -132,6 +173,10 @@ export class Supply {
 
   get priceCents(): number {
     return this.state.priceCents;
+  }
+
+  get category(): SupplyCategory | null {
+    return this.state.category ?? null;
   }
 
   get stockQty(): number {

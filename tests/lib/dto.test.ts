@@ -587,6 +587,7 @@ describe('Feature: DTO de insumo', () => {
       unit: 'unidade',
       minQty: 5,
       priceCents: 3000,
+      category: null,
       stockQty: 10,
       isLowStock: false,
       isOutOfStock: false,

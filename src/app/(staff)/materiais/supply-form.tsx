@@ -1,10 +1,16 @@
 'use client';
 
-import { Button, Checkbox, Input } from '@still-void/ui/react';
+import { Button, Checkbox, Input, NativeSelect } from '@still-void/ui/react';
 import { useToast } from '@still-void/ui/react/client';
 import { useState } from 'react';
 import { ErrorAlert } from '@/components/feedback';
 import { SafeForm } from '@/components/safe-form';
+import {
+  parseSupplyCategory,
+  SUPPLY_CATEGORIES,
+  SUPPLY_CATEGORY_LABELS,
+  type SupplyCategory,
+} from '@/domain/inventory/supply';
 import { unwrapAction } from '@/lib/action-result';
 import type { SupplyDto } from '@/lib/dto';
 import { createSupply, updateSupply } from './supply-actions';
@@ -14,6 +20,8 @@ interface SupplyFormValues {
   unit: string;
   minQty: string;
   price: string;
+  /** '' = sem categoria. */
+  category: string;
   active: boolean;
 }
 
@@ -22,8 +30,18 @@ const toSupplyFormValues = (initial?: SupplyDto): SupplyFormValues => ({
   unit: initial?.unit ?? 'un',
   minQty: initial ? String(initial.minQty) : '0',
   price: initial ? String(initial.priceCents / 100) : '',
+  category: initial?.category ?? '',
   active: initial?.active ?? true,
 });
+
+/** Só envia a categoria quando ela muda: cadastro sem categoria e edição que não a toca ficam como antes. */
+const categoryChange = (
+  values: SupplyFormValues,
+  initial?: SupplyDto,
+): { category?: SupplyCategory | null } => {
+  const category = parseSupplyCategory(values.category);
+  return category === (initial?.category ?? null) ? {} : { category };
+};
 
 const saveSupply = async (
   values: SupplyFormValues,
@@ -34,6 +52,7 @@ const saveSupply = async (
     unit: values.unit,
     minQty: Number(values.minQty),
     priceCents: Math.round(Number(values.price) * 100),
+    ...categoryChange(values, initial),
   };
   if (initial) {
     await unwrapAction(
@@ -134,6 +153,23 @@ export function SupplyForm({
           </div>
         </label>
       </div>
+      <label className="font-medium text-sm">
+        Categoria
+        <NativeSelect
+          value={values.category}
+          onChange={(e) =>
+            setValues((prev) => ({ ...prev, category: e.target.value }))
+          }
+          className="mt-1"
+        >
+          <option value="">Sem categoria</option>
+          {SUPPLY_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {SUPPLY_CATEGORY_LABELS[category]}
+            </option>
+          ))}
+        </NativeSelect>
+      </label>
       {initial && (
         <label className="flex items-center gap-2 font-medium text-sm">
           <Checkbox
