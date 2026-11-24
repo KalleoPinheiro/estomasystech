@@ -318,6 +318,8 @@ export interface PatientRecordClientProps {
   patient: PatientDto;
   /** Exportação LGPD: decidida no servidor pela mesma matriz de papéis da API (#185). */
   canExport: boolean;
+  /** Admin gera a proposta do plano de acompanhamento em PDF (#964). */
+  canProposePlan?: boolean;
   /** `?aba=` da URL; valor inválido cai em «anamnese» (PRONT-04). */
   initialTab?: string;
   anamnesis: Block<AnamnesisDto | null>;
@@ -516,7 +518,13 @@ function RecordTabPanel({
     );
   }
   if (tab === 'pacotes') {
-    return <PackagesSection packages={blocks.packages} />;
+    return (
+      <PackagesSection
+        packages={blocks.packages}
+        patientId={patientId}
+        canPropose={blocks.canProposePlan ?? false}
+      />
+    );
   }
   if (tab === 'planoCuidados') {
     return (

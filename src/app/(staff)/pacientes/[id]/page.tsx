@@ -95,6 +95,10 @@ export default async function PatientRecordPage({
         classifyRoute(`/api/patients/${id}/export`),
         session.role,
       )}
+      canProposePlan={isFamilyAllowedForRole(
+        classifyRoute('/api/packages/proposta'),
+        session.role,
+      )}
       initialTab={Array.isArray(aba) ? aba[0] : aba}
       anamnesis={anamnesis}
       conditions={conditions}
