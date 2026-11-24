@@ -177,3 +177,34 @@ describe('Feature: persistência dos insumos do curativo (#963, T2)', () => {
     expect(await repo.findByAppointmentId(appointmentId)).toEqual([]);
   });
 });
+
+describe('Feature: item do curativo preso à empresa (#963, T2; CodeRabbit no PR 1018)', () => {
+  it('Dado insumo de outra empresa, Quando salva o item, Então a chave composta recusa e nada grava', async () => {
+    const repo = new DrizzleDressingRecordRepository(
+      appDb,
+      CLINIC,
+      TEST_CIPHER,
+    );
+    const { patientId, appointmentId } = await seedAppointment();
+    await db
+      .insert(schema.clinics)
+      .values({
+        id: 'clinica-alheia',
+        name: 'Alheia',
+        createdBy: 'system',
+        createdAt: OLD,
+      })
+      .onConflictDoNothing();
+    const foreign = await seedSupply('clinica-alheia');
+    const record = DressingRecord.create({
+      patientId,
+      appointmentId,
+      content,
+      items: [{ role: 'solucao', supplyId: foreign, quantity: 1 }],
+    });
+
+    await expect(repo.save(record)).rejects.toThrow();
+
+    expect(await repo.findByAppointmentId(appointmentId)).toEqual([]);
+  });
+});

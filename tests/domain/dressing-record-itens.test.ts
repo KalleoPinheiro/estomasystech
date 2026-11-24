@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DRESSING_ITEM_DUPLICATE_MESSAGE,
   DRESSING_ITEM_QUANTITY_INVALID_MESSAGE,
+  DRESSING_ITEM_QUANTITY_MAX,
   DRESSING_ITEM_ROLE_INVALID_MESSAGE,
   DRESSING_ITEM_ROLE_LABELS,
   DRESSING_ITEM_ROLES,
@@ -148,5 +149,50 @@ describe('Feature: insumos usados no curativo (#963, T2)', () => {
       'Cobertura secundária',
       'Fixação',
     ]);
+  });
+});
+
+describe('Feature: itens do curativo protegidos e no limite do banco (#963, T2; CodeRabbit no PR 1018)', () => {
+  it('Dado item restaurado, Quando quem chamou altera o objeto original, Então o registro não muda', () => {
+    const item: DressingItem = {
+      role: 'solucao',
+      supplyId: 'soro',
+      quantity: 1,
+    };
+    const restored = DressingRecord.restore({
+      id: 'd-2',
+      patientId: 'p-1',
+      appointmentId: 'a-1',
+      createdAt: new Date('2026-11-01T10:00:00Z'),
+      content,
+      items: [item],
+    });
+
+    item.quantity = 0;
+
+    expect(restored.items[0]?.quantity).toBe(1);
+  });
+
+  it('Dado registro criado, Quando tentam alterar um item lido, Então o item segue o validado', () => {
+    const record = create([{ role: 'fixacao', supplyId: 'fita', quantity: 2 }]);
+    const [item] = record.items as DressingItem[];
+
+    expect(() => {
+      (item as DressingItem).quantity = 0;
+    }).toThrow(TypeError);
+    expect(record.items[0]?.quantity).toBe(2);
+  });
+
+  it('Dada a quantidade no maior inteiro do banco, Quando cria, Então aceita; acima dele, recusa', () => {
+    const at = (quantity: number) => [
+      { role: 'solucao' as const, supplyId: 'soro', quantity },
+    ];
+
+    expect(create(at(DRESSING_ITEM_QUANTITY_MAX)).items[0]?.quantity).toBe(
+      2_147_483_647,
+    );
+    expect(() => create(at(DRESSING_ITEM_QUANTITY_MAX + 1))).toThrow(
+      DRESSING_ITEM_QUANTITY_INVALID_MESSAGE,
+    );
   });
 });

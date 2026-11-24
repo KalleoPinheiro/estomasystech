@@ -83,6 +83,8 @@ export const DRESSING_ITEM_ROLE_LABELS: Record<DressingItemRole, string> = {
 };
 
 export const DRESSING_ITEMS_MAX = 30;
+/** Maior inteiro que a coluna `integer` do Postgres guarda. */
+export const DRESSING_ITEM_QUANTITY_MAX = 2_147_483_647;
 
 export const DRESSING_ITEM_ROLE_INVALID_MESSAGE =
   'Etapa do item do curativo inválida.';
@@ -283,14 +285,20 @@ function normalizeItem(item: DressingItem): DressingItem {
   if (supplyId.length === 0) {
     throw new ValidationError(DRESSING_ITEM_SUPPLY_REQUIRED_MESSAGE);
   }
-  if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+  if (
+    !Number.isInteger(item.quantity) ||
+    item.quantity <= 0 ||
+    item.quantity > DRESSING_ITEM_QUANTITY_MAX
+  ) {
     throw new ValidationError(DRESSING_ITEM_QUANTITY_INVALID_MESSAGE);
   }
-  return { role: item.role, supplyId, quantity: item.quantity };
+  return Object.freeze({ role: item.role, supplyId, quantity: item.quantity });
 }
 
 /** Itens na ordem recebida; o mesmo insumo duas vezes na mesma etapa é recusado. */
-function normalizeItems(items: readonly DressingItem[]): DressingItem[] {
+function normalizeItems(
+  items: readonly DressingItem[],
+): readonly DressingItem[] {
   if (items.length > DRESSING_ITEMS_MAX) {
     throw new ValidationError(DRESSING_ITEMS_TOO_MANY_MESSAGE);
   }
@@ -299,8 +307,12 @@ function normalizeItems(items: readonly DressingItem[]): DressingItem[] {
   if (keys.size !== normalized.length) {
     throw new ValidationError(DRESSING_ITEM_DUPLICATE_MESSAGE);
   }
-  return normalized;
+  return Object.freeze(normalized);
 }
+
+/** Cópia congelada: quem restaurou ou leu não altera o item guardado. */
+const frozenItems = (items: readonly DressingItem[]): readonly DressingItem[] =>
+  Object.freeze(items.map((item) => Object.freeze({ ...item })));
 
 export class DressingRecord {
   private constructor(
@@ -325,7 +337,10 @@ export class DressingRecord {
   }
 
   static restore(state: DressingRecordState): DressingRecord {
-    return new DressingRecord({ ...state, items: [...(state.items ?? [])] });
+    return new DressingRecord({
+      ...state,
+      items: frozenItems(state.items ?? []),
+    });
   }
 
   get id(): string {
