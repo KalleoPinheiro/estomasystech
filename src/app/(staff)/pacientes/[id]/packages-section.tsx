@@ -3,6 +3,7 @@
 import { ErrorAlert } from '@/components/feedback';
 import { formatCurrency, formatDate } from '@/lib/format';
 import type { Loaded } from '@/lib/server/data/load-block';
+import { PlanProposalForm } from './plan-proposal-form';
 
 export interface PackageDto {
   id: string;
@@ -32,8 +33,13 @@ const isExpired = (pkg: PackageDto): boolean =>
  */
 export function PackagesSection({
   packages: block,
+  patientId,
+  canPropose = false,
 }: {
   packages: Loaded<PackageDto[]> | null;
+  patientId?: string;
+  /** Só o Admin: a proposta leva preço (#964). */
+  canPropose?: boolean;
 }) {
   if (block?.error) return <ErrorAlert message={block.error} />;
   const packages = block?.data ?? [];
@@ -48,6 +54,7 @@ export function PackagesSection({
       ) : (
         <PackageList packages={packages} />
       )}
+      {canPropose && patientId && <PlanProposalForm patientId={patientId} />}
     </div>
   );
 }

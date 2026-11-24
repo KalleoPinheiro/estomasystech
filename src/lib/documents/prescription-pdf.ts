@@ -57,12 +57,12 @@ const INK = rgb(0, 0, 0);
 /** Espaços fixos do bloco de assinatura: antes da data, para assinar e da linha. */
 const SIGNATURE_GAPS = 18 + 44 + 6;
 
-interface Fonts {
+export interface Fonts {
   regular: PDFFont;
   bold: PDFFont;
 }
 
-interface TextStyle {
+export interface TextStyle {
   size: number;
   bold?: boolean;
   align?: 'left' | 'center';
@@ -126,7 +126,7 @@ function longestFittingPrefix(
 }
 
 /** Cursor de escrita de cima para baixo, com página nova quando o espaço acaba. */
-class PageWriter {
+export class PageWriter {
   private page: PDFPage;
   private y: number;
 
@@ -213,7 +213,7 @@ class PageWriter {
   }
 }
 
-function drawHeader(
+export function drawHeader(
   writer: PageWriter,
   issuer: PrescriptionDocument['issuer'],
 ) {
