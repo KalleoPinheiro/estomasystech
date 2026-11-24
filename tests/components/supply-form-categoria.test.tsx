@@ -87,4 +87,20 @@ describe('Feature: categoria no formulário do insumo (#963 D2)', () => {
       ),
     );
   });
+  it('Dado um refresh que muda a categoria no meio da edição, Quando salva sem tocar na categoria, Então não a sobrescreve', async () => {
+    mocks.updateSupply.mockResolvedValue(done);
+    const { rerender } = renderForm(existing);
+    rerender(
+      <ToastProvider>
+        <SupplyForm
+          initial={{ ...existing, category: 'protecao' }}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(mocks.updateSupply).toHaveBeenCalled());
+    expect(mocks.updateSupply.mock.calls[0][0]).not.toHaveProperty('category');
+  });
 });
