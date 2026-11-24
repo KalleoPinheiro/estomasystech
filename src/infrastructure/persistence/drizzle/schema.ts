@@ -1034,7 +1034,11 @@ export const supplies = pgTable(
       mode: 'date',
     }).notNull(),
   },
-  (table) => [index('idx_supplies_clinic').on(table.clinicId)],
+  (table) => [
+    index('idx_supplies_clinic').on(table.clinicId),
+    // Alvo das chaves compostas (id, empresa): item de outra tabela só aponta para insumo da mesma empresa.
+    uniqueIndex('uq_supplies_id_clinic').on(table.id, table.clinicId),
+  ],
 );
 
 export const supplyBatches = pgTable(
@@ -1621,11 +1625,50 @@ export const dressingRecords = pgTable(
   },
   (table) => [
     index('idx_dressing_records_appointment').on(table.appointmentId),
+    uniqueIndex('uq_dressing_records_id_clinic').on(table.id, table.clinicId),
     index('idx_dressing_records_patient').on(
       table.clinicId,
       table.patientId,
       table.createdAt,
     ),
+  ],
+);
+
+// Insumos usados em cada etapa do curativo (#963, T2). Sem texto clínico, como
+// o movimento de estoque da consulta: não é cifrado e fica na anonimização.
+export const dressingRecordItems = pgTable(
+  'dressing_record_items',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    dressingRecordId: text('dressing_record_id').notNull(),
+    position: integer('position').notNull(),
+    role: text('role').notNull(),
+    supplyId: text('supply_id').notNull(),
+    quantity: integer('quantity').notNull(),
+  },
+  (table) => [
+    // Chaves compostas com a empresa: o item não aponta para curativo nem insumo
+    // de outra empresa (a FK do Postgres não passa pela RLS).
+    foreignKey({
+      name: 'fk_dressing_record_items_record_clinic',
+      columns: [table.dressingRecordId, table.clinicId],
+      foreignColumns: [dressingRecords.id, dressingRecords.clinicId],
+    }),
+    foreignKey({
+      name: 'fk_dressing_record_items_supply_clinic',
+      columns: [table.supplyId, table.clinicId],
+      foreignColumns: [supplies.id, supplies.clinicId],
+    }),
+    index('idx_dressing_record_items_record').on(
+      table.dressingRecordId,
+      table.position,
+    ),
+    index('idx_dressing_record_items_supply').on(table.supplyId),
+    // Índice líder em clinic_id: a política de RLS filtra toda consulta por ele.
+    index('idx_dressing_record_items_clinic').on(table.clinicId),
   ],
 );
 

@@ -666,6 +666,13 @@
       "when": 1795518186432,
       "tag": "0094_insumo-categoria",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1795524180879,
+      "tag": "0095_curativo-itens",
+      "breakpoints": true
     }
   ]
 }
