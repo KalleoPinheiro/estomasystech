@@ -243,5 +243,11 @@ Um scan GitGuard sobre `fcd6110` deve cair de 54 para ~9 findings: 2 `hardcoded_
 - **Trade-off**: Hobby é uso não comercial e o cron é diário; `staging` diverge da `main` de propósito; seed por repositórios (cifrado) em vez de SQL cru, mais código para manter. Neon escolhido sobre Supabase (branch de banco por preview). ADR-041.
 - **Scope**: engenharia (ambientes, release), `src/lib/runtime-env.ts`, `src/infrastructure/mocks`, `scripts/seed`, `scripts/vercel-build.ts`
 
+### AD-056
+- **Decision**: curativo em etapas (#963), decisões do coordenador (PO) em 2026-11-24, reversíveis. **D5 laser**: comprimento de onda em número livre (nm, inteiro) por região (leito, borda, periferia), com energia por ponto (J) e número de pontos, cada um opcional; PDT e ILIB como sim/não. **D6 próxima troca**: a data da próxima troca só **sugere** o retorno; a equipe confirma, nada é criado sozinho.
+- **Reason**: D5 aceita qualquer aparelho sem inventar regra clínica e pode virar lista depois sem perder o registrado; D6 evita retorno duplicado ou criado por engano e mantém a equipe no controle da agenda.
+- **Trade-off**: D5 aceita digitação errada dentro dos limites de sanidade (1 a 10 000 nm, até 1000 J e 1000 pontos); D6 depende de a equipe confirmar o retorno.
+- **Scope**: `src/domain/clinical/dressing-record.ts` (T3), T6 do plano da #963 · 2026-11-24 · active
+
 ## Handoff
 Handoffs de trabalho encerrado ficam em [`.specs/archive/handoff-2026.md`](archive/handoff-2026.md) — leia só quando precisar do histórico de uma feature. Aqui fica apenas o que está em aberto: #308 (E2E intermitente, em investigação), #376 (jurídico, art. 33) e #381 (operação em produção: backup cifrado, uploads, UptimeRobot); o resto da fila segue pelo coordenador do projeto. Produção está no ar desde 2026-10-18: [`producao.md`](../docs/engineering/producao.md) § 0.
