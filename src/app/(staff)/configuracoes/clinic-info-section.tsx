@@ -10,6 +10,7 @@ import {
 import type { ClinicRegistrationDto } from '@/lib/dto';
 import { useApiQuery } from '@/lib/use-api-query';
 import { useSavableForm } from '@/lib/use-savable-form';
+import { ConvertToCompanySection } from './convert-to-company-section';
 
 /**
  * Dados cadastrais da clínica (issue #61) — CNPJ e responsável técnico
@@ -24,7 +25,18 @@ export function ClinicInfoSection() {
   if (error) return <ErrorAlert message={error} />;
   if (!data) return <LoadingIndicator />;
 
-  return <ClinicInfoForm info={data.info} onSaved={refresh} />;
+  return (
+    <>
+      <ClinicInfoForm
+        key={data.info.kind ?? 'company'}
+        info={data.info}
+        onSaved={refresh}
+      />
+      {data.info.kind === 'individual' && (
+        <ConvertToCompanySection onDone={refresh} />
+      )}
+    </>
+  );
 }
 
 function ClinicInfoForm({

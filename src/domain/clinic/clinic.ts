@@ -16,6 +16,7 @@ export const isClinicKind = (value: unknown): value is ClinicKind =>
   CLINIC_KINDS.includes(value as ClinicKind);
 
 export const MISSING_CNPJ_MESSAGE = 'CNPJ é obrigatório';
+export const ALREADY_COMPANY_MESSAGE = 'O cadastro já é de clínica, com CNPJ';
 export const MISSING_CPF_MESSAGE =
   'CPF é obrigatório para a profissional autônoma';
 export const CNPJ_ON_INDIVIDUAL_MESSAGE =
@@ -513,6 +514,31 @@ export class Clinic {
   flagCnpjForReview(at: Date): Clinic {
     if (!this.state.cnpj || this.cnpjReviewSince) return this;
     return new Clinic({ ...this.state, cnpjReviewSince: at });
+  }
+
+  /**
+   * Autônoma que abriu CNPJ (#986, decisão do Kalléo em 2026-11-23): o Admin
+   * troca o cadastro para clínica e o timbre passa a sair com o CNPJ. O CPF sai
+   * do cadastro (a clínica nunca guarda CPF, #977); nome, responsável técnica,
+   * COREN e todos os dados da empresa ficam.
+   */
+  convertToCompany(fields: { cnpj: string; name?: string | null }): Clinic {
+    if (this.kind !== 'individual') {
+      throw new ValidationError(ALREADY_COMPANY_MESSAGE);
+    }
+    const resolved = resolveInfoFields(this.state, {
+      cnpj: fields.cnpj,
+      cpf: null,
+    });
+    assertDocumentMatchesKind('company', resolved, true);
+    const name = fields.name?.trim() || this.state.name;
+    return new Clinic({
+      ...this.state,
+      ...resolved,
+      name,
+      kind: 'company',
+      cnpjReviewSince: null,
+    });
   }
 
   /** Retorna uma nova instância com os campos cadastrais atualizados (imutável). */
