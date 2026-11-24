@@ -1,5 +1,5 @@
 {
-  "id": "88e90342-37f8-4be8-b4e6-18bc0a2b9c2c",
+  "id": "7efd0975-c5b2-4395-b882-965227f8f55a",
   "prevId": "30e6710b-9520-4d7c-ace3-4cc64a3b428c",
   "version": "7",
   "dialect": "postgresql",
@@ -3035,6 +3035,21 @@
           "columns": [
             {
               "expression": "supply_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dressing_record_items_clinic": {
+          "name": "idx_dressing_record_items_clinic",
+          "columns": [
+            {
+              "expression": "clinic_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
