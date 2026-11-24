@@ -25,6 +25,8 @@ const renderSection = (onDone = vi.fn()) => {
       <ConvertToCompanySection onDone={onDone} />
     </ToastProvider>,
   );
+  expect(screen.queryByLabelText(/CNPJ \*/)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }));
   return onDone;
 };
 
@@ -37,9 +39,7 @@ describe('Feature: tela da troca de CPF por CNPJ (#986)', () => {
     const onDone = renderSection();
     fill(/CNPJ/, '12.345.678/0001-95');
     fill(/Razão social/, 'Estoma Saúde Ltda');
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     expect(api.apiFetch).not.toHaveBeenCalled();
     expect(screen.getByText(/Confirma a troca/)).toBeTruthy();
 
@@ -59,19 +59,13 @@ describe('Feature: tela da troca de CPF por CNPJ (#986)', () => {
     api.apiFetch.mockResolvedValue({});
     renderSection();
     fill(/CNPJ/, '12.345.678/0001-95');
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fill(/Razão social/, ' ');
     expect(screen.queryByText(/Confirma a troca/)).toBeNull();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fill(/CNPJ/, '12.345.678/0001-95 ');
     expect(screen.queryByText(/Confirma a troca/)).toBeNull();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(
       screen.getByRole('button', { name: 'Confirmar troca para CNPJ' }),
     );
@@ -86,18 +80,14 @@ describe('Feature: tela da troca de CPF por CNPJ (#986)', () => {
     );
     const onDone = renderSection();
     fill(/CNPJ/, '12.345.678/0001-95');
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(
       screen.getByRole('button', { name: 'Confirmar troca para CNPJ' }),
     );
     expect(
       await screen.findByText('Já existe clínica com este CNPJ'),
     ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeTruthy();
     expect(onDone).not.toHaveBeenCalled();
   });
 
@@ -105,9 +95,7 @@ describe('Feature: tela da troca de CPF por CNPJ (#986)', () => {
     api.apiFetch.mockRejectedValue('falhou');
     renderSection();
     fill(/CNPJ/, '12.345.678/0001-95');
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Trocar CPF por CNPJ' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
     fireEvent.click(
       screen.getByRole('button', { name: 'Confirmar troca para CNPJ' }),
     );

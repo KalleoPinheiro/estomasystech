@@ -15,6 +15,7 @@ export function ConvertToCompanySection({ onDone }: { onDone: () => void }) {
   const { toast } = useToast();
   const [cnpj, setCnpj] = useState('');
   const [name, setName] = useState('');
+  const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,49 +56,56 @@ export function ConvertToCompanySection({ onDone }: { onDone: () => void }) {
         cadastro.
       </p>
       {error && <ErrorAlert message={error} />}
-      <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <label className="font-medium text-sm">
-          CNPJ *
-          <Input
-            required
-            inputMode="numeric"
-            value={cnpj}
-            onChange={(e) => {
-              setCnpj(e.target.value);
-              setConfirming(false);
-            }}
-            className="mt-1"
-          />
-        </label>
-        <label className="font-medium text-sm">
-          Razão social (opcional; vazio mantém o nome atual)
-          <Input
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setConfirming(false);
-            }}
-            className="mt-1"
-          />
-        </label>
-        {confirming && (
-          <p className="font-medium text-sm">
-            Confirma a troca? Ela não volta para CPF por aqui.
-          </p>
-        )}
-        <Button
-          type="submit"
-          disabled={saving}
-          variant="accent"
-          className="self-start"
-        >
-          {saving
-            ? 'Trocando…'
-            : confirming
-              ? 'Confirmar troca para CNPJ'
-              : 'Trocar CPF por CNPJ'}
+      {!open && (
+        <Button type="button" onClick={() => setOpen(true)}>
+          Trocar CPF por CNPJ
         </Button>
-      </SafeForm>
+      )}
+      {open && (
+        <SafeForm onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <label className="font-medium text-sm">
+            CNPJ *
+            <Input
+              required
+              inputMode="numeric"
+              value={cnpj}
+              onChange={(e) => {
+                setCnpj(e.target.value);
+                setConfirming(false);
+              }}
+              className="mt-1"
+            />
+          </label>
+          <label className="font-medium text-sm">
+            Razão social (opcional; vazio mantém o nome atual)
+            <Input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setConfirming(false);
+              }}
+              className="mt-1"
+            />
+          </label>
+          {confirming && (
+            <p className="font-medium text-sm">
+              Confirma a troca? Ela não volta para CPF por aqui.
+            </p>
+          )}
+          <Button
+            type="submit"
+            disabled={saving}
+            variant="accent"
+            className="self-start"
+          >
+            {saving
+              ? 'Trocando…'
+              : confirming
+                ? 'Confirmar troca para CNPJ'
+                : 'Continuar'}
+          </Button>
+        </SafeForm>
+      )}
     </Card>
   );
 }
