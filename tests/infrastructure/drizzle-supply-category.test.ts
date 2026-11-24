@@ -33,6 +33,11 @@ describe('Feature: categoria do insumo persiste (#963 D2)', () => {
 
     await repo.save(supply.update({ category: null }));
     expect((await repo.findById(supply.id))?.category).toBeNull();
+    const [stored] = await db
+      .select({ category: schema.supplies.category })
+      .from(schema.supplies)
+      .where(eq(schema.supplies.id, supply.id));
+    expect(stored?.category).toBeNull();
   });
 
   it('valor desconhecido no banco vira sem categoria', async () => {

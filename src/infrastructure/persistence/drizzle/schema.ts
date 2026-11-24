@@ -1593,6 +1593,42 @@ export const nursingPrescriptions = pgTable(
   ],
 );
 
+/**
+ * Registro do curativo em etapas (#963, T1). As etapas vão cifradas num JSON
+ * só (`content`), como o receituário (ADR-116): é dado de saúde e nunca é
+ * consultado por partes. Grava uma vez; corrigir é registrar outro.
+ */
+export const dressingRecords = pgTable(
+  'dressing_records',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    patientId: text('patient_id')
+      .notNull()
+      .references(() => patients.id),
+    appointmentId: text('appointment_id')
+      .notNull()
+      .references(() => appointments.id),
+    conditionId: text('condition_id').references(() => clinicalConditions.id),
+    professionalId: text('professional_id').references(() => professionals.id),
+    content: text('content'),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'date',
+    }).notNull(),
+  },
+  (table) => [
+    index('idx_dressing_records_appointment').on(table.appointmentId),
+    index('idx_dressing_records_patient').on(
+      table.clinicId,
+      table.patientId,
+      table.createdAt,
+    ),
+  ],
+);
+
 // Reavaliação de resultado NOC — append-only (integridade de prontuário).
 export const outcomeEvaluations = pgTable(
   'outcome_evaluations',

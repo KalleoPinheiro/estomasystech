@@ -656,8 +656,15 @@
     {
       "idx": 93,
       "version": "7",
-      "when": 1795443504012,
-      "tag": "0093_insumo-categoria",
+      "when": 1795440284541,
+      "tag": "0093_curativo-registro",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1795518186432,
+      "tag": "0094_insumo-categoria",
       "breakpoints": true
     }
   ]
