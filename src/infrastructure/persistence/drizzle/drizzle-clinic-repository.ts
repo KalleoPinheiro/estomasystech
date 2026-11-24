@@ -69,12 +69,16 @@ const toClinic = (row: ClinicRow, cipher: () => FieldCipher): Clinic =>
     themeAccent: row.themeAccent,
   });
 
-/** Dados cadastrais gravados por `create` e `update`. */
+/**
+ * Dados cadastrais gravados por `create` e `update`. O tipo entra porque a
+ * autônoma que abre CNPJ passa a clínica (#986).
+ */
 const infoColumns = (
   clinic: Clinic,
   cipher: () => FieldCipher,
   blindIndex: () => BlindIndex,
 ) => ({
+  kind: clinic.kind,
   name: clinic.name,
   cnpj: clinic.cnpj,
   ...(clinic.cpf === null
@@ -125,7 +129,6 @@ export class DrizzleClinicRepository implements ClinicRepository {
   async create(clinic: Clinic): Promise<void> {
     await this.db.insert(clinics).values({
       id: clinic.id,
-      kind: clinic.kind,
       createdBy: clinic.createdBy,
       createdAt: clinic.createdAt,
       ...infoColumns(clinic, this.cipher, this.blindIndex),
