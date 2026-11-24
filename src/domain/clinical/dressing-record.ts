@@ -209,7 +209,11 @@ function normalizeItems(items: readonly DressingItem[]): DressingItem[] {
 }
 
 export class DressingRecord {
-  private constructor(private readonly state: DressingRecordState) {}
+  private constructor(
+    private readonly state: DressingRecordState & {
+      items: readonly DressingItem[];
+    },
+  ) {}
 
   static create(props: DressingRecordProps): DressingRecord {
     required(props.patientId, 'Paciente é obrigatório');
@@ -259,6 +263,6 @@ export class DressingRecord {
   }
 
   get items(): readonly DressingItem[] {
-    return this.state.items ?? [];
+    return this.state.items;
   }
 }
