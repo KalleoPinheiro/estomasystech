@@ -37,22 +37,23 @@ const toSupplyFormValues = (initial?: SupplyDto): SupplyFormValues => ({
 /** Só envia a categoria quando ela muda: cadastro sem categoria e edição que não a toca ficam como antes. */
 const categoryChange = (
   values: SupplyFormValues,
-  initial?: SupplyDto,
+  baseline: SupplyCategory | null,
 ): { category?: SupplyCategory | null } => {
   const category = parseSupplyCategory(values.category);
-  return category === (initial?.category ?? null) ? {} : { category };
+  return category === baseline ? {} : { category };
 };
 
 const saveSupply = async (
   values: SupplyFormValues,
-  initial?: SupplyDto,
+  initial: SupplyDto | undefined,
+  baselineCategory: SupplyCategory | null,
 ): Promise<void> => {
   const payload = {
     name: values.name,
     unit: values.unit,
     minQty: Number(values.minQty),
     priceCents: Math.round(Number(values.price) * 100),
-    ...categoryChange(values, initial),
+    ...categoryChange(values, baselineCategory),
   };
   if (initial) {
     await unwrapAction(
@@ -74,6 +75,10 @@ export function SupplyForm({
   const [values, setValues] = useState<SupplyFormValues>(() =>
     toSupplyFormValues(initial),
   );
+  // A categoria de quando o formulário abriu: um refresh no meio da edição não muda a comparação.
+  const [baselineCategory] = useState<SupplyCategory | null>(
+    () => initial?.category ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -82,7 +87,7 @@ export function SupplyForm({
     setSaving(true);
     setError(null);
     try {
-      await saveSupply(values, initial);
+      await saveSupply(values, initial, baselineCategory);
       toast({
         description: 'Insumo salvo',
         variant: 'success',
