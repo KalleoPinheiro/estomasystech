@@ -42,6 +42,7 @@ import {
   conditionPhotos,
   consentRecords,
   dataSubjectRequests,
+  dressingRecords,
   evolutionNotes,
   followUps,
   guardians,
@@ -422,6 +423,11 @@ function activitySince(db: Db, cutoff: Date): SQL {
     since(anamneses, anamneses.patientId, anamneses.updatedAt),
     since(evolutionNotes, evolutionNotes.patientId, evolutionNotes.createdAt),
     since(
+      dressingRecords,
+      dressingRecords.patientId,
+      dressingRecords.createdAt,
+    ),
+    since(
       clinicalConditions,
       clinicalConditions.patientId,
       clinicalConditions.createdAt,
@@ -454,7 +460,7 @@ function conditionsOf(tx: Tx, clinicId: string, patientId: string) {
     );
 }
 
-/** Anamnese, SOAP, condições, avaliações e observação das fotos. */
+/** Anamnese, SOAP, curativo, condições, avaliações e observação das fotos. */
 async function clearClinicalText(tx: Tx, clinicId: string, patientId: string) {
   const ofPatient = <T extends { clinicId: PgColumn; patientId: PgColumn }>(
     table: T,
@@ -473,6 +479,11 @@ async function clearClinicalText(tx: Tx, clinicId: string, patientId: string) {
     .update(evolutionNotes)
     .set({ subjective: '', objective: '', assessment: '', plan: '' })
     .where(ofPatient(evolutionNotes));
+  // Curativo em etapas (#963): o registro e a data ficam, as etapas saem.
+  await tx
+    .update(dressingRecords)
+    .set({ content: null })
+    .where(ofPatient(dressingRecords));
   await tx
     .update(clinicalConditions)
     .set({ title: ANONYMIZED_CONDITION_TITLE, notes: null })

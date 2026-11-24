@@ -6,6 +6,7 @@ import type { CarePlanOutcome } from './care-plan-outcome';
 import type { ClinicalCondition } from './clinical-condition';
 import type { ConditionAssessment } from './condition-assessment';
 import type { ConditionPhoto } from './condition-photo';
+import type { DressingRecord } from './dressing-record';
 import type { EvolutionNote } from './evolution-note';
 import type { InterventionRecord } from './intervention-record';
 import type { NursingPrescription } from './nursing-prescription';
@@ -78,6 +79,15 @@ export interface CarePlanInterventionRepository {
   findById(id: string): Promise<CarePlanIntervention | null>;
   findByCarePlanId(carePlanId: string): Promise<CarePlanIntervention[]>;
   findByCarePlanIds(carePlanIds: string[]): Promise<CarePlanIntervention[]>;
+}
+
+/** Registro do curativo em etapas (#963): só se grava uma vez, nunca se altera. */
+export interface DressingRecordRepository {
+  save(record: DressingRecord): Promise<void>;
+  /** Da consulta, do mais antigo para o mais novo. */
+  findByAppointmentId(appointmentId: string): Promise<DressingRecord[]>;
+  /** Do paciente, do mais novo para o mais antigo. */
+  findByPatientId(patientId: string): Promise<DressingRecord[]>;
 }
 
 /** Receituário emitido (#956, ADR-116): só se grava uma vez, nunca se altera. */
