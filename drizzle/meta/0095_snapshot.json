@@ -1,5 +1,5 @@
 {
-  "id": "cc2a1514-5def-43bf-a8a1-654bec7d07ac",
+  "id": "88e90342-37f8-4be8-b4e6-18bc0a2b9c2c",
   "prevId": "30e6710b-9520-4d7c-ace3-4cc64a3b428c",
   "version": "7",
   "dialect": "postgresql",
@@ -3060,28 +3060,32 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "dressing_record_items_dressing_record_id_dressing_records_id_fk": {
-          "name": "dressing_record_items_dressing_record_id_dressing_records_id_fk",
+        "fk_dressing_record_items_record_clinic": {
+          "name": "fk_dressing_record_items_record_clinic",
           "tableFrom": "dressing_record_items",
           "tableTo": "dressing_records",
           "columnsFrom": [
-            "dressing_record_id"
+            "dressing_record_id",
+            "clinic_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "clinic_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "dressing_record_items_supply_id_supplies_id_fk": {
-          "name": "dressing_record_items_supply_id_supplies_id_fk",
+        "fk_dressing_record_items_supply_clinic": {
+          "name": "fk_dressing_record_items_supply_clinic",
           "tableFrom": "dressing_record_items",
           "tableTo": "supplies",
           "columnsFrom": [
-            "supply_id"
+            "supply_id",
+            "clinic_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "clinic_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -3158,6 +3162,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_dressing_records_id_clinic": {
+          "name": "uq_dressing_records_id_clinic",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "clinic_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -7083,6 +7108,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_supplies_id_clinic": {
+          "name": "uq_supplies_id_clinic",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "clinic_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
