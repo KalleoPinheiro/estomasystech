@@ -20,6 +20,7 @@ ALTER TABLE "dressing_record_items" ADD CONSTRAINT "fk_dressing_record_items_rec
 ALTER TABLE "dressing_record_items" ADD CONSTRAINT "fk_dressing_record_items_supply_clinic" FOREIGN KEY ("supply_id","clinic_id") REFERENCES "public"."supplies"("id","clinic_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_dressing_record_items_record" ON "dressing_record_items" USING btree ("dressing_record_id","position");--> statement-breakpoint
 CREATE INDEX "idx_dressing_record_items_supply" ON "dressing_record_items" USING btree ("supply_id");--> statement-breakpoint
+CREATE INDEX "idx_dressing_record_items_clinic" ON "dressing_record_items" USING btree ("clinic_id");--> statement-breakpoint
 ALTER TABLE "dressing_record_items" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE POLICY "clinic_isolation" ON "dressing_record_items" USING ("clinic_id" = current_setting('app.clinic_id', true)) WITH CHECK ("clinic_id" = current_setting('app.clinic_id', true));--> statement-breakpoint
 ALTER TABLE "dressing_record_items" FORCE ROW LEVEL SECURITY;

@@ -1667,6 +1667,8 @@ export const dressingRecordItems = pgTable(
       table.position,
     ),
     index('idx_dressing_record_items_supply').on(table.supplyId),
+    // Índice líder em clinic_id: a política de RLS filtra toda consulta por ele.
+    index('idx_dressing_record_items_clinic').on(table.clinicId),
   ],
 );
 
