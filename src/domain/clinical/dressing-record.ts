@@ -4,8 +4,9 @@ import { newId } from '../shared/id';
 /**
  * Registro do curativo em etapas (#963, T1): o que foi feito no curativo de uma
  * consulta, etapa por etapa (aceleradores § 2.1, P2-10). Imutável depois de
- * salvo, como a evolução: corrigir é registrar outro (D4). Itens do estoque
- * (T2), laser (T3) e a baixa (T5) chegam em tickets próprios.
+ * salvo, como a evolução: corrigir é registrar outro (D4). Os itens do estoque
+ * usados em cada etapa entram com o registro (T2); laser (T3) e a baixa (T5)
+ * chegam em tickets próprios.
  *
  * Decisões conservadoras enquanto a clínica não define (plano da #963):
  * - D3: só a cobertura primária e a próxima troca são obrigatórias;
@@ -25,6 +26,43 @@ export const NEXT_CHANGE_INVALID_MESSAGE =
   'A próxima troca precisa ser uma data válida (AAAA-MM-DD).';
 export const PAIN_INVALID_MESSAGE = `A dor vai de ${PAIN_MIN} a ${PAIN_MAX}, em número inteiro.`;
 export const DRESSING_TEXT_TOO_LONG_MESSAGE = `Cada etapa do curativo tem no máximo ${DRESSING_TEXT_MAX} caracteres.`;
+
+/** Etapas do curativo que usam insumo do estoque, na ordem do curativo. */
+export const DRESSING_ITEM_ROLES = [
+  'solucao',
+  'protecao',
+  'cobertura_primaria',
+  'cobertura_secundaria',
+  'fixacao',
+] as const;
+export type DressingItemRole = (typeof DRESSING_ITEM_ROLES)[number];
+
+export const DRESSING_ITEM_ROLE_LABELS: Record<DressingItemRole, string> = {
+  solucao: 'Solução de limpeza',
+  protecao: 'Proteção perilesional',
+  cobertura_primaria: 'Cobertura primária',
+  cobertura_secundaria: 'Cobertura secundária',
+  fixacao: 'Fixação',
+};
+
+export const DRESSING_ITEMS_MAX = 30;
+
+export const DRESSING_ITEM_ROLE_INVALID_MESSAGE =
+  'Etapa do item do curativo inválida.';
+export const DRESSING_ITEM_SUPPLY_REQUIRED_MESSAGE =
+  'Informe o insumo usado no curativo.';
+export const DRESSING_ITEM_QUANTITY_INVALID_MESSAGE =
+  'A quantidade do insumo usado precisa ser um número inteiro maior que zero.';
+export const DRESSING_ITEM_DUPLICATE_MESSAGE =
+  'O mesmo insumo aparece duas vezes na mesma etapa do curativo.';
+export const DRESSING_ITEMS_TOO_MANY_MESSAGE = `O curativo tem no máximo ${DRESSING_ITEMS_MAX} itens.`;
+
+/** Insumo do estoque usado numa etapa do curativo (T2). A baixa vem no T5. */
+export interface DressingItem {
+  role: DressingItemRole;
+  supplyId: string;
+  quantity: number;
+}
 
 /** Etapas do curativo, na ordem em que acontecem. Texto em branco vira `null`. */
 export interface DressingContent {
@@ -56,12 +94,16 @@ export interface DressingRecordProps {
   /** Quem registrou (profissional da sessão), quando houver. */
   professionalId?: string | null;
   content: DressingContent;
+  /** Insumos usados, por etapa; sem item é um curativo sem estoque registrado. */
+  items?: readonly DressingItem[];
 }
 
 export interface DressingRecordState
-  extends Omit<DressingRecordProps, 'content'> {
+  extends Omit<DressingRecordProps, 'content' | 'items'> {
   id: string;
   createdAt: Date;
+  /** Ausente equivale a nenhum item (registro anterior ao T2). */
+  items?: readonly DressingItem[];
   /** `null` depois da anonimização por retenção: o registro fica, o conteúdo não. */
   content: DressingContent | null;
 }
@@ -136,6 +178,36 @@ function normalizeContent(content: DressingContent): DressingContent {
   };
 }
 
+const isItemRole = (value: string): value is DressingItemRole =>
+  (DRESSING_ITEM_ROLES as readonly string[]).includes(value);
+
+function normalizeItem(item: DressingItem): DressingItem {
+  if (!isItemRole(item.role)) {
+    throw new ValidationError(DRESSING_ITEM_ROLE_INVALID_MESSAGE);
+  }
+  const supplyId = item.supplyId.trim();
+  if (supplyId.length === 0) {
+    throw new ValidationError(DRESSING_ITEM_SUPPLY_REQUIRED_MESSAGE);
+  }
+  if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
+    throw new ValidationError(DRESSING_ITEM_QUANTITY_INVALID_MESSAGE);
+  }
+  return { role: item.role, supplyId, quantity: item.quantity };
+}
+
+/** Itens na ordem recebida; o mesmo insumo duas vezes na mesma etapa é recusado. */
+function normalizeItems(items: readonly DressingItem[]): DressingItem[] {
+  if (items.length > DRESSING_ITEMS_MAX) {
+    throw new ValidationError(DRESSING_ITEMS_TOO_MANY_MESSAGE);
+  }
+  const normalized = items.map(normalizeItem);
+  const keys = new Set(normalized.map((i) => `${i.role}:${i.supplyId}`));
+  if (keys.size !== normalized.length) {
+    throw new ValidationError(DRESSING_ITEM_DUPLICATE_MESSAGE);
+  }
+  return normalized;
+}
+
 export class DressingRecord {
   private constructor(private readonly state: DressingRecordState) {}
 
@@ -148,13 +220,14 @@ export class DressingRecord {
       conditionId: props.conditionId?.trim() || null,
       professionalId: props.professionalId?.trim() || null,
       content: normalizeContent(props.content),
+      items: normalizeItems(props.items ?? []),
       id: newId(),
       createdAt: new Date(),
     });
   }
 
   static restore(state: DressingRecordState): DressingRecord {
-    return new DressingRecord({ ...state });
+    return new DressingRecord({ ...state, items: [...(state.items ?? [])] });
   }
 
   get id(): string {
@@ -183,5 +256,9 @@ export class DressingRecord {
 
   get content(): DressingContent | null {
     return this.state.content;
+  }
+
+  get items(): readonly DressingItem[] {
+    return this.state.items ?? [];
   }
 }

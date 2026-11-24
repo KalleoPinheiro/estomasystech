@@ -1629,6 +1629,34 @@ export const dressingRecords = pgTable(
   ],
 );
 
+// Insumos usados em cada etapa do curativo (#963, T2). Sem texto clínico, como
+// o movimento de estoque da consulta: não é cifrado e fica na anonimização.
+export const dressingRecordItems = pgTable(
+  'dressing_record_items',
+  {
+    id: text('id').primaryKey(),
+    clinicId: text('clinic_id')
+      .notNull()
+      .references(() => clinics.id),
+    dressingRecordId: text('dressing_record_id')
+      .notNull()
+      .references(() => dressingRecords.id),
+    position: integer('position').notNull(),
+    role: text('role').notNull(),
+    supplyId: text('supply_id')
+      .notNull()
+      .references(() => supplies.id),
+    quantity: integer('quantity').notNull(),
+  },
+  (table) => [
+    index('idx_dressing_record_items_record').on(
+      table.dressingRecordId,
+      table.position,
+    ),
+    index('idx_dressing_record_items_supply').on(table.supplyId),
+  ],
+);
+
 // Reavaliação de resultado NOC — append-only (integridade de prontuário).
 export const outcomeEvaluations = pgTable(
   'outcome_evaluations',
